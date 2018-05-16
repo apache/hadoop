@@ -388,6 +388,18 @@ int get_docker_command(const char *command_file, const struct configuration *con
   }
   free(value);
 
+  char *docker = get_docker_binary(conf);
+  ret = add_to_args(args, docker);
+  free(docker);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
+  ret = add_docker_config_param(&command_config, args);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
   char *command = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (strcmp(DOCKER_INSPECT_COMMAND, command) == 0) {
     return get_docker_inspect_command(command_file, conf, args);
@@ -440,7 +452,7 @@ static int value_permitted(const struct configuration* executor_cfg,
 
 int get_docker_volume_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
-  char *driver = NULL, *volume_name = NULL, *sub_command = NULL, *format = NULL, *docker = NULL;
+  char *driver = NULL, *volume_name = NULL, *sub_command = NULL, *format = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_VOLUME_COMMAND, &command_config);
   if (ret != 0) {
@@ -453,19 +465,6 @@ int get_docker_volume_command(const char *command_file, const struct configurati
     fprintf(ERRORFILE, "\"create/ls\" are the only acceptable sub-command of volume, input sub_command=\"%s\"\n",
        sub_command);
     ret = INVALID_DOCKER_VOLUME_COMMAND;
-    goto cleanup;
-  }
-
-  docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  if (ret != 0) {
-    ret = BUFFER_TOO_SMALL;
-    goto cleanup;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    ret = BUFFER_TOO_SMALL;
     goto cleanup;
   }
 
@@ -538,7 +537,6 @@ cleanup:
   free(volume_name);
   free(sub_command);
   free(format);
-  free(docker);
   return ret;
 }
 
@@ -576,19 +574,6 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     return INVALID_DOCKER_INSPECT_FORMAT;
   }
 
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    free(container_name);
-    free(format);
-    return BUFFER_TOO_SMALL;
-  }
-
   ret = add_to_args(args, DOCKER_INSPECT_COMMAND);
   if (ret != 0) {
     goto free_and_exit;
@@ -610,7 +595,6 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
   free_and_exit:
   free(format);
   free(container_name);
-  free(docker);
   return BUFFER_TOO_SMALL;
 }
 
@@ -626,19 +610,6 @@ int get_docker_load_command(const char *command_file, const struct configuration
   image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (image_name == NULL) {
     return INVALID_DOCKER_IMAGE_NAME;
-  }
-
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    free(image_name);
-    return BUFFER_TOO_SMALL;
   }
 
   ret = add_to_args(args, DOCKER_LOAD_COMMAND);
@@ -675,17 +646,6 @@ int get_docker_pull_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_IMAGE_NAME;
   }
 
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  if (ret != 0) {
-    goto free_pull;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    goto free_pull;
-  }
-
   ret = add_to_args(args, DOCKER_PULL_COMMAND);
   if (ret == 0) {
     ret = add_to_args(args, image_name);
@@ -697,7 +657,6 @@ int get_docker_pull_command(const char *command_file, const struct configuration
   }
   free_pull:
   free(image_name);
-  free(docker);
   return BUFFER_TOO_SMALL;
 }
 
@@ -713,18 +672,6 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
     return INVALID_DOCKER_CONTAINER_NAME;
-  }
-
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
   }
 
   ret = add_to_args(args, DOCKER_RM_COMMAND);
@@ -755,18 +702,6 @@ int get_docker_stop_command(const char *command_file, const struct configuration
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
     return INVALID_DOCKER_CONTAINER_NAME;
-  }
-
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    goto free_and_exit;
   }
 
   ret = add_to_args(args, DOCKER_STOP_COMMAND);
@@ -812,18 +747,6 @@ int get_docker_kill_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
   ret = add_to_args(args, DOCKER_KILL_COMMAND);
   if (ret == 0) {
     value = get_configuration_value("signal", DOCKER_COMMAND_FILE_SECTION, &command_config);
@@ -853,7 +776,6 @@ free_and_exit:
 
 int get_docker_start_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
-  char *docker = NULL;
   char *container_name = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_START_COMMAND, &command_config);
@@ -864,20 +786,6 @@ int get_docker_start_command(const char *command_file, const struct configuratio
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
     return INVALID_DOCKER_CONTAINER_NAME;
-  }
-
-  docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    ret = BUFFER_TOO_SMALL;
-    goto free_and_exit;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    ret = BUFFER_TOO_SMALL;
-    goto free_and_exit;
   }
 
   ret = add_to_args(args, DOCKER_START_COMMAND);
@@ -1441,20 +1349,6 @@ int get_docker_run_command(const char *command_file, const struct configuration 
       free(image);
     }
     return INVALID_DOCKER_IMAGE_NAME;
-  }
-
-  char *docker = get_docker_binary(conf);
-  ret = add_to_args(args, docker);
-  free(docker);
-  if (ret != 0) {
-    reset_args(args);
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_docker_config_param(&command_config, args);
-  if (ret != 0) {
-    reset_args(args);
-    return BUFFER_TOO_SMALL;
   }
 
   ret = add_to_args(args, DOCKER_RUN_COMMAND);

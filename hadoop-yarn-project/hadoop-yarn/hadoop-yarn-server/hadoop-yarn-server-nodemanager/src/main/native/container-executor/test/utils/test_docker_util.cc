@@ -165,12 +165,12 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=inspect\n  format={{.State.Status}}\n  name=container_e1_12312_11111_02_000001",
-        "/usr/bin/docker inspect --format={{.State.Status}} container_e1_12312_11111_02_000001"));
+        "inspect --format={{.State.Status}} container_e1_12312_11111_02_000001"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=inspect\n"
             "  format={{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}\n"
             "  name=container_e1_12312_11111_02_000001",
-        "/usr/bin/docker inspect --format={{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}} container_e1_12312_11111_02_000001"));
+        "inspect --format={{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}} container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -202,7 +202,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=load\n  image=image-id",
-        "/usr/bin/docker load --i=image-id"));
+        "load --i=image-id"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -272,7 +272,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=pull\n  image=image-id",
-        "/usr/bin/docker pull image-id"));
+        "pull image-id"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -292,7 +292,7 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(
         std::make_pair<std::string, std::string>(
             "[docker-command-execution]\n  docker-command=rm\n  name=container_e1_12312_11111_02_000001",
-            "/usr/bin/docker rm container_e1_12312_11111_02_000001"));
+            "rm container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -312,10 +312,10 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=stop\n  name=container_e1_12312_11111_02_000001",
-        "/usr/bin/docker stop container_e1_12312_11111_02_000001"));
+        "stop container_e1_12312_11111_02_000001"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=stop\n  name=container_e1_12312_11111_02_000001\ntime=25",
-        "/usr/bin/docker stop --time=25 container_e1_12312_11111_02_000001"));
+        "stop --time=25 container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -339,10 +339,10 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001",
-        "/usr/bin/docker kill container_e1_12312_11111_02_000001"));
+        "kill container_e1_12312_11111_02_000001"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001\nsignal=SIGQUIT",
-        "/usr/bin/docker kill --signal=SIGQUIT container_e1_12312_11111_02_000001"));
+        "kill --signal=SIGQUIT container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -365,7 +365,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
          "[docker-command-execution]\n  docker-command=start\n  name=container_e1_12312_11111_02_000001",
-         "/usr/bin/docker start container_e1_12312_11111_02_000001"));
+         "start container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -1151,14 +1151,14 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL hadoop/docker-image"));
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL hadoop/docker-image"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL nothadoop/docker-image"));
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL nothadoop/docker-image"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL hadoop/docker-image bash test_script.sh arg1 arg2"));
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL hadoop/docker-image bash test_script.sh arg1 arg2"));
 
     // Test non-privileged conatiner with launch command
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -1168,7 +1168,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
             " --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash "
             "test_script.sh arg1 arg2"));
@@ -1179,7 +1179,7 @@ namespace ContainerExecutor {
             "  network=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
             " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
 
     // Test non-privileged container and drop all privileges
@@ -1190,7 +1190,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
             "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
             " test_script.sh arg1 arg2"));
@@ -1201,7 +1201,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  net=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
             " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
 
     // Test privileged container
@@ -1212,7 +1212,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image "
             "bash test_script.sh arg1 arg2"));
@@ -1224,7 +1224,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
             " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id "
             "--device=/dev/test:/dev/test hadoop/docker-image bash test_script.sh arg1 arg2"));
@@ -1235,7 +1235,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  net=bridge\n"
             "  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge --cap-drop=ALL "
             "--hostname=host-id --group-add 1000 --group-add 1001 "
             "docker-image"));
 
@@ -1339,7 +1339,7 @@ namespace ContainerExecutor {
         "  user=nobody\n"
         "  use-entry-point=true\n"
         "  environ=/tmp/test.env\n",
-        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL "
         "--env-file /tmp/test.env hadoop/docker-image"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
@@ -1382,11 +1382,11 @@ namespace ContainerExecutor {
       std::vector<std::pair<std::string, std::string> > file_cmd_vec;
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=nobody",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image"));
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image"));
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n"
               "  user=nobody\n  launch-command=bash,test_script.sh,arg1,arg2",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image"));
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image"));
 
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
@@ -1395,7 +1395,7 @@ namespace ContainerExecutor {
               "  network=bridge\n  devices=/dev/test:/dev/test\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
               " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
               " --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash "
               "test_script.sh arg1 arg2"));
@@ -1406,7 +1406,7 @@ namespace ContainerExecutor {
               "  network=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
               " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
 
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -1416,7 +1416,7 @@ namespace ContainerExecutor {
               "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
               " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
               "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
               " test_script.sh arg1 arg2"));
@@ -1427,7 +1427,7 @@ namespace ContainerExecutor {
               "  network=bridge\n  net=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
               " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
 
       std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
@@ -1511,10 +1511,10 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  volume=volume1 \n driver=driver1",
-        "/usr/bin/docker volume create --name=volume1 --driver=driver1"));
+        "volume create --name=volume1 --driver=driver1"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
        "[docker-command-execution]\n  docker-command=volume\n  format={{.Name}},{{.Driver}}\n  sub-command=ls",
-       "/usr/bin/docker volume ls --format={{.Name}},{{.Driver}}"));
+       "volume ls --format={{.Name}},{{.Driver}}"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
 
