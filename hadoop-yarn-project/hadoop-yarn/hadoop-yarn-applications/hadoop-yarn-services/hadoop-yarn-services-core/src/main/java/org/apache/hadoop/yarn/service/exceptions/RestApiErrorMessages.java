@@ -105,4 +105,10 @@ public interface RestApiErrorMessages {
       + "expression name defined for this component only.";
   String ERROR_KEYTAB_URI_SCHEME_INVALID = "Unsupported keytab URI scheme: %s";
   String ERROR_KEYTAB_URI_INVALID = "Invalid keytab URI: %s";
+
+  String ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE = "The component instance " +
+      "(%s) does not need an upgrade.";
+
+  String ERROR_COMP_DOES_NOT_NEED_UPGRADE = "The component (%s) does not need" +
+      " an upgrade.";
 }

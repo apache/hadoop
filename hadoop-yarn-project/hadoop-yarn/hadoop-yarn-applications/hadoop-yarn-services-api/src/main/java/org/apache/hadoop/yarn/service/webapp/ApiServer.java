@@ -17,7 +17,9 @@
 
 package org.apache.hadoop.yarn.service.webapp;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -29,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -61,8 +64,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
@@ -307,6 +312,42 @@ public class ApiServer {
   }
 
   @PUT
+  @Path(COMPONENTS_PATH)
+  @Consumes({MediaType.APPLICATION_JSON})
+  @Produces({RestApiConstants.MEDIA_TYPE_JSON_UTF8, MediaType.TEXT_PLAIN})
+  public Response updateComponents(@Context HttpServletRequest request,
+      @PathParam(SERVICE_NAME) String serviceName,
+      List<Component> requestComponents) {
+
+    try {
+      if (requestComponents == null || requestComponents.isEmpty()) {
+        throw new YarnException("No components provided.");
+      }
+      UserGroupInformation ugi = getProxyUser(request);
+      Set<String> compNamesToUpgrade = new HashSet<>();
+      requestComponents.forEach(reqComp -> {
+        if (reqComp.getState() != null &&
+            reqComp.getState().equals(ComponentState.UPGRADING)) {
+          compNamesToUpgrade.add(reqComp.getName());
+        }
+      });
+      LOG.info("PUT: upgrade components {} for service {} " +
+          "user = {}", compNamesToUpgrade, serviceName, ugi);
+      return processComponentsUpgrade(ugi, serviceName, compNamesToUpgrade);
+    } catch (AccessControlException e) {
+      return formatResponse(Response.Status.FORBIDDEN, e.getMessage());
+    } catch (YarnException e) {
+      return formatResponse(Response.Status.BAD_REQUEST, e.getMessage());
+    } catch (IOException | InterruptedException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getMessage());
+    } catch (UndeclaredThrowableException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getCause().getMessage());
+    }
+  }
+
+  @PUT
   @Path(COMPONENT_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8",
@@ -326,6 +367,15 @@ public class ApiServer {
             + componentName + ")";
         throw new YarnException(msg);
       }
+      UserGroupInformation ugi = getProxyUser(request);
+      if (component.getState() != null &&
+          component.getState().equals(ComponentState.UPGRADING)) {
+        LOG.info("PUT: upgrade component {} for service {} " +
+            "user = {}", component.getName(), appName, ugi);
+        return processComponentsUpgrade(ugi, appName,
+            Sets.newHashSet(componentName));
+      }
+
       if (component.getNumberOfContainers() == null) {
         throw new YarnException("No container count provided");
       }
@@ -334,7 +384,6 @@ public class ApiServer {
             + component.getNumberOfContainers();
         throw new YarnException(message);
       }
-      UserGroupInformation ugi = getProxyUser(request);
       Map<String, Long> original = ugi
           .doAs(new PrivilegedExceptionAction<Map<String, Long>>() {
             @Override
@@ -472,7 +521,7 @@ public class ApiServer {
 
       if (reqContainer.getState() != null
           && reqContainer.getState().equals(ContainerState.UPGRADING)) {
-        return processContainerUpgrade(ugi, service,
+        return processContainersUpgrade(ugi, service,
             Lists.newArrayList(liveContainer));
       }
     } catch (AccessControlException e) {
@@ -517,7 +566,7 @@ public class ApiServer {
         List<Container> liveContainers = ServiceApiUtil
             .getLiveContainers(service, toUpgrade);
 
-        return processContainerUpgrade(ugi, service, liveContainers);
+        return processContainersUpgrade(ugi, service, liveContainers);
       }
     } catch (AccessControlException e) {
       return formatResponse(Response.Status.FORBIDDEN, e.getMessage());
@@ -629,7 +678,29 @@ public class ApiServer {
     return formatResponse(Status.ACCEPTED, status);
   }
 
-  private Response processContainerUpgrade(UserGroupInformation ugi,
+  private Response processComponentsUpgrade(UserGroupInformation ugi,
+      String serviceName, Set<String> compNames) throws YarnException,
+      IOException, InterruptedException {
+    Service service = getServiceFromClient(ugi, serviceName);
+    if (service.getState() != ServiceState.UPGRADING) {
+      throw new YarnException(
+          String.format("The upgrade of service %s has not been initiated.",
+              service.getName()));
+    }
+    List<Container> containersToUpgrade = ServiceApiUtil
+        .validateAndResolveCompsUpgrade(service, compNames);
+    Integer result = invokeContainersUpgrade(ugi, service, containersToUpgrade);
+    if (result == EXIT_SUCCESS) {
+      ServiceStatus status = new ServiceStatus();
+      status.setDiagnostics(
+          "Upgrading components " + Joiner.on(',').join(compNames) + ".");
+      return formatResponse(Response.Status.ACCEPTED, status);
+    }
+    // If result is not a success, consider it a no-op
+    return Response.status(Response.Status.NO_CONTENT).build();
+  }
+
+  private Response processContainersUpgrade(UserGroupInformation ugi,
       Service service, List<Container> containers) throws YarnException,
       IOException, InterruptedException {
 
@@ -638,25 +709,8 @@ public class ApiServer {
           String.format("The upgrade of service %s has not been initiated.",
               service.getName()));
     }
-    for (Container liveContainer : containers) {
-      if (liveContainer.getState() != ContainerState.NEEDS_UPGRADE) {
-        // Nothing to upgrade
-        throw new YarnException(String.format(
-            "The component instance (%s) does not need an upgrade.",
-            liveContainer.getComponentInstanceName()));
-      }
-    }
-
-    Integer result = ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
-      int result1;
-      ServiceClient sc = getServiceClient();
-      sc.init(YARN_CONFIG);
-      sc.start();
-      result1 = sc.actionUpgrade(service, containers);
-      sc.close();
-      return result1;
-    });
-
+    ServiceApiUtil.validateInstancesUpgrade(containers);
+    Integer result = invokeContainersUpgrade(ugi, service, containers);
     if (result == EXIT_SUCCESS) {
       ServiceStatus status = new ServiceStatus();
       status.setDiagnostics(
@@ -666,6 +720,20 @@ public class ApiServer {
     }
     // If result is not a success, consider it a no-op
     return Response.status(Response.Status.NO_CONTENT).build();
+  }
+
+  private int invokeContainersUpgrade(UserGroupInformation ugi,
+      Service service, List<Container> containers) throws IOException,
+      InterruptedException {
+    return ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
+      int result1;
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      result1 = sc.actionUpgrade(service, containers);
+      sc.close();
+      return result1;
+    });
   }
 
   private Service getServiceFromClient(UserGroupInformation ugi,

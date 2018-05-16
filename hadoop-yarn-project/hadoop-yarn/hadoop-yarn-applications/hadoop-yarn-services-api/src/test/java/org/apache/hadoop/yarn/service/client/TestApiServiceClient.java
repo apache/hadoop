@@ -298,5 +298,17 @@ public class TestApiServiceClient {
     }
   }
 
+  @Test
+  public void testComponentsUpgrade() {
+    String appName = "example-app";
+    try {
+      int result = asc.actionUpgradeComponents(appName, Lists.newArrayList(
+          "comp"));
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
 
 }

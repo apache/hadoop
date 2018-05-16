@@ -2143,6 +2143,9 @@ public class TestYarnCLI {
     pw.println("                                          long-running service. Supports");
     pw.println("                                          absolute or relative changes,");
     pw.println("                                          such as +1, 2, or -3.");
+    pw.println(" -components <Components>                 Works with -upgrade option to");
+    pw.println("                                          trigger the upgrade of specified");
+    pw.println("                                          components of the application.");
     pw.println(" -destroy <Application Name>              Destroys a saved application");
     pw.println("                                          specification and removes all");
     pw.println("                                          application data permanently.");

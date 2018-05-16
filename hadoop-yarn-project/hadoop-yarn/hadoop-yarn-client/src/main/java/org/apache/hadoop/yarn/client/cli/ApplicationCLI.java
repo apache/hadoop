@@ -104,6 +104,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String UPGRADE_AUTO_FINALIZE = "autoFinalize";
   public static final String UPGRADE_FINALIZE = "finalize";
   public static final String COMPONENT_INSTS = "instances";
+  public static final String COMPONENTS = "components";
 
   private static String firstArg = null;
 
@@ -250,6 +251,8 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(COMPONENT_INSTS, true, "Works with -upgrade option to " +
           "trigger the upgrade of specified component instances of the " +
           "application.");
+      opts.addOption(COMPONENTS, true, "Works with -upgrade option to " +
+          "trigger the upgrade of specified components of the application.");
       opts.addOption(UPGRADE_FINALIZE, false, "Works with -upgrade option to " +
           "finalize the upgrade.");
       opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and " +
@@ -274,6 +277,9 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(COMPONENT_INSTS).setArgName("Component Instances");
       opts.getOption(COMPONENT_INSTS).setValueSeparator(',');
       opts.getOption(COMPONENT_INSTS).setArgs(Option.UNLIMITED_VALUES);
+      opts.getOption(COMPONENTS).setArgName("Components");
+      opts.getOption(COMPONENTS).setValueSeparator(',');
+      opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
     } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
@@ -574,7 +580,7 @@ public class ApplicationCLI extends YarnCLI {
           cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE));
     } else if (cliParser.hasOption(UPGRADE_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_INITIATE,
-          UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE, COMPONENT_INSTS,
+          UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE, COMPONENT_INSTS, COMPONENTS,
           APP_TYPE_CMD)) {
         printUsage(title, opts);
         return exitCode;
@@ -603,6 +609,15 @@ public class ApplicationCLI extends YarnCLI {
         }
         String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
         return client.actionUpgradeInstances(appName, Arrays.asList(instances));
+      } else if (cliParser.hasOption(COMPONENTS)) {
+        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+            COMPONENTS, APP_TYPE_CMD)) {
+          printUsage(title, opts);
+          return exitCode;
+        }
+        String[] components = cliParser.getOptionValues(COMPONENTS);
+        return client.actionUpgradeComponents(appName,
+            Arrays.asList(components));
       } else if (cliParser.hasOption(UPGRADE_FINALIZE)) {
         if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
             UPGRADE_FINALIZE, APP_TYPE_CMD)) {
