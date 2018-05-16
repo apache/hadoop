@@ -658,10 +658,12 @@ public class TestDFSAdmin {
     final String outStr = scanIntoString(out);
     LOG.info("dfsadmin -listOpenFiles output: \n" + out);
     for (Path closedFilePath : closedFileSet) {
-      assertThat(outStr, not(containsString(closedFilePath.toString() + "\n")));
+      assertThat(outStr, not(containsString(closedFilePath.toString() +
+          System.lineSeparator())));
     }
     for (Path openFilePath : openFilesMap.keySet()) {
-      assertThat(outStr, is(containsString(openFilePath.toString() + "\n")));
+      assertThat(outStr, is(containsString(openFilePath.toString() +
+          System.lineSeparator())));
     }
   }
 
