@@ -272,9 +272,45 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return true;
   }
 
-  private void init() {
+  /**
+  * initForReadableEndpoints does the init for all readable REST end points.
+  */
+  private void initForReadableEndpoints() {
     // clear content type
     response.setContentType(null);
+  }
+
+  /**
+   * initForWritableEndpoints does the init and acls verification for all
+   * writable REST end points.
+   * @param callerUGI remote caller who initiated the request
+   * @param doAdminACLsCheck boolean flag to indicate whether ACLs check is needed
+   * @throws AuthorizationException in case of no access to perfom this op.
+   */
+  private void initForWritableEndpoints(UserGroupInformation callerUGI,
+      boolean doAdminACLsCheck) throws AuthorizationException {
+    // clear content type
+    response.setContentType(null);
+
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated";
+      throw new AuthorizationException(msg);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      throw new ForbiddenException(msg);
+    }
+
+    if (doAdminACLsCheck) {
+      ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+      if (aclsManager.areACLsEnabled()) {
+        if (!aclsManager.isAdmin(callerUGI)) {
+          String msg = "Only admins can carry out this operation.";
+          throw new ForbiddenException(msg);
+        }
+      }
+    }
   }
 
   @GET
@@ -289,7 +325,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ClusterInfo getClusterInfo() {
-    init();
+    initForReadableEndpoints();
     return new ClusterInfo(this.rm);
   }
 
@@ -298,7 +334,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
-    init();
+    initForReadableEndpoints();
     return new ClusterMetricsInfo(this.rm);
   }
 
@@ -307,7 +343,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    init();
+    initForReadableEndpoints();
     ResourceScheduler rs = rm.getResourceScheduler();
     SchedulerInfo sinfo;
     if (rs instanceof CapacityScheduler) {
@@ -331,15 +367,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public String dumpSchedulerLogs(@FormParam(RMWSConsts.TIME) String time,
       @Context HttpServletRequest hsr) throws IOException {
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
-    if (aclsManager.areACLsEnabled()) {
-      if (callerUGI == null || !aclsManager.isAdmin(callerUGI)) {
-        String msg = "Only admins can carry out this operation.";
-        throw new ForbiddenException(msg);
-      }
-    }
+    initForWritableEndpoints(callerUGI, true);
+
     ResourceScheduler rs = rm.getResourceScheduler();
     int period = Integer.parseInt(time);
     if (period <= 0) {
@@ -364,7 +394,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodesInfo getNodes(@QueryParam(RMWSConsts.STATES) String states) {
-    init();
+    initForReadableEndpoints();
+
     ResourceScheduler sched = this.rm.getResourceScheduler();
     if (sched == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
@@ -402,7 +433,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodeInfo getNode(@PathParam(RMWSConsts.NODEID) String nodeId) {
-    init();
+    initForReadableEndpoints();
+
     if (nodeId == null || nodeId.isEmpty()) {
       throw new NotFoundException("nodeId, " + nodeId + ", is empty or null");
     }
@@ -445,6 +477,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> applicationTypes,
       @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
+
+    initForReadableEndpoints();
+
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
@@ -459,7 +494,6 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     long fBegin = 0;
     long fEnd = Long.MAX_VALUE;
 
-    init();
     if (count != null && !count.isEmpty()) {
       checkCount = true;
       countNum = Long.parseLong(count);
@@ -624,8 +658,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public ActivitiesInfo getActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.NODEID) String nodeId) {
-    YarnScheduler scheduler = rm.getRMContext().getScheduler();
+    initForReadableEndpoints();
 
+    YarnScheduler scheduler = rm.getRMContext().getScheduler();
     if (scheduler instanceof AbstractYarnScheduler) {
       String errMessage = "";
 
@@ -696,8 +731,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.APP_ID) String appId,
       @QueryParam(RMWSConsts.MAX_TIME) String time) {
-    YarnScheduler scheduler = rm.getRMContext().getScheduler();
+    initForReadableEndpoints();
 
+    YarnScheduler scheduler = rm.getRMContext().getScheduler();
     if (scheduler instanceof AbstractYarnScheduler) {
       AbstractYarnScheduler abstractYarnScheduler =
           (AbstractYarnScheduler) scheduler;
@@ -749,7 +785,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.STATES) Set<String> stateQueries,
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> typeQueries) {
-    init();
+    initForReadableEndpoints();
 
     // parse the params and build the scoreboard
     // converting state/type name to lowercase
@@ -835,7 +871,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public AppInfo getApp(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
-    init();
+    initForReadableEndpoints();
+
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
@@ -855,8 +892,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) {
+    initForReadableEndpoints();
 
-    init();
     ApplicationId id = WebAppUtils.parseApplicationId(recordFactory, appId);
     RMApp app = rm.getRMContext().getRMApps().get(id);
     if (app == null) {
@@ -881,7 +918,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest req, @Context HttpServletResponse res,
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getAppAttempt(req, res, appId, appAttemptId);
   }
 
@@ -893,7 +930,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletResponse res,
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getContainers(req, res, appId, appAttemptId);
   }
 
@@ -906,7 +943,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId,
       @PathParam("containerid") String containerId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getContainer(req, res, appId, appAttemptId, containerId);
   }
 
@@ -916,7 +953,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppState getAppState(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
-    init();
+    initForReadableEndpoints();
+
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     String userName = "";
     if (callerUGI != null) {
@@ -951,18 +989,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated";
-      throw new AuthorizationException(msg);
-    }
-
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     String userName = callerUGI.getUserName();
     RMApp app = null;
@@ -1000,7 +1028,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public NodeToLabelsInfo getNodeToLabels(@Context HttpServletRequest hsr)
       throws IOException {
-    init();
+    initForReadableEndpoints();
 
     NodeToLabelsInfo ntl = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> ntlMap = ntl.getNodeToLabels();
@@ -1021,7 +1049,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public LabelsToNodesInfo getLabelsToNodes(
       @QueryParam(RMWSConsts.LABELS) Set<String> labels) throws IOException {
-    init();
+    initForReadableEndpoints();
 
     LabelsToNodesInfo lts = new LabelsToNodesInfo();
     Map<NodeLabelInfo, NodeIDsInfo> ltsMap = lts.getLabelsToNodes();
@@ -1052,6 +1080,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public Response replaceLabelsOnNodes(
       final NodeToLabelsEntryList newNodeToLabels,
       @Context HttpServletRequest hsr) throws IOException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     Map<NodeId, Set<String>> nodeIdToLabels =
         new HashMap<NodeId, Set<String>>();
 
@@ -1072,6 +1103,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam("labels") Set<String> newNodeLabelsName,
       @Context HttpServletRequest hsr, @PathParam("nodeId") String nodeId)
       throws Exception {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
     Map<NodeId, Set<String>> newLabelsForNode =
         new HashMap<NodeId, Set<String>>();
@@ -1084,7 +1118,6 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   private Response replaceLabelsOnNode(
       Map<NodeId, Set<String>> newLabelsForNode, HttpServletRequest hsr,
       String operation) throws IOException {
-    init();
 
     NodeLabelsUtils.verifyCentralizedNodeLabelConfEnabled("replaceLabelsOnNode",
         isCentralizedNodeLabelConfiguration);
@@ -1117,7 +1150,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public NodeLabelsInfo getClusterNodeLabels(@Context HttpServletRequest hsr)
       throws IOException {
-    init();
+    initForReadableEndpoints();
 
     List<NodeLabel> nodeLabels =
         rm.getRMContext().getNodeLabelManager().getClusterNodeLabels();
@@ -1132,14 +1165,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response addToClusterNodeLabels(final NodeLabelsInfo newNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
-    init();
-
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated for"
-          + " post to .../add-node-labels";
-      throw new AuthorizationException(msg);
-    }
+    initForWritableEndpoints(callerUGI, false);
+
     if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
       String msg = "User " + callerUGI.getShortUserName() + " not authorized"
           + " for post to .../add-node-labels ";
@@ -1164,14 +1192,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public Response removeFromCluserNodeLabels(
       @QueryParam(RMWSConsts.LABELS) Set<String> oldNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
-    init();
-
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated for"
-          + " post to .../remove-node-labels";
-      throw new AuthorizationException(msg);
-    }
+    initForWritableEndpoints(callerUGI, false);
+
     if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
       String msg = "User " + callerUGI.getShortUserName() + " not authorized"
           + " for post to .../remove-node-labels ";
@@ -1194,7 +1217,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public NodeLabelsInfo getLabelsOnNode(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.NODEID) String nodeId) throws IOException {
-    init();
+    initForReadableEndpoints();
 
     NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
     List<NodeLabel> labels = new ArrayList<NodeLabel>(
@@ -1263,7 +1286,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppPriority getAppPriority(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
-    init();
+    initForReadableEndpoints();
+
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     String userName = "UNKNOWN-USER";
     if (callerUGI != null) {
@@ -1294,21 +1318,11 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     if (targetPriority == null) {
       throw new YarnException("Target Priority cannot be null");
-    }
-
-    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, user not authenticated");
-    }
-
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      return Response.status(Status.FORBIDDEN)
-          .entity("The default static user cannot carry out this operation.")
-          .build();
     }
 
     String userName = callerUGI.getUserName();
@@ -1378,7 +1392,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppQueue getAppQueue(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
-    init();
+    initForReadableEndpoints();
+
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     String userName = "UNKNOWN-USER";
     if (callerUGI != null) {
@@ -1410,17 +1425,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
 
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated";
-      throw new AuthorizationException(msg);
-    }
-
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     String userName = callerUGI.getUserName();
     RMApp app = null;
@@ -1530,16 +1536,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response createNewApplication(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     NewApplication appId = createNewApplication();
     return Response.status(Status.OK).entity(appId).build();
@@ -1558,17 +1556,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     ApplicationSubmissionContext appContext =
         RMWebAppUtil.createAppSubmissionContext(newApp, conf);
@@ -1622,14 +1611,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     return appId;
   }
 
-  private UserGroupInformation createKerberosUserGroupInformation(
-      HttpServletRequest hsr) throws AuthorizationException, YarnException {
-
-    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated";
-      throw new AuthorizationException(msg);
-    }
+  private void createKerberosUserGroupInformation(HttpServletRequest hsr,
+      UserGroupInformation callerUGI)
+      throws AuthorizationException, YarnException {
 
     String authType = hsr.getAuthType();
     if (!KerberosAuthenticationHandler.TYPE.equalsIgnoreCase(authType)) {
@@ -1640,14 +1624,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
     if (hsr.getAttribute(
         DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE) != null) {
-      String msg =
-          "Delegation token operations cannot be carried out using delegation"
-              + " token authentication.";
+      String msg = "Delegation token operations cannot be carried out using "
+          + "delegation token authentication.";
       throw new YarnException(msg);
     }
-
-    callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
-    return callerUGI;
   }
 
   @POST
@@ -1659,10 +1639,12 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr) throws AuthorizationException,
       IOException, InterruptedException, Exception {
 
-    init();
-    UserGroupInformation callerUGI;
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     try {
-      callerUGI = createKerberosUserGroupInformation(hsr);
+      createKerberosUserGroupInformation(hsr, callerUGI);
+      callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
       return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
@@ -1678,10 +1660,12 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
 
-    init();
-    UserGroupInformation callerUGI;
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     try {
-      callerUGI = createKerberosUserGroupInformation(hsr);
+      createKerberosUserGroupInformation(hsr, callerUGI);
+      callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
       return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
@@ -1792,10 +1776,12 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
 
-    init();
-    UserGroupInformation callerUGI;
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
     try {
-      callerUGI = createKerberosUserGroupInformation(hsr);
+      createKerberosUserGroupInformation(hsr, callerUGI);
+      callerUGI.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (YarnException ye) {
       return Response.status(Status.FORBIDDEN).entity(ye.getMessage()).build();
     }
@@ -1868,16 +1854,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public Response createNewReservation(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     NewReservation reservationId = createNewReservation();
     return Response.status(Status.OK).entity(reservationId).build();
@@ -1916,16 +1894,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     final ReservationSubmissionRequest reservation =
         createReservationSubmissionRequest(resContext);
@@ -2013,16 +1983,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     final ReservationUpdateRequest reservation =
         createReservationUpdateRequest(resContext);
@@ -2111,16 +2073,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
 
-    init();
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, " + "user not authenticated");
-    }
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      String msg = "The default static user cannot carry out this operation.";
-      return Response.status(Status.FORBIDDEN).entity(msg).build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     final ReservationDeleteRequest reservation =
         createReservationDeleteRequest(resContext);
@@ -2167,7 +2121,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.END_TIME) @DefaultValue(DEFAULT_END_TIME) long endTime,
       @QueryParam(RMWSConsts.INCLUDE_RESOURCE) @DefaultValue(DEFAULT_INCLUDE_RESOURCE) boolean includeResourceAllocations,
       @Context HttpServletRequest hsr) throws Exception {
-    init();
+    initForReadableEndpoints();
 
     final ReservationListRequest request = ReservationListRequest.newInstance(
         queue, reservationId, startTime, endTime, includeResourceAllocations);
@@ -2212,7 +2166,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public AppTimeoutInfo getAppTimeout(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.TYPE) String type) throws AuthorizationException {
-    init();
+    initForReadableEndpoints();
     RMApp app = validateAppTimeoutRequest(hsr, appId);
 
     ApplicationTimeoutType appTimeoutType = parseTimeoutType(type);
@@ -2255,7 +2209,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppTimeoutsInfo getAppTimeouts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
-    init();
+    initForReadableEndpoints();
 
     RMApp app = validateAppTimeoutRequest(hsr, appId);
 
@@ -2312,19 +2266,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    init();
 
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      throw new AuthorizationException(
-          "Unable to obtain user name, user not authenticated");
-    }
-
-    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
-      return Response.status(Status.FORBIDDEN)
-          .entity("The default static user cannot carry out this operation.")
-          .build();
-    }
+    initForWritableEndpoints(callerUGI, false);
 
     String userName = callerUGI.getUserName();
     RMApp app = null;
@@ -2436,17 +2380,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public synchronized Response updateSchedulerConfiguration(
       final SchedConfUpdateInfo mutationInfo, @Context HttpServletRequest hsr)
       throws AuthorizationException, InterruptedException {
-    init();
 
     final UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr,
         true);
-    ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
-    if (aclsManager.areACLsEnabled()) {
-      if (callerUGI == null || !aclsManager.isAdmin(callerUGI)) {
-        String msg = "Only admins can carry out this operation.";
-        throw new ForbiddenException(msg);
-      }
-    }
+    initForWritableEndpoints(callerUGI, true);
 
     final ResourceScheduler scheduler = rm.getResourceScheduler();
     if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
