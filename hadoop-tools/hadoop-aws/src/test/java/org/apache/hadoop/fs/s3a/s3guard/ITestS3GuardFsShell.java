@@ -33,6 +33,12 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class ITestS3GuardFsShell extends AbstractS3ATestBase {
 
+  /**
+   * Run a shell command.
+   * @param args array of arguments.
+   * @return the exit code.
+   * @throws Exception any exception raised.
+   */
   private int fsShell(String[] args) throws Exception {
     FsShell shell = new FsShell(getConfiguration());
     try {
@@ -42,61 +48,97 @@ public class ITestS3GuardFsShell extends AbstractS3ATestBase {
     }
   }
 
-  private void assertShell(int expected, String[] args) throws Exception {
+  /**
+   * Execute a command and verify that it returned the specific exit code.
+   * @param expected expected value
+   * @param args array of arguments.
+   * @throws Exception any exception raised.
+   */
+  private void exec(int expected, String[] args) throws Exception {
     int result = fsShell(args);
     String argslist = Arrays.stream(args).collect(Collectors.joining(" "));
     assertEquals("hadoop fs " + argslist, expected, result);
   }
 
+  /**
+   * Execute a shell command expecting a result of 0.
+   * @param args array of arguments.
+   * @throws Exception any exception raised.
+   */
   private void exec(String[] args) throws Exception {
-    assertShell(0, args);
+    exec(0, args);
   }
 
+  /**
+   * Issue a mkdir without a trailing /
+   */
   @Test
-  public void testMkdirNormal() throws Throwable {
+  public void testMkdirNoTrailing() throws Throwable {
     Path dest = path("normal");
     try {
       String destStr = dest.toString();
-      exec(new String[]{"-mkdir", "-p", destStr});
-      exec(new String[]{"-test", "-d", destStr});
-      exec(new String[]{"-rmdir", destStr});
-      assertShell(1, new String[]{"-test", "-d", destStr});
+      mkdirs(destStr);
+      isDir(destStr);
+      rmdir(destStr);
+      isNotFound(destStr);
     } finally {
       getFileSystem().delete(dest, true);
     }
   }
+
+  /**
+   * Issue a mkdir with a trailing /
+   */
   @Test
-
   public void testMkdirTrailing() throws Throwable {
-    Path dest = path("trailing");
-    getFileSystem().delete(dest, true);
+    Path base = path("trailing");
+    getFileSystem().delete(base, true);
     try {
-      String destStr = dest.toString() + "/";
-      exec(new String[]{"-mkdir", "-p", destStr});
-/*
-      exec(new String[]{"-test", "-d", destStr});
-      exec(new String[]{"-rmdir", destStr});
-      assertShell(1, new String[]{"-test", "-d", destStr});
-*/
+      String destStr = base.toString() + "/";
+      mkdirs(destStr);
+      isDir(destStr);
+      isDir(base.toString());
+      rmdir(destStr);
+      isNotFound(destStr);
     } finally {
-      getFileSystem().delete(dest, true);
+      getFileSystem().delete(base, true);
     }
   }
 
+  /**
+   * Create the destination path and then call mkdir, expect it to still work.
+   */
+  @Test
   public void testMkdirTrailingExists() throws Throwable {
-    Path dest = path("trailingexists");
-    getFileSystem().mkdirs(dest);
+    Path base = path("trailingexists");
+    getFileSystem().mkdirs(base);
     try {
-      String destStr = dest.toString() + "/";
-      exec(new String[]{"-mkdir", "-p", destStr});
-/*
-      exec(new String[]{"-test", "-d", destStr});
-      exec(new String[]{"-rmdir", destStr});
-      assertShell(1, new String[]{"-test", "-d", destStr});
-*/
+      String destStr = base.toString() + "/";
+      // the path already exists
+      isDir(destStr);
+      mkdirs(destStr);
+      isDir(destStr);
+      rmdir(base.toString());
+      isNotFound(destStr);
     } finally {
-      getFileSystem().delete(dest, true);
+      getFileSystem().delete(base, true);
     }
+  }
+
+  private void isNotFound(final String destStr) throws Exception {
+    exec(1, new String[]{"-test", "-d", destStr});
+  }
+
+  private void mkdirs(final String destStr) throws Exception {
+    exec(new String[]{"-mkdir", "-p", destStr});
+  }
+
+  private void rmdir(final String destStr) throws Exception {
+    exec(new String[]{"-rmdir", destStr});
+  }
+
+  private void isDir(final String destStr) throws Exception {
+    exec(new String[]{"-test", "-d", destStr});
   }
 
 }
