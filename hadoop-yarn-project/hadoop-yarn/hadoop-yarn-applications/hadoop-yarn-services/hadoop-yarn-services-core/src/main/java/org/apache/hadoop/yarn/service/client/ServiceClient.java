@@ -294,6 +294,17 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     Service persistedService = ServiceApiUtil.loadService(fs, appName);
     List<Container> containersToUpgrade = ServiceApiUtil.
         getLiveContainers(persistedService, componentInstances);
+    ServiceApiUtil.validateInstancesUpgrade(containersToUpgrade);
+    return actionUpgrade(persistedService, containersToUpgrade);
+  }
+
+  @Override
+  public int actionUpgradeComponents(String appName,
+      List<String> components) throws IOException, YarnException {
+    checkAppExistOnHdfs(appName);
+    Service persistedService = ServiceApiUtil.loadService(fs, appName);
+    List<Container> containersToUpgrade = ServiceApiUtil
+        .validateAndResolveCompsUpgrade(persistedService, components);
     return actionUpgrade(persistedService, containersToUpgrade);
   }
 

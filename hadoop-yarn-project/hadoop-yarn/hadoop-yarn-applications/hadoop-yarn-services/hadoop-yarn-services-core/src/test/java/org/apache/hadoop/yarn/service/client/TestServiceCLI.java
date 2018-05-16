@@ -194,6 +194,18 @@ public class TestServiceCLI {
   }
 
   @Test (timeout = 180000)
+  public void testUpgradeComponents() throws Exception {
+    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
+        DummyServiceClient.class.getName());
+    cli.setConf(conf);
+    String[] args = {"app", "-upgrade", "app-1",
+        "-components", "comp1,comp2",
+        "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
+  @Test (timeout = 180000)
   public void testEnableFastLaunch() throws Exception {
     fs.getFileSystem().create(new Path(basedir.getAbsolutePath(), "test.jar"))
         .close();
@@ -289,6 +301,12 @@ public class TestServiceCLI {
     @Override
     public int actionUpgradeInstances(String appName,
         List<String> componentInstances) throws IOException, YarnException {
+      return 0;
+    }
+
+    @Override
+    public int actionUpgradeComponents(String appName, List<String> components)
+        throws IOException, YarnException {
       return 0;
     }
   }

@@ -34,7 +34,10 @@ import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A mock version of ServiceClient - This class is design
@@ -46,6 +49,7 @@ public class ServiceClientTest extends ServiceClient {
   private Configuration conf = new Configuration();
   private Service goodServiceStatus = buildLiveGoodService();
   private boolean initialized;
+  private Set<String> expectedInstances = new HashSet<>();
 
   public ServiceClientTest() {
     super();
@@ -61,11 +65,12 @@ public class ServiceClientTest extends ServiceClient {
 
   @Override
   public void stop() {
-    // This is needed for testing  API Server which use client to get status
+    // This is needed for testing  API Server which uses client to get status
     // and then perform an action.
   }
 
   public void forceStop() {
+    expectedInstances.clear();
     super.stop();
   }
 
@@ -144,15 +149,25 @@ public class ServiceClientTest extends ServiceClient {
   @Override
   public int actionUpgrade(Service service, List<Container> compInstances)
       throws IOException, YarnException {
-    if (service.getName() != null && service.getName().equals("jenkins")) {
-      return EXIT_SUCCESS;
-    } else {
-      throw new IllegalArgumentException();
+    if (service.getName() != null && service.getName().equals("jenkins")
+        && compInstances != null) {
+      Set<String> actualInstances = compInstances.stream().map(
+          Container::getComponentInstanceName).collect(Collectors.toSet());
+      if (actualInstances.equals(expectedInstances)) {
+        return EXIT_SUCCESS;
+      }
     }
+    throw new IllegalArgumentException();
   }
 
   Service getGoodServiceStatus() {
     return goodServiceStatus;
+  }
+
+  void setExpectedInstances(Set<String> instances) {
+    if (instances != null) {
+      expectedInstances.addAll(instances);
+    }
   }
 
   static Service buildGoodService() {
@@ -166,13 +181,15 @@ public class ServiceClientTest extends ServiceClient {
     resource.setCpus(1);
     resource.setMemory("2048");
     List<Component> components = new ArrayList<>();
-    Component c = new Component();
-    c.setName("jenkins");
-    c.setNumberOfContainers(2L);
-    c.setArtifact(artifact);
-    c.setLaunchCommand("");
-    c.setResource(resource);
-    components.add(c);
+    for (int i = 0; i < 2; i++) {
+      Component c = new Component();
+      c.setName("jenkins" + i);
+      c.setNumberOfContainers(2L);
+      c.setArtifact(artifact);
+      c.setLaunchCommand("");
+      c.setResource(resource);
+      components.add(c);
+    }
     service.setComponents(components);
     return service;
   }

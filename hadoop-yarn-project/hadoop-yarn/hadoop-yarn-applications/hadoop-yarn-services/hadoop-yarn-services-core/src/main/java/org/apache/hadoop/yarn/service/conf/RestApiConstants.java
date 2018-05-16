@@ -34,6 +34,8 @@ public interface RestApiConstants {
       "/component-instances/{component_instance_name}";
   String COMP_INSTANCES = "component-instances";
   String COMP_INSTANCES_PATH = SERVICE_PATH + "/" + COMP_INSTANCES;
+  String COMPONENTS = "components";
+  String COMPONENTS_PATH = SERVICE_PATH + "/" + COMPONENTS;
 
   // Query param
   String SERVICE_NAME = "service_name";

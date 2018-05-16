@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -161,6 +162,22 @@ public class ApiServiceClient extends AppAdminClient {
     api.append(url);
     api.append("/app/v1/services/").append(appName).append("/")
         .append(RestApiConstants.COMP_INSTANCES);
+    Configuration conf = getConfig();
+    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
+        "simple")) {
+      api.append("?user.name=" + UrlEncoded
+          .encodeString(System.getProperty("user.name")));
+    }
+    return api.toString();
+  }
+
+  private String getComponentsPath(String appName) throws IOException {
+    Preconditions.checkNotNull(appName);
+    String url = getRMWebAddress();
+    StringBuilder api = new StringBuilder();
+    api.append(url);
+    api.append("/app/v1/services/").append(appName).append("/")
+        .append(RestApiConstants.COMPONENTS);
     Configuration conf = getConfig();
     if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
         "simple")) {
@@ -536,7 +553,7 @@ public class ApiServiceClient extends AppAdminClient {
         container.setState(ContainerState.UPGRADING);
         toUpgrade[idx++] = container;
       }
-      String buffer = containerJsonSerde.toJson(toUpgrade);
+      String buffer = CONTAINER_JSON_SERDE.toJson(toUpgrade);
       ClientResponse response = getApiClient(getInstancesPath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
@@ -547,7 +564,35 @@ public class ApiServiceClient extends AppAdminClient {
     return result;
   }
 
-  private static JsonSerDeser<Container[]> containerJsonSerde =
+  @Override
+  public int actionUpgradeComponents(String appName, List<String> components)
+      throws IOException, YarnException {
+    int result;
+    Component[] toUpgrade = new Component[components.size()];
+    try {
+      int idx = 0;
+      for (String compName : components) {
+        Component component = new Component();
+        component.setName(compName);
+        component.setState(ComponentState.UPGRADING);
+        toUpgrade[idx++] = component;
+      }
+      String buffer = COMP_JSON_SERDE.toJson(toUpgrade);
+      ClientResponse response = getApiClient(getComponentsPath(appName))
+          .put(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Failed to upgrade components: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
+
+  private static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
       new JsonSerDeser<>(Container[].class,
-      PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
+  private static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
+      new JsonSerDeser<>(Component[].class,
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 }

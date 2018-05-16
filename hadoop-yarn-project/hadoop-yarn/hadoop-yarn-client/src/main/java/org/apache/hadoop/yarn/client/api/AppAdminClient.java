@@ -258,4 +258,16 @@ public abstract class AppAdminClient extends CompositeService {
   public abstract int actionUpgradeInstances(String appName,
       List<String> componentInstances) throws IOException, YarnException;
 
+
+  /**
+   * Upgrade components of a long running service.
+   *
+   * @param appName    the name of the application.
+   * @param components the name of the components.
+   */
+  @Public
+  @Unstable
+  public abstract int actionUpgradeComponents(String appName,
+      List<String> components) throws IOException, YarnException;
+
 }
