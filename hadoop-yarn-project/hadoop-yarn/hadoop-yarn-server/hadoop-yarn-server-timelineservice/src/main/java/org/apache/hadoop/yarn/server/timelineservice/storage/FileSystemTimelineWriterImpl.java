@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
@@ -86,6 +87,14 @@ public class FileSystemTimelineWriterImpl extends AbstractService
           response);
     }
     return response;
+  }
+
+  @Override
+  public TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineDomain domain)
+      throws IOException {
+    // TODO implementation for storing domain into FileSystem
+    return null;
   }
 
   private synchronized void write(String clusterId, String userId,
