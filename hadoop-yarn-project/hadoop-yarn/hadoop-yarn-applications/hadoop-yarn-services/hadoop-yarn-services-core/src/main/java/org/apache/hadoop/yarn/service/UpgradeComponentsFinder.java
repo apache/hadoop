@@ -100,55 +100,63 @@ public interface UpgradeComponentsFinder {
       targetDef.getComponents().forEach(component -> {
         Component currentComp = currentDef.getComponent(component.getName());
 
-        if (!Objects.equals(currentComp.getName(), component.getName())) {
+        if (currentComp != null) {
+          if (!Objects.equals(currentComp.getName(), component.getName())) {
+            throw new UnsupportedOperationException(
+                "changes to component name not supported by upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getDependencies(),
+              component.getDependencies())) {
+            throw new UnsupportedOperationException(
+                "changes to component dependencies not supported by upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getReadinessCheck(),
+              component.getReadinessCheck())) {
+            throw new UnsupportedOperationException(
+                "changes to component readiness check not supported by "
+                    + "upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getResource(),
+              component.getResource())) {
+
+            throw new UnsupportedOperationException(
+                "changes to component resource not supported by upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getRunPrivilegedContainer(),
+              component.getRunPrivilegedContainer())) {
+            throw new UnsupportedOperationException(
+                "changes to run privileged container not supported by upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getPlacementPolicy(),
+              component.getPlacementPolicy())) {
+            throw new UnsupportedOperationException(
+                "changes to component placement policy not supported by "
+                    + "upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getQuicklinks(),
+              component.getQuicklinks())) {
+            throw new UnsupportedOperationException(
+                "changes to component quick links not supported by upgrade");
+          }
+
+          if (!Objects.equals(currentComp.getArtifact(),
+              component.getArtifact()) || !Objects.equals(
+              currentComp.getLaunchCommand(), component.getLaunchCommand())
+              || !Objects.equals(currentComp.getConfiguration(),
+              component.getConfiguration())) {
+            targetComps.add(component);
+          }
+        } else{
           throw new UnsupportedOperationException(
-              "changes to component name not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getDependencies(),
-            component.getDependencies())) {
-          throw new UnsupportedOperationException(
-              "changes to component dependencies not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getReadinessCheck(),
-            component.getReadinessCheck())) {
-          throw new UnsupportedOperationException(
-              "changes to component readiness check not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getResource(),
-            component.getResource())) {
-          throw new UnsupportedOperationException(
-              "changes to component resource not supported by upgrade");
-        }
-
-
-        if (!Objects.equals(currentComp.getRunPrivilegedContainer(),
-            component.getRunPrivilegedContainer())) {
-          throw new UnsupportedOperationException(
-              "changes to run privileged container not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getPlacementPolicy(),
-            component.getPlacementPolicy())) {
-          throw new UnsupportedOperationException(
-              "changes to component placement policy not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getQuicklinks(),
-            component.getQuicklinks())) {
-          throw new UnsupportedOperationException(
-              "changes to component quick links not supported by upgrade");
-        }
-
-        if (!Objects.equals(currentComp.getArtifact(),
-            component.getArtifact()) ||
-            !Objects.equals(currentComp.getLaunchCommand(),
-                component.getLaunchCommand()) ||
-            !Objects.equals(currentComp.getConfiguration(),
-                component.getConfiguration())) {
-          targetComps.add(component);
+              "addition/deletion of components not supported by upgrade. "
+                  + "Could not find component " + component.getName() + " in "
+                  + "current service definition.");
         }
       });
       return targetComps;

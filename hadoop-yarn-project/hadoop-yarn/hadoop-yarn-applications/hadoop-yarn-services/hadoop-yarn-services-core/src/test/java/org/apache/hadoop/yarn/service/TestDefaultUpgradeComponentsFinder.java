@@ -23,7 +23,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests for {@link UpgradeComponentsFinder.DefaultUpgradeComponentsFinder}.
@@ -40,9 +43,32 @@ public class TestDefaultUpgradeComponentsFinder {
     targetDef.getComponents().forEach(x -> x.setArtifact(
         TestServiceManager.createTestArtifact("v1")));
 
-    Assert.assertEquals("all components need upgrade",
+    assertEquals("all components need upgrade",
         targetDef.getComponents(), finder.findTargetComponentSpecs(currentDef,
             targetDef));
+  }
+
+  @Test
+  public void testServiceUpgradeWithNewComponentAddition() {
+    Service currentDef = ServiceTestUtils.createExampleApplication();
+    Service targetDef = ServiceTestUtils.createExampleApplication();
+    Iterator<Component> targetComponentsIter =
+        targetDef.getComponents().iterator();
+    Component firstComponent = targetComponentsIter.next();
+    firstComponent.setName("newComponentA");
+
+    try {
+      finder.findTargetComponentSpecs(currentDef, targetDef);
+      Assert.fail("Expected error since component does not exist in service "
+          + "definition");
+    } catch (UnsupportedOperationException usoe) {
+      assertEquals(
+          "addition/deletion of components not supported by upgrade. Could "
+              + "not find component newComponentA in current service "
+              + "definition.",
+          usoe.getMessage());
+      //Expected
+    }
   }
 
   @Test
@@ -56,7 +82,7 @@ public class TestDefaultUpgradeComponentsFinder {
     List<Component> expected = new ArrayList<>();
     expected.add(targetDef.getComponents().get(0));
 
-    Assert.assertEquals("single components needs upgrade",
+    assertEquals("single components needs upgrade",
         expected, finder.findTargetComponentSpecs(currentDef,
             targetDef));
   }
