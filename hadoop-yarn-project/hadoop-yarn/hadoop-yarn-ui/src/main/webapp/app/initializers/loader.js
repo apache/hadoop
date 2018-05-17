@@ -75,6 +75,15 @@ function getTimeLineV1URL(rmhost, isHttpsSchemeEnabled) {
   return url;
 }
 
+function getSecurityURL(rmhost) {
+  var url = window.location.protocol + '//' +
+    (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
+
+  url += '/conf?name=hadoop.security.authentication';
+  Ember.Logger.log("Server security mode url is: " + url);
+  return url;
+}
+
 function updateConfigs(application) {
   var hostname = window.location.hostname;
   var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') + skipTrailingSlash(window.location.pathname);
@@ -154,6 +163,29 @@ function updateConfigs(application) {
     });
   } else {
     Ember.Logger.log("Timeline V1 Address: " + ENV.hosts.timelineV1WebAddress);
+    application.advanceReadiness();
+  }
+
+  if(!ENV.hosts.isSecurityEnabled) {
+    var isSecurityEnabled = "";
+    $.ajax({
+      type: 'GET',
+      dataType: 'json',
+      async: true,
+      context: this,
+      url: getSecurityURL(rmhost),
+      success: function(data) {
+        isSecurityEnabled = data.property.value;
+        ENV.hosts.isSecurityEnabled = isSecurityEnabled;
+        Ember.Logger.log("Security mode is : " + isSecurityEnabled);
+        application.advanceReadiness();
+      },
+      error: function() {
+        application.advanceReadiness();
+      }
+    });
+  } else {
+    Ember.Logger.log("Security mode is: " + ENV.hosts.isSecurityEnabled);
     application.advanceReadiness();
   }
 }
