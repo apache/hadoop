@@ -47,38 +47,6 @@ Test rest interface
     ${result} =     Execute on          datanode        curl -i -X DELETE ${COMMON_RESTHEADER} "http://localhost:9880/volume1"
                     Should contain      ${result}       200 OK
 
-Test ozone cli
-                    Execute on          datanode        ozone oz -createVolume http://ksm/hive -user bilbo -quota 100TB -root
-    ${result} =     Execute on          datanode        ozone oz -listVolume o3://ksm -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="hive")'
-                    Should contain      ${result}       createdOn
-                    Execute on          datanode        ozone oz -updateVolume http://ksm/hive -user bill -quota 10TB
-    ${result} =     Execute on          datanode        ozone oz -infoVolume http://ksm/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .owner | .name'
-                    Should Be Equal     ${result}       bill
-    ${result} =     Execute on          datanode        ozone oz -infoVolume http://ksm/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .quota | .size'
-                    Should Be Equal     ${result}       10
-                    Execute on          datanode        ozone oz -createBucket http://ksm/hive/bb1
-    ${result} =     Execute on          datanode        ozone oz -infoBucket http://ksm/hive/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .storageType'
-                    Should Be Equal     ${result}       DISK
-    ${result} =     Execute on          datanode        ozone oz -updateBucket http://ksm/hive/bb1 -addAcl user:frodo:rw,group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="samwise") | .type'
-                    Should Be Equal     ${result}       GROUP
-    ${result} =     Execute on          datanode        ozone oz -updateBucket http://ksm/hive/bb1 -removeAcl group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="frodo") | .type'
-                    Should Be Equal     ${result}       USER
-    ${result} =     Execute on          datanode        ozone oz -listBucket o3://ksm/hive/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
-                    Should Be Equal     ${result}       hive
-                    Execute on          datanode        ozone oz -putKey http://ksm/hive/bb1/key1 -file NOTICE.txt
-                    Execute on          datanode        rm -f NOTICE.txt.1
-                    Execute on          datanode        ozone oz -getKey http://ksm/hive/bb1/key1 -file NOTICE.txt.1
-                    Execute on          datanode        ls -l NOTICE.txt.1
-    ${result} =     Execute on          datanode        ozone oz -infoKey http://ksm/hive/bb1/key1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.keyName=="key1")'
-                    Should contain      ${result}       createdOn
-    ${result} =     Execute on          datanode        ozone oz -listKey o3://ksm/hive/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
-                    Should Be Equal     ${result}       key1
-                    Execute on          datanode        ozone oz -deleteKey http://ksm/hive/bb1/key1 -v
-                    Execute on          datanode        ozone oz -deleteBucket http://ksm/hive/bb1
-                    Execute on          datanode        ozone oz -deleteVolume http://ksm/hive -user bilbo
-
-
-
 Check webui static resources
     ${result} =			Execute on		scm		curl -s -I http://localhost:9876/static/bootstrap-3.0.2/js/bootstrap.min.js
 	 Should contain		${result}		200

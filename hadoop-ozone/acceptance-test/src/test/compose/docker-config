@@ -16,6 +16,7 @@
 
 CORE-SITE.XML_fs.defaultFS=hdfs://namenode:9000
 OZONE-SITE.XML_ozone.ksm.address=ksm
+OZONE-SITE.XML_ozone.ksm.http-address=ksm:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
