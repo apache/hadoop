@@ -35,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -109,6 +110,14 @@ public class TestNestedEncryptionZones {
     // Create test keys and EZs
     DFSTestUtil.createKey(TOP_EZ_KEY, cluster, conf);
     DFSTestUtil.createKey(NESTED_EZ_KEY, cluster, conf);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   @Test(timeout = 60000)
