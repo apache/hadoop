@@ -136,4 +136,25 @@ public class SCMNodeStat implements NodeStat {
   public int hashCode() {
     return Long.hashCode(capacity.get() ^ scmUsed.get() ^ remaining.get());
   }
+
+
+  /**
+   * Truncate to 4 digits since uncontrolled precision is some times
+   * counter intuitive to what users expect.
+   * @param value - double.
+   * @return double.
+   */
+  private double truncateDecimals(double value) {
+    final int multiplier = 10000;
+    return (double) ((long) (value * multiplier)) / multiplier;
+  }
+
+  /**
+   * get the scmUsed ratio
+   */
+  public  double getScmUsedratio() {
+    double scmUsedRatio =
+        truncateDecimals(getScmUsed().get() / (double) getCapacity().get());
+    return scmUsedRatio;
+  }
 }

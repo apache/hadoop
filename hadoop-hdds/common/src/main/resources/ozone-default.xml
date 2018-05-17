@@ -1057,5 +1057,24 @@
       HDDS service starts as part of datanode.
     </description>
   </property>
+  <property>
+    <name>hdds.datanode.storage.utilization.warning.threshold</name>
+    <value>0.75</value>
+    <tag>OZONE, SCM, MANAGEMENT</tag>
+    <description>
+      If a datanode overall storage utilization exceeds more than this
+      value, a warning will be logged while processing the nodeReport in SCM.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.datanode.storage.utilization.critical.threshold</name>
+    <value>0.95</value>
+    <tag>OZONE, SCM, MANAGEMENT</tag>
+    <description>
+      If a datanode overall storage utilization exceeds more than this
+      value, the datanode will be marked out of space.
+    </description>
+  </property>
 
 </configuration>

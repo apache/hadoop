@@ -244,6 +244,16 @@ public final class OzoneConfigKeys {
   public static final String HDDS_DATANODE_PLUGINS_KEY =
       "hdds.datanode.plugins";
 
+  public static final String
+      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD =
+      "hdds.datanode.storage.utilization.warning.threshold";
+  public static final double
+      HDDS_DATANODE_STORAGE_UTILIZATION_WARNING_THRESHOLD_DEFAULT = 0.95;
+  public static final String
+      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD =
+      "hdds.datanode.storage.utilization.critical.threshold";
+  public static final double
+      HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
   /**
    * There is no need to instantiate this class.
    */
