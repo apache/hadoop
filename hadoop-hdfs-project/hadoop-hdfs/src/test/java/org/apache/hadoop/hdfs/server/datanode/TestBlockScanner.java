@@ -124,6 +124,7 @@ public class TestBlockScanner {
       if (cluster != null) {
         for (int i = 0; i < numNameServices; i++) {
           dfs[i].delete(new Path("/test"), true);
+          dfs[i].close();
         }
         cluster.shutdown();
       }
@@ -816,6 +817,7 @@ public class TestBlockScanner {
           "in recentSuspectBlocks.", info.goodBlocks.contains(first));
       info.blocksScanned = 0;
     }
+    ctx.close();
   }
 
   /**
@@ -872,6 +874,7 @@ public class TestBlockScanner {
       info.blocksScanned = 0;
     }
     info.sem.release(1);
+    ctx.close();
   }
 
   /**
@@ -932,12 +935,12 @@ public class TestBlockScanner {
     os.write(bytes);
     os.hflush();
     os.close();
-    fs.close();
 
     // verify that volume scanner does not find bad blocks after append.
     waitForRescan(info, numExpectedBlocks);
 
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.INFO);
+    ctx.close();
   }
 
   private void waitForRescan(final TestScanResultHandler.Info info,
