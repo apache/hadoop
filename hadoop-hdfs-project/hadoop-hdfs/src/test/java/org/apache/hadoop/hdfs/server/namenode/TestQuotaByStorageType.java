@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
   import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
   import org.junit.Before;
   import org.junit.Test;
@@ -804,8 +803,7 @@ public class TestQuotaByStorageType {
    */
   @Test
   public void testStorageSpaceQuotaWithWarmPolicy() throws IOException {
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 
@@ -864,9 +862,7 @@ public class TestQuotaByStorageType {
    */
   @Test(timeout = 30000)
   public void testStorageSpaceQuotaWithRepFactor() throws IOException {
-
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 
@@ -911,8 +907,7 @@ public class TestQuotaByStorageType {
    */
   @Test(timeout = 30000)
   public void testStorageSpaceQuotaPerQuotaClear() throws IOException {
-    final Path testDir = new Path(
-        PathUtils.getTestPath(getClass()),
+    final Path testDir = new Path(dir,
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(testDir));
 
