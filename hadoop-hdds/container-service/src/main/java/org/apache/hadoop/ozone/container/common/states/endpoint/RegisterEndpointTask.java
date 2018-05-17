@@ -20,12 +20,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,18 +49,21 @@ public final class RegisterEndpointTask implements
   private final Configuration conf;
   private Future<EndpointStateMachine.EndPointStates> result;
   private DatanodeDetails datanodeDetails;
+  private final OzoneContainer datanodeContainerManager;
 
   /**
    * Creates a register endpoint task.
    *
    * @param rpcEndPoint - endpoint
    * @param conf - conf
+   * @param ozoneContainer - container
    */
   @VisibleForTesting
   public RegisterEndpointTask(EndpointStateMachine rpcEndPoint,
-      Configuration conf) {
+      Configuration conf, OzoneContainer ozoneContainer) {
     this.rpcEndPoint = rpcEndPoint;
     this.conf = conf;
+    this.datanodeContainerManager = ozoneContainer;
 
   }
 
@@ -97,9 +104,13 @@ public final class RegisterEndpointTask implements
     rpcEndPoint.lock();
     try {
 
+      ContainerReportsRequestProto contianerReport = datanodeContainerManager
+          .getContainerReport();
+      SCMNodeReport nodeReport = datanodeContainerManager.getNodeReport();
       // TODO : Add responses to the command Queue.
       SCMRegisteredCmdResponseProto response = rpcEndPoint.getEndPoint()
-          .register(datanodeDetails.getProtoBufMessage());
+          .register(datanodeDetails.getProtoBufMessage(), nodeReport,
+              contianerReport);
       Preconditions.checkState(UUID.fromString(response.getDatanodeUUID())
               .equals(datanodeDetails.getUuid()),
           "Unexpected datanode ID in the response.");
@@ -139,6 +150,7 @@ public final class RegisterEndpointTask implements
     private EndpointStateMachine endPointStateMachine;
     private Configuration conf;
     private DatanodeDetails datanodeDetails;
+    private OzoneContainer container;
 
     /**
      * Constructs the builder class.
@@ -179,6 +191,17 @@ public final class RegisterEndpointTask implements
       return this;
     }
 
+    /**
+     * Sets the ozonecontainer.
+     * @param ozoneContainer
+     * @return Builder
+     */
+    public Builder setOzoneContainer(OzoneContainer ozoneContainer) {
+      this.container = ozoneContainer;
+      return this;
+    }
+
+
     public RegisterEndpointTask build() {
       if (endPointStateMachine == null) {
         LOG.error("No endpoint specified.");
@@ -198,8 +221,14 @@ public final class RegisterEndpointTask implements
             "construct RegisterEndpoint task");
       }
 
+      if (container == null) {
+        LOG.error("Container is not specified");
+        throw new IllegalArgumentException("Container is not specified to " +
+            "constrict RegisterEndpoint task");
+      }
+
       RegisterEndpointTask task = new RegisterEndpointTask(this
-          .endPointStateMachine, this.conf);
+          .endPointStateMachine, this.conf, this.container);
       task.setDatanodeDetails(datanodeDetails);
       return task;
     }

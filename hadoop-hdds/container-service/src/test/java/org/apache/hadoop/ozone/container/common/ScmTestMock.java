@@ -37,16 +37,13 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -62,6 +59,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   // Map of datanode to containers
   private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
       new HashMap();
+  private Map<DatanodeDetails, SCMNodeReport> nodeReports = new HashMap<>();
   /**
    * Returns the number of heartbeats made to this class.
    *
@@ -200,9 +198,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   @Override
   public StorageContainerDatanodeProtocolProtos
       .SCMRegisteredCmdResponseProto register(
-          DatanodeDetailsProto datanodeDetailsProto)
+          DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
+          StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto
+              containerReportsRequestProto)
       throws IOException {
     rpcCount.incrementAndGet();
+    sendContainerReport(containerReportsRequestProto);
+    updateNodeReport(datanodeDetailsProto, nodeReport);
     sleepIfNeeded();
     return StorageContainerDatanodeProtocolProtos
         .SCMRegisteredCmdResponseProto
@@ -210,6 +212,50 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         .setDatanodeUUID(datanodeDetailsProto.getUuid()).setErrorCode(
             StorageContainerDatanodeProtocolProtos
                 .SCMRegisteredCmdResponseProto.ErrorCode.success).build();
+  }
+
+  /**
+   * Update nodeReport.
+   * @param datanodeDetailsProto
+   * @param nodeReport
+   */
+  public void updateNodeReport(DatanodeDetailsProto datanodeDetailsProto,
+      SCMNodeReport nodeReport) {
+    DatanodeDetails datanode = DatanodeDetails.getFromProtoBuf(
+        datanodeDetailsProto);
+    SCMNodeReport.Builder datanodeReport = SCMNodeReport.newBuilder();
+
+    List<SCMStorageReport> storageReports =
+        nodeReport.getStorageReportList();
+
+    for(SCMStorageReport report : storageReports) {
+      datanodeReport.addStorageReport(report);
+    }
+
+    nodeReports.put(datanode, datanodeReport.build());
+
+  }
+
+  /**
+   * Return the number of StorageReports of a datanode.
+   * @param datanodeDetails
+   * @return count of containers of a datanode
+   */
+  public int getNodeReportsCount(DatanodeDetails datanodeDetails) {
+    return nodeReports.get(datanodeDetails).getStorageReportCount();
+  }
+
+  /**
+   * Returns the number of containers of a datanode.
+   * @param datanodeDetails
+   * @return count of storage reports of a datanode
+   */
+  public int getContainerCountsForDatanode(DatanodeDetails datanodeDetails) {
+    Map<String, ContainerInfo> cr = nodeContainers.get(datanodeDetails);
+    if(cr != null) {
+      return cr.size();
+    }
+    return 0;
   }
 
   /**

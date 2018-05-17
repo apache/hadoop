@@ -51,9 +51,11 @@ public interface StorageContainerNodeProtocol {
   /**
    * Register the node if the node finds that it is not registered with any SCM.
    * @param datanodeDetails DatanodeDetails
+   * @param nodeReport SCMNodeReport
    * @return  SCMHeartbeatResponseProto
    */
-  SCMCommand register(DatanodeDetailsProto datanodeDetails);
+  SCMCommand register(DatanodeDetailsProto datanodeDetails, SCMNodeReport
+      nodeReport);
 
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.

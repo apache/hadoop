@@ -146,6 +146,8 @@ message SCMStorageReport {
 
 message SCMRegisterRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
+  required SCMNodeReport nodeReport = 2;
+  required ContainerReportsRequestProto containerReport = 3;
 }
 
 /**

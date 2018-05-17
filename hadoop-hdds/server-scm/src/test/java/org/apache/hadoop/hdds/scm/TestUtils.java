@@ -16,6 +16,10 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import org.apache.hadoop.hdds.protocol
+    .proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 
@@ -46,8 +50,25 @@ public final class TestUtils {
   public static DatanodeDetails getDatanodeDetails(SCMNodeManager nodeManager,
       String uuid) {
     DatanodeDetails datanodeDetails = getDatanodeDetails(uuid);
-    nodeManager.register(datanodeDetails.getProtoBufMessage());
+    nodeManager.register(datanodeDetails.getProtoBufMessage(), null);
     return datanodeDetails;
+  }
+
+  /**
+   * Create Node Report object.
+   * @return SCMNodeReport
+   */
+  public static SCMNodeReport createNodeReport() {
+    SCMNodeReport.Builder nodeReport = SCMNodeReport.newBuilder();
+    for (int i = 0; i < 1; i++) {
+      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+      nodeReport.addStorageReport(i, srb.setStorageUuid("disk")
+          .setCapacity(100)
+          .setScmUsed(10)
+          .setRemaining(90)
+          .build());
+    }
+    return nodeReport.build();
   }
 
   /**

@@ -55,12 +55,14 @@ import org.apache.hadoop.ozone.container.common.states.endpoint
     .RegisterEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint
     .VersionEndpointTask;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -75,6 +77,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.ozone.container.common.ContainerTestUtils
     .createEndpoint;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests the endpoints.
@@ -208,11 +211,17 @@ public class TestEndPoint {
              createEndpoint(
                  SCMTestUtils.getConf(), serverAddress, 1000)) {
       SCMRegisteredCmdResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .register(nodeToRegister.getProtoBufMessage());
+          .register(nodeToRegister.getProtoBufMessage(),
+              TestUtils.createNodeReport(),
+              createContainerReport(10, nodeToRegister));
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(nodeToRegister.getUuidString(),
           responseProto.getDatanodeUUID());
       Assert.assertNotNull(responseProto.getClusterID());
+      Assert.assertEquals(10, scmServerImpl.
+          getContainerCountsForDatanode(nodeToRegister));
+      Assert.assertEquals(1, scmServerImpl.getNodeReportsCount(
+          nodeToRegister));
     }
   }
 
@@ -223,8 +232,13 @@ public class TestEndPoint {
         createEndpoint(conf,
             scmAddress, rpcTimeout);
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.REGISTER);
+    OzoneContainer ozoneContainer = mock(OzoneContainer.class);
+    when(ozoneContainer.getNodeReport()).thenReturn(TestUtils
+        .createNodeReport());
+    when(ozoneContainer.getContainerReport()).thenReturn(
+        createContainerReport(10, null));
     RegisterEndpointTask endpointTask =
-        new RegisterEndpointTask(rpcEndPoint, conf);
+        new RegisterEndpointTask(rpcEndPoint, conf, ozoneContainer);
     if (!clearDatanodeDetails) {
       DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
       endpointTask.setDatanodeDetails(datanodeDetails);
@@ -419,7 +433,8 @@ public class TestEndPoint {
              createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
       ContainerReportsResponseProto responseProto = rpcEndPoint
-          .getEndPoint().sendContainerReport(createContainerReport(count));
+          .getEndPoint().sendContainerReport(createContainerReport(count,
+              null));
       Assert.assertNotNull(responseProto);
     }
     Assert.assertEquals(1, scmServerImpl.getContainerReportsCount());
@@ -430,7 +445,8 @@ public class TestEndPoint {
     Assert.assertEquals(expectedBytesUsed, scmServerImpl.getBytesUsed());
   }
 
-  private ContainerReportsRequestProto createContainerReport(int count) {
+  private ContainerReportsRequestProto createContainerReport(
+      int count, DatanodeDetails datanodeDetails) {
     StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto.Builder
         reportsBuilder = StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.newBuilder();
@@ -448,8 +464,12 @@ public class TestEndPoint {
 
       reportsBuilder.addReports(report.getProtoBufMessage());
     }
-    reportsBuilder.setDatanodeDetails(getDatanodeDetails()
-        .getProtoBufMessage());
+    if(datanodeDetails == null) {
+      reportsBuilder.setDatanodeDetails(getDatanodeDetails()
+          .getProtoBufMessage());
+    } else {
+      reportsBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage());
+    }
     reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.reportType.fullReport);
     return reportsBuilder.build();

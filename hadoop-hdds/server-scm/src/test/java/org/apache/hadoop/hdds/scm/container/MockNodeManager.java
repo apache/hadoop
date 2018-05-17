@@ -373,10 +373,12 @@ public class MockNodeManager implements NodeManager {
    * SCM.
    *
    * @param datanodeDetails DatanodeDetailsProto
+   * @param nodeReport SCMNodeReport
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(HddsProtos.DatanodeDetailsProto datanodeDetails) {
+  public SCMCommand register(HddsProtos.DatanodeDetailsProto datanodeDetails,
+                             SCMNodeReport nodeReport) {
     return null;
   }
 

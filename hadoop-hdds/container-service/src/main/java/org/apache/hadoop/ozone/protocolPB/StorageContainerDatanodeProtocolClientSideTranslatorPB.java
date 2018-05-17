@@ -152,14 +152,20 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    * Register Datanode.
    *
    * @param datanodeDetailsProto - Datanode Details
+   * @param nodeReport - Node Report.
+   * @param containerReportsRequestProto - Container Reports.
    * @return SCM Command.
    */
   @Override
   public SCMRegisteredCmdResponseProto register(
-      DatanodeDetailsProto datanodeDetailsProto) throws IOException {
+      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
+      ContainerReportsRequestProto containerReportsRequestProto)
+      throws IOException {
     SCMRegisterRequestProto.Builder req =
         SCMRegisterRequestProto.newBuilder();
     req.setDatanodeDetails(datanodeDetailsProto);
+    req.setContainerReport(containerReportsRequestProto);
+    req.setNodeReport(nodeReport);
     final SCMRegisteredCmdResponseProto response;
     try {
       response = rpcProxy.register(NULL_RPC_CONTROLLER, req.build());

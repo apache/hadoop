@@ -279,11 +279,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Register the node if the node finds that it is not registered with any SCM.
    *
    * @param dd DatanodeDetailsProto
-   *
+   * @param nodeReport SCMNodeReport
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(HddsProtos.DatanodeDetailsProto dd) {
+  public SCMCommand register(HddsProtos.DatanodeDetailsProto dd,
+                             SCMNodeReport nodeReport) {
     return null;
   }
 

@@ -35,6 +35,8 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
@@ -167,11 +169,19 @@ public class SCMDatanodeProtocolServer implements
 
   @Override
   public SCMRegisteredCmdResponseProto register(
-      HddsProtos.DatanodeDetailsProto datanodeDetails)
+      HddsProtos.DatanodeDetailsProto datanodeDetails, SCMNodeReport nodeReport,
+      ContainerReportsRequestProto containerReportsRequestProto)
       throws IOException {
     // TODO : Return the list of Nodes that forms the SCM HA.
-    return getRegisteredResponse(scm.getScmNodeManager()
-        .register(datanodeDetails));
+    RegisteredCommand registeredCommand = (RegisteredCommand) scm
+        .getScmNodeManager().register(datanodeDetails, nodeReport);
+    SCMCmdType type = registeredCommand.getType();
+    if (type == SCMCmdType.registeredCommand && registeredCommand.getError()
+        == SCMRegisteredCmdResponseProto.ErrorCode.success) {
+      scm.getScmContainerManager().processContainerReports(
+          containerReportsRequestProto);
+    }
+    return getRegisteredResponse(registeredCommand);
   }
 
   @VisibleForTesting

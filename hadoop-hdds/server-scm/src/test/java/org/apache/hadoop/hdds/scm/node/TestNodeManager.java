@@ -282,7 +282,8 @@ public class TestNodeManager {
         100, TimeUnit.MILLISECONDS);
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     try (SCMNodeManager nodemanager = createNodeManager(conf)) {
-      nodemanager.register(datanodeDetails.getProtoBufMessage());
+      nodemanager.register(datanodeDetails.getProtoBufMessage(),
+          TestUtils.createNodeReport());
       List<SCMCommand> command = nodemanager.sendHeartbeat(
           datanodeDetails.getProtoBufMessage(),
           null, reportState);

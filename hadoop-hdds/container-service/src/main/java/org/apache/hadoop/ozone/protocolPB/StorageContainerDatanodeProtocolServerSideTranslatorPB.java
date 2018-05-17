@@ -30,6 +30,8 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -69,7 +71,12 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       register(RpcController controller, StorageContainerDatanodeProtocolProtos
       .SCMRegisterRequestProto request) throws ServiceException {
     try {
-      return impl.register(request.getDatanodeDetails());
+      ContainerReportsRequestProto containerRequestProto = null;
+      SCMNodeReport scmNodeReport = null;
+      containerRequestProto = request.getContainerReport();
+      scmNodeReport = request.getNodeReport();
+      return impl.register(request.getDatanodeDetails(), scmNodeReport,
+          containerRequestProto);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -739,11 +739,13 @@ public class SCMNodeManager
    *                   This function generates and assigns new datanode ID
    *                   for the datanode. This allows SCM to be run independent
    *                   of Namenode if required.
+   * @param nodeReport NodeReport.
    *
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(DatanodeDetailsProto datanodeDetailsProto) {
+  public SCMCommand register(DatanodeDetailsProto datanodeDetailsProto,
+                             SCMNodeReport nodeReport) {
 
     String hostname = null;
     String ip = null;
@@ -788,6 +790,8 @@ public class SCMNodeManager
           .setErrorCode(ErrorCode.errorNodeNotPermitted)
           .build();
     }
+    // Updating Node Report, as registration is successful
+    updateNodeStat(datanodeDetails.getUuid(), nodeReport);
     LOG.info("Data node with ID: {} Registered.",
         datanodeDetails.getUuid());
     RegisteredCommand.Builder builder =
