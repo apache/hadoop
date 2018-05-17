@@ -212,7 +212,7 @@ public class TestDFSOutputStream {
       dfsCluster.waitActive();
 
       final FSDataOutputStream os = dfsCluster.getFileSystem()
-          .create(new Path(baseDir.getAbsolutePath(), "testPreventOverflow"));
+          .create(new Path(baseDir.getPath(), "testPreventOverflow"));
       final DFSOutputStream dos = (DFSOutputStream) Whitebox
           .getInternalState(os, "wrappedStream");
 
