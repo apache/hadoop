@@ -67,15 +67,14 @@ public class TestStagingDirectoryOutputCommitter
     pathExists(mockS3, OUTPUT_PATH);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
+    // this should fail
     intercept(PathExistsException.class,
         InternalCommitterConstants.E_DEST_EXISTS,
         "Should throw an exception because the path exists",
         () -> committer.setupJob(getJob()));
 
-    intercept(PathExistsException.class,
-        InternalCommitterConstants.E_DEST_EXISTS,
-        "Should throw an exception because the path exists",
-        () -> committer.commitJob(getJob()));
+    // but there are no checks in job commit (HADOOP-15469)
+    committer.commitJob(getJob());
 
     reset(mockS3);
     pathDoesNotExist(mockS3, OUTPUT_PATH);
@@ -87,7 +86,6 @@ public class TestStagingDirectoryOutputCommitter
     reset(mockS3);
     pathDoesNotExist(mockS3, OUTPUT_PATH);
     committer.commitJob(getJob());
-    verifyExistenceChecked(mockS3, OUTPUT_PATH);
     verifyCompletion(mockS3);
   }
 

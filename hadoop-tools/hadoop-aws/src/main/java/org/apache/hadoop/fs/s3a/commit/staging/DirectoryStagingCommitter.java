@@ -93,11 +93,8 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     Configuration fsConf = fs.getConf();
     switch (getConflictResolutionMode(context, fsConf)) {
     case FAIL:
-      // this was checked in setupJob, but this avoids some cases where
-      // output was created while the job was processing
-      if (fs.exists(outputPath)) {
-        throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
-      }
+      // this was checked in setupJob; temporary files may have been
+      // created, so do not check again.
       break;
     case APPEND:
       // do nothing
