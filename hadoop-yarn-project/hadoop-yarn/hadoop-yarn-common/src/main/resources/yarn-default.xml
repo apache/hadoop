@@ -3036,6 +3036,15 @@
   </property>
 
   <property>
+    <description>Define how many aggregated log files per application per NM
+    we can have in remote file system. By default, the total number of
+    aggregated log files per application per NM is 30.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.num-log-files-per-app</name>
+    <value>30</value>
+  </property>
+
+  <property>
     <description>
     Enable/disable intermediate-data encryption at YARN level. For now,
     this only is used by the FileSystemRMStateStore to setup right
