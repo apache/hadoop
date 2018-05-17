@@ -560,8 +560,6 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setFactor(args.getFactor())
-        .setType(args.getType())
         .setDataSize(args.getDataSize()).build();
     req.setKeyArgs(keyArgs);
     req.setClientID(clientID);

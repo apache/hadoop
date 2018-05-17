@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.ksm.helpers;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.util.Time;
 
@@ -39,10 +40,13 @@ public final class KsmKeyInfo {
   private List<KsmKeyLocationInfoGroup> keyLocationVersions;
   private final long creationTime;
   private long modificationTime;
+  private HddsProtos.ReplicationType type;
+  private HddsProtos.ReplicationFactor factor;
 
   private KsmKeyInfo(String volumeName, String bucketName, String keyName,
       List<KsmKeyLocationInfoGroup> versions, long dataSize,
-      long creationTime, long modificationTime) {
+      long creationTime, long modificationTime, HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor factor) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -61,6 +65,8 @@ public final class KsmKeyInfo {
     this.keyLocationVersions = versions;
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
+    this.factor = factor;
+    this.type = type;
   }
 
   public String getVolumeName() {
@@ -69,6 +75,14 @@ public final class KsmKeyInfo {
 
   public String getBucketName() {
     return bucketName;
+  }
+
+  public HddsProtos.ReplicationType getType() {
+    return type;
+  }
+
+  public HddsProtos.ReplicationFactor getFactor() {
+    return factor;
   }
 
   public String getKeyName() {
@@ -170,6 +184,8 @@ public final class KsmKeyInfo {
     private List<KsmKeyLocationInfoGroup> ksmKeyLocationInfoGroups;
     private long creationTime;
     private long modificationTime;
+    private HddsProtos.ReplicationType type;
+    private HddsProtos.ReplicationFactor factor;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -207,10 +223,20 @@ public final class KsmKeyInfo {
       return this;
     }
 
+    public Builder setReplicationFactor(HddsProtos.ReplicationFactor factor) {
+      this.factor = factor;
+      return this;
+    }
+
+    public Builder setReplicationType(HddsProtos.ReplicationType type) {
+      this.type = type;
+      return this;
+    }
+
     public KsmKeyInfo build() {
       return new KsmKeyInfo(
           volumeName, bucketName, keyName, ksmKeyLocationInfoGroups,
-          dataSize, creationTime, modificationTime);
+          dataSize, creationTime, modificationTime, type, factor);
     }
   }
 
@@ -222,6 +248,8 @@ public final class KsmKeyInfo {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(dataSize)
+        .setFactor(factor)
+        .setType(type)
         .addAllKeyLocationList(keyLocationVersions.stream()
             .map(KsmKeyLocationInfoGroup::getProtobuf)
             .collect(Collectors.toList()))
@@ -241,7 +269,9 @@ public final class KsmKeyInfo {
             .collect(Collectors.toList()),
         keyInfo.getDataSize(),
         keyInfo.getCreationTime(),
-        keyInfo.getModificationTime());
+        keyInfo.getModificationTime(),
+        keyInfo.getType(),
+        keyInfo.getFactor());
   }
 
 }

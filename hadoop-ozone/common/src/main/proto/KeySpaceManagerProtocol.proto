@@ -249,10 +249,12 @@ message KeyInfo {
     required string bucketName = 2;
     required string keyName = 3;
     required uint64 dataSize = 4;
-    repeated KeyLocationList keyLocationList = 5;
-    required uint64 creationTime = 6;
-    required uint64 modificationTime = 7;
-    optional uint64 latestVersion = 8;
+    required hadoop.hdds.ReplicationType type = 5;
+    required hadoop.hdds.ReplicationFactor factor = 6;
+    repeated KeyLocationList keyLocationList = 7;
+    required uint64 creationTime = 8;
+    required uint64 modificationTime = 9;
+    optional uint64 latestVersion = 10;
 }
 
 message LocateKeyRequest {

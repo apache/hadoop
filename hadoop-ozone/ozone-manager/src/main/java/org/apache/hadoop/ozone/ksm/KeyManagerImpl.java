@@ -173,18 +173,6 @@ public class KeyManagerImpl implements KeyManager {
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
-    ReplicationFactor factor = args.getFactor();
-    ReplicationType type = args.getType();
-
-    // If user does not specify a replication strategy or
-    // replication factor, KSM will use defaults.
-    if(factor == null) {
-      factor = useRatis ? ReplicationFactor.THREE: ReplicationFactor.ONE;
-    }
-
-    if(type == null) {
-      type = useRatis ? ReplicationType.RATIS : ReplicationType.STAND_ALONE;
-    }
 
     try {
       validateBucket(volumeName, bucketName);
@@ -198,10 +186,11 @@ public class KeyManagerImpl implements KeyManager {
         throw new KSMException("Open Key not found",
             KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
       }
-      AllocatedBlock allocatedBlock =
-          scmBlockClient.allocateBlock(scmBlockSize, type, factor, ksmId);
       KsmKeyInfo keyInfo =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(keyData));
+      AllocatedBlock allocatedBlock =
+          scmBlockClient.allocateBlock(scmBlockSize, keyInfo.getType(),
+              keyInfo.getFactor(), ksmId);
       KsmKeyLocationInfo info = new KsmKeyLocationInfo.Builder()
           .setBlockID(allocatedBlock.getBlockID())
           .setShouldCreateContainer(allocatedBlock.getCreateContainer())
@@ -293,6 +282,8 @@ public class KeyManagerImpl implements KeyManager {
             .setCreationTime(currentTime)
             .setModificationTime(currentTime)
             .setDataSize(size)
+            .setReplicationType(type)
+            .setReplicationFactor(factor)
             .build();
         openVersion = 0;
       }
