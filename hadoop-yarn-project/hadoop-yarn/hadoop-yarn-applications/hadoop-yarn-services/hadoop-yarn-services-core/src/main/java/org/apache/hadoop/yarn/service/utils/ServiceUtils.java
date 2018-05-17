@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
@@ -570,5 +571,22 @@ public final class ServiceUtils {
 
     // Fallback to querying the default hostname as we did before.
     return InetAddress.getLocalHost().getCanonicalHostName();
+  }
+
+  /**
+   * Process termination handler - exist with specified exit code after
+   * waiting a while for ATS state to be in sync.
+   */
+  public static class ProcessTerminationHandler {
+    public void terminate(int exitCode) {
+      // Sleep for 5 seconds in hope that the state can be recorded in ATS.
+      // in case there's a client polling the comp state, it can be notified.
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        log.info("Interrupted on sleep while exiting.", e);
+      }
+      ExitUtil.terminate(exitCode);
+    }
   }
 }

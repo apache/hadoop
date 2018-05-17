@@ -49,6 +49,7 @@ public class TestCGroupsCpuResourceHandlerImpl {
   @Before
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
+    when(mockCGroupsHandler.getPathForCGroup(any(), any())).thenReturn(".");
     cGroupsCpuResourceHandler =
         new CGroupsCpuResourceHandlerImpl(mockCGroupsHandler);
 

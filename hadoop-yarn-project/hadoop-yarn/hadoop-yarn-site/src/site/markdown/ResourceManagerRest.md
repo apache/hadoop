@@ -1130,7 +1130,7 @@ Response Body:
 | type | string | Scheduler type - fairScheduler |
 | rootQueue | The root queue object | A collection of root queue resources |
 
-### Elements of the root queue object
+### Elements of all queue objects
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1142,17 +1142,23 @@ Response Body:
 | clusterResources | A single resource object | The capacity of the cluster |
 | queueName | string | The name of the queue |
 | schedulingPolicy | string | The name of the scheduling policy used by the queue |
-| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no childQueues. |
+| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no childQueues or is a leaf queue. |
+| allocatedContainers | int | The number of allocated containers |
+| demandResources | A single resource object | The resources that have been requested by containers in this queue which have not been fulfilled by the scheduler |
+| pendingContainers | int | The number of pending containers |
+| preemptable | boolean | true if containers in this queue can be preempted |
+| reservedContainers | int | The number of reserved containers |
+| steadyFairResources | A single resource object | The steady fair share for the queue |
 
-### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'childQueues' plus the following
+### Additional elements of leaf queue objects (with the exception of the 'childQueues' property)
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| type | string | type of the queue - fairSchedulerLeafQueueInfo |
+| type | string | The type of the queue - fairSchedulerLeafQueueInfo |
 | numActiveApps | int | The number of active applications in this queue |
 | numPendingApps | int | The number of pending applications in this queue |
 
-### Elements of the resource object for resourcesUsed in queues
+### Elements of the (cluster/demand/fair/max/min/used/*)Resources object in queues
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1181,12 +1187,18 @@ Response Body:
     "scheduler": {
         "schedulerInfo": {
             "rootQueue": {
+                "allocatedContainers": 0,
                 "childQueues": {
                     "queue": [
                         {
+                            "allocatedContainers": 0,
                             "clusterResources": {
                                 "memory": 8192,
                                 "vCores": 8
+                            },
+                            "demandResources": {
+                                "memory": 0,
+                                "vCores": 0
                             },
                             "fairResources": {
                                 "memory": 0,
@@ -1203,8 +1215,15 @@ Response Body:
                             },
                             "numActiveApps": 0,
                             "numPendingApps": 0,
+                            "pendingContainers": 0,
+                            "preemptable": true,
                             "queueName": "root.default",
+                            "reservedContainers": 0,
                             "schedulingPolicy": "fair",
+                            "steadyFairResources": {
+                                "memory": 4096,
+                                "vCores": 0
+                            },
                             "type": "fairSchedulerLeafQueueInfo",
                             "usedResources": {
                                 "memory": 0,
@@ -1212,12 +1231,18 @@ Response Body:
                             }
                         },
                         {
+                            "allocatedContainers": 0,
                             "childQueues": {
                                 "queue": [
                                     {
+                                        "allocatedContainers": 0,
                                         "clusterResources": {
                                             "memory": 8192,
-                                           "vCores": 8
+                                            "vCores": 8
+                                        },
+                                        "demandResources": {
+                                            "memory": 0,
+                                            "vCores": 0
                                         },
                                         "fairResources": {
                                             "memory": 10000,
@@ -1234,8 +1259,15 @@ Response Body:
                                         },
                                         "numActiveApps": 0,
                                         "numPendingApps": 0,
+                                        "pendingContainers": 0,
+                                        "preemptable": true,
                                         "queueName": "root.sample_queue.sample_sub_queue",
+                                        "reservedContainers": 0,
                                         "schedulingPolicy": "fair",
+                                        "steadyFairResources": {
+                                            "memory": 4096,
+                                            "vCores": 0
+                                        },
                                         "type": "fairSchedulerLeafQueueInfo",
                                         "usedResources": {
                                             "memory": 0,
@@ -1247,6 +1279,10 @@ Response Body:
                             "clusterResources": {
                                 "memory": 8192,
                                 "vCores": 8
+                            },
+                            "demandResources": {
+                                "memory": 0,
+                                "vCores": 0
                             },
                             "fairResources": {
                                 "memory": 10000,
@@ -1261,18 +1297,29 @@ Response Body:
                                 "memory": 10000,
                                 "vCores": 0
                             },
+                            "pendingContainers": 0,
+                            "preemptable": true,
                             "queueName": "root.sample_queue",
+                            "reservedContainers": 0,
                             "schedulingPolicy": "fair",
+                            "steadyFairResources": {
+                                "memory": 4096,
+                                "vCores": 0
+                            },
                             "usedResources": {
                                 "memory": 0,
                                 "vCores": 0
                             }
                         }
-                    ],
+                    ]
                 },
                 "clusterResources": {
                     "memory": 8192,
                     "vCores": 8
+                },
+                "demandResources": {
+                    "memory": 0,
+                    "vCores": 0
                 },
                 "fairResources": {
                     "memory": 8192,
@@ -1287,8 +1334,15 @@ Response Body:
                     "memory": 0,
                     "vCores": 0
                 },
+                "pendingContainers": 0,
+                "preemptable": true,
                 "queueName": "root",
+                "reservedContainers": 0,
                 "schedulingPolicy": "fair",
+                "steadyFairResources": {
+                    "memory": 8192,
+                    "vCores": 8
+                },
                 "usedResources": {
                     "memory": 0,
                     "vCores": 0
@@ -1334,6 +1388,14 @@ Response Body:
         <memory>0</memory>
         <vCores>0</vCores>
       </usedResources>
+      <demandResources>
+        <memory>0</memory>
+        <vCores>0</vCores>
+      </demandResources>
+      <steadyFairResources>
+        <memory>8192</memory>
+        <vCores>8</vCores>
+      </steadyFairResources>
       <fairResources>
         <memory>8192</memory>
         <vCores>8</vCores>
@@ -1342,8 +1404,12 @@ Response Body:
         <memory>8192</memory>
         <vCores>8</vCores>
       </clusterResources>
+      <pendingContainers>0</pendingContainers>
+      <allocatedContainers>0</allocatedContainers>
+      <reservedContainers>0</reservedContainers>
       <queueName>root</queueName>
       <schedulingPolicy>fair</schedulingPolicy>
+      <preemptable>true</preemptable>
       <childQueues>
         <queue xsi:type="fairSchedulerLeafQueueInfo">
           <maxApps>2147483647</maxApps>
@@ -1359,6 +1425,14 @@ Response Body:
             <memory>0</memory>
             <vCores>0</vCores>
           </usedResources>
+          <demandResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </demandResources>
+          <steadyFairResources>
+            <memory>4096</memory>
+            <vCores>0</vCores>
+          </steadyFairResources>
           <fairResources>
             <memory>0</memory>
             <vCores>0</vCores>
@@ -1367,15 +1441,19 @@ Response Body:
             <memory>8192</memory>
             <vCores>8</vCores>
           </clusterResources>
+          <pendingContainers>0</pendingContainers>
+          <allocatedContainers>0</allocatedContainers>
+          <reservedContainers>0</reservedContainers>
           <queueName>root.default</queueName>
           <schedulingPolicy>fair</schedulingPolicy>
+          <preemptable>true</preemptable>
           <numPendingApps>0</numPendingApps>
           <numActiveApps>0</numActiveApps>
         </queue>
         <queue>
           <maxApps>50</maxApps>
           <minResources>
-            <memory>10000</memory>
+            <memory>0</memory>
             <vCores>0</vCores>
           </minResources>
           <maxResources>
@@ -1386,6 +1464,14 @@ Response Body:
             <memory>0</memory>
             <vCores>0</vCores>
           </usedResources>
+          <demandResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </demandResources>
+          <steadyFairResources>
+            <memory>4096</memory>
+            <vCores>0</vCores>
+          </steadyFairResources>
           <fairResources>
             <memory>10000</memory>
             <vCores>0</vCores>
@@ -1394,8 +1480,12 @@ Response Body:
             <memory>8192</memory>
             <vCores>8</vCores>
           </clusterResources>
+          <pendingContainers>0</pendingContainers>
+          <allocatedContainers>0</allocatedContainers>
+          <reservedContainers>0</reservedContainers>
           <queueName>root.sample_queue</queueName>
           <schedulingPolicy>fair</schedulingPolicy>
+          <preemptable>true</preemptable>
           <childQueues>
             <queue xsi:type="fairSchedulerLeafQueueInfo">
               <maxApps>2147483647</maxApps>
@@ -1411,6 +1501,14 @@ Response Body:
                 <memory>0</memory>
                 <vCores>0</vCores>
               </usedResources>
+              <demandResources>
+                <memory>0</memory>
+                <vCores>0</vCores>
+              </demandResources>
+              <steadyFairResources>
+                <memory>4096</memory>
+                <vCores>0</vCores>
+              </steadyFairResources>
               <fairResources>
                 <memory>10000</memory>
                 <vCores>0</vCores>
@@ -1419,8 +1517,12 @@ Response Body:
                 <memory>8192</memory>
                 <vCores>8</vCores>
               </clusterResources>
+              <pendingContainers>0</pendingContainers>
+              <allocatedContainers>0</allocatedContainers>
+              <reservedContainers>0</reservedContainers>
               <queueName>root.sample_queue.sample_sub_queue</queueName>
               <schedulingPolicy>fair</schedulingPolicy>
+              <preemptable>true</preemptable>
               <numPendingApps>0</numPendingApps>
               <numActiveApps>0</numActiveApps>
             </queue>

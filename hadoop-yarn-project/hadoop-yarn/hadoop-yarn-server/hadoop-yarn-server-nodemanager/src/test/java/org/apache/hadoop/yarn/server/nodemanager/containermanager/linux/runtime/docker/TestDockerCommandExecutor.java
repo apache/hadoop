@@ -153,14 +153,14 @@ public class TestDockerCommandExecutor {
         env, configuration, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
-    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
     assertEquals(1, ops.size());
-    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
-        ops.get(0).getOperationType().name());
-    assertEquals(3, dockerCommands.size());
-    assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    assertEquals("  docker-command=rm", dockerCommands.get(1));
-    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
+    assertEquals(PrivilegedOperation.OperationType.
+        REMOVE_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(1, args.size());
+    assertEquals(MOCK_CONTAINER_ID, args.get(0));
   }
 
   @Test
@@ -188,16 +188,15 @@ public class TestDockerCommandExecutor {
         env, configuration, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
-    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
     assertEquals(1, ops.size());
-    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
-        ops.get(0).getOperationType().name());
-    assertEquals(4, dockerCommands.size());
-    assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    assertEquals("  docker-command=inspect", dockerCommands.get(1));
-    assertEquals("  format={{.State.Status}}", dockerCommands.get(2));
-    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(3));
-
+    assertEquals(PrivilegedOperation.OperationType.
+        INSPECT_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(2, args.size());
+    assertEquals("--format={{.State.Status}}", args.get(0));
+    assertEquals(MOCK_CONTAINER_ID, args.get(1));
   }
 
   @Test

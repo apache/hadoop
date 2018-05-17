@@ -65,6 +65,26 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
   }
 
   /**
+   * Create new Instance.
+   * @param nodeId NodeId.
+   * @param httpAddress Http address.
+   * @param rackName Rack Name.
+   * @param nodePartition Node Partition.
+   * @return RemoteNode Instance.
+   */
+  @Private
+  @Unstable
+  public static RemoteNode newInstance(NodeId nodeId, String httpAddress,
+      String rackName, String nodePartition) {
+    RemoteNode remoteNode = Records.newRecord(RemoteNode.class);
+    remoteNode.setNodeId(nodeId);
+    remoteNode.setHttpAddress(httpAddress);
+    remoteNode.setRackName(rackName);
+    remoteNode.setNodePartition(nodePartition);
+    return remoteNode;
+  }
+
+  /**
    * Get {@link NodeId}.
    * @return NodeId.
    */
@@ -117,6 +137,23 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
    * @param other RemoteNode.
    * @return Comparison.
    */
+
+  /**
+   * Get Node Partition.
+   * @return Node Partition.
+   */
+  @Private
+  @Unstable
+  public  abstract String getNodePartition();
+
+  /**
+   * Set Node Partition.
+   * @param nodePartition
+   */
+  @Private
+  @Unstable
+  public abstract void setNodePartition(String nodePartition);
+
   @Override
   public int compareTo(RemoteNode other) {
     return this.getNodeId().compareTo(other.getNodeId());
@@ -127,6 +164,7 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
     return "RemoteNode{" +
         "nodeId=" + getNodeId() + ", " +
         "rackName=" + getRackName() + ", " +
-        "httpAddress=" + getHttpAddress() + "}";
+        "httpAddress=" + getHttpAddress() + ", " +
+        "partition=" + getNodePartition() + "}";
   }
 }

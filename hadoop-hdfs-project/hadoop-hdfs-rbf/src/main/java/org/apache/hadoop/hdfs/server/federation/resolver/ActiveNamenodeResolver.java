@@ -109,6 +109,14 @@ public interface ActiveNamenodeResolver {
   Set<FederationNamespaceInfo> getNamespaces() throws IOException;
 
   /**
+   * Get a list of all namespaces that are disabled.
+   *
+   * @return List of name spaces identifier in the federation
+   * @throws IOException If the disabled list is not available.
+   */
+  Set<String> getDisabledNamespaces() throws IOException;
+
+  /**
    * Assign a unique identifier for the parent router service.
    * Required to report the status to the namenode resolver.
    *

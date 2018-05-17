@@ -23,10 +23,11 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -191,20 +192,36 @@ public class Apps {
   /**
    *
    * @param envString String containing env variable definitions
-   * @param classPathSeparator String that separates the definitions
-   * @return ArrayList of environment variable names
+   * @return Set of environment variable names
    */
-  public static ArrayList<String> getEnvVarsFromInputString(String envString,
-      String classPathSeparator) {
-    ArrayList<String> envList = new ArrayList<>();
+  private static Set<String> getEnvVarsFromInputString(String envString) {
+    Set<String> envSet = new HashSet<>();
     if (envString != null && envString.length() > 0) {
       Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
       while (varValMatcher.find()) {
         String envVar = varValMatcher.group(1);
-        envList.add(envVar);
+        envSet.add(envVar);
       }
     }
-    return envList;
+    return envSet;
+  }
+
+  /**
+   * Return the list of environment variable names specified in the
+   * given property or default string and those specified individually
+   * with the propname.VARNAME syntax (e.g., mapreduce.map.env.VARNAME=value).
+   * @param propName the name of the property
+   * @param defaultPropValue the default value for propName
+   * @param conf configuration containing properties
+   * @return Set of environment variable names
+   */
+  public static Set<String> getEnvVarsFromInputProperty(
+      String propName, String defaultPropValue, Configuration conf) {
+    String envString = conf.get(propName, defaultPropValue);
+    Set<String> varSet = getEnvVarsFromInputString(envString);
+    Map<String, String> propMap = conf.getPropsWithPrefix(propName + ".");
+    varSet.addAll(propMap.keySet());
+    return varSet;
   }
 
   /**

@@ -55,7 +55,8 @@ public class ConfigFile implements Serializable {
   @XmlEnum
   public enum TypeEnum {
     XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
-        "TEMPLATE"), HADOOP_XML("HADOOP_XML");
+        "TEMPLATE"), HADOOP_XML("HADOOP_XML"), STATIC("STATIC"), ARCHIVE(
+        "ARCHIVE");
 
     private String value;
 

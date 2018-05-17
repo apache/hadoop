@@ -23,24 +23,31 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.webapp.ApiServer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -52,18 +59,24 @@ import org.mockito.Mockito;
 public class TestApiServer {
   private ApiServer apiServer;
   private HttpServletRequest request;
+  private ServiceClientTest mockServerClient;
 
   @Before
   public void setup() throws Exception {
     request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteUser())
         .thenReturn(System.getProperty("user.name"));
-    ServiceClient mockServerClient = new ServiceClientTest();
+    mockServerClient = new ServiceClientTest();
     Configuration conf = new Configuration();
     conf.set("yarn.api-service.service.client.class",
         ServiceClientTest.class.getName());
     apiServer = new ApiServer(conf);
     apiServer.setServiceClient(mockServerClient);
+  }
+
+  @After
+  public void teardown() {
+    mockServerClient.forceStop();
   }
 
   @Test
@@ -107,24 +120,7 @@ public class TestApiServer {
     BufferedWriter bw = new BufferedWriter(new FileWriter(dockerConfig));
     bw.write(json);
     bw.close();
-    Service service = new Service();
-    service.setName("jenkins");
-    service.setVersion("v1");
-    Artifact artifact = new Artifact();
-    artifact.setType(TypeEnum.DOCKER);
-    artifact.setId("jenkins:latest");
-    Resource resource = new Resource();
-    resource.setCpus(1);
-    resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
-    Component c = new Component();
-    c.setName("jenkins");
-    c.setNumberOfContainers(1L);
-    c.setArtifact(artifact);
-    c.setLaunchCommand("");
-    c.setResource(resource);
-    components.add(c);
-    service.setComponents(components);
+    Service service = ServiceClientTest.buildGoodService();
     final Response actual = apiServer.createService(request, service);
     assertEquals("Create service is ",
         Response.status(Status.ACCEPTED).build().getStatus(),
@@ -160,10 +156,17 @@ public class TestApiServer {
 
   @Test
   public void testBadGetService() {
-    final Response actual = apiServer.getService(request, "no-jenkins");
+    final String serviceName = "nonexistent-jenkins";
+    final Response actual = apiServer.getService(request, serviceName);
     assertEquals("Get service is ",
         Response.status(Status.NOT_FOUND).build().getStatus(),
         actual.getStatus());
+    ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service " + serviceName + " not found",
+        serviceStatus.getDiagnostics());
   }
 
   @Test
@@ -172,6 +175,11 @@ public class TestApiServer {
     assertEquals("Get service is ",
         Response.status(Status.NOT_FOUND).build().getStatus(),
         actual.getStatus());
+    ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service name cannot be null.", serviceStatus.getDiagnostics());
   }
 
   @Test
@@ -494,5 +502,122 @@ public class TestApiServer {
         "Component name in the request object (jenkins-slave) does not match "
             + "that in the URI path (jenkins-master)",
         serviceStatus.getDiagnostics());
+  }
+
+  @Test
+  public void testInitiateUpgrade() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    goodService.setVersion("v2");
+    goodService.setState(ServiceState.UPGRADING);
+    final Response actual = apiServer.updateService(request,
+        goodService.getName(), goodService);
+    assertEquals("Initiate upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeSingleInstance() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    Component comp = goodService.getComponents().iterator().next();
+    Container container = comp.getContainers().iterator().next();
+    container.setState(ContainerState.UPGRADING);
+
+    // To be able to upgrade, the service needs to be in UPGRADING
+    // and container state needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    Container liveContainer = serviceStatus.getComponents().iterator().next()
+        .getContainers().iterator().next();
+    liveContainer.setState(ContainerState.NEEDS_UPGRADE);
+    mockServerClient.setExpectedInstances(Sets.newHashSet(
+        liveContainer.getComponentInstanceName()));
+
+    final Response actual = apiServer.updateComponentInstance(request,
+        goodService.getName(), comp.getName(),
+        container.getComponentInstanceName(), container);
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeMultipleInstances() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    Component comp = goodService.getComponents().iterator().next();
+    comp.getContainers().forEach(container ->
+        container.setState(ContainerState.UPGRADING));
+
+    // To be able to upgrade, the service needs to be in UPGRADING
+    // and container state needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    Set<String> expectedInstances = new HashSet<>();
+    serviceStatus.getComponents().iterator().next().getContainers().forEach(
+        container -> {
+          container.setState(ContainerState.NEEDS_UPGRADE);
+          expectedInstances.add(container.getComponentInstanceName());
+        }
+    );
+    mockServerClient.setExpectedInstances(expectedInstances);
+
+    final Response actual = apiServer.updateComponentInstances(request,
+        goodService.getName(), comp.getContainers());
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeComponent() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    Component comp = goodService.getComponents().iterator().next();
+    comp.setState(ComponentState.UPGRADING);
+
+    // To be able to upgrade, the service needs to be in UPGRADING
+    // and component state needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    Component liveComp = serviceStatus.getComponent(comp.getName());
+    liveComp.setState(ComponentState.NEEDS_UPGRADE);
+    Set<String> expectedInstances = new HashSet<>();
+    liveComp.getContainers().forEach(container -> {
+      expectedInstances.add(container.getComponentInstanceName());
+      container.setState(ContainerState.NEEDS_UPGRADE);
+    });
+    mockServerClient.setExpectedInstances(expectedInstances);
+
+    final Response actual = apiServer.updateComponent(request,
+        goodService.getName(), comp.getName(), comp);
+    assertEquals("Component upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeMultipleComps() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    goodService.getComponents().forEach(comp ->
+        comp.setState(ComponentState.UPGRADING));
+
+    // To be able to upgrade, the live service needs to be in UPGRADING
+    // and component states needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    Set<String> expectedInstances = new HashSet<>();
+    serviceStatus.getComponents().forEach(liveComp -> {
+      liveComp.setState(ComponentState.NEEDS_UPGRADE);
+      liveComp.getContainers().forEach(liveContainer -> {
+        expectedInstances.add(liveContainer.getComponentInstanceName());
+        liveContainer.setState(ContainerState.NEEDS_UPGRADE);
+      });
+    });
+    mockServerClient.setExpectedInstances(expectedInstances);
+
+    final Response actual = apiServer.updateComponents(request,
+        goodService.getName(), goodService.getComponents());
+    assertEquals("Component upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 }

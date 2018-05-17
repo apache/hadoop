@@ -154,6 +154,11 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
+  public void proxyOpFailureClientOverloaded() {
+    metrics.incrProxyOpFailureClientOverloaded();
+  }
+
+  @Override
   public void proxyOpNotImplemented() {
     metrics.incrProxyOpNotImplemented();
   }

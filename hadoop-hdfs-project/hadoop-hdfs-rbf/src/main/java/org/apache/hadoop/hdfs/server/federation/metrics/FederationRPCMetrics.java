@@ -54,6 +54,8 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   private MutableCounterLong proxyOpFailureStandby;
   @Metric("Number of operations to hit a standby NN")
   private MutableCounterLong proxyOpFailureCommunicate;
+  @Metric("Number of operations to hit a client overloaded Router")
+  private MutableCounterLong proxyOpFailureClientOverloaded;
   @Metric("Number of operations not implemented")
   private MutableCounterLong proxyOpNotImplemented;
   @Metric("Number of operation retries")
@@ -118,6 +120,14 @@ public class FederationRPCMetrics implements FederationRPCMBean {
     return proxyOpFailureCommunicate.value();
   }
 
+  public void incrProxyOpFailureClientOverloaded() {
+    proxyOpFailureClientOverloaded.incr();
+  }
+
+  @Override
+  public long getProxyOpFailureClientOverloaded() {
+    return proxyOpFailureClientOverloaded.value();
+  }
 
   public void incrProxyOpNotImplemented() {
     proxyOpNotImplemented.incr();

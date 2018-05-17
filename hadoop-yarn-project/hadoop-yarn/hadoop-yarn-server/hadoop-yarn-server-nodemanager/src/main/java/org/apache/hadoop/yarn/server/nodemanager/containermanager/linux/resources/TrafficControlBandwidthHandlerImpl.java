@@ -203,6 +203,12 @@ public class TrafficControlBandwidthHandlerImpl
     return null;
   }
 
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
   /**
    * Returns total bytes sent per container to be used for metrics tracking
    * purposes.

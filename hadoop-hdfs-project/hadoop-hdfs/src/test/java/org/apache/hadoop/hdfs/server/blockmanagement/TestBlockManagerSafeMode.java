@@ -28,11 +28,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 
 import org.junit.Before;
 import org.junit.Test;
-
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

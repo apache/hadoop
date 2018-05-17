@@ -233,6 +233,8 @@ One or more components of the service. If the service is HBase say, then the com
 |placement_policy|Advanced scheduling and placement policies for all containers of this component.|false|PlacementPolicy||
 |configuration|Config properties for this component.|false|Configuration||
 |quicklinks|A list of quicklink keys defined at the service level, and to be resolved by this component.|false|string array||
+|restart_policy|Policy of restart component. Including ALWAYS (Always restart
+ component even if instance exit code = 0); ON_FAILURE (Only restart component if instance exit code != 0); NEVER (Do not restart in any cases). Flexing is not supported for components which have restart_policy=ON_FAILURE/NEVER|false|string|ALWAYS|
 
 
 ### ComponentState
@@ -241,7 +243,7 @@ The state of the component
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|state|enum of the state of the component|false|enum (FLEXING, STABLE)||
+|state|enum of the state of the component|false|enum (INIT, FLEXING, STABLE, UPGRADING)||
 
 
 ### ConfigFile
@@ -250,8 +252,8 @@ A config file that needs to be created and made available as a volume in a servi
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|type|Config file in the standard format like xml, properties, json, yaml, template.|false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, HADOOP_XML)||
-|dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.|false|string||
+|type|Config file in the standard format like xml, properties, json, yaml, template or static/archive resource files. When static/archive types are specified, file must be uploaded to remote file system before launching the job, and YARN service framework will localize files prior to launching containers. Archive files are unwrapped during localization |false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, ENV, HADOOP_XML, STATIC, ARCHIVE)||
+|dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf for all types other than static/archive. For static/archive resource types, the files are available under resources directory.|false|string||
 |src_file|This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.|false|string||
 |properties|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
 
@@ -262,7 +264,7 @@ Set of configuration properties that can be injected into the service components
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|properties|A blob of key-value pairs for configuring YARN service AM.|false|object||
+|properties|A blob of key-value pairs for configuring the YARN service AM.|false|object||
 |env|A blob of key-value pairs which will be appended to the default system properties and handed off to the service at start time. All placeholder references to properties will be substituted before injection.|false|object||
 |files|Array of list of files that needs to be created and made available as volumes in the service component containers.|false|ConfigFile array||
 
@@ -300,8 +302,8 @@ The kerberos principal info of the user who launches the service.
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|principal_name|The principal name of the user who launches the service.|false|string||
-|keytab|The URI of the kerberos keytab. It supports two modes, URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host; URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.|false|string||
+|principal_name|The principal name of the user who launches the service. Note that `_HOST` is required in the `principal_name` field such as `testuser/_HOST@EXAMPLE.COM` because Hadoop client validates that the server's (in this case, the AM's) principal has hostname present when communicating to the server.|false|string||
+|keytab|The URI of the kerberos keytab. Currently supports only files present on the bare host. URI starts with "file://" - A path on the local host where the keytab is stored. It is assumed that admin pre-installs the keytabs on the local host before AM launches.|false|string||
 
 
 ### PlacementConstraint
@@ -369,7 +371,7 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
 |cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
 |memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
-|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below. |  false | object ||
+|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below.|false|object||
 
 
 ### ResourceInformation
@@ -402,8 +404,9 @@ a service resource has the following attributes.
 |state|State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.|false|ServiceState||
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
-|kerberos_principal | The principal info of the user who launches the service|false|KerberosPrincipal||
+|kerberos_principal|The principal info of the user who launches the service|false|KerberosPrincipal||
 |docker_client_config|URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json)|false|string||
+
 
 ### ServiceState
 
@@ -411,7 +414,7 @@ The current state of a service.
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|state|enum of the state of the service|false|enum (ACCEPTED, STARTED, STABLE, STOPPED, FAILED, FLEX)||
+|state|enum of the state of the service|false|enum (ACCEPTED, STARTED, STABLE, STOPPED, FAILED, FLEX, UPGRADING)||
 
 
 ### ServiceStatus
@@ -472,7 +475,6 @@ Note, lifetime value of -1 means unlimited lifetime.
     "components": [
         {
             "name": "hello",
-            "dependencies": [],
             "state": "STABLE",
             "resource": {
                 "cpus": 1,
@@ -536,7 +538,7 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ##### PUT Request JSON
 ```json
 {
-    "state": "STOPPED"
+  "state": "STOPPED"
 }
 ```
 
@@ -546,17 +548,34 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world
 ##### PUT Request JSON
 ```json
 {
-    "state": "STARTED"
+  "state": "STARTED"
 }
 ```
 
-### Update to flex up/down the no of containers (instances) of a component of a service
+### Update to flex up/down the number of containers (instances) of a component of a service
 PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 
 ##### PUT Request JSON
 ```json
 {
-    "number_of_containers": 3
+  "number_of_containers": 3
+}
+```
+
+Alternatively, you can specify the entire "components" section instead.
+
+PUT URL - http://localhost:8088/app/v1/services/hello-world
+##### PUT Request JSON
+```json
+{
+  "state": "FLEX",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 3
+      }
+    ]
 }
 ```
 
@@ -727,6 +746,14 @@ POST URL - http://localhost:8088/app/v1/services
             {
               "type": "ANTI_AFFINITY",
               "scope": "NODE",
+              "node_attributes": {
+                "os": ["centos6", "centos7"],
+                "fault_domain": ["fd1", "fd2"]
+              },
+              "node_partitions": [
+                "gpu",
+                "fast-disk"
+              ],
               "target_tags": [
                 "hello"
               ]
@@ -741,9 +768,13 @@ POST URL - http://localhost:8088/app/v1/services
 ##### GET Response JSON
 GET URL - http://localhost:8088/app/v1/services/hello-world
 
-Note, that the 3 containers will come up on 3 different nodes. If there are less
-than 3 NMs running in the cluster, then all 3 container requests will not be
-fulfilled and the service will be in non-STABLE state.
+Note, for an anti-affinity component no more than 1 container will be allocated
+in a specific node. In this example, 3 containers have been requested by
+component "hello". All 3 containers were allocated because the cluster had 3 or
+more NMs. If the cluster had less than 3 NMs then less than 3 containers would
+be allocated. In cases when the number of allocated containers are less than the
+number of requested containers, the component and the service will be in
+non-STABLE state.
 
 ```json
 {
@@ -756,7 +787,6 @@ fulfilled and the service will be in non-STABLE state.
     "components": [
         {
             "name": "hello",
-            "dependencies": [],
             "state": "STABLE",
             "resource": {
                 "cpus": 1,
@@ -767,8 +797,14 @@ fulfilled and the service will be in non-STABLE state.
                 {
                   "type": "ANTI_AFFINITY",
                   "scope": "NODE",
-                  "node_attributes": {},
-                  "node_partitions": [],
+                  "node_attributes": {
+                    "os": ["centos6", "centos7"],
+                    "fault_domain": ["fd1", "fd2"]
+                  },
+                  "node_partitions": [
+                    "gpu",
+                    "fast-disk"
+                  ],
                   "target_tags": [
                     "hello"
                   ]
@@ -823,3 +859,39 @@ fulfilled and the service will be in non-STABLE state.
     "quicklinks": {}
 }
 ```
+
+### Create a service with health threshold monitor enabled for a component
+POST URL - http://localhost:8088/app/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with health threshold monitor",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 100,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256"
+        },
+        "configuration": {
+          "properties": {
+            "yarn.service.container-health-threshold.percent": "90",
+            "yarn.service.container-health-threshold.window-secs": "400",
+            "yarn.service.container-health-threshold.init-delay-secs": "800"
+          }
+        }
+      }
+    ]
+}
+```
+

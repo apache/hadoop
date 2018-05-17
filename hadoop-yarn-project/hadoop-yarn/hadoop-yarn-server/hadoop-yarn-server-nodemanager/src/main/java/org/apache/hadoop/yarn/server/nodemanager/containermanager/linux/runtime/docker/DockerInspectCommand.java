@@ -20,12 +20,19 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+
+import java.util.Map;
+
 /**
  * Encapsulates the docker inspect command and its command
  * line arguments.
  */
 public class DockerInspectCommand extends DockerCommand {
   private static final String INSPECT_COMMAND = "inspect";
+  private String commandArguments;
 
   public DockerInspectCommand(String containerName) {
     super(INSPECT_COMMAND);
@@ -34,6 +41,7 @@ public class DockerInspectCommand extends DockerCommand {
 
   public DockerInspectCommand getContainerStatus() {
     super.addCommandArguments("format", "{{.State.Status}}");
+    this.commandArguments = "--format={{.State.Status}}";
     return this;
   }
 
@@ -43,6 +51,17 @@ public class DockerInspectCommand extends DockerCommand {
     // cannot parse the arguments correctly.
     super.addCommandArguments("format", "{{range(.NetworkSettings.Networks)}}"
         + "{{.IPAddress}},{{end}}{{.Config.Hostname}}");
+    this.commandArguments = "--format={{range(.NetworkSettings.Networks)}}"
+        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}";
     return this;
+  }
+  @Override
+  public PrivilegedOperation preparePrivilegedOperation(
+      DockerCommand dockerCommand, String containerName, Map<String,
+      String> env, Configuration conf, Context nmContext) {
+    PrivilegedOperation dockerOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.INSPECT_DOCKER_CONTAINER);
+    dockerOp.appendArgs(commandArguments, containerName);
+    return dockerOp;
   }
 }

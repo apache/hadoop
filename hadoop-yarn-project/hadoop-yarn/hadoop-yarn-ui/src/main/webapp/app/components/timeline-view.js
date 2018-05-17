@@ -382,8 +382,9 @@ export default Ember.Component.extend({
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
         var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        var link = row.get('masterNodeURL');
         if (address) {
-          return `<a href="${address}" target="_blank">${address}</a>`;
+          return `<a href="${link}">${address}</a>`;
         } else {
           return 'N/A';
         }
@@ -483,8 +484,9 @@ export default Ember.Component.extend({
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
         var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        var link = row.get('masterNodeURL');
         if (address) {
-          return `<a href="${address}" target="_blank">${address}</a>`;
+          return `<a href="${link}">${address}</a>`;
         } else {
           return 'N/A';
         }

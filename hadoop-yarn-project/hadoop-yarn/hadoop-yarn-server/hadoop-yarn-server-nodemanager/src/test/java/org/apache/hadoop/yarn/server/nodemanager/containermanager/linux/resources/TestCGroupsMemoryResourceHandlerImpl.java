@@ -45,6 +45,7 @@ public class TestCGroupsMemoryResourceHandlerImpl {
   @Before
   public void setup() {
     mockCGroupsHandler = mock(CGroupsHandler.class);
+    when(mockCGroupsHandler.getPathForCGroup(any(), any())).thenReturn(".");
     cGroupsMemoryResourceHandler =
         new CGroupsMemoryResourceHandlerImpl(mockCGroupsHandler);
   }

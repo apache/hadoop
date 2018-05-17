@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
+import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -419,6 +420,8 @@ abstract class StripeReader {
       outputs[i] = decodeInputs[decodeIndices[i]];
       decodeInputs[decodeIndices[i]] = null;
     }
+
+    long start = Time.monotonicNow();
     // Step 2: decode into prepared output buffers
     decoder.decode(decodeInputs, decodeIndices, outputs);
 
@@ -432,6 +435,11 @@ abstract class StripeReader {
         }
       }
     }
+    long end = Time.monotonicNow();
+    // Decoding time includes CPU time on erasure coding and memory copying of
+    // decoded data.
+    dfsStripedInputStream.readStatistics.addErasureCodingDecodingTime(
+        end - start);
   }
 
   /**

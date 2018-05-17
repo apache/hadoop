@@ -38,11 +38,6 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     Path dest = path("testMetricsRegister");
     ContractTestUtils.touch(fs, dest);
 
-    String targetMetricSource = "S3AMetrics1" + "-" + fs.getBucket();
-    assertNotNull("No metrics under test fs for " + targetMetricSource,
-        fs.getInstrumentation().getMetricsSystem()
-            .getSource(targetMetricSource));
-
     MutableCounterLong fileCreated =
         (MutableCounterLong) fs.getInstrumentation().getRegistry()
             .get(Statistic.FILES_CREATED.getSymbol());

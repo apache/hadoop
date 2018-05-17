@@ -41,7 +41,7 @@ export default Ember.Controller.extend({
       routeName: 'yarn-apps.apps'
     }, {
       text: `App [${appId}]`,
-      href: `#/yarn-app/${appId}/info`
+      href: `#/yarn-app/${appId}/attempts`
     }, {
       text: "Attempts",
       href: `#/yarn-app/${appId}/attempts`

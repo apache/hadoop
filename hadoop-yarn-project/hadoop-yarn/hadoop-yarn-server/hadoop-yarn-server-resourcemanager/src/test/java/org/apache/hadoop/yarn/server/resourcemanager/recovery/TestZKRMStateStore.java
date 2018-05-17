@@ -210,6 +210,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
           curatorTestingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
+      conf.setLong(YarnConfiguration.RM_EPOCH_RANGE, getEpochRange());
       this.store = new TestZKRMStateStoreInternal(conf, workingZnode);
       return this.store;
     }

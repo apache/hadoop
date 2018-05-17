@@ -317,6 +317,14 @@ public class MockServiceAM extends ServiceMaster {
     }
   }
 
+  public Container updateContainerStatus(Service service, int id,
+      String compName, String host) {
+    ContainerId containerId = createContainerId(id);
+    Container container = createContainer(containerId, compName);
+    addContainerStatus(container, ContainerState.RUNNING, host);
+    return container;
+  }
+
   public ContainerId createContainerId(int id) {
     ApplicationId applicationId = ApplicationId.fromString(service.getId());
     return ContainerId.newContainerId(
@@ -389,10 +397,15 @@ public class MockServiceAM extends ServiceMaster {
   }
 
   private void addContainerStatus(Container container, ContainerState state) {
+    addContainerStatus(container, state, container.getNodeId().getHost());
+  }
+
+  private void addContainerStatus(Container container, ContainerState state,
+      String host) {
     ContainerStatus status = ContainerStatus.newInstance(container.getId(),
         state, "", 0);
-    status.setHost(container.getNodeId().getHost());
-    status.setIPs(Lists.newArrayList(container.getNodeId().getHost()));
+    status.setHost(host);
+    status.setIPs(Lists.newArrayList(host));
     containerStatuses.put(container.getId(), status);
   }
 

@@ -101,6 +101,24 @@ public class ResourceHandlerChain implements ResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    List<PrivilegedOperation> allOperations = new
+        ArrayList<PrivilegedOperation>();
+
+    for (ResourceHandler resourceHandler : resourceHandlers) {
+      List<PrivilegedOperation> handlerOperations =
+          resourceHandler.updateContainer(container);
+
+      if (handlerOperations != null) {
+        allOperations.addAll(handlerOperations);
+      }
+
+    }
+    return allOperations;
+  }
+
+  @Override
   public List<PrivilegedOperation> postComplete(ContainerId containerId)
       throws ResourceHandlerException {
     List<PrivilegedOperation> allOperations = new

@@ -790,11 +790,22 @@ public class DFSInputStream extends FSInputStream
           // Check if need to report block replicas corruption either read
           // was successful or ChecksumException occurred.
           reportCheckSumFailure(corruptedBlocks,
-              currentLocatedBlock.getLocations().length, false);
+              getCurrentBlockLocationsLength(), false);
         }
       }
     }
     return -1;
+  }
+
+  protected int getCurrentBlockLocationsLength() {
+    int len = 0;
+    if (currentLocatedBlock == null) {
+      DFSClient.LOG.info("Found null currentLocatedBlock. pos={}, "
+          + "blockEnd={}, fileLength={}", pos, blockEnd, getFileLength());
+    } else {
+      len = currentLocatedBlock.getLocations().length;
+    }
+    return len;
   }
 
   /**

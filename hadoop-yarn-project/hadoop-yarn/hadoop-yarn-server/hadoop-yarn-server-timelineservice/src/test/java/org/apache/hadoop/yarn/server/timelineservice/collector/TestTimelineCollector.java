@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
@@ -175,6 +176,37 @@ public class TestTimelineCollector {
     verify(writer, times(1)).write(any(TimelineCollectorContext.class),
         any(TimelineEntities.class), any(UserGroupInformation.class));
     verify(writer, never()).flush();
+  }
+
+  /**
+   * Test TimelineCollector's interaction with TimelineWriter upon
+   * putDomain() calls.
+   */
+  @Test public void testPutDomain() throws IOException {
+    TimelineWriter writer = mock(TimelineWriter.class);
+    TimelineCollector collector = new TimelineCollectorForTest(writer);
+
+    TimelineDomain domain =
+        generateDomain("id", "desc", "owner", "reader1,reader2", "writer", 0L,
+            1L);
+    collector.putDomain(domain, UserGroupInformation.createRemoteUser("owner"));
+
+    verify(writer, times(1))
+        .write(any(TimelineCollectorContext.class), any(TimelineDomain.class));
+    verify(writer, times(1)).flush();
+  }
+
+  private static TimelineDomain generateDomain(String id, String desc,
+      String owner, String reader, String writer, Long cTime, Long mTime) {
+    TimelineDomain domain = new TimelineDomain();
+    domain.setId(id);
+    domain.setDescription(desc);
+    domain.setOwner(owner);
+    domain.setReaders(reader);
+    domain.setWriters(writer);
+    domain.setCreatedTime(cTime);
+    domain.setModifiedTime(mTime);
+    return domain;
   }
 
   private static class TimelineCollectorForTest extends TimelineCollector {

@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -737,21 +738,22 @@ public class RMContainerImpl implements RMContainer {
 
     private static void updateAttemptMetrics(RMContainerImpl container) {
       Resource resource = container.getContainer().getResource();
-      RMAppAttempt rmAttempt = container.rmContext.getRMApps()
-          .get(container.getApplicationAttemptId().getApplicationId())
-          .getCurrentAppAttempt();
-
-      if (rmAttempt != null) {
-        long usedMillis = container.finishTime - container.creationTime;
-        rmAttempt.getRMAppAttemptMetrics()
-            .updateAggregateAppResourceUsage(resource, usedMillis);
-        // If this is a preempted container, update preemption metrics
-        if (ContainerExitStatus.PREEMPTED == container.finishedStatus
-            .getExitStatus()) {
+      RMApp app = container.rmContext.getRMApps()
+          .get(container.getApplicationAttemptId().getApplicationId());
+      if (app != null) {
+        RMAppAttempt rmAttempt = app.getCurrentAppAttempt();
+        if (rmAttempt != null) {
+          long usedMillis = container.finishTime - container.creationTime;
           rmAttempt.getRMAppAttemptMetrics()
-              .updatePreemptionInfo(resource, container);
-          rmAttempt.getRMAppAttemptMetrics()
-              .updateAggregatePreemptedAppResourceUsage(resource, usedMillis);
+              .updateAggregateAppResourceUsage(resource, usedMillis);
+          // If this is a preempted container, update preemption metrics
+          if (ContainerExitStatus.PREEMPTED == container.finishedStatus
+              .getExitStatus()) {
+            rmAttempt.getRMAppAttemptMetrics()
+                .updatePreemptionInfo(resource, container);
+            rmAttempt.getRMAppAttemptMetrics()
+                .updateAggregatePreemptedAppResourceUsage(resource, usedMillis);
+          }
         }
       }
     }

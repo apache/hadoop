@@ -24,5 +24,5 @@ package org.apache.hadoop.yarn.service;
 public enum ServiceEventType {
   START,
   UPGRADE,
-  STOP_UPGRADE
+  CHECK_STABLE
 }

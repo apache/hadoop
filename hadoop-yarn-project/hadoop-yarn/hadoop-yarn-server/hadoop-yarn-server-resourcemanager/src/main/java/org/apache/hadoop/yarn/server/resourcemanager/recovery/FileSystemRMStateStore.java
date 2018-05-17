@@ -205,12 +205,12 @@ public class FileSystemRMStateStore extends RMStateStore {
       Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
       currentEpoch = epoch.getEpoch();
       // increment epoch and store it
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       updateFile(epochNodePath, storeData, false);
     } else {
       // initialize epoch file with 1 for the next time.
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       writeFileWithRetries(epochNodePath, storeData, false);
     }

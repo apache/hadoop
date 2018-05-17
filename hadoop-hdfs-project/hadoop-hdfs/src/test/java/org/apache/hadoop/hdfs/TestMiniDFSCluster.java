@@ -108,29 +108,35 @@ public class TestMiniDFSCluster {
             capacities,
             defaultBlockSize,
             fileLen);
-    verifyStorageCapacity(cluster, capacities);
+    try {
+      verifyStorageCapacity(cluster, capacities);
 
-    /* restart all data nodes */
-    cluster.restartDataNodes();
-    cluster.waitActive();
-    verifyStorageCapacity(cluster, capacities);
+      /* restart all data nodes */
+      cluster.restartDataNodes();
+      cluster.waitActive();
+      verifyStorageCapacity(cluster, capacities);
 
-    /* restart all name nodes */
-    cluster.restartNameNodes();
-    cluster.waitActive();
-    verifyStorageCapacity(cluster, capacities);
+      /* restart all name nodes */
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      verifyStorageCapacity(cluster, capacities);
 
-    /* restart all name nodes firstly and data nodes then */
-    cluster.restartNameNodes();
-    cluster.restartDataNodes();
-    cluster.waitActive();
-    verifyStorageCapacity(cluster, capacities);
+      /* restart all name nodes firstly and data nodes then */
+      cluster.restartNameNodes();
+      cluster.restartDataNodes();
+      cluster.waitActive();
+      verifyStorageCapacity(cluster, capacities);
 
-    /* restart all data nodes firstly and name nodes then */
-    cluster.restartDataNodes();
-    cluster.restartNameNodes();
-    cluster.waitActive();
-    verifyStorageCapacity(cluster, capacities);
+      /* restart all data nodes firstly and name nodes then */
+      cluster.restartDataNodes();
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      verifyStorageCapacity(cluster, capacities);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   private void verifyStorageCapacity(

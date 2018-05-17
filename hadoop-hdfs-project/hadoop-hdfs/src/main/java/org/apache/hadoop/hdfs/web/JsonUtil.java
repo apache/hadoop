@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -135,7 +136,10 @@ public class JsonUtil {
     if (status.isErasureCoded()) {
       m.put("ecBit", true);
       if (status.getErasureCodingPolicy() != null) {
+        // to maintain backward comparability
         m.put("ecPolicy", status.getErasureCodingPolicy().getName());
+        // to re-construct HdfsFileStatus object via WebHdfs
+        m.put("ecPolicyObj", getEcPolicyAsMap(status.getErasureCodingPolicy()));
       }
     }
     if (status.isSnapshotEnabled()) {
@@ -150,6 +154,21 @@ public class JsonUtil {
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
     return m;
+  }
+
+  private static Map<String, Object> getEcPolicyAsMap(
+      final ErasureCodingPolicy ecPolicy) {
+    /** Convert an ErasureCodingPolicy to a map. */
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put("name", ecPolicy.getName())
+        .put("cellSize", ecPolicy.getCellSize())
+        .put("numDataUnits", ecPolicy.getNumDataUnits())
+        .put("numParityUnits", ecPolicy.getNumParityUnits())
+        .put("codecName", ecPolicy.getCodecName())
+        .put("id", ecPolicy.getId())
+        .put("extraOptions", ecPolicy.getSchema().getExtraOptions());
+    return builder.build();
+
   }
 
   /** Convert an ExtendedBlock to a Json map. */

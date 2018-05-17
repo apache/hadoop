@@ -188,6 +188,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_EPOCH = RM_PREFIX + "epoch";
   public static final long DEFAULT_RM_EPOCH = 0L;
 
+  /** The epoch range before wrap around. 0 disables wrap around*/
+  public static final String RM_EPOCH_RANGE = RM_EPOCH + ".range";
+  public static final long DEFAULT_RM_EPOCH_RANGE = 0;
+
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
     RM_PREFIX + "address";
@@ -1373,6 +1377,16 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "log-aggregation.roll-monitoring-interval-seconds";
   public static final long
       DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS = -1;
+
+  /**
+   * Define how many aggregated log files per application per NM we can have
+   * in remote file system.
+   */
+  public static final String NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP
+      = NM_PREFIX + "log-aggregation.num-log-files-per-app";
+  public static final int
+      DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP = 30;
+
   /**
    * Number of threads used in log cleanup. Only applicable if Log aggregation
    * is disabled

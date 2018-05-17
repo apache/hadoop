@@ -34,4 +34,8 @@ int validate_container_id(const char* input);
  */
 int get_numbers_split_by_comma(const char* input, int** numbers, size_t* n_numbers);
 
+/*
+ * String format utility
+ */
+char *make_string(const char *fmt, ...);
 #endif

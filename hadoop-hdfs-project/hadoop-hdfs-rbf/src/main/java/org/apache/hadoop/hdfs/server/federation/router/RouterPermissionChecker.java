@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.FSPermissionChecker;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -35,9 +40,23 @@ public class RouterPermissionChecker extends FSPermissionChecker {
   /** Mount table default permission. */
   public static final short MOUNT_TABLE_PERMISSION_DEFAULT = 00755;
 
-  public RouterPermissionChecker(String routerOwner, String supergroup,
+  /** Name of the super user. */
+  private final String superUser;
+  /** Name of the super group. */
+  private final String superGroup;
+
+  public RouterPermissionChecker(String user, String group,
       UserGroupInformation callerUgi) {
-    super(routerOwner, supergroup, callerUgi, null);
+    super(user, group, callerUgi, null);
+    this.superUser = user;
+    this.superGroup = group;
+  }
+
+  public RouterPermissionChecker(String user, String group)
+      throws IOException {
+    super(user, group, UserGroupInformation.getCurrentUser(), null);
+    this.superUser = user;
+    this.superGroup = group;
   }
 
   /**
@@ -78,5 +97,41 @@ public class RouterPermissionChecker extends FSPermissionChecker {
             + mountTable.getSourcePath()
             + ": user " + getUser() + " does not have " + access.toString()
             + " permissions.");
+  }
+
+  /**
+   * Check the superuser privileges of the current RPC caller. This method is
+   * based on Datanode#checkSuperuserPrivilege().
+   * @throws AccessControlException If the user is not authorized.
+   */
+  @Override
+  public void checkSuperuserPrivilege() throws  AccessControlException {
+
+    // Try to get the ugi in the RPC call.
+    UserGroupInformation ugi = null;
+    try {
+      ugi = NameNode.getRemoteUser();
+    } catch (IOException e) {
+      // Ignore as we catch it afterwards
+    }
+    if (ugi == null) {
+      LOG.error("Cannot get the remote user name");
+      throw new AccessControlException("Cannot get the remote user name");
+    }
+
+    // Is this by the Router user itself?
+    if (ugi.getUserName().equals(superUser)) {
+      return;
+    }
+
+    // Is the user a member of the super group?
+    List<String> groups = Arrays.asList(ugi.getGroupNames());
+    if (groups.contains(superGroup)) {
+      return;
+    }
+
+    // Not a superuser
+    throw new AccessControlException(
+        ugi.getUserName() + " is not a super user");
   }
 }

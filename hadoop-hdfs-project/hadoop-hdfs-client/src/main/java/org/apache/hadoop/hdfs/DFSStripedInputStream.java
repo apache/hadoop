@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -92,6 +94,7 @@ public class DFSStripedInputStream extends DFSInputStream {
       LocatedBlocks locatedBlocks) throws IOException {
     super(dfsClient, src, verifyChecksum, locatedBlocks);
 
+    this.readStatistics.setBlockType(BlockType.STRIPED);
     assert ecPolicy != null;
     this.ecPolicy = ecPolicy;
     this.cellSize = ecPolicy.getCellSize();
@@ -158,7 +161,8 @@ public class DFSStripedInputStream extends DFSInputStream {
    * When seeking into a new block group, create blockReader for each internal
    * block in the group.
    */
-  private synchronized void blockSeekTo(long target) throws IOException {
+  @VisibleForTesting
+  synchronized void blockSeekTo(long target) throws IOException {
     if (target >= getFileLength()) {
       throw new IOException("Attempted to read past end of file");
     }
@@ -398,8 +402,8 @@ public class DFSStripedInputStream extends DFSInputStream {
       } finally {
         // Check if need to report block replicas corruption either read
         // was successful or ChecksumException occurred.
-        reportCheckSumFailure(corruptedBlocks,
-            currentLocatedBlock.getLocations().length, true);
+        reportCheckSumFailure(corruptedBlocks, getCurrentBlockLocationsLength(),
+            true);
       }
     }
     return -1;

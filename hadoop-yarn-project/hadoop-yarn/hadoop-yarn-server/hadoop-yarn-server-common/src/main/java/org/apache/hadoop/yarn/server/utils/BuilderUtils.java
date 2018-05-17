@@ -183,7 +183,7 @@ public class BuilderUtils {
   public static NodeId newNodeId(String host, int port) {
     return NodeId.newInstance(host, port);
   }
-  
+
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
@@ -422,7 +422,7 @@ public class BuilderUtils {
     report.setPriority(priority);
     return report;
   }
-  
+
   public static ApplicationSubmissionContext newApplicationSubmissionContext(
       ApplicationId applicationId, String applicationName, String queue,
       Priority priority, ContainerLaunchContext amContainer,
@@ -475,6 +475,10 @@ public class BuilderUtils {
     resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
+  }
+
+  public static Resource newEmptyResource() {
+    return recordFactory.newRecordInstance(Resource.class);
   }
 
   public static URL newURL(String scheme, String host, int port, String file) {

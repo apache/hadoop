@@ -259,7 +259,7 @@ public class LeveldbRMStateStore extends RMStateStore {
       if (data != null) {
         currentEpoch = EpochProto.parseFrom(data).getEpoch();
       }
-      EpochProto proto = Epoch.newInstance(currentEpoch + 1).getProto();
+      EpochProto proto = Epoch.newInstance(nextEpoch(currentEpoch)).getProto();
       db.put(dbKeyBytes, proto.toByteArray());
     } catch (DBException e) {
       throw new IOException(e);

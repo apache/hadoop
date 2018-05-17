@@ -165,6 +165,12 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   }
 
   @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
+  @Override
   public synchronized List<PrivilegedOperation> postComplete(
       ContainerId containerId) throws ResourceHandlerException {
     gpuAllocator.cleanupAssignGpus(containerId);

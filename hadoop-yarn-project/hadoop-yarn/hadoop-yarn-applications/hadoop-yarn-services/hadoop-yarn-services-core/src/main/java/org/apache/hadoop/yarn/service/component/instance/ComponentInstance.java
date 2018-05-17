@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
@@ -25,9 +26,9 @@ import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -39,8 +40,12 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.component.ComponentEvent;
+import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
@@ -93,8 +98,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   // This container object is used for rest API query
   private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
 
+
   private static final StateMachineFactory<ComponentInstance,
-      ComponentInstanceState, ComponentInstanceEventType, ComponentInstanceEvent>
+      ComponentInstanceState, ComponentInstanceEventType,
+      ComponentInstanceEvent>
       stateMachineFactory =
       new StateMachineFactory<ComponentInstance, ComponentInstanceState,
           ComponentInstanceEventType, ComponentInstanceEvent>(INIT)
@@ -116,9 +123,14 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       .addTransition(READY, STARTED, BECOME_NOT_READY,
           new ContainerBecomeNotReadyTransition())
       .addTransition(READY, INIT, STOP, new ContainerStoppedTransition())
+      .addTransition(READY, UPGRADING, UPGRADE,
+          new ContainerUpgradeTransition())
+      .addTransition(UPGRADING, UPGRADING, UPGRADE,
+          new ContainerUpgradeTransition())
+      .addTransition(UPGRADING, READY, BECOME_READY,
+          new ContainerBecomeReadyTransition())
+      .addTransition(UPGRADING, INIT, STOP, new ContainerStoppedTransition())
       .installTopology();
-
-
 
   public ComponentInstance(Component component,
       ComponentInstanceId compInstanceId) {
@@ -144,10 +156,19 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       // Query container status for ip and host
+      boolean cancelOnSuccess = true;
+      if (compInstance.getCompSpec().getArtifact() != null && compInstance
+          .getCompSpec().getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
+        // A docker container might get a different IP if the container is
+        // relaunched by the NM, so we need to keep checking the status.
+        // This is a temporary fix until the NM provides a callback for
+        // container relaunch (see YARN-8265).
+        cancelOnSuccess = false;
+      }
       compInstance.containerStatusFuture =
           compInstance.scheduler.executorService.scheduleAtFixedRate(
               new ContainerStatusRetriever(compInstance.scheduler,
-                  event.getContainerId(), compInstance), 0, 1,
+                  event.getContainerId(), compInstance, cancelOnSuccess), 0, 1,
               TimeUnit.SECONDS);
       long containerStartTime = System.currentTimeMillis();
       try {
@@ -186,7 +207,17 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       compInstance.containerSpec.setState(ContainerState.READY);
-      compInstance.component.incContainersReady();
+      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
+        compInstance.component.incContainersReady(false);
+        compInstance.component.decContainersThatNeedUpgrade();
+        ComponentEvent checkState = new ComponentEvent(
+            compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
+        compInstance.scheduler.getDispatcher().getEventHandler().handle(
+            checkState);
+
+      } else {
+        compInstance.component.incContainersReady(true);
+      }
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
             .componentInstanceBecomeReady(compInstance.containerSpec);
@@ -199,8 +230,49 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
-      compInstance.component.decContainersReady();
+      compInstance.component.decContainersReady(true);
     }
+  }
+
+  @VisibleForTesting
+  static void handleComponentInstanceRelaunch(
+      ComponentInstance compInstance, ComponentInstanceEvent event) {
+    Component comp = compInstance.getComponent();
+
+    // Do we need to relaunch the service?
+    boolean hasContainerFailed = hasContainerFailed(event.getStatus());
+
+    ComponentRestartPolicy restartPolicy = comp.getRestartPolicyHandler();
+
+    if (restartPolicy.shouldRelaunchInstance(compInstance, event.getStatus())) {
+      // re-ask the failed container.
+      comp.requestContainers(1);
+      comp.reInsertPendingInstance(compInstance);
+      LOG.info(compInstance.getCompInstanceId()
+              + ": {} completed. Reinsert back to pending list and requested " +
+              "a new container." + System.lineSeparator() +
+              " exitStatus={}, diagnostics={}.",
+          event.getContainerId(), event.getStatus().getExitStatus(),
+          event.getStatus().getDiagnostics());
+    } else {
+      // When no relaunch, update component's #succeeded/#failed
+      // instances.
+      if (hasContainerFailed) {
+        comp.markAsFailed(compInstance);
+      } else {
+        comp.markAsSucceeded(compInstance);
+      }
+      LOG.info(compInstance.getCompInstanceId() + (!hasContainerFailed ?
+          " succeeded" :
+          " failed") + " without retry, exitStatus=" + event.getStatus());
+      comp.getScheduler().terminateServiceIfAllComponentsFinished();
+    }
+  }
+
+  public static boolean hasContainerFailed(ContainerStatus containerStatus) {
+    //Mark conainer as failed if we cant get its exit status i.e null?
+    return containerStatus == null || containerStatus.getExitStatus() !=
+        ContainerExitStatus.SUCCESS;
   }
 
   private static class ContainerStoppedTransition extends  BaseTransition {
@@ -217,32 +289,39 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      // re-ask the failed container.
+
       Component comp = compInstance.component;
-      comp.requestContainers(1);
       String containerDiag =
           compInstance.getCompInstanceId() + ": " + event.getStatus()
               .getDiagnostics();
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
       compInstance.cancelContainerStatusRetriever();
-
+      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
+        compInstance.component.decContainersThatNeedUpgrade();
+      }
       if (compInstance.getState().equals(READY)) {
-        compInstance.component.decContainersReady();
+        compInstance.component.decContainersReady(true);
       }
       compInstance.component.decRunningContainers();
-      boolean shouldExit = false;
-      // check if it exceeds the failure threshold
-      if (comp.currentContainerFailure.get() > comp.maxContainerFailurePerComp) {
+      // Should we fail (terminate) the service?
+      boolean shouldFailService = false;
+
+      final ServiceScheduler scheduler = comp.getScheduler();
+      // Check if it exceeds the failure threshold, but only if health threshold
+      // monitor is not enabled
+      if (!comp.isHealthThresholdMonitorEnabled()
+          && comp.currentContainerFailure
+              .get() > comp.maxContainerFailurePerComp) {
         String exitDiag = MessageFormat.format(
             "[COMPONENT {0}]: Failed {1} times, exceeded the limit - {2}. Shutting down now... "
                 + System.lineSeparator(),
             comp.getName(), comp.currentContainerFailure.get(), comp.maxContainerFailurePerComp);
         compInstance.diagnostics.append(exitDiag);
         // append to global diagnostics that will be reported to RM.
-        comp.getScheduler().getDiagnostics().append(containerDiag);
-        comp.getScheduler().getDiagnostics().append(exitDiag);
+        scheduler.getDiagnostics().append(containerDiag);
+        scheduler.getDiagnostics().append(exitDiag);
         LOG.warn(exitDiag);
-        shouldExit = true;
+        shouldFailService = true;
       }
 
       if (!failedBeforeLaunching) {
@@ -264,26 +343,32 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       }
 
       // remove the failed ContainerId -> CompInstance mapping
-      comp.getScheduler().removeLiveCompInstance(event.getContainerId());
+      scheduler.removeLiveCompInstance(event.getContainerId());
 
-      comp.reInsertPendingInstance(compInstance);
+      // According to component restart policy, handle container restart
+      // or finish the service (if all components finished)
+      handleComponentInstanceRelaunch(compInstance, event);
 
-      LOG.info(compInstance.getCompInstanceId()
-              + ": {} completed. Reinsert back to pending list and requested " +
-              "a new container." + System.lineSeparator() +
-              " exitStatus={}, diagnostics={}.",
-          event.getContainerId(), event.getStatus().getExitStatus(),
-          event.getStatus().getDiagnostics());
-      if (shouldExit) {
-        // Sleep for 5 seconds in hope that the state can be recorded in ATS.
-        // in case there's a client polling the comp state, it can be notified.
-        try {
-          Thread.sleep(5000);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted on sleep while exiting.", e);
-        }
-        ExitUtil.terminate(-1);
+      if (shouldFailService) {
+        scheduler.getTerminationHandler().terminate(-1);
       }
+    }
+  }
+
+  private static class ContainerUpgradeTransition extends BaseTransition {
+
+    @Override
+    public void transition(ComponentInstance compInstance,
+        ComponentInstanceEvent event) {
+      compInstance.containerSpec.setState(ContainerState.UPGRADING);
+      compInstance.component.decContainersReady(false);
+      ComponentEvent upgradeEvent = compInstance.component.getUpgradeEvent();
+      compInstance.scheduler.getContainerLaunchService()
+          .reInitCompInstance(compInstance.scheduler.getApp(), compInstance,
+              compInstance.container,
+              compInstance.component.createLaunchContext(
+                  upgradeEvent.getTargetSpec(),
+                  upgradeEvent.getUpgradeVersion()));
     }
   }
 
@@ -334,14 +419,26 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     this.status = status;
     org.apache.hadoop.yarn.service.api.records.Container container =
         getCompSpec().getContainer(status.getContainerId().toString());
+    boolean doRegistryUpdate = true;
     if (container != null) {
-      container.setIp(StringUtils.join(",", status.getIPs()));
+      String existingIP = container.getIp();
+      String newIP = StringUtils.join(",", status.getIPs());
+      container.setIp(newIP);
       container.setHostname(status.getHost());
-      if (timelineServiceEnabled) {
+      if (existingIP != null && newIP.equals(existingIP)) {
+        doRegistryUpdate = false;
+      }
+      if (timelineServiceEnabled && doRegistryUpdate) {
         serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
       }
     }
-    updateServiceRecord(yarnRegistryOperations, status);
+    if (doRegistryUpdate) {
+      cleanupRegistry(status.getContainerId());
+      LOG.info(
+          getCompInstanceId() + " new IP = " + status.getIPs() + ", host = "
+              + status.getHost() + ", updating registry");
+      updateServiceRecord(yarnRegistryOperations, status);
+    }
   }
 
   public String getCompName() {
@@ -422,7 +519,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       component.decRunningContainers();
     }
     if (getState() == READY) {
-      component.decContainersReady();
+      component.decContainersReady(true);
       component.decRunningContainers();
     }
     getCompSpec().removeContainer(containerSpec);
@@ -483,12 +580,15 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     private NodeId nodeId;
     private NMClient nmClient;
     private ComponentInstance instance;
+    private boolean cancelOnSuccess;
     ContainerStatusRetriever(ServiceScheduler scheduler,
-        ContainerId containerId, ComponentInstance instance) {
+        ContainerId containerId, ComponentInstance instance, boolean
+        cancelOnSuccess) {
       this.containerId = containerId;
       this.nodeId = instance.getNodeId();
       this.nmClient = scheduler.getNmClient().getClient();
       this.instance = instance;
+      this.cancelOnSuccess = cancelOnSuccess;
     }
     @Override public void run() {
       ContainerStatus status = null;
@@ -509,10 +609,12 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         return;
       }
       instance.updateContainerStatus(status);
-      LOG.info(
-          instance.compInstanceId + " IP = " + status.getIPs() + ", host = "
-              + status.getHost() + ", cancel container status retriever");
-      instance.containerStatusFuture.cancel(false);
+      if (cancelOnSuccess) {
+        LOG.info(
+            instance.compInstanceId + " IP = " + status.getIPs() + ", host = "
+                + status.getHost() + ", cancel container status retriever");
+        instance.containerStatusFuture.cancel(false);
+      }
     }
   }
 
@@ -542,14 +644,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   @Override
   public int compareTo(ComponentInstance to) {
-    long delta = containerStartedTime - to.containerStartedTime;
-    if (delta == 0) {
-      return getCompInstanceId().compareTo(to.getCompInstanceId());
-    } else if (delta < 0) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return getCompInstanceId().compareTo(to.getCompInstanceId());
   }
 
   @Override public boolean equals(Object o) {
@@ -570,5 +665,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     result = 31 * result + (int) (containerStartedTime ^ (containerStartedTime
         >>> 32));
     return result;
+  }
+
+  @VisibleForTesting public org.apache.hadoop.yarn.service.api.records
+      .Container getContainerSpec() {
+    return containerSpec;
   }
 }

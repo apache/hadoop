@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn.service.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -27,12 +31,16 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.Resource;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
@@ -54,6 +62,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_DOES_NOT_NEED_UPGRADE;
+import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE;
+
 public class ServiceApiUtil {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServiceApiUtil.class);
@@ -65,6 +76,8 @@ public class ServiceApiUtil {
 
   private static final PatternValidator userNamePattern
       = new PatternValidator("[a-z][a-z0-9-.]*");
+
+
 
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
@@ -106,14 +119,7 @@ public class ServiceApiUtil {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      if (!StringUtils.isEmpty(service.getKerberosPrincipal().getKeytab())) {
-        try {
-          // validate URI format
-          new URI(service.getKerberosPrincipal().getKeytab());
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-      }
+      validateKerberosPrincipal(service.getKerberosPrincipal());
     }
 
     // Validate the Docker client config.
@@ -140,9 +146,8 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException("Component name collision: " +
             comp.getName());
       }
-      // If artifact is of type SERVICE (which cannot be filled from
-      // global), read external service and add its components to this
-      // service
+      // If artifact is of type SERVICE (which cannot be filled from global),
+      // read external service and add its components to this service
       if (comp.getArtifact() != null && comp.getArtifact().getType() ==
           Artifact.TypeEnum.SERVICE) {
         if (StringUtils.isEmpty(comp.getArtifact().getId())) {
@@ -221,12 +226,32 @@ public class ServiceApiUtil {
     }
   }
 
+  public static void validateKerberosPrincipal(
+      KerberosPrincipal kerberosPrincipal) throws IOException {
+    if (!StringUtils.isEmpty(kerberosPrincipal.getKeytab())) {
+      try {
+        // validate URI format
+        URI keytabURI = new URI(kerberosPrincipal.getKeytab());
+        if (keytabURI.getScheme() == null) {
+          throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
+              kerberosPrincipal.getKeytab()));
+        }
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(
+            String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID,
+                e.getLocalizedMessage()));
+      }
+    }
+  }
+
   private static void validateDockerClientConfiguration(Service service,
       org.apache.hadoop.conf.Configuration conf) throws IOException {
     String dockerClientConfig = service.getDockerClientConfig();
     if (!StringUtils.isEmpty(dockerClientConfig)) {
       Path dockerClientConfigPath = new Path(dockerClientConfig);
       FileSystem fs = dockerClientConfigPath.getFileSystem(conf);
+      LOG.info("The supplied Docker client config is " + dockerClientConfig);
       if (!fs.exists(dockerClientConfigPath)) {
         throw new IOException(
             "The supplied Docker client config does not exist: "
@@ -494,6 +519,89 @@ public class ServiceApiUtil {
     Path appJson = new Path(appDir, service.getName() + ".json");
     jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
     return appJson;
+  }
+
+  public static List<Container> getLiveContainers(Service service,
+      List<String> componentInstances)
+      throws YarnException {
+    List<Container> result = new ArrayList<>();
+
+    // In order to avoid iterating over all the containers of all components,
+    // first find the affected components by parsing the instance name.
+    Multimap<String, String> affectedComps = ArrayListMultimap.create();
+    for (String instanceName : componentInstances) {
+      affectedComps.put(
+          ServiceApiUtil.parseComponentName(instanceName), instanceName);
+    }
+
+    service.getComponents().forEach(comp -> {
+      // Iterating once over the containers of the affected component to
+      // find all the containers. Avoiding multiple calls to
+      // service.getComponent(...) and component.getContainer(...) because they
+      // iterate over all the components of the service and all the containers
+      // of the components respectively.
+      if (affectedComps.get(comp.getName()) != null) {
+        Collection<String> instanceNames = affectedComps.get(comp.getName());
+        comp.getContainers().forEach(container -> {
+          if (instanceNames.contains(container.getComponentInstanceName())) {
+            result.add(container);
+          }
+        });
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Validates that the component instances that are requested to upgrade
+   * require an upgrade.
+   */
+  public static void validateInstancesUpgrade(List<Container>
+      liveContainers) throws YarnException {
+    for (Container liveContainer : liveContainers) {
+      if (!liveContainer.getState().equals(ContainerState.NEEDS_UPGRADE)) {
+        // Nothing to upgrade
+        throw new YarnException(String.format(
+            ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE,
+            liveContainer.getComponentInstanceName()));
+      }
+    }
+  }
+
+  /**
+   * Validates the components that are requested to upgrade require an upgrade.
+   * It returns the instances of the components which need upgrade.
+   */
+  public static List<Container> validateAndResolveCompsUpgrade(
+      Service liveService, Collection<String> compNames) throws YarnException {
+    Preconditions.checkNotNull(compNames);
+    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    List<Container> containerNeedUpgrade = new ArrayList<>();
+    for (Component liveComp : liveService.getComponents()) {
+      if (requestedComps.contains(liveComp.getName())) {
+        if (!liveComp.getState().equals(ComponentState.NEEDS_UPGRADE)) {
+          // Nothing to upgrade
+          throw new YarnException(String.format(
+              ERROR_COMP_DOES_NOT_NEED_UPGRADE, liveComp.getName()));
+        }
+        liveComp.getContainers().forEach(liveContainer -> {
+          if (liveContainer.getState().equals(ContainerState.NEEDS_UPGRADE)) {
+            containerNeedUpgrade.add(liveContainer);
+          }
+        });
+      }
+    }
+    return containerNeedUpgrade;
+  }
+
+  private static String parseComponentName(String componentInstanceName)
+      throws YarnException {
+    int idx = componentInstanceName.lastIndexOf('-');
+    if (idx == -1) {
+      throw new YarnException("Invalid component instance (" +
+          componentInstanceName + ") name.");
+    }
+    return componentInstanceName.substring(0, idx);
   }
 
   public static String $(String s) {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -27,10 +28,12 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
@@ -48,6 +51,8 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.common.base.Supplier;
 
@@ -93,6 +98,22 @@ public class TestRouterAdminCLI {
         routerSocket);
     admin = new RouterAdmin(routerConf);
     client = routerContext.getAdminClient();
+
+    // Add two fake name services to testing disabling them
+    ActiveNamenodeResolver membership = router.getNamenodeResolver();
+    membership.registerNamenode(
+        createNamenodeReport("ns0", "nn1", HAServiceState.ACTIVE));
+    membership.registerNamenode(
+        createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
+    stateStore.refreshCaches(true);
+
+    // Mock the quota module since no real namenode is started up.
+    Quota quota = Mockito
+        .spy(routerContext.getRouter().createRpcServer().getQuotaModule());
+    Mockito.doNothing().when(quota).setQuota(Mockito.anyString(),
+        Mockito.anyLong(), Mockito.anyLong(), Mockito.any());
+    Whitebox.setInternalState(
+        routerContext.getRouter().getRpcServer(), "quotaCall", quota);
   }
 
   @AfterClass
@@ -148,6 +169,45 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testAddMountTableNotNormalized() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-addmounttable-notnormalized";
+    String srcWithSlash = src + "/";
+    String dest = "/addmounttable-notnormalized";
+    String[] argv = new String[] {"-add", srcWithSlash, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    MountTable mountTable = getResponse.getEntries().get(0);
+
+    List<RemoteLocation> destinations = mountTable.getDestinations();
+    assertEquals(1, destinations.size());
+
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, destinations.get(0).getNameserviceId());
+    assertEquals(dest, destinations.get(0).getDest());
+    assertFalse(mountTable.isReadOnly());
+
+    // test mount table update behavior
+    dest = dest + "-new";
+    argv = new String[] {"-add", srcWithSlash, nsId, dest, "-readonly"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(2, mountTable.getDestinations().size());
+    assertEquals(nsId, mountTable.getDestinations().get(1).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(1).getDest());
+    assertTrue(mountTable.isReadOnly());
+  }
+
+  @Test
   public void testAddOrderMountTable() throws Exception {
     testAddOrderMountTable(DestinationOrder.HASH);
     testAddOrderMountTable(DestinationOrder.LOCAL);
@@ -181,6 +241,7 @@ public class TestRouterAdminCLI {
   public void testListMountTable() throws Exception {
     String nsId = "ns0";
     String src = "/test-lsmounttable";
+    String srcWithSlash = src + "/";
     String dest = "/lsmounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
@@ -189,6 +250,11 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
     argv = new String[] {"-ls", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(src));
+
+    // Test with not-normalized src input
+    argv = new String[] {"-ls", srcWithSlash};
     assertEquals(0, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(src));
 
@@ -242,6 +308,33 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(
         "Cannot remove mount point " + invalidPath));
+  }
+
+  @Test
+  public void testRemoveMountTableNotNormalized() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-rmmounttable-notnormalized";
+    String srcWithSlash = src + "/";
+    String dest = "/rmmounttable-notnormalized";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+
+    argv = new String[] {"-rm", srcWithSlash};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    assertEquals(0, getResponse.getEntries().size());
   }
 
   @Test
@@ -517,5 +610,194 @@ public class TestRouterAdminCLI {
         return expectedState == routerContext.getRouter().getRouterState();
       }
     }, 1000, 30000);
+  }
+
+  @Test
+  public void testUpdateNonExistingMountTable() throws Exception {
+    System.setOut(new PrintStream(out));
+    String nsId = "ns0";
+    String src = "/test-updateNonExistingMounttable";
+    String dest = "/updateNonExistingMounttable";
+    String[] argv = new String[] {"-update", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    // Ensure the destination updated successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+  }
+
+  @Test
+  public void testUpdateDestinationForExistingMountTable() throws
+  Exception {
+    // Add a mount table firstly
+    String nsId = "ns0";
+    String src = "/test-updateDestinationForExistingMountTable";
+    String dest = "/UpdateDestinationForExistingMountTable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+
+    // Update the destination
+    String newNsId = "ns1";
+    String newDest = "/newDestination";
+    argv = new String[] {"-update", src, newNsId, newDest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // Ensure the destination updated successfully
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(newNsId,
+        mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(newDest, mountTable.getDestinations().get(0).getDest());
+  }
+
+  @Test
+  public void testUpdateDestinationForExistingMountTableNotNormalized() throws
+      Exception {
+    // Add a mount table firstly
+    String nsId = "ns0";
+    String src = "/test-updateDestinationForExistingMountTableNotNormalized";
+    String srcWithSlash = src + "/";
+    String dest = "/UpdateDestinationForExistingMountTableNotNormalized";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+
+    // Update the destination
+    String newNsId = "ns1";
+    String newDest = "/newDestination";
+    argv = new String[] {"-update", srcWithSlash, newNsId, newDest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // Ensure the destination updated successfully
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(newNsId,
+        mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(newDest, mountTable.getDestinations().get(0).getDest());
+  }
+
+  @Test
+  public void testUpdateReadonlyUserGroupPermissionMountable()
+      throws Exception {
+    // Add a mount table
+    String nsId = "ns0";
+    String src = "/test-updateReadonlyUserGroupPermissionMountTable";
+    String dest = "/UpdateReadonlyUserGroupPermissionMountTable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+    assertFalse(mountTable.isReadOnly());
+
+    // Update the readonly, owner, group and permission
+    String testOwner = "test_owner";
+    String testGroup = "test_group";
+    argv = new String[] {"-update", src, nsId, dest, "-readonly",
+        "-owner", testOwner, "-group", testGroup, "-mode", "0455"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    // Ensure the destination updated successfully
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+    assertTrue(mountTable.isReadOnly());
+    assertEquals(testOwner, mountTable.getOwnerName());
+    assertEquals(testGroup, mountTable.getGroupName());
+    assertEquals((short)0455, mountTable.getMode().toShort());
+  }
+
+  @Test
+  public void testUpdateOrderMountTable() throws Exception {
+    testUpdateOrderMountTable(DestinationOrder.HASH);
+    testUpdateOrderMountTable(DestinationOrder.LOCAL);
+    testUpdateOrderMountTable(DestinationOrder.RANDOM);
+    testUpdateOrderMountTable(DestinationOrder.HASH_ALL);
+  }
+
+  private void testUpdateOrderMountTable(DestinationOrder order)
+      throws Exception {
+    // Add a mount table
+    String nsId = "ns0";
+    String src = "/test-updateOrderMountTable-"+order.toString();
+    String dest = "/UpdateOrderMountTable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+    assertEquals(DestinationOrder.HASH, mountTable.getDestOrder());
+
+    // Update the order
+    argv = new String[] {"-update", src, nsId, dest, "-order",
+        order.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    // Ensure the destination updated successfully
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+    assertEquals(order, mountTable.getDestOrder());
   }
 }

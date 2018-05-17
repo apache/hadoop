@@ -186,38 +186,8 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   public List<PrivilegedOperation> preStart(Container container)
       throws ResourceHandlerException {
     String cgroupId = container.getContainerId().toString();
-    Resource containerResource = container.getResource();
     cGroupsHandler.createCGroup(CPU, cgroupId);
-    try {
-      int containerVCores = containerResource.getVirtualCores();
-      ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
-      if (id != null && id.getExecutionType() ==
-          ExecutionType.OPPORTUNISTIC) {
-        cGroupsHandler
-            .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
-                String.valueOf(CPU_DEFAULT_WEIGHT_OPPORTUNISTIC));
-      } else {
-        int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
-        cGroupsHandler
-            .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
-                String.valueOf(cpuShares));
-      }
-      if (strictResourceUsageMode) {
-        if (nodeVCores != containerVCores) {
-          float containerCPU =
-              (containerVCores * yarnProcessors) / (float) nodeVCores;
-          int[] limits = getOverallLimits(containerCPU);
-          cGroupsHandler.updateCGroupParam(CPU, cgroupId,
-              CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(limits[0]));
-          cGroupsHandler.updateCGroupParam(CPU, cgroupId,
-              CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(limits[1]));
-        }
-      }
-    } catch (ResourceHandlerException re) {
-      cGroupsHandler.deleteCGroup(CPU, cgroupId);
-      LOG.warn("Could not update cgroup for container", re);
-      throw re;
-    }
+    updateContainer(container);
     List<PrivilegedOperation> ret = new ArrayList<>();
     ret.add(new PrivilegedOperation(
         PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
@@ -229,6 +199,49 @@ public class CGroupsCpuResourceHandlerImpl implements CpuResourceHandler {
   @Override
   public List<PrivilegedOperation> reacquireContainer(ContainerId containerId)
       throws ResourceHandlerException {
+    return null;
+  }
+
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    Resource containerResource = container.getResource();
+    String cgroupId = container.getContainerId().toString();
+    File cgroup = new File(cGroupsHandler.getPathForCGroup(CPU, cgroupId));
+    if (cgroup.exists()) {
+      try {
+        int containerVCores = containerResource.getVirtualCores();
+        ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
+        if (id != null && id.getExecutionType() ==
+            ExecutionType.OPPORTUNISTIC) {
+          cGroupsHandler
+              .updateCGroupParam(CPU, cgroupId,
+                  CGroupsHandler.CGROUP_CPU_SHARES,
+                  String.valueOf(CPU_DEFAULT_WEIGHT_OPPORTUNISTIC));
+        } else {
+          int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
+          cGroupsHandler
+              .updateCGroupParam(CPU, cgroupId,
+                  CGroupsHandler.CGROUP_CPU_SHARES,
+                  String.valueOf(cpuShares));
+        }
+        if (strictResourceUsageMode) {
+          if (nodeVCores != containerVCores) {
+            float containerCPU =
+                (containerVCores * yarnProcessors) / (float) nodeVCores;
+            int[] limits = getOverallLimits(containerCPU);
+            cGroupsHandler.updateCGroupParam(CPU, cgroupId,
+                CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(limits[0]));
+            cGroupsHandler.updateCGroupParam(CPU, cgroupId,
+                CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(limits[1]));
+          }
+        }
+      } catch (ResourceHandlerException re) {
+        cGroupsHandler.deleteCGroup(CPU, cgroupId);
+        LOG.warn("Could not update cgroup for container", re);
+        throw re;
+      }
+    }
     return null;
   }
 

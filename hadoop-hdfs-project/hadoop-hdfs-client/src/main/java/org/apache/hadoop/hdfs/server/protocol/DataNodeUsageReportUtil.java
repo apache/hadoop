@@ -23,7 +23,7 @@ import org.apache.hadoop.util.Time;
 
 /**
  * This class is helper class to generate a live usage report by calculating
- * the delta between  current DataNode usage metrics and the usage metrics
+ * the delta between current DataNode usage metrics and the usage metrics
  * captured at the time of the last report.
  */
 @InterfaceAudience.Private

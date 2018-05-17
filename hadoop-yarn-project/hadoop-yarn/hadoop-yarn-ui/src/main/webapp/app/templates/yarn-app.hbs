@@ -18,6 +18,15 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
+{{#if actionResponse}}
+  <div class="col-md-12">
+    <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
+      <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
+      <strong>{{actionResponse.msg}}</strong>
+    </div>
+  </div>
+{{/if}}
+
 <div class="panel-group">
   <div class="panel panel-default">
     <div class="yarn-app-header">
@@ -64,18 +73,26 @@
 
         <div class="flex-right">
           <div class="links">
-            {{#if isRunningService}}
+              {{#if (or isRunningService isKillable)}}
               <div class="btn-group">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <i class="glyphicon glyphicon-cog" />
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
-                  <li>
-                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
-                  </li>
-                  <li>
-                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
-                  </li>
+                  {{#if isRunningService}}
+                    <li>
+                      <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
+                    </li>
+                    <li>
+                      <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
+                    </li>
+                  {{else if isKillable}}
+                    <li>
+                      <a href="#"  {{action "showKillApplicationConfirm"}} target="_blank">
+                        <i class="glyphicon glyphicon-stop" />&nbsp;Kill Application
+                      </a>
+                    </li>
+                  {{/if}}
                 </ul>
               </div>
             {{/if}}
@@ -99,6 +116,9 @@
             <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
           </div>
           <div>Priority {{model.app.priority}}</div>
+          {{#if model.app.trackingUrl}}
+            <div><a href="{{model.app.trackingUrl}}" target="_blank">{{model.app.trackingUI}}</a></div>
+          {{/if}}
         </div>
       </div>
     </div>
@@ -146,4 +166,10 @@
   dialogId="deleteServiceConfirmDialog"
   message=(concat 'Are you sure you want to delete service "' model.serviceName '" for user "' model.app.user '" ?')
   action="deleteService"
+}}
+
+{{confirm-dialog
+  dialogId="killApplicationConfirmDialog"
+  message=(concat 'Are you sure you want to kill application "' model.app.id '"?')
+  action="killApplication"
 }}

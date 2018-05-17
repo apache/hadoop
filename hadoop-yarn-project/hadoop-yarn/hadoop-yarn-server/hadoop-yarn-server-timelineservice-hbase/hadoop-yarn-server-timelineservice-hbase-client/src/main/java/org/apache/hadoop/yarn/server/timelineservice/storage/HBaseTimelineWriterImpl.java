@@ -30,6 +30,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import  org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -56,6 +57,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConve
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
@@ -101,6 +106,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   private TypedBufferedMutator<FlowActivityTable> flowActivityTable;
   private TypedBufferedMutator<FlowRunTable> flowRunTable;
   private TypedBufferedMutator<SubApplicationTable> subApplicationTable;
+  private TypedBufferedMutator<DomainTable> domainTable;
 
   /**
    * Used to convert strings key components to and from storage format.
@@ -139,6 +145,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         new FlowActivityTableRW().getTableMutator(hbaseConf, conn);
     subApplicationTable =
         new SubApplicationTableRW().getTableMutator(hbaseConf, conn);
+    domainTable = new DomainTableRW().getTableMutator(hbaseConf, conn);
 
     UserGroupInformation ugi = UserGroupInformation.isSecurityEnabled() ?
         UserGroupInformation.getLoginUser() :
@@ -228,6 +235,41 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         }
       }
     }
+    return putStatus;
+  }
+
+  @Override
+  public TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineDomain domain)
+      throws IOException {
+    TimelineWriteResponse putStatus = new TimelineWriteResponse();
+
+    String clusterId = context.getClusterId();
+    String domainId = domain.getId();
+
+    // defensive coding to avoid NPE during row key construction
+    if (clusterId == null) {
+      LOG.warn(
+          "Found null for clusterId. Not proceeding with writing to hbase");
+      return putStatus;
+    }
+
+    DomainRowKey domainRowKey = new DomainRowKey(clusterId, domainId);
+    byte[] rowKey = domainRowKey.getRowKey();
+
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.CREATED_TIME, null,
+        domain.getCreatedTime());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.DESCRIPTION, null,
+        domain.getDescription());
+    ColumnRWHelper
+        .store(rowKey, domainTable, DomainColumn.MODIFICATION_TIME, null,
+            domain.getModifiedTime());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.OWNER, null,
+        domain.getOwner());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.READERS, null,
+        domain.getReaders());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.WRITERS, null,
+        domain.getWriters());
     return putStatus;
   }
 
@@ -568,6 +610,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     flowRunTable.flush();
     flowActivityTable.flush();
     subApplicationTable.flush();
+    domainTable.flush();
   }
 
   /**
@@ -602,6 +645,9 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     }
     if (subApplicationTable != null) {
       subApplicationTable.close();
+    }
+    if (domainTable != null) {
+      domainTable.close();
     }
     if (conn != null) {
       LOG.info("closing the hbase Connection");

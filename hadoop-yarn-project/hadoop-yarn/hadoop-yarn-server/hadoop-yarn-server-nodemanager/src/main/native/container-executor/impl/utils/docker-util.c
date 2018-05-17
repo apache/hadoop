@@ -32,6 +32,8 @@
 #include <pwd.h>
 #include <errno.h>
 
+int entry_point = 0;
+
 static int read_and_verify_command_file(const char *command_file, const char *docker_command,
                                         struct configuration *command_config) {
   int ret = 0;
@@ -47,36 +49,63 @@ static int read_and_verify_command_file(const char *command_file, const char *do
   return ret;
 }
 
-static int add_to_buffer(char *buff, const size_t bufflen, const char *string) {
-  size_t current_len = strlen(buff);
-  size_t string_len = strlen(string);
-  if (current_len + string_len < bufflen - 1) {
-    strncpy(buff + current_len, string, string_len);
-    buff[current_len + string_len] = '\0';
-    return 0;
+static int add_to_args(args *args, const char *string) {
+  if (string == NULL) {
+    return -1;
   }
-  return -1;
+  if (args->data == NULL || args->length >= DOCKER_ARG_MAX) {
+    return -1;
+  }
+  char *clone = strdup(string);
+  if (clone == NULL) {
+    return -1;
+  }
+  if (args->data != NULL) {
+    args->data[args->length] = clone;
+    args->length++;
+  }
+  return 0;
+}
+
+void reset_args(args *args) {
+  int i = 0;
+  if (args == NULL) {
+    return;
+  }
+  for (i = 0; i < args->length; i++) {
+    free(args->data[i]);
+  }
+  args->length = 0;
+}
+
+char** extract_execv_args(args* args) {
+  char** copy = (char**)malloc((args->length + 1) * sizeof(char*));
+  for (int i = 0; i < args->length; i++) {
+    copy[i] = args->data[i];
+  }
+  copy[args->length] = NULL;
+  args->length = 0;
+  return copy;
 }
 
 static int add_param_to_command(const struct configuration *command_config, const char *key, const char *param,
-                                const int with_argument, char *out, const size_t outlen) {
-  size_t tmp_buffer_size = 4096;
+                                const int with_argument, args *args) {
   int ret = 0;
-  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
+  char *tmp_buffer = NULL;
   char *value = get_configuration_value(key, DOCKER_COMMAND_FILE_SECTION, command_config);
   if (value != NULL) {
     if (with_argument) {
-      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, param, value);
-      ret = add_to_buffer(out, outlen, tmp_buffer);
+      tmp_buffer = make_string("%s%s", param, value);
+      ret = add_to_args(args, tmp_buffer);
+      free(tmp_buffer);
     } else if (strcmp(value, "true") == 0) {
-      ret = add_to_buffer(out, outlen, param);
+      ret = add_to_args(args, param);
     }
     free(value);
     if (ret != 0) {
       ret = BUFFER_TOO_SMALL;
     }
   }
-  free(tmp_buffer);
   return ret;
 }
 
@@ -116,8 +145,8 @@ int check_trusted_image(const struct configuration *command_config, const struct
   }
   free(image_name);
 
-  free_and_exit:
-  free(privileged_registry);
+free_and_exit:
+  free_values(privileged_registry);
   return ret;
 }
 
@@ -141,9 +170,8 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
                                            const struct configuration *executor_cfg,
                                            const char *key, const char *allowed_key, const char *param,
                                            const int multiple_values, const char prefix,
-                                           char *out, const size_t outlen) {
-  size_t tmp_buffer_size = 4096;
-  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
+                                           args *args) {
+  char *tmp_buffer = NULL;
   char *tmp_ptr = NULL;
   char **values = NULL;
   char **permitted_values = get_configuration_values_delimiter(allowed_key,
@@ -174,7 +202,6 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
     if (permitted_values != NULL) {
       // Values are user requested.
       for (i = 0; values[i] != NULL; ++i) {
-        memset(tmp_buffer, 0, tmp_buffer_size);
         permitted = 0;
         if(prefix != 0) {
           tmp_ptr = strchr(values[i], prefix);
@@ -195,12 +222,8 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
           } else {
             // If permitted-Values[j] is a REGEX, use REGEX to compare
             if (is_regex(permitted_values[j])) {
-              size_t offset = tmp_ptr - values[i];
-              dst = (char *) alloc_and_clear_memory(offset, sizeof(char));
-              strncpy(dst, values[i], offset);
-              dst[tmp_ptr - values[i]] = '\0';
-              pattern = (char *) alloc_and_clear_memory((size_t)(strlen(permitted_values[j]) - 6), sizeof(char));
-              strcpy(pattern, permitted_values[j] + 6);
+              dst = strndup(values[i], tmp_ptr - values[i]);
+              pattern = strdup(permitted_values[j] + 6);
               ret = execute_regex_match(pattern, dst);
             } else {
               ret = strncmp(values[i], permitted_values[j], tmp_ptr - values[i]);
@@ -214,8 +237,9 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
           }
         }
         if (permitted == 1) {
-          quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, param, values[i]);
-          ret = add_to_buffer(out, outlen, tmp_buffer);
+          tmp_buffer = make_string("%s%s", param, values[i]);
+          ret = add_to_args(args, tmp_buffer);
+          free(tmp_buffer);
           if (ret != 0) {
             fprintf(ERRORFILE, "Output buffer too small\n");
             ret = BUFFER_TOO_SMALL;
@@ -238,15 +262,11 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
   free_and_exit:
   free_values(values);
   free_values(permitted_values);
-  free(tmp_buffer);
-  if (ret != 0) {
-    memset(out, 0, outlen);
-  }
   return ret;
 }
 
-static int add_docker_config_param(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "docker-config", "--config=", 1, out, outlen);
+static int add_docker_config_param(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "docker-config", "--config=", 1, args);
 }
 
 static int validate_volume_name(const char *volume_name) {
@@ -318,6 +338,17 @@ const char *get_docker_error_message(const int error_code) {
   }
 }
 
+int get_max_retries(const struct configuration *conf) {
+  int retries = 10;
+  char *max_retries = get_configuration_value(DOCKER_INSPECT_MAX_RETRIES_KEY,
+      CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
+  if (max_retries != NULL) {
+    retries = atoi(max_retries);
+    free(max_retries);
+  }
+  return retries;
+}
+
 char *get_docker_binary(const struct configuration *conf) {
   char *docker_binary = NULL;
   docker_binary = get_configuration_value(DOCKER_BINARY_KEY, CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
@@ -330,6 +361,10 @@ char *get_docker_binary(const struct configuration *conf) {
   return docker_binary;
 }
 
+int get_use_entry_point_flag() {
+  return entry_point;
+}
+
 int docker_module_enabled(const struct configuration *conf) {
   struct section *section = get_configuration_section(CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
   if (section != NULL) {
@@ -338,7 +373,7 @@ int docker_module_enabled(const struct configuration *conf) {
   return 0;
 }
 
-int get_docker_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   struct configuration command_config = {0, NULL};
 
@@ -347,25 +382,43 @@ int get_docker_command(const char *command_file, const struct configuration *con
     return INVALID_COMMAND_FILE;
   }
 
+  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (value != NULL && strcasecmp(value, "true") == 0) {
+    entry_point = 1;
+  }
+  free(value);
+
+  char *docker = get_docker_binary(conf);
+  ret = add_to_args(args, docker);
+  free(docker);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
+  ret = add_docker_config_param(&command_config, args);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
   char *command = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (strcmp(DOCKER_INSPECT_COMMAND, command) == 0) {
-    return get_docker_inspect_command(command_file, conf, out, outlen);
+    return get_docker_inspect_command(command_file, conf, args);
   } else if (strcmp(DOCKER_KILL_COMMAND, command) == 0) {
-    return get_docker_kill_command(command_file, conf, out, outlen);
+    return get_docker_kill_command(command_file, conf, args);
   } else if (strcmp(DOCKER_LOAD_COMMAND, command) == 0) {
-    return get_docker_load_command(command_file, conf, out, outlen);
+    return get_docker_load_command(command_file, conf, args);
   } else if (strcmp(DOCKER_PULL_COMMAND, command) == 0) {
-    return get_docker_pull_command(command_file, conf, out, outlen);
+    return get_docker_pull_command(command_file, conf, args);
   } else if (strcmp(DOCKER_RM_COMMAND, command) == 0) {
-    return get_docker_rm_command(command_file, conf, out, outlen);
+    return get_docker_rm_command(command_file, conf, args);
   } else if (strcmp(DOCKER_RUN_COMMAND, command) == 0) {
-    return get_docker_run_command(command_file, conf, out, outlen);
+    return get_docker_run_command(command_file, conf, args);
   } else if (strcmp(DOCKER_STOP_COMMAND, command) == 0) {
-    return get_docker_stop_command(command_file, conf, out, outlen);
+    return get_docker_stop_command(command_file, conf, args);
   } else if (strcmp(DOCKER_VOLUME_COMMAND, command) == 0) {
-    return get_docker_volume_command(command_file, conf, out, outlen);
+    return get_docker_volume_command(command_file, conf, args);
   } else if (strcmp(DOCKER_START_COMMAND, command) == 0) {
-    return get_docker_start_command(command_file, conf, out, outlen);
+    return get_docker_start_command(command_file, conf, args);
   } else {
     return UNKNOWN_DOCKER_COMMAND;
   }
@@ -397,8 +450,7 @@ static int value_permitted(const struct configuration* executor_cfg,
   return found;
 }
 
-int get_docker_volume_command(const char *command_file, const struct configuration *conf, char *out,
-                               const size_t outlen) {
+int get_docker_volume_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   char *driver = NULL, *volume_name = NULL, *sub_command = NULL, *format = NULL;
   struct configuration command_config = {0, NULL};
@@ -416,15 +468,7 @@ int get_docker_volume_command(const char *command_file, const struct configurati
     goto cleanup;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    ret = BUFFER_TOO_SMALL;
-    goto cleanup;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_VOLUME_COMMAND);
+  ret = add_to_args(args, DOCKER_VOLUME_COMMAND);
   if (ret != 0) {
     goto cleanup;
   }
@@ -443,18 +487,16 @@ int get_docker_volume_command(const char *command_file, const struct configurati
       goto cleanup;
     }
 
-    ret = add_to_buffer(out, outlen, " create");
+    ret = add_to_args(args, "create");
     if (ret != 0) {
       goto cleanup;
     }
 
-    ret = add_to_buffer(out, outlen, " --name=");
+    char *name_buffer = make_string("--name=%s", volume_name);
+    ret = add_to_args(args, name_buffer);
+    free(name_buffer);
     if (ret != 0) {
-      goto cleanup;
-    }
-
-    ret = add_to_buffer(out, outlen, volume_name);
-    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
       goto cleanup;
     }
 
@@ -465,30 +507,26 @@ int get_docker_volume_command(const char *command_file, const struct configurati
       goto cleanup;
     }
 
-    ret = add_to_buffer(out, outlen, " --driver=");
+    char *driver_buffer = make_string("--driver=%s", driver);
+    ret = add_to_args(args, driver_buffer);
+    free(driver_buffer);
     if (ret != 0) {
-      goto cleanup;
-    }
-
-    ret = add_to_buffer(out, outlen, driver);
-    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
       goto cleanup;
     }
   } else if (0 == strcmp(sub_command, "ls")) {
     format = get_configuration_value("format", DOCKER_COMMAND_FILE_SECTION, &command_config);
 
-    ret = add_to_buffer(out, outlen, " ls");
+    ret = add_to_args(args, "ls");
     if (ret != 0) {
       goto cleanup;
     }
-
     if (format) {
-      ret = add_to_buffer(out, outlen, " --format=");
+      char *tmp_buffer = make_string("--format=%s", format);
+      ret = add_to_args(args, tmp_buffer);
+      free(tmp_buffer);
       if (ret != 0) {
-        goto cleanup;
-      }
-      ret = add_to_buffer(out, outlen, format);
-      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
         goto cleanup;
       }
     }
@@ -499,20 +537,14 @@ cleanup:
   free(volume_name);
   free(sub_command);
   free(format);
-
-  // clean up out buffer
-  if (ret != 0) {
-    out[0] = 0;
-  }
   return ret;
 }
 
-int get_docker_inspect_command(const char *command_file, const struct configuration *conf, char *out,
-                               const size_t outlen) {
+int get_docker_inspect_command(const char *command_file, const struct configuration *conf, args *args) {
   const char *valid_format_strings[] = { "{{.State.Status}}",
                                 "{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}" };
   int ret = 0, i = 0, valid_format = 0;
-  char *format = NULL, *container_name = NULL;
+  char *format = NULL, *container_name = NULL, *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_INSPECT_COMMAND, &command_config);
   if (ret != 0) {
@@ -542,32 +574,17 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
     return INVALID_DOCKER_INSPECT_FORMAT;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    free(container_name);
-    free(format);
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_INSPECT_COMMAND);
+  ret = add_to_args(args, DOCKER_INSPECT_COMMAND);
   if (ret != 0) {
     goto free_and_exit;
   }
-  ret = add_to_buffer(out, outlen, " --format=");
+  tmp_buffer = make_string("--format=%s", format);
+  ret = add_to_args(args, tmp_buffer);
+  free(tmp_buffer);
   if (ret != 0) {
     goto free_and_exit;
   }
-  ret = add_to_buffer(out, outlen, format);
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-  ret = add_to_buffer(out, outlen, " ");
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-  ret = add_to_buffer(out, outlen, container_name);
+  ret = add_to_args(args, container_name);
   if (ret != 0) {
     goto free_and_exit;
   }
@@ -581,11 +598,9 @@ int get_docker_inspect_command(const char *command_file, const struct configurat
   return BUFFER_TOO_SMALL;
 }
 
-int get_docker_load_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_load_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   char *image_name = NULL;
-  size_t tmp_buffer_size = 1024;
-  char *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_LOAD_COMMAND, &command_config);
   if (ret != 0) {
@@ -597,19 +612,10 @@ int get_docker_load_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_IMAGE_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    free(image_name);
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_LOAD_COMMAND);
+  ret = add_to_args(args, DOCKER_LOAD_COMMAND);
   if (ret == 0) {
-    tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
-    quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, " --i=", image_name);
-    ret = add_to_buffer(out, outlen, tmp_buffer);
+    char *tmp_buffer = make_string("--i=%s", image_name);
+    ret = add_to_args(args, tmp_buffer);
     free(tmp_buffer);
     free(image_name);
     if (ret != 0) {
@@ -626,11 +632,9 @@ static int validate_docker_image_name(const char *image_name) {
   return execute_regex_match(regex_str, image_name);
 }
 
-int get_docker_pull_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_pull_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   char *image_name = NULL;
-  size_t tmp_buffer_size = 1024;
-  char *tmp_buffer = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_PULL_COMMAND, &command_config);
   if (ret != 0) {
@@ -642,30 +646,21 @@ int get_docker_pull_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_IMAGE_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_PULL_COMMAND);
+  ret = add_to_args(args, DOCKER_PULL_COMMAND);
   if (ret == 0) {
-    tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
-    quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, " ", image_name);
-    ret = add_to_buffer(out, outlen, tmp_buffer);
-    free(tmp_buffer);
+    ret = add_to_args(args, image_name);
     free(image_name);
     if (ret != 0) {
-      return BUFFER_TOO_SMALL;
+      goto free_pull;
     }
     return 0;
   }
+  free_pull:
   free(image_name);
   return BUFFER_TOO_SMALL;
 }
 
-int get_docker_rm_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_rm_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   char *container_name = NULL;
   struct configuration command_config = {0, NULL};
@@ -679,19 +674,9 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_RM_COMMAND);
+  ret = add_to_args(args, DOCKER_RM_COMMAND);
   if (ret == 0) {
-    ret = add_to_buffer(out, outlen, " ");
-    if (ret == 0) {
-      ret = add_to_buffer(out, outlen, container_name);
-    }
+    ret = add_to_args(args, container_name);
     free(container_name);
     if (ret != 0) {
       return BUFFER_TOO_SMALL;
@@ -703,7 +688,7 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
 }
 
 int get_docker_stop_command(const char *command_file, const struct configuration *conf,
-                            char *out, const size_t outlen) {
+                            args *args) {
   int ret = 0;
   size_t len = 0, i = 0;
   char *value = NULL;
@@ -719,14 +704,7 @@ int get_docker_stop_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_STOP_COMMAND);
+  ret = add_to_args(args, DOCKER_STOP_COMMAND);
   if (ret == 0) {
     value = get_configuration_value("time", DOCKER_COMMAND_FILE_SECTION, &command_config);
     if (value != NULL) {
@@ -734,36 +712,26 @@ int get_docker_stop_command(const char *command_file, const struct configuration
       for (i = 0; i < len; ++i) {
         if (isdigit(value[i]) == 0) {
           fprintf(ERRORFILE, "Value for time is not a number '%s'\n", value);
-          free(container_name);
-          memset(out, 0, outlen);
-          return INVALID_DOCKER_STOP_COMMAND;
+          ret = INVALID_DOCKER_STOP_COMMAND;
+          goto free_and_exit;
         }
       }
-      ret = add_to_buffer(out, outlen, " --time=");
-      if (ret == 0) {
-        ret = add_to_buffer(out, outlen, value);
-      }
+      char *time_buffer = make_string("--time=%s", value);
+      ret = add_to_args(args, time_buffer);
+      free(time_buffer);
       if (ret != 0) {
-        free(container_name);
-        return BUFFER_TOO_SMALL;
+        goto free_and_exit;
       }
     }
-    ret = add_to_buffer(out, outlen, " ");
-    if (ret == 0) {
-      ret = add_to_buffer(out, outlen, container_name);
-    }
-    free(container_name);
-    if (ret != 0) {
-      return BUFFER_TOO_SMALL;
-    }
-    return 0;
+    ret = add_to_args(args, container_name);
   }
+free_and_exit:
   free(container_name);
-  return BUFFER_TOO_SMALL;
+  return ret;
 }
 
 int get_docker_kill_command(const char *command_file, const struct configuration *conf,
-                            char *out, const size_t outlen) {
+                            args *args) {
   int ret = 0;
   size_t len = 0, i = 0;
   char *value = NULL;
@@ -779,14 +747,7 @@ int get_docker_kill_command(const char *command_file, const struct configuration
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_KILL_COMMAND);
+  ret = add_to_args(args, DOCKER_KILL_COMMAND);
   if (ret == 0) {
     value = get_configuration_value("signal", DOCKER_COMMAND_FILE_SECTION, &command_config);
     if (value != NULL) {
@@ -794,35 +755,26 @@ int get_docker_kill_command(const char *command_file, const struct configuration
       for (i = 0; i < len; ++i) {
         if (isupper(value[i]) == 0) {
           fprintf(ERRORFILE, "Value for signal contains non-uppercase characters '%s'\n", value);
-          free(container_name);
-          memset(out, 0, outlen);
-          return INVALID_DOCKER_KILL_COMMAND;
+          ret = INVALID_DOCKER_KILL_COMMAND;
+          goto free_and_exit;
         }
       }
-      ret = add_to_buffer(out, outlen, " --signal=");
-      if (ret == 0) {
-        ret = add_to_buffer(out, outlen, value);
-      }
+
+      char *signal_buffer = make_string("--signal=%s", value);
+      ret = add_to_args(args, signal_buffer);
+      free(signal_buffer);
       if (ret != 0) {
-        free(container_name);
-        return BUFFER_TOO_SMALL;
+        goto free_and_exit;
       }
     }
-    ret = add_to_buffer(out, outlen, " ");
-    if (ret == 0) {
-      ret = add_to_buffer(out, outlen, container_name);
-    }
-    free(container_name);
-    if (ret != 0) {
-      return BUFFER_TOO_SMALL;
-    }
-    return 0;
+    ret = add_to_args(args, container_name);
   }
+free_and_exit:
   free(container_name);
-  return BUFFER_TOO_SMALL;
+  return ret;
 }
 
-int get_docker_start_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_start_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
   char *container_name = NULL;
   struct configuration command_config = {0, NULL};
@@ -836,99 +788,81 @@ int get_docker_start_command(const char *command_file, const struct configuratio
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
-  memset(out, 0, outlen);
-
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_START_COMMAND);
+  ret = add_to_args(args, DOCKER_START_COMMAND);
   if (ret != 0) {
     goto free_and_exit;
   }
-  ret = add_to_buffer(out, outlen, " ");
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-  ret = add_to_buffer(out, outlen, container_name);
-  if (ret != 0) {
-    goto free_and_exit;
-  }
+  ret = add_to_args(args, container_name);
 free_and_exit:
   free(container_name);
   return ret;
 }
 
-static int detach_container(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "detach", "-d ", 0, out, outlen);
+static int detach_container(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "detach", "-d", 0, args);
 }
 
-static int  rm_container_on_exit(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "rm", "--rm ", 0, out, outlen);
+static int  rm_container_on_exit(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "rm", "--rm", 0, args);
 }
 
-static int set_container_workdir(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "workdir", "--workdir=", 1, out, outlen);
+static int set_container_workdir(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "workdir", "--workdir=", 1, args);
 }
 
-static int set_cgroup_parent(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "cgroup-parent", "--cgroup-parent=", 1, out, outlen);
+static int set_cgroup_parent(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "cgroup-parent", "--cgroup-parent=", 1, args);
 }
 
-static int set_hostname(const struct configuration *command_config, char *out, const size_t outlen) {
-  return add_param_to_command(command_config, "hostname", "--hostname=", 1, out, outlen);
+static int set_hostname(const struct configuration *command_config, args *args) {
+  return add_param_to_command(command_config, "hostname", "--hostname=", 1, args);
 }
 
-static int set_group_add(const struct configuration *command_config, char *out, const size_t outlen) {
+static int set_group_add(const struct configuration *command_config, args *args) {
   int i = 0, ret = 0;
   char **group_add = get_configuration_values_delimiter("group-add", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
-  size_t tmp_buffer_size = 4096;
-  char *tmp_buffer = NULL;
   char *privileged = NULL;
 
   privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
   if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
-    free(privileged);
-    return ret;
+    goto free_and_exit;
   }
-  free(privileged);
 
   if (group_add != NULL) {
     for (i = 0; group_add[i] != NULL; ++i) {
-      tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
-      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--group-add ", group_add[i]);
-      ret = add_to_buffer(out, outlen, tmp_buffer);
+      ret = add_to_args(args, "--group-add");
       if (ret != 0) {
-        return BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
+      ret = add_to_args(args, group_add[i]);
+      if (ret != 0) {
+        goto free_and_exit;
       }
     }
   }
+free_and_exit:
+  free_values(group_add);
+  free(privileged);
   return ret;
 }
 
 static int set_network(const struct configuration *command_config,
-                       const struct configuration *conf, char *out,
-                       const size_t outlen) {
+                       const struct configuration *conf, args *args) {
 
   int ret = 0;
   ret = add_param_to_command_if_allowed(command_config, conf, "net",
                                         "docker.allowed.networks", "--net=",
-                                        0, 0, out, outlen);
+                                        0, 0, args);
   if (ret != 0) {
     fprintf(ERRORFILE, "Could not find requested network in allowed networks\n");
     ret = INVALID_DOCKER_NETWORK;
-    memset(out, 0, outlen);
   }
 
   return ret;
 }
 
 static int set_pid_namespace(const struct configuration *command_config,
-                   const struct configuration *conf, char *out,
-                   const size_t outlen) {
-  size_t tmp_buffer_size = 1024;
-  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
+                   const struct configuration *conf, args *args) {
   char *value = get_configuration_value("pid", DOCKER_COMMAND_FILE_SECTION,
       command_config);
   char *pid_host_enabled = get_configuration_value("docker.host-pid-namespace.enabled",
@@ -940,7 +874,7 @@ static int set_pid_namespace(const struct configuration *command_config,
       if (pid_host_enabled != NULL) {
         if (strcmp(pid_host_enabled, "1") == 0 ||
             strcasecmp(pid_host_enabled, "True") == 0) {
-          ret = add_to_buffer(out, outlen, "--pid='host' ");
+          ret = add_to_args(args, "--pid=host");
           if (ret != 0) {
             ret = BUFFER_TOO_SMALL;
           }
@@ -960,23 +894,17 @@ static int set_pid_namespace(const struct configuration *command_config,
     }
   }
 
-  free_and_exit:
-  free(tmp_buffer);
+free_and_exit:
   free(value);
   free(pid_host_enabled);
-  if (ret != 0) {
-    memset(out, 0, outlen);
-  }
   return ret;
 }
 
 static int set_capabilities(const struct configuration *command_config,
-                            const struct configuration *conf, char *out,
-                            const size_t outlen) {
-
+                            const struct configuration *conf, args *args) {
   int ret = 0;
 
-  ret = add_to_buffer(out, outlen, "--cap-drop='ALL' ");
+  ret = add_to_args(args, "--cap-drop=ALL");
   if (ret != 0) {
     return BUFFER_TOO_SMALL;
   }
@@ -984,7 +912,7 @@ static int set_capabilities(const struct configuration *command_config,
   ret = add_param_to_command_if_allowed(command_config, conf, "cap-add",
                                         "docker.allowed.capabilities",
                                         "--cap-add=", 1, 0,
-                                        out, outlen);
+                                        args);
   switch (ret) {
     case 0:
       break;
@@ -995,23 +923,38 @@ static int set_capabilities(const struct configuration *command_config,
     default:
       fprintf(ERRORFILE, "Invalid docker capability requested\n");
       ret = INVALID_DOCKER_CAPABILITY;
-      memset(out, 0, outlen);
   }
 
   return ret;
 }
 
-static int set_devices(const struct configuration *command_config, const struct configuration *conf, char *out,
-                       const size_t outlen) {
+static int set_devices(const struct configuration *command_config, const struct configuration *conf, args *args) {
   int ret = 0;
   ret = add_param_to_command_if_allowed(command_config, conf, "devices", "docker.allowed.devices", "--device=", 1, ':',
-                                        out, outlen);
+                                        args);
   if (ret != 0) {
     fprintf(ERRORFILE, "Invalid docker device requested\n");
     ret = INVALID_DOCKER_DEVICE;
-    memset(out, 0, outlen);
   }
 
+  return ret;
+}
+
+static int set_env(const struct configuration *command_config, struct args *args) {
+  int ret = 0;
+  // Use envfile method.
+  char *envfile = get_configuration_value("environ", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (envfile != NULL) {
+    ret = add_to_args(args, "--env-file");
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+    }
+    ret = add_to_args(args, envfile);
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+    }
+    free(envfile);
+  }
   return ret;
 }
 
@@ -1046,7 +989,6 @@ static char* normalize_mount(const char* mount, int isRegexAllowed) {
       }
     }
     fprintf(ERRORFILE, "Could not determine real path of mount '%s'\n", mount);
-    free(real_mount);
     return NULL;
   }
   ret = stat(real_mount, &buff);
@@ -1054,6 +996,7 @@ static char* normalize_mount(const char* mount, int isRegexAllowed) {
     if (S_ISDIR(buff.st_mode)) {
       size_t len = strlen(real_mount);
       if (len <= 0) {
+        free(real_mount);
         return NULL;
       }
       if (real_mount[len - 1] != '/') {
@@ -1095,10 +1038,10 @@ static int normalize_mounts(char **mounts, int isRegexAllowed) {
 static int check_mount_permitted(const char **permitted_mounts, const char *requested) {
   int i = 0, ret = 0;
   size_t permitted_mount_len = 0;
-  char *normalized_path = normalize_mount(requested, 0);
   if (permitted_mounts == NULL) {
     return 0;
   }
+  char *normalized_path = normalize_mount(requested, 0);
   if (normalized_path == NULL) {
     return -1;
   }
@@ -1124,36 +1067,31 @@ static int check_mount_permitted(const char **permitted_mounts, const char *requ
         break;
       }
     }
-
   }
   free(normalized_path);
   return ret;
 }
 
 static char* get_mount_source(const char *mount) {
-  char *src_mount = NULL;
-  const char *tmp = NULL;
-  tmp = strchr(mount, ':');
+  const char *tmp = strchr(mount, ':');
   if (tmp == NULL) {
     fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
     return NULL;
   }
-  src_mount = strndup(mount, tmp - mount);
-  return src_mount;
+  size_t len = tmp - mount;
+  return strndup(mount, len);
 }
 
 static int add_mounts(const struct configuration *command_config, const struct configuration *conf, const char *key,
-                      const int ro, char *out, const size_t outlen) {
-  size_t tmp_buffer_size = 1024;
+                      const int ro, args *args) {
   const char *ro_suffix = "";
   const char *tmp_path_buffer[2] = {NULL, NULL};
-  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
+  char *mount_src = NULL;
   char **permitted_ro_mounts = get_configuration_values_delimiter("docker.allowed.ro-mounts",
                                                                   CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char **permitted_rw_mounts = get_configuration_values_delimiter("docker.allowed.rw-mounts",
                                                                   CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char **values = get_configuration_values_delimiter(key, DOCKER_COMMAND_FILE_SECTION, command_config, ",");
-  char *tmp_buffer_2 = NULL, *mount_src = NULL;
   const char *container_executor_cfg_path = normalize_mount(get_config_path(""), 0);
   int i = 0, permitted_rw = 0, permitted_ro = 0, ret = 0;
   if (ro != 0) {
@@ -1180,10 +1118,10 @@ static int add_mounts(const struct configuration *command_config, const struct c
       ret = MOUNT_ACCESS_ERROR;
       goto free_and_exit;
     }
-    for (i = 0; values[i] != NULL; ++i) {
+    for (i = 0; values[i] != NULL; i++) {
       mount_src = get_mount_source(values[i]);
       if (mount_src == NULL) {
-        fprintf(ERRORFILE, "Invalid docker mount '%s', realpath=%s\n", values[i], mount_src);
+        fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
         ret = INVALID_DOCKER_MOUNT;
         goto free_and_exit;
       }
@@ -1221,16 +1159,16 @@ static int add_mounts(const struct configuration *command_config, const struct c
         ret = INVALID_DOCKER_RO_MOUNT;
         goto free_and_exit;
       }
-      tmp_buffer_2 = (char *) alloc_and_clear_memory(strlen(values[i]) + strlen(ro_suffix) + 1, sizeof(char));
-      strncpy(tmp_buffer_2, values[i], strlen(values[i]));
-      strncpy(tmp_buffer_2 + strlen(values[i]), ro_suffix, strlen(ro_suffix));
-      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "-v ", tmp_buffer_2);
-      ret = add_to_buffer(out, outlen, tmp_buffer);
-      free(tmp_buffer_2);
-      free(mount_src);
-      tmp_buffer_2 = NULL;
-      mount_src = NULL;
-      memset(tmp_buffer, 0, tmp_buffer_size);
+
+      ret = add_to_args(args, "-v");
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
+
+      char *tmp_buffer = make_string("%s%s", values[i], (char *) ro_suffix);
+      ret = add_to_args(args, tmp_buffer);
+      free(tmp_buffer);
       if (ret != 0) {
         ret = BUFFER_TOO_SMALL;
         goto free_and_exit;
@@ -1238,27 +1176,21 @@ static int add_mounts(const struct configuration *command_config, const struct c
     }
   }
 
-  free_and_exit:
+free_and_exit:
+  free(mount_src);
   free_values(permitted_ro_mounts);
   free_values(permitted_rw_mounts);
   free_values(values);
-  free(mount_src);
   free((void *) container_executor_cfg_path);
-  free(tmp_buffer);
-  if (ret != 0) {
-    memset(out, 0, outlen);
-  }
   return ret;
 }
 
-static int add_ro_mounts(const struct configuration *command_config, const struct configuration *conf, char *out,
-                          const size_t outlen) {
-  return add_mounts(command_config, conf, "ro-mounts", 1, out, outlen);
+static int add_ro_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
+  return add_mounts(command_config, conf, "ro-mounts", 1, args);
 }
 
-static int  add_rw_mounts(const struct configuration *command_config, const struct configuration *conf, char *out,
-                          const size_t outlen) {
-  return add_mounts(command_config, conf, "rw-mounts", 0, out, outlen);
+static int  add_rw_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
+  return add_mounts(command_config, conf, "rw-mounts", 0, args);
 }
 
 static int check_privileges(const char *user) {
@@ -1334,20 +1266,18 @@ static int check_privileges(const char *user) {
   return ret;
 }
 
-static int set_privileged(const struct configuration *command_config, const struct configuration *conf, char *out,
-                          const size_t outlen) {
-  size_t tmp_buffer_size = 1024;
+static int set_privileged(const struct configuration *command_config, const struct configuration *conf, args *args) {
   char *user = NULL;
-  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
   char *value = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
   char *privileged_container_enabled
       = get_configuration_value("docker.privileged-containers.enabled", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
   int ret = 0;
-  int allowed = 0;
+  int allowed = 1;
 
   user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, command_config);
   if (user == NULL) {
-    return INVALID_DOCKER_USER_NAME;
+    ret = INVALID_DOCKER_USER_NAME;
+    goto free_and_exit;
   }
 
   if (value != NULL && strcasecmp(value, "true") == 0 ) {
@@ -1362,7 +1292,7 @@ static int set_privileged(const struct configuration *command_config, const stru
         }
         allowed = check_privileges(user);
         if (allowed) {
-          ret = add_to_buffer(out, outlen, "--privileged ");
+          ret = add_to_args(args, "--privileged");
           if (ret != 0) {
             ret = BUFFER_TOO_SMALL;
           }
@@ -1384,20 +1314,15 @@ static int set_privileged(const struct configuration *command_config, const stru
   }
 
   free_and_exit:
-  free(tmp_buffer);
   free(value);
   free(privileged_container_enabled);
   free(user);
-  if (ret != 0) {
-    memset(out, 0, outlen);
-  }
   return ret;
 }
 
-int get_docker_run_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+int get_docker_run_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0, i = 0;
   char *container_name = NULL, *user = NULL, *image = NULL;
-  size_t tmp_buffer_size = 1024;
   char *tmp_buffer = NULL;
   char **launch_command = NULL;
   char *privileged = NULL;
@@ -1409,6 +1334,9 @@ int get_docker_run_command(const char *command_file, const struct configuration 
 
   container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (container_name == NULL || validate_container_name(container_name) != 0) {
+    if (container_name != NULL) {
+      free(container_name);
+    }
     return INVALID_DOCKER_CONTAINER_NAME;
   }
   user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, &command_config);
@@ -1417,127 +1345,139 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
   image = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (image == NULL || validate_docker_image_name(image) != 0) {
+    if (image != NULL) {
+      free(image);
+    }
     return INVALID_DOCKER_IMAGE_NAME;
   }
 
-  ret = add_docker_config_param(&command_config, out, outlen);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
-  }
-
-  ret = add_to_buffer(out, outlen, DOCKER_RUN_COMMAND);
+  ret = add_to_args(args, DOCKER_RUN_COMMAND);
   if(ret != 0) {
+    reset_args(args);
     return BUFFER_TOO_SMALL;
   }
 
-
-  tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
-
-  quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, " --name=", container_name);
-  ret = add_to_buffer(out, outlen, tmp_buffer);
+  tmp_buffer = make_string("--name=%s", container_name);
+  ret = add_to_args(args, tmp_buffer);
   if (ret != 0) {
+    reset_args(args);
     return BUFFER_TOO_SMALL;
   }
-  memset(tmp_buffer, 0, tmp_buffer_size);
 
   privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, &command_config);
 
-  if (privileged == NULL || strcasecmp(privileged, "false") == 0) {
-      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--user=", user);
-      ret = add_to_buffer(out, outlen, tmp_buffer);
-      if (ret != 0) {
-        return BUFFER_TOO_SMALL;
-      }
-      memset(tmp_buffer, 0, tmp_buffer_size);
+  if (privileged == NULL || strcmp(privileged, "false") == 0) {
+    char *user_buffer = make_string("--user=%s", user);
+    ret = add_to_args(args, user_buffer);
+    free(user_buffer);
+    if (ret != 0) {
+      reset_args(args);
+      return BUFFER_TOO_SMALL;
+    }
   }
   free(privileged);
 
-  ret = detach_container(&command_config, out, outlen);
+  ret = detach_container(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = rm_container_on_exit(&command_config, out, outlen);
+  ret = rm_container_on_exit(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_container_workdir(&command_config, out, outlen);
+  ret = set_container_workdir(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_network(&command_config, conf, out, outlen);
+  ret = set_network(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_pid_namespace(&command_config, conf, out, outlen);
+  ret = set_pid_namespace(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = add_ro_mounts(&command_config, conf, out, outlen);
+  ret = add_ro_mounts(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = add_rw_mounts(&command_config, conf, out, outlen);
+  ret = add_rw_mounts(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_cgroup_parent(&command_config, out, outlen);
+  ret = set_cgroup_parent(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_privileged(&command_config, conf, out, outlen);
+  ret = set_privileged(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_capabilities(&command_config, conf, out, outlen);
+  ret = set_capabilities(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_hostname(&command_config, out, outlen);
+  ret = set_hostname(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_group_add(&command_config, out, outlen);
+  ret = set_group_add(&command_config, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  ret = set_devices(&command_config, conf, out, outlen);
+  ret = set_devices(&command_config, conf, args);
   if (ret != 0) {
+    reset_args(args);
     return ret;
   }
 
-  quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "", image);
-  ret = add_to_buffer(out, outlen, tmp_buffer);
+  ret = set_env(&command_config, args);
   if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
+  ret = add_to_args(args, image);
+  if (ret != 0) {
+    reset_args(args);
     return BUFFER_TOO_SMALL;
   }
 
   launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
                                                       ",");
-
   if (check_trusted_image(&command_config, conf) != 0) {
     launch_command = NULL;
   }
 
   if (launch_command != NULL) {
     for (i = 0; launch_command[i] != NULL; ++i) {
-      memset(tmp_buffer, 0, tmp_buffer_size);
-      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "", launch_command[i]);
-      ret = add_to_buffer(out, outlen, tmp_buffer);
+      ret = add_to_args(args, launch_command[i]);
       if (ret != 0) {
         free_values(launch_command);
-        free(tmp_buffer);
+        reset_args(args);
         return BUFFER_TOO_SMALL;
       }
     }
@@ -1546,6 +1486,3 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   free(tmp_buffer);
   return 0;
 }
-
-
-

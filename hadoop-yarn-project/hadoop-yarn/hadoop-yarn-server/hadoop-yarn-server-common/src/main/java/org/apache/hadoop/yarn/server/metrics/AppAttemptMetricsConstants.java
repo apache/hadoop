@@ -61,4 +61,9 @@ public class AppAttemptMetricsConstants {
   public static final String STATE_INFO =
       "YARN_APPLICATION_ATTEMPT_STATE";
 
+  public static final String MASTER_NODE_ADDRESS =
+      "YARN_APPLICATION_ATTEMPT_MASTER_NODE_ADDRESS";
+
+  public static final String MASTER_NODE_ID =
+      "YARN_APPLICATION_ATTEMPT_MASTER_NODE_ID";
 }

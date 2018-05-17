@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -143,6 +145,19 @@ class JsonUtilClient {
       f.add(HdfsFileStatus.Flags.HAS_EC);
     }
 
+    Map<String, Object> ecPolicyObj = (Map) m.get("ecPolicyObj");
+    ErasureCodingPolicy ecPolicy = null;
+    if (ecPolicyObj != null) {
+      Map<String, String> extraOptions = (Map) ecPolicyObj.get("extraOptions");
+      ECSchema ecSchema = new ECSchema((String) ecPolicyObj.get("codecName"),
+          (int) ecPolicyObj.get("numDataUnits"),
+          (int) ecPolicyObj.get("numParityUnits"), extraOptions);
+      ecPolicy = new ErasureCodingPolicy((String) ecPolicyObj.get("name"),
+          ecSchema, (int) ecPolicyObj.get("cellSize"),
+          (byte) (int) ecPolicyObj.get("id"));
+
+    }
+
     final long aTime = ((Number) m.get("accessTime")).longValue();
     final long mTime = ((Number) m.get("modificationTime")).longValue();
     final long blockSize = ((Number) m.get("blockSize")).longValue();
@@ -170,6 +185,7 @@ class JsonUtilClient {
       .fileId(fileId)
       .children(childrenNum)
       .storagePolicy(storagePolicy)
+      .ecPolicy(ecPolicy)
       .build();
   }
 

@@ -927,6 +927,8 @@ public class TestOpportunisticContainerAllocatorAMService {
                 distAllReq.getProto()));
     Assert.assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getNodeId().getHost());
+    Assert.assertEquals(
+        "l1", dsAllocResp.getNodesForScheduling().get(1).getNodePartition());
 
     FinishApplicationMasterResponse dsfinishResp =
         new FinishApplicationMasterResponsePBImpl(
@@ -1004,9 +1006,13 @@ public class TestOpportunisticContainerAllocatorAMService {
             .getExecutionTypeRequest().getEnforceExecutionType());
         DistributedSchedulingAllocateResponse resp = factory
             .newRecordInstance(DistributedSchedulingAllocateResponse.class);
+        RemoteNode remoteNode1 = RemoteNode.newInstance(
+            NodeId.newInstance("h1", 1234), "http://h1:4321");
+        RemoteNode remoteNode2 = RemoteNode.newInstance(
+            NodeId.newInstance("h2", 1234), "http://h2:4321");
+        remoteNode2.setNodePartition("l1");
         resp.setNodesForScheduling(
-            Arrays.asList(RemoteNode.newInstance(
-                NodeId.newInstance("h1", 1234), "http://h1:4321")));
+            Arrays.asList(remoteNode1, remoteNode2));
         return resp;
       }
     };

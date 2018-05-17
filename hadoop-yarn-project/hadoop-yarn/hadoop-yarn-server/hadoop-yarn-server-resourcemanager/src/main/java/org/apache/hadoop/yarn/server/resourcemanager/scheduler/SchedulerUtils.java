@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -283,24 +284,10 @@ public class SchedulerUtils {
   private static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
-    Resource requestedResource = resReq.getCapability();
-    for (int i = 0; i < ResourceUtils.getNumberOfKnownResourceTypes(); i++) {
-      ResourceInformation reqRI = requestedResource.getResourceInformation(i);
-      ResourceInformation maxRI = maximumResource.getResourceInformation(i);
-      if (reqRI.getValue() < 0 || reqRI.getValue() > maxRI.getValue()) {
-        throw new InvalidResourceRequestException(
-            "Invalid resource request, requested resource type=[" + reqRI
-                .getName()
-                + "] < 0 or greater than maximum allowed allocation. Requested "
-                + "resource=" + requestedResource
-                + ", maximum allowed allocation=" + maximumResource
-                + ", please note that maximum allowed allocation is calculated "
-                + "by scheduler based on maximum resource of registered "
-                + "NodeManagers, which might be less than configured "
-                + "maximum allocation=" + ResourceUtils
-                .getResourceTypesMaximumAllocation());
-      }
-    }
+    final Resource requestedResource = resReq.getCapability();
+    checkResourceRequestAgainstAvailableResource(requestedResource,
+        maximumResource);
+
     String labelExp = resReq.getNodeLabelExpression();
     // we don't allow specify label expression other than resourceName=ANY now
     if (!ResourceRequest.ANY.equals(resReq.getResourceName())
@@ -336,6 +323,78 @@ public class SchedulerUtils {
         checkQueueLabelInLabelManager(labelExp, rmContext);
       }
     }
+  }
+
+  @Private
+  @VisibleForTesting
+  static void checkResourceRequestAgainstAvailableResource(Resource reqResource,
+      Resource availableResource) throws InvalidResourceRequestException {
+    for (int i = 0; i < ResourceUtils.getNumberOfKnownResourceTypes(); i++) {
+      final ResourceInformation requestedRI =
+          reqResource.getResourceInformation(i);
+      final String reqResourceName = requestedRI.getName();
+
+      if (requestedRI.getValue() < 0) {
+        throwInvalidResourceException(reqResource, availableResource,
+            reqResourceName);
+      }
+
+      final ResourceInformation availableRI =
+          availableResource.getResourceInformation(reqResourceName);
+
+      long requestedResourceValue = requestedRI.getValue();
+      long availableResourceValue = availableRI.getValue();
+      int unitsRelation = UnitsConversionUtil
+          .compareUnits(requestedRI.getUnits(), availableRI.getUnits());
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Requested resource information: " + requestedRI);
+        LOG.debug("Available resource information: " + availableRI);
+        LOG.debug("Relation of units: " + unitsRelation);
+      }
+
+      // requested resource unit is less than available resource unit
+      // e.g. requestedUnit: "m", availableUnit: "K")
+      if (unitsRelation < 0) {
+        availableResourceValue =
+            UnitsConversionUtil.convert(availableRI.getUnits(),
+                requestedRI.getUnits(), availableRI.getValue());
+
+        // requested resource unit is greater than available resource unit
+        // e.g. requestedUnit: "G", availableUnit: "M")
+      } else if (unitsRelation > 0) {
+        requestedResourceValue =
+            UnitsConversionUtil.convert(requestedRI.getUnits(),
+                availableRI.getUnits(), requestedRI.getValue());
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Requested resource value after conversion: " +
+                requestedResourceValue);
+        LOG.info("Available resource value after conversion: " +
+                availableResourceValue);
+      }
+
+      if (requestedResourceValue > availableResourceValue) {
+        throwInvalidResourceException(reqResource, availableResource,
+            reqResourceName);
+      }
+    }
+  }
+
+  private static void throwInvalidResourceException(Resource reqResource,
+      Resource availableResource, String reqResourceName)
+      throws InvalidResourceRequestException {
+    throw new InvalidResourceRequestException(
+        "Invalid resource request, requested resource type=[" + reqResourceName
+            + "] < 0 or greater than maximum allowed allocation. Requested "
+            + "resource=" + reqResource + ", maximum allowed allocation="
+            + availableResource
+            + ", please note that maximum allowed allocation is calculated "
+            + "by scheduler based on maximum resource of registered "
+            + "NodeManagers, which might be less than configured "
+            + "maximum allocation="
+            + ResourceUtils.getResourceTypesMaximumAllocation());
   }
 
   private static void checkQueueLabelInLabelManager(String labelExpression,

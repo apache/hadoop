@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
+import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -108,6 +109,7 @@ public class TestServiceAM extends ServiceTestUtils{
     ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
     exampleApp.setName("testContainerCompleted");
     exampleApp.addComponent(createComponent("compa", 1, "pwd"));
 
@@ -146,6 +148,7 @@ public class TestServiceAM extends ServiceTestUtils{
         System.currentTimeMillis(), 1);
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
     exampleApp.setName("testContainersRecovers");
     String comp1Name = "comp1";
     String comp1InstName = "comp1-0";
@@ -189,6 +192,7 @@ public class TestServiceAM extends ServiceTestUtils{
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
     exampleApp.setName("testContainersRecovers");
+    exampleApp.setVersion("v1");
     String comp1Name = "comp1";
     String comp1InstName = "comp1-0";
 
@@ -230,6 +234,7 @@ public class TestServiceAM extends ServiceTestUtils{
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
     exampleApp.setName("testContainersFromDifferentApp");
+    exampleApp.setVersion("v1");
     String comp1Name = "comp1";
     String comp1InstName = "comp1-0";
 
@@ -270,6 +275,7 @@ public class TestServiceAM extends ServiceTestUtils{
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
     exampleApp.setName("testScheduleWithMultipleResourceTypes");
+    exampleApp.setVersion("v1");
 
     List<ResourceTypeInfo> resourceTypeInfos = new ArrayList<>(
         ResourceUtils.getResourcesTypeInfo());
@@ -342,6 +348,47 @@ public class TestServiceAM extends ServiceTestUtils{
           tk.getKind().equals(DockerCredentialTokenIdentifier.KIND));
     }
 
+    am.stop();
+  }
+
+  @Test
+  public void testIPChange() throws TimeoutException,
+      InterruptedException {
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
+    String comp1Name = "comp1";
+    String comp1InstName = "comp1-0";
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
+    exampleApp.setName("testIPChange");
+    Component comp1 = createComponent(comp1Name, 1, "sleep 60");
+    comp1.setArtifact(new Artifact().type(Artifact.TypeEnum.DOCKER));
+    exampleApp.addComponent(comp1);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    am.init(conf);
+    am.start();
+
+    ComponentInstance comp1inst0 = am.getCompInstance(comp1Name, comp1InstName);
+    // allocate a container
+    am.feedContainerToComp(exampleApp, 1, comp1Name);
+    GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus() != null,
+        2000, 200000);
+    // first host status will match the container nodeId
+    Assert.assertEquals("localhost",
+        comp1inst0.getContainerStatus().getHost());
+
+    LOG.info("Change the IP and host");
+    // change the container status
+    am.updateContainerStatus(exampleApp, 1, comp1Name, "new.host");
+    GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus().getHost()
+        .equals("new.host"), 2000, 200000);
+
+    LOG.info("Change the IP and host again");
+    // change the container status
+    am.updateContainerStatus(exampleApp, 1, comp1Name, "newer.host");
+    GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus().getHost()
+        .equals("newer.host"), 2000, 200000);
     am.stop();
   }
 }

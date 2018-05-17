@@ -26,7 +26,9 @@ export default RESTAbstractAdapter.extend({
 
   deployService(request, user) {
     var url = this.buildURL();
-    url += "/?user.name=" + user;
+    if(user) {
+      url += "/?user.name=" + user;
+    }
     return this.ajax(url, "POST", {data: request});
   },
 

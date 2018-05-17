@@ -22,6 +22,7 @@
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 /*
  * if all chars in the input str are numbers
@@ -155,4 +156,27 @@ cleanup:
     is_container_id = 0;
   }
   return is_container_id;
+}
+
+/*
+ * Format string utility.
+ */
+char *make_string(const char *fmt, ...) {
+  va_list vargs;
+  va_start(vargs, fmt);
+  size_t buflen = vsnprintf(NULL, 0, fmt, vargs) + 1;
+  va_end(vargs);
+  if (buflen <= 0) {
+    return NULL;
+  }
+  char* buf = malloc(buflen);
+  if (buf != NULL) {
+    va_start(vargs, fmt);
+    int ret = vsnprintf(buf, buflen, fmt, vargs);
+    va_end(vargs);
+    if (ret < 0) {
+      buf = NULL;
+    }
+  }
+  return buf;
 }

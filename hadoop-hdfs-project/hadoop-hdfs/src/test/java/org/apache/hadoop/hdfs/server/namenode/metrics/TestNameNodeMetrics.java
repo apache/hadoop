@@ -992,8 +992,10 @@ public class TestNameNodeMetrics {
         .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         2);
+    File basedir = new File(MiniDFSCluster.getBaseDirectory(),
+        GenericTestUtils.getMethodName());
 
-    try (MiniDFSCluster clusterEDEK = new MiniDFSCluster.Builder(conf)
+    try (MiniDFSCluster clusterEDEK = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(1).build()) {
 
       DistributedFileSystem fsEDEK =
@@ -1029,7 +1031,9 @@ public class TestNameNodeMetrics {
   @Test
   public void testResourceCheck() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(MiniDFSCluster.getBaseDirectory(),
+        GenericTestUtils.getMethodName());
+    MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(0)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .build();

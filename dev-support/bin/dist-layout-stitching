@@ -21,6 +21,9 @@ VERSION=$1
 # project.build.directory
 BASEDIR=$2
 
+#hdds.version
+HDDS_VERSION=$3
+
 function run()
 {
   declare res
@@ -132,7 +135,6 @@ run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-native-client/target/hadoop-hd
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-rbf/target/hadoop-hdfs-rbf-${VERSION}" .
 run copy "${ROOT}/hadoop-yarn-project/target/hadoop-yarn-project-${VERSION}" .
 run copy "${ROOT}/hadoop-mapreduce-project/target/hadoop-mapreduce-${VERSION}" .
-run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 
 #copy httpfs and kms as is
 run cp -pr "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-httpfs/target/hadoop-hdfs-httpfs-${VERSION}"/* .
@@ -143,6 +145,9 @@ run mkdir -p "share/hadoop/client"
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-api/target/hadoop-client-api-${VERSION}.jar" share/hadoop/client/
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-runtime/target/hadoop-client-runtime-${VERSION}.jar" share/hadoop/client/
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-minicluster/target/hadoop-client-minicluster-${VERSION}.jar" share/hadoop/client/
+
+run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
+
 
 echo
 echo "Hadoop dist layout available at: ${BASEDIR}/hadoop-${VERSION}"

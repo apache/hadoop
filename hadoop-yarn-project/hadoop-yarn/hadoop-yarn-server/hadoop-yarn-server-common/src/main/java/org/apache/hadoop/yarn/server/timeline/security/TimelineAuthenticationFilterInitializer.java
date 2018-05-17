@@ -22,8 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
-import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -33,7 +32,6 @@ import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAu
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,42 +60,17 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
   protected void setAuthFilterConfig(Configuration conf) {
     filterConfig = new HashMap<String, String>();
 
-    // setting the cookie path to root '/' so it is used for all resources.
-    filterConfig.put(AuthenticationFilter.COOKIE_PATH, "/");
-
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(ProxyUsers.CONF_HADOOP_PROXYUSER)) {
-        String value = conf.get(name);
-        name = name.substring("hadoop.".length());
-        filterConfig.put(name, value);
-      }
-    }
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(PREFIX)) {
-        // yarn.timeline-service.http-authentication.proxyuser will override
-        // hadoop.proxyuser
-        String value = conf.get(name);
-        name = name.substring(PREFIX.length());
-        filterConfig.put(name, value);
-      }
+    for (Map.Entry<String, String> entry : conf
+        .getPropsWithPrefix(ProxyUsers.CONF_HADOOP_PROXYUSER).entrySet()) {
+      filterConfig.put("proxyuser" + entry.getKey(), entry.getValue());
     }
 
-    // Resolve _HOST into bind address
-    String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
-    String principal =
-        filterConfig.get(KerberosAuthenticationHandler.PRINCIPAL);
-    if (principal != null) {
-      try {
-        principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
-      } catch (IOException ex) {
-        throw new RuntimeException("Could not resolve Kerberos principal " +
-            "name: " + ex.toString(), ex);
-      }
-      filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL,
-          principal);
-    }
+    // yarn.timeline-service.http-authentication.proxyuser will override
+    // hadoop.proxyuser
+    Map<String, String> timelineAuthProps =
+        AuthenticationFilterInitializer.getFilterConfigMap(conf, PREFIX);
+
+    filterConfig.putAll(timelineAuthProps);
   }
 
   protected Map<String, String> getFilterConfig() {

@@ -139,6 +139,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         app.getApplicationSubmissionContext().getAMContainerSpec();
     entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
         amContainerSpec.getCommands());
+    entityInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        RMServerUtils.createApplicationState(app.getState()).toString());
 
     entity.setInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
@@ -316,6 +318,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     if (appAttempt.getMasterContainer() != null) {
       entityInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO,
           appAttempt.getMasterContainer().getId().toString());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ADDRESS,
+          appAttempt.getMasterContainer().getNodeHttpAddress());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ID,
+          appAttempt.getMasterContainer().getNodeId().toString());
     }
     entity.setInfo(entityInfo);
     entity.setIdPrefix(

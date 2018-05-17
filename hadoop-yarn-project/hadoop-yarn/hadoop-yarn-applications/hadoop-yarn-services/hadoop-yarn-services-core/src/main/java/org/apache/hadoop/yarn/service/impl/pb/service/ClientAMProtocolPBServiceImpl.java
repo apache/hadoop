@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.service.impl.pb.service;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
@@ -87,6 +89,16 @@ public class ClientAMProtocolPBServiceImpl implements ClientAMProtocolPB {
       RestartServiceRequestProto request) throws ServiceException {
     try {
       return real.restart(request);
+    } catch (IOException | YarnException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CompInstancesUpgradeResponseProto upgrade(RpcController controller,
+      CompInstancesUpgradeRequestProto request) throws ServiceException {
+    try {
+      return real.upgrade(request);
     } catch (IOException | YarnException e) {
       throw new ServiceException(e);
     }

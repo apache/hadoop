@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.eclipse.jetty.server.Server;
@@ -58,7 +59,12 @@ public class TestApiServiceClient {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
       System.out.println("Get was called");
-      resp.setStatus(HttpServletResponse.SC_OK);
+      if (req.getPathInfo() != null
+          && req.getPathInfo().contains("nonexistent-app")) {
+        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+      } else {
+        resp.setStatus(HttpServletResponse.SC_OK);
+      }
     }
 
     @Override
@@ -133,6 +139,18 @@ public class TestApiServiceClient {
     try {
       int result = badAsc.actionLaunch(fileName, appName, lifetime, queue);
       assertEquals(EXIT_EXCEPTION_THROWN, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
+  @Test
+  public void testStatus() {
+    String appName = "nonexistent-app";
+    try {
+      String result = asc.getStatusString(appName);
+      assertEquals("Status reponse don't match",
+          " Service " + appName + " not found", result);
     } catch (IOException | YarnException e) {
       fail();
     }
@@ -255,5 +273,42 @@ public class TestApiServiceClient {
       fail();
     }
   }
+
+  @Test
+  public void testInitiateServiceUpgrade() {
+    String appName = "example-app";
+    String upgradeFileName = "target/test-classes/example-app.json";
+    try {
+      int result = asc.initiateUpgrade(appName, upgradeFileName, false);
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
+  @Test
+  public void testInstancesUpgrade() {
+    String appName = "example-app";
+    try {
+      int result = asc.actionUpgradeInstances(appName, Lists.newArrayList(
+          "comp-1", "comp-2"));
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
+  @Test
+  public void testComponentsUpgrade() {
+    String appName = "example-app";
+    try {
+      int result = asc.actionUpgradeComponents(appName, Lists.newArrayList(
+          "comp"));
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
 
 }

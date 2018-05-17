@@ -48,7 +48,7 @@ export default Ember.Controller.extend({
         text: 'Components'
       }, {
         text: `${componentName}`,
-        href: `#/yarn-component-instances/${componentName}/components?service=${serviceName}&&appid=${appId}`
+        href: `#/yarn-component-instances/${componentName}/info?service=${serviceName}&&appid=${appId}`
       }, {
         text: `${instanceName}`
       });

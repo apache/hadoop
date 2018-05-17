@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -288,7 +289,6 @@ public class RouterRpcServer extends AbstractService
     // We don't want the server to log the full stack trace for some exceptions
     this.rpcServer.addTerseExceptions(
         RemoteException.class,
-        StandbyException.class,
         SafeModeException.class,
         FileNotFoundException.class,
         FileAlreadyExistsException.class,
@@ -296,6 +296,9 @@ public class RouterRpcServer extends AbstractService
         LeaseExpiredException.class,
         NotReplicatedYetException.class,
         IOException.class);
+
+    this.rpcServer.addSuppressedLoggingExceptions(
+        StandbyException.class);
 
     // The RPC-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
@@ -412,7 +415,7 @@ public class RouterRpcServer extends AbstractService
    * @throws UnsupportedOperationException If the operation is not supported.
    */
   protected void checkOperation(OperationCategory op, boolean supported)
-      throws RouterSafeModeException, UnsupportedOperationException {
+      throws StandbyException, UnsupportedOperationException {
     checkOperation(op);
 
     if (!supported) {
@@ -434,7 +437,7 @@ public class RouterRpcServer extends AbstractService
    *                           client requests.
    */
   protected void checkOperation(OperationCategory op)
-      throws RouterSafeModeException {
+      throws StandbyException {
     // Log the function we are currently calling.
     if (rpcMonitor != null) {
       rpcMonitor.startOp();
@@ -458,7 +461,8 @@ public class RouterRpcServer extends AbstractService
       if (rpcMonitor != null) {
         rpcMonitor.routerFailureSafemode();
       }
-      throw new RouterSafeModeException(router.getRouterId(), op);
+      throw new StandbyException("Router " + router.getRouterId() +
+          " is in safe mode and cannot handle " + op + " requests");
     }
   }
 
@@ -1386,7 +1390,8 @@ public class RouterRpcServer extends AbstractService
         action, isChecked);
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, Boolean> results =
-        rpcClient.invokeConcurrent(nss, method, true, true, Boolean.class);
+        rpcClient.invokeConcurrent(
+            nss, method, true, !isChecked, Boolean.class);
 
     // We only report true if all the name space are in safe mode
     int numSafemode = 0;
@@ -2269,7 +2274,15 @@ public class RouterRpcServer extends AbstractService
         }
       }
 
-      return location.getDestinations();
+      // Filter disabled subclusters
+      Set<String> disabled = namenodeResolver.getDisabledNamespaces();
+      List<RemoteLocation> locs = new ArrayList<>();
+      for (RemoteLocation loc : location.getDestinations()) {
+        if (!disabled.contains(loc.getNameserviceId())) {
+          locs.add(loc);
+        }
+      }
+      return locs;
     } catch (IOException ioe) {
       if (this.rpcMonitor != null) {
         this.rpcMonitor.routerFailureStateStore();

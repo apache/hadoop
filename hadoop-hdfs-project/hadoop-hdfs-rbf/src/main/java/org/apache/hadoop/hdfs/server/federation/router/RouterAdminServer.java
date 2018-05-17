@@ -26,9 +26,12 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -52,6 +55,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -226,7 +230,31 @@ public class RouterAdminServer extends AbstractService
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-    return getMountTableStore().updateMountTableEntry(request);
+    UpdateMountTableEntryResponse response =
+        getMountTableStore().updateMountTableEntry(request);
+
+    MountTable mountTable = request.getEntry();
+    if (mountTable != null) {
+      synchronizeQuota(mountTable);
+    }
+    return response;
+  }
+
+  /**
+   * Synchronize the quota value across mount table and subclusters.
+   * @param mountTable Quota set in given mount table.
+   * @throws IOException
+   */
+  private void synchronizeQuota(MountTable mountTable) throws IOException {
+    String path = mountTable.getSourcePath();
+    long nsQuota = mountTable.getQuota().getQuota();
+    long ssQuota = mountTable.getQuota().getSpaceQuota();
+
+    if (nsQuota != HdfsConstants.QUOTA_DONT_SET
+        || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
+      this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
+          ssQuota, null);
+    }
   }
 
   @Override
@@ -282,28 +310,60 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-    // TODO check permissions
+
+    RouterPermissionChecker pc = getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+
     String nsId = request.getNameServiceId();
-    // TODO check that the name service exists
-    boolean success = getDisabledNameserviceStore().disableNameservice(nsId);
+    boolean success = false;
+    if (namespaceExists(nsId)) {
+      success = getDisabledNameserviceStore().disableNameservice(nsId);
+    } else {
+      LOG.error("Cannot disable {}, it does not exists", nsId);
+    }
     return DisableNameserviceResponse.newInstance(success);
+  }
+
+  private boolean namespaceExists(final String nsId) throws IOException {
+    boolean found = false;
+    ActiveNamenodeResolver resolver = router.getNamenodeResolver();
+    Set<FederationNamespaceInfo> nss = resolver.getNamespaces();
+    for (FederationNamespaceInfo ns : nss) {
+      if (nsId.equals(ns.getNameserviceId())) {
+        found = true;
+        break;
+      }
+    }
+    return found;
   }
 
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    // TODO check permissions
+    RouterPermissionChecker pc = getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+
     String nsId = request.getNameServiceId();
-    // TODO check that the name service exists
-    boolean success = getDisabledNameserviceStore().enableNameservice(nsId);
+    DisabledNameserviceStore store = getDisabledNameserviceStore();
+    Set<String> disabled = store.getDisabledNameservices();
+    boolean success = false;
+    if (disabled.contains(nsId)) {
+      success = store.enableNameservice(nsId);
+    } else {
+      LOG.error("Cannot enable {}, it was not disabled", nsId);
+    }
     return EnableNameserviceResponse.newInstance(success);
   }
 
   @Override
   public GetDisabledNameservicesResponse getDisabledNameservices(
       GetDisabledNameservicesRequest request) throws IOException {
-    // TODO check permissions
-    Set<String> nsIds = getDisabledNameserviceStore().getDisabledNameservices();
+    Set<String> nsIds =
+        getDisabledNameserviceStore().getDisabledNameservices();
     return GetDisabledNameservicesResponse.newInstance(nsIds);
   }
 

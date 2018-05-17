@@ -144,3 +144,12 @@ org.apache.hadoop.security.AccessControlException: MKDIRS failed with error 0x83
 ```
 
 See "Adding the service principal to your ADL Account".
+
+## Timeouts
+
+The timeout used by the ADL SDK can be overridden with the hadoop property
+`adl.http.timeout`.  Some timeouts in compute frameworks may need to be
+addressed by lowering the timeout used by the SDK.  A lower timeout at the
+storage layer may allow more retries to be attempted and actually increase
+the likelihood of success before hitting the framework's timeout, as attempts
+that may ultimately fail will fail faster.

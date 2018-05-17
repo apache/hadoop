@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,14 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   @Override
   protected MetadataStore newMetadataStore() {
     return new DynamoDBMetadataStore();
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard",
+        getConfiguration().get(Constants.S3_METADATA_STORE_IMPL).equals(
+            Constants.S3GUARD_METASTORE_DYNAMO));
   }
 
   // Check the existence of a given DynamoDB table.

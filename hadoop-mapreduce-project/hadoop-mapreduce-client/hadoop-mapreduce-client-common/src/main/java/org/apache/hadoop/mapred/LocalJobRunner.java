@@ -593,10 +593,16 @@ public class LocalJobRunner implements ClientProtocol {
 
       } finally {
         try {
-          fs.delete(systemJobFile.getParent(), true);  // delete submit dir
-          localFs.delete(localJobFile, true);              // delete local copy
-          // Cleanup distributed cache
-          localDistributedCacheManager.close();
+          try {
+            // Cleanup distributed cache
+            localDistributedCacheManager.close();
+          } finally {
+            try {
+              fs.delete(systemJobFile.getParent(), true); // delete submit dir
+            } finally {
+              localFs.delete(localJobFile, true);         // delete local copy
+            }
+          }
         } catch (IOException e) {
           LOG.warn("Error cleaning up "+id+": "+e);
         }

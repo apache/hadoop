@@ -775,16 +775,6 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String KMS_CLIENT_COPY_LEGACY_TOKEN_KEY =
-      "hadoop.security.kms.client.copy.legacy.token";
-  /**  Default value is true. */
-  public static final boolean KMS_CLIENT_COPY_LEGACY_TOKEN_DEFAULT = true;
-
-  /**
-   * @see
-   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
-   * core-default.xml</a>
-   */
   public static final String KMS_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY =
       "hadoop.security.kms.client.failover.sleep.max.millis";
   /** Default value is 2 secs. */

@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
@@ -152,14 +153,6 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     setting it to false.
  *   </li>
  *   <li>
- *     {@code YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS} adds
- *     additional volume mounts to the Docker container. The value of the
- *     environment variable should be a comma-separated list of mounts.
- *     All such mounts must be given as {@code source:dest}, where the
- *     source is an absolute path that is not a symlink and that points to a
- *     localized resource.
- *   </li>
- *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS} allows users to specify
  +     additional volume mounts for the Docker container. The value of the
  *     environment variable should be a comma-separated list of mounts.
@@ -199,6 +192,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       HOSTNAME_PATTERN);
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
       "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
+  private static final int HOST_NAME_LENGTH = 64;
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -225,15 +219,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_RUN_ENABLE_USER_REMAPPING =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_ENABLE_USER_REMAPPING";
   @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
-      "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
-  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_DELAYED_REMOVAL =
       "YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL";
-
   private Configuration conf;
   private Context nmContext;
   private DockerClient dockerClient;
@@ -383,7 +373,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       Container container) throws ContainerExecutionException {
     try {
       String commandFile = dockerClient.writeCommandToTempFile(
-          dockerVolumeCommand, container, nmContext);
+          dockerVolumeCommand, container.getContainerId(), nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);
@@ -541,6 +531,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         throw new ContainerExecutionException("Hostname '" + hostname
             + "' doesn't match docker hostname pattern");
       }
+      if (hostname.length() > HOST_NAME_LENGTH) {
+        throw new ContainerExecutionException(
+            "Hostname can not be greater than " + HOST_NAME_LENGTH
+                + " characters: " + hostname);
+      }
     }
   }
 
@@ -674,8 +669,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return true;
   }
 
-  @VisibleForTesting
-  protected String validateMount(String mount,
+  private String mountReadOnlyPath(String mount,
       Map<Path, List<String>> localizedResources)
       throws ContainerExecutionException {
     for (Entry<Path, List<String>> resource : localizedResources.entrySet()) {
@@ -728,11 +722,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
+    ContainerId containerId = container.getContainerId();
     Map<String, String> environment = container.getLaunchContext()
         .getEnvironment();
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
+    boolean useEntryPoint = Boolean.parseBoolean(environment
+              .get(ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE));
 
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
@@ -744,7 +741,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     validateImageName(imageName);
 
-    String containerIdStr = container.getContainerId().toString();
+    String containerIdStr = containerId.toString();
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
     String dockerRunAsUser = runAsUser;
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
@@ -794,8 +791,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
         dockerRunAsUser, imageName)
-        .detachOnRun()
-        .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network);
     // Only add hostname if network is not host or if Registry DNS is enabled.
     if (!network.equalsIgnoreCase("host") ||
@@ -810,23 +805,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     runCommand.addAllReadOnlyMountLocations(filecacheDirs);
     runCommand.addAllReadOnlyMountLocations(userFilecacheDirs);
 
-    if (environment.containsKey(ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS)) {
-      String mounts = environment.get(
-          ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS);
-      if (!mounts.isEmpty()) {
-        for (String mount : StringUtils.split(mounts)) {
-          String[] dir = StringUtils.split(mount, ':');
-          if (dir.length != 2) {
-            throw new ContainerExecutionException("Invalid mount : " +
-                mount);
-          }
-          String src = validateMount(dir[0], localizedResources);
-          String dst = dir[1];
-          runCommand.addReadOnlyMountLocation(src, dst, true);
-        }
-      }
-    }
-
     if (environment.containsKey(ENV_DOCKER_CONTAINER_MOUNTS)) {
       Matcher parsedMounts = USER_MOUNT_PATTERN.matcher(
           environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
@@ -838,6 +816,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       parsedMounts.reset();
       while (parsedMounts.find()) {
         String src = parsedMounts.group(1);
+        java.nio.file.Path srcPath = java.nio.file.Paths.get(src);
+        if (!srcPath.isAbsolute()) {
+          src = mountReadOnlyPath(src, localizedResources);
+        }
         String dst = parsedMounts.group(2);
         String mode = parsedMounts.group(3);
         if (!mode.equals("ro") && !mode.equals("rw")) {
@@ -867,19 +849,22 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     addCGroupParentIfRequired(resourcesOpts, containerIdStr, runCommand);
 
-    String disableOverride = environment.get(
-        ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE);
-
-    if (disableOverride != null && disableOverride.equals("true")) {
-      LOG.info("command override disabled");
+    if (useEntryPoint) {
+      runCommand.setOverrideDisabled(true);
+      runCommand.addEnv(environment);
+      runCommand.setOverrideCommandWithArgs(container.getLaunchContext()
+          .getCommands());
+      runCommand.disableDetach();
+      runCommand.setLogDir(container.getLogDir());
     } else {
       List<String> overrideCommands = new ArrayList<>();
       Path launchDst =
           new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-
       overrideCommands.add("bash");
       overrideCommands.add(launchDst.toUri().getPath());
+      runCommand.setContainerWorkDir(containerWorkDir.toString());
       runCommand.setOverrideCommandWithArgs(overrideCommands);
+      runCommand.detachOnRun();
     }
 
     if(enableUserReMapping) {
@@ -902,17 +887,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
-        container, nmContext);
+        containerId, nmContext);
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
         commandFile, runCommand);
+
+    // Some failures here are acceptable. Let the calling executor decide.
+    launchOp.disableFailureLogging();
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
           launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
-      LOG.warn("Launch container failed. Exception: ", e);
-      LOG.info("Docker command used: " + runCommand);
-
       throw new ContainerExecutionException("Launch container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
     }
@@ -921,8 +906,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void relaunchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
-    String containerIdStr = container.getContainerId().toString();
+    ContainerId containerId = ctx.getContainer().getContainerId();
+    String containerIdStr = containerId.toString();
     // Check to see if the container already exists for relaunch
     DockerCommandExecutor.DockerContainerStatus containerStatus =
         DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
@@ -931,18 +916,18 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         DockerCommandExecutor.isStartable(containerStatus)) {
       DockerStartCommand startCommand = new DockerStartCommand(containerIdStr);
       String commandFile = dockerClient.writeCommandToTempFile(startCommand,
-          container, nmContext);
+          containerId, nmContext);
       PrivilegedOperation launchOp = buildLaunchOp(ctx, commandFile,
           startCommand);
+
+      // Some failures here are acceptable. Let the calling executor decide.
+      launchOp.disableFailureLogging();
 
       try {
         privilegedOperationExecutor.executePrivilegedOperation(null,
             launchOp, null, null, false, false);
       } catch (PrivilegedOperationException e) {
-        LOG.warn("Relaunch container failed. Exception: ", e);
-        LOG.info("Docker command used: " + startCommand);
-
-        throw new ContainerExecutionException("Launch container failed", e
+        throw new ContainerExecutionException("Relaunch container failed", e
             .getExitCode(), e.getOutput(), e.getErrorOutput());
       }
     } else {
@@ -1036,12 +1021,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   // ipAndHost[1] contains the hostname.
   @Override
   public String[] getIpAndHost(Container container) {
-    String containerId = container.getContainerId().toString();
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
     DockerInspectCommand inspectCommand =
-        new DockerInspectCommand(containerId).getIpAndHost();
+        new DockerInspectCommand(containerIdStr).getIpAndHost();
     try {
       String commandFile = dockerClient.writeCommandToTempFile(inspectCommand,
-          container, nmContext);
+          containerId, nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);

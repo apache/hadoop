@@ -42,8 +42,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.util.KMSUtil;
-import org.apache.hadoop.util.KMSUtilFaultInjector;
+import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -57,68 +56,33 @@ public class TestLoadBalancingKMSClientProvider {
     SecurityUtil.setTokenServiceUseIp(false);
   }
 
-  private void setKMSUtilFaultInjector() {
-    KMSUtilFaultInjector injector = new KMSUtilFaultInjector() {
-      @Override
-      public KeyProvider createKeyProviderForTests(
-          String value, Configuration conf) throws IOException {
-        return TestLoadBalancingKMSClientProvider
-            .createKeyProviderForTests(value, conf);
-      }
-    };
-    KMSUtilFaultInjector.set(injector);
-  }
-
-  public static KeyProvider createKeyProviderForTests(
-      String value, Configuration conf) throws IOException {
-    // The syntax for kms servers will be
-    // kms://http@localhost:port1/kms,kms://http@localhost:port2/kms
-    if (!value.contains(",")) {
-      return null;
-    }
-    String[] keyProviderUrisStr = value.split(",");
-    KMSClientProvider[] keyProviderArr =
-        new KMSClientProvider[keyProviderUrisStr.length];
-
-    int i = 0;
-    for (String keyProviderUri: keyProviderUrisStr) {
-      KMSClientProvider kmcp =
-          new KMSClientProvider(URI.create(keyProviderUri), conf, URI
-              .create(value));
-      keyProviderArr[i] = kmcp;
-      i++;
-    }
-    LoadBalancingKMSClientProvider lbkcp =
-        new LoadBalancingKMSClientProvider(keyProviderArr, conf);
-    return lbkcp;
+  @After
+  public void teardown() throws IOException {
+    KMSClientProvider.fallbackDefaultPortForTesting = false;
   }
 
   @Test
   public void testCreation() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KeyProvider kp = new KMSClientProvider.Factory().createProvider(new URI(
-        "kms://http@host1:9600/kms/foo"), conf);
+        "kms://http@host1/kms/foo"), conf);
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     KMSClientProvider[] providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(1, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/"),
+    assertEquals(Sets.newHashSet("http://host1/kms/foo/v1/"),
         Sets.newHashSet(providers[0].getKMSUrl()));
-    setKMSUtilFaultInjector();
-    String uriStr = "kms://http@host1:9600/kms/foo," +
-        "kms://http@host2:9600/kms/foo," +
-        "kms://http@host3:9600/kms/foo";
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        uriStr);
-    kp = KMSUtil.createKeyProvider(conf, CommonConfigurationKeysPublic
-        .HADOOP_SECURITY_KEY_PROVIDER_PATH);
+
+    kp = new KMSClientProvider.Factory().createProvider(new URI(
+        "kms://http@host1;host2;host3/kms/foo"), conf);
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
     providers =
         ((LoadBalancingKMSClientProvider) kp).getProviders();
     assertEquals(3, providers.length);
-    assertEquals(Sets.newHashSet("http://host1:9600/kms/foo/v1/",
-        "http://host2:9600/kms/foo/v1/",
-        "http://host3:9600/kms/foo/v1/"),
+    assertEquals(Sets.newHashSet("http://host1/kms/foo/v1/",
+        "http://host2/kms/foo/v1/",
+        "http://host3/kms/foo/v1/"),
         Sets.newHashSet(providers[0].getKMSUrl(),
             providers[1].getKMSUrl(),
             providers[2].getKMSUrl()));
@@ -244,7 +208,7 @@ public class TestLoadBalancingKMSClientProvider {
 
   private class MyKMSClientProvider extends KMSClientProvider {
     public MyKMSClientProvider(URI uri, Configuration conf) throws IOException {
-      super(uri, conf, uri);
+      super(uri, conf);
     }
 
     @Override
@@ -281,8 +245,9 @@ public class TestLoadBalancingKMSClientProvider {
   @Test
   public void testClassCastException() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KMSClientProvider p1 = new MyKMSClientProvider(
-        new URI("kms://http@host1:9600/kms/foo"), conf);
+        new URI("kms://http@host1/kms/foo"), conf);
     LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
         new KMSClientProvider[] {p1}, 0, conf);
     try {

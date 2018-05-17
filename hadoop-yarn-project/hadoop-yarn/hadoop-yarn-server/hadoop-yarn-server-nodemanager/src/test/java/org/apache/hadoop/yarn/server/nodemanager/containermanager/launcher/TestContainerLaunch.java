@@ -491,7 +491,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
   }
 
-
   @Test (timeout = 20000)
   public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
 
@@ -688,9 +687,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     resources.put(userjar, lpaths);
 
     Path nmp = new Path(testDir);
+    Set<String> nmEnvTrack = new LinkedHashSet<>();
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp, Collections.emptySet());
+        resources, nmp, nmEnvTrack);
 
     List<String> result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -709,7 +709,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         dispatcher, exec, null, container, dirsHandler, containerManager);
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp, Collections.emptySet());
+        resources, nmp, nmEnvTrack);
 
     result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -718,6 +718,94 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertTrue(
       result.get(0).endsWith("userjarlink.jar"));
 
+  }
+
+  @Test
+  public void testSanitizeNMEnvVars() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
+    Map<String, String> userSetEnv = new HashMap<String, String>();
+    Set<String> nmEnvTrack = new LinkedHashSet<>();
+    userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
+    userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
+    userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
+    userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
+    userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
+    userSetEnv.put(Environment.USER.key(), "user_set_" +
+        Environment.USER.key());
+    userSetEnv.put(Environment.LOGNAME.name(), "user_set_LOGNAME");
+    userSetEnv.put(Environment.PWD.name(), "user_set_PWD");
+    userSetEnv.put(Environment.HOME.name(), "user_set_HOME");
+    userSetEnv.put(Environment.CLASSPATH.name(), "APATH");
+    // This one should be appended to.
+    String userMallocArenaMaxVal = "test_user_max_val";
+    userSetEnv.put("MALLOC_ARENA_MAX", userMallocArenaMaxVal);
+    containerLaunchContext.setEnvironment(userSetEnv);
+    Container container = mock(Container.class);
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(containerLaunchContext);
+    when(container.getLocalizedResources()).thenReturn(null);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
+      public void handle(Event event) {
+        Assert.assertTrue(event instanceof ContainerExitEvent);
+        ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+        Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+            exitEvent.getType());
+      }
+    };
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
+    // these should eclipse anything in the user environment
+    YarnConfiguration conf = new YarnConfiguration();
+    String mallocArenaMaxVal = "test_nm_max_val";
+    conf.set("yarn.nodemanager.admin-env",
+        "MALLOC_ARENA_MAX=" + mallocArenaMaxVal);
+    String testKey1 = "TEST_KEY1";
+    String testVal1 = "testVal1";
+    conf.set("yarn.nodemanager.admin-env." + testKey1, testVal1);
+    String testKey2 = "TEST_KEY2";
+    String testVal2 = "testVal2";
+    conf.set("yarn.nodemanager.admin-env." + testKey2, testVal2);
+    String testKey3 = "MOUNT_LIST";
+    String testVal3 = "/home/a/b/c,/home/d/e/f,/home/g/e/h";
+    conf.set("yarn.nodemanager.admin-env." + testKey3, testVal3);
+    Map<String, String> environment = new HashMap<>();
+    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
+    ContainerLaunch launch = new ContainerLaunch(distContext, conf,
+        dispatcher, exec, null, container, dirsHandler, containerManager);
+    String testDir = System.getProperty("test.build.data",
+        "target/test-dir");
+    Path pwd = new Path(testDir);
+    List<Path> appDirs = new ArrayList<Path>();
+    List<String> userLocalDirs = new ArrayList<>();
+    List<String> containerLogs = new ArrayList<String>();
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    Path userjar = new Path("user.jar");
+    List<String> lpaths = new ArrayList<String>();
+    lpaths.add("userjarlink.jar");
+    resources.put(userjar, lpaths);
+    Path nmp = new Path(testDir);
+
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp, nmEnvTrack);
+    Assert.assertTrue(userSetEnv.containsKey("MALLOC_ARENA_MAX"));
+    Assert.assertTrue(userSetEnv.containsKey(testKey1));
+    Assert.assertTrue(userSetEnv.containsKey(testKey2));
+    Assert.assertTrue(userSetEnv.containsKey(testKey3));
+    Assert.assertTrue(nmEnvTrack.contains("MALLOC_ARENA_MAX"));
+    Assert.assertTrue(nmEnvTrack.contains("MOUNT_LIST"));
+    Assert.assertEquals(userMallocArenaMaxVal + File.pathSeparator
+        + mallocArenaMaxVal, userSetEnv.get("MALLOC_ARENA_MAX"));
+    Assert.assertEquals(testVal1, userSetEnv.get(testKey1));
+    Assert.assertEquals(testVal2, userSetEnv.get(testKey2));
+    Assert.assertEquals(testVal3, userSetEnv.get(testKey3));
   }
 
   @Test

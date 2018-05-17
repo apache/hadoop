@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster.DSEvent;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.impl.DirectTimelineWriter;
@@ -664,6 +665,15 @@ public class TestDistributedShell {
           }
           if (entityLine.contains(expectedEvent)) {
             actualCount++;
+          }
+          if (expectedEvent.equals(DSEvent.DS_CONTAINER_END.toString()) &&
+              entityLine.contains(expectedEvent)) {
+            TimelineEntity entity = FileSystemTimelineReaderImpl.
+                getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
+            TimelineEvent event = entity.getEvents().pollFirst();
+            Assert.assertNotNull(event);
+            Assert.assertTrue("diagnostics",
+                event.getInfo().containsKey(ApplicationMaster.DIAGNOSTICS));
           }
           if (checkIdPrefix) {
             TimelineEntity entity = FileSystemTimelineReaderImpl.

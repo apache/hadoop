@@ -1154,6 +1154,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       map.put(READ_CAPACITY, throughput.getReadCapacityUnits().toString());
       map.put(WRITE_CAPACITY, throughput.getWriteCapacityUnits().toString());
       map.put(TABLE, desc.toString());
+      map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
+          Boolean.toString(false));
     } else {
       map.put("name", "DynamoDB Metadata Store");
       map.put(TABLE, "none");

@@ -109,6 +109,15 @@
       <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
     </menu>
 
+    <menu name="Ozone" inherit="top">
+      <item name="Getting Started" href="hadoop-project-dist/hadoop-hdfs/OzoneGettingStarted.html"/>
+      <item name="Ozone Overview"
+            href="hadoop-project-dist/hadoop-hdfs/OzoneOverview.html"/>
+      <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/OzoneCommandShell.html"/>
+      <item name="Ozone Rest API" href="hadoop-project-dist/hadoop-hdfs/OzoneRest.html"/>
+      <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/OzoneMetrics.html"/>
+    </menu>
+
     <menu name="MapReduce" inherit="top">
       <item name="Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
       <item name="Commands Reference" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html"/>

@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
-import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -1098,7 +1097,7 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
 
     env.put(
-        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_MOUNTS,
         "source");
 
     try {
@@ -1118,8 +1117,8 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
 
     env.put(
-        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
-        "test_dir/test_resource_file:test_mount");
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_MOUNTS,
+        "test_dir/test_resource_file:test_mount:ro");
 
     runtime.launchContainer(builder.build());
     PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
@@ -1165,24 +1164,6 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testMountInvalid() throws ContainerExecutionException {
-    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor, mockCGroupsHandler);
-    runtime.initialize(conf, nmContext);
-
-    env.put(
-        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
-        "source:target:other");
-
-    try {
-      runtime.launchContainer(builder.build());
-      Assert.fail("Expected a launch container failure due to invalid mount.");
-    } catch (ContainerExecutionException e) {
-      LOG.info("Caught expected exception : " + e);
-    }
-  }
-
-  @Test
   public void testMountMultiple()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
@@ -1191,9 +1172,9 @@ public class TestDockerContainerRuntime {
     runtime.initialize(conf, nmContext);
 
     env.put(
-        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS,
-        "test_dir/test_resource_file:test_mount1," +
-            "test_dir/test_resource_file:test_mount2");
+        DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_MOUNTS,
+        "test_dir/test_resource_file:test_mount1:ro," +
+            "test_dir/test_resource_file:test_mount2:ro");
 
     runtime.launchContainer(builder.build());
     PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
@@ -1537,6 +1518,19 @@ public class TestDockerContainerRuntime {
         continue;
       }
     }
+  }
+
+  @Test
+  public void testValidDockerHostnameLength() throws Exception {
+    String validLength = "example.test.site";
+    DockerLinuxContainerRuntime.validateHostname(validLength);
+  }
+
+  @Test(expected = ContainerExecutionException.class)
+  public void testInvalidDockerHostnameLength() throws Exception {
+    String invalidLength =
+        "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
+    DockerLinuxContainerRuntime.validateHostname(invalidLength);
   }
 
   @SuppressWarnings("unchecked")

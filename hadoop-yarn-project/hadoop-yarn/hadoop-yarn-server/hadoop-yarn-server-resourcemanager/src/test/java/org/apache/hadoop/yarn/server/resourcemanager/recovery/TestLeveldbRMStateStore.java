@@ -83,6 +83,7 @@ public class TestLeveldbRMStateStore extends RMStateStoreTestBase {
   @Test(timeout = 60000)
   public void testEpoch() throws Exception {
     conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
+    conf.setLong(YarnConfiguration.RM_EPOCH_RANGE, getEpochRange());
     LeveldbStateStoreTester tester = new LeveldbStateStoreTester();
     testEpoch(tester);
   }

@@ -22,7 +22,8 @@ module.exports = { // YARN UI App configurations
       timelineWebAddress: "localhost:8188",
       timelineV1WebAddress: "localhost:8188",
       rmWebAddress: "localhost:8088",
-      protocolScheme: "http:"
+      protocolScheme: "http:",
+      isSecurityEnabled: ""
     },
     namespaces: {
       timeline: 'ws/v1/applicationhistory',
