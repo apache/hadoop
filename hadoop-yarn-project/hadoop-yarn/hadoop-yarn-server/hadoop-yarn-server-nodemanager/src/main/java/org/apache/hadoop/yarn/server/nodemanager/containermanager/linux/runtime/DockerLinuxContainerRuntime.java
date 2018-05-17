@@ -153,14 +153,6 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     setting it to false.
  *   </li>
  *   <li>
- *     {@code YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS} adds
- *     additional volume mounts to the Docker container. The value of the
- *     environment variable should be a comma-separated list of mounts.
- *     All such mounts must be given as {@code source:dest}, where the
- *     source is an absolute path that is not a symlink and that points to a
- *     localized resource.
- *   </li>
- *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS} allows users to specify
  +     additional volume mounts for the Docker container. The value of the
  *     environment variable should be a comma-separated list of mounts.
@@ -226,9 +218,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_RUN_ENABLE_USER_REMAPPING =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_ENABLE_USER_REMAPPING";
-  @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
-      "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
@@ -675,8 +664,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return true;
   }
 
-  @VisibleForTesting
-  protected String validateMount(String mount,
+  private String mountReadOnlyPath(String mount,
       Map<Path, List<String>> localizedResources)
       throws ContainerExecutionException {
     for (Entry<Path, List<String>> resource : localizedResources.entrySet()) {
@@ -812,23 +800,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     runCommand.addAllReadOnlyMountLocations(filecacheDirs);
     runCommand.addAllReadOnlyMountLocations(userFilecacheDirs);
 
-    if (environment.containsKey(ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS)) {
-      String mounts = environment.get(
-          ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS);
-      if (!mounts.isEmpty()) {
-        for (String mount : StringUtils.split(mounts)) {
-          String[] dir = StringUtils.split(mount, ':');
-          if (dir.length != 2) {
-            throw new ContainerExecutionException("Invalid mount : " +
-                mount);
-          }
-          String src = validateMount(dir[0], localizedResources);
-          String dst = dir[1];
-          runCommand.addReadOnlyMountLocation(src, dst, true);
-        }
-      }
-    }
-
     if (environment.containsKey(ENV_DOCKER_CONTAINER_MOUNTS)) {
       Matcher parsedMounts = USER_MOUNT_PATTERN.matcher(
           environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
@@ -840,6 +811,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       parsedMounts.reset();
       while (parsedMounts.find()) {
         String src = parsedMounts.group(1);
+        java.nio.file.Path srcPath = java.nio.file.Paths.get(src);
+        if (!srcPath.isAbsolute()) {
+          src = mountReadOnlyPath(src, localizedResources);
+        }
         String dst = parsedMounts.group(2);
         String mode = parsedMounts.group(3);
         if (!mode.equals("ro") && !mode.equals("rw")) {
