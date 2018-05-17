@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -266,12 +267,24 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
         event.setAutoFinalize(true);
       }
       compsThatNeedUpgrade.forEach(component -> {
-        ComponentEvent needUpgradeEvent = new ComponentEvent(
-            component.getName(), ComponentEventType.UPGRADE)
-            .setTargetSpec(component)
-            .setUpgradeVersion(event.getVersion());
-        context.scheduler.getDispatcher().getEventHandler().handle(
-            needUpgradeEvent);
+        org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum
+            restartPolicy = component.getRestartPolicy();
+
+        final ComponentRestartPolicy restartPolicyHandler =
+            Component.getRestartPolicyHandler(restartPolicy);
+        // Do not allow upgrades for components which have NEVER/ON_FAILURE
+        // restart policy
+        if (restartPolicyHandler.allowUpgrades()) {
+          ComponentEvent needUpgradeEvent = new ComponentEvent(
+              component.getName(), ComponentEventType.UPGRADE).setTargetSpec(
+              component).setUpgradeVersion(event.getVersion());
+          context.scheduler.getDispatcher().getEventHandler().handle(
+              needUpgradeEvent);
+        } else {
+          LOG.info("The component {} has a restart "
+              + "policy that doesnt allow upgrades {} ", component.getName(),
+              component.getRestartPolicy().toString());
+        }
       });
     } else {
       // nothing to upgrade if upgrade auto finalize is requested, trigger a
