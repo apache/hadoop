@@ -233,6 +233,8 @@ One or more components of the service. If the service is HBase say, then the com
 |placement_policy|Advanced scheduling and placement policies for all containers of this component.|false|PlacementPolicy||
 |configuration|Config properties for this component.|false|Configuration||
 |quicklinks|A list of quicklink keys defined at the service level, and to be resolved by this component.|false|string array||
+|restart_policy|Policy of restart component. Including ALWAYS (Always restart
+ component even if instance exit code = 0); ON_FAILURE (Only restart component if instance exit code != 0); NEVER (Do not restart in any cases). Flexing is not supported for components which have restart_policy=ON_FAILURE/NEVER|false|string|ALWAYS|
 
 
 ### ComponentState

@@ -57,6 +57,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
@@ -99,8 +101,32 @@ public class ServiceTestUtils {
     return exampleApp;
   }
 
+  // Example service definition
+  // 2 components, each of which has 2 containers.
+  public static Service createTerminatingJobExample(String serviceName) {
+    Service exampleApp = new Service();
+    exampleApp.setName(serviceName);
+    exampleApp.setVersion("v1");
+    exampleApp.addComponent(
+        createComponent("terminating-comp1", 2, "sleep " + "1000",
+            Component.RestartPolicyEnum.NEVER, null));
+    exampleApp.addComponent(
+        createComponent("terminating-comp2", 2, "sleep 1000",
+            Component.RestartPolicyEnum.ON_FAILURE, new ArrayList<String>() {{
+                add("terminating-comp1");
+            }}));
+    exampleApp.addComponent(
+        createComponent("terminating-comp3", 2, "sleep 1000",
+            Component.RestartPolicyEnum.ON_FAILURE, new ArrayList<String>() {{
+                add("terminating-comp2");
+            }}));
+
+    return exampleApp;
+  }
+
   public static Component createComponent(String name) {
-    return createComponent(name, 2L, "sleep 1000");
+    return createComponent(name, 2L, "sleep 1000",
+        Component.RestartPolicyEnum.ALWAYS, null);
   }
 
   protected static Component createComponent(String name, long numContainers,
@@ -114,6 +140,18 @@ public class ServiceTestUtils {
     resource.setMemory("128");
     resource.setCpus(1);
     return comp1;
+  }
+
+  protected static Component createComponent(String name, long numContainers,
+      String command, Component.RestartPolicyEnum restartPolicyEnum,
+      List<String> dependencies) {
+    Component comp = createComponent(name, numContainers, command);
+    comp.setRestartPolicy(restartPolicyEnum);
+
+    if (dependencies != null) {
+      comp.dependencies(dependencies);
+    }
+    return comp;
   }
 
   public static SliderFileSystem initMockFs() throws IOException {
@@ -304,6 +342,12 @@ public class ServiceTestUtils {
     client.init(conf);
     client.start();
     return client;
+  }
+
+  public static ServiceManager createServiceManager(ServiceContext context) {
+    ServiceManager serviceManager = new ServiceManager(context);
+    context.setServiceManager(serviceManager);
+    return serviceManager;
   }
 
   /**

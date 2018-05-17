@@ -56,4 +56,8 @@ public class ServiceContext {
   void setServiceManager(ServiceManager serviceManager) {
     this.serviceManager = Preconditions.checkNotNull(serviceManager);
   }
+
+  public Service getService() {
+    return service;
+  }
 }

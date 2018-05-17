@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.service.api.records;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
@@ -29,7 +30,9 @@ import java.util.Objects;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -97,6 +100,74 @@ public class Component implements Serializable {
   @JsonProperty("containers")
   private List<Container> containers =
       Collections.synchronizedList(new ArrayList<Container>());
+
+
+  @JsonProperty("restart_policy")
+  @XmlElement(name = "restart_policy")
+  private RestartPolicyEnum restartPolicy = RestartPolicyEnum.ALWAYS;
+
+  /**
+   * Policy of restart component. Including ALWAYS - Long lived components
+   * (Always restart component instance even if instance exit code &#x3D; 0.);
+   *
+   * ON_FAILURE (Only restart component instance if instance exit code !&#x3D;
+   * 0);
+   * NEVER (Do not restart in any cases)
+   *
+   * @return restartPolicy
+   **/
+  @XmlType(name = "restart_policy")
+  @XmlEnum
+  public enum RestartPolicyEnum {
+    ALWAYS("ALWAYS"),
+
+    ON_FAILURE("ON_FAILURE"),
+
+    NEVER("NEVER");
+    private String value;
+
+    RestartPolicyEnum(String value) {
+      this.value = value;
+    }
+
+    @Override
+    @JsonValue
+    public String toString() {
+      return value;
+    }
+  }
+
+  public Component restartPolicy(RestartPolicyEnum restartPolicyEnumVal) {
+    this.restartPolicy = restartPolicyEnumVal;
+    return this;
+  }
+
+  /**
+   * Policy of restart component.
+   *
+   * Including
+   * ALWAYS (Always restart component instance even if instance exit
+   * code &#x3D; 0);
+   *
+   * ON_FAILURE (Only restart component instance if instance exit code !&#x3D;
+   * 0);
+   *
+   * NEVER (Do not restart in any cases)
+   *
+   * @return restartPolicy
+   **/
+  @ApiModelProperty(value = "Policy of restart component. Including ALWAYS "
+      + "(Always restart component even if instance exit code = 0); "
+      + "ON_FAILURE (Only restart component if instance exit code != 0); "
+      + "NEVER (Do not restart in any cases)")
+  public RestartPolicyEnum getRestartPolicy() {
+    return restartPolicy;
+  }
+
+  public void setRestartPolicy(RestartPolicyEnum restartPolicy) {
+    this.restartPolicy = restartPolicy;
+  }
+
 
   /**
    * Name of the service component (mandatory).

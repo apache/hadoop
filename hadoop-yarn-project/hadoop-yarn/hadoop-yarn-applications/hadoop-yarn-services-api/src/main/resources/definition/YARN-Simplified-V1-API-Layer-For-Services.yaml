@@ -424,6 +424,14 @@ definitions:
         items:
           type: string
         description: A list of quicklink keys defined at the service level, and to be resolved by this component.
+      restartPolicy:
+        type: string
+        description: Policy of restart component. Including ALWAYS (Always restart component even if instance exit code = 0); ON_FAILURE (Only restart component if instance exit code != 0); NEVER (Do not restart in any cases)
+        enum:
+          - ALWAYS
+          - ON_FAILURE
+          - NEVER
+        default: ALWAYS
   ReadinessCheck:
     description: A check to be performed to determine the readiness of a component instance (a container). If no readiness check is specified, the default readiness check will be used unless the yarn.service.default-readiness-check.enabled configuration property is set to false at the component, service, or system level. The artifact field is currently unsupported but may be implemented in the future, enabling a pluggable helper container to support advanced use cases.
     required:

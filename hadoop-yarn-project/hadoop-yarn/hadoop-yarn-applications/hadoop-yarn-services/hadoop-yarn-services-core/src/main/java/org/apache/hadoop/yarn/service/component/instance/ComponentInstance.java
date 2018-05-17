@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.component.instance;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
@@ -25,9 +26,9 @@ import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
@@ -96,8 +98,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   // This container object is used for rest API query
   private org.apache.hadoop.yarn.service.api.records.Container containerSpec;
 
+
   private static final StateMachineFactory<ComponentInstance,
-      ComponentInstanceState, ComponentInstanceEventType, ComponentInstanceEvent>
+      ComponentInstanceState, ComponentInstanceEventType,
+      ComponentInstanceEvent>
       stateMachineFactory =
       new StateMachineFactory<ComponentInstance, ComponentInstanceState,
           ComponentInstanceEventType, ComponentInstanceEvent>(INIT)
@@ -230,6 +234,47 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     }
   }
 
+  @VisibleForTesting
+  static void handleComponentInstanceRelaunch(
+      ComponentInstance compInstance, ComponentInstanceEvent event) {
+    Component comp = compInstance.getComponent();
+
+    // Do we need to relaunch the service?
+    boolean hasContainerFailed = hasContainerFailed(event.getStatus());
+
+    ComponentRestartPolicy restartPolicy = comp.getRestartPolicyHandler();
+
+    if (restartPolicy.shouldRelaunchInstance(compInstance, event.getStatus())) {
+      // re-ask the failed container.
+      comp.requestContainers(1);
+      comp.reInsertPendingInstance(compInstance);
+      LOG.info(compInstance.getCompInstanceId()
+              + ": {} completed. Reinsert back to pending list and requested " +
+              "a new container." + System.lineSeparator() +
+              " exitStatus={}, diagnostics={}.",
+          event.getContainerId(), event.getStatus().getExitStatus(),
+          event.getStatus().getDiagnostics());
+    } else {
+      // When no relaunch, update component's #succeeded/#failed
+      // instances.
+      if (hasContainerFailed) {
+        comp.markAsFailed(compInstance);
+      } else {
+        comp.markAsSucceeded(compInstance);
+      }
+      LOG.info(compInstance.getCompInstanceId() + (!hasContainerFailed ?
+          " succeeded" :
+          " failed") + " without retry, exitStatus=" + event.getStatus());
+      comp.getScheduler().terminateServiceIfAllComponentsFinished();
+    }
+  }
+
+  public static boolean hasContainerFailed(ContainerStatus containerStatus) {
+    //Mark conainer as failed if we cant get its exit status i.e null?
+    return containerStatus == null || containerStatus.getExitStatus() !=
+        ContainerExitStatus.SUCCESS;
+  }
+
   private static class ContainerStoppedTransition extends  BaseTransition {
     // whether the container failed before launched by AM or not.
     boolean failedBeforeLaunching = false;
@@ -244,9 +289,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      // re-ask the failed container.
+
       Component comp = compInstance.component;
-      comp.requestContainers(1);
       String containerDiag =
           compInstance.getCompInstanceId() + ": " + event.getStatus()
               .getDiagnostics();
@@ -259,7 +303,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         compInstance.component.decContainersReady(true);
       }
       compInstance.component.decRunningContainers();
-      boolean shouldExit = false;
+      // Should we fail (terminate) the service?
+      boolean shouldFailService = false;
+
+      final ServiceScheduler scheduler = comp.getScheduler();
       // Check if it exceeds the failure threshold, but only if health threshold
       // monitor is not enabled
       if (!comp.isHealthThresholdMonitorEnabled()
@@ -271,10 +318,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
             comp.getName(), comp.currentContainerFailure.get(), comp.maxContainerFailurePerComp);
         compInstance.diagnostics.append(exitDiag);
         // append to global diagnostics that will be reported to RM.
-        comp.getScheduler().getDiagnostics().append(containerDiag);
-        comp.getScheduler().getDiagnostics().append(exitDiag);
+        scheduler.getDiagnostics().append(containerDiag);
+        scheduler.getDiagnostics().append(exitDiag);
         LOG.warn(exitDiag);
-        shouldExit = true;
+        shouldFailService = true;
       }
 
       if (!failedBeforeLaunching) {
@@ -296,25 +343,14 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       }
 
       // remove the failed ContainerId -> CompInstance mapping
-      comp.getScheduler().removeLiveCompInstance(event.getContainerId());
+      scheduler.removeLiveCompInstance(event.getContainerId());
 
-      comp.reInsertPendingInstance(compInstance);
+      // According to component restart policy, handle container restart
+      // or finish the service (if all components finished)
+      handleComponentInstanceRelaunch(compInstance, event);
 
-      LOG.info(compInstance.getCompInstanceId()
-              + ": {} completed. Reinsert back to pending list and requested " +
-              "a new container." + System.lineSeparator() +
-              " exitStatus={}, diagnostics={}.",
-          event.getContainerId(), event.getStatus().getExitStatus(),
-          event.getStatus().getDiagnostics());
-      if (shouldExit) {
-        // Sleep for 5 seconds in hope that the state can be recorded in ATS.
-        // in case there's a client polling the comp state, it can be notified.
-        try {
-          Thread.sleep(5000);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted on sleep while exiting.", e);
-        }
-        ExitUtil.terminate(-1);
+      if (shouldFailService) {
+        scheduler.getTerminationHandler().terminate(-1);
       }
     }
   }
@@ -629,5 +665,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     result = 31 * result + (int) (containerStartedTime ^ (containerStartedTime
         >>> 32));
     return result;
+  }
+
+  @VisibleForTesting public org.apache.hadoop.yarn.service.api.records
+      .Container getContainerSpec() {
+    return containerSpec;
   }
 }

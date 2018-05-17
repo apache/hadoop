@@ -227,14 +227,16 @@ public class TestServiceManager {
   }
 
   public static Service createBaseDef(String name) {
+    return createDef(name, ServiceTestUtils.createExampleApplication());
+  }
+
+  public static Service createDef(String name, Service serviceDef) {
     ApplicationId applicationId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);
-    Service serviceDef = ServiceTestUtils.createExampleApplication();
     serviceDef.setId(applicationId.toString());
     serviceDef.setName(name);
     serviceDef.setState(ServiceState.STARTED);
     Artifact artifact = createTestArtifact("1");
-
     serviceDef.getComponents().forEach(component ->
         component.setArtifact(artifact));
     return serviceDef;

@@ -38,8 +38,10 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
+
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
+import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,6 +52,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
+
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -59,6 +62,9 @@ import static org.mockito.Mockito.when;
  * Tests for {@link Component}.
  */
 public class TestComponent {
+
+  private static final int WAIT_MS_PER_LOOP = 1000;
+  static final Logger LOG = Logger.getLogger(TestComponent.class);
 
   @Rule
   public ServiceTestUtils.ServiceFSWatcher rule =
@@ -158,6 +164,57 @@ public class TestComponent {
         comp.getComponentSpec().getConfiguration().getEnv("key1"));
   }
 
+  @Test
+  public void testComponentStateUpdatesWithTerminatingComponents() throws
+      Exception {
+    final String serviceName =
+        "testComponentStateUpdatesWithTerminatingComponents";
+
+    Service testService = ServiceTestUtils.createTerminatingJobExample(
+        serviceName);
+    TestServiceManager.createDef(serviceName, testService);
+
+    ServiceContext context = createTestContext(rule, testService);
+
+    for (Component comp : context.scheduler.getAllComponents().values()) {
+
+      Iterator<ComponentInstance> instanceIter = comp.
+          getAllComponentInstances().iterator();
+
+      ComponentInstance componentInstance = instanceIter.next();
+      Container instanceContainer = componentInstance.getContainer();
+
+      Assert.assertEquals(0, comp.getNumSucceededInstances());
+      Assert.assertEquals(0, comp.getNumFailedInstances());
+      Assert.assertEquals(2, comp.getNumRunningInstances());
+      Assert.assertEquals(2, comp.getNumReadyInstances());
+      Assert.assertEquals(0, comp.getPendingInstances().size());
+
+      //stop 1 container
+      ContainerStatus containerStatus = ContainerStatus.newInstance(
+          instanceContainer.getId(),
+          org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+          "successful", 0);
+      comp.handle(new ComponentEvent(comp.getName(),
+          ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus));
+      componentInstance.handle(
+          new ComponentInstanceEvent(componentInstance.getContainer().getId(),
+              ComponentInstanceEventType.STOP).setStatus(containerStatus));
+
+      Assert.assertEquals(1, comp.getNumSucceededInstances());
+      Assert.assertEquals(0, comp.getNumFailedInstances());
+      Assert.assertEquals(1, comp.getNumRunningInstances());
+      Assert.assertEquals(1, comp.getNumReadyInstances());
+      Assert.assertEquals(0, comp.getPendingInstances().size());
+
+      org.apache.hadoop.yarn.service.component.ComponentState componentState =
+          Component.checkIfStable(comp);
+      Assert.assertEquals(
+          org.apache.hadoop.yarn.service.component.ComponentState.STABLE,
+          componentState);
+    }
+  }
+
   private static org.apache.hadoop.yarn.service.api.records.Component
       createSpecWithEnv(String serviceName, String compName, String key,
       String val) {
@@ -171,31 +228,38 @@ public class TestComponent {
   public static ServiceContext createTestContext(
       ServiceTestUtils.ServiceFSWatcher fsWatcher, String serviceName)
       throws Exception {
+    return createTestContext(fsWatcher,
+        TestServiceManager.createBaseDef(serviceName));
+  }
+
+  public static ServiceContext createTestContext(
+      ServiceTestUtils.ServiceFSWatcher fsWatcher, Service serviceDef)
+      throws Exception {
     ServiceContext context = new ServiceContext();
-    context.service = TestServiceManager.createBaseDef(serviceName);
+    context.service = serviceDef;
     context.fs = fsWatcher.getFs();
 
     ContainerLaunchService mockLaunchService = mock(
         ContainerLaunchService.class);
 
     context.scheduler = new ServiceScheduler(context) {
-      @Override
-      protected YarnRegistryViewForProviders createYarnRegistryOperations(
+      @Override protected YarnRegistryViewForProviders
+      createYarnRegistryOperations(
           ServiceContext context, RegistryOperations registryClient) {
         return mock(YarnRegistryViewForProviders.class);
       }
 
-      @Override
-      public NMClientAsync createNMClient() {
+      @Override public NMClientAsync createNMClient() {
         NMClientAsync nmClientAsync = super.createNMClient();
         NMClient nmClient = mock(NMClient.class);
         try {
           when(nmClient.getContainerStatus(anyObject(), anyObject()))
-              .thenAnswer((Answer<ContainerStatus>) invocation ->
-                  ContainerStatus.newInstance(
-                      (ContainerId) invocation.getArguments()[0],
-                      org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-                      "", 0));
+              .thenAnswer(
+                  (Answer<ContainerStatus>) invocation -> ContainerStatus
+                      .newInstance((ContainerId) invocation.getArguments()[0],
+                          org.apache.hadoop.yarn.api.records.ContainerState
+                              .RUNNING,
+                          "", 0));
         } catch (YarnException | IOException e) {
           throw new RuntimeException(e);
         }
@@ -203,16 +267,18 @@ public class TestComponent {
         return nmClientAsync;
       }
 
-      @Override
-      public ContainerLaunchService getContainerLaunchService() {
+      @Override public ContainerLaunchService getContainerLaunchService() {
         return mockLaunchService;
       }
     };
     context.scheduler.init(fsWatcher.getConf());
 
+    ServiceTestUtils.createServiceManager(context);
+
     doNothing().when(mockLaunchService).
         reInitCompInstance(anyObject(), anyObject(), anyObject(), anyObject());
     stabilizeComponents(context);
+
     return context;
   }
 
@@ -223,6 +289,8 @@ public class TestComponent {
     context.attemptId = attemptId;
     Map<String, Component>
         componentState = context.scheduler.getAllComponents();
+
+    int counter = 0;
     for (org.apache.hadoop.yarn.service.api.records.Component componentSpec :
         context.service.getComponents()) {
       Component component = new org.apache.hadoop.yarn.service.component.
@@ -230,9 +298,12 @@ public class TestComponent {
       componentState.put(component.getName(), component);
       component.handle(new ComponentEvent(component.getName(),
           ComponentEventType.FLEX));
+
       for (int i = 0; i < componentSpec.getNumberOfContainers(); i++) {
-        assignNewContainer(attemptId, i + 1, context, component);
+        counter++;
+        assignNewContainer(attemptId, counter, context, component);
       }
+
       component.handle(new ComponentEvent(component.getName(),
           ComponentEventType.CHECK_STABLE));
     }
@@ -241,6 +312,8 @@ public class TestComponent {
   private static void assignNewContainer(
       ApplicationAttemptId attemptId, long containerNum,
       ServiceContext context, Component component) {
+
+
     Container container = org.apache.hadoop.yarn.api.records.Container
         .newInstance(ContainerId.newContainerId(attemptId, containerNum),
             NODE_ID, "localhost", null, null,
