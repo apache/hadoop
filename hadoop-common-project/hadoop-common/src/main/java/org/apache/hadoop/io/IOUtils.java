@@ -400,6 +400,13 @@ public class IOUtils {
           "File/Directory " + fileToSync.getAbsolutePath() + " does not exist");
     }
     boolean isDir = fileToSync.isDirectory();
+
+    // HDFS-13586, FileChannel.open fails with AccessDeniedException
+    // for any directory, ignore.
+    if (isDir && Shell.WINDOWS) {
+      return;
+    }
+
     // If the file is a directory we have to open read-only, for regular files
     // we must open r/w for the fsync to have an effect. See
     // http://blog.httrack.com/blog/2013/11/15/
