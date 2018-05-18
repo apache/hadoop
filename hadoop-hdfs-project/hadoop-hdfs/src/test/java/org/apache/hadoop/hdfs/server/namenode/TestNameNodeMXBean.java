@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.util.Shell.getMemlockLimit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -103,8 +104,10 @@ public class TestNameNodeMXBean {
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
+    Long maxLockedMemory = getMemlockLimit(
+        NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
-      NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
+        maxLockedMemory);
     MiniDFSCluster cluster = null;
 
     try {
@@ -256,7 +259,7 @@ public class TestNameNodeMXBean {
       assertEquals(1, statusMap.get("active").size());
       assertEquals(1, statusMap.get("failed").size());
       assertEquals(0L, mbs.getAttribute(mxbeanName, "CacheUsed"));
-      assertEquals(NativeIO.POSIX.getCacheManipulator().getMemlockLimit() *
+      assertEquals(maxLockedMemory *
           cluster.getDataNodes().size(),
               mbs.getAttribute(mxbeanName, "CacheCapacity"));
       assertNull("RollingUpgradeInfo should be null when there is no rolling"
