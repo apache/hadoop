@@ -16,10 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.utils;
+package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -37,7 +43,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
@@ -187,5 +194,69 @@ public final class AMRMClientUtils {
   private static void setAuthModeInConf(Configuration conf) {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         SaslRpcServer.AuthMethod.TOKEN.toString());
+  }
+
+  public static void addToOutstandingSchedulingRequests(
+      Collection<SchedulingRequest> requests,
+      Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests) {
+    for (SchedulingRequest req : requests) {
+      List<SchedulingRequest> schedulingRequests = outstandingSchedRequests
+          .computeIfAbsent(req.getAllocationTags(), x -> new LinkedList<>());
+      SchedulingRequest matchingReq = null;
+      for (SchedulingRequest schedReq : schedulingRequests) {
+        if (isMatchingSchedulingRequests(req, schedReq)) {
+          matchingReq = schedReq;
+          break;
+        }
+      }
+      if (matchingReq != null) {
+        matchingReq.getResourceSizing()
+            .setNumAllocations(req.getResourceSizing().getNumAllocations());
+      } else {
+        schedulingRequests.add(req);
+      }
+    }
+  }
+
+  public static boolean isMatchingSchedulingRequests(
+      SchedulingRequest schedReq1, SchedulingRequest schedReq2) {
+    return schedReq1.getPriority().equals(schedReq2.getPriority()) &&
+        schedReq1.getExecutionType().getExecutionType().equals(
+            schedReq1.getExecutionType().getExecutionType()) &&
+        schedReq1.getAllocationRequestId() ==
+            schedReq2.getAllocationRequestId();
+  }
+
+  public static void removeFromOutstandingSchedulingRequests(
+      Collection<Container> containers,
+      Map<Set<String>, List<SchedulingRequest>> outstandingSchedRequests) {
+    if (containers == null || containers.isEmpty()) {
+      return;
+    }
+    for (Container container : containers) {
+      if (container.getAllocationTags() != null
+          && !container.getAllocationTags().isEmpty()) {
+        List<SchedulingRequest> schedReqs =
+            outstandingSchedRequests.get(container.getAllocationTags());
+        if (schedReqs != null && !schedReqs.isEmpty()) {
+          Iterator<SchedulingRequest> iter = schedReqs.iterator();
+          while (iter.hasNext()) {
+            SchedulingRequest schedReq = iter.next();
+            if (schedReq.getPriority().equals(container.getPriority())
+                && schedReq.getAllocationRequestId() == container
+                    .getAllocationRequestId()) {
+              int numAllocations =
+                  schedReq.getResourceSizing().getNumAllocations();
+              numAllocations--;
+              if (numAllocations == 0) {
+                iter.remove();
+              } else {
+                schedReq.getResourceSizing().setNumAllocations(numAllocations);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
