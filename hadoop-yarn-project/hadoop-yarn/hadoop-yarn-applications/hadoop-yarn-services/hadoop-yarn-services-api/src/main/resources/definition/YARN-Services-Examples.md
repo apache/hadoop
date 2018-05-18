@@ -221,7 +221,6 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
     {
       "name": "regionserver",
       "number_of_containers": 3,
-      "unique_component_support": "true",
       "artifact": {
         "id": "hbase:latest",
         "type": "DOCKER"

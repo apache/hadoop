@@ -34,5 +34,6 @@
 
     <modules>
         <module>hadoop-yarn-services-core</module>
+        <module>hadoop-yarn-services-api</module>
     </modules>
 </project>

@@ -41,10 +41,15 @@ import com.google.common.annotations.VisibleForTesting;
  * The class is responsible for choosing the desired number of targets
  * for placing block replicas.
  * The replica placement strategy is that if the writer is on a datanode,
- * the 1st replica is placed on the local machine, 
- * otherwise a random datanode. The 2nd replica is placed on a datanode
- * that is on a different rack. The 3rd replica is placed on a datanode
- * which is on a different node of the rack as the second replica.
+ * the 1st replica is placed on the local machine by default
+ * (By passing the {@link org.apache.hadoop.fs.CreateFlag#NO_LOCAL_WRITE} flag
+ * the client can request not to put a block replica on the local datanode.
+ * Subsequent replicas will still follow default block placement policy.).
+ * If the writer is not on a datanode, the 1st replica is placed on a random
+ * node.
+ * The 2nd replica is placed on a datanode that is on a different rack.
+ * The 3rd replica is placed on a datanode which is on a different node of the
+ * rack as the second replica.
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {

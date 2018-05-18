@@ -136,12 +136,25 @@ message SCMNodeReport {
   repeated SCMStorageReport storageReport = 1;
 }
 
+/**
+ * Types of recognized storage media.
+ */
+enum StorageTypeProto {
+  DISK = 1;
+  SSD = 2;
+  ARCHIVE = 3;
+  RAM_DISK = 4;
+  PROVIDED = 5;
+}
+
 message SCMStorageReport {
   required string storageUuid = 1;
-  optional uint64 capacity = 2 [default = 0];
-  optional uint64 scmUsed = 3 [default = 0];
-  optional uint64 remaining = 4 [default = 0];
-  //optional hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
+  required string storageLocation = 2;
+  optional uint64 capacity = 3 [default = 0];
+  optional uint64 scmUsed = 4 [default = 0];
+  optional uint64 remaining = 5 [default = 0];
+  optional StorageTypeProto storageType = 6 [default = DISK];
+  optional bool failed = 7 [default = false];
 }
 
 message SCMRegisterRequestProto {

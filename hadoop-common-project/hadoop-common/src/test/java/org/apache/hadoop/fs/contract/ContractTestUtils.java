@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
@@ -1437,6 +1438,34 @@ public class ContractTestUtils extends Assert {
     return list;
   }
 
+  /**
+   * Custom assert to test {@link StreamCapabilities}.
+   *
+   * @param stream The stream to test for StreamCapabilities
+   * @param shouldHaveCapabilities The array of expected capabilities
+   * @param shouldNotHaveCapabilities The array of unexpected capabilities
+   */
+  public static void assertCapabilities(
+      Object stream, String[] shouldHaveCapabilities,
+      String[] shouldNotHaveCapabilities) {
+    assertTrue("Stream should be instanceof StreamCapabilities",
+        stream instanceof StreamCapabilities);
+
+    if (shouldHaveCapabilities!=null) {
+      for (String shouldHaveCapability : shouldHaveCapabilities) {
+        assertTrue("Should have capability: " + shouldHaveCapability,
+            ((StreamCapabilities) stream).hasCapability(shouldHaveCapability));
+      }
+    }
+
+    if (shouldNotHaveCapabilities!=null) {
+      for (String shouldNotHaveCapability : shouldNotHaveCapabilities) {
+        assertFalse("Should not have capability: " + shouldNotHaveCapability,
+            ((StreamCapabilities) stream)
+                .hasCapability(shouldNotHaveCapability));
+      }
+    }
+  }
 
   /**
    * Results of recursive directory creation/scan operations.
