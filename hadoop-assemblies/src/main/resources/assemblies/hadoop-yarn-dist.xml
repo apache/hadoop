@@ -105,7 +105,7 @@
       </includes>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services-api/target</directory>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services/hadoop-yarn-services-api/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
         <include>*-sources.jar</include>
