@@ -220,7 +220,7 @@ One or more components of the service. If the service is HBase say, then the com
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|name|Name of the service component (mandatory). If Registry DNS is enabled, the max length is 63 characters. If unique component support is enabled, the max length is lowered to 44 characters.|true|string||
+|name|Name of the service component (mandatory). If Registry DNS is enabled, the max length is 44 characters.|true|string||
 |state|The state of the component|false|ComponentState||
 |dependencies|An array of service components which should be in READY state (as defined by readiness check), before this component can be started. The dependencies across all components of a service should be represented as a DAG.|false|string array||
 |readiness_check|Readiness check for this component.|false|ReadinessCheck||
@@ -638,7 +638,6 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
     {
       "name": "regionserver",
       "number_of_containers": 3,
-      "unique_component_support": "true",
       "artifact": {
         "id": "hbase:latest",
         "type": "DOCKER"
