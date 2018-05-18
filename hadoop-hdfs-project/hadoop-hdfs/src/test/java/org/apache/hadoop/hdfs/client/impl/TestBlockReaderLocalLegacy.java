@@ -48,6 +48,7 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -93,8 +94,9 @@ public class TestBlockReaderLocalLegacy {
     final long FILE_LENGTH = 512L;
 
     HdfsConfiguration conf = getConfiguration(null);
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+        new MiniDFSCluster.Builder(conf, basedir).numDataNodes(1).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
 
@@ -173,8 +175,9 @@ public class TestBlockReaderLocalLegacy {
     final HdfsConfiguration conf = getConfiguration(null);
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
 
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
     final MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+        new MiniDFSCluster.Builder(conf, basedir).numDataNodes(1).build();
     cluster.waitActive();
 
     final DistributedFileSystem dfs = cluster.getFileSystem();
