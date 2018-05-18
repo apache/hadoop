@@ -25,6 +25,7 @@ import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.util.Shell.getMemlockLimit;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -421,7 +422,7 @@ public abstract class LazyPersistTestCase {
     private StorageType[] storageTypes = null;
     private int ramDiskReplicaCapacity = -1;
     private long ramDiskStorageLimit = -1;
-    private long maxLockedMemory = Long.MAX_VALUE;
+    private long maxLockedMemory = getMemlockLimit(Long.MAX_VALUE);
     private boolean hasTransientStorage = true;
     private boolean useScr = false;
     private boolean useLegacyBlockReaderLocal = false;
