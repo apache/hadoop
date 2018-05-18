@@ -1,0 +1,66 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+OZONE-SITE.XML_ozone.ksm.address=ksm
+OZONE-SITE.XML_ozone.scm.names=scm
+OZONE-SITE.XML_ozone.enabled=True
+OZONE-SITE.XML_hdds.scm.datanode.id=/data/datanode.id
+OZONE-SITE.XML_hdds.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
+OZONE-SITE.XML_ozone.handler.type=distributed
+OZONE-SITE.XML_hdds.scm.client.address=scm
+OZONE-SITE.XML_hdds.datanode.plugins=org.apache.hadoop.ozone.web.OzoneHddsDatanodeService
+OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
+OZONE-SITE.XML_ozone.ksm.kerberos.principal=ksm/ksm@EXAMPLE.COM
+OZONE-SITE.XML_ozone.ksm.kerberos.keytab.file=/etc/security/keytabs/ksm.keytab
+OZONE-SITE.XML_ozone.security.enabled=true
+OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.principal=HTTP/scm@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.ksm.web.authentication.kerberos.principal=HTTP/ksm@EXAMPLE.COM
+OZONE-SITE.XML_ozone.ksm.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.scm.client.address=scm
+HDFS-SITE.XML_dfs.namenode.name.dir=/data/namenode
+HDFS-SITE.XML_dfs.datanode.plugins=org.apache.hadoop.ozone.HddsDatanodeService
+HDFS-SITE.XML_dfs.block.access.token.enable=true
+HDFS-SITE.XML_dfs.namenode.kerberos.principal=nn/namenode@EXAMPLE.COM
+HDFS-SITE.XML_dfs.namenode.keytab.file=/etc/security/keytabs/nn.keytab
+HDFS-SITE.XML_dfs.datanode.kerberos.principal=dn/datanode@EXAMPLE.COM
+HDFS-SITE.XML_dfs.datanode.keytab.file=/etc/security/keytabs/dn.keytab
+HDFS-SITE.XML_dfs.namenode.kerberos.internal.spnego.principal=HTTP/namenode@EXAMPLE.COM
+HDFS-SITE.XML_dfs.web.authentication.kerberos.principal=HTTP/_HOST@EXAMPLE.COM
+HDFS-SITE.XML_dfs.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
+HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
+HDFS-SITE.XML_dfs.namenode.rpc-address=namenode:9000
+CORE-SITE.XML_dfs.data.transfer.protection=authentication
+CORE-SITE.XML_hadoop.security.authentication=kerberos
+CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
+LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
+LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+
+OZONE_DATANODE_SECURE_USER=root
+CONF_DIR=/etc/security/keytabs
+KERBEROS_KEYTABS=dn nn ksm scm HTTP testuser
+KERBEROS_KEYSTORES=hadoop
+KERBEROS_SERVER=ozone.kdc
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+JSVC_HOME=/usr/bin
+SLEEP_SECONDS=10
+KERBEROS_ENABLED=true
