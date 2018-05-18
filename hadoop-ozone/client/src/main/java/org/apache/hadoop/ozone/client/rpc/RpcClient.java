@@ -117,8 +117,7 @@ public class RpcClient implements ClientProtocol {
     this.ozoneManagerClient =
         new OzoneManagerProtocolClientSideTranslatorPB(
             RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-                omAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
+                omAddress, ugi, conf, NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
 
     long scmVersion =
@@ -129,8 +128,7 @@ public class RpcClient implements ClientProtocol {
     this.storageContainerLocationClient =
         new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
-                scmAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
+                scmAddress, ugi, conf, NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
 
     this.xceiverClientManager = new XceiverClientManager(conf);
