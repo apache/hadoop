@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -818,11 +821,7 @@ public class ContainerManagerImpl implements ContainerManager {
     SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
     for (int i = 0; i < reports.length; i++) {
       SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      nrb.addStorageReport(i, srb.setStorageUuid(reports[i].getId())
-          .setCapacity(reports[i].getCapacity())
-          .setScmUsed(reports[i].getScmUsed())
-          .setRemaining(reports[i].getRemaining())
-          .build());
+      nrb.addStorageReport(reports[i].getProtoBufMessage());
     }
     return nrb.build();
   }

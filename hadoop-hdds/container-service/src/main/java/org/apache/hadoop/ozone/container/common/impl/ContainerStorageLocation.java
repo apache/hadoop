@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.GetSpaceUsed;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
@@ -119,6 +120,14 @@ public class ContainerStorageLocation {
 
   public long getScmUsed() throws IOException{
     return scmUsage.getUsed();
+  }
+
+  public String getStorageLocation() {
+    return getNormalizedUri().getRawPath();
+  }
+
+  public StorageType getStorageType() {
+    return dataLocation.getStorageType();
   }
 
   public void shutdown() {

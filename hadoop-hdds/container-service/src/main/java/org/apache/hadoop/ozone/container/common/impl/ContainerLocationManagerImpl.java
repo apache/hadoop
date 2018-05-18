@@ -108,12 +108,14 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager,
 
   @Override
   public StorageLocationReport[] getLocationReport() throws IOException {
+    boolean failed;
     StorageLocationReport[] reports =
         new StorageLocationReport[dataLocations.size()];
     for (int idx = 0; idx < dataLocations.size(); idx++) {
       ContainerStorageLocation loc = dataLocations.get(idx);
       long scmUsed = 0;
       long remaining = 0;
+      failed = false;
       try {
         scmUsed = loc.getScmUsed();
         remaining = loc.getAvailable();
@@ -123,13 +125,19 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager,
         // reset scmUsed and remaining if df/du failed.
         scmUsed = 0;
         remaining = 0;
+        failed = true;
       }
 
-      // TODO: handle failed storage
-      // For now, include storage report for location that failed to get df/du.
-      StorageLocationReport r = new StorageLocationReport(
-          loc.getStorageUuId(), false, loc.getCapacity(),
-          scmUsed, remaining);
+      StorageLocationReport.Builder builder =
+          StorageLocationReport.newBuilder();
+      builder.setStorageLocation(loc.getStorageLocation())
+          .setId(loc.getStorageUuId())
+          .setFailed(failed)
+          .setCapacity(loc.getCapacity())
+          .setRemaining(remaining)
+          .setScmUsed(scmUsed)
+          .setStorageType(loc.getStorageType());
+      StorageLocationReport r = builder.build();
       reports[idx] = r;
     }
     return reports;
