@@ -65,7 +65,6 @@ export default DS.Model.extend({
       artifactType: 'DOCKER',
       launchCommand: '',
       dependencies: [],
-      uniqueComponentSupport: false,
       configuration: null
     });
   },
@@ -199,9 +198,6 @@ export default DS.Model.extend({
       cpus: record.get('cpus'),
       memory: record.get('memory')
     };
-    if (record.get('uniqueComponentSupport')) {
-      json['unique_component_support'] = "true";
-    }
     if (record.get('configuration')) {
       json['configuration'] = record.get('configuration');
     }
