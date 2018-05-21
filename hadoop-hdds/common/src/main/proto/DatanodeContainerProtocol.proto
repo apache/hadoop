@@ -152,6 +152,7 @@ enum ContainerLifeCycleState {
     OPEN = 1;
     CLOSING = 2;
     CLOSED = 3;
+    INVALID = 4;
 }
 
 message ContainerCommandRequestProto {

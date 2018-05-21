@@ -52,6 +52,17 @@ public class ContainerData {
   private ContainerType containerType;
   private String containerDBType;
 
+
+  /**
+   * Number of pending deletion blocks in container.
+   */
+  private int numPendingDeletionBlocks;
+  private AtomicLong readBytes;
+  private AtomicLong writeBytes;
+  private AtomicLong readCount;
+  private AtomicLong writeCount;
+
+
   /**
    * Constructs a  ContainerData Object.
    *
@@ -66,6 +77,34 @@ public class ContainerData {
     this.bytesUsed =  new AtomicLong(0L);
     this.containerID = containerID;
     this.state = ContainerLifeCycleState.OPEN;
+    this.numPendingDeletionBlocks = 0;
+    this.readCount = new AtomicLong(0L);
+    this.readBytes =  new AtomicLong(0L);
+    this.writeCount =  new AtomicLong(0L);
+    this.writeBytes =  new AtomicLong(0L);
+  }
+
+  /**
+   * Constructs a  ContainerData Object.
+   *
+   * @param containerID - ID
+   * @param conf - Configuration
+   * @param state - ContainerLifeCycleState
+   * @param
+   */
+  public ContainerData(long containerID, Configuration conf,
+                       ContainerLifeCycleState state) {
+    this.metadata = new TreeMap<>();
+    this.maxSize = conf.getLong(ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY,
+        ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT) * OzoneConsts.GB;
+    this.bytesUsed =  new AtomicLong(0L);
+    this.containerID = containerID;
+    this.state = state;
+    this.numPendingDeletionBlocks = 0;
+    this.readCount = new AtomicLong(0L);
+    this.readBytes =  new AtomicLong(0L);
+    this.writeCount =  new AtomicLong(0L);
+    this.writeBytes =  new AtomicLong(0L);
   }
 
   /**
@@ -293,6 +332,14 @@ public class ContainerData {
   }
 
   /**
+   * checks if the container is invalid.
+   * @return - boolean
+   */
+  public boolean isValid() {
+    return !(ContainerLifeCycleState.INVALID == state);
+  }
+
+  /**
    * Marks this container as closed.
    */
   public synchronized void closeContainer() {
@@ -317,11 +364,119 @@ public class ContainerData {
     this.bytesUsed.set(used);
   }
 
-  public long addBytesUsed(long delta) {
-    return this.bytesUsed.addAndGet(delta);
-  }
-
+  /**
+   * Get the number of bytes used by the container.
+   * @return the number of bytes used by the container.
+   */
   public long getBytesUsed() {
     return bytesUsed.get();
   }
+
+  /**
+   * Increase the number of bytes used by the container.
+   * @param used number of bytes used by the container.
+   * @return the current number of bytes used by the container afert increase.
+   */
+  public long incrBytesUsed(long used) {
+    return this.bytesUsed.addAndGet(used);
+  }
+
+
+  /**
+   * Decrease the number of bytes used by the container.
+   * @param reclaimed the number of bytes reclaimed from the container.
+   * @return the current number of bytes used by the container after decrease.
+   */
+  public long decrBytesUsed(long reclaimed) {
+    return this.bytesUsed.addAndGet(-1L * reclaimed);
+  }
+
+  /**
+   * Increase the count of pending deletion blocks.
+   *
+   * @param numBlocks increment number
+   */
+  public void incrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks += numBlocks;
+  }
+
+  /**
+   * Decrease the count of pending deletion blocks.
+   *
+   * @param numBlocks decrement number
+   */
+  public void decrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks -= numBlocks;
+  }
+
+  /**
+   * Get the number of pending deletion blocks.
+   */
+  public int getNumPendingDeletionBlocks() {
+    return this.numPendingDeletionBlocks;
+  }
+
+  /**
+   * Get the number of bytes read from the container.
+   * @return the number of bytes read from the container.
+   */
+  public long getReadBytes() {
+    return readBytes.get();
+  }
+
+  /**
+   * Increase the number of bytes read from the container.
+   * @param bytes number of bytes read.
+   */
+  public void incrReadBytes(long bytes) {
+    this.readBytes.addAndGet(bytes);
+  }
+
+  /**
+   * Get the number of times the container is read.
+   * @return the number of times the container is read.
+   */
+  public long getReadCount() {
+    return readCount.get();
+  }
+
+  /**
+   * Increase the number of container read count by 1.
+   */
+  public void incrReadCount() {
+    this.readCount.incrementAndGet();
+  }
+
+  /**
+   * Get the number of bytes write into the container.
+   * @return the number of bytes write into the container.
+   */
+  public long getWriteBytes() {
+    return writeBytes.get();
+  }
+
+  /**
+   * Increase the number of bytes write into the container.
+   * @param bytes the number of bytes write into the container.
+   */
+  public void incrWriteBytes(long bytes) {
+    this.writeBytes.addAndGet(bytes);
+  }
+
+  /**
+   * Get the number of writes into the container.
+   * @return the number of writes into the container.
+   */
+  public long getWriteCount() {
+    return writeCount.get();
+  }
+
+  /**
+   * Increase the number of writes into the container by 1.
+   */
+  public void incrWriteCount() {
+    this.writeCount.incrementAndGet();
+  }
+
+
 }

@@ -41,24 +41,24 @@ public class RandomContainerDeletionChoosingPolicy
 
   @Override
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
-      Map<Long, ContainerStatus> candidateContainers)
+      Map<Long, ContainerData> candidateContainers)
       throws StorageContainerException {
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
 
     int currentCount = 0;
     List<ContainerData> result = new LinkedList<>();
-    ContainerStatus[] values = new ContainerStatus[candidateContainers.size()];
+    ContainerData[] values = new ContainerData[candidateContainers.size()];
     // to get a shuffle list
-    for (ContainerStatus entry : DFSUtil.shuffle(
+    for (ContainerData entry : DFSUtil.shuffle(
         candidateContainers.values().toArray(values))) {
       if (currentCount < count) {
-        result.add(entry.getContainer());
+        result.add(entry);
         currentCount++;
 
         LOG.debug("Select container {} for block deletion, "
             + "pending deletion blocks num: {}.",
-            entry.getContainer().getContainerID(),
+            entry.getContainerID(),
             entry.getNumPendingDeletionBlocks());
       } else {
         break;

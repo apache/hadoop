@@ -65,7 +65,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.UUID;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
@@ -191,23 +190,23 @@ public class TestContainerPersistence {
     containerManager.createContainer(data);
     Assert.assertTrue(containerManager.getContainerMap()
         .containsKey(testContainerID));
-    ContainerStatus status = containerManager
+    ContainerData cData = containerManager
         .getContainerMap().get(testContainerID);
 
-    Assert.assertNotNull(status.getContainer());
-    Assert.assertNotNull(status.getContainer().getContainerPath());
-    Assert.assertNotNull(status.getContainer().getDBPath());
+    Assert.assertNotNull(cData);
+    Assert.assertNotNull(cData.getContainerPath());
+    Assert.assertNotNull(cData.getDBPath());
 
 
-    Assert.assertTrue(new File(status.getContainer().getContainerPath())
+    Assert.assertTrue(new File(cData.getContainerPath())
         .exists());
 
-    Path meta = Paths.get(status.getContainer().getDBPath()).getParent();
+    Path meta = Paths.get(cData.getDBPath()).getParent();
     Assert.assertTrue(meta != null && Files.exists(meta));
 
     MetadataStore store = null;
     try {
-      store = KeyUtils.getDB(status.getContainer(), conf);
+      store = KeyUtils.getDB(cData, conf);
       Assert.assertNotNull(store);
     } finally {
       if (store != null) {
@@ -762,7 +761,7 @@ public class TestContainerPersistence {
 
     // Verify in-memory map
     ContainerData actualNewData = containerManager.getContainerMap()
-        .get(testContainerID).getContainer();
+        .get(testContainerID);
     Assert.assertEquals("shire_new",
         actualNewData.getAllMetadata().get("VOLUME"));
     Assert.assertEquals("bilbo_new",
@@ -805,7 +804,7 @@ public class TestContainerPersistence {
 
     // Verify in-memory map
     actualNewData = containerManager.getContainerMap()
-        .get(testContainerID).getContainer();
+        .get(testContainerID);
     Assert.assertEquals("shire_new_1",
         actualNewData.getAllMetadata().get("VOLUME"));
     Assert.assertEquals("bilbo_new_1",

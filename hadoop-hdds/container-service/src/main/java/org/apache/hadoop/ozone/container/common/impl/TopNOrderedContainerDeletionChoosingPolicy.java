@@ -41,11 +41,11 @@ public class TopNOrderedContainerDeletionChoosingPolicy
   private static final Logger LOG =
       LoggerFactory.getLogger(TopNOrderedContainerDeletionChoosingPolicy.class);
 
-  /** customized comparator used to compare differentiate container status. **/
-  private static final Comparator<ContainerStatus> CONTAINER_STATUS_COMPARATOR
-      = new Comparator<ContainerStatus>() {
+  /** customized comparator used to compare differentiate container data. **/
+  private static final Comparator<ContainerData> CONTAINER_DATA_COMPARATOR
+      = new Comparator<ContainerData>() {
         @Override
-        public int compare(ContainerStatus c1, ContainerStatus c2) {
+        public int compare(ContainerData c1, ContainerData c2) {
           return Integer.compare(c2.getNumPendingDeletionBlocks(),
               c1.getNumPendingDeletionBlocks());
         }
@@ -53,28 +53,28 @@ public class TopNOrderedContainerDeletionChoosingPolicy
 
   @Override
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
-      Map<Long, ContainerStatus> candidateContainers)
+      Map<Long, ContainerData> candidateContainers)
       throws StorageContainerException {
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
 
     List<ContainerData> result = new LinkedList<>();
-    List<ContainerStatus> orderedList = new LinkedList<>();
+    List<ContainerData> orderedList = new LinkedList<>();
     orderedList.addAll(candidateContainers.values());
-    Collections.sort(orderedList, CONTAINER_STATUS_COMPARATOR);
+    Collections.sort(orderedList, CONTAINER_DATA_COMPARATOR);
 
     // get top N list ordered by pending deletion blocks' number
     int currentCount = 0;
-    for (ContainerStatus entry : orderedList) {
+    for (ContainerData entry : orderedList) {
       if (currentCount < count) {
         if (entry.getNumPendingDeletionBlocks() > 0) {
-          result.add(entry.getContainer());
+          result.add(entry);
           currentCount++;
 
           LOG.debug(
               "Select container {} for block deletion, "
                   + "pending deletion blocks num: {}.",
-              entry.getContainer().getContainerID(),
+              entry.getContainerID(),
               entry.getNumPendingDeletionBlocks());
         } else {
           LOG.debug("Stop looking for next container, there is no"
