@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
  * Composite key for outstanding scheduler requests for any schedulable entity.
  * Currently it includes {@link Priority}.
  */
-public final class SchedulerRequestKey implements
+public class SchedulerRequestKey implements
     Comparable<SchedulerRequestKey> {
 
   private final Priority priority;
@@ -61,8 +61,6 @@ public final class SchedulerRequestKey implements
     return new SchedulerRequestKey(container.getPriority(),
         container.getAllocationRequestId(), null);
   }
-
-
 
   public SchedulerRequestKey(Priority priority, long allocationRequestId,
       ContainerId containerToUpdate) {
