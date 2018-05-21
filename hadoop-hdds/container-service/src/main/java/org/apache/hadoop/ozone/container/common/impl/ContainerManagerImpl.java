@@ -42,6 +42,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -399,6 +400,12 @@ public class ContainerManagerImpl implements ContainerManager {
           ContainerUtils.getContainerDbFileName(containerName))
           .toString());
       containerData.setContainerPath(containerFile.toString());
+
+      if(containerData.getContainerDBType() == null) {
+        String impl = conf.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+            OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
+        containerData.setContainerDBType(impl);
+      }
 
       ContainerProtos.ContainerData protoData = containerData
           .getProtoBufMessage();

@@ -225,6 +225,12 @@ message ContainerData {
   optional int64 size = 7;
   optional int64 keyCount = 8;
   optional ContainerLifeCycleState state = 9 [default = OPEN];
+  optional ContainerType containerType = 10 [default = KeyValueContainer];
+  optional string containerDBType = 11;
+}
+
+enum ContainerType {
+  KeyValueContainer = 1;
 }
 
 

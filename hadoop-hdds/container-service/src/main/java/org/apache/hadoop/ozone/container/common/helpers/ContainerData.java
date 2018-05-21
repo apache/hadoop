@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerType;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
 import org.apache.hadoop.ozone.OzoneConsts;
 
@@ -47,6 +49,8 @@ public class ContainerData {
   private long maxSize;
   private long containerID;
   private ContainerLifeCycleState state;
+  private ContainerType containerType;
+  private String containerDBType;
 
   /**
    * Constructs a  ContainerData Object.
@@ -99,7 +103,24 @@ public class ContainerData {
     if (protoData.hasSize()) {
       data.setMaxSize(protoData.getSize());
     }
+
+    if(protoData.hasContainerType()) {
+      data.setContainerType(protoData.getContainerType());
+    }
+
+    if(protoData.hasContainerDBType()) {
+      data.setContainerDBType(protoData.getContainerDBType());
+    }
+
     return data;
+  }
+
+  public String getContainerDBType() {
+    return containerDBType;
+  }
+
+  public void setContainerDBType(String containerDBType) {
+    this.containerDBType = containerDBType;
   }
 
   /**
@@ -141,9 +162,24 @@ public class ContainerData {
       builder.setSize(this.getMaxSize());
     }
 
+    if(this.getContainerType() != null) {
+      builder.setContainerType(containerType);
+    }
+
+    if(this.getContainerDBType() != null) {
+      builder.setContainerDBType(containerDBType);
+    }
+
     return builder.build();
   }
 
+  public void setContainerType(ContainerType containerType) {
+    this.containerType = containerType;
+  }
+
+  public ContainerType getContainerType() {
+    return this.containerType;
+  }
   /**
    * Adds metadata.
    */
