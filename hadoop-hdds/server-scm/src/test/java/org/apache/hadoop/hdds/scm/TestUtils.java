@@ -16,10 +16,13 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol
     .proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 
@@ -58,18 +61,34 @@ public final class TestUtils {
    * Create Node Report object.
    * @return SCMNodeReport
    */
-  public static SCMNodeReport createNodeReport() {
+  public static SCMNodeReport createNodeReport(List<SCMStorageReport> reports) {
     SCMNodeReport.Builder nodeReport = SCMNodeReport.newBuilder();
-    for (int i = 0; i < 1; i++) {
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      nodeReport.addStorageReport(i, srb.setStorageUuid("disk")
-          .setCapacity(100)
-          .setScmUsed(10)
-          .setRemaining(90)
-          .build());
-    }
+    nodeReport.addAllStorageReport(reports);
     return nodeReport.build();
   }
+
+  /**
+   * Create SCM Storage Report object.
+   * @return list of SCMStorageReport
+   */
+  public static List<SCMStorageReport> createStorageReport(long capacity,
+      long used, long remaining, String path, StorageTypeProto type, String id,
+      int count) {
+    List<SCMStorageReport> reportList = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Preconditions.checkNotNull(path);
+      Preconditions.checkNotNull(id);
+      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+      srb.setStorageUuid(id).setStorageLocation(path).setCapacity(capacity)
+          .setScmUsed(used).setRemaining(remaining);
+      StorageTypeProto storageTypeProto =
+          type == null ? StorageTypeProto.DISK : type;
+      srb.setStorageType(storageTypeProto);
+      reportList.add(srb.build());
+    }
+    return reportList;
+  }
+
 
   /**
    * Get specified number of DatanodeDetails and registered them with node

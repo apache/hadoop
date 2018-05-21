@@ -66,6 +66,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.scm.TestUtils.getDatanodeDetails;
@@ -207,12 +208,12 @@ public class TestEndPoint {
   @Test
   public void testRegister() throws Exception {
     DatanodeDetails nodeToRegister = getDatanodeDetails();
-    try (EndpointStateMachine rpcEndPoint =
-             createEndpoint(
-                 SCMTestUtils.getConf(), serverAddress, 1000)) {
+    try (EndpointStateMachine rpcEndPoint = createEndpoint(
+        SCMTestUtils.getConf(), serverAddress, 1000)) {
       SCMRegisteredCmdResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .register(nodeToRegister.getProtoBufMessage(),
-              TestUtils.createNodeReport(),
+          .register(nodeToRegister.getProtoBufMessage(), TestUtils
+                  .createNodeReport(
+                      getStorageReports(nodeToRegister.getUuidString())),
               createContainerReport(10, nodeToRegister));
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(nodeToRegister.getUuidString(),
@@ -220,9 +221,13 @@ public class TestEndPoint {
       Assert.assertNotNull(responseProto.getClusterID());
       Assert.assertEquals(10, scmServerImpl.
           getContainerCountsForDatanode(nodeToRegister));
-      Assert.assertEquals(1, scmServerImpl.getNodeReportsCount(
-          nodeToRegister));
+      Assert.assertEquals(1, scmServerImpl.getNodeReportsCount(nodeToRegister));
     }
+  }
+
+  private List<SCMStorageReport> getStorageReports(String id) {
+    String storagePath = testDir.getAbsolutePath() + "/" + id;
+    return TestUtils.createStorageReport(100, 10, 90, storagePath, null, id, 1);
   }
 
   private EndpointStateMachine registerTaskHelper(InetSocketAddress scmAddress,
@@ -234,7 +239,7 @@ public class TestEndPoint {
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.REGISTER);
     OzoneContainer ozoneContainer = mock(OzoneContainer.class);
     when(ozoneContainer.getNodeReport()).thenReturn(TestUtils
-        .createNodeReport());
+        .createNodeReport(getStorageReports(UUID.randomUUID().toString())));
     when(ozoneContainer.getContainerReport()).thenReturn(
         createContainerReport(10, null));
     RegisterEndpointTask endpointTask =
@@ -297,14 +302,11 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint =
              createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
-      SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      srb.setStorageUuid(UUID.randomUUID().toString());
-      srb.setCapacity(2000).setScmUsed(500).setRemaining(1500).build();
-      nrb.addStorageReport(srb);
+      String storageId = UUID.randomUUID().toString();
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .sendHeartbeat(
-              dataNode.getProtoBufMessage(), nrb.build(), defaultReportState);
+          .sendHeartbeat(dataNode.getProtoBufMessage(),
+              TestUtils.createNodeReport(getStorageReports(storageId)),
+              defaultReportState);
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(0, responseProto.getCommandsCount());
     }

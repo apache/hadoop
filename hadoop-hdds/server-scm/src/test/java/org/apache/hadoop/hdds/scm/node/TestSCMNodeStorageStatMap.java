@@ -18,16 +18,17 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -108,14 +109,17 @@ public class TestSCMNodeStorageStatMap {
     SCMNodeStorageStatMap map = new SCMNodeStorageStatMap(conf);
     map.insertNewDatanode(key, value);
     Assert.assertTrue(map.isKnownDatanode(key));
-    SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-    SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-    srb.setStorageUuid(UUID.randomUUID().toString());
-    srb.setCapacity(value.getCapacity().get())
-        .setScmUsed(value.getScmUsed().get()).
-        setRemaining(value.getRemaining().get()).build();
+    String storageId = UUID.randomUUID().toString();
+    String path =
+        GenericTestUtils.getRandomizedTempPath().concat("/" + storageId);
+    long capacity = value.getCapacity().get();
+    long used = value.getScmUsed().get();
+    long remaining = value.getRemaining().get();
+    List<SCMStorageReport> reports = TestUtils
+        .createStorageReport(capacity, used, remaining, path, null, storageId,
+            1);
     SCMNodeStorageStatMap.NodeReportStatus status =
-        map.processNodeReport(key, nrb.addStorageReport(srb).build());
+        map.processNodeReport(key, TestUtils.createNodeReport(reports));
     Assert.assertEquals(status,
         SCMNodeStorageStatMap.NodeReportStatus.ALL_IS_WELL);
   }

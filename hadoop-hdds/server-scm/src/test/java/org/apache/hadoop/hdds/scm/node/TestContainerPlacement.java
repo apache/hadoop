@@ -36,8 +36,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -140,13 +138,12 @@ public class TestContainerPlacement {
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(used).
-            setRemaining(remaining).build();
+        String id = UUID.randomUUID().toString();
+        String path = testDir.getAbsolutePath() + "/" + id;
+        List<SCMStorageReport> reports = TestUtils
+            .createStorageReport(capacity, used, remaining, path, null, id, 1);
         nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            nrb.addStorageReport(srb).build(), reportState);
+            TestUtils.createNodeReport(reports), reportState);
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),

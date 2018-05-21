@@ -281,9 +281,13 @@ public class TestNodeManager {
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    String dnId = datanodeDetails.getUuidString();
+    String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+    List<SCMStorageReport> reports =
+        TestUtils.createStorageReport(100, 10, 90, storagePath, null, dnId, 1);
     try (SCMNodeManager nodemanager = createNodeManager(conf)) {
       nodemanager.register(datanodeDetails.getProtoBufMessage(),
-          TestUtils.createNodeReport());
+          TestUtils.createNodeReport(reports));
       List<SCMCommand> command = nodemanager.sendHeartbeat(
           datanodeDetails.getProtoBufMessage(),
           null, reportState);
@@ -1012,14 +1016,14 @@ public class TestNodeManager {
       for (int x = 0; x < nodeCount; x++) {
         DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
             nodeManager);
-
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(used).
-            setRemaining(capacity - used).build();
+        String dnId = datanodeDetails.getUuidString();
+        long free = capacity - used;
+        String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+        List<SCMStorageReport> reports = TestUtils
+            .createStorageReport(capacity, used, free, storagePath,
+                null, dnId, 1);
         nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            nrb.addStorageReport(srb).build(), reportState);
+            TestUtils.createNodeReport(reports), reportState);
       }
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
@@ -1055,21 +1059,21 @@ public class TestNodeManager {
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
-          nodeManager);
+      DatanodeDetails datanodeDetails =
+          TestUtils.getDatanodeDetails(nodeManager);
       final long capacity = 2000;
       final long usedPerHeartbeat = 100;
-
+      String dnId = datanodeDetails.getUuidString();
       for (int x = 0; x < heartbeatCount; x++) {
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(x * usedPerHeartbeat)
-            .setRemaining(capacity - x * usedPerHeartbeat).build();
-        nrb.addStorageReport(srb);
+        long scmUsed = x * usedPerHeartbeat;
+        long remaining = capacity - scmUsed;
+        String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+        List<SCMStorageReport> reports = TestUtils
+            .createStorageReport(capacity, scmUsed, remaining, storagePath,
+                null, dnId, 1);
 
-        nodeManager.sendHeartbeat(
-            datanodeDetails.getProtoBufMessage(), nrb.build(), reportState);
+        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
+            TestUtils.createNodeReport(reports), reportState);
         Thread.sleep(100);
       }
 
@@ -1145,14 +1149,12 @@ public class TestNodeManager {
       assertEquals(0, foundRemaining);
 
       // Send a new report to bring the dead node back to healthy
-      SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      srb.setStorageUuid(UUID.randomUUID().toString());
-      srb.setCapacity(capacity).setScmUsed(expectedScmUsed)
-          .setRemaining(expectedRemaining).build();
-      nrb.addStorageReport(srb);
-      nodeManager.sendHeartbeat(
-          datanodeDetails.getProtoBufMessage(), nrb.build(), reportState);
+      String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+      List<SCMStorageReport> reports = TestUtils
+          .createStorageReport(capacity, expectedScmUsed, expectedRemaining,
+              storagePath, null, dnId, 1);
+      nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
+          TestUtils.createNodeReport(reports), reportState);
 
       // Wait up to 5 seconds so that the dead node becomes healthy
       // Verify usage info should be updated.
