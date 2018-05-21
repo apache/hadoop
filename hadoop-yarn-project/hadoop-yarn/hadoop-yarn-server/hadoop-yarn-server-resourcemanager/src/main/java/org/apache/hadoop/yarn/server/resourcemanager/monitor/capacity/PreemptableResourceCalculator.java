@@ -197,8 +197,11 @@ public class PreemptableResourceCalculator
            */
           Resource resToObtain = qT.toBePreempted;
           if (!isReservedPreemptionCandidatesSelector) {
-            resToObtain = Resources.multiply(qT.toBePreempted,
-                context.getNaturalTerminationFactor());
+            if (Resources.greaterThan(rc, clusterResource, resToObtain,
+                Resource.newInstance(0, 0))) {
+              resToObtain = Resources.multiplyAndNormalizeUp(rc, qT.toBePreempted,
+                  context.getNaturalTerminationFactor(), Resource.newInstance(1, 1));
+            }
           }
 
           // Only add resToObtain when it >= 0
