@@ -281,7 +281,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
 
     private static boolean getRestrictParserDefault(Object resource) {
-      if (resource instanceof String) {
+      if (resource instanceof String || !UserGroupInformation.isInitialized()) {
         return false;
       }
       UserGroupInformation user;
