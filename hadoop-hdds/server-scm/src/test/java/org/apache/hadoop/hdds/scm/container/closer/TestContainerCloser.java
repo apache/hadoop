@@ -213,8 +213,7 @@ public class TestContainerCloser {
         .setReadCount(100000000L)
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
-        .setWriteBytes(2000000000L)
-        .setContainerID(1L);
+        .setWriteBytes(2000000000L);
     reports.setDatanodeDetails(
         TestUtils.getDatanodeDetails().getProtoBufMessage());
     reports.addReports(ciBuilder);
