@@ -41,9 +41,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -69,6 +72,8 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions
+        .SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
@@ -5413,5 +5418,205 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         SchedulerUtils.createAbnormalContainerStatus(rmc.getContainerId(),
             SchedulerUtils.COMPLETED_APPLICATION),
         RMContainerEventType.EXPIRE);
+  }
+
+  @Test
+  public void testAppRejectedToQueueWithZeroCapacityOfVcores()
+      throws IOException {
+    testAppRejectedToQueueWithZeroCapacityOfResource(
+            ResourceInformation.VCORES_URI);
+  }
+
+  @Test
+  public void testAppRejectedToQueueWithZeroCapacityOfMemory()
+      throws IOException {
+    testAppRejectedToQueueWithZeroCapacityOfResource(
+            ResourceInformation.MEMORY_URI);
+  }
+
+  private void testAppRejectedToQueueWithZeroCapacityOfResource(String resource)
+      throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    generateAllocationFileWithZeroResource(resource);
+
+    final List<Event> recordedEvents = Lists.newArrayList();
+
+    RMContext spyContext = Mockito.spy(resourceManager.getRMContext());
+    Dispatcher mockDispatcher = mock(AsyncDispatcher.class);
+    when(mockDispatcher.getEventHandler()).thenReturn((EventHandler) event -> {
+      if (event instanceof RMAppEvent) {
+        recordedEvents.add(event);
+      }
+    });
+    Mockito.doReturn(mockDispatcher).when(spyContext).getDispatcher();
+    ((AsyncDispatcher) mockDispatcher).start();
+
+    scheduler.setRMContext(spyContext);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // submit app with queue name (queueA)
+    ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+
+    ResourceRequest amReqs = ResourceRequest.newBuilder()
+        .capability(Resource.newInstance(5 * GB, 3)).build();
+    createApplicationWithAMResource(appAttemptId1, "queueA", "user1",
+        Resource.newInstance(GB, 1), Lists.newArrayList(amReqs));
+    scheduler.update();
+
+    assertEquals("Exactly one APP_REJECTED event is expected", 1,
+        recordedEvents.size());
+    Event event = recordedEvents.get(0);
+    RMAppEvent rmAppEvent = (RMAppEvent) event;
+    assertEquals(RMAppEventType.APP_REJECTED, rmAppEvent.getType());
+    assertTrue("Diagnostic message does not match: " +
+                    rmAppEvent.getDiagnosticMsg(),
+            rmAppEvent.getDiagnosticMsg()
+        .matches("Cannot submit application application[\\d_]+ to queue "
+            + "root.queueA because it has zero amount of resource "
+            + "for a requested resource! " +
+                "Invalid requested AM resources: .+, "
+            + "maximum queue resources: .+"));
+  }
+
+  private void generateAllocationFileWithZeroResource(String resource)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+
+    String resources = "";
+    if (resource.equals(ResourceInformation.MEMORY_URI)) {
+      resources = "0 mb,2vcores";
+    } else if (resource.equals(ResourceInformation.VCORES_URI)) {
+      resources = "10000 mb,0vcores";
+    }
+    out.println("<minResources>" + resources + "</minResources>");
+    out.println("<maxResources>" + resources + "</maxResources>");
+    out.println("<weight>2.0</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<minResources>1 mb 1 vcores</minResources>");
+    out.println("<weight>0.0</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  @Test
+  public void testSchedulingRejectedToQueueWithZeroCapacityOfMemory()
+      throws IOException {
+    // This request is not valid as queue will have 0 capacity of memory and
+    // the requests asks 2048M
+    ResourceRequest invalidRequest =
+        createResourceRequest(2048, 2, ResourceRequest.ANY, 1, 2, true);
+
+    ResourceRequest validRequest =
+        createResourceRequest(0, 0, ResourceRequest.ANY, 1, 2, true);
+    testSchedulingRejectedToQueueZeroCapacityOfResource(
+        ResourceInformation.MEMORY_URI,
+        Lists.newArrayList(invalidRequest, validRequest));
+  }
+
+  @Test
+  public void testSchedulingAllowedToQueueWithZeroCapacityOfMemory()
+      throws IOException {
+    testSchedulingAllowedToQueueZeroCapacityOfResource(
+        ResourceInformation.MEMORY_URI, 0, 2);
+  }
+
+  @Test
+  public void testSchedulingRejectedToQueueWithZeroCapacityOfVcores()
+      throws IOException {
+    // This request is not valid as queue will have 0 capacity of vCores and
+    // the requests asks 1
+    ResourceRequest invalidRequest =
+        createResourceRequest(0, 1, ResourceRequest.ANY, 1, 2, true);
+
+    ResourceRequest validRequest =
+        createResourceRequest(0, 0, ResourceRequest.ANY, 1, 2, true);
+
+    testSchedulingRejectedToQueueZeroCapacityOfResource(
+        ResourceInformation.VCORES_URI,
+        Lists.newArrayList(invalidRequest, validRequest));
+  }
+
+  @Test
+  public void testSchedulingAllowedToQueueWithZeroCapacityOfVcores()
+      throws IOException {
+    testSchedulingAllowedToQueueZeroCapacityOfResource(
+            ResourceInformation.VCORES_URI, 2048, 0);
+  }
+
+  private void testSchedulingRejectedToQueueZeroCapacityOfResource(
+      String resource, Collection<ResourceRequest> requests)
+      throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    generateAllocationFileWithZeroResource(resource);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 2));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    try {
+      createSchedulingRequest(requests, "queueA", "user1");
+      fail("Exception is expected because the queue has zero capacity of "
+          + resource + " and requested resource capabilities are: "
+          + requests.stream().map(ResourceRequest::getCapability)
+              .collect(Collectors.toList()));
+    } catch (SchedulerInvalidResoureRequestException e) {
+      assertTrue(
+          "The thrown exception is not the expected one. Exception message: "
+              + e.getMessage(),
+          e.getMessage()
+              .matches("Resource request is invalid for application "
+                  + "application[\\d_]+ because queue root\\.queueA has 0 "
+                  + "amount of resource for a resource type! "
+                  + "Validation result:.*"));
+
+      List<ApplicationAttemptId> appsInQueue =
+          scheduler.getAppsInQueue("queueA");
+      assertEquals("Number of apps in queue 'queueA' should be one!", 1,
+          appsInQueue.size());
+
+      ApplicationAttemptId appAttemptId =
+          scheduler.getAppsInQueue("queueA").get(0);
+      assertNotNull(
+          "Scheduler app for appAttemptId " + appAttemptId
+              + " should not be null!",
+          scheduler.getSchedulerApp(appAttemptId));
+
+      FSAppAttempt schedulerApp = scheduler.getSchedulerApp(appAttemptId);
+      assertNotNull("Scheduler app queueInfo for appAttemptId " + appAttemptId
+          + " should not be null!", schedulerApp.getAppSchedulingInfo());
+
+      assertTrue("There should be no requests accepted", schedulerApp
+          .getAppSchedulingInfo().getAllResourceRequests().isEmpty());
+    }
+  }
+
+  private void testSchedulingAllowedToQueueZeroCapacityOfResource(
+          String resource, int memory, int vCores) throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    generateAllocationFileWithZeroResource(resource);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 2));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    createSchedulingRequest(memory, vCores, "queueA", "user1", 1, 2);
   }
 }

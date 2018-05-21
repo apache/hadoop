@@ -182,6 +182,9 @@ public class FSParentQueue extends FSQueue {
 
     // If this queue is over its limit, reject
     if (!assignContainerPreCheck(node)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Assign container precheck on node " + node + " failed");
+      }
       return assigned;
     }
 
