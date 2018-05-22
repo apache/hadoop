@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.ksm.address=ksm
+OZONE-SITE.XML_ozone.ksm.address=om
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_hdds.scm.datanode.id=/data/datanode.id
@@ -25,13 +25,13 @@ OZONE-SITE.XML_hdds.scm.client.address=scm
 OZONE-SITE.XML_hdds.datanode.plugins=org.apache.hadoop.ozone.web.OzoneHddsDatanodeService
 OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
-OZONE-SITE.XML_ozone.ksm.kerberos.principal=ksm/ksm@EXAMPLE.COM
-OZONE-SITE.XML_ozone.ksm.kerberos.keytab.file=/etc/security/keytabs/ksm.keytab
+OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
+OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.principal=HTTP/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
-OZONE-SITE.XML_ozone.ksm.web.authentication.kerberos.principal=HTTP/ksm@EXAMPLE.COM
-OZONE-SITE.XML_ozone.ksm.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.om.web.authentication.kerberos.principal=HTTP/om@EXAMPLE.COM
+OZONE-SITE.XML_ozone.om.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
 OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.scm.client.address=scm
 HDFS-SITE.XML_dfs.namenode.name.dir=/data/namenode
@@ -57,7 +57,7 @@ LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH
 
 OZONE_DATANODE_SECURE_USER=root
 CONF_DIR=/etc/security/keytabs
-KERBEROS_KEYTABS=dn nn ksm scm HTTP testuser
+KERBEROS_KEYTABS=dn nn om scm HTTP testuser
 KERBEROS_KEYSTORES=hadoop
 KERBEROS_SERVER=ozone.kdc
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
