@@ -19,7 +19,7 @@ DOCDIR="$DIR/../.."
 
 if [ ! "$(which hugo)" ]; then
    echo "Hugo is not yet installed. Doc generation is skipped."
-   exit -1
+   exit 0
 fi
 
 DESTDIR="$DOCDIR/target/classes/webapps/docs"
