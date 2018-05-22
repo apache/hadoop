@@ -154,7 +154,7 @@ public class HddsConfServlet extends HttpServlet {
 
     switch (cmd) {
     case "getOzoneTags":
-      out.write(gson.toJson(config.get("ozone.system.tags").split(",")));
+      out.write(gson.toJson(config.get("ozone.tags.system").split(",")));
       break;
     case "getPropertyByTag":
       String tags = request.getParameter("tags");
