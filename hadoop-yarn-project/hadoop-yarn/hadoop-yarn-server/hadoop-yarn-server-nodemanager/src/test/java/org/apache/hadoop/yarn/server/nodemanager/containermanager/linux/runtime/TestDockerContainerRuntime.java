@@ -43,13 +43,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerClient;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStartCommand;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -87,6 +82,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPLICATION_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
@@ -103,7 +99,6 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RESOURCES_OPTIONS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RUN_AS_USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.TC_COMMAND_FILE;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_FILECACHE_DIRS;
 import static org.mockito.Matchers.anyString;
@@ -317,20 +312,24 @@ public class TestDockerContainerRuntime {
         .isDockerContainerRequested(envOtherType));
   }
 
-  @SuppressWarnings("unchecked")
   private PrivilegedOperation capturePrivilegedOperation()
+      throws PrivilegedOperationException {
+    return capturePrivilegedOperation(1);
+  }
+
+  @SuppressWarnings("unchecked")
+  private PrivilegedOperation capturePrivilegedOperation(int invocations)
       throws PrivilegedOperationException {
     ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
         PrivilegedOperation.class);
 
-    //single invocation expected
     //due to type erasure + mocking, this verification requires a suppress
     // warning annotation on the entire method
-    verify(mockExecutor, times(1))
+    verify(mockExecutor, times(invocations))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
             File.class), anyMap(), anyBoolean(), anyBoolean());
 
-    //verification completed. we need to isolate specific invications.
+    //verification completed. we need to isolate specific invocations.
     // hence, reset mock here
     Mockito.reset(mockExecutor);
 
@@ -918,6 +917,8 @@ public class TestDockerContainerRuntime {
   @Test
   public void testLaunchPrivilegedContainersWithDisabledSetting()
       throws ContainerExecutionException {
+    conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
+        false);
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -939,6 +940,7 @@ public class TestDockerContainerRuntime {
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
+    conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL, "");
 
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
@@ -1356,9 +1358,12 @@ public class TestDockerContainerRuntime {
   public void testDockerStopOnTermSignalWhenRunning()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
-    List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.TERM,
-        DockerCommandExecutor.DockerContainerStatus.RUNNING);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.TERM);
     Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1370,11 +1375,54 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testDockerStopOnKillSignalWhenRunning()
+      throws ContainerExecutionException, PrivilegedOperationException {
+    List<String> dockerCommands = getDockerCommandsForSignal(
+        ContainerExecutor.Signal.KILL);
+    Assert.assertEquals(5, dockerCommands.size());
+    Assert.assertEquals(runAsUser, dockerCommands.get(0));
+    Assert.assertEquals(user, dockerCommands.get(1));
+    Assert.assertEquals(
+        Integer.toString(PrivilegedOperation.RunAsUserCommand
+        .SIGNAL_CONTAINER.getValue()),
+        dockerCommands.get(2));
+    Assert.assertEquals(signalPid, dockerCommands.get(3));
+    Assert.assertEquals(
+        Integer.toString(ContainerExecutor.Signal.KILL.getValue()),
+        dockerCommands.get(4));
+  }
+
+  @Test
+  public void testDockerKillOnQuitSignalWhenRunning() throws Exception {
+    List<String> dockerCommands = getDockerCommandsForSignal(
+        ContainerExecutor.Signal.QUIT);
+
+    Assert.assertEquals(5, dockerCommands.size());
+    Assert.assertEquals(runAsUser, dockerCommands.get(0));
+    Assert.assertEquals(user, dockerCommands.get(1));
+    Assert.assertEquals(
+        Integer.toString(PrivilegedOperation.RunAsUserCommand
+        .SIGNAL_CONTAINER.getValue()),
+        dockerCommands.get(2));
+    Assert.assertEquals(signalPid, dockerCommands.get(3));
+    Assert.assertEquals(
+        Integer.toString(ContainerExecutor.Signal.QUIT.getValue()),
+        dockerCommands.get(4));
+  }
+
+  @Test
+  public void testDockerStopOnTermSignalWhenRunningPrivileged()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
-    List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.KILL,
-        DockerCommandExecutor.DockerContainerStatus.RUNNING);
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
+    conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
+        submittingUser);
+    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.TERM);
     Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1385,10 +1433,42 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerKillOnQuitSignalWhenRunning() throws Exception {
-    List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.QUIT,
-        DockerCommandExecutor.DockerContainerStatus.RUNNING);
+  public void testDockerStopOnKillSignalWhenRunningPrivileged()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
+    conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
+        submittingUser);
+    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.KILL);
+    Assert.assertEquals(4, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(2));
+    Assert.assertEquals("  signal=KILL", dockerCommands.get(3));
+  }
+
+  @Test
+  public void testDockerKillOnQuitSignalWhenRunningPrivileged()
+      throws Exception {
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS, "true");
+    conf.set(YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
+        submittingUser);
+    env.put(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER, "true");
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.QUIT);
+
     Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
@@ -1403,8 +1483,8 @@ public class TestDockerContainerRuntime {
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
         "false");
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
-    MockRuntime runtime = new MockRuntime(mockExecutor,
-        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
         .setExecutionAttribute(USER, user);
     runtime.initialize(enableMockContainerExecutor(conf), null);
@@ -1420,8 +1500,8 @@ public class TestDockerContainerRuntime {
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
         "true");
     conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
-    MockRuntime runtime = new MockRuntime(mockExecutor,
-        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
         .setExecutionAttribute(USER, user);
     runtime.initialize(enableMockContainerExecutor(conf), null);
@@ -1431,13 +1511,34 @@ public class TestDockerContainerRuntime {
             File.class), anyMap(), anyBoolean(), anyBoolean());
   }
 
-  private List<String> getDockerCommandsForSignal(
-      ContainerExecutor.Signal signal,
-      DockerCommandExecutor.DockerContainerStatus status)
+  private List<String> getDockerCommandsForDockerStop(
+      ContainerExecutor.Signal signal)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
 
-    MockRuntime runtime = new MockRuntime(mockExecutor, status, false);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user)
+        .setExecutionAttribute(PID, signalPid)
+        .setExecutionAttribute(SIGNAL, signal);
+    runtime.initialize(enableMockContainerExecutor(conf), nmContext);
+    runtime.signalContainer(builder.build());
+
+    PrivilegedOperation op = capturePrivilegedOperation(2);
+    Assert.assertEquals(op.getOperationType(),
+        PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
+    String dockerCommandFile = op.getArguments().get(0);
+    return Files.readAllLines(Paths.get(dockerCommandFile),
+        Charset.forName("UTF-8"));
+  }
+
+  private List<String> getDockerCommandsForSignal(
+      ContainerExecutor.Signal signal)
+      throws ContainerExecutionException, PrivilegedOperationException {
+
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
@@ -1447,10 +1548,8 @@ public class TestDockerContainerRuntime {
 
     PrivilegedOperation op = capturePrivilegedOperation();
     Assert.assertEquals(op.getOperationType(),
-        PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
-    String dockerCommandFile = op.getArguments().get(0);
-    return Files.readAllLines(Paths.get(dockerCommandFile),
-        Charset.forName("UTF-8"));
+        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
+    return op.getArguments();
   }
 
   /**
@@ -1937,12 +2036,16 @@ public class TestDockerContainerRuntime {
   public void testDockerContainerRelaunch()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
-    DockerLinuxContainerRuntime runtime = new MockRuntime(mockExecutor,
-        DockerCommandExecutor.DockerContainerStatus.EXITED, false);
-    runtime.initialize(conf, null);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+        any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.STOPPED.getName());
+    runtime.initialize(conf, nmContext);
     runtime.relaunchContainer(builder.build());
 
-    PrivilegedOperation op = capturePrivilegedOperation();
+    PrivilegedOperation op = capturePrivilegedOperation(2);
     List<String> args = op.getArguments();
     String dockerCommandFile = args.get(11);
 
@@ -1959,135 +2062,5 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter));
-  }
-
-  class MockRuntime extends DockerLinuxContainerRuntime {
-
-    private PrivilegedOperationExecutor privilegedOperationExecutor;
-    private DockerCommandExecutor.DockerContainerStatus containerStatus;
-    private boolean delayedRemovalAllowed;
-
-    MockRuntime(PrivilegedOperationExecutor privilegedOperationExecutor,
-        DockerCommandExecutor.DockerContainerStatus containerStatus,
-        boolean delayedRemovalAllowed) {
-      super(privilegedOperationExecutor);
-      this.privilegedOperationExecutor = privilegedOperationExecutor;
-      this.containerStatus = containerStatus;
-      this.delayedRemovalAllowed = delayedRemovalAllowed;
-    }
-
-    @Override
-    public void signalContainer(ContainerRuntimeContext ctx)
-        throws ContainerExecutionException {
-      ContainerExecutor.Signal signal = ctx.getExecutionAttribute(SIGNAL);
-      String containerName = ctx.getContainer().getContainerId().toString();
-      Map<String, String> environment =
-          ctx.getContainer().getLaunchContext().getEnvironment();
-      try {
-        if (ContainerExecutor.Signal.KILL.equals(signal)
-            || ContainerExecutor.Signal.TERM.equals(signal)) {
-          if (DockerCommandExecutor.isStoppable(containerStatus)) {
-            DockerStopCommand dockerStopCommand =
-                new DockerStopCommand(containerName)
-                .setGracePeriod(dockerStopGracePeriod);
-            DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
-                containerName, environment, conf, mockExecutor, false,
-                nmContext);
-          }
-        } else {
-          if (DockerCommandExecutor.isKillable(containerStatus)) {
-            DockerKillCommand dockerKillCommand =
-                new DockerKillCommand(containerName);
-            dockerKillCommand.setSignal(signal.name());
-            DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-                containerName, environment, conf, mockExecutor, false,
-                nmContext);
-          }
-        }
-      } catch (ContainerExecutionException e) {
-        LOG.warn("Signal docker container failed. Exception: ", e);
-        throw new ContainerExecutionException("Signal docker container failed",
-            e.getExitCode(), e.getOutput(), e.getErrorOutput());
-      }
-    }
-
-    @Override
-    public void reapContainer(ContainerRuntimeContext ctx)
-        throws ContainerExecutionException {
-      String delayedRemoval = env.get(ENV_DOCKER_CONTAINER_DELAYED_REMOVAL);
-      if (delayedRemovalAllowed && delayedRemoval != null
-          && delayedRemoval.equalsIgnoreCase("true")) {
-        LOG.info("Delayed removal requested and allowed, skipping removal - "
-            + containerId);
-      } else {
-        if (DockerCommandExecutor.isRemovable(containerStatus)) {
-          DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
-          DockerCommandExecutor
-              .executeDockerCommand(dockerRmCommand, containerId, env, conf,
-                  privilegedOperationExecutor, false, nmContext);
-        }
-      }
-    }
-
-    @Override
-    public void relaunchContainer(ContainerRuntimeContext ctx)
-        throws ContainerExecutionException {
-      if (DockerCommandExecutor.isRemovable(containerStatus)) {
-        String relaunchContainerIdStr =
-            ctx.getContainer().getContainerId().toString();
-        DockerStartCommand startCommand =
-            new DockerStartCommand(containerIdStr);
-        DockerClient dockerClient = new DockerClient(conf);
-        String commandFile = dockerClient.writeCommandToTempFile(startCommand,
-            relaunchContainerIdStr);
-        String relaunchRunAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
-        Path relaunchNmPrivateContainerScriptPath = ctx.getExecutionAttribute(
-            NM_PRIVATE_CONTAINER_SCRIPT_PATH);
-        Path relaunchContainerWorkDir =
-            ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
-        //we can't do better here thanks to type-erasure
-        @SuppressWarnings("unchecked")
-        List<String> relaunchLocalDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
-        @SuppressWarnings("unchecked")
-        List<String> relaunchLogDirs = ctx.getExecutionAttribute(LOG_DIRS);
-        String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
-
-        PrivilegedOperation launchOp = new PrivilegedOperation(
-            PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
-
-        launchOp.appendArgs(relaunchRunAsUser, ctx.getExecutionAttribute(USER),
-            Integer.toString(PrivilegedOperation
-                .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
-            ctx.getExecutionAttribute(APPID),
-            relaunchContainerIdStr,
-            relaunchContainerWorkDir.toString(),
-            relaunchNmPrivateContainerScriptPath.toUri().getPath(),
-            ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
-            ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
-            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-                relaunchLocalDirs),
-            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-                relaunchLogDirs),
-            commandFile,
-            resourcesOpts);
-
-        String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
-
-        if (tcCommandFile != null) {
-          launchOp.appendArgs(tcCommandFile);
-        }
-
-        try {
-          privilegedOperationExecutor.executePrivilegedOperation(null,
-              launchOp, null, null, false, false);
-        } catch (PrivilegedOperationException e) {
-          LOG.warn("Relaunch container failed. Exception: ", e);
-          LOG.info("Docker command used: " + startCommand);
-
-          throw new ContainerExecutionException("Launch container failed", e
-              .getExitCode(), e.getOutput(), e.getErrorOutput());
-        }
-      }
-    }
   }
 }
