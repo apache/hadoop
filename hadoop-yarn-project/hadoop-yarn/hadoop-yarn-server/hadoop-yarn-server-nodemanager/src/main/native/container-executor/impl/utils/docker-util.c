@@ -1374,6 +1374,18 @@ int get_docker_run_command(const char *command_file, const struct configuration 
       reset_args(args);
       return BUFFER_TOO_SMALL;
     }
+    char *no_new_privileges_enabled =
+        get_configuration_value("docker.no-new-privileges.enabled",
+        CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
+    if (no_new_privileges_enabled != NULL &&
+        strcasecmp(no_new_privileges_enabled, "True") == 0) {
+      ret = add_to_args(args, "--security-opt=no-new-privileges");
+      if (ret != 0) {
+        reset_args(args);
+        return BUFFER_TOO_SMALL;
+      }
+    }
+    free(no_new_privileges_enabled);
   }
   free(privileged);
 

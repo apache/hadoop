@@ -1545,4 +1545,94 @@ namespace ContainerExecutor {
 
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_volume_command);
   }
+
+  TEST_F(TestDockerUtil, test_docker_no_new_privileges) {
+
+    std::string container_executor_contents[] = {"[docker]\n"
+                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.privileged-containers.enabled=false\n"
+                                                     "  docker.no-new-privileges.enabled=true",
+                                                 "[docker]\n"
+                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.privileged-containers.enabled=true\n"
+                                                     "  docker.no-new-privileges.enabled=true",
+                                                 "[docker]\n"
+                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.privileged-containers.enabled=true\n"
+                                                     "  docker.no-new-privileges.enabled=true",
+                                                 "[docker]\n"
+                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.privileged-containers.enabled=false\n"
+                                                     "  docker.no-new-privileges.enabled=false",
+                                                 "[docker]\n"
+                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.privileged-containers.enabled=true\n"
+                                                     "  docker.no-new-privileges.enabled=false"};
+    for (int i = 0; i < 2; ++i) {
+      write_file(container_executor_cfg_file, container_executor_contents[i]);
+      int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = create_ce_file();
+      if (ret != 0) {
+        std::cerr << "Could not create ce file, skipping test" << std::endl;
+        return;
+      }
+
+      std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+      file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+          "[docker-command-execution]\n  docker-command=run\n name=container_e1_12312_11111_02_000001\n"
+          "image=hadoop/docker-image\n  user=nobody",
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody --security-opt=no-new-privileges "
+          "--cap-drop=ALL hadoop/docker-image"));
+
+      std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+      run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_run_command);
+    }
+
+    for (int i = 2; i < 3; ++i) {
+      write_file(container_executor_cfg_file, container_executor_contents[i]);
+      int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = create_ce_file();
+      if (ret != 0) {
+        std::cerr << "Could not create ce file, skipping test" << std::endl;
+        return;
+      }
+
+      std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+      file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+          "[docker-command-execution]\n  docker-command=run\n privileged=true\n"
+          "name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root",
+          "run --name=container_e1_12312_11111_02_000001 --privileged --cap-drop=ALL hadoop/docker-image"));
+
+      std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+      run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_run_command);
+    }
+
+    for (int i = 3; i < 5; ++i) {
+      write_file(container_executor_cfg_file, container_executor_contents[i]);
+      int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = create_ce_file();
+      if (ret != 0) {
+        std::cerr << "Could not create ce file, skipping test" << std::endl;
+        return;
+      }
+
+      std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+      file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+          "[docker-command-execution]\n  docker-command=run\n name=container_e1_12312_11111_02_000001\n"
+          "image=hadoop/docker-image\n  user=nobody",
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL hadoop/docker-image"));
+
+      std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+      run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_run_command);
+    }
+  }
 }
