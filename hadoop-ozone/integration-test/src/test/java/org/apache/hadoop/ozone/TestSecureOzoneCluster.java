@@ -118,10 +118,10 @@ public final class TestSecureOzoneCluster {
   private void createCredentialsInKDC(Configuration conf, MiniKdc miniKdc)
       throws Exception {
     createPrincipal(scmKeytab,
-        conf.get(ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY));
-    createPrincipal(spnegoKeytab,
-        conf.get(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY),
-        conf.get(OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
+        conf.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
+     createPrincipal(spnegoKeytab,
+         conf.get(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY),
+         conf.get(OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
     createPrincipal(omKeyTab,
         conf.get(OMConfigKeys
             .OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
@@ -154,7 +154,7 @@ public final class TestSecureOzoneCluster {
         "kerberos");
     conf.set(OZONE_ADMINISTRATORS, curUser);
 
-    conf.set(ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/" + host + "@" + realm);
     conf.set(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
         "HTTP_SCM/" + host + "@" + realm);
@@ -162,19 +162,18 @@ public final class TestSecureOzoneCluster {
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "om/" + host + "@" + realm);
     conf.set(OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        "HTTP_KSM/" + host + "@" + realm);
+        "HTTP_OM/" + host + "@" + realm);
 
     scmKeytab = new File(workDir, "scm.keytab");
     spnegoKeytab = new File(workDir, "http.keytab");
     omKeyTab = new File(workDir, "om.keytab");
 
-    conf.set(ScmConfigKeys.OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
     conf.set(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY,
         spnegoKeytab.getAbsolutePath());
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
-
   }
 
   @Test
@@ -205,7 +204,7 @@ public final class TestSecureOzoneCluster {
   @Test
   public void testSecureScmStartupFailure() throws Exception {
     initSCM();
-    conf.set(ScmConfigKeys.OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY, "");
+    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY, "");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
 
@@ -215,9 +214,9 @@ public final class TestSecureOzoneCluster {
           StorageContainerManager.createSCM(null, conf);
         });
 
-    conf.set(ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/_HOST@EXAMPLE.com");
-    conf.set(ScmConfigKeys.OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         "/etc/security/keytabs/scm.keytab");
 
     testCommonKerberosFailures(

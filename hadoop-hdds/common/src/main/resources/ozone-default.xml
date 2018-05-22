@@ -433,6 +433,7 @@
     </description>
   </property>
   <property>
+<<<<<<< HEAD
     <name>ozone.om.keytab.file</name>
     <value/>
     <tag>OM, SECURITY</tag>
@@ -442,6 +443,9 @@
   </property>
   <property>
     <name>ozone.om.db.cache.size.mb</name>
+=======
+    <name>ozone.ksm.db.cache.size.mb</name>
+>>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value>128</value>
     <tag>OM, PERFORMANCE</tag>
     <description>
@@ -929,7 +933,7 @@
   </property>
 
   <property>
-    <name>ozone.scm.container.creation.lease.timeout</name>
+    <name>hdds.scm.container.creation.lease.timeout</name>
     <value>60s</value>
     <tag>OZONE, SCM</tag>
     <description>
@@ -983,7 +987,11 @@
     </description>
   </property>
   <property>
+<<<<<<< HEAD
     <name>hdds.container.close.threshold</name>
+=======
+    <name>hdds.scm.container.close.threshold</name>
+>>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value>0.9f</value>
     <tag>OZONE, DATANODE</tag>
     <description>
@@ -1199,6 +1207,7 @@
     </description>
   </property>
   <property>
+<<<<<<< HEAD
     <name>hdds.db.profile</name>
     <value>SSD</value>
     <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
@@ -1227,15 +1236,18 @@
 
   <property>
     <name>ozone.scm.kerberos.keytab.file</name>
+=======
+    <name>hdds.scm.kerberos.keytab.file</name>
+>>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value></value>
     <tag> OZONE, SECURITY</tag>
     <description> The keytab file used by each SCM daemon to login as its
       service principal. The principal name is configured with
-      ozone.scm.kerberos.principal.
+      hdds.scm.kerberos.principal.
     </description>
   </property>
   <property>
-    <name>ozone.scm.kerberos.principal</name>
+    <name>hdds.scm.kerberos.principal</name>
     <value></value>
     <tag> OZONE, SECURITY</tag>
     <description>The SCM service principal. Ex scm/_HOST@REALM.COM</description>
@@ -1245,38 +1257,38 @@
     <name>ozone.om.kerberos.keytab.file</name>
     <value></value>
     <tag> OZONE, SECURITY</tag>
-    <description> The keytab file used by KSM daemon to login as its
+    <description> The keytab file used by OzoneManager daemon to login as its
       service principal. The principal name is configured with
-      hdds.ksm.kerberos.principal.
+      ozone.om.kerberos.principal.
     </description>
   </property>
   <property>
     <name>ozone.om.kerberos.principal</name>
     <value></value>
     <tag> OZONE, SECURITY</tag>
-    <description>The KSM service principal. Ex ksm/_HOST@REALM.COM</description>
+    <description>The OzoneManager service principal. Ex om/_HOST@REALM.COM</description>
   </property>
 
   <property>
-    <name>ozone.scm.web.authentication.kerberos.principal</name>
+    <name>hdds.scm.web.authentication.kerberos.principal</name>
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>ozone.scm.web.authentication.kerberos.keytab</name>
+    <name>hdds.scm.web.authentication.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
   <property>
-    <name>hdds.ksm.web.authentication.kerberos.principal</name>
+    <name>ozone.om.web.authentication.kerberos.principal</name>
     <value>HTTP/_HOST@EXAMPLE.COM</value>
     <description>
-      KSM http server kerberos principal.
+      OzoneManager http server kerberos principal.
     </description>
   </property>
   <property>
-    <name>hdds.ksm.web.authentication.kerberos.keytab</name>
+    <name>ozone.om.web.authentication.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
-      KSM http server kerberos keytab.
+      OzoneManager http server kerberos keytab.
     </description>
   </property>
 </configuration>

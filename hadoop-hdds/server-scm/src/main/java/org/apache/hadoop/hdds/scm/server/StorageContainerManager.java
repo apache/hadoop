@@ -107,8 +107,8 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_M
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -334,16 +334,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       throws IOException, AuthenticationException {
     LOG.debug("Ozone security is enabled. Attempting login for SCM user. "
             + "Principal: {}, keytab: {}", this.scmConf.get
-            (OZONE_SCM_KERBEROS_PRINCIPAL_KEY),
-        this.scmConf.get(OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY));
+            (HDDS_SCM_KERBEROS_PRINCIPAL_KEY),
+        this.scmConf.get(HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY));
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals
         (AuthenticationMethod.KERBEROS)) {
       UserGroupInformation.setConfiguration(this.scmConf);
       InetSocketAddress socAddr = HddsServerUtil
           .getScmBlockClientBindAddress(conf);
-      SecurityUtil.login(conf, OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY,
-          OZONE_SCM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
+      SecurityUtil.login(conf, HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
+          HDDS_SCM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     } else {
       throw new AuthenticationException(SecurityUtil.getAuthenticationMethod
           (conf) + " authentication method not support. "

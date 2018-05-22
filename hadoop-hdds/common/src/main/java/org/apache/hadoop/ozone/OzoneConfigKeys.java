@@ -297,11 +297,15 @@ public final class OzoneConfigKeys {
   public static final long
       HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT = 10000L;
   public static final String OZONE_SECURITY_ENABLED_KEY = "ozone.security.enabled";
-  public static final String OZONE_SYSTEM_TAGS_KEY = "ozone.system.tags";
   public static final boolean OZONE_SECURITY_ENABLED_DEFAULT = false;
 
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";
+
+  public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
+      + "kerberos.keytab.file";
+  public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"
+      + ".kerberos.principal";
 
   /**
    * There is no need to instantiate this class.

@@ -40,7 +40,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * includes: {@link org.apache.hadoop.ozone.client.rpc.RpcClient} for RPC and
  * {@link  org.apache.hadoop.ozone.client.rest.RestClient} for REST.
  */
-@KerberosInfo(serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
+@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ClientProtocol {
 
   /**

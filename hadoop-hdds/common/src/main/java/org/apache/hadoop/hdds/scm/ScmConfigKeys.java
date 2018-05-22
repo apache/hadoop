@@ -158,9 +158,9 @@ public final class ScmConfigKeys {
       "ozone.scm.http-address";
   public static final String OZONE_SCM_HTTPS_ADDRESS_KEY =
       "ozone.scm.https-address";
-  public static final String OZONE_SCM_KERBEROS_KEYTAB_FILE_KEY =
-      "ozone.scm.kerberos.keytab.file";
-  public static final String OZONE_SCM_KERBEROS_PRINCIPAL_KEY = "ozone.scm.kerberos.principal";
+  public static final String HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY =
+      "hdds.scm.kerberos.keytab.file";
+  public static final String HDDS_SCM_KERBEROS_PRINCIPAL_KEY = "hdds.scm.kerberos.principal";
   public static final String OZONE_SCM_HTTP_BIND_HOST_DEFAULT = "0.0.0.0";
   public static final int OZONE_SCM_HTTP_BIND_PORT_DEFAULT = 9876;
   public static final int OZONE_SCM_HTTPS_BIND_PORT_DEFAULT = 9877;
