@@ -68,13 +68,6 @@
       <artifactId>hadoop-client-integration-tests</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone-docs</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
-
 
   </dependencies>
 
@@ -265,6 +258,11 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-ozone-tools</artifactId>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-ozone-docs</artifactId>
           <scope>provided</scope>
         </dependency>
       </dependencies>
