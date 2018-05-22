@@ -40,6 +40,10 @@
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+    </dependency>
 
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->

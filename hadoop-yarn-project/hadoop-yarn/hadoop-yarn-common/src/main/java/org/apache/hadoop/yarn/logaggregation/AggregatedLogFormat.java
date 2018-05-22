@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
@@ -547,7 +548,7 @@ public class AggregatedLogFormat {
     }
 
     @Override
-    public void close() {
+    public void close() throws DSQuotaExceededException {
       try {
         if (writer != null) {
           writer.close();
@@ -555,7 +556,16 @@ public class AggregatedLogFormat {
       } catch (Exception e) {
         LOG.warn("Exception closing writer", e);
       } finally {
-        IOUtils.cleanupWithLogger(LOG, this.fsDataOStream);
+        try {
+          this.fsDataOStream.close();
+        } catch (DSQuotaExceededException e) {
+          LOG.error("Exception in closing {}",
+              this.fsDataOStream.getClass(), e);
+          throw e;
+        } catch (Throwable e) {
+          LOG.error("Exception in closing {}",
+              this.fsDataOStream.getClass(), e);
+        }
       }
     }
   }

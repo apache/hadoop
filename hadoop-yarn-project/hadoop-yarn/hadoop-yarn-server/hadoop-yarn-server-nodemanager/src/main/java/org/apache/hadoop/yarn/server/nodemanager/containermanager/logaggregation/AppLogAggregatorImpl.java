@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationDFSException;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
@@ -263,7 +264,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     return params;
   }
 
-  private void uploadLogsForContainers(boolean appFinished) {
+  private void uploadLogsForContainers(boolean appFinished)
+      throws LogAggregationDFSException {
     if (this.logAggregationDisabled) {
       return;
     }
@@ -301,6 +303,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     logAggregationTimes++;
     String diagnosticMessage = "";
     boolean logAggregationSucceedInThisCycle = true;
+    DeletionTask deletionTask = null;
     try {
       try {
         logAggregationFileController.initializeWriter(logControllerContext);
@@ -327,10 +330,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           uploadedLogsInThisCycle = true;
           List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
           uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
-          DeletionTask deletionTask = new FileDeletionTask(delService,
+          deletionTask = new FileDeletionTask(delService,
               this.userUgi.getShortUserName(), null,
               uploadedFilePathsInThisCycleList);
-          delService.delete(deletionTask);
         }
 
         // This container is finished, and all its logs have been uploaded,
@@ -356,9 +358,23 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         logAggregationSucceedInThisCycle = false;
       }
     } finally {
+      LogAggregationDFSException exc = null;
+      try {
+        this.logAggregationFileController.closeWriter();
+      } catch (LogAggregationDFSException e) {
+        diagnosticMessage = e.getMessage();
+        renameTemporaryLogFileFailed = true;
+        logAggregationSucceedInThisCycle = false;
+        exc = e;
+      }
+      if (logAggregationSucceedInThisCycle && deletionTask != null) {
+        delService.delete(deletionTask);
+      }
       sendLogAggregationReport(logAggregationSucceedInThisCycle,
           diagnosticMessage, appFinished);
-      logAggregationFileController.closeWriter();
+      if (exc != null) {
+        throw exc;
+      }
     }
   }
 
@@ -413,13 +429,18 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         diagnosticMessage, finalized);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void run() {
     try {
       doAppLogAggregation();
+    } catch (LogAggregationDFSException e) {
+      // if the log aggregation could not be performed due to DFS issues
+      // let's not clean up the log files, since that can result in
+      // loss of logs
+      LOG.error("Error occurred while aggregating the log for the application "
+          + appId, e);
     } catch (Exception e) {
-      // do post clean up of log directories on any exception
+      // do post clean up of log directories on any other exception
       LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
       doAppLogAggregationPostCleanUp();
@@ -434,8 +455,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private void doAppLogAggregation() {
+  private void doAppLogAggregation() throws LogAggregationDFSException {
     while (!this.appFinishing.get() && !this.aborted.get()) {
       synchronized(this) {
         try {
@@ -452,6 +472,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         } catch (InterruptedException e) {
           LOG.warn("PendingContainers queue is interrupted");
           this.appFinishing.set(true);
+        } catch (LogAggregationDFSException e) {
+          this.appFinishing.set(true);
+          throw e;
         }
       }
     }
@@ -460,10 +483,14 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       return;
     }
 
-    // App is finished, upload the container logs.
-    uploadLogsForContainers(true);
+    try {
+      // App is finished, upload the container logs.
+      uploadLogsForContainers(true);
 
-    doAppLogAggregationPostCleanUp();
+      doAppLogAggregationPostCleanUp();
+    } catch (LogAggregationDFSException e) {
+      LOG.error("Error during log aggregation", e);
+    }
 
     this.dispatcher.getEventHandler().handle(
         new ApplicationEvent(this.appId,

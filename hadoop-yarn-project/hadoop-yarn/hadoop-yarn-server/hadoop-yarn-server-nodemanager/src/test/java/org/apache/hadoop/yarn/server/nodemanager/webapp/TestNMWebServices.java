@@ -87,7 +87,6 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
@@ -356,7 +355,7 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   @Test (timeout = 5000)
-  public void testContainerLogsWithNewAPI() throws IOException, JSONException{
+  public void testContainerLogsWithNewAPI() throws Exception {
     final ContainerId containerId = BuilderUtils.newContainerId(0, 0, 0, 0);
     WebResource r = resource();
     r = r.path("ws").path("v1").path("node").path("containers")
@@ -365,7 +364,7 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   @Test (timeout = 5000)
-  public void testContainerLogsWithOldAPI() throws IOException, JSONException{
+  public void testContainerLogsWithOldAPI() throws Exception {
     final ContainerId containerId = BuilderUtils.newContainerId(1, 1, 0, 1);
     WebResource r = resource();
     r = r.path("ws").path("v1").path("node").path("containerlogs")
@@ -538,7 +537,7 @@ public class TestNMWebServices extends JerseyTestBase {
   }
 
   private void testContainerLogs(WebResource r, ContainerId containerId)
-      throws IOException {
+      throws Exception {
     final String containerIdStr = containerId.toString();
     final ApplicationAttemptId appAttemptId = containerId
         .getApplicationAttemptId();

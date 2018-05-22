@@ -65,7 +65,7 @@ public final class TestContainerLogsUtils {
   public static void createContainerLogFileInRemoteFS(Configuration conf,
       FileSystem fs, String rootLogDir, ContainerId containerId, NodeId nodeId,
       String fileName, String user, String content,
-      boolean deleteRemoteLogDir) throws IOException {
+      boolean deleteRemoteLogDir) throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     //prepare the logs for remote directory
     ApplicationId appId = containerId.getApplicationAttemptId()
@@ -113,7 +113,7 @@ public final class TestContainerLogsUtils {
 
   private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,
       Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
-      ContainerId containerId, Path appDir, FileSystem fs) throws IOException {
+      ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
     LogAggregationFileControllerFactory factory

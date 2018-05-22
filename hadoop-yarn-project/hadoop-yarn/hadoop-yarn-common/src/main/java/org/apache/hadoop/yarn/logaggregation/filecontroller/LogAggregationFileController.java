@@ -162,8 +162,10 @@ public abstract class LogAggregationFileController {
 
   /**
    * Close the writer.
+   * @throws LogAggregationDFSException if the closing of the writer fails
+   *         (for example due to HDFS quota being exceeded)
    */
-  public abstract void closeWriter();
+  public abstract void closeWriter() throws LogAggregationDFSException;
 
   /**
    * Write the log content.
