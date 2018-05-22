@@ -19,7 +19,6 @@ package org.apache.hadoop.util;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.DiskChecker.FileIoProvider;
 import org.junit.After;
@@ -213,106 +212,5 @@ public class TestDiskChecker {
       }
     }
     localDir.delete();
-  }
-
-  /**
-   * Verify DiskChecker ignores at least 2 transient file creation errors.
-   */
-  @Test(timeout = 30000)
-  public void testDiskIoIgnoresTransientCreateErrors() throws Throwable {
-    DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        DiskChecker.DISK_IO_MAX_ITERATIONS - 1, 0));
-    checkDirs(true, "755", true);
-  }
-
-  /**
-   * Verify DiskChecker bails after 3 file creation errors.
-   */
-  @Test(timeout = 30000)
-  public void testDiskIoDetectsCreateErrors() throws Throwable {
-    DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        DiskChecker.DISK_IO_MAX_ITERATIONS, 0));
-    checkDirs(true, "755", false);
-  }
-
-  /**
-   * Verify DiskChecker ignores at least 2 transient file write errors.
-   */
-  @Test(timeout = 30000)
-  public void testDiskIoIgnoresTransientWriteErrors() throws Throwable {
-    DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        0, DiskChecker.DISK_IO_MAX_ITERATIONS - 1));
-    checkDirs(true, "755", true);
-  }
-
-  /**
-   * Verify DiskChecker bails after 3 file write errors.
-   */
-  @Test(timeout = 30000)
-  public void testDiskIoDetectsWriteErrors() throws Throwable {
-    DiskChecker.replaceFileOutputStreamProvider(new TestFileIoProvider(
-        0, DiskChecker.DISK_IO_MAX_ITERATIONS));
-    checkDirs(true, "755", false);
-  }
-
-  /**
-   * Verify DiskChecker's test file naming scheme.
-   */
-  @Test(timeout = 30000)
-  public void testDiskIoFileNaming() throws Throwable {
-    final File rootDir = new File("/");
-    assertTrue(".001".matches("\\.00\\d$"));
-    for (int i = 1; i < DiskChecker.DISK_IO_MAX_ITERATIONS; ++i) {
-      final File file = DiskChecker.getFileNameForDiskIoCheck(rootDir, i);
-      assertTrue(
-          "File name does not match expected pattern: " + file,
-          file.toString().matches("^.*\\.[0-9]+$"));
-    }
-    final File guidFile = DiskChecker.getFileNameForDiskIoCheck(
-        rootDir, DiskChecker.DISK_IO_MAX_ITERATIONS);
-    assertTrue(
-        "File name does not match expected pattern: " + guidFile,
-        guidFile.toString().matches("^.*\\.[A-Za-z0-9-]+$"));
-  }
-
-  /**
-   * A dummy {@link DiskChecker#FileIoProvider} that can throw a programmable
-   * number of times.
-   */
-  private static class TestFileIoProvider implements FileIoProvider {
-    private final AtomicInteger numCreateCalls = new AtomicInteger(0);
-    private final AtomicInteger numWriteCalls = new AtomicInteger(0);
-
-    private final int numTimesToThrowOnCreate;
-    private final int numTimesToThrowOnWrite;
-
-    public TestFileIoProvider(
-        int numTimesToThrowOnCreate, int numTimesToThrowOnWrite) {
-      this.numTimesToThrowOnCreate = numTimesToThrowOnCreate;
-      this.numTimesToThrowOnWrite = numTimesToThrowOnWrite;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public FileOutputStream get(File f) throws FileNotFoundException {
-      if (numCreateCalls.getAndIncrement() < numTimesToThrowOnCreate) {
-        throw new FileNotFoundException("Dummy exception for testing");
-      }
-      // Can't mock final class FileOutputStream.
-      return new FileOutputStream(f);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void write(FileOutputStream fos, byte[] data) throws IOException {
-      if (numWriteCalls.getAndIncrement() < numTimesToThrowOnWrite) {
-        throw new IOException("Dummy exception for testing");
-      }
-      fos.write(data);
-    }
   }
 }
