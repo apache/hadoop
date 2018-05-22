@@ -1037,9 +1037,9 @@ public class TestEditLog {
         "[1,100]|[101,200]|[201,]");
     log = getFSEditLog(storage);
     log.initJournalsForWrite();
-    assertEquals("[[1,100], [101,200]]",
+    assertEquals("[[1,100], [101,200]] CommittedTxId: 200",
         log.getEditLogManifest(1).toString());
-    assertEquals("[[101,200]]",
+    assertEquals("[[101,200]] CommittedTxId: 200",
         log.getEditLogManifest(101).toString());
 
     // Another simple case, different directories have different
@@ -1049,8 +1049,8 @@ public class TestEditLog {
         "[1,100]|[201,300]|[301,400]"); // nothing starting at 101
     log = getFSEditLog(storage);
     log.initJournalsForWrite();
-    assertEquals("[[1,100], [101,200], [201,300], [301,400]]",
-        log.getEditLogManifest(1).toString());
+    assertEquals("[[1,100], [101,200], [201,300], [301,400]]" +
+            " CommittedTxId: 400", log.getEditLogManifest(1).toString());
     
     // Case where one directory has an earlier finalized log, followed
     // by a gap. The returned manifest should start after the gap.
@@ -1059,7 +1059,7 @@ public class TestEditLog {
         "[301,400]|[401,500]");
     log = getFSEditLog(storage);
     log.initJournalsForWrite();
-    assertEquals("[[301,400], [401,500]]",
+    assertEquals("[[301,400], [401,500]] CommittedTxId: 500",
         log.getEditLogManifest(1).toString());
     
     // Case where different directories have different length logs
@@ -1069,9 +1069,9 @@ public class TestEditLog {
         "[1,50]|[101,200]"); // short log at 1
     log = getFSEditLog(storage);
     log.initJournalsForWrite();
-    assertEquals("[[1,100], [101,200]]",
+    assertEquals("[[1,100], [101,200]] CommittedTxId: 200",
         log.getEditLogManifest(1).toString());
-    assertEquals("[[101,200]]",
+    assertEquals("[[101,200]] CommittedTxId: 200",
         log.getEditLogManifest(101).toString());
 
     // Case where the first storage has an inprogress while
@@ -1082,9 +1082,9 @@ public class TestEditLog {
         "[1,100]|[101,200]"); 
     log = getFSEditLog(storage);
     log.initJournalsForWrite();
-    assertEquals("[[1,100], [101,200]]",
+    assertEquals("[[1,100], [101,200]] CommittedTxId: 200",
         log.getEditLogManifest(1).toString());
-    assertEquals("[[101,200]]",
+    assertEquals("[[101,200]] CommittedTxId: 200",
         log.getEditLogManifest(101).toString());
   }
   

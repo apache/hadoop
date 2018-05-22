@@ -42,10 +42,14 @@ interface LogsPurgeable {
    * 
    * @param fromTxId the first transaction id we want to read
    * @param inProgressOk whether or not in-progress streams should be returned
+   * @param onlyDurableTxns whether or not streams should be bounded by durable
+   *                        TxId. A durable TxId is the committed txid in QJM
+   *                        or the largest txid written into file in FJM
    * @throws IOException if the underlying storage has an error or is otherwise
    * inaccessible
    */
   void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk) throws IOException;
+      long fromTxId, boolean inProgressOk, boolean onlyDurableTxns)
+      throws IOException;
   
 }

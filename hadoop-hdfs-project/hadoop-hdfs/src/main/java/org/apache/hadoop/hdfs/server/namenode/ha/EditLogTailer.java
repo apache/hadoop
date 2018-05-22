@@ -135,6 +135,11 @@ public class EditLogTailer {
    */
   private int maxRetries;
 
+  /**
+   * Whether the tailer should tail the in-progress edit log segments.
+   */
+  private final boolean inProgressOk;
+
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
     this.conf = conf;
@@ -181,6 +186,10 @@ public class EditLogTailer {
           DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
       maxRetries = DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT;
     }
+
+    inProgressOk = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
 
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
@@ -263,7 +272,8 @@ public class EditLogTailer {
       }
       Collection<EditLogInputStream> streams;
       try {
-        streams = editLog.selectInputStreams(lastTxnId + 1, 0, null, false);
+        streams = editLog.selectInputStreams(lastTxnId + 1, 0,
+            null, inProgressOk, true);
       } catch (IOException ioe) {
         // This is acceptable. If we try to tail edits in the middle of an edits
         // log roll, i.e. the last one has been finalized but the new inprogress

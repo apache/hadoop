@@ -262,10 +262,13 @@ public class JournalSet implements JournalManager {
    *                         may not be sorted-- this is up to the caller.
    * @param fromTxId         The transaction ID to start looking for streams at
    * @param inProgressOk     Should we consider unfinalized streams?
+   * @param onlyDurableTxns  Set to true if streams are bounded by the durable
+   *                         TxId. A durable TxId is the committed txid in QJM
+   *                         or the largest txid written into file in FJM
    */
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk) throws IOException {
+      long fromTxId, boolean inProgressOk, boolean onlyDurableTxns) throws IOException {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             EDIT_LOG_INPUT_STREAM_COMPARATOR);
@@ -275,7 +278,8 @@ public class JournalSet implements JournalManager {
         continue;
       }
       try {
-        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+        jas.getManager().selectInputStreams(allStreams, fromTxId,
+            inProgressOk, onlyDurableTxns);
       } catch (IOException ioe) {
         LOG.warn("Unable to determine input streams from " + jas.getManager() +
             ". Skipping.", ioe);
@@ -682,7 +686,8 @@ public class JournalSet implements JournalManager {
       // And then start looking from after that point
       curStartTxId = bestLog.getEndTxId() + 1;
     }
-    RemoteEditLogManifest ret = new RemoteEditLogManifest(logs);
+    RemoteEditLogManifest ret = new RemoteEditLogManifest(logs,
+        curStartTxId - 1);
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generated manifest for logs since " + fromTxId + ":"

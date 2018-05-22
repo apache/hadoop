@@ -2794,6 +2794,16 @@
 </property>
 
 <property>
+  <name>dfs.ha.tail-edits.in-progress</name>
+  <value>false</value>
+  <description>
+    Whether enable standby namenode to tail in-progress edit logs.
+    Clients might want to turn it on when they want Standby NN to have
+    more up-to-date data.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
   <description>During the release of lease a lock is hold that make any

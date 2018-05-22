@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -545,6 +546,19 @@ public class IPCLoggerChannel implements AsyncLogger {
         return null;
       }
     });
+  }
+
+  @Override
+  public ListenableFuture<GetJournaledEditsResponseProto> getJournaledEdits(
+      long fromTxnId, int maxTransactions) {
+    return parallelExecutor.submit(
+        new Callable<GetJournaledEditsResponseProto>() {
+          @Override
+          public GetJournaledEditsResponseProto call() throws IOException {
+            return getProxy().getJournaledEdits(journalId, nameServiceId,
+                fromTxnId, maxTransactions);
+          }
+        });
   }
 
   @Override

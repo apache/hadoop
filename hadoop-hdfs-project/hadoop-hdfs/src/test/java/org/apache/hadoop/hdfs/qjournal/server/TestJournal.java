@@ -167,12 +167,12 @@ public class TestJournal {
     // Send txids 1-3, with a request indicating only 0 committed
     journal.journal(new RequestInfo(JID, 1, 2, 0), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
-    assertEquals(0, journal.getCommittedTxnIdForTests());
+    assertEquals(0, journal.getCommittedTxnId());
     
     // Send 4-6, with request indicating that through 3 is committed.
     journal.journal(new RequestInfo(JID, 1, 3, 3), 1, 4, 3,
         QJMTestUtil.createTxnData(4, 6));
-    assertEquals(3, journal.getCommittedTxnIdForTests());    
+    assertEquals(3, journal.getCommittedTxnId());
   }
   
   @Test (timeout = 10000)
