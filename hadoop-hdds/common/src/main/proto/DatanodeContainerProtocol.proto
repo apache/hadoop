@@ -24,6 +24,7 @@
 
 // This file contains protocol buffers that are used to transfer data
 // to and from the datanode.
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdds.protocol.datanode.proto";
 option java_outer_classname = "ContainerProtos";
 option java_generate_equals_and_hash = true;
@@ -417,4 +418,10 @@ message CopyContainerResponseProto {
   required bool eof = 4;
   repeated bytes data = 5;
   optional int64 checksum = 6;
+}
+
+service XceiverClientProtocolService {
+  // A client-to-datanode RPC to send container commands
+  rpc send(stream ContainerCommandRequestProto) returns
+    (stream ContainerCommandResponseProto) {}
 }

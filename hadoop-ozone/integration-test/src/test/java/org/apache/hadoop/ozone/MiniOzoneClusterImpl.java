@@ -220,13 +220,13 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     datanodeService.stop();
     datanodeService.join();
     // ensure same ports are used across restarts.
-    Configuration conf = datanodeService.getConf();
+    Configuration config = datanodeService.getConf();
     int currentPort = datanodeService.getDatanodeDetails().getContainerPort();
-    conf.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
-    conf.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+    config.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
+    config.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
     int ratisPort = datanodeService.getDatanodeDetails().getRatisPort();
-    conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
-    conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
+    config.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
+    config.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     datanodeService.start(null);
   }
 

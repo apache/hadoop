@@ -63,20 +63,20 @@ public class ContainerMetrics {
     this.registry = new MetricsRegistry("StorageContainerMetrics");
     for (int i = 0; i < numEnumEntries; i++) {
       numOpsArray[i] = registry.newCounter(
-          "num" + ContainerProtos.Type.valueOf(i + 1),
-          "number of " + ContainerProtos.Type.valueOf(i + 1) + " ops",
+          "num" + ContainerProtos.Type.forNumber(i + 1),
+          "number of " + ContainerProtos.Type.forNumber(i + 1) + " ops",
           (long) 0);
       opsBytesArray[i] = registry.newCounter(
-          "bytes" + ContainerProtos.Type.valueOf(i + 1),
-          "bytes used by " + ContainerProtos.Type.valueOf(i + 1) + "op",
+          "bytes" + ContainerProtos.Type.forNumber(i + 1),
+          "bytes used by " + ContainerProtos.Type.forNumber(i + 1) + "op",
           (long) 0);
       opsLatency[i] = registry.newRate(
-          "latency" + ContainerProtos.Type.valueOf(i + 1),
-          ContainerProtos.Type.valueOf(i + 1) + " op");
+          "latency" + ContainerProtos.Type.forNumber(i + 1),
+          ContainerProtos.Type.forNumber(i + 1) + " op");
 
       for (int j = 0; j < len; j++) {
         int interval = intervals[j];
-        String quantileName = ContainerProtos.Type.valueOf(i + 1) + "Nanos"
+        String quantileName = ContainerProtos.Type.forNumber(i + 1) + "Nanos"
             + interval + "s";
         opsLatQuantiles[i][j] = registry.newQuantiles(quantileName,
             "latency of Container ops", "ops", "latency", interval);

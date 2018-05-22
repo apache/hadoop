@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -39,6 +40,8 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background
     .BlockDeletingService;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.container.common.transport.server
+    .XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server
     .XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
@@ -121,8 +124,14 @@ public class OzoneContainer {
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
+    boolean useGrpc = this.ozoneConfig.getBoolean(
+        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     server = new XceiverServerSpi[]{
-        new XceiverServer(datanodeDetails, this.ozoneConfig, this.dispatcher),
+        useGrpc ? new XceiverServerGrpc(datanodeDetails,
+            this.ozoneConfig, this.dispatcher) :
+            new XceiverServer(datanodeDetails,
+                this.ozoneConfig, this.dispatcher),
       XceiverServerRatis
           .newXceiverServerRatis(datanodeDetails, this.ozoneConfig, dispatcher)
     };
