@@ -198,8 +198,8 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * <h4 id="Tags">Tags</h4>
  *
  * <p>Optionally we can tag related properties together by using tag
- * attributes. System tags are defined by hadoop.system.tags property. Users
- * can define there own custom tags in  hadoop.custom.tags property.
+ * attributes. System tags are defined by hadoop.tags.system property. Users
+ * can define there own custom tags in  hadoop.tags.custom property.
  *
  * <p>For example, we can tag existing property as:
  * <tt><pre>
@@ -3180,12 +3180,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Add tags defined in HADOOP_SYSTEM_TAGS, HADOOP_CUSTOM_TAGS.
+   * Add tags defined in HADOOP_TAGS_SYSTEM, HADOOP_TAGS_CUSTOM.
    * @param prop
    */
   public void addTags(Properties prop) {
     // Get all system tags
     try {
+      if (prop.containsKey(CommonConfigurationKeys.HADOOP_TAGS_SYSTEM)) {
+        String systemTags = prop.getProperty(CommonConfigurationKeys
+            .HADOOP_TAGS_SYSTEM);
+        Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
+      }
+      // Get all custom tags
+      if (prop.containsKey(CommonConfigurationKeys.HADOOP_TAGS_CUSTOM)) {
+        String customTags = prop.getProperty(CommonConfigurationKeys
+            .HADOOP_TAGS_CUSTOM);
+        Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+      }
+
       if (prop.containsKey(CommonConfigurationKeys.HADOOP_SYSTEM_TAGS)) {
         String systemTags = prop.getProperty(CommonConfigurationKeys
             .HADOOP_SYSTEM_TAGS);
