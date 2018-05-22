@@ -53,3 +53,5 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/yarn-error.log
 log.html
 output.xml
 report.html
+
+hadoop-ozone/docs/public

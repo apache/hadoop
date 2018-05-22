@@ -573,6 +573,11 @@
         <artifactId>hadoop-ozone-objectstore-service</artifactId>
         <version>${hdds.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-docs</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>

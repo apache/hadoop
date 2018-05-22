@@ -36,6 +36,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>tools</module>
     <module>integration-test</module>
     <module>objectstore-service</module>
+    <module>docs</module>
   </modules>
 
   <dependencies>

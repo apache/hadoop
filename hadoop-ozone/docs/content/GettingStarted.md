@@ -1,3 +1,8 @@
+---
+title: Getting started
+weight: -2
+menu: main
+---
 <!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -11,6 +16,7 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
+
 Ozone - Object store for Hadoop
 ==============================
 
@@ -344,4 +350,3 @@ Please file any issues you see under the related issues:
  - [Object store in HDFS: HDFS-7240](https://issues.apache.org/jira/browse/HDFS-7240)
  - [Ozone File System: HDFS-13074](https://issues.apache.org/jira/browse/HDFS-13074)
  - [Building HDFS on top of new storage layer (HDDS): HDFS-10419](https://issues.apache.org/jira/browse/HDFS-10419)
-
