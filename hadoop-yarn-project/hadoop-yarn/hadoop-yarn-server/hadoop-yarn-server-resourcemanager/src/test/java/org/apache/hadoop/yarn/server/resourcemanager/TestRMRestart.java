@@ -766,6 +766,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     RMApp loadedApp0 = rm2.getRMContext().getRMApps().get(app0.getApplicationId());
     rm2.waitForState(app0.getApplicationId(), RMAppState.FAILED);
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    Assert.assertEquals(app0.getUser(), loadedApp0.getUser());
     // no new attempt is created.
     Assert.assertEquals(1, loadedApp0.getAppAttempts().size());
 

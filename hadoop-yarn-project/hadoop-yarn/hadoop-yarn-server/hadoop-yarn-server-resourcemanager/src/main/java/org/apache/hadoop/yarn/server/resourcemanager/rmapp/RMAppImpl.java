@@ -45,6 +45,7 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -2020,6 +2021,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void sendATSCreateEvent() {
     rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
     rmContext.getSystemMetricsPublisher().appCreated(this, this.startTime);
+    String appViewACLs = submissionContext.getAMContainerSpec()
+        .getApplicationACLs().get(ApplicationAccessType.VIEW_APP);
+    rmContext.getSystemMetricsPublisher().appACLsUpdated(
+        this, appViewACLs, System.currentTimeMillis());
   }
 
   @Private
