@@ -44,7 +44,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protoc file that defines this protocol.
  */
 @KerberosInfo(
-    serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface StorageContainerDatanodeProtocol {
   /**

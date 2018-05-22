@@ -26,7 +26,7 @@ ${version}
 *** Test Cases ***
 
 Daemons are running
-    Is daemon running           ksm
+    Is daemon running           om
     Is daemon running           scm
     Is daemon running           datanode
     Is daemon running           ozone.kdc
@@ -45,15 +45,15 @@ Test rest interface
                     Should contain      ${result}       200 OK
 
 Test ozone cli
-    ${result} =     Execute on      1   datanode        ozone oz -createVolume o3://ksm/hive -user bilbo -quota 100TB -root
+    ${result} =     Execute on      1   datanode        ozone oz -createVolume o3://om/hive -user bilbo -quota 100TB -root
                     Should contain      ${result}       Client cannot authenticate via
                     # Authenticate testuser
                     Execute on      0   datanode        kinit -k testuser/datanode@EXAMPLE.COM -t /etc/security/keytabs/testuser.keytab
-                    Execute on      0   datanode        ozone oz -createVolume o3://ksm/hive -user bilbo -quota 100TB -root
-    ${result} =     Execute on      0   datanode        ozone oz -listVolume o3://ksm/ -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="hive")'
+                    Execute on      0   datanode        ozone oz -createVolume o3://om/hive -user bilbo -quota 100TB -root
+    ${result} =     Execute on      0   datanode        ozone oz -listVolume o3://om/ -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="hive")'
                     Should contain      ${result}       createdOn
-                    Execute on      0   datanode        ozone oz -updateVolume o3://ksm/hive -user bill -quota 10TB
-    ${result} =     Execute on      0   datanode        ozone oz -infoVolume o3://ksm/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .owner | .name'
+                    Execute on      0   datanode        ozone oz -updateVolume o3://om/hive -user bill -quota 10TB
+    ${result} =     Execute on      0   datanode        ozone oz -infoVolume o3://om/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .owner | .name'
                     Should Be Equal     ${result}       bill
 
 *** Keywords ***

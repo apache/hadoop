@@ -18,11 +18,9 @@
 package org.apache.hadoop.hdds.scm.protocolPB;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .ScmBlockLocationProtocolService;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -35,7 +33,7 @@ import org.apache.hadoop.security.KerberosInfo;
     protocolVersion = 1)
 @InterfaceAudience.Private
 @KerberosInfo(
-    serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ScmBlockLocationProtocolPB
     extends ScmBlockLocationProtocolService.BlockingInterface {
 }

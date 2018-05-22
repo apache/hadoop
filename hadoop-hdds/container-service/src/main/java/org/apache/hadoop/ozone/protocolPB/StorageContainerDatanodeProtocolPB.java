@@ -33,7 +33,7 @@ import org.apache.hadoop.security.KerberosInfo;
     "org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol",
     protocolVersion = 1)
 @KerberosInfo(
-    serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY,
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY)
 public interface StorageContainerDatanodeProtocolPB extends
     StorageContainerDatanodeProtocolService.BlockingInterface {

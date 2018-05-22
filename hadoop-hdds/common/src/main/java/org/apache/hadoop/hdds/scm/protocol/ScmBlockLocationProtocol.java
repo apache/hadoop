@@ -33,7 +33,7 @@ import java.util.List;
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
  * to read/write a block.
  */
-@KerberosInfo(serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
+@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface ScmBlockLocationProtocol {
 
   /**
