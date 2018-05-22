@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
@@ -256,6 +257,19 @@ class AsyncLoggerSet {
     for (AsyncLogger logger : loggers) {
       ListenableFuture<Void> future = 
         logger.sendEdits(segmentTxId, firstTxnId, numTxns, data);
+      calls.put(logger, future);
+    }
+    return QuorumCall.create(calls);
+  }
+
+  public QuorumCall<AsyncLogger, GetJournaledEditsResponseProto>
+  getJournaledEdits(long fromTxnId, int maxTransactions) {
+    Map<AsyncLogger,
+        ListenableFuture<GetJournaledEditsResponseProto>> calls
+        = Maps.newHashMap();
+    for (AsyncLogger logger : loggers) {
+      ListenableFuture<GetJournaledEditsResponseProto> future =
+          logger.getJournaledEdits(fromTxnId, maxTransactions);
       calls.put(logger, future);
     }
     return QuorumCall.create(calls);
