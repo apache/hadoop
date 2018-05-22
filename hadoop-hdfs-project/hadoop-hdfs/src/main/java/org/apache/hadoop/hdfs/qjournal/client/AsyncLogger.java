@@ -22,6 +22,7 @@ import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -107,6 +108,12 @@ interface AsyncLogger {
    * Begin a new epoch on the target node.
    */
   public ListenableFuture<NewEpochResponseProto> newEpoch(long epoch);
+
+  /**
+   * Fetch journaled edits from the cache.
+   */
+  public ListenableFuture<GetJournaledEditsResponseProto> getJournaledEdits(
+      long fromTxnId, int maxTransactions);
   
   /**
    * Fetch the list of edit logs available on the remote node.
