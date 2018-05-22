@@ -151,7 +151,11 @@ public class EditLogTailer {
   private int maxRetries;
 
   /**
-   * Whether the tailer should tail the in-progress edit log segments.
+   * Whether the tailer should tail the in-progress edit log segments. If true,
+   * this will also attempt to optimize for latency when tailing the edit logs
+   * (if using the
+   * {@link org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager}, this
+   * implies using the RPC-based mechanism to tail edits).
    */
   private final boolean inProgressOk;
 
