@@ -18,8 +18,6 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
@@ -40,9 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState.states
-    .noContainerReports;
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
 /**
@@ -58,9 +53,6 @@ public class StateContext {
   private final Configuration conf;
   private DatanodeStateMachine.DatanodeStates state;
   private SCMNodeReport nrState;
-  private ReportState  reportState;
-  private static final ReportState DEFAULT_REPORT_STATE =
-      ReportState.newBuilder().setState(noContainerReports).setCount(0).build();
 
   /**
    * Constructs a StateContext.
@@ -212,7 +204,6 @@ public class StateContext {
       if (isExiting(newState)) {
         task.onExit();
       }
-      this.clearReportState();
       this.setState(newState);
     }
   }
@@ -251,35 +242,6 @@ public class StateContext {
    */
   public long getExecutionCount() {
     return stateExecutionCount.get();
-  }
-
-
-  /**
-   * Gets the ReportState.
-   * @return ReportState.
-   */
-  public synchronized  ReportState getContainerReportState() {
-    if (reportState == null) {
-      return DEFAULT_REPORT_STATE;
-    }
-    return reportState;
-  }
-
-  /**
-   * Sets the ReportState.
-   * @param rState - ReportState.
-   */
-  public synchronized  void setContainerReportState(ReportState rState) {
-    this.reportState = rState;
-  }
-
-  /**
-   * Clears report state after it has been communicated.
-   */
-  public synchronized void clearReportState() {
-    if(reportState != null) {
-      setContainerReportState(null);
-    }
   }
 
 }

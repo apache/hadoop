@@ -29,8 +29,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 
@@ -266,9 +264,4 @@ public interface ContainerManager extends RwLock {
    */
   long getNumKeys(long containerId);
 
-  /**
-   * Get the container report state to send via HB to SCM.
-   * @return container report state.
-   */
-  ReportState getContainerReportState();
 }

@@ -30,8 +30,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -53,7 +51,6 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private int rpcResponseDelay;
   private AtomicInteger heartbeatCount = new AtomicInteger(0);
   private AtomicInteger rpcCount = new AtomicInteger(0);
-  private ReportState reportState;
   private AtomicInteger containerReportsCount = new AtomicInteger(0);
 
   // Map of datanode to containers
@@ -177,11 +174,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
       sendHeartbeat(DatanodeDetailsProto datanodeDetailsProto,
-                    SCMNodeReport nodeReport, ReportState scmReportState)
+                    SCMNodeReport nodeReport)
       throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
-    this.reportState = scmReportState;
     sleepIfNeeded();
     List<SCMCommandResponseProto>
         cmdResponses = new LinkedList<>();
@@ -298,19 +294,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         .newBuilder().getDefaultInstanceForType();
   }
 
-  public ReportState getReportState() {
-    return this.reportState;
-  }
-
   /**
    * Reset the mock Scm for test to get a fresh start without rebuild MockScm.
    */
   public void reset() {
     heartbeatCount.set(0);
     rpcCount.set(0);
-    reportState = ReportState.newBuilder()
-        .setState(ReportState.states.noContainerReports)
-        .setCount(0).build();
     containerReportsCount.set(0);
     nodeContainers.clear();
 

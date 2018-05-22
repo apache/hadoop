@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
-
 /**
  * Interface for container report manager operations.
  */
 public interface ContainerReportManager {
 
   /**
-   * Get the container report state.
-   * @return the container report state.
+   * Check if we have to send container report.
+   * @return true if container report has to be sent.
    */
-  ReportState getContainerReportState();
+  boolean shouldSendContainerReport();
 }

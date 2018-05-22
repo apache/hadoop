@@ -29,8 +29,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -133,12 +131,11 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
       DatanodeDetailsProto datanodeDetailsProto,
-      SCMNodeReport nodeReport, ReportState reportState) throws IOException {
+      SCMNodeReport nodeReport) throws IOException {
     SCMHeartbeatRequestProto.Builder req = SCMHeartbeatRequestProto
         .newBuilder();
     req.setDatanodeDetails(datanodeDetailsProto);
     req.setNodeReport(nodeReport);
-    req.setContainerReportState(reportState);
     final SCMHeartbeatResponseProto resp;
     try {
       resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, req.build());

@@ -35,8 +35,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
@@ -1072,16 +1070,8 @@ public class ContainerManagerImpl implements ContainerManager {
   @Override
   public long getNumKeys(long containerId) {
     ContainerData cData = containerMap.get(containerId);
-    return cData.getKeyCount();  }
-
-  /**
-   * Get the container report state to send via HB to SCM.
-   *
-   * @return container report state.
-   */
-  @Override
-  public ReportState getContainerReportState() {
-    return containerReportManager.getContainerReportState();
+    return cData.getKeyCount();
   }
+
 
 }

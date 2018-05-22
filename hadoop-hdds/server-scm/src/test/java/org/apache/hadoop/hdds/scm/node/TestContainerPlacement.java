@@ -26,15 +26,12 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -69,10 +66,6 @@ public class TestContainerPlacement {
   public ExpectedException thrown = ExpectedException.none();
   private static XceiverClientManager xceiverClientManager =
       new XceiverClientManager(new OzoneConfiguration());
-
-  private ReportState reportState = ReportState.newBuilder()
-      .setState(ReportState.states.noContainerReports)
-      .setCount(0).build();
 
   /**
    * Returns a new copy of Configuration.
@@ -143,7 +136,7 @@ public class TestContainerPlacement {
         List<SCMStorageReport> reports = TestUtils
             .createStorageReport(capacity, used, remaining, path, null, id, 1);
         nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            TestUtils.createNodeReport(reports), reportState);
+            TestUtils.createNodeReport(reports));
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),

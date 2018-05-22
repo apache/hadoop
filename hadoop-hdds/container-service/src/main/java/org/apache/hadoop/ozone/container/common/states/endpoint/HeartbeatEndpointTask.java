@@ -99,8 +99,7 @@ public class HeartbeatEndpointTask
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(datanodeDetailsProto, this.context.getNodeReport(),
-              this.context.getContainerReportState());
+          .sendHeartbeat(datanodeDetailsProto, this.context.getNodeReport());
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();

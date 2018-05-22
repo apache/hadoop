@@ -27,8 +27,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
@@ -293,12 +291,11 @@ public class ReplicationNodeManagerMock implements NodeManager {
    *
    * @param dd - Datanode Details.
    * @param nodeReport - node report.
-   * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
   public List<SCMCommand> sendHeartbeat(HddsProtos.DatanodeDetailsProto dd,
-      SCMNodeReport nodeReport, ReportState containerReportState) {
+      SCMNodeReport nodeReport) {
     return null;
   }
 

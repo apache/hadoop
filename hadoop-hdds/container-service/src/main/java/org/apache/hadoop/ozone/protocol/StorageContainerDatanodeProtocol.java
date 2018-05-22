@@ -28,8 +28,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
@@ -59,12 +57,11 @@ public interface StorageContainerDatanodeProtocol {
    * Used by data node to send a Heartbeat.
    * @param datanodeDetails - Datanode Details.
    * @param nodeReport - node report state
-   * @param reportState - container report state.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   SCMHeartbeatResponseProto sendHeartbeat(DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport, ReportState reportState) throws IOException;
+      SCMNodeReport nodeReport) throws IOException;
 
   /**
    * Register Datanode.

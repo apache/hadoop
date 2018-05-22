@@ -21,8 +21,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -305,11 +303,6 @@ public class TestDatanodeStateMachine {
 
       for (ScmTestMock mock : mockServers) {
         Assert.assertEquals(1, mock.getHeartbeatCount());
-        // Assert that heartbeat did indeed carry that State that we said
-        // have in the datanode.
-        Assert.assertEquals(mock.getReportState().getState().getNumber(),
-            StorageContainerDatanodeProtocolProtos.ReportState.states
-                .noContainerReports.getNumber());
       }
     }
   }

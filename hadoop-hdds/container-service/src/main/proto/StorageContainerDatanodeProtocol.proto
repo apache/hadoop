@@ -42,45 +42,6 @@ import "hdds.proto";
 message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional SCMNodeReport nodeReport = 2;
-  optional ReportState containerReportState = 3;
-}
-
-enum DatanodeContainerState {
-  closed = 0;
-  open = 1;
-}
-
-/**
-NodeState contains messages from datanode to SCM saying that it has
-some information that SCM might be interested in.*/
-message ReportState {
-  enum states {
-    noContainerReports = 0;
-    completeContinerReport = 1;
-    deltaContainerReport = 2;
-  }
-  required states state = 1;
-  required int64 count = 2 [default = 0];
-}
-
-
-/**
-This message is used to persist the information about a container in the
-SCM database, This information allows SCM to startup faster and avoid having
-all container info in memory all the time.
-  */
-message ContainerPersistanceProto {
-  required DatanodeContainerState state = 1;
-  required hadoop.hdds.Pipeline pipeline = 2;
-  required ContainerInfo info = 3;
-}
-
-/**
-This message is used to do a quick look up of which containers are effected
-if a node goes down
-*/
-message NodeContianerMapping {
-  repeated string contianerName = 1;
 }
 
 /**

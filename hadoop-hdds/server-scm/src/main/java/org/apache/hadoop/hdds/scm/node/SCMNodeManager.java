@@ -31,8 +31,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
@@ -48,7 +46,6 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -609,8 +606,6 @@ public class SCMNodeManager
     if (healthyNodes.containsKey(datanodeUuid)) {
       healthyNodes.put(datanodeUuid, processTimestamp);
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -622,8 +617,6 @@ public class SCMNodeManager
       healthyNodeCount.incrementAndGet();
       staleNodeCount.decrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -635,8 +628,6 @@ public class SCMNodeManager
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -668,22 +659,6 @@ public class SCMNodeManager
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
       nodeStats.put(dnId, stat);
       scmStat.add(stat);
-    }
-  }
-
-  private void updateCommandQueue(UUID dnId,
-                                  ReportState.states containerReportState) {
-    if (containerReportState != null) {
-      switch (containerReportState) {
-      case completeContinerReport:
-        commandQueue.addCommand(dnId,
-            SendContainerCommand.newBuilder().build());
-        return;
-      case deltaContainerReport:
-      case noContainerReports:
-      default:
-        // do nothing
-      }
     }
   }
 
@@ -829,14 +804,12 @@ public class SCMNodeManager
    *
    * @param datanodeDetailsProto - DatanodeDetailsProto.
    * @param nodeReport - node report.
-   * @param containerReportState - container report state.
    * @return SCMheartbeat response.
    * @throws IOException
    */
   @Override
   public List<SCMCommand> sendHeartbeat(
-      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
-      ReportState containerReportState) {
+      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport) {
 
     Preconditions.checkNotNull(datanodeDetailsProto, "Heartbeat is missing " +
         "DatanodeDetails.");
@@ -851,7 +824,6 @@ public class SCMNodeManager
           new HeartbeatQueueItem.Builder()
               .setDatanodeDetails(datanodeDetails)
               .setNodeReport(nodeReport)
-              .setContainerReportState(containerReportState)
               .build());
       return commandQueue.getCommand(datanodeDetails.getUuid());
     } else {

@@ -24,8 +24,6 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
@@ -387,13 +385,12 @@ public class MockNodeManager implements NodeManager {
    *
    * @param datanodeDetails - Datanode ID.
    * @param nodeReport - node report.
-   * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
   public List<SCMCommand> sendHeartbeat(
       HddsProtos.DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport, ReportState containerReportState) {
+      SCMNodeReport nodeReport) {
     if ((datanodeDetails != null) && (nodeReport != null) && (nodeReport
         .getStorageReportCount() > 0)) {
       SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());

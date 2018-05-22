@@ -33,7 +33,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager.StartupOption;
@@ -302,11 +301,9 @@ public class TestStorageContainerManager {
     GenericTestUtils.waitFor(() -> {
       NodeManager nodeManager = cluster.getStorageContainerManager()
           .getScmNodeManager();
-      ReportState reportState = ReportState.newBuilder()
-          .setState(ReportState.states.noContainerReports).setCount(0).build();
       List<SCMCommand> commands = nodeManager.sendHeartbeat(
           nodeManager.getNodes(NodeState.HEALTHY).get(0).getProtoBufMessage(),
-          null, reportState);
+          null);
 
       if (commands != null) {
         for (SCMCommand cmd : commands) {

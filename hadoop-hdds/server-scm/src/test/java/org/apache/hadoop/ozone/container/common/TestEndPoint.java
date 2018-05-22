@@ -71,9 +71,6 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hdds.scm.TestUtils.getDatanodeDetails;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState.states
-    .noContainerReports;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.ozone.container.common.ContainerTestUtils
     .createEndpoint;
@@ -88,8 +85,6 @@ public class TestEndPoint {
   private static RPC.Server scmServer;
   private static ScmTestMock scmServerImpl;
   private static File testDir;
-  private static StorageContainerDatanodeProtocolProtos.ReportState
-      defaultReportState;
 
   @AfterClass
   public static void tearDown() throws Exception {
@@ -106,9 +101,6 @@ public class TestEndPoint {
     scmServer = SCMTestUtils.startScmRpcServer(SCMTestUtils.getConf(),
         scmServerImpl, serverAddress, 10);
     testDir = PathUtils.getTestDir(TestEndPoint.class);
-    defaultReportState = StorageContainerDatanodeProtocolProtos.
-        ReportState.newBuilder().setState(noContainerReports).
-        setCount(0).build();
   }
 
   @Test
@@ -305,8 +297,7 @@ public class TestEndPoint {
       String storageId = UUID.randomUUID().toString();
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
           .sendHeartbeat(dataNode.getProtoBufMessage(),
-              TestUtils.createNodeReport(getStorageReports(storageId)),
-              defaultReportState);
+              TestUtils.createNodeReport(getStorageReports(storageId)));
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(0, responseProto.getCommandsCount());
     }

@@ -153,12 +153,10 @@ public class SCMDatanodeProtocolServer implements
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
       HddsProtos.DatanodeDetailsProto datanodeDetails,
-      StorageContainerDatanodeProtocolProtos.SCMNodeReport nodeReport,
-      StorageContainerDatanodeProtocolProtos.ReportState reportState)
+      StorageContainerDatanodeProtocolProtos.SCMNodeReport nodeReport)
       throws IOException {
     List<SCMCommand> commands =
-        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport,
-            reportState);
+        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport);
     List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
       cmdResponses.add(getCommandResponse(cmd, datanodeDetails.getUuid()));
