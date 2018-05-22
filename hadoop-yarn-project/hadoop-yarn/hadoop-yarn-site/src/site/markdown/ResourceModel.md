@@ -49,8 +49,8 @@ The following configuration properties are supported. See below for details.
 |:---- |:---- |
 | `yarn.resource-types` | Comma-separated list of additional resources. May not include `memory`, `memory-mb`, or `vcores` |
 | `yarn.resource-types.<resource>.units` | Default unit for the specified resource type |
-| `yarn.resource-types.<resource>.minimum` | The minimum request for the specified resource type |
-| `yarn.resource-types.<resource>.maximum` | The maximum request for the specified resource type |
+| `yarn.resource-types.<resource>.minimum-allocation` | The minimum request for the specified resource type |
+| `yarn.resource-types.<resource>.maximum-allocation` | The maximum request for the specified resource type |
 
 `node-resources.xml`
 
@@ -127,8 +127,8 @@ set the default unit for the resource type. Valid values are:
 
 The property must be named `yarn.resource-types.<resource>.units`. Each defined
 resource may also have optional minimum and maximum properties. The properties
-must be named `yarn.resource-types.<resource>.minimum` and
-`yarn.resource-types.<resource>.maximum`.
+must be named `yarn.resource-types.<resource>.minimum-allocation` and
+`yarn.resource-types.<resource>.maximum-allocation`.
 
 The `yarn.resource-types` property and any unit, mimimum, or maximum properties
 may be defined in either the usual `yarn-site.xml` file or in a file named
@@ -147,12 +147,12 @@ may be defined in either the usual `yarn-site.xml` file or in a file named
   </property>
 
   <property>
-    <name>yarn.resource-types.resource2.minimum</name>
+    <name>yarn.resource-types.resource2.minimum-allocation</name>
     <value>1</value>
   </property>
 
   <property>
-    <name>yarn.resource-types.resource2.maximum</name>
+    <name>yarn.resource-types.resource2.maximum-allocation</name>
     <value>1024</value>
   </property>
 </configuration>
