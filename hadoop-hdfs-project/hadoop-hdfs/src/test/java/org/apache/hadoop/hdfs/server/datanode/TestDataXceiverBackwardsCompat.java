@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.net.*;
@@ -47,6 +48,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.UUID;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
@@ -171,9 +173,17 @@ public class TestDataXceiverBackwardsCompat {
 
     DatanodeInfo datanodeInfo = mock(DatanodeInfo.class);
     doReturn("localhost").when(datanodeInfo).getHostName();
+    doReturn(ByteString.copyFromUtf8("localhost"))
+        .when(datanodeInfo).getHostNameBytes();
     doReturn("127.0.0.1").when(datanodeInfo).getIpAddr();
+    doReturn(ByteString.copyFromUtf8("127.0.0.1"))
+        .when(datanodeInfo).getIpAddrBytes();
     doReturn(DatanodeInfo.AdminStates.NORMAL).when(datanodeInfo)
         .getAdminState();
+    final String uuid = UUID.randomUUID().toString();
+    doReturn(uuid).when(datanodeInfo).getDatanodeUuid();
+    doReturn(ByteString.copyFromUtf8(uuid))
+        .when(datanodeInfo).getDatanodeUuidBytes();
 
     Exception storedException = null;
     try {
