@@ -60,4 +60,11 @@
     <Field name="cachingStrategy" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocolPB.PBHelperClient" />
+    <Method name="getFixedByteString" />
+    <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
+  </Match>
+
 </FindBugsFilter>
