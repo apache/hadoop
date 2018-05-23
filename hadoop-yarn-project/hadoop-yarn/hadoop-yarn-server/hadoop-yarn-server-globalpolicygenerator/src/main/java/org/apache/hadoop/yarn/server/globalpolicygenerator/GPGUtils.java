@@ -18,21 +18,22 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 
 /**
  * GPGUtils contains utility functions for the GPG.
@@ -53,15 +54,23 @@ public final class GPGUtils {
     T obj = null;
 
     WebResource webResource = client.resource(webAddr);
-    ClientResponse response = webResource.path("ws/v1/cluster").path(path)
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    if (response.getStatus() == HttpServletResponse.SC_OK) {
-      obj = response.getEntity(returnType);
-    } else {
-      throw new YarnRuntimeException("Bad response from remote web service: "
-          + response.getStatus());
+    ClientResponse response = null;
+    try {
+      response = webResource.path("ws/v1/cluster").path(path)
+          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      if (response.getStatus() == SC_OK) {
+        obj = response.getEntity(returnType);
+      } else {
+        throw new YarnRuntimeException(
+            "Bad response from remote web service: " + response.getStatus());
+      }
+      return obj;
+    } finally {
+      if (response != null) {
+        response.close();
+      }
+      client.destroy();
     }
-    return obj;
   }
 
   /**
