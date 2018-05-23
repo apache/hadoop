@@ -307,7 +307,7 @@ public class TestContainerPersistence {
     }
 
     // The container report only returns reports of closed containers.
-    List<ContainerData> reports = containerManager.getContainerReports();
+    List<ContainerData> reports = containerManager.getClosedContainerReports();
     Assert.assertEquals(4, reports.size());
     for(ContainerData report : reports) {
       long actualContainerID = report.getContainerID();

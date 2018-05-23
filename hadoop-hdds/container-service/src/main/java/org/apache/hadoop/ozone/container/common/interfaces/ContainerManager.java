@@ -185,7 +185,7 @@ public interface ContainerManager extends RwLock {
    * @return List of all closed containers.
    * @throws IOException
    */
-  List<ContainerData> getContainerReports() throws IOException;
+  List<ContainerData> getClosedContainerReports() throws IOException;
 
   /**
    * Increase pending deletion blocks count number of specified container.

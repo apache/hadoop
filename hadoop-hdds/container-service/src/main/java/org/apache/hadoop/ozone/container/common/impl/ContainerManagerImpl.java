@@ -26,6 +26,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -100,6 +102,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNCLOSED_CONTAINER_IO;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    Result.INVALID_CONTAINER_STATE;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 
 /**
@@ -707,6 +711,39 @@ public class ContainerManagerImpl implements ContainerManager {
   }
 
   /**
+   * Returns LifeCycle State of the container
+   * @param containerID - Id of the container
+   * @return LifeCycle State of the container
+   * @throws StorageContainerException
+   */
+  private HddsProtos.LifeCycleState getState(long containerID)
+      throws StorageContainerException {
+    LifeCycleState state;
+    final ContainerData data = containerMap.get(containerID);
+    if (data == null) {
+      throw new StorageContainerException(
+          "Container status not found: " + containerID, CONTAINER_NOT_FOUND);
+    }
+    switch (data.getState()) {
+    case OPEN:
+      state = LifeCycleState.OPEN;
+      break;
+    case CLOSING:
+      state = LifeCycleState.CLOSING;
+      break;
+    case CLOSED:
+      state = LifeCycleState.CLOSED;
+      break;
+    default:
+      throw new StorageContainerException(
+          "Invalid Container state found: " + containerID,
+          INVALID_CONTAINER_STATE);
+    }
+
+    return state;
+  }
+
+  /**
    * Supports clean shutdown of container.
    *
    * @throws IOException
@@ -835,14 +872,14 @@ public class ContainerManagerImpl implements ContainerManager {
    * @throws IOException
    */
   @Override
-  public List<ContainerData> getContainerReports() throws IOException {
+  public List<ContainerData> getClosedContainerReports() throws IOException {
     LOG.debug("Starting container report iteration.");
     // No need for locking since containerMap is a ConcurrentSkipListMap
     // And we can never get the exact state since close might happen
     // after we iterate a point.
     return containerMap.entrySet().stream()
         .filter(containerData ->
-            !containerData.getValue().isOpen())
+            containerData.getValue().isClosed())
         .map(containerData -> containerData.getValue())
         .collect(Collectors.toList());
   }
@@ -870,6 +907,7 @@ public class ContainerManagerImpl implements ContainerManager {
         .setType(ContainerReportsRequestProto.reportType.fullReport);
 
     for (ContainerData container: containers) {
+      long containerId = container.getContainerID();
       StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
           StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
       ciBuilder.setContainerID(container.getContainerID())
@@ -879,7 +917,8 @@ public class ContainerManagerImpl implements ContainerManager {
           .setReadCount(container.getReadCount())
           .setWriteCount(container.getWriteCount())
           .setReadBytes(container.getReadBytes())
-          .setWriteBytes(container.getWriteBytes());
+          .setWriteBytes(container.getWriteBytes())
+          .setState(getState(containerId));
 
       crBuilder.addReports(ciBuilder.build());
     }

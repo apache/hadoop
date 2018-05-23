@@ -265,8 +265,8 @@ public class OzoneContainer {
    * @return - List of closed containers.
    * @throws IOException
    */
-  public List<ContainerData> getContainerReports() throws IOException {
-    return this.manager.getContainerReports();
+  public List<ContainerData> getClosedContainerReports() throws IOException {
+    return this.manager.getClosedContainerReports();
   }
 
   @VisibleForTesting

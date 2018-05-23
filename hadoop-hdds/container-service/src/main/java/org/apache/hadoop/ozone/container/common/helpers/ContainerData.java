@@ -340,6 +340,14 @@ public class ContainerData {
   }
 
   /**
+   * checks if the container is closed.
+   * @return - boolean
+   */
+  public synchronized  boolean isClosed() {
+    return ContainerLifeCycleState.CLOSED == state;
+  }
+
+  /**
    * Marks this container as closed.
    */
   public synchronized void closeContainer() {

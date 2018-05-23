@@ -63,13 +63,13 @@ public class ContainerReportHandler implements CommandHandler {
     invocationCount++;
     long startTime = Time.monotonicNow();
     try {
-      ContainerReportsRequestProto contianerReport =
+      ContainerReportsRequestProto containerReport =
           container.getContainerReport();
 
       // TODO : We send this report to all SCMs.Check if it is enough only to
       // send to the leader once we have RAFT enabled SCMs.
       for (EndpointStateMachine endPoint : connectionManager.getValues()) {
-        endPoint.getEndPoint().sendContainerReport(contianerReport);
+        endPoint.getEndPoint().sendContainerReport(containerReport);
       }
     } catch (IOException ex) {
       LOG.error("Unable to process the Container Report command.", ex);
