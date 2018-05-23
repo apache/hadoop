@@ -106,9 +106,6 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     will be used to launch the Docker container.
  *   </li>
  *   <li>
- *     {@code YARN_CONTAINER_RUNTIME_DOCKER_IMAGE_FILE} is currently ignored.
- *   </li>
- *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE} controls
  *     whether the Docker container's default command is overridden.  When set
  *     to {@code true}, the Docker container's command will be
@@ -198,9 +195,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
       "YARN_CONTAINER_RUNTIME_DOCKER_IMAGE";
   @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_IMAGE_FILE =
-      "YARN_CONTAINER_RUNTIME_DOCKER_IMAGE_FILE";
-  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE";
   @InterfaceAudience.Private
@@ -215,9 +209,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER";
-  @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_RUN_ENABLE_USER_REMAPPING =
-      "YARN_CONTAINER_RUNTIME_DOCKER_RUN_ENABLE_USER_REMAPPING";
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
