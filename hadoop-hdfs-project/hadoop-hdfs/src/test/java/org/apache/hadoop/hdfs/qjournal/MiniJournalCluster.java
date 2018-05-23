@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 
 import com.google.common.base.Joiner;
@@ -50,6 +51,10 @@ public class MiniJournalCluster {
     private int numJournalNodes = 3;
     private boolean format = true;
     private final Configuration conf;
+
+    static {
+      DefaultMetricsSystem.setMiniClusterMode(true);
+    }
     
     public Builder(Configuration conf) {
       this.conf = conf;
