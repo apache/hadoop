@@ -25,8 +25,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URI;
 import java.io.PrintWriter;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import java.util.zip.ZipOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
@@ -708,10 +710,8 @@ public class TestFileUtil {
   
   @Test (timeout = 30000)
   public void testUnZip() throws IOException {
-    // make sa simple zip
     setupDirs();
-    
-    // make a simple tar:
+    // make a simple zip
     final File simpleZip = new File(del, FILE);
     OutputStream os = new FileOutputStream(simpleZip); 
     ZipOutputStream tos = new ZipOutputStream(os);
@@ -728,7 +728,7 @@ public class TestFileUtil {
       tos.close();
     }
     
-    // successfully untar it into an existing dir:
+    // successfully unzip it into an existing dir:
     FileUtil.unZip(simpleZip, tmp);
     // check result:
     assertTrue(new File(tmp, "foo").exists());
@@ -743,8 +743,36 @@ public class TestFileUtil {
     } catch (IOException ioe) {
       // okay
     }
-  }  
-  
+  }
+
+  @Test (timeout = 30000)
+  public void testUnZip2() throws IOException {
+    setupDirs();
+    // make a simple zip
+    final File simpleZip = new File(del, FILE);
+    OutputStream os = new FileOutputStream(simpleZip);
+    try (ZipOutputStream tos = new ZipOutputStream(os)) {
+      // Add an entry that contains invalid filename
+      ZipEntry ze = new ZipEntry("../foo");
+      byte[] data = "some-content".getBytes(StandardCharsets.UTF_8);
+      ze.setSize(data.length);
+      tos.putNextEntry(ze);
+      tos.write(data);
+      tos.closeEntry();
+      tos.flush();
+      tos.finish();
+    }
+
+    // Unzip it into an existing dir
+    try {
+      FileUtil.unZip(simpleZip, tmp);
+      Assert.fail("unZip should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "would create file outside of", e);
+    }
+  }
+
   @Test (timeout = 30000)
   /*
    * Test method copy(FileSystem srcFS, Path src, File dst, boolean deleteSource, Configuration conf)
