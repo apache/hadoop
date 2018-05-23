@@ -114,12 +114,14 @@ public class DFSStripedInputStream extends DFSInputStream {
     return decoder.preferDirectBuffer();
   }
 
-  void resetCurStripeBuffer() {
-    if (curStripeBuf == null) {
+  private void resetCurStripeBuffer(boolean shouldAllocateBuf) {
+    if (shouldAllocateBuf && curStripeBuf == null) {
       curStripeBuf = BUFFER_POOL.getBuffer(useDirectBuffer(),
           cellSize * dataBlkNum);
     }
-    curStripeBuf.clear();
+    if (curStripeBuf != null) {
+      curStripeBuf.clear();
+    }
     curStripeRange = new StripeRange(0, 0);
   }
 
@@ -204,7 +206,7 @@ public class DFSStripedInputStream extends DFSInputStream {
    */
   @Override
   protected void closeCurrentBlockReaders() {
-    resetCurStripeBuffer();
+    resetCurStripeBuffer(false);
     if (blockReaders ==  null || blockReaders.length == 0) {
       return;
     }
@@ -294,7 +296,7 @@ public class DFSStripedInputStream extends DFSInputStream {
    */
   private void readOneStripe(CorruptedBlocks corruptedBlocks)
       throws IOException {
-    resetCurStripeBuffer();
+    resetCurStripeBuffer(true);
 
     // compute stripe range based on pos
     final long offsetInBlockGroup = getOffsetInBlockGroup();

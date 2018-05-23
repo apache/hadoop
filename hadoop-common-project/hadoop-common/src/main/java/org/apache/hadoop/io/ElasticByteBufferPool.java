@@ -116,4 +116,16 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
       // poor granularity.
     }
   }
+
+  /**
+   * Get the size of the buffer pool, for the specified buffer type.
+   *
+   * @param direct Whether the size is returned for direct buffers
+   * @return The size
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public int size(boolean direct) {
+    return getBufferTree(direct).size();
+  }
 }

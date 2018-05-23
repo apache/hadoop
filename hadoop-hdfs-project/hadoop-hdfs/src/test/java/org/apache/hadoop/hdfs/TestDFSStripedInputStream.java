@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
@@ -526,6 +527,50 @@ public class TestDFSStripedInputStream {
       } catch (IOException expected) {
         LOG.info("Exception caught", expected);
         GenericTestUtils.assertExceptionContains(msg, expected);
+      }
+    }
+  }
+
+  @Test
+  public void testCloseDoesNotAllocateNewBuffer() throws Exception {
+    final int numBlocks = 2;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+    try (DFSInputStream in = fs.getClient().open(filePath.toString())) {
+      assertTrue(in instanceof DFSStripedInputStream);
+      final DFSStripedInputStream stream = (DFSStripedInputStream) in;
+      final ElasticByteBufferPool ebbp =
+          (ElasticByteBufferPool) stream.getBufferPool();
+      // first clear existing pool
+      LOG.info("Current pool size: direct: " + ebbp.size(true) + ", indirect: "
+          + ebbp.size(false));
+      emptyBufferPoolForCurrentPolicy(ebbp, true);
+      emptyBufferPoolForCurrentPolicy(ebbp, false);
+      final int startSizeDirect = ebbp.size(true);
+      final int startSizeIndirect = ebbp.size(false);
+      // close should not allocate new buffers in the pool.
+      stream.close();
+      assertEquals(startSizeDirect, ebbp.size(true));
+      assertEquals(startSizeIndirect, ebbp.size(false));
+    }
+  }
+
+  /**
+   * Empties the pool for the specified buffer type, for the current ecPolicy.
+   * <p>
+   * Note that {@link #ecPolicy} may change for difference test cases in
+   * {@link TestDFSStripedInputStreamWithRandomECPolicy}.
+   */
+  private void emptyBufferPoolForCurrentPolicy(ElasticByteBufferPool ebbp,
+      boolean direct) {
+    int size;
+    while ((size = ebbp.size(direct)) != 0) {
+      ebbp.getBuffer(direct,
+          ecPolicy.getCellSize() * ecPolicy.getNumDataUnits());
+      if (size == ebbp.size(direct)) {
+        // if getBuffer didn't decrease size, it means the pool for the buffer
+        // corresponding to current ecPolicy is empty
+        break;
       }
     }
   }
