@@ -443,4 +443,24 @@ public class IOUtils {
       throw ioe;
     }
   }
+
+  /**
+   * Reads a DataInput until EOF and returns a byte array.  Make sure not to
+   * pass in an infinite DataInput or this will never return.
+   *
+   * @param in A DataInput
+   * @return a byte array containing the data from the DataInput
+   * @throws IOException on I/O error, other than EOF
+   */
+  public static byte[] readFullyToByteArray(DataInput in) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      while (true) {
+        baos.write(in.readByte());
+      }
+    } catch (EOFException eof) {
+      // finished reading, do nothing
+    }
+    return baos.toByteArray();
+  }
 }
