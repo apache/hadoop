@@ -186,6 +186,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Trunca
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnsetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.*;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
@@ -272,6 +274,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
   private final static FinalizeUpgradeRequestProto
       VOID_FINALIZE_UPGRADE_REQUEST =
       FinalizeUpgradeRequestProto.newBuilder().build();
+
+  private final static UpgradeStatusRequestProto
+      VOID_UPGRADE_STATUS_REQUEST =
+      UpgradeStatusRequestProto.newBuilder().build();
 
   private final static GetDataEncryptionKeyRequestProto
       VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
@@ -825,6 +831,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public void finalizeUpgrade() throws IOException {
     try {
       rpcProxy.finalizeUpgrade(null, VOID_FINALIZE_UPGRADE_REQUEST);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public boolean upgradeStatus() throws IOException {
+    try {
+      final UpgradeStatusResponseProto proto = rpcProxy.upgradeStatus(
+          null, VOID_UPGRADE_STATUS_REQUEST);
+      return proto.getUpgradeFinalized();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

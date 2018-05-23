@@ -157,6 +157,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSto
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsRequestProto;
@@ -894,6 +896,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.finalizeUpgrade();
       return VOID_FINALIZEUPGRADE_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public UpgradeStatusResponseProto upgradeStatus(
+      RpcController controller, UpgradeStatusRequestProto req)
+      throws ServiceException {
+    try {
+      final boolean isUpgradeFinalized = server.upgradeStatus();
+      UpgradeStatusResponseProto.Builder b =
+          UpgradeStatusResponseProto.newBuilder();
+      b.setUpgradeFinalized(isUpgradeFinalized);
+      return b.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

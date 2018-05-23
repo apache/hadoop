@@ -1534,6 +1534,16 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Get status of upgrade - finalized or not.
+   * @return true if upgrade is finalized or if no upgrade is in progress and
+   * false otherwise.
+   * @throws IOException
+   */
+  public boolean upgradeStatus() throws IOException {
+    return dfs.upgradeStatus();
+  }
+
+  /**
    * Rolling upgrade: prepare/finalize/query.
    */
   public RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
