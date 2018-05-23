@@ -150,7 +150,6 @@ public class TestNodeManagerResync {
     testContainerPreservationOnResyncImpl(nm, true);
   }
 
-  @SuppressWarnings("unchecked")
   protected void testContainerPreservationOnResyncImpl(TestNodeManager1 nm,
       boolean isWorkPreservingRestartEnabled)
       throws IOException, YarnException, InterruptedException {
@@ -186,32 +185,35 @@ public class TestNodeManagerResync {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("resource")
   @Test(timeout=10000)
   public void testNMshutdownWhenResyncThrowException() throws IOException,
       InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager3();
     YarnConfiguration conf = createNMConfig();
-    nm.init(conf);
-    nm.start();
-    Assert.assertEquals(1, ((TestNodeManager3) nm).getNMRegistrationCount());
-    nm.getNMDispatcher().getEventHandler()
-        .handle(new NodeManagerEvent(NodeManagerEventType.RESYNC));
+    try {
+      nm.init(conf);
+      nm.start();
+      Assert.assertEquals(1, ((TestNodeManager3) nm).getNMRegistrationCount());
+      nm.getNMDispatcher().getEventHandler()
+          .handle(new NodeManagerEvent(NodeManagerEventType.RESYNC));
 
-    synchronized (isNMShutdownCalled) {
-      while (isNMShutdownCalled.get() == false) {
-        try {
-          isNMShutdownCalled.wait();
-        } catch (InterruptedException e) {
+      synchronized (isNMShutdownCalled) {
+        while (!isNMShutdownCalled.get()) {
+          try {
+            isNMShutdownCalled.wait();
+          } catch (InterruptedException e) {
+          }
         }
       }
-    }
 
-    Assert.assertTrue("NM shutdown not called.",isNMShutdownCalled.get());
-    nm.stop();
+      Assert.assertTrue("NM shutdown not called.", isNMShutdownCalled.get());
+    } finally {
+      nm.stop();
+    }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("resource")
   @Test(timeout=60000)
   public void testContainerResourceIncreaseIsSynchronizedWithRMResync()
       throws IOException, InterruptedException, YarnException {
@@ -219,28 +221,32 @@ public class TestNodeManagerResync {
     YarnConfiguration conf = createNMConfig();
     conf.setBoolean(
         YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
-    nm.init(conf);
-    nm.start();
-    // Start a container and make sure it is in RUNNING state
-    ((TestNodeManager4)nm).startContainer();
-    // Simulate a container resource increase in a separate thread
-    ((TestNodeManager4)nm).updateContainerResource();
-    // Simulate RM restart by sending a RESYNC event
-    LOG.info("Sending out RESYNC event");
-    nm.getNMDispatcher().getEventHandler().handle(
-        new NodeManagerEvent(NodeManagerEventType.RESYNC));
     try {
-      syncBarrier.await();
-    } catch (BrokenBarrierException e) {
-      e.printStackTrace();
+      nm.init(conf);
+      nm.start();
+      // Start a container and make sure it is in RUNNING state
+      ((TestNodeManager4) nm).startContainer();
+      // Simulate a container resource increase in a separate thread
+      ((TestNodeManager4) nm).updateContainerResource();
+      // Simulate RM restart by sending a RESYNC event
+      LOG.info("Sending out RESYNC event");
+      nm.getNMDispatcher().getEventHandler()
+          .handle(new NodeManagerEvent(NodeManagerEventType.RESYNC));
+      try {
+        syncBarrier.await();
+      } catch (BrokenBarrierException e) {
+        e.printStackTrace();
+      }
+      Assert.assertFalse(assertionFailedInThread.get());
+    } finally {
+      nm.stop();
     }
-    Assert.assertFalse(assertionFailedInThread.get());
-    nm.stop();
   }
 
   // This is to test when NM gets the resync response from last heart beat, it
   // should be able to send the already-sent-via-last-heart-beat container
   // statuses again when it re-register with RM.
+  @SuppressWarnings("resource")
   @Test
   public void testNMSentContainerStatusOnResync() throws Exception {
     final ContainerStatus testCompleteContainer =
@@ -323,15 +329,18 @@ public class TestNodeManagerResync {
       }
     };
     YarnConfiguration conf = createNMConfig();
-    nm.init(conf);
-    nm.start();
-
     try {
-      syncBarrier.await();
-    } catch (BrokenBarrierException e) {
+      nm.init(conf);
+      nm.start();
+
+      try {
+        syncBarrier.await();
+      } catch (BrokenBarrierException e) {
+      }
+      Assert.assertFalse(assertionFailedInThread.get());
+    } finally {
+      nm.stop();
     }
-    Assert.assertFalse(assertionFailedInThread.get());
-    nm.stop();
   }
 
   // This can be used as a common base class for testing NM resync behavior.
