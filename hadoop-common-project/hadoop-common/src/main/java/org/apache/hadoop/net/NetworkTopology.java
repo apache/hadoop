@@ -387,7 +387,7 @@ public class NetworkTopology {
   private boolean clusterEverBeenMultiRack = false;
 
   /** the lock used to manage access */
-  protected ReadWriteLock netlock = new ReentrantReadWriteLock();
+  protected ReadWriteLock netlock = new ReentrantReadWriteLock(true);
 
   public NetworkTopology() {
     clusterMap = new InnerNode(InnerNode.ROOT);
