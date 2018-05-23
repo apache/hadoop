@@ -94,7 +94,8 @@ public class TestQuorumJournalManager {
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     
     cluster = new MiniJournalCluster.Builder(conf)
-      .build();
+        .baseDir(GenericTestUtils.getRandomizedTestDir().getAbsolutePath())
+        .build();
     cluster.waitActive();
     
     qjm = createSpyingQJM();
