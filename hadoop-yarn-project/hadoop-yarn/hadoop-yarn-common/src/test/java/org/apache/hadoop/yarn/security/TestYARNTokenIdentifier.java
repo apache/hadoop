@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
@@ -48,6 +49,15 @@ public class TestYARNTokenIdentifier {
 
   @Test
   public void testNMTokenIdentifier() throws IOException {
+    testNMTokenIdentifier(false);
+  }
+
+  @Test
+  public void testNMTokenIdentifierOldFormat() throws IOException {
+    testNMTokenIdentifier(true);
+  }
+
+  public void testNMTokenIdentifier(boolean oldFormat) throws IOException {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(1, 1), 1);
     NodeId nodeId = NodeId.newInstance("host0", 0);
@@ -58,8 +68,13 @@ public class TestYARNTokenIdentifier {
         appAttemptId, nodeId, applicationSubmitter, masterKeyId);
     
     NMTokenIdentifier anotherToken = new NMTokenIdentifier();
-    
-    byte[] tokenContent = token.getBytes();
+
+    byte[] tokenContent;
+    if (oldFormat) {
+      tokenContent = writeInOldFormat(token);
+    } else {
+      tokenContent = token.getBytes();
+    }
     DataInputBuffer dib = new DataInputBuffer();
     dib.reset(tokenContent, tokenContent.length);
     anotherToken.readFields(dib);
@@ -88,6 +103,15 @@ public class TestYARNTokenIdentifier {
 
   @Test
   public void testAMRMTokenIdentifier() throws IOException {
+    testAMRMTokenIdentifier(false);
+  }
+
+  @Test
+  public void testAMRMTokenIdentifierOldFormat() throws IOException {
+    testAMRMTokenIdentifier(true);
+  }
+
+  public void testAMRMTokenIdentifier(boolean oldFormat) throws IOException {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(1, 1), 1);
     int masterKeyId = 1;
@@ -95,7 +119,13 @@ public class TestYARNTokenIdentifier {
     AMRMTokenIdentifier token = new AMRMTokenIdentifier(appAttemptId, masterKeyId);
     
     AMRMTokenIdentifier anotherToken = new AMRMTokenIdentifier();
-    byte[] tokenContent = token.getBytes();
+
+    byte[] tokenContent;
+    if (oldFormat) {
+      tokenContent = writeInOldFormat(token);
+    } else {
+      tokenContent = token.getBytes();
+    }
     DataInputBuffer dib = new DataInputBuffer();
     dib.reset(tokenContent, tokenContent.length);
     anotherToken.readFields(dib);
@@ -138,9 +168,20 @@ public class TestYARNTokenIdentifier {
     Assert.assertEquals("clientName from proto is not the same with original token",
         anotherToken.getClientName(), clientName);
   }
-  
+
   @Test
   public void testContainerTokenIdentifier() throws IOException {
+    testContainerTokenIdentifier(false, false);
+  }
+
+  @Test
+  public void testContainerTokenIdentifierOldFormat() throws IOException {
+    testContainerTokenIdentifier(true, true);
+    testContainerTokenIdentifier(true, false);
+  }
+
+  public void testContainerTokenIdentifier(boolean oldFormat,
+      boolean withLogAggregation) throws IOException {
     ContainerId containerID = ContainerId.newContainerId(
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(
             1, 1), 1), 1);
@@ -158,8 +199,13 @@ public class TestYARNTokenIdentifier {
         masterKeyId, rmIdentifier, priority, creationTime);
     
     ContainerTokenIdentifier anotherToken = new ContainerTokenIdentifier();
-    
-    byte[] tokenContent = token.getBytes();
+
+    byte[] tokenContent;
+    if (oldFormat) {
+      tokenContent = writeInOldFormat(token, withLogAggregation);
+    } else {
+      tokenContent = token.getBytes();
+    }
     DataInputBuffer dib = new DataInputBuffer();
     dib.reset(tokenContent, tokenContent.length);
     anotherToken.readFields(dib);
@@ -426,4 +472,67 @@ public class TestYARNTokenIdentifier {
         anotherToken.getExecutionType());
   }
 
+  @SuppressWarnings("deprecation")
+  private byte[] writeInOldFormat(ContainerTokenIdentifier token,
+      boolean withLogAggregation) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(baos);
+    ApplicationAttemptId applicationAttemptId = token.getContainerID()
+        .getApplicationAttemptId();
+    ApplicationId applicationId = applicationAttemptId.getApplicationId();
+    out.writeLong(applicationId.getClusterTimestamp());
+    out.writeInt(applicationId.getId());
+    out.writeInt(applicationAttemptId.getAttemptId());
+    out.writeLong(token.getContainerID().getContainerId());
+    out.writeUTF(token.getNmHostAddress());
+    out.writeUTF(token.getApplicationSubmitter());
+    out.writeInt(token.getResource().getMemory());
+    out.writeInt(token.getResource().getVirtualCores());
+    out.writeLong(token.getExpiryTimeStamp());
+    out.writeInt(token.getMasterKeyId());
+    out.writeLong(token.getRMIdentifier());
+    out.writeInt(token.getPriority().getPriority());
+    out.writeLong(token.getCreationTime());
+    if (withLogAggregation) {
+      if (token.getLogAggregationContext() == null) {
+        out.writeInt(-1);
+      } else {
+        byte[] logAggregationContext = ((LogAggregationContextPBImpl)
+            token.getLogAggregationContext()).getProto().toByteArray();
+        out.writeInt(logAggregationContext.length);
+        out.write(logAggregationContext);
+      }
+    }
+    out.close();
+    return baos.toByteArray();
+  }
+
+  private byte[] writeInOldFormat(NMTokenIdentifier token) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(baos);
+    ApplicationId applicationId = token.getApplicationAttemptId()
+        .getApplicationId();
+    out.writeLong(applicationId.getClusterTimestamp());
+    out.writeInt(applicationId.getId());
+    out.writeInt(token.getApplicationAttemptId().getAttemptId());
+    out.writeUTF(token.getNodeId().toString());
+    out.writeUTF(token.getApplicationSubmitter());
+    out.writeInt(token.getKeyId());
+    out.close();
+    return baos.toByteArray();
+  }
+
+  private byte[] writeInOldFormat(AMRMTokenIdentifier token)
+      throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(baos);
+    ApplicationId applicationId = token.getApplicationAttemptId()
+        .getApplicationId();
+    out.writeLong(applicationId.getClusterTimestamp());
+    out.writeInt(applicationId.getId());
+    out.writeInt(token.getApplicationAttemptId().getAttemptId());
+    out.writeInt(token.getKeyId());
+    out.close();
+    return baos.toByteArray();
+  }
 }
