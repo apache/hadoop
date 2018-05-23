@@ -105,7 +105,7 @@ public class NetworkTopology {
   private boolean clusterEverBeenMultiRack = false;
 
   /** the lock used to manage access */
-  protected ReadWriteLock netlock = new ReentrantReadWriteLock();
+  protected ReadWriteLock netlock = new ReentrantReadWriteLock(true);
 
   // keeping the constructor because other components like MR still uses this.
   public NetworkTopology() {
