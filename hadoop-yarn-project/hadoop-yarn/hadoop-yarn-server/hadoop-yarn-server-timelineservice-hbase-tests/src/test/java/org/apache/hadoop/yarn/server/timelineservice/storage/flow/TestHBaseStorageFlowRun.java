@@ -1075,6 +1075,8 @@ public class TestHBaseStorageFlowRun {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    util.shutdownMiniCluster();
+    if (util != null) {
+      util.shutdownMiniCluster();
+    }
   }
 }

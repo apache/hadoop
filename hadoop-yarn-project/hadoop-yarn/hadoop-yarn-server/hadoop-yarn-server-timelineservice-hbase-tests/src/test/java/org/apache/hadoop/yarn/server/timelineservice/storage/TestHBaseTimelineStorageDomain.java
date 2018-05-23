@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnRWHelp
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -122,5 +123,12 @@ public class TestHBaseTimelineStorageDomain {
     assertEquals("owner1", owners);
     assertEquals("user1,user2 group1,group2", readers);
     assertEquals("writer1,writer2", writers);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    if (util != null) {
+      util.shutdownMiniCluster();
+    }
   }
 }
