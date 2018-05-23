@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   }
 
   char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
-  char *conf_file = resolve_config_path(orig_conf_file, argv[0]);
+  char *conf_file = resolve_config_path(orig_conf_file, executable_file);
   char *local_dirs, *log_dirs;
   char *resources, *resources_key, *resources_value;
 
