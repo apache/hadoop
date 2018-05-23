@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockReader;
@@ -666,7 +667,8 @@ public class TestFsDatasetImpl {
           TimeUnit.MILLISECONDS);
       config.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
 
-      cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(config,
+          GenericTestUtils.getRandomizedTestDir()).numDataNodes(1).build();
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
@@ -688,7 +690,7 @@ public class TestFsDatasetImpl {
         // Remove write and execute access so that checkDiskErrorThread detects
         // this volume is bad.
         finalizedDir.setExecutable(false);
-        finalizedDir.setWritable(false);
+        assertTrue(FileUtil.setWritable(finalizedDir, false));
       }
       Assert.assertTrue("Reference count for the volume should be greater "
           + "than 0", volume.getReferenceCount() > 0);
@@ -709,7 +711,7 @@ public class TestFsDatasetImpl {
       } catch (IOException ioe) {
         GenericTestUtils.assertExceptionContains(info.getXferAddr(), ioe);
       }
-      finalizedDir.setWritable(true);
+      assertTrue(FileUtil.setWritable(finalizedDir, true));
       finalizedDir.setExecutable(true);
     } finally {
     cluster.shutdown();
