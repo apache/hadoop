@@ -137,7 +137,7 @@ public class TestJournaledEditsCache {
     storeEdits(thirdCapacity * 4 + 1, thirdCapacity * 5);
 
     try {
-      cache.retrieveEdits(1, 10, new ArrayList<>());
+      cache.retrieveEdits(1, 10, new ArrayList<ByteBuffer>());
       fail();
     } catch (IOException ioe) {
       // expected
@@ -153,7 +153,7 @@ public class TestJournaledEditsCache {
     logs.stopCapturing();
     assertTrue(logs.getOutput().contains("batch of edits was too large"));
     try {
-      cache.retrieveEdits(1, 1, new ArrayList<>());
+      cache.retrieveEdits(1, 1, new ArrayList<ByteBuffer>());
       fail();
     } catch (IOException ioe) {
       // expected
@@ -188,7 +188,7 @@ public class TestJournaledEditsCache {
     // Ensure the cache will only return edits from a single
     // layout version at a time
     try {
-      cache.retrieveEdits(1, 50, new ArrayList<>());
+      cache.retrieveEdits(1, 50, new ArrayList<ByteBuffer>());
       fail("Expected a cache miss");
     } catch (JournaledEditsCache.CacheMissException cme) {
       // expected
@@ -202,7 +202,7 @@ public class TestJournaledEditsCache {
     storeEdits(10, 15);
 
     try {
-      cache.retrieveEdits(1, 20, new ArrayList<>());
+      cache.retrieveEdits(1, 20, new ArrayList<ByteBuffer>());
       fail();
     } catch (JournaledEditsCache.CacheMissException cme) {
       assertEquals(9, cme.getCacheMissAmount());
@@ -212,13 +212,13 @@ public class TestJournaledEditsCache {
 
   @Test(expected = JournaledEditsCache.CacheMissException.class)
   public void testReadUninitializedCache() throws Exception {
-    cache.retrieveEdits(1, 10, new ArrayList<>());
+    cache.retrieveEdits(1, 10, new ArrayList<ByteBuffer>());
   }
 
   @Test(expected = JournaledEditsCache.CacheMissException.class)
   public void testCacheMalformedInput() throws Exception {
     storeEdits(1, 1);
-    cache.retrieveEdits(-1, 10, new ArrayList<>());
+    cache.retrieveEdits(-1, 10, new ArrayList<ByteBuffer>());
   }
 
   private void storeEdits(int startTxn, int endTxn) throws Exception {
@@ -236,8 +236,11 @@ public class TestJournaledEditsCache {
     byte[] expectedBytes = Bytes.concat(
         getHeaderForLayoutVersion(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION),
         createTxnData(startTxn, expectedTxnCount));
-    byte[] actualBytes =
-        new byte[buffers.stream().mapToInt(ByteBuffer::remaining).sum()];
+    int length = 0;
+    for (ByteBuffer buffer : buffers) {
+      length += buffer.remaining();
+    }
+    byte[] actualBytes = new byte[length];
     int pos = 0;
     for (ByteBuffer buf : buffers) {
       System.arraycopy(buf.array(), buf.position(), actualBytes, pos,

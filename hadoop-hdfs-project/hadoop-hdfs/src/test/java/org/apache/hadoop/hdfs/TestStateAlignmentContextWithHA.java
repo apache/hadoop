@@ -52,6 +52,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 
 /**
  * Class is used to test server sending state alignment information to clients
@@ -254,12 +257,15 @@ public class TestStateAlignmentContextWithHA {
       // Collect RpcRequestHeaders for verification later.
       final List<RpcHeaderProtos.RpcRequestHeaderProto.Builder> headers =
           new ArrayList<>();
-      Mockito.doAnswer(a -> {
-        Object[] arguments = a.getArguments();
-        RpcHeaderProtos.RpcRequestHeaderProto.Builder header =
-            (RpcHeaderProtos.RpcRequestHeaderProto.Builder) arguments[0];
-        headers.add(header);
-        return a.callRealMethod();
+      Mockito.doAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock a) throws Throwable {
+          Object[] arguments = a.getArguments();
+          RpcHeaderProtos.RpcRequestHeaderProto.Builder header =
+              (RpcHeaderProtos.RpcRequestHeaderProto.Builder) arguments[0];
+          headers.add(header);
+          return a.callRealMethod();
+        }
       }).when(spiedAlignContext).updateRequestState(Mockito.any());
 
       DFSTestUtil.writeFile(clearDfs, new Path("/testFile4"), "shv");
@@ -294,14 +300,17 @@ public class TestStateAlignmentContextWithHA {
              (DistributedFileSystem) FileSystem.get(CONF)) {
 
       // Make every client call have a stateId > server's stateId.
-      Mockito.doAnswer(a -> {
-        Object[] arguments = a.getArguments();
-        RpcHeaderProtos.RpcRequestHeaderProto.Builder header =
-            (RpcHeaderProtos.RpcRequestHeaderProto.Builder) arguments[0];
-        try {
-          return a.callRealMethod();
-        } finally {
-          header.setStateId(Long.MAX_VALUE);
+      Mockito.doAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock a) throws Throwable {
+          Object[] arguments = a.getArguments();
+          RpcHeaderProtos.RpcRequestHeaderProto.Builder header =
+              (RpcHeaderProtos.RpcRequestHeaderProto.Builder) arguments[0];
+          try {
+            return a.callRealMethod();
+          } finally {
+            header.setStateId(Long.MAX_VALUE);
+          }
         }
       }).when(spiedAlignContext).updateRequestState(Mockito.any());
 
