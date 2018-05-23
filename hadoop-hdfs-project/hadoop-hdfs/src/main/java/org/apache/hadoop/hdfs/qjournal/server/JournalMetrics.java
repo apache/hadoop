@@ -25,6 +25,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
+import org.apache.hadoop.metrics2.lib.MutableStat;
+
 
 /**
  * The server-side metrics for a journal from the JournalNode's
@@ -42,7 +44,23 @@ class JournalMetrics {
   
   @Metric("Number of bytes written since startup")
   MutableCounterLong bytesWritten;
-  
+
+  @Metric("Number of txns served via RPC")
+  MutableCounterLong txnsServedViaRpc;
+
+  @Metric("Number of bytes served via RPC")
+  MutableCounterLong bytesServedViaRpc;
+
+  @Metric
+  MutableStat rpcRequestCacheMissAmount = new MutableStat(
+      "RpcRequestCacheMissAmount", "Number of RPC requests unable to be " +
+      "served due to lack of availability in cache, and how many " +
+      "transactions away the request was from being in the cache.",
+      "Misses", "Txns");
+
+  @Metric("Number of RPC requests with zero edits returned")
+  MutableCounterLong rpcEmptyResponses;
+
   @Metric("Number of batches written where this node was lagging")
   MutableCounterLong batchesWrittenWhileLagging;
 
