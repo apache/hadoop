@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +67,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private long monitoringInterval;
   private MonitoringThread monitoringThread;
+  private CGroupElasticMemoryController oomListenerThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
   private long containerMetricsUnregisterDelayMs;
@@ -85,6 +89,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private boolean pmemCheckEnabled;
   private boolean vmemCheckEnabled;
+  private boolean elasticMemoryEnforcement;
+  private boolean strictMemoryEnforcement;
   private boolean containersMonitorEnabled;
 
   private long maxVCoresAllottedForContainers;
@@ -173,8 +179,37 @@ public class ContainersMonitorImpl extends AbstractService implements
     vmemCheckEnabled = this.conf.getBoolean(
         YarnConfiguration.NM_VMEM_CHECK_ENABLED,
         YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
+    elasticMemoryEnforcement = this.conf.getBoolean(
+        YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_ENABLED,
+        YarnConfiguration.DEFAULT_NM_ELASTIC_MEMORY_CONTROL_ENABLED);
+    strictMemoryEnforcement = conf.getBoolean(
+        YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED,
+        YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENFORCED);
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
+    LOG.info("Elastic memory control enabled: " + elasticMemoryEnforcement);
+    LOG.info("Strict memory control enabled: " + strictMemoryEnforcement);
+
+    if (elasticMemoryEnforcement) {
+      if (!CGroupElasticMemoryController.isAvailable()) {
+        // Test for availability outside the constructor
+        // to be able to write non-Linux unit tests for
+        // CGroupElasticMemoryController
+        throw new YarnException(
+            "CGroup Elastic Memory controller enabled but " +
+            "it is not available. Exiting.");
+      } else {
+        this.oomListenerThread = new CGroupElasticMemoryController(
+            conf,
+            context,
+            ResourceHandlerModule.getCGroupsHandler(),
+            pmemCheckEnabled,
+            vmemCheckEnabled,
+            pmemCheckEnabled ?
+                maxPmemAllottedForContainers : maxVmemAllottedForContainers
+        );
+      }
+    }
 
     containersMonitorEnabled =
         isContainerMonitorEnabled() && monitoringInterval > 0;
@@ -246,6 +281,9 @@ public class ContainersMonitorImpl extends AbstractService implements
     if (containersMonitorEnabled) {
       this.monitoringThread.start();
     }
+    if (oomListenerThread != null) {
+      oomListenerThread.start();
+    }
     super.serviceStart();
   }
 
@@ -258,6 +296,14 @@ public class ContainersMonitorImpl extends AbstractService implements
         this.monitoringThread.join();
       } catch (InterruptedException e) {
         LOG.info("ContainersMonitorImpl monitoring thread interrupted");
+      }
+      if (this.oomListenerThread != null) {
+        this.oomListenerThread.stopListening();
+        try {
+          this.oomListenerThread.join();
+        } finally {
+          this.oomListenerThread = null;
+        }
       }
     }
     super.serviceStop();
@@ -651,6 +697,10 @@ public class ContainersMonitorImpl extends AbstractService implements
                             ProcessTreeInfo ptInfo,
                             long currentVmemUsage,
                             long currentPmemUsage) {
+      if (elasticMemoryEnforcement || strictMemoryEnforcement) {
+        // We enforce the overall memory usage instead of individual containers
+        return;
+      }
       boolean isMemoryOverLimit = false;
       long vmemLimit = ptInfo.getVmemLimit();
       long pmemLimit = ptInfo.getPmemLimit();

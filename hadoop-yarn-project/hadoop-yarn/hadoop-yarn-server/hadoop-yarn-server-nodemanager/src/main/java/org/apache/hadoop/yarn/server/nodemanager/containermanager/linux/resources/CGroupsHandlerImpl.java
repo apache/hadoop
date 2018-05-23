@@ -594,7 +594,11 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   @Override
   public String getCGroupParam(CGroupController controller, String cGroupId,
       String param) throws ResourceHandlerException {
-    String cGroupParamPath = getPathForCGroupParam(controller, cGroupId, param);
+    String cGroupParamPath =
+        param.equals(CGROUP_FILE_TASKS) ?
+            getPathForCGroup(controller, cGroupId)
+                + Path.SEPARATOR + param :
+        getPathForCGroupParam(controller, cGroupId, param);
 
     try {
       byte[] contents = Files.readAllBytes(Paths.get(cGroupParamPath));

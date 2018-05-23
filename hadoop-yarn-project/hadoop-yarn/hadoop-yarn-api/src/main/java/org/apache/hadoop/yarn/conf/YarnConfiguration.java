@@ -1440,6 +1440,25 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "vmem-pmem-ratio";
   public static final float DEFAULT_NM_VMEM_PMEM_RATIO = 2.1f;
 
+  /** Specifies whether to do memory check on overall usage. */
+  public static final String NM_ELASTIC_MEMORY_CONTROL_ENABLED = NM_PREFIX
+      + "elastic-memory-control.enabled";
+  public static final boolean DEFAULT_NM_ELASTIC_MEMORY_CONTROL_ENABLED = false;
+
+  /** Specifies the OOM handler code. */
+  public static final String NM_ELASTIC_MEMORY_CONTROL_OOM_HANDLER = NM_PREFIX
+      + "elastic-memory-control.oom-handler";
+
+  /** The path to the OOM listener.*/
+  public static final String NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH =
+      NM_PREFIX + "elastic-memory-control.oom-listener.path";
+
+  /** Maximum time in seconds to resolve an OOM situation. */
+  public static final String NM_ELASTIC_MEMORY_CONTROL_OOM_TIMEOUT_SEC =
+      NM_PREFIX + "elastic-memory-control.timeout-sec";
+  public static final Integer
+      DEFAULT_NM_ELASTIC_MEMORY_CONTROL_OOM_TIMEOUT_SEC = 5;
+
   /** Number of Virtual CPU Cores which can be allocated for containers.*/
   public static final String NM_VCORES = NM_PREFIX + "resource.cpu-vcores";
   public static final int DEFAULT_NM_VCORES = 8;
@@ -2006,13 +2025,6 @@ public class YarnConfiguration extends Configuration {
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
-  
-  /** 
-   * The UNIX group that the linux-container-executor should run as.
-   * This is intended to be set as part of container-executor.cfg. 
-   */
-  public static final String NM_LINUX_CONTAINER_GROUP =
-    NM_PREFIX + "linux-container-executor.group";
 
   /**
    * True if linux-container-executor should limit itself to one user

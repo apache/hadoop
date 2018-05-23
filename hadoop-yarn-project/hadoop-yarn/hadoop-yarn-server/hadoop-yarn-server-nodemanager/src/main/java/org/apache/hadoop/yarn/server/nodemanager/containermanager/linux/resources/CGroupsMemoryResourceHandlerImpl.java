@@ -65,21 +65,6 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
   @Override
   public List<PrivilegedOperation> bootstrap(Configuration conf)
       throws ResourceHandlerException {
-    boolean pmemEnabled =
-        conf.getBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED,
-            YarnConfiguration.DEFAULT_NM_PMEM_CHECK_ENABLED);
-    boolean vmemEnabled =
-        conf.getBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED,
-            YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
-    if (pmemEnabled || vmemEnabled) {
-      String msg = "The default YARN physical and/or virtual memory health"
-          + " checkers as well as the CGroups memory controller are enabled. "
-          + "If you wish to use the Cgroups memory controller, please turn off"
-          + " the default physical/virtual memory checkers by setting "
-          + YarnConfiguration.NM_PMEM_CHECK_ENABLED + " and "
-          + YarnConfiguration.NM_VMEM_CHECK_ENABLED + " to false.";
-      throw new ResourceHandlerException(msg);
-    }
     this.cGroupsHandler.initializeCGroupController(MEMORY);
     enforce = conf.getBoolean(
         YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED,
