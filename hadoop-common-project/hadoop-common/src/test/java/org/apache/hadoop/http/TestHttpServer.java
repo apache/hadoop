@@ -701,4 +701,65 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(backlogSize, listener.getAcceptQueueSize());
   }
+
+  @Test
+  public void testHttpResponseDefaultHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals(HttpServer2.X_XSS_PROTECTION.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0]));
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0]));
+    } finally {
+      httpServer.stop();
+    }
+  }
+
+  @Test
+  public void testHttpResponseOverrideDefaultHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HttpServer2.HTTP_HEADER_PREFIX+
+            HttpServer2.X_XSS_PROTECTION.split(":")[0], "customXssValue");
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals("customXssValue",
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0])
+      );
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0])
+      );
+    } finally {
+      httpServer.stop();
+    }
+  }
+
+  @Test
+  public void testHttpResponseCustomHeaders() throws Exception {
+    Configuration conf = new Configuration();
+    String key = "customKey";
+    String value = "customValue";
+    conf.set(HttpServer2.HTTP_HEADER_PREFIX+key, value);
+    HttpServer2  httpServer = createTestServer(conf);
+    try {
+      HttpURLConnection conn = getHttpURLConnection(httpServer);
+      assertEquals(HttpServer2.X_XSS_PROTECTION.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_XSS_PROTECTION.split(":")[0]));
+      assertEquals(HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[1],
+              conn.getHeaderField(
+              HttpServer2.X_CONTENT_TYPE_OPTIONS.split(":")[0]));
+      assertEquals(value, conn.getHeaderField(
+              key));
+    } finally {
+      httpServer.stop();
+    }
+  }
+
 }
