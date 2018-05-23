@@ -31,7 +31,7 @@ function getYarnHttpProtocolScheme(rmhost, application) {
   $.ajax({
     type: 'GET',
     dataType: 'json',
-    async: true,
+    async: false,
     context: this,
     url: httpUrl,
     success: function(data) {
@@ -44,7 +44,7 @@ function getYarnHttpProtocolScheme(rmhost, application) {
       application.advanceReadiness();
     }
   });
-  return protocolScheme == "HTTPS_ONLY";
+  return protocolScheme;
 }
 
 function getTimeLineURL(rmhost, isHttpsSchemeEnabled) {
@@ -97,7 +97,9 @@ function updateConfigs(application) {
 
   Ember.Logger.log("RM Address: " + rmhost);
 
-  var isHttpsSchemeEnabled = getYarnHttpProtocolScheme(rmhost, application);
+  var protocolSchemeFromRM = getYarnHttpProtocolScheme(rmhost, application);
+  Ember.Logger.log("Is protocol scheme https? " + (protocolSchemeFromRM == "HTTPS_ONLY"));
+  var isHttpsSchemeEnabled = (protocolSchemeFromRM == "HTTPS_ONLY");
   if(!ENV.hosts.timelineWebAddress) {
     var timelinehost = "";
     $.ajax({
@@ -137,7 +139,7 @@ function updateConfigs(application) {
     $.ajax({
       type: 'GET',
       dataType: 'json',
-      async: true,
+      async: false,
       context: this,
       url: getTimeLineV1URL(rmhost, isHttpsSchemeEnabled),
       success: function(data) {
@@ -171,7 +173,7 @@ function updateConfigs(application) {
     $.ajax({
       type: 'GET',
       dataType: 'json',
-      async: true,
+      async: false,
       context: this,
       url: getSecurityURL(rmhost),
       success: function(data) {
