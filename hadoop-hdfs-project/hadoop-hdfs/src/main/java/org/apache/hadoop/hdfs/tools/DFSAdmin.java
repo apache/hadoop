@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
@@ -443,6 +444,7 @@ public class DFSAdmin extends FsShell {
     "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
     "\t[-finalizeUpgrade]\n" +
     "\t[" + RollingUpgradeCommand.USAGE +"]\n" +
+    "\t[-upgrade <query | finalize>]\n" +
     "\t[-refreshServiceAcl]\n" +
     "\t[-refreshUserToGroupsMappings]\n" +
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
@@ -1147,6 +1149,11 @@ public class DFSAdmin extends FsShell {
       "\t\tfollowed by Namenode doing the same.\n" + 
       "\t\tThis completes the upgrade process.\n";
 
+    String upgrade = "-upgrade <query | finalize>:\n"
+        + "     query: query the current upgrade status.\n"
+        + "  finalize: finalize the upgrade of HDFS (equivalent to " +
+        "-finalizeUpgrade.";
+
     String metaSave = "-metasave <filename>: \tSave Namenode's primary data structures\n" +
       "\t\tto <filename> in the directory specified by hadoop.log.dir property.\n" +
       "\t\t<filename> is overwritten if it exists.\n" +
@@ -1278,6 +1285,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(finalizeUpgrade);
     } else if (RollingUpgradeCommand.matches("-"+cmd)) {
       System.out.println(RollingUpgradeCommand.DESCRIPTION);
+    } else if ("upgrade".equals(cmd)) {
+      System.out.println(upgrade);
     } else if ("metasave".equals(cmd)) {
       System.out.println(metaSave);
     } else if (SetQuotaCommand.matches("-"+cmd)) {
@@ -1338,6 +1347,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
       System.out.println(RollingUpgradeCommand.DESCRIPTION);
+      System.out.println(upgrade);
       System.out.println(metaSave);
       System.out.println(SetQuotaCommand.DESCRIPTION);
       System.out.println(ClearQuotaCommand.DESCRIPTION);
@@ -1414,6 +1424,83 @@ public class DFSAdmin extends FsShell {
     }
     
     return 0;
+  }
+
+  /**
+   * Command to get the upgrade status of each namenode in the nameservice.
+   * Usage: hdfs dfsadmin -upgrade query
+   * @exception IOException
+   */
+  public int getUpgradeStatus() throws IOException {
+    DistributedFileSystem dfs = getDFS();
+
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+
+    boolean isHaAndLogicalUri = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+    if (isHaAndLogicalUri) {
+      // In the case of HA and logical URI, run upgrade query for all
+      // NNs in this nameservice.
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+              nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        try {
+          boolean upgradeFinalized = proxy.getProxy().upgradeStatus();
+          if (upgradeFinalized) {
+            System.out.println("Upgrade finalized for " + proxy.getAddress());
+          } else {
+            System.out.println("Upgrade not finalized for " +
+                proxy.getAddress());
+          }
+        } catch (IOException ioe){
+          System.err.println("Getting upgrade status failed for " +
+              proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if (!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
+      }
+    } else {
+      if (dfs.upgradeStatus()) {
+        System.out.println("Upgrade finalized");
+      } else {
+        System.out.println("Upgrade not finalized");
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Upgrade command to get the status of upgrade or ask NameNode to finalize
+   * the previously performed upgrade.
+   * Usage: hdfs dfsadmin -upgrade [query | finalize]
+   * @exception IOException
+   */
+  public int upgrade(String arg) throws IOException {
+    UpgradeAction action;
+    if ("query".equalsIgnoreCase(arg)) {
+      action = UpgradeAction.QUERY;
+    } else if ("finalize".equalsIgnoreCase(arg)) {
+      action = UpgradeAction.FINALIZE;
+    } else {
+      printUsage("-upgrade");
+      return -1;
+    }
+
+    switch (action) {
+    case QUERY:
+      return getUpgradeStatus();
+    case FINALIZE:
+      return finalizeUpgrade();
+    default:
+      printUsage("-upgrade");
+      return -1;
+    }
   }
 
   /**
@@ -1997,6 +2084,9 @@ public class DFSAdmin extends FsShell {
     } else if (RollingUpgradeCommand.matches(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [" + RollingUpgradeCommand.USAGE+"]");
+    } else if ("-upgrade".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-upgrade query | finalize]");
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-metasave filename]");
@@ -2146,6 +2236,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-upgrade".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-metasave".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -2263,6 +2358,8 @@ public class DFSAdmin extends FsShell {
         exitCode = finalizeUpgrade();
       } else if (RollingUpgradeCommand.matches(cmd)) {
         exitCode = RollingUpgradeCommand.run(getDFS(), argv, i);
+      } else if ("-upgrade".equals(cmd)) {
+        exitCode = upgrade(argv[i]);
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if (ClearQuotaCommand.matches(cmd)) {
