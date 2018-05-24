@@ -1159,7 +1159,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
       TimelineClient createTimelineClient() throws IOException, YarnException {
         timelineClient = mock(TimelineClient.class);
         when(timelineClient.getDelegationToken(any(String.class)))
-          .thenThrow(new IOException("Best effort test exception"));
+          .thenThrow(new RuntimeException("Best effort test exception"));
         return timelineClient;
       }
     });
@@ -1175,7 +1175,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
       client.serviceInit(conf);
       client.getTimelineDelegationToken();
       Assert.fail("Get delegation token should have thrown an exception");
-    } catch (Exception e) {
+    } catch (IOException e) {
       // Success
     }
   }
