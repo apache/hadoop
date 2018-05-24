@@ -26,8 +26,6 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CommandDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
-    .ContainerReportHandler;
-import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -88,7 +86,6 @@ public class DatanodeStateMachine implements Closeable {
      // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
-        .addHandler(new ContainerReportHandler())
         .addHandler(new CloseContainerHandler())
         .addHandler(new DeleteBlocksCommandHandler(
             container.getContainerManager(), conf))

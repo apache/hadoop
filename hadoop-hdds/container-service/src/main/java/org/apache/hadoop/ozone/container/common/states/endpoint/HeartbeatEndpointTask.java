@@ -35,7 +35,6 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
-import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,10 +132,6 @@ public class HeartbeatEndpointTask
           .equalsIgnoreCase(datanodeDetails.getUuid()),
           "Unexpected datanode ID in the response.");
       switch (commandResponseProto.getCmdType()) {
-      case sendContainerReport:
-        this.context.addCommand(SendContainerCommand.getFromProtobuf(
-            commandResponseProto.getSendReport()));
-        break;
       case reregisterCommand:
         if (rpcEndpoint.getState() == EndPointStates.HEARTBEAT) {
           if (LOG.isDebugEnabled()) {
