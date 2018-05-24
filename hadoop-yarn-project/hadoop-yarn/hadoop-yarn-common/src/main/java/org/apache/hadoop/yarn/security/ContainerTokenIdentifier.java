@@ -216,7 +216,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
    */
   public ContainerType getContainerType(){
     if (!proto.hasContainerType()) {
-      return null;
+      return ContainerType.TASK;
     }
     return convertFromProtoFormat(proto.getContainerType());
   }
@@ -227,7 +227,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
    */
   public ExecutionType getExecutionType(){
     if (!proto.hasExecutionType()) {
-      return null;
+      return ExecutionType.GUARANTEED;
     }
     return convertFromProtoFormat(proto.getExecutionType());
   }
