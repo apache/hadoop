@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.hadoop.ozone.RatisTestHelper;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -35,12 +36,12 @@ public class TestBucketsRatis {
   public Timeout testTimeout = new Timeout(300000);
 
   private static RatisTestHelper.RatisTestSuite suite;
-  private static OzoneRestClient ozoneRestClient;
+  private static ClientProtocol client;
 
   @BeforeClass
   public static void init() throws Exception {
     suite = new RatisTestHelper.RatisTestSuite(TestBucketsRatis.class);
-    ozoneRestClient = suite.newOzoneRestClient();
+    client = suite.newOzoneClient();
   }
 
   @AfterClass
@@ -52,25 +53,25 @@ public class TestBucketsRatis {
 
   @Test
   public void testCreateBucket() throws Exception {
-    TestBuckets.runTestCreateBucket(ozoneRestClient);
+    TestBuckets.runTestCreateBucket(client);
   }
 
   @Test
   public void testAddBucketAcls() throws Exception {
-    TestBuckets.runTestAddBucketAcls(ozoneRestClient);
+    TestBuckets.runTestAddBucketAcls(client);
   }
 
   @Test
   public void testRemoveBucketAcls() throws Exception {
-    TestBuckets.runTestRemoveBucketAcls(ozoneRestClient);
+    TestBuckets.runTestRemoveBucketAcls(client);
   }
 
   @Test
   public void testDeleteBucket() throws OzoneException, IOException {
-    TestBuckets.runTestDeleteBucket(ozoneRestClient);
+    TestBuckets.runTestDeleteBucket(client);
   }
   @Test
   public void testListBucket() throws Exception {
-    TestBuckets.runTestListBucket(ozoneRestClient);
+    TestBuckets.runTestListBucket(client);
   }
 }

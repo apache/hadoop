@@ -21,6 +21,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -52,7 +53,7 @@ public class TestKeysRatis {
   private static RatisTestHelper.RatisTestSuite suite;
   private static MiniOzoneCluster ozoneCluster = null;
   static private String path;
-  private static OzoneRestClient ozoneRestClient = null;
+  private static ClientProtocol client = null;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -60,7 +61,7 @@ public class TestKeysRatis {
     path = suite.getConf().get(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT);
     ozoneCluster = suite.getCluster();
     ozoneCluster.waitForClusterToBeReady();
-    ozoneRestClient = suite.newOzoneRestClient();
+    client = suite.newOzoneClient();
   }
 
   /**
@@ -76,9 +77,9 @@ public class TestKeysRatis {
 
   @Test
   public void testPutKey() throws Exception {
-    runTestPutKey(new PutHelper(ozoneRestClient, path));
+    runTestPutKey(new PutHelper(client, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
-    runTestPutKey(new PutHelper(ozoneRestClient, path,
+    runTestPutKey(new PutHelper(client, path,
         getMultiPartKey(delimiter)));
   }
 
@@ -86,42 +87,42 @@ public class TestKeysRatis {
   @Test
   public void testPutAndGetKeyWithDnRestart() throws Exception {
     runTestPutAndGetKeyWithDnRestart(
-        new PutHelper(ozoneRestClient, path), ozoneCluster);
+        new PutHelper(client, path), ozoneCluster);
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
     runTestPutAndGetKeyWithDnRestart(
-        new PutHelper(ozoneRestClient, path, getMultiPartKey(delimiter)),
+        new PutHelper(client, path, getMultiPartKey(delimiter)),
         ozoneCluster);
   }
 
   @Test
   public void testPutAndGetKey() throws Exception {
-    runTestPutAndGetKey(new PutHelper(ozoneRestClient, path));
+    runTestPutAndGetKey(new PutHelper(client, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
-    runTestPutAndGetKey(new PutHelper(ozoneRestClient, path,
+    runTestPutAndGetKey(new PutHelper(client, path,
         getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testPutAndDeleteKey() throws Exception  {
-    runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path));
+    runTestPutAndDeleteKey(new PutHelper(client, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
-    runTestPutAndDeleteKey(new PutHelper(ozoneRestClient, path,
+    runTestPutAndDeleteKey(new PutHelper(client, path,
         getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testPutAndListKey() throws Exception {
-    runTestPutAndListKey(new PutHelper(ozoneRestClient, path));
+    runTestPutAndListKey(new PutHelper(client, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
-    runTestPutAndListKey(new PutHelper(ozoneRestClient, path,
+    runTestPutAndListKey(new PutHelper(client, path,
         getMultiPartKey(delimiter)));
   }
 
   @Test
   public void testGetKeyInfo() throws Exception {
-    runTestGetKeyInfo(new PutHelper(ozoneRestClient, path));
+    runTestGetKeyInfo(new PutHelper(client, path));
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
-    runTestGetKeyInfo(new PutHelper(ozoneRestClient, path,
+    runTestGetKeyInfo(new PutHelper(client, path,
         getMultiPartKey(delimiter)));
   }
 }

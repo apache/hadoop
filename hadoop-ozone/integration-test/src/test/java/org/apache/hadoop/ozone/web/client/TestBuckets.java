@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.ozone.web.client;
 
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.BucketArgs;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -36,7 +41,10 @@ import org.junit.rules.Timeout;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -54,7 +62,7 @@ public class TestBuckets {
   public Timeout testTimeout = new Timeout(300000);
 
   private static MiniOzoneCluster cluster = null;
-  private static OzoneRestClient ozoneRestClient = null;
+  private static ClientProtocol client = null;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -76,11 +84,10 @@ public class TestBuckets {
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    cluster = MiniOzoneCluster.newBuilder(conf).build();
-    final int port = cluster.getHddsDatanodes().get(0).getDatanodeDetails()
-        .getOzoneRestPort();
-    ozoneRestClient = new OzoneRestClient(
-        String.format("http://localhost:%d", port));
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(3)
+        .build();
+    client = new RpcClient(conf);
   }
 
   /**
@@ -95,110 +102,151 @@ public class TestBuckets {
 
   @Test
   public void testCreateBucket() throws Exception {
-    runTestCreateBucket(ozoneRestClient);
+    runTestCreateBucket(client);
   }
 
-  static void runTestCreateBucket(OzoneRestClient client)
+  static void runTestCreateBucket(ClientProtocol client)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.setUserAuth("hdfs");
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .setAdmin("hdfs")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
 
     // create 10 buckets under same volume
     for (int x = 0; x < 10; x++) {
       long currentTime = Time.now();
       String bucketName = OzoneUtils.getRequestID().toLowerCase();
-      OzoneBucket bucket =
-          vol.createBucket(bucketName, acls, StorageType.DEFAULT);
-      assertEquals(bucket.getBucketName(), bucketName);
+
+      List<OzoneAcl> aclList =
+          Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
+              .collect(Collectors.toList());
+      BucketArgs bucketArgs = BucketArgs.newBuilder()
+          .setAcls(aclList)
+          .build();
+      vol.createBucket(bucketName, bucketArgs);
+      OzoneBucket bucket = vol.getBucket(bucketName);
+      assertEquals(bucket.getName(), bucketName);
 
       // verify the bucket creation time
-      assertTrue((OzoneUtils.formatDate(bucket.getCreatedOn())
-          / 1000) >= (currentTime / 1000));
+      assertTrue((bucket.getCreationTime() / 1000) >= (currentTime / 1000));
     }
     client.close();
 
-    assertEquals(vol.getVolumeName(), volumeName);
-    assertEquals(vol.getCreatedby(), "hdfs");
-    assertEquals(vol.getOwnerName(), "bilbo");
-    assertEquals(vol.getQuota().getUnit(), OzoneQuota.Units.TB);
-    assertEquals(vol.getQuota().getSize(), 100);
+    assertEquals(vol.getName(), volumeName);
+    assertEquals(vol.getAdmin(), "hdfs");
+    assertEquals(vol.getOwner(), "bilbo");
+    assertEquals(vol.getQuota(), OzoneQuota.parseQuota("100TB").sizeInBytes());
 
     // Test create a bucket with invalid bucket name,
     // not use Rule here because the test method is static.
     try {
       String invalidBucketName = "#" + OzoneUtils.getRequestID().toLowerCase();
-      vol.createBucket(invalidBucketName, acls, StorageType.DEFAULT);
+      vol.createBucket(invalidBucketName);
       fail("Except the bucket creation to be failed because the"
           + " bucket name starts with an invalid char #");
     } catch (Exception e) {
-      assertTrue(e instanceof OzoneClientException);
-      assertTrue(e.getMessage().contains("Bucket or Volume name"
-          + " has an unsupported character : #"));
+      assertTrue(e.getMessage()
+          .contains("Bucket or Volume name has an unsupported character : #"));
     }
   }
 
   @Test
   public void testAddBucketAcls() throws Exception {
-    runTestAddBucketAcls(ozoneRestClient);
+    runTestAddBucketAcls(client);
   }
 
-  static void runTestAddBucketAcls(OzoneRestClient client)
+  static void runTestAddBucketAcls(ClientProtocol client)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.setUserAuth("hdfs");
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .setAdmin("hdfs")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
     String bucketName = OzoneUtils.getRequestID().toLowerCase();
     vol.createBucket(bucketName);
-    vol.addAcls(bucketName, acls);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    List<OzoneAcl> aclList =
+        Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
+            .collect(Collectors.toList());
+    int numAcls = bucket.getAcls().size();
+    bucket.addAcls(aclList);
     OzoneBucket updatedBucket = vol.getBucket(bucketName);
-    assertEquals(updatedBucket.getAcls().size(), 2);
+    assertEquals(updatedBucket.getAcls().size(), 2 + numAcls);
     // verify if the creation time is missing after update operation
     assertTrue(
-        (OzoneUtils.formatDate(updatedBucket.getCreatedOn()) / 1000) >= 0);
+        (updatedBucket.getCreationTime()) / 1000 >= 0);
     client.close();
   }
 
   @Test
   public void testRemoveBucketAcls() throws Exception {
-    runTestRemoveBucketAcls(ozoneRestClient);
+    runTestRemoveBucketAcls(client);
   }
 
-  static void runTestRemoveBucketAcls(OzoneRestClient client)
+  static void runTestRemoveBucketAcls(ClientProtocol client)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.setUserAuth("hdfs");
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .setAdmin("hdfs")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
     String bucketName = OzoneUtils.getRequestID().toLowerCase();
-    OzoneBucket bucket = vol.createBucket(bucketName, acls);
-    assertEquals(bucket.getAcls().size(), 2);
-    vol.removeAcls(bucketName, acls);
+    List<OzoneAcl> aclList =
+        Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
+            .collect(Collectors.toList());
+    vol.createBucket(bucketName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    int numAcls = bucket.getAcls().size();
+    bucket.addAcls(aclList);
+    assertEquals(bucket.getAcls().size(), 2 + numAcls);
+    bucket.removeAcls(aclList);
     OzoneBucket updatedBucket = vol.getBucket(bucketName);
 
     // We removed all acls
-    assertEquals(updatedBucket.getAcls().size(), 0);
+    assertEquals(updatedBucket.getAcls().size(), numAcls);
     // verify if the creation time is missing after update operation
     assertTrue(
-        (OzoneUtils.formatDate(updatedBucket.getCreatedOn()) / 1000) >= 0);
+        (updatedBucket.getCreationTime() / 1000) >= 0);
     client.close();
   }
 
   @Test
   public void testDeleteBucket() throws OzoneException, IOException {
-    runTestDeleteBucket(ozoneRestClient);
+    runTestDeleteBucket(client);
   }
 
-  static void runTestDeleteBucket(OzoneRestClient client)
+  static void runTestDeleteBucket(ClientProtocol client)
       throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.setUserAuth("hdfs");
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .setAdmin("hdfs")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
     String bucketName = OzoneUtils.getRequestID().toLowerCase();
-    vol.createBucket(bucketName, acls);
+    List<OzoneAcl> aclList =
+        Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
+            .collect(Collectors.toList());
+    BucketArgs bucketArgs = BucketArgs.newBuilder()
+        .setAcls(aclList)
+        .build();
+    vol.createBucket(bucketName, bucketArgs);
     vol.deleteBucket(bucketName);
     try {
       OzoneBucket updatedBucket = vol.getBucket(bucketName);
@@ -212,38 +260,57 @@ public class TestBuckets {
 
   @Test
   public void testListBucket() throws Exception {
-    runTestListBucket(ozoneRestClient);
+    runTestListBucket(client);
   }
 
-  static void runTestListBucket(OzoneRestClient client)
+  static void runTestListBucket(ClientProtocol client)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.setUserAuth("hdfs");
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .setAdmin("hdfs")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
+    List<OzoneAcl> aclList =
+        Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
+            .collect(Collectors.toList());
 
     long currentTime = Time.now();
     for (int x = 0; x < 10; x++) {
       String bucketName = "listbucket-test-" + x;
-      vol.createBucket(bucketName, acls);
+      BucketArgs bucketArgs = BucketArgs.newBuilder()
+          .setAcls(aclList)
+          .build();
+      vol.createBucket(bucketName, bucketArgs);
     }
-    List<OzoneBucket> bucketList = vol.listBuckets("100", null, null);
-    assertEquals(bucketList.size(), 10);
+    Iterator<OzoneBucket> bucketIterator = vol.listBuckets(null);
+    int count = 0;
 
-    for (OzoneBucket bucket : bucketList) {
-      assertTrue((OzoneUtils.formatDate(bucket.getCreatedOn())
+    while (bucketIterator.hasNext()) {
+      assertTrue((bucketIterator.next().getCreationTime()
           / 1000) >= (currentTime / 1000));
+      count++;
     }
+    assertEquals(count, 10);
 
-    bucketList = vol.listBuckets("3", null, null);
-    assertEquals(bucketList.size(), 3);
+    bucketIterator = vol.listBuckets(null, "listbucket-test-4");
+    assertEquals(getSize(bucketIterator), 5);
 
-    bucketList = vol.listBuckets("100", "listbucket-test-4", null);
-    assertEquals(bucketList.size(), 5);
-
-    bucketList = vol.listBuckets("100", null, "listbucket-test-3");
-    assertEquals(bucketList.size(), 1);
+    bucketIterator = vol.listBuckets(null, "listbucket-test-3");
+    assertEquals(getSize(bucketIterator), 6);
 
     client.close();
+  }
+
+  private static int getSize(Iterator<OzoneBucket> bucketIterator) {
+    int count = 0;
+    while (bucketIterator.hasNext()) {
+      count++;
+      bucketIterator.next();
+    }
+    return count;
   }
 }

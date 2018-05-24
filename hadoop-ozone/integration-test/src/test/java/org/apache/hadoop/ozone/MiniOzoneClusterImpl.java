@@ -37,7 +37,6 @@ import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.ozone.ksm.KSMStorage;
-import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -167,7 +166,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   /**
-   * Creates an {@link OzoneRestClient} connected to this cluster's REST
+   * Creates an {@link OzoneClient} connected to this cluster's REST
    * service. Callers take ownership of the client and must close it when done.
    *
    * @return OzoneRestClient connected to this cluster's REST service
