@@ -237,6 +237,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private int userRemappingGidThreshold;
   private Set<String> capabilities;
   private boolean delayedRemovalAllowed;
+  private Set<String> defaultROMounts = new HashSet<>();
+  private Set<String> defaultRWMounts = new HashSet<>();
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -299,6 +301,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     this.conf = conf;
     dockerClient = new DockerClient(conf);
     allowedNetworks.clear();
+    defaultROMounts.clear();
+    defaultRWMounts.clear();
     allowedNetworks.addAll(Arrays.asList(
         conf.getTrimmedStrings(
             YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_NETWORKS,
@@ -340,6 +344,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     delayedRemovalAllowed = conf.getBoolean(
         YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL,
         YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL);
+
+    defaultROMounts.addAll(Arrays.asList(
+        conf.getTrimmedStrings(
+        YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS)));
+
+    defaultRWMounts.addAll(Arrays.asList(
+        conf.getTrimmedStrings(
+        YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS)));
   }
 
   private Set<String> getDockerCapabilitiesFromConf() throws
@@ -830,6 +842,32 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         } else {
           runCommand.addReadWriteMountLocation(src, dst);
         }
+      }
+    }
+
+    if(defaultROMounts != null && !defaultROMounts.isEmpty()) {
+      for (String mount : defaultROMounts) {
+        String[] dir = StringUtils.split(mount, ':');
+        if (dir.length != 2) {
+          throw new ContainerExecutionException("Invalid mount : " +
+              mount);
+        }
+        String src = dir[0];
+        String dst = dir[1];
+        runCommand.addReadOnlyMountLocation(src, dst);
+      }
+    }
+
+    if(defaultRWMounts != null && !defaultRWMounts.isEmpty()) {
+      for (String mount : defaultRWMounts) {
+        String[] dir = StringUtils.split(mount, ':');
+        if (dir.length != 2) {
+          throw new ContainerExecutionException("Invalid mount : " +
+              mount);
+        }
+        String src = dir[0];
+        String dst = dir[1];
+        runCommand.addReadWriteMountLocation(src, dst);
       }
     }
 

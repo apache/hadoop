@@ -82,6 +82,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPLICATION_LOCAL_DIRS;
@@ -1321,6 +1323,142 @@ public class TestDockerContainerRuntime {
     try {
       runtime.launchContainer(builder.build());
       Assert.fail("Expected a launch container failure due to NUL in mount.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
+  }
+
+  @Test
+  public void testDefaultROMounts()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.setStrings(NM_DOCKER_DEFAULT_RO_MOUNTS,
+        "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar");
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 14;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir,"
+        + "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+        + "/test_application_local_dir:/test_application_local_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testDefaultROMountsInvalid() throws ContainerExecutionException {
+    conf.setStrings(NM_DOCKER_DEFAULT_RO_MOUNTS,
+        "source,target");
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    try {
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a launch container failure due to invalid mount.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
+  }
+
+  @Test
+  public void testDefaultRWMounts()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.setStrings(NM_DOCKER_DEFAULT_RW_MOUNTS,
+        "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar");
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 14;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+        + "/test_application_local_dir:/test_application_local_dir,"
+        + "/tmp/foo:/tmp/foo,/tmp/bar:/tmp/bar",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testDefaultRWMountsInvalid() throws ContainerExecutionException {
+    conf.setStrings(NM_DOCKER_DEFAULT_RW_MOUNTS,
+        "source,target");
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+
+    try {
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a launch container failure due to invalid mount.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
     }

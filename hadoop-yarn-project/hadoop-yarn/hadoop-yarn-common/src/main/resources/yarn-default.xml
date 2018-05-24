@@ -1787,6 +1787,20 @@
   </property>
 
   <property>
+    <description>The default list of read-only mounts to be bind-mounted
+      into all Docker containers that use DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-ro-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The default list of read-write mounts to be bind-mounted
+      into all Docker containers that use DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-rw-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
