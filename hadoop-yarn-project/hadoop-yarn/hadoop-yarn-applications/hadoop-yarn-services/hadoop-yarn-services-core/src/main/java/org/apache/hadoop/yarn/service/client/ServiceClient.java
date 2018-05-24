@@ -1198,6 +1198,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     Service appSpec = new Service();
     appSpec.setName(serviceName);
+    appSpec.setState(ServiceState.STOPPED);
     ApplicationId currentAppId = getAppId(serviceName);
     if (currentAppId == null) {
       LOG.info("Service {} does not have an application ID", serviceName);
