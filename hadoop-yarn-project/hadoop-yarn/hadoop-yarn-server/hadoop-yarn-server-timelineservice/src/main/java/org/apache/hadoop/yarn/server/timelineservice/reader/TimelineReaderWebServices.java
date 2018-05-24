@@ -23,6 +23,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
@@ -42,12 +43,15 @@ import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -1450,6 +1454,19 @@ public class TimelineReaderWebServices {
     long endTime = Time.monotonicNow();
     if (entities == null) {
       entities = Collections.emptySet();
+    } else if (isDisplayEntityPerUserFilterEnabled(
+        timelineReaderManager.getConfig())) {
+      Set<TimelineEntity> userEntities = new LinkedHashSet<>();
+      userEntities.addAll(entities);
+      for (TimelineEntity entity : userEntities) {
+        if (entity.getInfo() != null) {
+          String userId =
+              (String) entity.getInfo().get(FlowActivityEntity.USER_INFO_KEY);
+          if (!validateAuthUserWithEntityUser(callerUGI, userId)) {
+            entities.remove(entity);
+          }
+        }
+      }
     }
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
@@ -3402,5 +3419,21 @@ public class TimelineReaderWebServices {
     LOG.info(
         "Processed URL " + url + " (Took " + (endTime - startTime) + " ms.)");
     return entities;
+  }
+
+  private boolean isDisplayEntityPerUserFilterEnabled(Configuration config) {
+    return config
+        .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
+  }
+
+  private boolean validateAuthUserWithEntityUser(UserGroupInformation ugi,
+      String entityUser) {
+    String authUser = TimelineReaderWebServicesUtils.getUserName(ugi);
+    String requestedUser = TimelineReaderWebServicesUtils.parseStr(entityUser);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Authenticated User: " + authUser + " Requested User:" + entityUser);
+    }
+    return authUser.equals(requestedUser);
   }
 }

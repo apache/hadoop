@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +55,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -99,6 +102,7 @@ public class NMWebServices {
       .getRecordFactory(null);
   private final String redirectWSUrl;
   private final LogAggregationFileControllerFactory factory;
+  private boolean filterAppsByUser = false;
 
   private @javax.ws.rs.core.Context 
     HttpServletRequest request;
@@ -119,6 +123,15 @@ public class NMWebServices {
         YarnConfiguration.YARN_LOG_SERVER_WEBSERVICE_URL);
     this.factory = new LogAggregationFileControllerFactory(
         this.nmContext.getConf());
+    this.filterAppsByUser = this.nmContext.getConf().getBoolean(
+        YarnConfiguration.FILTER_ENTITY_LIST_BY_USER,
+        YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+  }
+
+  public NMWebServices(final Context nm, final ResourceView view,
+      final WebApp webapp, HttpServletResponse response) {
+    this(nm, view, webapp);
+    this.response = response;
   }
 
   private void init() {
@@ -146,7 +159,8 @@ public class NMWebServices {
   @Path("/apps")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public AppsInfo getNodeApps(@QueryParam("state") String stateQuery,
+  public AppsInfo getNodeApps(@javax.ws.rs.core.Context HttpServletRequest hsr,
+      @QueryParam("state") String stateQuery,
       @QueryParam("user") String userQuery) {
     init();
     AppsInfo allApps = new AppsInfo();
@@ -169,6 +183,14 @@ public class NMWebServices {
           continue;
         }
       }
+
+      // Allow only application-owner/admin for any type of access on the
+      // application.
+      if (filterAppsByUser
+          && !hasAccess(appInfo.getUser(), entry.getKey(), hsr)) {
+        continue;
+      }
+
       allApps.add(appInfo);
     }
     return allApps;
@@ -205,6 +227,16 @@ public class NMWebServices {
       }
       ContainerInfo info = new ContainerInfo(this.nmContext, entry.getValue(),
           uriInfo.getBaseUri().toString(), webapp.name(), hsr.getRemoteUser());
+
+      ApplicationId appId = entry.getKey().getApplicationAttemptId()
+          .getApplicationId();
+      // Allow only application-owner/admin for any type of access on the
+      // application.
+      if (filterAppsByUser
+          && !hasAccess(entry.getValue().getUser(), appId, hsr)) {
+        continue;
+      }
+
       allContainers.add(info);
     }
     return allContainers;
@@ -552,5 +584,34 @@ public class NMWebServices {
         HttpServletResponse.SC_TEMPORARY_REDIRECT);
     res.header("Location", redirectPath.toString());
     return res.build();
+  }
+
+  protected Boolean hasAccess(String user, ApplicationId appId,
+      HttpServletRequest hsr) {
+    // Check for the authorization.
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+
+    if (callerUGI != null && !(this.nmContext.getApplicationACLsManager()
+        .checkAccess(callerUGI, ApplicationAccessType.VIEW_APP, user, appId))) {
+      return false;
+    }
+    return true;
+  }
+
+  private UserGroupInformation getCallerUserGroupInformation(
+      HttpServletRequest hsr, boolean usePrincipal) {
+
+    String remoteUser = hsr.getRemoteUser();
+    if (usePrincipal) {
+      Principal princ = hsr.getUserPrincipal();
+      remoteUser = princ == null ? null : princ.getName();
+    }
+
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+
+    return callerUGI;
   }
 }

@@ -3529,7 +3529,7 @@
   </property>
  
   <property>
-    <name>yarn.resourcemanager.display.per-user-apps</name>
+    <name>yarn.webapp.filter-entity-list-by-user</name>
     <value>false</value>
       <description>
         Flag to enable display of applications per user as an admin
