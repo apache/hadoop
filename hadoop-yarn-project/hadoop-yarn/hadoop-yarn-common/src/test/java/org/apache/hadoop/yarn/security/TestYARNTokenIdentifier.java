@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -167,6 +168,30 @@ public class TestYARNTokenIdentifier {
     
     Assert.assertEquals("clientName from proto is not the same with original token",
         anotherToken.getClientName(), clientName);
+  }
+
+  @Test
+  public void testContainerTokenIdentifierProtoMissingFields()
+      throws IOException {
+    ContainerTokenIdentifierProto.Builder builder =
+        ContainerTokenIdentifierProto.newBuilder();
+    ContainerTokenIdentifierProto proto = builder.build();
+    Assert.assertFalse(proto.hasContainerType());
+    Assert.assertFalse(proto.hasExecutionType());
+    Assert.assertFalse(proto.hasNodeLabelExpression());
+
+    byte[] tokenData = proto.toByteArray();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenData, tokenData.length);
+    ContainerTokenIdentifier tid = new ContainerTokenIdentifier();
+    tid.readFields(dib);
+
+    Assert.assertEquals("container type",
+        ContainerType.TASK, tid.getContainerType());
+    Assert.assertEquals("execution type",
+        ExecutionType.GUARANTEED, tid.getExecutionType());
+    Assert.assertEquals("node label expression",
+        CommonNodeLabelsManager.NO_LABEL, tid.getNodeLabelExpression());
   }
 
   @Test
