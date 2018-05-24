@@ -240,7 +240,7 @@ public class PBHelperClient {
     ByteString value = fixedByteStringCache.get(key);
     if (value == null) {
       value = ByteString.copyFromUtf8(key.toString());
-      fixedByteStringCache.put(key, value);
+      fixedByteStringCache.put(new Text(key.copyBytes()), value);
     }
     return value;
   }
