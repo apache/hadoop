@@ -484,7 +484,7 @@ public class INodesInPath {
     }
 
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
-        .append(": path = ").append(DFSUtil.byteArray2PathString(path))
+        .append(": path = ").append(getPath())
         .append("\n  inodes = ");
     if (inodes == null) {
       b.append("null");
