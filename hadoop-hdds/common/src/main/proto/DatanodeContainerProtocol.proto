@@ -232,6 +232,14 @@ message ContainerData {
   optional string containerDBType = 11;
 }
 
+// This is used for create Container Request.
+message CreateContainerData {
+  required int64 containerId = 1;
+  repeated KeyValue metadata = 2;
+  optional ContainerType containerType = 3 [default = KeyValueContainer];
+}
+
+
 enum ContainerType {
   KeyValueContainer = 1;
 }
