@@ -121,9 +121,12 @@ public final class ContainerCache extends LRUMap {
    * Returns a DB handle if available, create the handler otherwise.
    *
    * @param containerID - ID of the container.
+   * @param containerDBType - DB type of the container.
+   * @param containerDBPath - DB path of the container.
    * @return MetadataStore.
    */
-  public MetadataStore getDB(long containerID, String containerDBPath)
+  public MetadataStore getDB(long containerID, String containerDBType, String
+                             containerDBPath)
       throws IOException {
     Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
     lock.lock();
@@ -134,6 +137,7 @@ public final class ContainerCache extends LRUMap {
         db = MetadataStoreBuilder.newBuilder()
             .setDbFile(new File(containerDBPath))
             .setCreateIfMissing(false)
+            .setDBType(containerDBType)
             .build();
         this.put(containerID, db);
       }

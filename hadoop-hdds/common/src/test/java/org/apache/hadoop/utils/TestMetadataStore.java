@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone;
+package org.apache.hadoop.utils;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
@@ -24,12 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,6 +36,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +49,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.runners.Parameterized.Parameters;
 
 /**
@@ -100,6 +100,55 @@ public class TestMetadataStore {
       store.put(getBytes("a" + i), getBytes("a-value" + i));
       store.put(getBytes("b" + i), getBytes("b-value" + i));
     }
+  }
+
+  @Test
+  public void testMetaStoreConfigDifferentFromType() throws IOException {
+
+    Configuration conf = new OzoneConfiguration();
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, storeImpl);
+    String dbType;
+    GenericTestUtils.setLogLevel(MetadataStoreBuilder.LOG, Level.DEBUG);
+    GenericTestUtils.LogCapturer logCapturer =
+        GenericTestUtils.LogCapturer.captureLogs(MetadataStoreBuilder.LOG);
+    if(storeImpl.equals(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB)) {
+      dbType = "RocksDB";
+    } else {
+      dbType = "LevelDB";
+    }
+
+    File dbDir = GenericTestUtils.getTestDir(getClass().getSimpleName()
+        + "-" + dbType.toLowerCase() + "-test");
+    MetadataStore dbStore = MetadataStoreBuilder.newBuilder().setConf(conf)
+        .setCreateIfMissing(true).setDbFile(dbDir).setDBType(dbType).build();
+    assertTrue(logCapturer.getOutput().contains("Using dbType " + dbType + "" +
+        " for metastore"));
+    dbStore.close();
+    dbStore.destroy();
+    FileUtils.deleteDirectory(dbDir);
+
+  }
+
+  @Test
+  public void testdbTypeNotSet() throws IOException {
+
+    Configuration conf = new OzoneConfiguration();
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, storeImpl);
+    GenericTestUtils.setLogLevel(MetadataStoreBuilder.LOG, Level.DEBUG);
+    GenericTestUtils.LogCapturer logCapturer =
+        GenericTestUtils.LogCapturer.captureLogs(MetadataStoreBuilder.LOG);
+
+
+    File dbDir = GenericTestUtils.getTestDir(getClass().getSimpleName()
+        + "-" + storeImpl.toLowerCase() + "-test");
+    MetadataStore dbStore = MetadataStoreBuilder.newBuilder().setConf(conf)
+        .setCreateIfMissing(true).setDbFile(dbDir).build();
+    assertTrue(logCapturer.getOutput().contains("dbType is null, using dbType" +
+        " " + storeImpl));
+    dbStore.close();
+    dbStore.destroy();
+    FileUtils.deleteDirectory(dbDir);
+
   }
 
   @After
