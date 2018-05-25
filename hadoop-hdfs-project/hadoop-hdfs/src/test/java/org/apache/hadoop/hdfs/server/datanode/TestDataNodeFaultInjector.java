@@ -118,7 +118,7 @@ public class TestDataNodeFaultInjector {
       final MetricsDataNodeFaultInjector mdnFaultInjector) throws Exception {
 
     final Path baseDir = new Path(
-        PathUtils.getTestDir(getClass()).getAbsolutePath(),
+        PathUtils.getTestDir(getClass()).getPath(),
         GenericTestUtils.getMethodName());
     final DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(mdnFaultInjector);
