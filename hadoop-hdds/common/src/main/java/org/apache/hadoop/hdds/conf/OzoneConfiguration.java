@@ -137,7 +137,7 @@ public class OzoneConfiguration extends Configuration {
 
     @Override
     public String toString() {
-      return this.getName() + " " + this.getValue() + this.getTag();
+      return this.getName() + " " + this.getValue() + " " + this.getTag();
     }
 
     @Override
@@ -152,7 +152,7 @@ public class OzoneConfiguration extends Configuration {
     }
   }
 
-  public static void activate(){
+  public static void activate() {
     // adds the default resources
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
