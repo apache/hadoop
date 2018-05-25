@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -170,7 +171,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void createVolume(String volumeName, VolumeArgs volArgs)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     Preconditions.checkNotNull(volArgs);
 
     String admin = volArgs.getAdmin() == null ?
@@ -214,7 +215,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void setVolumeOwner(String volumeName, String owner)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     Preconditions.checkNotNull(owner);
     keySpaceManagerClient.setOwner(volumeName, owner);
   }
@@ -222,7 +223,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void setVolumeQuota(String volumeName, OzoneQuota quota)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     Preconditions.checkNotNull(quota);
     long quotaInBytes = quota.sizeInBytes();
     keySpaceManagerClient.setQuota(volumeName, quotaInBytes);
@@ -231,7 +232,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public OzoneVolume getVolumeDetails(String volumeName)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     KsmVolumeArgs volume = keySpaceManagerClient.getVolumeInfo(volumeName);
     return new OzoneVolume(
         conf,
@@ -253,7 +254,7 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public void deleteVolume(String volumeName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     keySpaceManagerClient.deleteVolume(volumeName);
   }
 
@@ -307,8 +308,7 @@ public class RpcClient implements ClientProtocol {
   public void createBucket(
       String volumeName, String bucketName, BucketArgs bucketArgs)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(bucketArgs);
 
     Boolean isVersionEnabled = bucketArgs.getVersioning() == null ?
@@ -346,8 +346,7 @@ public class RpcClient implements ClientProtocol {
   public void addBucketAcls(
       String volumeName, String bucketName, List<OzoneAcl> addAcls)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(addAcls);
     KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
@@ -360,8 +359,7 @@ public class RpcClient implements ClientProtocol {
   public void removeBucketAcls(
       String volumeName, String bucketName, List<OzoneAcl> removeAcls)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(removeAcls);
     KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
@@ -374,8 +372,7 @@ public class RpcClient implements ClientProtocol {
   public void setBucketVersioning(
       String volumeName, String bucketName, Boolean versioning)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(versioning);
     KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
@@ -388,8 +385,7 @@ public class RpcClient implements ClientProtocol {
   public void setBucketStorageType(
       String volumeName, String bucketName, StorageType storageType)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(storageType);
     KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
@@ -401,8 +397,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void deleteBucket(
       String volumeName, String bucketName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     keySpaceManagerClient.deleteBucket(volumeName, bucketName);
   }
 
@@ -415,8 +410,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public OzoneBucket getBucketDetails(
       String volumeName, String bucketName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     KsmBucketInfo bucketArgs =
         keySpaceManagerClient.getBucketInfo(volumeName, bucketName);
     return new OzoneBucket(
@@ -454,6 +448,8 @@ public class RpcClient implements ClientProtocol {
       String volumeName, String bucketName, String keyName, long size,
       ReplicationType type, ReplicationFactor factor)
       throws IOException {
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(keyName, type, factor);
     String requestId = UUID.randomUUID().toString();
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -486,8 +482,7 @@ public class RpcClient implements ClientProtocol {
   public OzoneInputStream getKey(
       String volumeName, String bucketName, String keyName)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(keyName);
     String requestId = UUID.randomUUID().toString();
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
@@ -508,8 +503,7 @@ public class RpcClient implements ClientProtocol {
   public void deleteKey(
       String volumeName, String bucketName, String keyName)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(keyName);
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -522,10 +516,8 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void renameKey(String volumeName, String bucketName,
       String fromKeyName, String toKeyName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
-    Preconditions.checkNotNull(fromKeyName);
-    Preconditions.checkNotNull(toKeyName);
+    HddsClientUtils.verifyResourceName(volumeName, bucketName);
+    HddsClientUtils.checkNotNull(fromKeyName, toKeyName);
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)

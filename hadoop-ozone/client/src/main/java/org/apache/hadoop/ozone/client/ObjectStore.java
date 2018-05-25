@@ -63,8 +63,6 @@ public class ObjectStore {
    * @throws IOException
    */
   public void createVolume(String volumeName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    HddsClientUtils.verifyResourceName(volumeName);
     proxy.createVolume(volumeName);
   }
 
@@ -76,9 +74,6 @@ public class ObjectStore {
    */
   public void createVolume(String volumeName, VolumeArgs volumeArgs)
       throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(volumeArgs);
-    HddsClientUtils.verifyResourceName(volumeName);
     proxy.createVolume(volumeName, volumeArgs);
   }
 
@@ -89,8 +84,6 @@ public class ObjectStore {
    * @throws IOException
    */
   public OzoneVolume getVolume(String volumeName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    HddsClientUtils.verifyResourceName(volumeName);
     OzoneVolume volume = proxy.getVolumeDetails(volumeName);
     return volume;
   }
@@ -150,8 +143,6 @@ public class ObjectStore {
    * @throws IOException
    */
   public void deleteVolume(String volumeName) throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    HddsClientUtils.verifyResourceName(volumeName);
     proxy.deleteVolume(volumeName);
   }
 

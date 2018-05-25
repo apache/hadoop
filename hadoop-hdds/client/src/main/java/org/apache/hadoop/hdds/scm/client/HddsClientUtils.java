@@ -170,6 +170,29 @@ public final class HddsClientUtils {
   }
 
   /**
+   * verifies that bucket / volume name is a valid DNS name.
+   *
+   * @param resourceNames Array of bucket / volume names to be verified.
+   */
+  public static void verifyResourceName(String... resourceNames) {
+    for (String resourceName : resourceNames) {
+      HddsClientUtils.verifyResourceName(resourceName);
+    }
+  }
+
+  /**
+   * Checks that object parameters passed as reference is not null.
+   *
+   * @param references Array of object references to be checked.
+   * @param <T>
+   */
+  public static <T> void checkNotNull(T... references) {
+    for (T ref: references) {
+      Preconditions.checkNotNull(ref);
+    }
+  }
+
+  /**
    * Returns the cache value to be used for list calls.
    * @param conf Configuration object
    * @return list cache size
