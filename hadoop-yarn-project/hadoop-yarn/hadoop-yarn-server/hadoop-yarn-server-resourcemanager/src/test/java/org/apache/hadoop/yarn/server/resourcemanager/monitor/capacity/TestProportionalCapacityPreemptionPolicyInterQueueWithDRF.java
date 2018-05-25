@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import java.io.IOException;
+
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -41,8 +46,7 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
   }
 
   @Test
-  public void testInterQueuePreemptionWithMultipleResource()
-      throws Exception {
+  public void testInterQueuePreemptionWithMultipleResource() throws Exception {
     /**
      * Queue structure is:
      *
@@ -120,5 +124,53 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     verify(mDisp, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
+  }
+
+  @Test
+  public void test3ResourceTypesInterQueuePreemption() throws IOException {
+    // Initialize resource map
+    String RESOURCE_1 = "res1";
+    riMap.put(RESOURCE_1, ResourceInformation
+        .newInstance(RESOURCE_1, "", 0, ResourceTypes.COUNTABLE, 0,
+            Integer.MAX_VALUE));
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    /*
+     *              root
+     *           /  \  \
+     *          a    b  c
+     *
+     *  A / B / C have 33.3 / 33.3 / 33.4 resources
+     *  Total cluster resource have mem=30, cpu=18, GPU=6
+     *  A uses mem=6, cpu=3, GPU=3
+     *  B uses mem=6, cpu=3, GPU=3
+     *  C is asking mem=1,cpu=1,GPU=1
+     *
+     *  We expect it can preempt from one of the jobs
+     */
+    String labelsConfig = "=30:18:6,true;";
+    String nodesConfig = "n1= res=30:18:6;"; // n1 is default partition
+    String queuesConfig =
+        // guaranteed,max,used,pending
+        "root(=[30:18:6 30:18:6 12:12:6 1:1:1]);" + //root
+            "-a(=[10:7:2 10:6:3 6:6:3 0:0:0]);" + // a
+            "-b(=[10:6:2 10:6:3 6:6:3 0:0:0]);" + // b
+            "-c(=[10:5:2 10:6:2 0:0:0 1:1:1])"; // c
+    String appsConfig =
+        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        "a\t" // app1 in a1
+            + "(1,2:2:1,n1,,3,false);" + "b\t" // app2 in b2
+            + "(1,2:2:1,n1,,3,false)";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(mDisp, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+    verify(mDisp, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
   }
 }

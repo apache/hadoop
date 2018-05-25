@@ -111,7 +111,7 @@ public class FifoCandidatesSelector
                   .tryPreemptContainerAndDeductResToObtain(rc,
                       preemptionContext, resToObtainByPartition, c,
                       clusterResource, selectedCandidates,
-                      totalPreemptionAllowed);
+                      totalPreemptionAllowed, false);
               if (!preempted) {
                 continue;
               }
@@ -187,7 +187,7 @@ public class FifoCandidatesSelector
       boolean preempted = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, preemptMap,
-              totalPreemptionAllowed);
+              totalPreemptionAllowed, false);
       if (preempted) {
         Resources.subtractFrom(skippedAMSize, c.getAllocatedResource());
       }
@@ -221,7 +221,7 @@ public class FifoCandidatesSelector
       // Try to preempt this container
       CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
           rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed);
+          selectedContainers, totalPreemptionAllowed, false);
 
       if (!preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
@@ -264,7 +264,7 @@ public class FifoCandidatesSelector
       // Try to preempt this container
       CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
           rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed);
+          selectedContainers, totalPreemptionAllowed, false);
     }
   }
 }

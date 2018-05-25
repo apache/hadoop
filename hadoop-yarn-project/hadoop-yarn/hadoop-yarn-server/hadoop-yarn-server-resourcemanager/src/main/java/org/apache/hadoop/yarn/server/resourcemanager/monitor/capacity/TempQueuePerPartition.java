@@ -151,7 +151,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     //               # This is for leaf queue only.
     //               max(guaranteed, used) - assigned}
     // remain = avail - accepted
-    Resource accepted = Resources.min(rc, clusterResource,
+    Resource accepted = Resources.componentwiseMin(
         absMaxCapIdealAssignedDelta,
         Resources.min(rc, clusterResource, avail, Resources
             /*
@@ -185,6 +185,12 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     // locality acceptable
 
     accepted = acceptedByLocality(rc, accepted);
+
+    // accept should never be < 0
+    accepted = Resources.componentwiseMax(accepted, Resources.none());
+
+    // or more than offered
+    accepted = Resources.componentwiseMin(accepted, avail);
 
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);
