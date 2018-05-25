@@ -196,7 +196,9 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         logMsg.append("] ,");
       }
 
-      LOG.info(logMsg);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(logMsg);
+      }
 
       if (null != dispatcher && NodeAttribute.PREFIX_CENTRALIZED
           .equals(attributePrefix)) {
