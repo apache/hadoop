@@ -339,6 +339,13 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY =
     "hadoop.security.crypto.jce.provider";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER =
+      "hadoop.security.crypto.jceks.key.serialfilter";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY = 
     "hadoop.security.crypto.buffer.size";

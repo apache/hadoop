@@ -1844,6 +1844,29 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.security.crypto.jceks.key.serialfilter</name>
+  <description>
+    Enhanced KeyStore Mechanisms in JDK 8u171 introduced jceks.key.serialFilter.
+    If jceks.key.serialFilter is configured, the JCEKS KeyStore uses it during
+    the deserialization of the encrypted Key object stored inside a
+    SecretKeyEntry.
+    If jceks.key.serialFilter is not configured it will cause an error when
+    recovering keystore file in KeyProviderFactory when recovering key from
+    keystore file using JDK 8u171 or newer. The filter pattern uses the same
+    format as jdk.serialFilter.
+
+    The value of this property will be used as the following:
+    1. The value of jceks.key.serialFilter system property takes precedence
+    over the value of this property.
+    2. In the absence of jceks.key.serialFilter system property the value of
+    this property will be set as the value of jceks.key.serialFilter.
+    3. If the value of this property and jceks.key.serialFilter system
+    property has not been set, org.apache.hadoop.crypto.key.KeyProvider
+    sets a default value for jceks.key.serialFilter.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.crypto.buffer.size</name>
   <value>8192</value>
   <description>
