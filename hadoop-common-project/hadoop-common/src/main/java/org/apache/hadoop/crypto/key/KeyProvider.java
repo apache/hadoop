@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER;
+
 /**
  * A provider of secret key material for Hadoop applications. Provides an
  * abstraction to separate key storage from users of encryption. It
@@ -61,6 +63,14 @@ public abstract class KeyProvider {
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY;
   public static final int DEFAULT_BITLENGTH = CommonConfigurationKeysPublic.
       HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT;
+  public static final String JCEKS_KEY_SERIALFILTER_DEFAULT =
+      "java.lang.Enum;"
+          + "java.security.KeyRep;"
+          + "java.security.KeyRep$Type;"
+          + "javax.crypto.spec.SecretKeySpec;"
+          + "org.apache.hadoop.crypto.key.JavaKeyStoreProvider$KeyMetadata;"
+          + "!*";
+  public static final String JCEKS_KEY_SERIAL_FILTER = "jceks.key.serialFilter";
 
   private final Configuration conf;
 
@@ -396,6 +406,14 @@ public abstract class KeyProvider {
    */
   public KeyProvider(Configuration conf) {
     this.conf = new Configuration(conf);
+    // Added for HADOOP-15473. Configured serialFilter property fixes
+    // java.security.UnrecoverableKeyException in JDK 8u171.
+    if(System.getProperty(JCEKS_KEY_SERIAL_FILTER) == null) {
+      String serialFilter =
+          conf.get(HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER,
+              JCEKS_KEY_SERIALFILTER_DEFAULT);
+      System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
+    }
   }
 
   /**
