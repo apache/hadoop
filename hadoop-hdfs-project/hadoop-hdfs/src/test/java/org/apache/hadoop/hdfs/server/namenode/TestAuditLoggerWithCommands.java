@@ -620,8 +620,9 @@ public class TestAuditLoggerWithCommands {
   }
 
   private int verifyAuditLogs(String pattern) {
-    int length = auditlog.getOutput().split("\n").length;
-    String lastAudit = auditlog.getOutput().split("\n")[length - 1];
+    int length = auditlog.getOutput().split(System.lineSeparator()).length;
+    String lastAudit = auditlog.getOutput()
+        .split(System.lineSeparator())[length - 1];
     assertTrue("Unexpected log!", lastAudit.matches(pattern));
     return length;
   }
