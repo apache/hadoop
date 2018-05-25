@@ -87,7 +87,7 @@ public class AllocationFileLoaderService extends AbstractService {
   private Path allocFile;
   private FileSystem fs;
 
-  private Listener reloadListener;
+  private final Listener reloadListener;
 
   @VisibleForTesting
   long reloadIntervalMs = ALLOC_RELOAD_INTERVAL_MS;
@@ -95,15 +95,16 @@ public class AllocationFileLoaderService extends AbstractService {
   private Thread reloadThread;
   private volatile boolean running = true;
 
-  public AllocationFileLoaderService() {
-    this(SystemClock.getInstance());
+  public AllocationFileLoaderService(Listener reloadListener) {
+    this(reloadListener, SystemClock.getInstance());
   }
 
   private List<Permission> defaultPermissions;
 
-  public AllocationFileLoaderService(Clock clock) {
+  public AllocationFileLoaderService(Listener reloadListener, Clock clock) {
     super(AllocationFileLoaderService.class.getName());
     this.clock = clock;
+    this.reloadListener = reloadListener;
   }
 
   @Override
@@ -114,6 +115,7 @@ public class AllocationFileLoaderService extends AbstractService {
       reloadThread = new Thread(() -> {
         while (running) {
           try {
+            reloadListener.onCheck();
             long time = clock.getTime();
             long lastModified =
                 fs.getFileStatus(allocFile).getModificationTime();
@@ -205,10 +207,6 @@ public class AllocationFileLoaderService extends AbstractService {
       allocPath = new Path("file", null, allocFilePath);
     }
     return allocPath;
-  }
-
-  public synchronized void setReloadListener(Listener reloadListener) {
-    this.reloadListener = reloadListener;
   }
 
   /**
@@ -351,5 +349,7 @@ public class AllocationFileLoaderService extends AbstractService {
 
   public interface Listener {
     void onReload(AllocationConfiguration info) throws IOException;
+
+    void onCheck();
   }
 }

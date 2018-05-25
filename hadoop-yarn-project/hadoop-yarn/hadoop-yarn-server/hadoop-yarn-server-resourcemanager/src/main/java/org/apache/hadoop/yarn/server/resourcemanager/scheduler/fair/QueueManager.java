@@ -22,13 +22,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.parsers.ParserConfigurationException;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -52,6 +56,36 @@ public class QueueManager {
   public static final Log LOG = LogFactory.getLog(
     QueueManager.class.getName());
 
+  private final class IncompatibleQueueRemovalTask {
+
+    private final String queueToCreate;
+    private final FSQueueType queueType;
+
+    private IncompatibleQueueRemovalTask(String queueToCreate,
+        FSQueueType queueType) {
+      this.queueToCreate = queueToCreate;
+      this.queueType = queueType;
+    }
+
+    private void execute() {
+      Boolean removed =
+          removeEmptyIncompatibleQueues(queueToCreate, queueType).orElse(null);
+      if (Boolean.TRUE.equals(removed)) {
+        FSQueue queue = getQueue(queueToCreate, true, queueType, false);
+        if (queue != null &&
+            // if queueToCreate is present in the allocation config, set it
+            // to static
+            scheduler.allocConf.configuredQueues.values().stream()
+            .anyMatch(s -> s.contains(queueToCreate))) {
+          queue.setDynamic(false);
+        }
+      }
+      if (!Boolean.FALSE.equals(removed)) {
+        incompatibleQueuesPendingRemoval.remove(this);
+      }
+    }
+  }
+
   public static final String ROOT_QUEUE = "root";
   
   private final FairScheduler scheduler;
@@ -59,6 +93,8 @@ public class QueueManager {
   private final Collection<FSLeafQueue> leafQueues = 
       new CopyOnWriteArrayList<FSLeafQueue>();
   private final Map<String, FSQueue> queues = new HashMap<String, FSQueue>();
+  private Set<IncompatibleQueueRemovalTask> incompatibleQueuesPendingRemoval =
+      new HashSet<>();
   private FSParentQueue rootQueue;
 
   public QueueManager(FairScheduler scheduler) {
@@ -75,10 +111,13 @@ public class QueueManager {
     // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
     // loaded yet.
     rootQueue = new FSParentQueue("root", scheduler, null);
+    rootQueue.setDynamic(false);
     queues.put(rootQueue.getName(), rootQueue);
 
     // Create the default queue
-    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
+    FSLeafQueue defaultQueue =
+        getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
+    defaultQueue.setDynamic(false);
     // Recursively reinitialize to propagate queue properties
     rootQueue.reinit(true);
   }
@@ -121,7 +160,8 @@ public class QueueManager {
    */
   public boolean removeLeafQueue(String name) {
     name = ensureRootPrefix(name);
-    return removeEmptyIncompatibleQueues(name, FSQueueType.PARENT);
+    return !Boolean.FALSE.equals(
+        removeEmptyIncompatibleQueues(name, FSQueueType.PARENT).orElse(null));
   }
 
 
@@ -346,9 +386,13 @@ public class QueueManager {
    * 
    * We will never remove the root queue or the default queue in this way.
    *
-   * @return true if we can create queueToCreate or it already exists.
+   * @return Optional.of(Boolean.TRUE)  if there was an incompatible queue that
+   *                                    has been removed,
+   *         Optional.of(Boolean.FALSE) if there was an incompatible queue that
+   *                                    have not be removed,
+   *         Optional.empty()           if there is no incompatible queue.
    */
-  private boolean removeEmptyIncompatibleQueues(String queueToCreate,
+  private Optional<Boolean> removeEmptyIncompatibleQueues(String queueToCreate,
       FSQueueType queueType) {
     queueToCreate = ensureRootPrefix(queueToCreate);
 
@@ -357,7 +401,7 @@ public class QueueManager {
     if (queueToCreate.equals(ROOT_QUEUE) ||
         queueToCreate.startsWith(
             ROOT_QUEUE + "." + YarnConfiguration.DEFAULT_QUEUE_NAME + ".")) {
-      return false;
+      return Optional.empty();
     }
 
     FSQueue queue = queues.get(queueToCreate);
@@ -365,19 +409,18 @@ public class QueueManager {
     if (queue != null) {
       if (queue instanceof FSLeafQueue) {
         if (queueType == FSQueueType.LEAF) {
-          // if queue is already a leaf then return true
-          return true;
+          return Optional.empty();
         }
         // remove incompatibility since queue is a leaf currently
         // needs to change to a parent.
-        return removeQueueIfEmpty(queue);
+        return Optional.of(removeQueueIfEmpty(queue));
       } else {
         if (queueType == FSQueueType.PARENT) {
-          return true;
+          return Optional.empty();
         }
         // If it's an existing parent queue and needs to change to leaf, 
         // remove it if it's empty.
-        return removeQueueIfEmpty(queue);
+        return Optional.of(removeQueueIfEmpty(queue));
       }
     }
 
@@ -389,11 +432,51 @@ public class QueueManager {
       String prefixString = queueToCreate.substring(0, sepIndex);
       FSQueue prefixQueue = queues.get(prefixString);
       if (prefixQueue != null && prefixQueue instanceof FSLeafQueue) {
-        return removeQueueIfEmpty(prefixQueue);
+        return Optional.of(removeQueueIfEmpty(prefixQueue));
       }
       sepIndex = queueToCreate.lastIndexOf('.', sepIndex-1);
     }
-    return true;
+    return Optional.empty();
+  }
+
+  /**
+   * Removes all empty dynamic queues (including empty dynamic parent queues).
+   */
+  public void removeEmptyDynamicQueues() {
+    synchronized (queues) {
+      Set<FSParentQueue> parentQueuesToCheck = new HashSet<>();
+      for (FSQueue queue : getQueues()) {
+        if (queue.isDynamic() && queue.getChildQueues().isEmpty()) {
+          boolean removed = removeQueueIfEmpty(queue);
+          if (removed && queue.getParent().isDynamic()) {
+            parentQueuesToCheck.add(queue.getParent());
+          }
+        }
+      }
+      while (!parentQueuesToCheck.isEmpty()) {
+        FSParentQueue queue = parentQueuesToCheck.iterator().next();
+        if (queue.getChildQueues().isEmpty()) {
+          removeQueue(queue);
+          if (queue.getParent().isDynamic()) {
+            parentQueuesToCheck.add(queue.getParent());
+          }
+        }
+        parentQueuesToCheck.remove(queue);
+      }
+    }
+  }
+
+  /**
+   * Re-checking incompatible queues that could not be removed earlier due to
+   * not being empty, and removing those that became empty.
+   */
+  public void removePendingIncompatibleQueues() {
+    synchronized (queues) {
+      for (IncompatibleQueueRemovalTask removalTask :
+          ImmutableSet.copyOf(incompatibleQueuesPendingRemoval)) {
+        removalTask.execute();
+      }
+    }
   }
 
   /**
@@ -435,7 +518,8 @@ public class QueueManager {
     if (queue instanceof FSLeafQueue) {
       FSLeafQueue leafQueue = (FSLeafQueue)queue;
       return queue.getNumRunnableApps() == 0 &&
-          leafQueue.getNumNonRunnableApps() == 0;
+          leafQueue.getNumNonRunnableApps() == 0 &&
+          leafQueue.getNumAssignedApps() == 0;
     } else {
       for (FSQueue child : queue.getChildQueues()) {
         if (!isEmpty(child)) {
@@ -501,27 +585,48 @@ public class QueueManager {
         LOG.error("Setting scheduling policies for existing queues failed!");
       }
 
-      for (String name : queueConf.getConfiguredQueues().get(
-              FSQueueType.LEAF)) {
-        if (removeEmptyIncompatibleQueues(name, FSQueueType.LEAF)) {
-          getLeafQueue(name, true, false);
-        }
-      }
+      ensureQueueExistsAndIsCompatibleAndIsStatic(queueConf, FSQueueType.LEAF);
+
       // At this point all leaves and 'parents with
       // at least one child' would have been created.
       // Now create parents with no configured leaf.
-      for (String name : queueConf.getConfiguredQueues().get(
-          FSQueueType.PARENT)) {
-        if (removeEmptyIncompatibleQueues(name, FSQueueType.PARENT)) {
-          getParentQueue(name, true, false);
-        }
-      }
+      ensureQueueExistsAndIsCompatibleAndIsStatic(queueConf,
+          FSQueueType.PARENT);
     }
 
     // Initialize all queues recursively
     rootQueue.reinit(true);
     // Update steady fair shares for all queues
     rootQueue.recomputeSteadyShares();
+  }
+
+  private void ensureQueueExistsAndIsCompatibleAndIsStatic(
+      AllocationConfiguration queueConf, FSQueueType queueType) {
+    for (String name : queueConf.getConfiguredQueues().get(queueType)) {
+      Boolean removed =
+          removeEmptyIncompatibleQueues(name, queueType).orElse(null);
+      if (Boolean.FALSE.equals(removed)) {
+        incompatibleQueuesPendingRemoval.add(
+            new IncompatibleQueueRemovalTask(name, queueType));
+      } else {
+        FSQueue queue = getQueue(name, true, queueType, false);
+        if (queue != null) {
+          queue.setDynamic(false);
+        }
+      }
+    }
+  }
+
+  /**
+   * Setting a set of queues to dynamic.
+   * @param queueNames The names of the queues to be set to dynamic
+   */
+  protected void setQueuesToDynamic(Set<String> queueNames) {
+    synchronized (queues) {
+      for (String queueName : queueNames) {
+        queues.get(queueName).setDynamic(true);
+      }
+    }
   }
 
   /**

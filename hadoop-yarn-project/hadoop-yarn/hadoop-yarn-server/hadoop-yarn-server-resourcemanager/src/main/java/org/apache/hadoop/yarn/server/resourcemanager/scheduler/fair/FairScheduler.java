@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -207,7 +208,8 @@ public class FairScheduler extends
   public FairScheduler() {
     super(FairScheduler.class.getName());
     context = new FSContext(this);
-    allocsLoader = new AllocationFileLoaderService();
+    allocsLoader =
+        new AllocationFileLoaderService(new AllocationReloadListener());
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
@@ -516,6 +518,7 @@ public class FairScheduler extends
           new SchedulerApplication<FSAppAttempt>(queue, user);
       applications.put(applicationId, application);
       queue.getMetrics().submitApp(user);
+      queue.addAssignedApp(applicationId);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queue.getName()
@@ -1435,7 +1438,6 @@ public class FairScheduler extends
     }
 
     allocsLoader.init(conf);
-    allocsLoader.setReloadListener(new AllocationReloadListener());
     // If we fail to load allocations file on initialize, we want to fail
     // immediately.  After a successful load, exceptions on future reloads
     // will just result in leaving things as they are.
@@ -1589,6 +1591,7 @@ public class FairScheduler extends
       // Commit the reload; also create any queue defined in the alloc file
       // if it does not already exist, so it can be displayed on the web UI.
 
+      Set<String> removedStaticQueues = getRemovedStaticQueues(queueInfo);
       writeLock.lock();
       try {
         if (queueInfo == null) {
@@ -1599,12 +1602,34 @@ public class FairScheduler extends
           setQueueAcls(allocConf.getQueueAcls());
           allocConf.getDefaultSchedulingPolicy().initialize(getContext());
           queueMgr.updateAllocationConfiguration(allocConf);
+          queueMgr.setQueuesToDynamic(removedStaticQueues);
           applyChildDefaults();
           maxRunningEnforcer.updateRunnabilityOnReload();
         }
       } finally {
         writeLock.unlock();
       }
+    }
+
+    private Set<String> getRemovedStaticQueues(
+        AllocationConfiguration queueInfo) {
+      if (queueInfo == null || allocConf == null) {
+        return Collections.emptySet();
+      }
+      Set<String> removedStaticQueues = new HashSet<>();
+      for (Set<String> queues : allocConf.getConfiguredQueues().values()) {
+        removedStaticQueues.addAll(queues);
+      }
+      for (Set<String> queues : queueInfo.getConfiguredQueues().values()) {
+        removedStaticQueues.removeAll(queues);
+      }
+      return removedStaticQueues;
+    }
+
+    @Override
+    public void onCheck() {
+      queueMgr.removeEmptyDynamicQueues();
+      queueMgr.removePendingIncompatibleQueues();
     }
   }
 
