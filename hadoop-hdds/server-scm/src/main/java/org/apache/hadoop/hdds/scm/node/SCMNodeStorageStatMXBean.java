@@ -19,7 +19,9 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -66,4 +68,10 @@ public interface SCMNodeStorageStatMXBean {
    * @return long
    */
   long getTotalFreeSpace();
+
+  /**
+   * Returns the set of disks for a given Datanode.
+   * @return set of storage volumes
+   */
+  Set<StorageLocationReport> getStorageVolumes(UUID datanodeId);
 }
