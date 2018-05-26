@@ -1464,4 +1464,9 @@ public abstract class AbstractYarnScheduler
       SchedulingRequest schedulingRequest, SchedulerNode schedulerNode) {
     return false;
   }
+
+  @Override
+  public void resetSchedulerMetrics() {
+    // reset scheduler metrics
+  }
 }
