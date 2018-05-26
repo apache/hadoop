@@ -1252,6 +1252,7 @@ public class CapacityScheduler extends
 
   @Override
   protected void nodeUpdate(RMNode rmNode) {
+    long begin = System.nanoTime();
     try {
       readLock.lock();
       setLastNodeUpdateTime(Time.now());
@@ -1279,6 +1280,9 @@ public class CapacityScheduler extends
         writeLock.unlock();
       }
     }
+
+    long latency = System.nanoTime() - begin;
+    CapacitySchedulerMetrics.getMetrics().addNodeUpdate(latency);
   }
 
   /**
@@ -1643,17 +1647,28 @@ public class CapacityScheduler extends
       return null;
     }
 
+    long startTime = System.nanoTime();
+
     // Backward compatible way to make sure previous behavior which allocation
     // driven by node heartbeat works.
     FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
 
     // We have two different logics to handle allocation on single node / multi
     // nodes.
+    CSAssignment assignment;
     if (null != node) {
-      return allocateContainerOnSingleNode(candidates, node, withNodeHeartbeat);
+      assignment = allocateContainerOnSingleNode(candidates,
+          node, withNodeHeartbeat);
     } else{
-      return allocateContainersOnMultiNodes(candidates);
+      assignment = allocateContainersOnMultiNodes(candidates);
     }
+
+    if (assignment != null && assignment.getAssignmentInformation() != null
+        && assignment.getAssignmentInformation().getNumAllocations() > 0) {
+      long allocateTime = System.nanoTime() - startTime;
+      CapacitySchedulerMetrics.getMetrics().addAllocate(allocateTime);
+    }
+    return assignment;
   }
 
   @Override
@@ -2806,6 +2821,7 @@ public class CapacityScheduler extends
   @Override
   public boolean tryCommit(Resource cluster, ResourceCommitRequest r,
       boolean updatePending) {
+    long commitStart = System.nanoTime();
     ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
         (ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>) r;
 
@@ -2844,9 +2860,15 @@ public class CapacityScheduler extends
       if (app != null && attemptId.equals(app.getApplicationAttemptId())) {
         if (app.accept(cluster, request, updatePending)
             && app.apply(cluster, request, updatePending)) {
+          long commitSuccess = System.nanoTime() - commitStart;
+          CapacitySchedulerMetrics.getMetrics()
+              .addCommitSuccess(commitSuccess);
           LOG.info("Allocation proposal accepted");
           isSuccess = true;
         } else{
+          long commitFailed = System.nanoTime() - commitStart;
+          CapacitySchedulerMetrics.getMetrics()
+              .addCommitFailure(commitFailed);
           LOG.info("Failed to accept allocation proposal");
         }
 
@@ -3028,5 +3050,10 @@ public class CapacityScheduler extends
               + " which parent queue it needs to be created under.");
     }
     return autoCreatedLeafQueue;
+  }
+
+  @Override
+  public void resetSchedulerMetrics() {
+    CapacitySchedulerMetrics.destroy();
   }
 }
