@@ -33,8 +33,10 @@ import org.apache.hadoop.mapreduce.v2.hs.UnparsedJob;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.StringHelper;
+import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
@@ -48,6 +50,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -69,7 +73,13 @@ public class TestHsJobBlock {
         new JobHistoryStubWithAllOversizeJobs(maxAllowedTaskNum);
     jobHistory.init(config);
 
-    HsJobBlock jobBlock = new HsJobBlock(jobHistory) {
+    Controller.RequestContext rc = mock(Controller.RequestContext.class);
+    ViewContext view = mock(ViewContext.class);
+    HttpServletRequest req =mock(HttpServletRequest.class);
+    when(rc.getRequest()).thenReturn(req);
+    when(view.requestContext()).thenReturn(rc);
+
+    HsJobBlock jobBlock = new HsJobBlock(config, jobHistory, view) {
       // override this so that job block can fetch a job id.
       @Override
       public Map<String, String> moreParams() {
@@ -101,7 +111,13 @@ public class TestHsJobBlock {
     JobHistory jobHistory = new JobHitoryStubWithAllNormalSizeJobs();
     jobHistory.init(config);
 
-    HsJobBlock jobBlock = new HsJobBlock(jobHistory) {
+    Controller.RequestContext rc = mock(Controller.RequestContext.class);
+    ViewContext view = mock(ViewContext.class);
+    HttpServletRequest req =mock(HttpServletRequest.class);
+    when(rc.getRequest()).thenReturn(req);
+    when(view.requestContext()).thenReturn(rc);
+
+    HsJobBlock jobBlock = new HsJobBlock(config, jobHistory, view) {
       // override this so that the job block can fetch a job id.
       @Override
       public Map<String, String> moreParams() {
