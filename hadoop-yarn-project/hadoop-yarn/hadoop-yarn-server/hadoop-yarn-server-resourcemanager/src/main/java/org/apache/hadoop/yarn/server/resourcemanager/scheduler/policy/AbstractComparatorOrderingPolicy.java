@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -89,7 +88,6 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
     }
   }
 
-  @VisibleForTesting
   public Comparator<SchedulableEntity> getComparator() {
     return comparator; 
   }
