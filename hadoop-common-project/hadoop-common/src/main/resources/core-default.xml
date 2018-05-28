@@ -2155,7 +2155,7 @@
 
 <property>
   <name>ha.zookeeper.session-timeout.ms</name>
-  <value>5000</value>
+  <value>10000</value>
   <description>
     The session timeout to use when the ZKFC connects to ZooKeeper.
     Setting this value to a lower value implies that server crashes
