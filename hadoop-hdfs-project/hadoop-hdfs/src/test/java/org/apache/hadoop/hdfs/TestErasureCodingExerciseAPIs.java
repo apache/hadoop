@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
@@ -91,8 +92,10 @@ public class TestErasureCodingExerciseAPIs {
     // Set up java key store
     String testRootDir = Paths.get(new FileSystemTestHelper().getTestRootDir())
         .toString();
+    Path targetFile = new Path(new File(testRootDir).getAbsolutePath(),
+        "test.jks");
     String keyProviderURI = JavaKeyStoreProvider.SCHEME_NAME + "://file"
-        + new Path(testRootDir, "test.jks").toUri();
+        + targetFile.toUri();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         keyProviderURI);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
