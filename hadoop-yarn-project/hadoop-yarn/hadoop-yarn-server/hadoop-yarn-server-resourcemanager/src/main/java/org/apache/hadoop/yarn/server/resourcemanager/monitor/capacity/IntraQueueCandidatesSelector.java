@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.AbstractComparatorOrderingPolicy;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.Serializable;
@@ -61,6 +63,44 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         return p1.compareTo(p2);
       }
       return ta1.getApplicationId().compareTo(ta2.getApplicationId());
+    }
+  }
+
+  /*
+   * Order first by amount used from least to most. Then order from oldest to
+   * youngest if amount used is the same.
+   */
+  static class TAFairOrderingComparator
+      implements Comparator<TempAppPerPartition> {
+
+    private ResourceCalculator rc;
+    private Resource clusterRes;
+
+    TAFairOrderingComparator(ResourceCalculator rc, Resource clusterRes) {
+      this.rc = rc;
+      this.clusterRes = clusterRes;
+    }
+
+    @Override
+    public int compare(TempAppPerPartition ta1, TempAppPerPartition ta2) {
+      if (ta1.getUser().equals(ta2.getUser())) {
+        AbstractComparatorOrderingPolicy<FiCaSchedulerApp> acop =
+            (AbstractComparatorOrderingPolicy<FiCaSchedulerApp>)
+            ta1.getFiCaSchedulerApp().getCSLeafQueue().getOrderingPolicy();
+        return acop.getComparator()
+                  .compare(ta1.getFiCaSchedulerApp(), ta2.getFiCaSchedulerApp());
+      } else {
+        Resource usedByUser1 = ta1.getTempUserPerPartition().getUsedDeductAM();
+        Resource usedByUser2 = ta2.getTempUserPerPartition().getUsedDeductAM();
+        if (Resources.equals(usedByUser1, usedByUser2)) {
+          return ta1.getApplicationId().compareTo(ta2.getApplicationId());
+        }
+        if (Resources.lessThan(rc, clusterRes, usedByUser1, usedByUser2)) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
     }
   }
 
