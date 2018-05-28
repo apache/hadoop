@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -266,7 +267,7 @@ public class TestHadoopArchiveLogs {
     hal.generateScript(localScript, workingDir, remoteRootLogDir, suffix);
     Assert.assertTrue(localScript.exists());
     String script = IOUtils.toString(localScript.toURI());
-    String[] lines = script.split(System.lineSeparator());
+    String[] lines = script.split("\n");
     Assert.assertEquals(16, lines.length);
     Assert.assertEquals("#!/bin/bash", lines[0]);
     Assert.assertEquals("set -e", lines[1]);
@@ -338,7 +339,8 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(dirPrepared);
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertEquals(
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
+            !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
     // Throw a file in the dir
     Path dummyFile = new Path(workingDir, "dummy.txt");
@@ -351,7 +353,8 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertTrue(fs.exists(dummyFile));
     Assert.assertEquals(
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
+            !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
     // -force is true and the dir exists, so it will recreate it and the dummy
     // won't exist anymore
@@ -360,7 +363,8 @@ public class TestHadoopArchiveLogs {
     Assert.assertTrue(dirPrepared);
     Assert.assertTrue(fs.exists(workingDir));
     Assert.assertEquals(
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL,
+            !Shell.WINDOWS),
         fs.getFileStatus(workingDir).getPermission());
     Assert.assertFalse(fs.exists(dummyFile));
   }
