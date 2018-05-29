@@ -1602,8 +1602,10 @@ public class ContainerImpl implements Container {
         }
         container.addDiagnostics(exitEvent.getDiagnosticInfo() + "\n");
       }
-
       if (container.shouldRetry(container.exitCode)) {
+        // Updates to the retry context should  be protected from concurrent
+        // writes. It should only be called from this transition.
+        container.retryPolicy.updateRetryContext(container.windowRetryContext);
         container.storeRetryContext();
         doRelaunch(container,
             container.windowRetryContext.getRemainingRetries(),
