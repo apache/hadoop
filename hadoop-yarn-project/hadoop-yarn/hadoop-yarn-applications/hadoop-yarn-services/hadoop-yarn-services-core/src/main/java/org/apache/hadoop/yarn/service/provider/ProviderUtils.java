@@ -298,8 +298,7 @@ public class ProviderUtils implements YarnServiceConstants {
         destFile = new Path(staticFile.getDestFile());
       }
 
-      String symlink = APP_RESOURCES_DIR + "/" + destFile.getName();
-      addLocalResource(launcher, symlink, localResource, destFile);
+      addLocalResource(launcher, destFile.getName(), localResource, destFile);
     }
   }
 
