@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
-
 import java.io.IOException;
 
 /**
@@ -31,6 +29,6 @@ public interface ContainerLocationManagerMXBean {
    *
    * @return storage location usage report.
    */
-  StorageLocationReport[] getLocationReport() throws IOException;
+  StorageLocationReportMXBean[] getLocationReport() throws IOException;
 
 }

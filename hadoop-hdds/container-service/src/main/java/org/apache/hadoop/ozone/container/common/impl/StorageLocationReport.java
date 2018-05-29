@@ -23,6 +23,8 @@ import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.StorageTypeProto;
+import org.apache.hadoop.ozone.container.common.interfaces
+    .StorageLocationReportMXBean;
 
 import java.io.IOException;
 
@@ -30,7 +32,8 @@ import java.io.IOException;
  * Storage location stats of datanodes that provide back store for containers.
  *
  */
-public class StorageLocationReport {
+public final class StorageLocationReport implements
+    StorageLocationReportMXBean {
 
   private final String id;
   private final boolean failed;
@@ -74,6 +77,11 @@ public class StorageLocationReport {
 
   public String getStorageLocation() {
     return storageLocation;
+  }
+
+  @Override
+  public String getStorageTypeName() {
+    return storageType.name();
   }
 
   public StorageType getStorageType() {
@@ -204,76 +212,76 @@ public class StorageLocationReport {
     /**
      * Sets the storageId.
      *
-     * @param id storageId
+     * @param idValue storageId
      * @return StorageLocationReport.Builder
      */
-    public Builder setId(String id) {
-      this.id = id;
+    public Builder setId(String idValue) {
+      this.id = idValue;
       return this;
     }
 
     /**
      * Sets whether the volume failed or not.
      *
-     * @param failed whether volume failed or not
+     * @param failedValue whether volume failed or not
      * @return StorageLocationReport.Builder
      */
-    public Builder setFailed(boolean failed) {
-      this.failed = failed;
+    public Builder setFailed(boolean failedValue) {
+      this.failed = failedValue;
       return this;
     }
 
     /**
      * Sets the capacity of volume.
      *
-     * @param capacity capacity
+     * @param capacityValue capacity
      * @return StorageLocationReport.Builder
      */
-    public Builder setCapacity(long capacity) {
-      this.capacity = capacity;
+    public Builder setCapacity(long capacityValue) {
+      this.capacity = capacityValue;
       return this;
     }
     /**
      * Sets the scmUsed Value.
      *
-     * @param scmUsed storage space used by scm
+     * @param scmUsedValue storage space used by scm
      * @return StorageLocationReport.Builder
      */
-    public Builder setScmUsed(long scmUsed) {
-      this.scmUsed = scmUsed;
+    public Builder setScmUsed(long scmUsedValue) {
+      this.scmUsed = scmUsedValue;
       return this;
     }
 
     /**
      * Sets the remaining free space value.
      *
-     * @param remaining remaining free space
+     * @param remainingValue remaining free space
      * @return StorageLocationReport.Builder
      */
-    public Builder setRemaining(long remaining) {
-      this.remaining = remaining;
+    public Builder setRemaining(long remainingValue) {
+      this.remaining = remainingValue;
       return this;
     }
 
     /**
      * Sets the storageType.
      *
-     * @param storageType type of the storage used
+     * @param storageTypeValue type of the storage used
      * @return StorageLocationReport.Builder
      */
-    public Builder setStorageType(StorageType storageType) {
-      this.storageType = storageType;
+    public Builder setStorageType(StorageType storageTypeValue) {
+      this.storageType = storageTypeValue;
       return this;
     }
 
     /**
      * Sets the storageLocation.
      *
-     * @param storageLocation location of the volume
+     * @param storageLocationValue location of the volume
      * @return StorageLocationReport.Builder
      */
-    public Builder setStorageLocation(String storageLocation) {
-      this.storageLocation = storageLocation;
+    public Builder setStorageLocation(String storageLocationValue) {
+      this.storageLocation = storageLocationValue;
       return this;
     }
 
