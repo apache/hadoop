@@ -247,9 +247,9 @@ public class KMSACLs implements Runnable, KeyACLs {
         if (blacklist == null) {
           LOG.debug("No blacklist for {}", type.toString());
         } else if (access) {
-          LOG.debug("user is in {}" , blacklist.getAclString());
-        } else {
           LOG.debug("user is not in {}" , blacklist.getAclString());
+        } else {
+          LOG.debug("user is in {}" , blacklist.getAclString());
         }
       }
     }
