@@ -230,18 +230,18 @@ public class ContainerStateManager implements Closeable {
    *
    * Container State Flow:
    *
-   * [ALLOCATED]------->[CREATING]--------->[OPEN]---------->[CLOSING]------->[CLOSED]
-   *            (CREATE)     |    (CREATED)       (FINALIZE)          (CLOSE)    |
-   *                         |                                                   |
-   *                         |                                                   |
-   *                         |(TIMEOUT)                                  (DELETE)|
-   *                         |                                                   |
-   *                         +------------------> [DELETING] <-------------------+
-   *                                                   |
-   *                                                   |
-   *                                          (CLEANUP)|
-   *                                                   |
-   *                                               [DELETED]
+   * [ALLOCATED]---->[CREATING]------>[OPEN]-------->[CLOSING]------->[CLOSED]
+   *            (CREATE)     |    (CREATED)       (FINALIZE)     (CLOSE)    |
+   *                         |                                              |
+   *                         |                                              |
+   *                         |(TIMEOUT)                             (DELETE)|
+   *                         |                                              |
+   *                         +-------------> [DELETING] <-------------------+
+   *                                            |
+   *                                            |
+   *                                   (CLEANUP)|
+   *                                            |
+   *                                        [DELETED]
    */
   private void initializeStateMachine() {
     stateMachine.addTransition(LifeCycleState.ALLOCATED,

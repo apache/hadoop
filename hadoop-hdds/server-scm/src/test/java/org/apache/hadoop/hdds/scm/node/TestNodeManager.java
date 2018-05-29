@@ -510,42 +510,42 @@ public class TestNodeManager {
    * @throws InterruptedException
    * @throws TimeoutException
    */
+  /**
+   * These values are very important. Here is what it means so you don't
+   * have to look it up while reading this code.
+   *
+   *  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL - This the frequency of the
+   *  HB processing thread that is running in the SCM. This thread must run
+   *  for the SCM  to process the Heartbeats.
+   *
+   *  OZONE_SCM_HEARTBEAT_INTERVAL - This is the frequency at which
+   *  datanodes will send heartbeats to SCM. Please note: This is the only
+   *  config value for node manager that is specified in seconds. We don't
+   *  want SCM heartbeat resolution to be more than in seconds.
+   *  In this test it is not used, but we are forced to set it because we
+   *  have validation code that checks Stale Node interval and Dead Node
+   *  interval is larger than the value of
+   *  OZONE_SCM_HEARTBEAT_INTERVAL.
+   *
+   *  OZONE_SCM_STALENODE_INTERVAL - This is the time that must elapse
+   *  from the last heartbeat for us to mark a node as stale. In this test
+   *  we set that to 3. That is if a node has not heartbeat SCM for last 3
+   *  seconds we will mark it as stale.
+   *
+   *  OZONE_SCM_DEADNODE_INTERVAL - This is the time that must elapse
+   *  from the last heartbeat for a node to be marked dead. We have an
+   *  additional constraint that this must be at least 2 times bigger than
+   *  Stale node Interval.
+   *
+   *  With these we are trying to explore the state of this cluster with
+   *  various timeouts. Each section is commented so that you can keep
+   *  track of the state of the cluster nodes.
+   *
+   */
+
   @Test
   public void testScmClusterIsInExpectedState1() throws IOException,
       InterruptedException, TimeoutException {
-    /**
-     * These values are very important. Here is what it means so you don't
-     * have to look it up while reading this code.
-     *
-     *  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL - This the frequency of the
-     *  HB processing thread that is running in the SCM. This thread must run
-     *  for the SCM  to process the Heartbeats.
-     *
-     *  OZONE_SCM_HEARTBEAT_INTERVAL - This is the frequency at which
-     *  datanodes will send heartbeats to SCM. Please note: This is the only
-     *  config value for node manager that is specified in seconds. We don't
-     *  want SCM heartbeat resolution to be more than in seconds.
-     *  In this test it is not used, but we are forced to set it because we
-     *  have validation code that checks Stale Node interval and Dead Node
-     *  interval is larger than the value of
-     *  OZONE_SCM_HEARTBEAT_INTERVAL.
-     *
-     *  OZONE_SCM_STALENODE_INTERVAL - This is the time that must elapse
-     *  from the last heartbeat for us to mark a node as stale. In this test
-     *  we set that to 3. That is if a node has not heartbeat SCM for last 3
-     *  seconds we will mark it as stale.
-     *
-     *  OZONE_SCM_DEADNODE_INTERVAL - This is the time that must elapse
-     *  from the last heartbeat for a node to be marked dead. We have an
-     *  additional constraint that this must be at least 2 times bigger than
-     *  Stale node Interval.
-     *
-     *  With these we are trying to explore the state of this cluster with
-     *  various timeouts. Each section is commented so that you can keep
-     *  track of the state of the cluster nodes.
-     *
-     */
-
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100,
         MILLISECONDS);

@@ -42,11 +42,14 @@ import java.util.HashSet;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Test Node Storage Map.
+ */
 public class TestSCMNodeStorageStatMap {
   private final static int DATANODE_COUNT = 100;
-  final long capacity = 10L * OzoneConsts.GB;
-  final long used = 2L * OzoneConsts.GB;
-  final long remaining = capacity - used;
+  private final long capacity = 10L * OzoneConsts.GB;
+  private final long used = 2L * OzoneConsts.GB;
+  private final long remaining = capacity - used;
   private static OzoneConfiguration conf = new OzoneConfiguration();
   private final Map<UUID, Set<StorageLocationReport>> testData =
       new ConcurrentHashMap<>();
@@ -59,9 +62,10 @@ public class TestSCMNodeStorageStatMap {
       UUID dnId = UUID.randomUUID();
       Set<StorageLocationReport> reportSet = new HashSet<>();
       String path = GenericTestUtils.getTempPath(
-          TestSCMNodeStorageStatMap.class.getSimpleName() + "-" + Integer
-              .toString(dnIndex));
-      StorageLocationReport.Builder builder = StorageLocationReport.newBuilder();
+          TestSCMNodeStorageStatMap.class.getSimpleName() + "-" +
+              Integer.toString(dnIndex));
+      StorageLocationReport.Builder builder =
+          StorageLocationReport.newBuilder();
       builder.setStorageType(StorageType.DISK).setId(dnId.toString())
           .setStorageLocation(path).setScmUsed(used).setRemaining(remaining)
           .setCapacity(capacity).setFailed(false);
@@ -139,12 +143,12 @@ public class TestSCMNodeStorageStatMap {
     String path =
         GenericTestUtils.getRandomizedTempPath().concat("/" + storageId);
     StorageLocationReport report = reportSet.iterator().next();
-    long capacity = report.getCapacity();
-    long used = report.getScmUsed();
-    long remaining = report.getRemaining();
+    long reportCapacity = report.getCapacity();
+    long reportScmUsed = report.getScmUsed();
+    long reportRemaining = report.getRemaining();
     List<SCMStorageReport> reports = TestUtils
-        .createStorageReport(capacity, used, remaining, path, null, storageId,
-            1);
+        .createStorageReport(reportCapacity, reportScmUsed, reportRemaining,
+            path, null, storageId, 1);
     StorageReportResult result =
         map.processNodeReport(key, TestUtils.createNodeReport(reports));
     Assert.assertEquals(result.getStatus(),
@@ -158,7 +162,7 @@ public class TestSCMNodeStorageStatMap {
         SCMNodeStorageStatMap.ReportStatus.ALL_IS_WELL);
 
     reportList.add(TestUtils
-        .createStorageReport(capacity, capacity, 0, path, null,
+        .createStorageReport(reportCapacity, reportCapacity, 0, path, null,
             UUID.randomUUID().toString(), 1).get(0));
     result = map.processNodeReport(key, TestUtils.createNodeReport(reportList));
     Assert.assertEquals(result.getStatus(),
@@ -166,8 +170,8 @@ public class TestSCMNodeStorageStatMap {
     // Mark a disk failed 
     SCMStorageReport srb2 = SCMStorageReport.newBuilder()
         .setStorageUuid(UUID.randomUUID().toString())
-        .setStorageLocation(srb.getStorageLocation()).setScmUsed(capacity)
-        .setCapacity(capacity).setRemaining(0).setFailed(true).build();
+        .setStorageLocation(srb.getStorageLocation()).setScmUsed(reportCapacity)
+        .setCapacity(reportCapacity).setRemaining(0).setFailed(true).build();
     reportList.add(srb2);
     nrb.addAllStorageReport(reportList);
     result = map.processNodeReport(key, nrb.addStorageReport(srb).build());

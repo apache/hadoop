@@ -56,7 +56,7 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
   // NodeStorageInfo MXBean
   private ObjectName scmNodeStorageInfoBean;
   /**
-   * constructs the scmNodeStorageReportMap object
+   * constructs the scmNodeStorageReportMap object.
    */
   public SCMNodeStorageStatMap(OzoneConfiguration conf) {
     // scmNodeStorageReportMap = new ConcurrentHashMap<>();
@@ -73,6 +73,9 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
             HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT);
   }
 
+  /**
+   * Enum that Describes what we should do at various thresholds.
+   */
   public enum UtilizationThreshold {
     NORMAL, WARN, CRITICAL;
   }
@@ -107,8 +110,8 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
    * @param datanodeID -- Datanode UUID
    * @param report - set if StorageReports.
    */
-  public void insertNewDatanode(UUID datanodeID, Set<StorageLocationReport> report)
-      throws SCMException {
+  public void insertNewDatanode(UUID datanodeID,
+      Set<StorageLocationReport> report) throws SCMException {
     Preconditions.checkNotNull(report);
     Preconditions.checkState(report.size() != 0);
     Preconditions.checkNotNull(datanodeID);
@@ -142,8 +145,8 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
    * @throws SCMException - if we don't know about this datanode, for new DN
    *                      use insertNewDatanode.
    */
-  public void updateDatanodeMap(UUID datanodeID, Set<StorageLocationReport> report)
-      throws SCMException {
+  public void updateDatanodeMap(UUID datanodeID,
+      Set<StorageLocationReport> report) throws SCMException {
     Preconditions.checkNotNull(datanodeID);
     Preconditions.checkNotNull(report);
     Preconditions.checkState(report.size() != 0);
@@ -301,7 +304,7 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
   }
 
   /**
-   * removes the dataNode from scmNodeStorageReportMap
+   * removes the dataNode from scmNodeStorageReportMap.
    * @param datanodeID
    * @throws SCMException in case the dataNode is not found in the map.
    */
@@ -339,11 +342,11 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
   }
 
   /**
-   * get the scmUsed ratio
+   * get the scmUsed ratio.
    */
   public  double getScmUsedratio(long scmUsed, long capacity) {
     double scmUsedRatio =
-        truncateDecimals (scmUsed / (double) capacity);
+        truncateDecimals(scmUsed / (double) capacity);
     return scmUsedRatio;
   }
   /**

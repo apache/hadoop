@@ -45,7 +45,6 @@ import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -87,7 +86,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * create a container, which then can be used to store data.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public class StorageContainerManager extends ServiceRuntimeInfoImpl
+public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     implements SCMMXBean {
 
   private static final Logger LOG = LoggerFactory

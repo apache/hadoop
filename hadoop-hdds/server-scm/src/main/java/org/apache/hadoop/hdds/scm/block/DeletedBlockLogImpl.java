@@ -190,7 +190,7 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     try {
       for(Long txID : txIDs) {
         try {
-          byte [] deleteBlockBytes =
+          byte[] deleteBlockBytes =
               deletedStore.get(Longs.toByteArray(txID));
           if (deleteBlockBytes == null) {
             LOG.warn("Delete txID {} not found", txID);

@@ -152,7 +152,8 @@ public class ContainerMapping implements Mapping {
     ContainerInfo containerInfo;
     lock.lock();
     try {
-      byte[] containerBytes = containerStore.get(Longs.toByteArray(containerID));
+      byte[] containerBytes = containerStore.get(
+          Longs.toByteArray(containerID));
       if (containerBytes == null) {
         throw new SCMException(
             "Specified key does not exist. key : " + containerID,
@@ -229,7 +230,8 @@ public class ContainerMapping implements Mapping {
           containerStateManager.allocateContainer(
               pipelineSelector, type, replicationFactor, owner);
 
-      byte[] containerIDBytes = Longs.toByteArray(containerInfo.getContainerID());
+      byte[] containerIDBytes = Longs.toByteArray(
+          containerInfo.getContainerID());
       containerStore.put(containerIDBytes, containerInfo.getProtobuf()
               .toByteArray());
     } finally {

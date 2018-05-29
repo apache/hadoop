@@ -216,8 +216,10 @@ public class TestContainerMapping {
 
     mapping.processContainerReports(crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
-    Assert.assertEquals(100000000L, updatedContainer.getNumberOfKeys());
+    ContainerInfo updatedContainer =
+        mapping.getContainer(info.getContainerID());
+    Assert.assertEquals(100000000L,
+        updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
   }
 
@@ -251,8 +253,10 @@ public class TestContainerMapping {
 
     mapping.processContainerReports(crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
-    Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());
+    ContainerInfo updatedContainer =
+        mapping.getContainer(info.getContainerID());
+    Assert.assertEquals(500000000L,
+        updatedContainer.getNumberOfKeys());
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
     NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainerIDs(

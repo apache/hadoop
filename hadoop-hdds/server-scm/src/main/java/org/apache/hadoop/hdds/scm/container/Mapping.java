@@ -45,7 +45,8 @@ public interface Mapping extends Closeable {
    * The max size of the searching range cannot exceed the
    * value of count.
    *
-   * @param startContainerID start containerID, >=0, start searching at the head if 0.
+   * @param startContainerID start containerID, >=0,
+   * start searching at the head if 0.
    * @param count count must be >= 0
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big.
@@ -53,7 +54,8 @@ public interface Mapping extends Closeable {
    * @return a list of container.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(long startContainerID, int count) throws IOException;
+  List<ContainerInfo> listContainer(long startContainerID, int count)
+      throws IOException;
 
   /**
    * Allocates a new container for a given keyName and replication factor.
@@ -64,7 +66,8 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor replicationFactor, String owner) throws IOException;
+      HddsProtos.ReplicationFactor replicationFactor, String owner)
+      throws IOException;
 
   /**
    * Deletes a container from SCM.

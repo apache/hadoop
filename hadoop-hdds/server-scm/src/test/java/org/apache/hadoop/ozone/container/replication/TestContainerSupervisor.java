@@ -202,8 +202,8 @@ public class TestContainerSupervisor {
       ppool.handleContainerReport(reportsProto);
     }
 
-    clist = datanodeStateManager.getContainerReport(wayOverReplicatedContainerID,
-        ppool.getPool().getPoolName(), 7);
+    clist = datanodeStateManager.getContainerReport(
+        wayOverReplicatedContainerID, ppool.getPool().getPoolName(), 7);
 
     for (ContainerReportsRequestProto reportsProto : clist) {
       ppool.handleContainerReport(reportsProto);
@@ -264,7 +264,8 @@ public class TestContainerSupervisor {
               "PoolNew", 1);
       containerSupervisor.handleContainerReport(clist.get(0));
       GenericTestUtils.waitFor(() ->
-          inProgressLog.getOutput().contains(Long.toString(newContainerID)) && inProgressLog
+          inProgressLog.getOutput()
+              .contains(Long.toString(newContainerID)) && inProgressLog
               .getOutput().contains(id.getUuidString()),
           200, 10 * 1000);
     } finally {

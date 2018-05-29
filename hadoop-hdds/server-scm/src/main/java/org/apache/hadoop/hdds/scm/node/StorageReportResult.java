@@ -69,14 +69,14 @@ public class StorageReportResult {
     }
 
     public ReportResultBuilder setFullVolumeSet(
-        Set<StorageLocationReport> fullVolumes) {
-      this.fullVolumes = fullVolumes;
+        Set<StorageLocationReport> fullVolumesSet) {
+      this.fullVolumes = fullVolumesSet;
       return this;
     }
 
     public ReportResultBuilder setFailedVolumeSet(
-        Set<StorageLocationReport> failedVolumes) {
-      this.failedVolumes = failedVolumes;
+        Set<StorageLocationReport> failedVolumesSet) {
+      this.failedVolumes = failedVolumesSet;
       return this;
     }
 

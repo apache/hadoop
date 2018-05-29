@@ -31,7 +31,7 @@ import java.util.UUID;
 @InterfaceAudience.Private
 public interface SCMNodeStorageStatMXBean {
   /**
-   * Get the capacity of the dataNode
+   * Get the capacity of the dataNode.
    * @param datanodeID Datanode Id
    * @return long
    */
@@ -52,7 +52,7 @@ public interface SCMNodeStorageStatMXBean {
   long getUsedSpace(UUID datanodeId);
 
   /**
-   * Returns the total capacity of all dataNodes
+   * Returns the total capacity of all dataNodes.
    * @return long
    */
   long getTotalCapacity();
