@@ -27,9 +27,9 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 
 import java.io.IOException;
@@ -171,14 +171,14 @@ public interface ContainerManager extends RwLock {
    * Get the Node Report of container storage usage.
    * @return node report.
    */
-  SCMNodeReport getNodeReport() throws IOException;
+  NodeReportProto getNodeReport() throws IOException;
 
   /**
    * Gets container report.
    * @return container report.
    * @throws IOException
    */
-  ContainerReportsRequestProto getContainerReport() throws IOException;
+  ContainerReportsProto getContainerReport() throws IOException;
 
   /**
    * Gets container reports.

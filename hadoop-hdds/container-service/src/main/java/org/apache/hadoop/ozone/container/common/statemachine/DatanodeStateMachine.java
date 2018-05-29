@@ -21,8 +21,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
-    .CloseContainerHandler;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.CloseContainerCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CommandDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
@@ -86,7 +85,7 @@ public class DatanodeStateMachine implements Closeable {
      // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
-        .addHandler(new CloseContainerHandler())
+        .addHandler(new CloseContainerCommandHandler())
         .addHandler(new DeleteBlocksCommandHandler(
             container.getContainerManager(), conf))
         .setConnectionManager(connectionManager)
@@ -131,7 +130,7 @@ public class DatanodeStateMachine implements Closeable {
       try {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
         nextHB.set(Time.monotonicNow() + heartbeatFrequency);
-        context.setReportState(container.getNodeReport());
+        context.setNodeReport(container.getNodeReport());
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();

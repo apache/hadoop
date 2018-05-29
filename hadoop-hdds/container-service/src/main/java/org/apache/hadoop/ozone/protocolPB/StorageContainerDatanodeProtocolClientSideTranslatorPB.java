@@ -20,24 +20,23 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos
     .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
+
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisterRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -123,22 +122,16 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   /**
    * Send by datanode to SCM.
    *
-   * @param datanodeDetailsProto - Datanode Details
-   * @param nodeReport - node report
+   * @param heartbeat node heartbeat
    * @throws IOException
    */
 
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
-      DatanodeDetailsProto datanodeDetailsProto,
-      SCMNodeReport nodeReport) throws IOException {
-    SCMHeartbeatRequestProto.Builder req = SCMHeartbeatRequestProto
-        .newBuilder();
-    req.setDatanodeDetails(datanodeDetailsProto);
-    req.setNodeReport(nodeReport);
+      SCMHeartbeatRequestProto heartbeat) throws IOException {
     final SCMHeartbeatResponseProto resp;
     try {
-      resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, req.build());
+      resp = rpcProxy.sendHeartbeat(NULL_RPC_CONTROLLER, heartbeat);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -154,41 +147,22 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    * @return SCM Command.
    */
   @Override
-  public SCMRegisteredCmdResponseProto register(
-      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
-      ContainerReportsRequestProto containerReportsRequestProto)
+  public SCMRegisteredResponseProto register(
+      DatanodeDetailsProto datanodeDetailsProto, NodeReportProto nodeReport,
+      ContainerReportsProto containerReportsRequestProto)
       throws IOException {
     SCMRegisterRequestProto.Builder req =
         SCMRegisterRequestProto.newBuilder();
     req.setDatanodeDetails(datanodeDetailsProto);
     req.setContainerReport(containerReportsRequestProto);
     req.setNodeReport(nodeReport);
-    final SCMRegisteredCmdResponseProto response;
+    final SCMRegisteredResponseProto response;
     try {
       response = rpcProxy.register(NULL_RPC_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
     return response;
-  }
-
-  /**
-   * Send a container report.
-   *
-   * @param reports -- Container report
-   * @return HeartbeatRespose.nullcommand.
-   * @throws IOException
-   */
-  @Override
-  public ContainerReportsResponseProto sendContainerReport(
-      ContainerReportsRequestProto reports) throws IOException {
-    final ContainerReportsResponseProto resp;
-    try {
-      resp = rpcProxy.sendContainerReport(NULL_RPC_CONTROLLER, reports);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-    return resp;
   }
 
   @Override

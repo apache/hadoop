@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -133,9 +133,9 @@ public class TestContainerPlacement {
       for (DatanodeDetails datanodeDetails : datanodes) {
         String id = UUID.randomUUID().toString();
         String path = testDir.getAbsolutePath() + "/" + id;
-        List<SCMStorageReport> reports = TestUtils
+        List<StorageReportProto> reports = TestUtils
             .createStorageReport(capacity, used, remaining, path, null, id, 1);
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
+        nodeManager.sendHeartbeat(datanodeDetails,
             TestUtils.createNodeReport(reports));
       }
 

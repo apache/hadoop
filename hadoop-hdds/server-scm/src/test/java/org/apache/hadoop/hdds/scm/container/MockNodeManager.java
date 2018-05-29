@@ -24,13 +24,14 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.assertj.core.util.Preconditions;
 import org.mockito.Mockito;
@@ -370,13 +371,13 @@ public class MockNodeManager implements NodeManager {
    * Register the node if the node finds that it is not registered with any
    * SCM.
    *
-   * @param datanodeDetails DatanodeDetailsProto
-   * @param nodeReport SCMNodeReport
+   * @param datanodeDetails DatanodeDetails
+   * @param nodeReport NodeReportProto
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(HddsProtos.DatanodeDetailsProto datanodeDetails,
-                             SCMNodeReport nodeReport) {
+  public RegisteredCommand register(DatanodeDetails datanodeDetails,
+      NodeReportProto nodeReport) {
     return null;
   }
 
@@ -388,9 +389,8 @@ public class MockNodeManager implements NodeManager {
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(
-      HddsProtos.DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport) {
+  public List<SCMCommand> sendHeartbeat(DatanodeDetails datanodeDetails,
+      NodeReportProto nodeReport) {
     if ((datanodeDetails != null) && (nodeReport != null) && (nodeReport
         .getStorageReportCount() > 0)) {
       SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
@@ -398,8 +398,9 @@ public class MockNodeManager implements NodeManager {
       long totalCapacity = 0L;
       long totalRemaining = 0L;
       long totalScmUsed = 0L;
-      List<SCMStorageReport> storageReports = nodeReport.getStorageReportList();
-      for (SCMStorageReport report : storageReports) {
+      List<StorageReportProto> storageReports = nodeReport
+          .getStorageReportList();
+      for (StorageReportProto report : storageReports) {
         totalCapacity += report.getCapacity();
         totalRemaining += report.getRemaining();
         totalScmUsed += report.getScmUsed();
@@ -407,8 +408,7 @@ public class MockNodeManager implements NodeManager {
       aggregateStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
       aggregateStat.add(stat);
-      nodeMetricMap.put(DatanodeDetails
-          .getFromProtoBuf(datanodeDetails).getUuid(), stat);
+      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
 
     }
     return null;

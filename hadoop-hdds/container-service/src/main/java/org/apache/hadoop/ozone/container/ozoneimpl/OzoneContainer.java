@@ -19,14 +19,14 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
@@ -219,7 +219,7 @@ public class OzoneContainer {
   /**
    * Returns node report of container storage usage.
    */
-  public SCMNodeReport getNodeReport() throws IOException {
+  public NodeReportProto getNodeReport() throws IOException {
     return this.manager.getNodeReport();
   }
 
@@ -255,7 +255,7 @@ public class OzoneContainer {
    * @return - container report.
    * @throws IOException
    */
-  public ContainerReportsRequestProto getContainerReport() throws IOException {
+  public ContainerReportsProto getContainerReport() throws IOException {
     return this.manager.getContainerReport();
   }
 

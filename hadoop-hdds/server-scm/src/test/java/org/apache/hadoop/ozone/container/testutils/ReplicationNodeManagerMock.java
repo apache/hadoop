@@ -24,13 +24,13 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodePoolManager;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.mockito.Mockito;
 
@@ -277,12 +277,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Register the node if the node finds that it is not registered with any SCM.
    *
    * @param dd DatanodeDetailsProto
-   * @param nodeReport SCMNodeReport
+   * @param nodeReport NodeReportProto
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(HddsProtos.DatanodeDetailsProto dd,
-                             SCMNodeReport nodeReport) {
+  public RegisteredCommand register(DatanodeDetails dd,
+                                    NodeReportProto nodeReport) {
     return null;
   }
 
@@ -294,8 +294,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(HddsProtos.DatanodeDetailsProto dd,
-      SCMNodeReport nodeReport) {
+  public List<SCMCommand> sendHeartbeat(DatanodeDetails dd,
+      NodeReportProto nodeReport) {
     return null;
   }
 

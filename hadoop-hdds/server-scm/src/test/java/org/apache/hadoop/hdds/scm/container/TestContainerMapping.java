@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -191,8 +191,6 @@ public class TestContainerMapping {
   public void testFullContainerReport() throws IOException {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
-    ContainerReportsRequestProto.reportType reportType =
-        ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
@@ -209,12 +207,11 @@ public class TestContainerMapping {
 
     reports.add(ciBuilder.build());
 
-    ContainerReportsRequestProto.Builder crBuilder =
-        ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
-        .setType(reportType).addAllReports(reports);
+    ContainerReportsProto.Builder crBuilder = ContainerReportsProto
+        .newBuilder();
+    crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build());
 
     ContainerInfo updatedContainer =
         mapping.getContainer(info.getContainerID());
@@ -227,8 +224,6 @@ public class TestContainerMapping {
   public void testContainerCloseWithContainerReport() throws IOException {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
-    ContainerReportsRequestProto.reportType reportType =
-        ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
 
@@ -246,12 +241,11 @@ public class TestContainerMapping {
 
     reports.add(ciBuilder.build());
 
-    ContainerReportsRequestProto.Builder crBuilder =
-        ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
-        .setType(reportType).addAllReports(reports);
+    ContainerReportsProto.Builder crBuilder =
+        ContainerReportsProto.newBuilder();
+    crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build());
 
     ContainerInfo updatedContainer =
         mapping.getContainer(info.getContainerID());

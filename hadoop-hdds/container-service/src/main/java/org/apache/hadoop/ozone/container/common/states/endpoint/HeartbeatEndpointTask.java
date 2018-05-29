@@ -23,7 +23,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.container.common.helpers
@@ -97,8 +99,13 @@ public class HeartbeatEndpointTask
     try {
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
+      SCMHeartbeatRequestProto request = SCMHeartbeatRequestProto.newBuilder()
+          .setDatanodeDetails(datanodeDetailsProto)
+          .setNodeReport(context.getNodeReport())
+          .build();
+
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(datanodeDetailsProto, this.context.getNodeReport());
+          .sendHeartbeat(request);
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
@@ -125,13 +132,13 @@ public class HeartbeatEndpointTask
    */
   private void processResponse(SCMHeartbeatResponseProto response,
       final DatanodeDetailsProto datanodeDetails) {
-    for (SCMCommandResponseProto commandResponseProto : response
+    Preconditions.checkState(response.getDatanodeUUID()
+            .equalsIgnoreCase(datanodeDetails.getUuid()),
+        "Unexpected datanode ID in the response.");
+    // Verify the response is indeed for this datanode.
+    for (SCMCommandProto commandResponseProto : response
         .getCommandsList()) {
-      // Verify the response is indeed for this datanode.
-      Preconditions.checkState(commandResponseProto.getDatanodeUUID()
-          .equalsIgnoreCase(datanodeDetails.getUuid()),
-          "Unexpected datanode ID in the response.");
-      switch (commandResponseProto.getCmdType()) {
+      switch (commandResponseProto.getCommandType()) {
       case reregisterCommand:
         if (rpcEndpoint.getState() == EndPointStates.HEARTBEAT) {
           if (LOG.isDebugEnabled()) {
@@ -148,7 +155,8 @@ public class HeartbeatEndpointTask
         break;
       case deleteBlocksCommand:
         DeleteBlocksCommand db = DeleteBlocksCommand
-            .getFromProtobuf(commandResponseProto.getDeleteBlocksProto());
+            .getFromProtobuf(
+                commandResponseProto.getDeleteBlocksCommandProto());
         if (!db.blocksTobeDeleted().isEmpty()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(DeletedContainerBlocksSummary
@@ -161,7 +169,7 @@ public class HeartbeatEndpointTask
       case closeContainerCommand:
         CloseContainerCommand closeContainer =
             CloseContainerCommand.getFromProtobuf(
-                commandResponseProto.getCloseContainerProto());
+                commandResponseProto.getCloseContainerCommandProto());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received SCM container close request for container {}",
               closeContainer.getContainerID());
@@ -170,7 +178,7 @@ public class HeartbeatEndpointTask
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "
-            + commandResponseProto.getCmdType().name());
+            + commandResponseProto.getCommandType().name());
       }
     }
   }

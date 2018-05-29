@@ -19,20 +19,20 @@ package org.apache.hadoop.ozone.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos
     .ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -55,13 +55,12 @@ public interface StorageContainerDatanodeProtocol {
 
   /**
    * Used by data node to send a Heartbeat.
-   * @param datanodeDetails - Datanode Details.
-   * @param nodeReport - node report state
+   * @param heartbeat Heartbeat
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
-  SCMHeartbeatResponseProto sendHeartbeat(DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport) throws IOException;
+  SCMHeartbeatResponseProto sendHeartbeat(SCMHeartbeatRequestProto heartbeat)
+      throws IOException;
 
   /**
    * Register Datanode.
@@ -70,18 +69,9 @@ public interface StorageContainerDatanodeProtocol {
    * @param containerReportsRequestProto - Container Reports.
    * @return SCM Command.
    */
-  SCMRegisteredCmdResponseProto register(DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport, ContainerReportsRequestProto
+  SCMRegisteredResponseProto register(DatanodeDetailsProto datanodeDetails,
+      NodeReportProto nodeReport, ContainerReportsProto
       containerReportsRequestProto) throws IOException;
-
-  /**
-   * Send a container report.
-   * @param reports -- Container report.
-   * @return container reports response.
-   * @throws IOException
-   */
-  ContainerReportsResponseProto sendContainerReport(
-      ContainerReportsRequestProto reports) throws IOException;
 
   /**
    * Used by datanode to send block deletion ACK to SCM.

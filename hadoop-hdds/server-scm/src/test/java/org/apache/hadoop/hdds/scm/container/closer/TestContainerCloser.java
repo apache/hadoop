@@ -30,7 +30,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -199,9 +199,8 @@ public class TestContainerCloser {
 
   private void sendContainerReport(ContainerInfo info, long used) throws
       IOException {
-    ContainerReportsRequestProto.Builder
-        reports =  ContainerReportsRequestProto.newBuilder();
-    reports.setType(ContainerReportsRequestProto.reportType.fullReport);
+    ContainerReportsProto.Builder
+        reports =  ContainerReportsProto.newBuilder();
 
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
         StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
@@ -214,9 +213,8 @@ public class TestContainerCloser {
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
         .setWriteBytes(2000000000L);
-    reports.setDatanodeDetails(
-        TestUtils.getDatanodeDetails().getProtoBufMessage());
     reports.addReports(ciBuilder);
-    mapping.processContainerReports(reports.build());
+    mapping.processContainerReports(TestUtils.getDatanodeDetails(),
+        reports.build());
   }
 }

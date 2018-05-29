@@ -16,10 +16,11 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -98,7 +99,8 @@ public interface Mapping extends Closeable {
    *
    * @param reports Container report
    */
-  void processContainerReports(ContainerReportsRequestProto reports)
+  void processContainerReports(DatanodeDetails datanodeDetails,
+                               ContainerReportsProto reports)
       throws IOException;
 
 }

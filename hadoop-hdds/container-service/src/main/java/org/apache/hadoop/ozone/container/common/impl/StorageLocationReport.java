@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 
@@ -137,8 +137,8 @@ public class StorageLocationReport {
    * @return SCMStorageReport
    * @throws IOException In case, the storage type specified is invalid.
    */
-  public SCMStorageReport getProtoBufMessage() throws IOException{
-    SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+  public StorageReportProto getProtoBufMessage() throws IOException{
+    StorageReportProto.Builder srb = StorageReportProto.newBuilder();
     return srb.setStorageUuid(getId())
         .setCapacity(getCapacity())
         .setScmUsed(getScmUsed())
@@ -156,7 +156,7 @@ public class StorageLocationReport {
    * @throws IOException in case of invalid storage type
    */
 
-  public static StorageLocationReport getFromProtobuf(SCMStorageReport report)
+  public static StorageLocationReport getFromProtobuf(StorageReportProto report)
       throws IOException {
     StorageLocationReport.Builder builder = StorageLocationReport.newBuilder();
     builder.setId(report.getStorageUuid())

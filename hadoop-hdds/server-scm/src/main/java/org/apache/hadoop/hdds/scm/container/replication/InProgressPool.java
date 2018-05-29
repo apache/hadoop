@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -178,21 +178,20 @@ public final class InProgressPool {
    *
    * @param containerReport - ContainerReport
    */
-  public void handleContainerReport(
-      ContainerReportsRequestProto containerReport) {
+  public void handleContainerReport(DatanodeDetails datanodeDetails,
+      ContainerReportsProto containerReport) {
     if (status == ProgressStatus.InProgress) {
-      executorService.submit(processContainerReport(containerReport));
+      executorService.submit(processContainerReport(datanodeDetails,
+          containerReport));
     } else {
       LOG.debug("Cannot handle container report when the pool is in {} status.",
           status);
     }
   }
 
-  private Runnable processContainerReport(
-      ContainerReportsRequestProto reports) {
+  private Runnable processContainerReport(DatanodeDetails datanodeDetails,
+      ContainerReportsProto reports) {
     return () -> {
-      DatanodeDetails datanodeDetails =
-          DatanodeDetails.getFromProtoBuf(reports.getDatanodeDetails());
       if (processedNodeSet.computeIfAbsent(datanodeDetails.getUuid(),
           (k) -> true)) {
         nodeProcessed.incrementAndGet();

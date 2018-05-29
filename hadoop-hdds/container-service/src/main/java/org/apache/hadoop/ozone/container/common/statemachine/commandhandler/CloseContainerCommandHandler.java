@@ -17,9 +17,9 @@
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCloseContainerCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
+    .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
 import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -30,18 +30,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Container Report handler.
+ * Handler for close container command received from SCM.
  */
-public class CloseContainerHandler implements CommandHandler {
+public class CloseContainerCommandHandler implements CommandHandler {
   static final Logger LOG =
-      LoggerFactory.getLogger(CloseContainerHandler.class);
+      LoggerFactory.getLogger(CloseContainerCommandHandler.class);
   private int invocationCount;
   private long totalTime;
 
   /**
    * Constructs a ContainerReport handler.
    */
-  public CloseContainerHandler() {
+  public CloseContainerCommandHandler() {
   }
 
   /**
@@ -62,9 +62,9 @@ public class CloseContainerHandler implements CommandHandler {
     long containerID = -1;
     try {
 
-      SCMCloseContainerCmdResponseProto
+      CloseContainerCommandProto
           closeContainerProto =
-          SCMCloseContainerCmdResponseProto
+          CloseContainerCommandProto
               .parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
 
@@ -84,8 +84,8 @@ public class CloseContainerHandler implements CommandHandler {
    * @return Type
    */
   @Override
-  public SCMCmdType getCommandType() {
-    return SCMCmdType.closeContainerCommand;
+  public SCMCommandProto.Type getCommandType() {
+    return SCMCommandProto.Type.closeContainerCommand;
   }
 
   /**

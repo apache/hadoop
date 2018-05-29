@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .InitDatanodeState;
@@ -52,7 +52,7 @@ public class StateContext {
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
   private DatanodeStateMachine.DatanodeStates state;
-  private SCMNodeReport nrState;
+  private NodeReportProto dnReport;
 
   /**
    * Constructs a StateContext.
@@ -69,7 +69,7 @@ public class StateContext {
     commandQueue = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
-    nrState = SCMNodeReport.getDefaultInstance();
+    dnReport = NodeReportProto.getDefaultInstance();
   }
 
   /**
@@ -144,16 +144,16 @@ public class StateContext {
    * Returns the node report of the datanode state context.
    * @return the node report.
    */
-  public SCMNodeReport getNodeReport() {
-    return nrState;
+  public NodeReportProto getNodeReport() {
+    return dnReport;
   }
 
   /**
    * Sets the storage location report of the datanode state context.
-   * @param nrReport - node report
+   * @param nodeReport node report
    */
-  public void setReportState(SCMNodeReport nrReport) {
-    this.nrState = nrReport;
+  public void setNodeReport(NodeReportProto nodeReport) {
+    this.dnReport = nodeReport;
   }
 
   /**

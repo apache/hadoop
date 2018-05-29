@@ -18,11 +18,11 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMDeleteBlocksCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.DeleteBlocksCommandProto;
 
 import java.util.List;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * A SCM command asks a datanode to delete a number of blocks.
  */
 public class DeleteBlocksCommand extends
-    SCMCommand<SCMDeleteBlocksCmdResponseProto> {
+    SCMCommand<DeleteBlocksCommandProto> {
 
   private List<DeletedBlocksTransaction> blocksTobeDeleted;
 
@@ -44,8 +44,8 @@ public class DeleteBlocksCommand extends
   }
 
   @Override
-  public SCMCmdType getType() {
-    return SCMCmdType.deleteBlocksCommand;
+  public SCMCommandProto.Type getType() {
+    return SCMCommandProto.Type.deleteBlocksCommand;
   }
 
   @Override
@@ -54,13 +54,13 @@ public class DeleteBlocksCommand extends
   }
 
   public static DeleteBlocksCommand getFromProtobuf(
-      SCMDeleteBlocksCmdResponseProto deleteBlocksProto) {
+      DeleteBlocksCommandProto deleteBlocksProto) {
     return new DeleteBlocksCommand(deleteBlocksProto
         .getDeletedBlocksTransactionsList());
   }
 
-  public SCMDeleteBlocksCmdResponseProto getProto() {
-    return SCMDeleteBlocksCmdResponseProto.newBuilder()
+  public DeleteBlocksCommandProto getProto() {
+    return DeleteBlocksCommandProto.newBuilder()
         .addAllDeletedBlocksTransactions(blocksTobeDeleted).build();
   }
 }

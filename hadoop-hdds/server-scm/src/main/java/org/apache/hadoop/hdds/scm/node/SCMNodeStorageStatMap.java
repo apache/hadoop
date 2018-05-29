@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -33,7 +33,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -159,7 +163,7 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
   }
 
   public StorageReportResult processNodeReport(UUID datanodeID,
-      StorageContainerDatanodeProtocolProtos.SCMNodeReport nodeReport)
+      StorageContainerDatanodeProtocolProtos.NodeReportProto nodeReport)
       throws IOException {
     Preconditions.checkNotNull(datanodeID);
     Preconditions.checkNotNull(nodeReport);
@@ -170,9 +174,9 @@ public class SCMNodeStorageStatMap implements SCMNodeStorageStatMXBean {
     Set<StorageLocationReport> storagReportSet = new HashSet<>();
     Set<StorageLocationReport> fullVolumeSet = new HashSet<>();
     Set<StorageLocationReport> failedVolumeSet = new HashSet<>();
-    List<SCMStorageReport>
+    List<StorageReportProto>
         storageReports = nodeReport.getStorageReportList();
-    for (SCMStorageReport report : storageReports) {
+    for (StorageReportProto report : storageReports) {
       StorageLocationReport storageReport =
           StorageLocationReport.getFromProtobuf(report);
       storagReportSet.add(storageReport);

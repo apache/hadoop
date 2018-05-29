@@ -21,7 +21,7 @@ package org.apache.hadoop.hdds.scm.node;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -31,7 +31,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 public class HeartbeatQueueItem {
   private DatanodeDetails datanodeDetails;
   private long recvTimestamp;
-  private SCMNodeReport nodeReport;
+  private NodeReportProto nodeReport;
 
   /**
    *
@@ -40,7 +40,7 @@ public class HeartbeatQueueItem {
    * @param nodeReport - node report associated with the heartbeat if any.
    */
   HeartbeatQueueItem(DatanodeDetails datanodeDetails, long recvTimestamp,
-      SCMNodeReport nodeReport) {
+      NodeReportProto nodeReport) {
     this.datanodeDetails = datanodeDetails;
     this.recvTimestamp = recvTimestamp;
     this.nodeReport = nodeReport;
@@ -56,7 +56,7 @@ public class HeartbeatQueueItem {
   /**
    * @return node report.
    */
-  public SCMNodeReport getNodeReport() {
+  public NodeReportProto getNodeReport() {
     return nodeReport;
   }
 
@@ -72,7 +72,7 @@ public class HeartbeatQueueItem {
    */
   public static class Builder {
     private DatanodeDetails datanodeDetails;
-    private SCMNodeReport nodeReport;
+    private NodeReportProto nodeReport;
     private long recvTimestamp = monotonicNow();
 
     public Builder setDatanodeDetails(DatanodeDetails dnDetails) {
@@ -80,8 +80,8 @@ public class HeartbeatQueueItem {
       return this;
     }
 
-    public Builder setNodeReport(SCMNodeReport scmNodeReport) {
-      this.nodeReport = scmNodeReport;
+    public Builder setNodeReport(NodeReportProto report) {
+      this.nodeReport = report;
       return this;
     }
 

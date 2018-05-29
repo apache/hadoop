@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 
 /**
  * A class that acts as the base class to convert between Java and SCM
@@ -31,7 +31,7 @@ public abstract class SCMCommand<T extends GeneratedMessage> {
    * Returns the type of this command.
    * @return Type
    */
-  public  abstract SCMCmdType getType();
+  public  abstract SCMCommandProto.Type getType();
 
   /**
    * Gets the protobuf message of this object.

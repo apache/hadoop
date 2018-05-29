@@ -19,18 +19,15 @@ package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto
     .ErrorCode;
 
 /**
  * Response to Datanode Register call.
  */
-public class RegisteredCommand extends
-    SCMCommand<SCMRegisteredCmdResponseProto> {
+public class RegisteredCommand {
   private String datanodeUUID;
   private String clusterID;
   private ErrorCode error;
@@ -57,16 +54,6 @@ public class RegisteredCommand extends
    */
   public static Builder newBuilder() {
     return new Builder();
-  }
-
-  /**
-   * Returns the type of this command.
-   *
-   * @return Type
-   */
-  @Override
-  public SCMCmdType getType() {
-    return SCMCmdType.registeredCommand;
   }
 
   /**
@@ -117,10 +104,9 @@ public class RegisteredCommand extends
    *
    * @return A protobuf message.
    */
-  @Override
   public byte[] getProtoBufMessage() {
-    SCMRegisteredCmdResponseProto.Builder builder =
-        SCMRegisteredCmdResponseProto.newBuilder()
+    SCMRegisteredResponseProto.Builder builder =
+        SCMRegisteredResponseProto.newBuilder()
             .setClusterID(this.clusterID)
             .setDatanodeUUID(this.datanodeUUID)
             .setErrorCode(this.error);
@@ -157,7 +143,7 @@ public class RegisteredCommand extends
      * @param response - RegisteredCmdResponseProto
      * @return RegisteredCommand
      */
-    public  RegisteredCommand getFromProtobuf(SCMRegisteredCmdResponseProto
+    public  RegisteredCommand getFromProtobuf(SCMRegisteredResponseProto
                                                         response) {
       Preconditions.checkNotNull(response);
       if (response.hasHostname() && response.hasIpAddress()) {

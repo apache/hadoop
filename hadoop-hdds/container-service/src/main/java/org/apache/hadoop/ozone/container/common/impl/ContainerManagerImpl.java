@@ -35,11 +35,11 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -854,11 +854,11 @@ public class ContainerManagerImpl implements ContainerManager {
    * @return node report.
    */
   @Override
-  public SCMNodeReport getNodeReport() throws IOException {
+  public NodeReportProto getNodeReport() throws IOException {
     StorageLocationReport[] reports = locationManager.getLocationReport();
-    SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+    NodeReportProto.Builder nrb = NodeReportProto.newBuilder();
     for (int i = 0; i < reports.length; i++) {
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
+      StorageReportProto.Builder srb = StorageReportProto.newBuilder();
       nrb.addStorageReport(reports[i].getProtoBufMessage());
     }
     return nrb.build();
@@ -891,7 +891,7 @@ public class ContainerManagerImpl implements ContainerManager {
    * @throws IOException
    */
   @Override
-  public ContainerReportsRequestProto getContainerReport() throws IOException {
+  public ContainerReportsProto getContainerReport() throws IOException {
     LOG.debug("Starting container report iteration.");
     // No need for locking since containerMap is a ConcurrentSkipListMap
     // And we can never get the exact state since close might happen
@@ -899,12 +899,8 @@ public class ContainerManagerImpl implements ContainerManager {
     List<ContainerData> containers = containerMap.values().stream()
         .collect(Collectors.toList());
 
-    ContainerReportsRequestProto.Builder crBuilder =
-        ContainerReportsRequestProto.newBuilder();
-
-    // TODO: support delta based container report
-    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
-        .setType(ContainerReportsRequestProto.reportType.fullReport);
+    ContainerReportsProto.Builder crBuilder =
+        ContainerReportsProto.newBuilder();
 
     for (ContainerData container: containers) {
       long containerId = container.getContainerID();

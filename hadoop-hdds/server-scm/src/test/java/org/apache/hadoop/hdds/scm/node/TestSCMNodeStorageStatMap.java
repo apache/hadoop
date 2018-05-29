@@ -21,9 +21,9 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -134,7 +134,7 @@ public class TestSCMNodeStorageStatMap {
   @Test
   public void testProcessNodeReportCheckOneNode() throws IOException {
     UUID key = getFirstKey();
-    List<SCMStorageReport> reportList = new ArrayList<>();
+    List<StorageReportProto> reportList = new ArrayList<>();
     Set<StorageLocationReport> reportSet = testData.get(key);
     SCMNodeStorageStatMap map = new SCMNodeStorageStatMap(conf);
     map.insertNewDatanode(key, reportSet);
@@ -146,16 +146,16 @@ public class TestSCMNodeStorageStatMap {
     long reportCapacity = report.getCapacity();
     long reportScmUsed = report.getScmUsed();
     long reportRemaining = report.getRemaining();
-    List<SCMStorageReport> reports = TestUtils
+    List<StorageReportProto> reports = TestUtils
         .createStorageReport(reportCapacity, reportScmUsed, reportRemaining,
             path, null, storageId, 1);
     StorageReportResult result =
         map.processNodeReport(key, TestUtils.createNodeReport(reports));
     Assert.assertEquals(result.getStatus(),
         SCMNodeStorageStatMap.ReportStatus.ALL_IS_WELL);
-    StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =
-        SCMNodeReport.newBuilder();
-    SCMStorageReport srb = reportSet.iterator().next().getProtoBufMessage();
+    StorageContainerDatanodeProtocolProtos.NodeReportProto.Builder nrb =
+        NodeReportProto.newBuilder();
+    StorageReportProto srb = reportSet.iterator().next().getProtoBufMessage();
     reportList.add(srb);
     result = map.processNodeReport(key, TestUtils.createNodeReport(reportList));
     Assert.assertEquals(result.getStatus(),
@@ -168,7 +168,7 @@ public class TestSCMNodeStorageStatMap {
     Assert.assertEquals(result.getStatus(),
         SCMNodeStorageStatMap.ReportStatus.STORAGE_OUT_OF_SPACE);
     // Mark a disk failed 
-    SCMStorageReport srb2 = SCMStorageReport.newBuilder()
+    StorageReportProto srb2 = StorageReportProto.newBuilder()
         .setStorageUuid(UUID.randomUUID().toString())
         .setStorageLocation(srb.getStorageLocation()).setScmUsed(reportCapacity)
         .setCapacity(reportCapacity).setRemaining(0).setFailed(true).build();

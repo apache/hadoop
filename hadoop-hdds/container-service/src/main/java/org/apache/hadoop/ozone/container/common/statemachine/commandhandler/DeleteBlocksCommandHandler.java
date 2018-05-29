@@ -18,6 +18,8 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
@@ -26,8 +28,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers
@@ -73,10 +73,10 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
   @Override
   public void handle(SCMCommand command, OzoneContainer container,
       StateContext context, SCMConnectionManager connectionManager) {
-    if (command.getType() != SCMCmdType.deleteBlocksCommand) {
+    if (command.getType() != SCMCommandProto.Type.deleteBlocksCommand) {
       LOG.warn("Skipping handling command, expected command "
               + "type {} but found {}",
-          SCMCmdType.deleteBlocksCommand, command.getType());
+          SCMCommandProto.Type.deleteBlocksCommand, command.getType());
       return;
     }
     LOG.debug("Processing block deletion command.");
@@ -193,8 +193,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
   }
 
   @Override
-  public SCMCmdType getCommandType() {
-    return SCMCmdType.deleteBlocksCommand;
+  public SCMCommandProto.Type getCommandType() {
+    return SCMCommandProto.Type.deleteBlocksCommand;
   }
 
   @Override
