@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -185,5 +188,38 @@ public class TestRunJar extends TestCase {
     jstream.close();
 
     return jarFile;
+  }
+
+  @Test
+  public void testUnJar2() throws IOException {
+    // make a simple zip
+    File jarFile = new File(TEST_ROOT_DIR, TEST_JAR_NAME);
+    JarOutputStream jstream =
+        new JarOutputStream(new FileOutputStream(jarFile));
+    JarEntry je = new JarEntry("META-INF/MANIFEST.MF");
+    byte[] data = "Manifest-Version: 1.0\nCreated-By: 1.8.0_1 (Manual)"
+        .getBytes(StandardCharsets.UTF_8);
+    je.setSize(data.length);
+    jstream.putNextEntry(je);
+    jstream.write(data);
+    jstream.closeEntry();
+    je = new JarEntry("../outside.path");
+    data = "any data here".getBytes(StandardCharsets.UTF_8);
+    je.setSize(data.length);
+    jstream.putNextEntry(je);
+    jstream.write(data);
+    jstream.closeEntry();
+    jstream.close();
+
+    File unjarDir = new File(TEST_ROOT_DIR, "unjar-path");
+
+    // Unjar everything
+    try {
+      RunJar.unJar(jarFile, unjarDir);
+      fail("unJar should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "would create file outside of", e);
+    }
   }
 }
