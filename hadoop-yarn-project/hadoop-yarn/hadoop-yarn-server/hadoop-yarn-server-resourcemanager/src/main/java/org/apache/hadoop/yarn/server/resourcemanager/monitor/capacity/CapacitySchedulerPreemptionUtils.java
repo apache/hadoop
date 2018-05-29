@@ -136,12 +136,12 @@ public class CapacitySchedulerPreemptionUtils {
    * @param conservativeDRF
    *          should we do conservativeDRF preemption or not.
    *          When true:
-   *            stop preempt container when any major resource type <= 0 for to-
-   *            preempt.
+   *            stop preempt container when any major resource type
+   *            {@literal <=} 0 for to-preempt.
    *            This is default preemption behavior of intra-queue preemption
    *          When false:
-   *            stop preempt container when: all major resource type <= 0 for
-   *            to-preempt.
+   *            stop preempt container when: all major resource type
+   *            {@literal <=} 0 for to-preempt.
    *            This is default preemption behavior of inter-queue preemption
    * @return should we preempt rmContainer. If we should, deduct from
    *         <code>resourceToObtainByPartition</code>
