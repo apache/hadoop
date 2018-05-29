@@ -1299,14 +1299,15 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
                   .getParent();
           File dockerConfigPath = new File(nmPrivateDir + "/config.json");
           try {
-            DockerClientConfigHandler
-                .writeDockerCredentialsToPath(dockerConfigPath, credentials);
+            if (DockerClientConfigHandler
+                .writeDockerCredentialsToPath(dockerConfigPath, credentials)) {
+              dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
+            }
           } catch (IOException e) {
             throw new ContainerExecutionException(
                 "Unable to write Docker client credentials to "
                     + dockerConfigPath);
           }
-          dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
         }
       }
     }

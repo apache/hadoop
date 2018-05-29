@@ -154,14 +154,15 @@ public final class DockerClientConfigHandler {
    * @param outConfigFile the File to write the Docker client configuration to.
    * @param credentials the populated Credentials object.
    * @throws IOException if the write fails.
+   * @return true if a Docker credential is found in the supplied credentials.
    */
-  public static void writeDockerCredentialsToPath(File outConfigFile,
+  public static boolean writeDockerCredentialsToPath(File outConfigFile,
       Credentials credentials) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode rootNode = mapper.createObjectNode();
-    ObjectNode registryUrlNode = mapper.createObjectNode();
     boolean foundDockerCred = false;
     if (credentials.numberOfTokens() > 0) {
+      ObjectMapper mapper = new ObjectMapper();
+      ObjectNode rootNode = mapper.createObjectNode();
+      ObjectNode registryUrlNode = mapper.createObjectNode();
       for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
         if (tk.getKind().equals(DockerCredentialTokenIdentifier.KIND)) {
           foundDockerCred = true;
@@ -176,12 +177,14 @@ public final class DockerClientConfigHandler {
           }
         }
       }
+      if (foundDockerCred) {
+        rootNode.put(CONFIG_AUTHS_KEY, registryUrlNode);
+        String json = mapper.writerWithDefaultPrettyPrinter()
+            .writeValueAsString(rootNode);
+        FileUtils.writeStringToFile(
+            outConfigFile, json, StandardCharsets.UTF_8);
+      }
     }
-    if (foundDockerCred) {
-      rootNode.put(CONFIG_AUTHS_KEY, registryUrlNode);
-      String json =
-          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
-      FileUtils.writeStringToFile(outConfigFile, json, StandardCharsets.UTF_8);
-    }
+    return foundDockerCred;
   }
 }
