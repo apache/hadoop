@@ -48,8 +48,10 @@ import org.junit.Test;
  */
 public class TestTrash extends TestCase {
 
-  private final static Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
+  private final static File BASE_PATH = new File(GenericTestUtils.getTempPath(
       "testTrash"));
+
+  private final static Path TEST_DIR = new Path(BASE_PATH.getAbsolutePath());
 
   @Before
   public void setUp() throws IOException {
@@ -680,7 +682,7 @@ public class TestTrash extends TestCase {
   static class TestLFS extends LocalFileSystem {
     Path home;
     TestLFS() {
-      this(new Path(TEST_DIR, "user/test"));
+      this(TEST_DIR);
     }
     TestLFS(final Path home) {
       super(new RawLocalFileSystem() {
@@ -807,8 +809,8 @@ public class TestTrash extends TestCase {
    */
   public static void verifyTrashPermission(FileSystem fs, Configuration conf)
       throws IOException {
-    Path caseRoot = new Path(
-        GenericTestUtils.getTempPath("testTrashPermission"));
+    Path caseRoot = new Path(BASE_PATH.getPath(),
+        "testTrashPermission");
     try (FileSystem fileSystem = fs){
       Trash trash = new Trash(fileSystem, conf);
       FileSystemTestWrapper wrapper =
