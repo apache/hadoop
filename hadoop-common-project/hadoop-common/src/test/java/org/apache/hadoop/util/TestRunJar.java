@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.util;
 
+import static org.apache.hadoop.util.RunJar.MATCH_ANY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -221,5 +225,45 @@ public class TestRunJar {
     // run RunJar
     runJar.run(args);
     // it should not throw an exception
+  }
+
+  @Test
+  public void testUnJar2() throws IOException {
+    // make a simple zip
+    File jarFile = new File(TEST_ROOT_DIR, TEST_JAR_NAME);
+    JarOutputStream jstream =
+        new JarOutputStream(new FileOutputStream(jarFile));
+    JarEntry je = new JarEntry("META-INF/MANIFEST.MF");
+    byte[] data = "Manifest-Version: 1.0\nCreated-By: 1.8.0_1 (Manual)"
+        .getBytes(StandardCharsets.UTF_8);
+    je.setSize(data.length);
+    jstream.putNextEntry(je);
+    jstream.write(data);
+    jstream.closeEntry();
+    je = new JarEntry("../outside.path");
+    data = "any data here".getBytes(StandardCharsets.UTF_8);
+    je.setSize(data.length);
+    jstream.putNextEntry(je);
+    jstream.write(data);
+    jstream.closeEntry();
+    jstream.close();
+
+    File unjarDir = getUnjarDir("unjar-path");
+
+    // Unjar everything
+    try {
+      RunJar.unJar(jarFile, unjarDir, MATCH_ANY);
+      fail("unJar should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "would create file outside of", e);
+    }
+    try {
+      RunJar.unJar(new FileInputStream(jarFile), unjarDir, MATCH_ANY);
+      fail("unJar should throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "would create file outside of", e);
+    }
   }
 }
