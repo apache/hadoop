@@ -64,12 +64,18 @@ public class TestSlidingWindowRetryPolicy {
         new SlidingWindowRetryPolicy.RetryContext(retryContext);
     Assert.assertTrue("retry 1",
         retryPolicy.shouldRetry(windowRetryContext, 12));
+    retryPolicy.updateRetryContext(windowRetryContext);
+
     clock.setTime(20);
     Assert.assertTrue("retry 2",
         retryPolicy.shouldRetry(windowRetryContext, 12));
+    retryPolicy.updateRetryContext(windowRetryContext);
+
     clock.setTime(40);
     Assert.assertTrue("retry 3",
         retryPolicy.shouldRetry(windowRetryContext, 12));
+    retryPolicy.updateRetryContext(windowRetryContext);
+
     clock.setTime(45);
     Assert.assertFalse("retry failed",
         retryPolicy.shouldRetry(windowRetryContext, 12));
