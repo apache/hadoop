@@ -154,11 +154,11 @@ public class TestProviderUtils {
 
     ProviderUtils.handleStaticFilesForLocalization(launcher, sfs,
         compLaunchCtx);
-    Mockito.verify(launcher).addLocalResource(Mockito.eq("resources/destFile1"),
+    Mockito.verify(launcher).addLocalResource(Mockito.eq("destFile1"),
         any(LocalResource.class));
     Mockito.verify(launcher).addLocalResource(
-        Mockito.eq("resources/destFile_2"), any(LocalResource.class));
+        Mockito.eq("destFile_2"), any(LocalResource.class));
     Mockito.verify(launcher).addLocalResource(
-        Mockito.eq("resources/sourceFile4"), any(LocalResource.class));
+        Mockito.eq("sourceFile4"), any(LocalResource.class));
   }
 }
