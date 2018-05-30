@@ -85,8 +85,9 @@ public class SlidingWindowRetryPolicy {
    * Updates remaining retries and the restart time when
    * required in the retryContext.
    * <p>
-   * When failuresValidityInterval is > 0, it also removes time entries from
-   * <code>restartTimes</code> which are outside the validity interval.
+   * When failuresValidityInterval is {@literal >} 0, it also removes time
+   * entries from <code>restartTimes</code> which are outside the validity
+   * interval.
    */
   protected void updateRetryContext(RetryContext retryContext) {
     if (retryContext.containerRetryContext.getFailuresValidityInterval() > 0) {
