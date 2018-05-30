@@ -53,6 +53,7 @@ public class MiniQJMHACluster {
     private StartupOption startOpt = null;
     private final MiniDFSCluster.Builder dfsBuilder;
     private boolean forceRemoteEditsOnly = false;
+    private String baseDir;
 
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -71,6 +72,11 @@ public class MiniQJMHACluster {
 
     public void startupOption(StartupOption startOpt) {
       this.startOpt = startOpt;
+    }
+
+    public Builder baseDir(String d) {
+      this.baseDir = d;
+      return this;
     }
 
     public Builder setForceRemoteEditsOnly(boolean val) {
@@ -98,8 +104,8 @@ public class MiniQJMHACluster {
         basePort = 10000 + RANDOM.nextInt(1000) * 4;
         LOG.info("Set MiniQJMHACluster basePort to " + basePort);
         // start 3 journal nodes
-        journalCluster = new MiniJournalCluster.Builder(conf).format(true)
-            .build();
+        journalCluster = new MiniJournalCluster.Builder(conf)
+            .baseDir(builder.baseDir).format(true).build();
         journalCluster.waitActive();
         URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
 
