@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -85,7 +86,8 @@ public class TestDFSAdminWithHA {
     conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         security);
-    cluster = new MiniQJMHACluster.Builder(conf).build();
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    cluster = new MiniQJMHACluster.Builder(conf).baseDir(baseDir).build();
     setHAConf(conf, cluster.getDfsCluster().getNameNode(0).getHostAndPort(),
         cluster.getDfsCluster().getNameNode(1).getHostAndPort());
     cluster.getDfsCluster().getNameNode(0).getHostAndPort();
