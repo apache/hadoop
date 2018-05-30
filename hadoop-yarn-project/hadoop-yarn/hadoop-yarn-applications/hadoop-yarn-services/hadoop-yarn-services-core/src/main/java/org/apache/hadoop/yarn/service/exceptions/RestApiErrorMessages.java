@@ -91,6 +91,14 @@ public interface RestApiErrorMessages {
 
   String ERROR_QUICKLINKS_FOR_COMP_INVALID = "Quicklinks specified at"
       + " component level, needs corresponding values set at service level";
+  // Note: %sin is not a typo. Constraint name is optional so the error messages
+  // below handle that scenario by adding a space if name is specified.
+  String ERROR_PLACEMENT_POLICY_CONSTRAINT_TYPE_NULL = "Type not specified "
+      + "for constraint %sin placement policy of component %s.";
+  String ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL = "Scope not specified "
+      + "for constraint %sin placement policy of component %s.";
+  String ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL = "Tag(s) not specified "
+      + "for constraint %sin placement policy of component %s.";
   String ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME = "Invalid target tag %s "
       + "specified in placement policy of component %s. For now, target tags "
       + "support self reference only. Specifying anything other than its "
