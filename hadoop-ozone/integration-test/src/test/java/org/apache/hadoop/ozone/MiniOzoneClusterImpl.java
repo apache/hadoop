@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
@@ -219,13 +220,15 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     datanodeService.stop();
     datanodeService.join();
     // ensure same ports are used across restarts.
-    Configuration config = datanodeService.getConf();
-    int currentPort = datanodeService.getDatanodeDetails().getContainerPort();
-    config.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
-    config.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
-    int ratisPort = datanodeService.getDatanodeDetails().getRatisPort();
-    config.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
-    config.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
+    Configuration conf = datanodeService.getConf();
+    int currentPort = datanodeService.getDatanodeDetails()
+        .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
+    conf.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
+    conf.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+    int ratisPort = datanodeService.getDatanodeDetails()
+        .getPort(DatanodeDetails.Port.Name.RATIS).getValue();
+    conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
+    conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     datanodeService.start(null);
   }
 

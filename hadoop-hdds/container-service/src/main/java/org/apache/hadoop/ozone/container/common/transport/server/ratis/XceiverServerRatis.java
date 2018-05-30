@@ -203,7 +203,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
             + "fallback to use default port {}", localPort, e);
       }
     }
-    datanodeDetails.setRatisPort(localPort);
+    datanodeDetails.setPort(
+        DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
     return new XceiverServerRatis(datanodeDetails, localPort, storageDir,
         dispatcher, ozoneConf);
   }

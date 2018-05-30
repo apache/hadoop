@@ -81,8 +81,6 @@ public class TestVolume {
 
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
-    final int port = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails().getOzoneRestPort();
 
     client = new RpcClient(conf);
   }

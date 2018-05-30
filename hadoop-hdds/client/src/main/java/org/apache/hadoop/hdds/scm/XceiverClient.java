@@ -93,7 +93,7 @@ public class XceiverClient extends XceiverClientSpi {
 
     // read port from the data node, on failure use default configured
     // port.
-    int port = leader.getContainerPort();
+    int port = leader.getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
     if (port == 0) {
       port = config.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);

@@ -27,7 +27,6 @@ import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachin
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.XceiverClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 
+import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
@@ -114,9 +114,9 @@ public class TestMiniOzoneCluster {
     DatanodeDetails id1 = TestUtils.getDatanodeDetails();
     DatanodeDetails id2 = TestUtils.getDatanodeDetails();
     DatanodeDetails id3 = TestUtils.getDatanodeDetails();
-    id1.setContainerPort(1);
-    id2.setContainerPort(2);
-    id3.setContainerPort(3);
+    id1.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 1));
+    id2.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 2));
+    id3.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 3));
 
     // Write a single ID to the file and read it out
     File validIdsFile = new File(WRITE_TMP, "valid-values.id");

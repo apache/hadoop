@@ -71,7 +71,8 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
             + "fallback to use default port {}", this.port, e);
       }
     }
-    datanodeDetails.setContainerPort(port);
+    datanodeDetails.setPort(
+        DatanodeDetails.newPort(DatanodeDetails.Port.Name.STANDALONE, port));
     server = ((NettyServerBuilder) ServerBuilder.forPort(port))
         .maxMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
         .addService(new GrpcXceiverService(dispatcher))

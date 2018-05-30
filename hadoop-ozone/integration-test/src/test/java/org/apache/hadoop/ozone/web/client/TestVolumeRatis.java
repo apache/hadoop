@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -63,7 +64,8 @@ public class TestVolumeRatis {
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
     cluster.waitForClusterToBeReady();
     final int port = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails().getOzoneRestPort();
+        .getDatanodeDetails()
+        .getPort(DatanodeDetails.Port.Name.REST).getValue();
 
     client = new RpcClient(conf);
   }

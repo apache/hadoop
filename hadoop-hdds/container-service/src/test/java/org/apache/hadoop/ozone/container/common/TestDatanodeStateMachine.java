@@ -209,8 +209,10 @@ public class TestDatanodeStateMachine {
         conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
     idPath.delete();
     DatanodeDetails datanodeDetails = getNewDatanodeDetails();
-    datanodeDetails.setContainerPort(
+    DatanodeDetails.Port port = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE,
         OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    datanodeDetails.setPort(port);
     ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
 
     try (DatanodeStateMachine stateMachine =
@@ -360,13 +362,19 @@ public class TestDatanodeStateMachine {
   }
 
   private DatanodeDetails getNewDatanodeDetails() {
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
     return DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setHostName("localhost")
         .setIpAddress("127.0.0.1")
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0)
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort)
         .build();
   }
 }

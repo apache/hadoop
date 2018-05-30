@@ -118,8 +118,9 @@ public class TestKeySpaceManagerRestInterface {
       switch (type) {
       case HTTP:
       case HTTPS:
-        Assert.assertEquals(datanodeDetails.getOzoneRestPort(),
-            (int) ports.get(type));
+        Assert.assertEquals(
+            datanodeDetails.getPort(DatanodeDetails.Port.Name.REST).getValue(),
+            ports.get(type));
         break;
       default:
         // KSM only sends Datanode's info port details

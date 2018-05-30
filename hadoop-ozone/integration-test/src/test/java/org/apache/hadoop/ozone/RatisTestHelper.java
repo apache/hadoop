@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.ratis.rpc.RpcType;
@@ -78,7 +79,7 @@ public interface RatisTestHelper {
 
     public int getDatanodeOzoneRestPort() {
       return cluster.getHddsDatanodes().get(0).getDatanodeDetails()
-          .getOzoneRestPort();
+          .getPort(DatanodeDetails.Port.Name.REST).getValue();
     }
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.web;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.TestOzoneHelper;
@@ -70,7 +71,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     port = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails().getOzoneRestPort();
+        .getDatanodeDetails().getPort(
+            DatanodeDetails.Port.Name.REST).getValue();
   }
 
   /**

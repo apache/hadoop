@@ -29,13 +29,15 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdds;
 
 message DatanodeDetailsProto {
-    // TODO: make the port as a seperate proto message and use it here
     required string uuid = 1;  // UUID assigned to the Datanode.
     required string ipAddress = 2;     // IP address
     required string hostName = 3;      // hostname
-    optional uint32 containerPort = 4 [default = 0];  // Ozone stand_alone protocol
-    optional uint32 ratisPort = 5 [default = 0];      //Ozone ratis port
-    optional uint32 ozoneRestPort = 6 [default = 0];
+    repeated Port ports = 4;
+}
+
+message Port {
+    required string name = 1;
+    required uint32 value = 2;
 }
 
 message PipelineChannel {

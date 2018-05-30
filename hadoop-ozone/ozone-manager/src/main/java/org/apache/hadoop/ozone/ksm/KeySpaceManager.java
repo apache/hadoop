@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -896,7 +897,8 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
 
       dnServiceInfoBuilder.addServicePort(ServicePort.newBuilder()
           .setType(ServicePort.Type.HTTP)
-          .setValue(datanode.getOzoneRestPort())
+          .setValue(DatanodeDetails.getFromProtoBuf(datanode)
+              .getPort(DatanodeDetails.Port.Name.REST).getValue())
           .build());
 
       services.add(dnServiceInfoBuilder.build());

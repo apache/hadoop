@@ -90,7 +90,8 @@ public class TestOzoneFSInputStream {
     // Fetch the host and port for File System init
     DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
         .getDatanodeDetails();
-    int port = datanodeDetails.getOzoneRestPort();
+    int port = datanodeDetails
+        .getPort(DatanodeDetails.Port.Name.REST).getValue();
     String host = datanodeDetails.getHostName();
 
     // Set the fs.defaultFS and start the filesystem

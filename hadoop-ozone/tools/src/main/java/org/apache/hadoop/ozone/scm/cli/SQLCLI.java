@@ -530,7 +530,8 @@ public class SQLCLI  extends Configured implements Tool {
         // but this seems a bit cleaner.
         String ipAddr = dd.getIpAddress();
         String hostName = dd.getHostName();
-        int containerPort = dd.getContainerPort();
+        int containerPort = DatanodeDetails.getFromProtoBuf(dd)
+            .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
         String insertMachineInfo = String.format(
             INSERT_DATANODE_INFO, hostName, uuid, ipAddr, containerPort);
         executeSQL(conn, insertMachineInfo);
@@ -598,7 +599,8 @@ public class SQLCLI  extends Configured implements Tool {
     String insertDatanodeDetails = String
         .format(INSERT_DATANODE_INFO, datanodeDetails.getHostName(),
             datanodeDetails.getUuidString(), datanodeDetails.getIpAddress(),
-            datanodeDetails.getContainerPort());
+            datanodeDetails.getPort(DatanodeDetails.Port.Name.STANDALONE)
+                .getValue());
     executeSQL(conn, insertDatanodeDetails);
   }
 

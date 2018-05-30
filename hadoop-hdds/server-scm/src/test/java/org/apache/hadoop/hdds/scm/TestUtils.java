@@ -124,13 +124,19 @@ public final class TestUtils {
             .nextInt(256) + "." + random.nextInt(256);
 
     String hostName = uuid;
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
     DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
     builder.setUuid(uuid)
         .setHostName("localhost")
         .setIpAddress(ipAddress)
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0);
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort);
     return builder.build();
   }
 

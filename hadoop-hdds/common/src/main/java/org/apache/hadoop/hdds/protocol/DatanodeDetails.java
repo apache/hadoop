@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -42,9 +44,7 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
 
   private String ipAddress;
   private String hostName;
-  private Integer containerPort;
-  private Integer ratisPort;
-  private Integer ozoneRestPort;
+  private List<Port> ports;
 
 
   /**
@@ -53,18 +53,14 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
    * @param uuid DataNode's UUID
    * @param ipAddress IP Address of this DataNode
    * @param hostName DataNode's hostname
-   * @param containerPort Container Port
-   * @param ratisPort Ratis Port
-   * @param ozoneRestPort Rest Port
+   * @param ports Ports used by the DataNode
    */
   private DatanodeDetails(String uuid, String ipAddress, String hostName,
-      Integer containerPort, Integer ratisPort, Integer ozoneRestPort) {
+      List<Port> ports) {
     this.uuid = UUID.fromString(uuid);
     this.ipAddress = ipAddress;
     this.hostName = hostName;
-    this.containerPort = containerPort;
-    this.ratisPort = ratisPort;
-    this.ozoneRestPort = ozoneRestPort;
+    this.ports = ports;
   }
 
   /**
@@ -122,54 +118,40 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
   }
 
   /**
-   * Sets the Container Port.
-   * @param port ContainerPort
-   */
-  public void setContainerPort(int port) {
-    containerPort = port;
-  }
-
-  /**
-   * Returns standalone container Port.
+   * Sets a DataNode Port.
    *
-   * @return Container Port
+   * @param port DataNode port
    */
-  public int getContainerPort() {
-    return containerPort;
+  public void setPort(Port port) {
+    // If the port is already in the list remove it first and add the
+    // new/updated port value.
+    ports.remove(port);
+    ports.add(port);
   }
 
   /**
-   * Sets Ratis Port.
-   * @param port RatisPort
+   * Returns all the Ports used by DataNode.
+   *
+   * @return DataNode Ports
    */
-  public void setRatisPort(int port) {
-    ratisPort = port;
-  }
-
-
-  /**
-   * Returns Ratis Port.
-   * @return Ratis Port
-   */
-  public int getRatisPort() {
-    return ratisPort;
-  }
-
-
-  /**
-   * Sets OzoneRestPort.
-   * @param port OzoneRestPort
-   */
-  public void setOzoneRestPort(int port) {
-    ozoneRestPort = port;
+  public List<Port> getPorts() {
+    return ports;
   }
 
   /**
-   * Returns Ozone Rest Port.
-   * @return OzoneRestPort
+   * Given the name returns port number, null if the asked port is not found.
+   *
+   * @param name Name of the port
+   *
+   * @return Port
    */
-  public int getOzoneRestPort() {
-    return ozoneRestPort;
+  public Port getPort(Port.Name name) {
+    for (Port port : ports) {
+      if (port.getName().equals(name)) {
+        return port;
+      }
+    }
+    return null;
   }
 
   /**
@@ -188,14 +170,9 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (datanodeDetailsProto.hasHostName()) {
       builder.setHostName(datanodeDetailsProto.getHostName());
     }
-    if (datanodeDetailsProto.hasContainerPort()) {
-      builder.setContainerPort(datanodeDetailsProto.getContainerPort());
-    }
-    if (datanodeDetailsProto.hasRatisPort()) {
-      builder.setRatisPort(datanodeDetailsProto.getRatisPort());
-    }
-    if (datanodeDetailsProto.hasOzoneRestPort()) {
-      builder.setOzoneRestPort(datanodeDetailsProto.getOzoneRestPort());
+    for (HddsProtos.Port port : datanodeDetailsProto.getPortsList()) {
+      builder.addPort(newPort(
+          Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
     }
     return builder.build();
   }
@@ -214,14 +191,11 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (hostName != null) {
       builder.setHostName(hostName);
     }
-    if (containerPort != null) {
-      builder.setContainerPort(containerPort);
-    }
-    if (ratisPort != null) {
-      builder.setRatisPort(ratisPort);
-    }
-    if (ozoneRestPort != null) {
-      builder.setOzoneRestPort(ozoneRestPort);
+    for (Port port : ports) {
+      builder.addPorts(HddsProtos.Port.newBuilder()
+          .setName(port.getName().toString())
+          .setValue(port.getValue())
+          .build());
     }
     return builder.build();
   }
@@ -268,9 +242,15 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     private String id;
     private String ipAddress;
     private String hostName;
-    private Integer containerPort;
-    private Integer ratisPort;
-    private Integer ozoneRestPort;
+    private List<Port> ports;
+
+    /**
+     * Default private constructor. To create Builder instance use
+     * DatanodeDetails#newBuilder.
+     */
+    private Builder() {
+      ports = new ArrayList<>();
+    }
 
     /**
      * Sets the DatanodeUuid.
@@ -304,36 +284,16 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
       this.hostName = host;
       return this;
     }
-    /**
-     * Sets the ContainerPort.
-     *
-     * @param port ContainerPort
-     * @return DatanodeDetails.Builder
-     */
-    public Builder setContainerPort(Integer port) {
-      this.containerPort = port;
-      return this;
-    }
 
     /**
-     * Sets the RatisPort.
+     * Adds a DataNode Port.
      *
-     * @param port RatisPort
+     * @param port DataNode port
+     *
      * @return DatanodeDetails.Builder
      */
-    public Builder setRatisPort(Integer port) {
-      this.ratisPort = port;
-      return this;
-    }
-
-    /**
-     * Sets the OzoneRestPort.
-     *
-     * @param port OzoneRestPort
-     * @return DatanodeDetails.Builder
-     */
-    public Builder setOzoneRestPort(Integer port) {
-      this.ozoneRestPort = port;
+    public Builder addPort(Port port) {
+      this.ports.add(port);
       return this;
     }
 
@@ -344,10 +304,91 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
      */
     public DatanodeDetails build() {
       Preconditions.checkNotNull(id);
-      return new DatanodeDetails(id, ipAddress, hostName, containerPort,
-          ratisPort, ozoneRestPort);
+      return new DatanodeDetails(id, ipAddress, hostName, ports);
     }
 
+  }
+
+  /**
+   * Constructs a new Port with name and value.
+   *
+   * @param name Name of the port
+   * @param value Port number
+   *
+   * @return {@code Port} instance
+   */
+  public static Port newPort(Port.Name name, Integer value) {
+    return new Port(name, value);
+  }
+
+  /**
+   * Container to hold DataNode Port details.
+   */
+  public static class Port {
+
+    /**
+     * Ports that are supported in DataNode.
+     */
+    public enum Name {
+      STANDALONE, RATIS, REST
+    }
+
+    private Name name;
+    private Integer value;
+
+    /**
+     * Private constructor for constructing Port object. Use
+     * DatanodeDetails#newPort to create a new Port object.
+     *
+     * @param name
+     * @param value
+     */
+    private Port(Name name, Integer value) {
+      this.name = name;
+      this.value = value;
+    }
+
+    /**
+     * Returns the name of the port.
+     *
+     * @return Port name
+     */
+    public Name getName() {
+      return name;
+    }
+
+    /**
+     * Returns the port number.
+     *
+     * @return Port number
+     */
+    public Integer getValue() {
+      return value;
+    }
+
+    @Override
+    public int hashCode() {
+      return name.hashCode();
+    }
+
+    /**
+     * Ports are considered equal if they have the same name.
+     *
+     * @param anObject
+     *          The object to compare this {@code Port} against
+     * @return {@code true} if the given object represents a {@code Port}
+               and has the same name, {@code false} otherwise
+     */
+    @Override
+    public boolean equals(Object anObject) {
+      if (this == anObject) {
+        return true;
+      }
+      if (anObject instanceof Port) {
+        return name.equals(((Port) anObject).name);
+      }
+      return false;
+    }
   }
 
 }
