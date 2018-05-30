@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,6 +33,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.util.StopWatch;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -48,6 +51,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -65,6 +70,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private static final int PRUNE_MAX_AGE_SECS = 2;
 
   private MetadataStore ms;
+  private S3AFileSystem rawFs;
 
   protected static void expectResult(int expected,
       String message,
@@ -129,28 +135,34 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     return ms;
   }
 
-  protected abstract MetadataStore newMetadataStore();
-
   @Override
   public void setup() throws Exception {
     super.setup();
     S3ATestUtils.assumeS3GuardState(true, getConfiguration());
-    ms = newMetadataStore();
-    ms.initialize(getFileSystem());
+    ms = getFileSystem().getMetadataStore();
+
+    // Also create a "raw" fs without any MetadataStore configured
+    Configuration conf = new Configuration(getConfiguration());
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+    URI fsUri = getFileSystem().getUri();
+    rawFs = (S3AFileSystem) FileSystem.newInstance(fsUri, conf);
   }
 
   @Override
   public void teardown() throws Exception {
     super.teardown();
     IOUtils.cleanupWithLogger(LOG, ms);
+    IOUtils.closeStream(rawFs);
   }
 
   protected void mkdirs(Path path, boolean onS3, boolean onMetadataStore)
       throws IOException {
+    Preconditions.checkArgument(onS3 || onMetadataStore);
+    // getFileSystem() returns an fs with MetadataStore configured
+    S3AFileSystem fs = onMetadataStore ? getFileSystem() : rawFs;
     if (onS3) {
-      getFileSystem().mkdirs(path);
-    }
-    if (onMetadataStore) {
+      fs.mkdirs(path);
+    } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
       ms.put(new PathMetadata(status));
     }
@@ -178,13 +190,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    */
   protected void createFile(Path path, boolean onS3, boolean onMetadataStore)
       throws IOException {
+    Preconditions.checkArgument(onS3 || onMetadataStore);
+    // getFileSystem() returns an fs with MetadataStore configured
+    S3AFileSystem fs = onMetadataStore ? getFileSystem() : rawFs;
     if (onS3) {
-      ContractTestUtils.touch(getFileSystem(), path);
-    }
-
-    if (onMetadataStore) {
+      ContractTestUtils.touch(fs, path);
+    } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
-          getFileSystem().qualify(path), 512L, "hdfs");
+          fs.qualify(path), 512L, "hdfs");
       putFile(ms, status);
     }
   }

@@ -52,11 +52,6 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   private static final String[] ABORT_FORCE_OPTIONS = new String[] {"-abort",
       "-force", "-verbose"};
 
-  @Override
-  protected MetadataStore newMetadataStore() {
-    return new LocalMetadataStore();
-  }
-
   @Test
   public void testImportCommand() throws Exception {
     S3AFileSystem fs = getFileSystem();
