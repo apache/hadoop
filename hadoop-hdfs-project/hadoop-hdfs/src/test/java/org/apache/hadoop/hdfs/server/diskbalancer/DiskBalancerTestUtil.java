@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
@@ -307,7 +309,8 @@ public class DiskBalancerTestUtil {
         "need to specify capacities for two storages.");
 
     // Write a file and restart the cluster
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(numDatanodes)
         .storageCapacities(storageCapacities)
         .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
