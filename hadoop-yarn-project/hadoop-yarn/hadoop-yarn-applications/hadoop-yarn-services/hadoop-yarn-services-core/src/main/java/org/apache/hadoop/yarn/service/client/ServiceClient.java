@@ -978,6 +978,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       // see if it is actually running and bail out;
       verifyNoLiveAppInRM(serviceName, "start");
       ApplicationId appId = submitApp(service);
+      cachedAppInfo.put(serviceName, new AppInfo(appId, service
+          .getKerberosPrincipal().getPrincipalName()));
       service.setId(appId.toString());
       // write app definition on to hdfs
       Path appJson = ServiceApiUtil.writeAppDefinition(fs, appDir, service);
