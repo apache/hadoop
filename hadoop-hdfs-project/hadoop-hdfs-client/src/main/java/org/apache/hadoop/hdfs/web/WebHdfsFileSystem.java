@@ -146,6 +146,8 @@ public class WebHdfsFileSystem extends FileSystem
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
 
+  public static final String SPECIAL_FILENAME_CHARACTERS_REGEX = ".*[;+%].*";
+
   /**
    * Default connection factory may be overridden in tests to use smaller
    * timeout values
@@ -606,8 +608,10 @@ public class WebHdfsFileSystem extends FileSystem
     if (fspath != null) {
       URI fspathUri = fspath.toUri();
       String fspathUriDecoded = fspathUri.getPath();
+      boolean pathAlreadyEncoded = false;
       try {
         fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
+        pathAlreadyEncoded = true;
       } catch (IllegalArgumentException ex) {
         LOG.trace("Cannot decode URL encoded file", ex);
       }
@@ -617,7 +621,12 @@ public class WebHdfsFileSystem extends FileSystem
         StringBuilder fsPathEncodedItems = new StringBuilder();
         for (String fsPathItem : fspathItems) {
           fsPathEncodedItems.append("/");
-          fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
+          if (fsPathItem.matches(SPECIAL_FILENAME_CHARACTERS_REGEX) ||
+              pathAlreadyEncoded) {
+            fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
+          } else {
+            fsPathEncodedItems.append(fsPathItem);
+          }
         }
         encodedFSPath = new Path(fspathUri.getScheme(),
                 fspathUri.getAuthority(), fsPathEncodedItems.substring(1));
