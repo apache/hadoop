@@ -375,6 +375,23 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             </goals>
             <phase>pre-site</phase>
           </execution>
+          <execution>
+            <id>enforce-property</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireProperty>
+                  <property>hadoop.version</property>
+                  <message>You must set a hadoop.version to be the same as ${project.version}</message>
+                  <regex>${project.version}</regex>
+                  <regexMessage>The hadoop.version property should be set and should be ${project.version}.</regexMessage>
+                </requireProperty>
+              </rules>
+              <fail>true</fail>
+              </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -427,30 +444,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>
         <version>${dependency-check-maven.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>enforce-property</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireProperty>
-                  <property>hadoop.version</property>
-                  <message>You must set a hadoop.version to be the same as ${project.version}</message>
-                  <regex>${project.version}</regex>
-                  <regexMessage>The hadoop.version property should be set and should be ${project.version}.</regexMessage>
-                </requireProperty>
-              </rules>
-              <fail>true</fail>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
