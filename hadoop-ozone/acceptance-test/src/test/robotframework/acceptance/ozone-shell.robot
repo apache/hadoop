@@ -189,6 +189,27 @@ Test ozone shell (RpcClient without hostname)
                     Execute on          datanode        ozone oz -deleteBucket o3:///hive/bb1
                     Execute on          datanode        ozone oz -deleteVolume o3:///hive -user bilbo
 
+Test ozone shell (no scheme - RpcClient used by default)
+                    Execute on          datanode        ozone oz -createVolume /hive -user bilbo -quota 100TB -root
+    ${result} =     Execute on          datanode        ozone oz -listVolume / -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="hive")'
+                    Should contain      ${result}       createdOn
+                    Execute on          datanode        ozone oz -updateVolume /hive -user bill -quota 10TB
+    ${result} =     Execute on          datanode        ozone oz -infoVolume /hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .owner | .name'
+                    Should Be Equal     ${result}       bill
+    ${result} =     Execute on          datanode        ozone oz -infoVolume /hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .quota | .size'
+                    Should Be Equal     ${result}       10
+                    Execute on          datanode        ozone oz -createBucket /hive/bb1
+    ${result} =     Execute on          datanode        ozone oz -infoBucket /hive/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .storageType'
+                    Should Be Equal     ${result}       DISK
+    ${result} =     Execute on          datanode        ozone oz -updateBucket /hive/bb1 -addAcl user:frodo:rw,group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="samwise") | .type'
+                    Should Be Equal     ${result}       GROUP
+    ${result} =     Execute on          datanode        ozone oz -updateBucket /hive/bb1 -removeAcl group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="frodo") | .type'
+                    Should Be Equal     ${result}       USER
+    ${result} =     Execute on          datanode        ozone oz -listBucket /hive/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
+                    Should Be Equal     ${result}       hive
+                    Execute on          datanode        ozone oz -deleteBucket /hive/bb1
+                    Execute on          datanode        ozone oz -deleteVolume /hive -user bilbo
+
 *** Keywords ***
 
 Startup Ozone Cluster
