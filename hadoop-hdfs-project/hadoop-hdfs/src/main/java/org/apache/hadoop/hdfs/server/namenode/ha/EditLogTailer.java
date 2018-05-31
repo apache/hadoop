@@ -73,7 +73,19 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class EditLogTailer {
   public static final Log LOG = LogFactory.getLog(EditLogTailer.class);
-  
+
+  /**
+   * StandbyNode will hold namesystem lock to apply at most this many journal
+   * transactions.
+   * It will then release the lock and re-acquire it to load more transactions.
+   * By default the write lock is held for the entire journal segment.
+   * Fine-grained locking allows read requests to get through.
+   */
+  public static final String  DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY =
+      "dfs.ha.tail-edits.max-txns-per-lock";
+  public static final long DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_DEFAULT =
+      Long.MAX_VALUE;
+
   private final EditLogTailerThread tailerThread;
   
   private final Configuration conf;
@@ -138,6 +150,12 @@ public class EditLogTailer {
    */
   private final boolean inProgressOk;
 
+  /**
+   * Release the namesystem lock after loading this many transactions.
+   * Then re-acquire the lock to load more edits.
+   */
+  private final long maxTxnsPerLock;
+
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
     this.conf = conf;
@@ -197,6 +215,10 @@ public class EditLogTailer {
     inProgressOk = conf.getBoolean(
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
+
+    this.maxTxnsPerLock = conf.getLong(
+        DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY,
+        DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_DEFAULT);
 
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
@@ -290,7 +312,8 @@ public class EditLogTailer {
       // disk are ignored.
       long editsLoaded = 0;
       try {
-        editsLoaded = image.loadEdits(streams, namesystem);
+        editsLoaded = image.loadEdits(
+            streams, namesystem, maxTxnsPerLock, null, null);
       } catch (EditLogInputException elie) {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;

@@ -98,8 +98,9 @@ public class TestEditLogTailer {
   public void testTailer() throws IOException, InterruptedException,
       ServiceFailedException {
     Configuration conf = getConf();
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
+    conf.setLong(EditLogTailer.DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY, 3);
 
     HAUtil.setAllowStandbyReads(conf, true);
     
@@ -121,7 +122,10 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      
+      assertEquals("Inconsistent number of applied txns on Standby",
+          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+
       for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
             getDirPath(i), false).isDirectory());
@@ -134,7 +138,10 @@ public class TestEditLogTailer {
       }
       
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
-      
+      assertEquals("Inconsistent number of applied txns on Standby",
+          nn1.getNamesystem().getEditLog().getLastWrittenTxId(),
+          nn2.getNamesystem().getFSImage().getLastAppliedTxId() + 1);
+
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
             getDirPath(i), false).isDirectory());
