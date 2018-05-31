@@ -414,4 +414,59 @@ public class TestWebHdfsUrl {
     }
   }
 
+  private static final String BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME =
+          "specialFile ?\"\\()[]_-=&,{}#'`~!@$^*|<>.";
+
+  @Test
+  public void testWebHdfsBackwardCompatibleSpecialCharacterFile()
+          throws Exception {
+
+    assertFalse(BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME
+            .matches(WebHdfsFileSystem.SPECIAL_FILENAME_CHARACTERS_REGEX));
+
+    UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser("test-user");
+    ugi.setAuthenticationMethod(KERBEROS);
+    UserGroupInformation.setLoginUser(ugi);
+
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path dir = new Path("/testWebHdfsSpecialCharacterFile");
+
+    final short numDatanodes = 1;
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(numDatanodes)
+            .build();
+    try {
+      cluster.waitActive();
+      final FileSystem fs = WebHdfsTestUtil
+              .getWebHdfsFileSystem(conf, WebHdfs.SCHEME);
+
+      //create a file
+      final long length = 1L << 10;
+      final Path file1 = new Path(dir,
+              BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME);
+
+      DFSTestUtil.createFile(fs, file1, length, numDatanodes, 20120406L);
+
+      //get file status and check that it was written properly.
+      final FileStatus s1 = fs.getFileStatus(file1);
+      assertEquals("Write failed for file " + file1, length, s1.getLen());
+
+      boolean found = false;
+      RemoteIterator<LocatedFileStatus> statusRemoteIterator =
+              fs.listFiles(dir, false);
+      while (statusRemoteIterator.hasNext()) {
+        LocatedFileStatus locatedFileStatus = statusRemoteIterator.next();
+        if (locatedFileStatus.isFile() &&
+                BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME
+                        .equals(locatedFileStatus.getPath().getName())) {
+          found = true;
+        }
+      }
+      assertFalse("Could not find file with special character", !found);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }
