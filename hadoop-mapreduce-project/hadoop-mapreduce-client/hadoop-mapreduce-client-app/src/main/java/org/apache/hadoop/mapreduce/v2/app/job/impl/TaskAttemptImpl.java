@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import java.io.IOException;
 import java.net.InetAddress;

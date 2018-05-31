@@ -79,6 +79,7 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
+  optional ContainerActionsProto containerActions = 4;
 }
 
 /*
@@ -122,20 +123,33 @@ enum StorageTypeProto {
   PROVIDED = 5;
 }
 
-/**
-A set of container reports, max count is generally set to
-8192 since that keeps the size of the reports under 1 MB.
-*/
 message ContainerReportsProto {
-  repeated ContainerInfo reports = 2;
+  repeated ContainerInfo reports = 1;
 }
 
+message ContainerActionsProto {
+  repeated ContainerAction containerActions = 1;
+}
+
+message ContainerAction {
+  enum Action {
+    CLOSE = 1;
+  }
+
+  enum Reason {
+    CONTAINER_FULL = 1;
+  }
+
+  required ContainerInfo container = 1;
+  required Action action = 2;
+  optional Reason reason = 3;
+}
 
 /**
 A container report contains the following information.
 */
 message ContainerInfo {
-  optional string finalhash = 1;
+  required int64 containerID = 1;
   optional int64 size = 2;
   optional int64 used = 3;
   optional int64 keyCount = 4;
@@ -144,7 +158,7 @@ message ContainerInfo {
   optional int64 writeCount = 6;
   optional int64 readBytes = 7;
   optional int64 writeBytes = 8;
-  required int64 containerID = 9;
+  optional string finalhash = 9;
   optional hadoop.hdds.LifeCycleState state = 10;
 }
 
