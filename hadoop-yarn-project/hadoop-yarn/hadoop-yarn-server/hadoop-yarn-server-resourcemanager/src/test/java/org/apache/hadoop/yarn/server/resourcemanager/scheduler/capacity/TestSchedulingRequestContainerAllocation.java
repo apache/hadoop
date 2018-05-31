@@ -18,8 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.TargetApplicationsNamespace;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -38,6 +45,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.*;
 
 public class TestSchedulingRequestContainerAllocation {
   private final int GB = 1024;
@@ -391,6 +400,81 @@ public class TestSchedulingRequestContainerAllocation {
       caughtException = true;
     }
     Assert.assertTrue(caughtException);
+    rm1.close();
+  }
+
+  @Test
+  public void testSchedulingRequestWithNullConstraint() throws Exception {
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
+        new Configuration());
+    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+
+    // inject node label manager
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    // 4 NMs.
+    MockNM[] nms = new MockNM[4];
+    RMNode[] rmNodes = new RMNode[4];
+    for (int i = 0; i < 4; i++) {
+      nms[i] = rm1.registerNode("192.168.0." + i + ":1234", 10 * GB);
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(nms[i].getNodeId());
+    }
+
+    // app1 -> c
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
+    PlacementConstraint constraint = PlacementConstraints
+        .targetNotIn("node", allocationTag("t1"))
+        .build();
+    SchedulingRequest sc = SchedulingRequest
+        .newInstance(0, Priority.newInstance(1),
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+            ImmutableSet.of("t1"),
+            ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+            constraint);
+    AllocateRequest request = AllocateRequest.newBuilder()
+        .schedulingRequests(ImmutableList.of(sc)).build();
+    am1.allocate(request);
+
+    for (int i = 0; i < 4; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
+    }
+
+    FiCaSchedulerApp schedApp = cs.getApplicationAttempt(
+        am1.getApplicationAttemptId());
+    Assert.assertEquals(2, schedApp.getLiveContainers().size());
+
+
+    // Send another request with null placement constraint,
+    // ensure there is no NPE while handling this request.
+    sc = SchedulingRequest
+        .newInstance(1, Priority.newInstance(1),
+            ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+            ImmutableSet.of("t2"),
+            ResourceSizing.newInstance(2, Resource.newInstance(1024, 1)),
+            null);
+    AllocateRequest request1 = AllocateRequest.newBuilder()
+        .schedulingRequests(ImmutableList.of(sc)).build();
+    am1.allocate(request1);
+
+    for (int i = 0; i < 4; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
+    }
+
+    Assert.assertEquals(4, schedApp.getLiveContainers().size());
+
     rm1.close();
   }
 }
