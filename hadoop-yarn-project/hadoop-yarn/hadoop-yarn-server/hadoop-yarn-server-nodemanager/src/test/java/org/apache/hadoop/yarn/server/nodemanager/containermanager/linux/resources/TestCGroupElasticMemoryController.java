@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -36,11 +38,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeMacOS;
 
 /**
  * Test for elastic non-strict memory controller based on cgroups.
  */
 public class TestCGroupElasticMemoryController {
+  protected static final Log LOG = LogFactory
+      .getLog(TestCGroupElasticMemoryController.class);
   private YarnConfiguration conf = new YarnConfiguration();
   private File script = new File("target/" +
       TestCGroupElasticMemoryController.class.getName());
@@ -52,15 +57,14 @@ public class TestCGroupElasticMemoryController {
   @Test(expected = YarnException.class)
   public void testConstructorOff()
       throws YarnException {
-    CGroupElasticMemoryController controller =
-        new CGroupElasticMemoryController(
-            conf,
-            null,
-            null,
-            false,
-            false,
-            10000
-        );
+    new CGroupElasticMemoryController(
+        conf,
+        null,
+        null,
+        false,
+        false,
+        10000
+    );
   }
 
   /**
@@ -74,22 +78,21 @@ public class TestCGroupElasticMemoryController {
         DummyRunnableWithContext.class, Runnable.class);
     CGroupsHandler handler = mock(CGroupsHandler.class);
     when(handler.getPathForCGroup(any(), any())).thenReturn("");
-    CGroupElasticMemoryController controller =
-        new CGroupElasticMemoryController(
-            conf,
-            null,
-            handler,
-            true,
-            false,
-            10000
-        );
+    new CGroupElasticMemoryController(
+        conf,
+        null,
+        handler,
+        true,
+        false,
+        10000
+    );
   }
 
   /**
    * Test that the handler is notified about multiple OOM events.
    * @throws Exception on exception
    */
-  @Test
+  @Test(timeout = 20000)
   public void testMultipleOOMEvents() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
@@ -131,7 +134,7 @@ public class TestCGroupElasticMemoryController {
    * the child process starts
    * @throws Exception one exception
    */
-  @Test
+  @Test(timeout = 20000)
   public void testStopBeforeStart() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
@@ -173,7 +176,7 @@ public class TestCGroupElasticMemoryController {
    * Test the edge case that OOM is never resolved.
    * @throws Exception on exception
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test(timeout = 20000, expected = YarnRuntimeException.class)
   public void testInfiniteOOM() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
@@ -215,7 +218,7 @@ public class TestCGroupElasticMemoryController {
    * containers.
    * @throws Exception on exception
    */
-  @Test(expected = YarnRuntimeException.class)
+  @Test(timeout = 20000, expected = YarnRuntimeException.class)
   public void testNothingToKill() throws Exception {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
@@ -258,13 +261,16 @@ public class TestCGroupElasticMemoryController {
    * Then we wait for 2 seconds and stop listening.
    * @throws Exception exception occurred
    */
-  @Test
+  @Test(timeout = 20000)
   public void testNormalExit() throws Exception {
+    // TODO This may hang on Linux
+    assumeMacOS();
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
+    ExecutorService service = Executors.newFixedThreadPool(1);
     try {
       FileUtils.writeStringToFile(script,
-          "#!/bin/bash\nsleep 10000;\n",
+          "#!/bin/bash\nsleep 10000;",
           Charset.defaultCharset(), false);
       assertTrue("Could not set executable",
           script.setExecutable(true));
@@ -287,17 +293,21 @@ public class TestCGroupElasticMemoryController {
               10000,
               handler
           );
-      ExecutorService service = Executors.newFixedThreadPool(1);
+      long start = System.currentTimeMillis();
       service.submit(() -> {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException ex) {
           assertTrue("Wait interrupted.", false);
         }
+        LOG.info(String.format("Calling process destroy in %d ms",
+            System.currentTimeMillis() - start));
         controller.stopListening();
+        LOG.info("Called process destroy.");
       });
       controller.run();
     } finally {
+      service.shutdown();
       assertTrue(String.format("Could not clean up script %s",
           script.getAbsolutePath()), script.delete());
     }
@@ -312,8 +322,7 @@ public class TestCGroupElasticMemoryController {
   public void testDefaultConstructor() throws YarnException{
     CGroupsHandler handler = mock(CGroupsHandler.class);
     when(handler.getPathForCGroup(any(), any())).thenReturn("");
-    CGroupElasticMemoryController controller =
-        new CGroupElasticMemoryController(
-            conf, null, handler, true, false, 10);
+    new CGroupElasticMemoryController(
+        conf, null, handler, true, false, 10);
   }
 }
