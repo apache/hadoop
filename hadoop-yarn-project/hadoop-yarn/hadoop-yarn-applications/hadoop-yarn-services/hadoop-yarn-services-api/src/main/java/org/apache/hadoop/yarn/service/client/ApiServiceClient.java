@@ -588,6 +588,17 @@ public class ApiServiceClient extends AppAdminClient {
     return result;
   }
 
+  @Override
+  public int actionCleanUp(String appName, String userName) throws
+      IOException, YarnException {
+    ServiceClient sc = new ServiceClient();
+    sc.init(getConfig());
+    sc.start();
+    int result = sc.actionCleanUp(appName, userName);
+    sc.close();
+    return result;
+  }
+
   private static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
       new JsonSerDeser<>(Container[].class,
           PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);

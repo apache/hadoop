@@ -270,4 +270,16 @@ public abstract class AppAdminClient extends CompositeService {
   public abstract int actionUpgradeComponents(String appName,
       List<String> components) throws IOException, YarnException;
 
+  /**
+   * Operation to be performed by the RM after an application has completed.
+   *
+   * @param appName  the name of the application.
+   * @param userName the name of the user.
+   * @return exit code
+   */
+  @Public
+  @Unstable
+  public abstract int actionCleanUp(String appName, String userName) throws
+      IOException, YarnException;
+
 }

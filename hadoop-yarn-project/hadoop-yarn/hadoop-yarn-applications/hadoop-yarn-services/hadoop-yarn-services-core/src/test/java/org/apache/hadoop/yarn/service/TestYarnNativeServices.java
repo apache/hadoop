@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
@@ -36,7 +35,6 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Container;
-import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
 import org.apache.hadoop.yarn.service.api.records.PlacementScope;
@@ -805,132 +803,5 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       Assert.assertEquals(component.getName() + "-" + i, s);
       i++;
     }
-  }
-
-  /**
-   * Wait until all the containers for all components become ready state.
-   *
-   * @param client
-   * @param exampleApp
-   * @return all ready containers of a service.
-   * @throws TimeoutException
-   * @throws InterruptedException
-   */
-  private Multimap<String, String> waitForAllCompToBeReady(ServiceClient client,
-      Service exampleApp) throws TimeoutException, InterruptedException {
-    int expectedTotalContainers = countTotalContainers(exampleApp);
-
-    Multimap<String, String> allContainers = HashMultimap.create();
-
-    GenericTestUtils.waitFor(() -> {
-      try {
-        Service retrievedApp = client.getStatus(exampleApp.getName());
-        int totalReadyContainers = 0;
-        allContainers.clear();
-        LOG.info("Num Components " + retrievedApp.getComponents().size());
-        for (Component component : retrievedApp.getComponents()) {
-          LOG.info("looking for  " + component.getName());
-          LOG.info(component.toString());
-          if (component.getContainers() != null) {
-            if (component.getContainers().size() == exampleApp
-                .getComponent(component.getName()).getNumberOfContainers()) {
-              for (Container container : component.getContainers()) {
-                LOG.info(
-                    "Container state " + container.getState() + ", component "
-                        + component.getName());
-                if (container.getState() == ContainerState.READY) {
-                  totalReadyContainers++;
-                  allContainers.put(component.getName(), container.getId());
-                  LOG.info("Found 1 ready container " + container.getId());
-                }
-              }
-            } else {
-              LOG.info(component.getName() + " Expected number of containers "
-                  + exampleApp.getComponent(component.getName())
-                  .getNumberOfContainers() + ", current = " + component
-                  .getContainers());
-            }
-          }
-        }
-        LOG.info("Exit loop, totalReadyContainers= " + totalReadyContainers
-            + " expected = " + expectedTotalContainers);
-        return totalReadyContainers == expectedTotalContainers;
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, 2000, 200000);
-    return allContainers;
-  }
-
-  /**
-   * Wait until service state becomes stable. A service is stable when all
-   * requested containers of all components are running and in ready state.
-   *
-   * @param client
-   * @param exampleApp
-   * @throws TimeoutException
-   * @throws InterruptedException
-   */
-  private void waitForServiceToBeStable(ServiceClient client,
-      Service exampleApp) throws TimeoutException, InterruptedException {
-    waitForServiceToBeStable(client, exampleApp, 200000);
-  }
-
-  private void waitForServiceToBeStable(ServiceClient client,
-      Service exampleApp, int waitForMillis)
-      throws TimeoutException, InterruptedException {
-    waitForServiceToBeInState(client, exampleApp, ServiceState.STABLE,
-        waitForMillis);
-  }
-
-  /**
-   * Wait until service is started. It does not have to reach a stable state.
-   *
-   * @param client
-   * @param exampleApp
-   * @throws TimeoutException
-   * @throws InterruptedException
-   */
-  private void waitForServiceToBeStarted(ServiceClient client,
-      Service exampleApp) throws TimeoutException, InterruptedException {
-    waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
-  }
-
-  private void waitForServiceToBeInState(ServiceClient client,
-      Service exampleApp, ServiceState desiredState) throws TimeoutException,
-      InterruptedException {
-    waitForServiceToBeInState(client, exampleApp, desiredState, 200000);
-  }
-
-  /**
-   * Wait until service is started. It does not have to reach a stable state.
-   *
-   * @param client
-   * @param exampleApp
-   * @throws TimeoutException
-   * @throws InterruptedException
-   */
-  private void waitForServiceToBeInState(ServiceClient client,
-      Service exampleApp, ServiceState desiredState, int waitForMillis) throws
-      TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> {
-      try {
-        Service retrievedApp = client.getStatus(exampleApp.getName());
-        System.out.println(retrievedApp);
-        return retrievedApp.getState() == desiredState;
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, 2000, waitForMillis);
-  }
-
-  private int countTotalContainers(Service service) {
-    int totalContainers = 0;
-    for (Component component : service.getComponents()) {
-      totalContainers += component.getNumberOfContainers();
-    }
-    return totalContainers;
   }
 }

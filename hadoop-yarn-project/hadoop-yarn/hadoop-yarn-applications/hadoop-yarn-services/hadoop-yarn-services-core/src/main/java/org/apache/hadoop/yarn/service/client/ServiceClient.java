@@ -308,6 +308,16 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return actionUpgrade(persistedService, containersToUpgrade);
   }
 
+  @Override
+  public int actionCleanUp(String appName, String userName) throws
+      IOException, YarnException {
+    if (cleanUpRegistry(appName, userName)) {
+      return EXIT_SUCCESS;
+    } else {
+      return EXIT_FALSE;
+    }
+  }
+
   public int actionUpgrade(Service service, List<Container> compInstances)
       throws IOException, YarnException {
     ApplicationReport appReport =
@@ -639,9 +649,23 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     }
   }
 
+  private boolean cleanUpRegistry(String serviceName, String user) throws
+      SliderException {
+    String encodedName = RegistryUtils.registryUser(user);
+
+    String registryPath = RegistryUtils.servicePath(encodedName,
+        YarnServiceConstants.APP_TYPE, serviceName);
+    return cleanUpRegistryPath(registryPath, serviceName);
+  }
+
   private boolean cleanUpRegistry(String serviceName) throws SliderException {
     String registryPath =
         ServiceRegistryUtils.registryPathForInstance(serviceName);
+    return cleanUpRegistryPath(registryPath, serviceName);
+  }
+
+  private boolean cleanUpRegistryPath(String registryPath, String
+      serviceName) throws SliderException {
     try {
       if (getRegistryClient().exists(registryPath)) {
         getRegistryClient().delete(registryPath, true);
