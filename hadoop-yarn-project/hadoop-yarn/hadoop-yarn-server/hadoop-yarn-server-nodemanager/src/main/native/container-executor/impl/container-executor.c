@@ -1140,8 +1140,8 @@ char *init_log_path(const char *container_log_dir, const char *logfile) {
   int fd = open(tmp_buffer, O_CREAT | O_WRONLY, permissions);
   if (fd >= 0) {
     close(fd);
-    if (change_owner(tmp_buffer, user_detail->pw_uid, user_detail->pw_gid) != 0) {
-      fprintf(ERRORFILE, "Failed to chown %s to %d:%d: %s\n", tmp_buffer, user_detail->pw_uid, user_detail->pw_gid,
+    if (change_owner(tmp_buffer, user_detail->pw_uid, nm_gid) != 0) {
+      fprintf(ERRORFILE, "Failed to chown %s to %d:%d: %s\n", tmp_buffer, user_detail->pw_uid, nm_gid,
           strerror(errno));
       free(tmp_buffer);
       tmp_buffer = NULL;
