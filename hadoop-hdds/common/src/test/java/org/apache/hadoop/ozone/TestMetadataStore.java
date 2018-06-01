@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -81,6 +83,11 @@ public class TestMetadataStore {
 
   @Before
   public void init() throws IOException {
+    if (OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB.equals(storeImpl)) {
+      // The initialization of RocksDB fails on Windows
+      assumeNotWindows();
+    }
+
     testDir = GenericTestUtils.getTestDir(getClass().getSimpleName()
         + "-" + storeImpl.toLowerCase());
 
@@ -104,9 +111,13 @@ public class TestMetadataStore {
 
   @After
   public void cleanup() throws IOException {
-    store.close();
-    store.destroy();
-    FileUtils.deleteDirectory(testDir);
+    if (store != null) {
+      store.close();
+      store.destroy();
+    }
+    if (testDir != null) {
+      FileUtils.deleteDirectory(testDir);
+    }
   }
 
   private byte[] getBytes(String str) {
