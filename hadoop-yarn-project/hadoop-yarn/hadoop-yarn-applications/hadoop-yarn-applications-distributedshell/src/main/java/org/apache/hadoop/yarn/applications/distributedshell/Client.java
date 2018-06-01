@@ -332,10 +332,12 @@ public class Client {
             + " containers to guaranteed.");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
-      "Flag to indicate whether to keep containers across application attempts." +
-      " If the flag is true, running containers will not be killed when" +
-      " application attempt fails and these containers will be retrieved by" +
-      " the new application attempt ");
+        "Flag to indicate whether to keep containers across application "
+            + "attempts."
+            + " If the flag is true, running containers will not be killed when"
+            + " application attempt fails and these containers will be "
+            + "retrieved by"
+            + " the new application attempt ");
     opts.addOption("attempt_failures_validity_interval", true,
       "when attempt_failures_validity_interval in milliseconds is set to > 0," +
       "the failure number will not take failures which happen out of " +
@@ -890,6 +892,10 @@ public class Client {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
+
+    if (keepContainers) {
+      vargs.add("--keep_containers_across_application_attempts");
+    }
 
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
