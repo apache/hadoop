@@ -871,6 +871,17 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
     CLI.add("-" + ServiceMaster.YARNFILE_OPTION, new Path(appRootDir,
         app.getName() + ".json"));
+    CLI.add("-" + ServiceMaster.SERVICE_NAME_OPTION, app.getName());
+    if (app.getKerberosPrincipal() != null) {
+      if (!StringUtils.isEmpty(app.getKerberosPrincipal().getKeytab())) {
+        CLI.add("-" + ServiceMaster.KEYTAB_OPTION,
+            app.getKerberosPrincipal().getKeytab());
+      }
+      if (!StringUtils.isEmpty(app.getKerberosPrincipal().getPrincipalName())) {
+        CLI.add("-" + ServiceMaster.PRINCIPAL_NAME_OPTION,
+            app.getKerberosPrincipal().getPrincipalName());
+      }
+    }
     // pass the registry binding
     CLI.addConfOptionToCLI(conf, RegistryConstants.KEY_REGISTRY_ZK_ROOT,
         RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);
