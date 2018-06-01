@@ -72,8 +72,10 @@ public class KeyManagerImpl implements KeyManager {
    */
   @Override
   public void putKey(KeyData data) throws IOException {
-    Preconditions.checkNotNull(data, "KeyData cannot be null for put operation.");
-    Preconditions.checkState(data.getContainerID() >= 0, "Container ID cannot be negative");
+    Preconditions.checkNotNull(data,
+        "KeyData cannot be null for put operation.");
+    Preconditions.checkState(data.getContainerID() >= 0,
+        "Container ID cannot be negative");
     containerManager.readLock();
     try {
       // We are not locking the key manager since LevelDb serializes all actions
@@ -169,8 +171,10 @@ public class KeyManagerImpl implements KeyManager {
   public List<KeyData> listKey(
       long containerID, long startLocalID, int count)
       throws IOException {
-    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative");
-    Preconditions.checkState(startLocalID >= 0, "startLocal ID cannot be negative");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative");
+    Preconditions.checkState(startLocalID >= 0,
+        "startLocal ID cannot be negative");
     Preconditions.checkArgument(count > 0,
         "Count must be a positive number.");
     ContainerData cData = containerManager.readContainer(containerID);

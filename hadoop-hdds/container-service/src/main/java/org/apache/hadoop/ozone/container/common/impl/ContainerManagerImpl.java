@@ -314,7 +314,8 @@ public class ContainerManagerImpl implements ContainerManager {
     writeLock();
     try {
       if (containerMap.containsKey(containerData.getContainerID())) {
-        LOG.debug("container already exists. {}", containerData.getContainerID());
+        LOG.debug("container already exists. {}",
+            containerData.getContainerID());
         throw new StorageContainerException("container already exists.",
             CONTAINER_EXISTS);
       }
@@ -595,7 +596,8 @@ public class ContainerManagerImpl implements ContainerManager {
   @Override
   public void updateContainer(long containerID, ContainerData data,
       boolean forceUpdate) throws StorageContainerException {
-    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative.");
     Preconditions.checkNotNull(data, "Container data cannot be null");
     FileOutputStream containerStream = null;
     DigestOutputStream dos = null;
@@ -711,7 +713,7 @@ public class ContainerManagerImpl implements ContainerManager {
   }
 
   /**
-   * Returns LifeCycle State of the container
+   * Returns LifeCycle State of the container.
    * @param containerID - Id of the container
    * @return LifeCycle State of the container
    * @throws StorageContainerException
