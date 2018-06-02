@@ -206,7 +206,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
-| `docker.privileged-containers.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
+| `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
 
@@ -230,7 +230,7 @@ yarn.nodemanager.linux-container-executor.group=yarn
 [docker]
   module.enabled=true
   docker.privileged-containers.enabled=true
-  docker.privileged-containers.registries=centos
+  docker.trusted.registries=centos
   docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
   docker.allowed.networks=bridge,host,none
   docker.allowed.ro-mounts=/sys/fs/cgroup
@@ -372,7 +372,7 @@ Privileged docker container can interact with host system devices.  This can cau
 
 The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
 
-When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.privileged-containers.registries`, and setup private docker registry server to promote trusted images.
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.trusted.registries`, and setup private docker registry server to promote trusted images.
 
 Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
 
@@ -436,3 +436,30 @@ To run a Spark shell in Docker containers, run the following command:
 
 Note that the application master and executors are configured
 independently. In this example, we are using the hadoop-docker image for both.
+
+Docker Container ENTRYPOINT Support
+------------------------------------
+
+When Docker support was introduced to Hadoop 2.x, the platform was designed to
+run existing Hadoop programs inside Docker container.  Log redirection and
+environment setup are integrated with Node Manager.  In Hadoop 3.x, Hadoop
+Docker support extends beyond running Hadoop workload, and support Docker container
+in Docker native form using ENTRYPOINT from dockerfile.  Application can decide to
+support YARN mode as default or Docker mode as default by defining
+YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE environment variable.
+System administrator can also set as default setting for the cluster to make
+ENTRY_POINT as default mode of operation.
+
+In yarn-site.xml, add YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE to
+node manager environment white list:
+```
+<property>
+        <name>yarn.nodemanager.env-whitelist</name>
+        <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME,YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE</value>
+</property>
+```
+
+In yarn-env.sh, define:
+```
+export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true
+```

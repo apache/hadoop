@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
@@ -728,6 +729,25 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return id;
   }
 
+  /**
+   * Check if system is default to disable docker override or
+   * user requested a Docker container with ENTRY_POINT support.
+   *
+   * @param environment - Docker container environment variables
+   * @return true if Docker launch command override is disabled
+   */
+  private boolean checkUseEntryPoint(Map<String, String> environment) {
+    boolean overrideDisable = false;
+    String overrideDisableKey = Environment.
+        YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.
+            name();
+    String overrideDisableValue = (environment.get(overrideDisableKey) != null)
+        ? environment.get(overrideDisableKey) :
+            System.getenv(overrideDisableKey);
+    overrideDisable = Boolean.parseBoolean(overrideDisableValue);
+    return overrideDisable;
+  }
+
   @Override
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
@@ -738,8 +758,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
-    boolean useEntryPoint = Boolean.parseBoolean(environment
-              .get(ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE));
+    boolean useEntryPoint = checkUseEntryPoint(environment);
 
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
