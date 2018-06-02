@@ -22,10 +22,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -42,9 +47,19 @@ public class HsJobsBlock extends HtmlBlock {
   final AppContext appContext;
   final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
+  private UserGroupInformation ugi;
+  private boolean isFilterAppListByUserEnabled;
+  private boolean areAclsEnabled;
+  private AccessControlList adminAclList;
 
-  @Inject HsJobsBlock(AppContext appCtx) {
+  @Inject
+  HsJobsBlock(Configuration conf, AppContext appCtx, ViewContext ctx) {
+    super(ctx);
     appContext = appCtx;
+    isFilterAppListByUserEnabled = conf
+        .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
+    areAclsEnabled = conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
+    adminAclList = new AccessControlList(conf.get(MRConfig.MR_ADMINS, " "));
   }
 
   /*
@@ -77,6 +92,12 @@ public class HsJobsBlock extends HtmlBlock {
     StringBuilder jobsTableData = new StringBuilder("[\n");
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j);
+      ugi = getCallerUGI();
+      // Allow to list only per-user apps if incoming ugi has permission.
+      if (isFilterAppListByUserEnabled && ugi != null
+          && !checkAccess(job.getUserName())) {
+        continue;
+      }
       jobsTableData.append("[\"")
       .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
       .append(job.getFormattedStartTimeStr(dateFormat)).append("\",\"")
@@ -138,5 +159,22 @@ public class HsJobsBlock extends HtmlBlock {
         __().
         __().
         __();
+  }
+
+  private boolean checkAccess(String userName) {
+    if(!areAclsEnabled) {
+      return true;
+    }
+
+    // User could see its own job.
+    if (ugi.getShortUserName().equals(userName)) {
+      return true;
+    }
+
+    // Admin could also see all jobs
+    if (adminAclList != null && adminAclList.isUserAllowed(ugi)) {
+      return true;
+    }
+    return false;
   }
 }
