@@ -639,9 +639,9 @@ namespace ContainerExecutor {
     struct configuration container_cfg, cmd_cfg;
     struct args buff = ARGS_INITIAL_VALUE;
     int ret = 0;
-    std::string container_executor_cfg_contents[] = {"[docker]\n  docker.privileged-containers.enabled=1\n  docker.privileged-containers.registries=hadoop",
-                                                     "[docker]\n  docker.privileged-containers.enabled=true\n  docker.privileged-containers.registries=hadoop",
-                                                     "[docker]\n  docker.privileged-containers.enabled=True\n  docker.privileged-containers.registries=hadoop",
+    std::string container_executor_cfg_contents[] = {"[docker]\n  docker.privileged-containers.enabled=1\n  docker.trusted.registries=hadoop",
+                                                     "[docker]\n  docker.privileged-containers.enabled=true\n  docker.trusted.registries=hadoop",
+                                                     "[docker]\n  docker.privileged-containers.enabled=True\n  docker.trusted.registries=hadoop",
                                                      "[docker]\n  docker.privileged-containers.enabled=0",
                                                      "[docker]\n  docker.privileged-containers.enabled=false",
                                                      "[docker]\n"};
@@ -727,7 +727,7 @@ namespace ContainerExecutor {
     int ret = 0;
     std::string container_executor_cfg_contents = "[docker]\n"
         "  docker.allowed.capabilities=CHROOT,MKNOD\n"
-        "  docker.privileged-containers.registries=hadoop\n";
+        "  docker.trusted.registries=hadoop\n";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/docker-image\n  cap-add=CHROOT,MKNOD",
@@ -773,7 +773,7 @@ namespace ContainerExecutor {
     ret = set_capabilities(&cmd_cfg, &container_cfg, &buff);
     ASSERT_EQ(INVALID_DOCKER_CAPABILITY, ret);
 
-    container_executor_cfg_contents = "[docker]\n  docker.privileged-containers.registries=hadoop\n";
+    container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n";
     write_container_executor_cfg(container_executor_cfg_contents);
     ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
     if (ret != 0) {
@@ -790,7 +790,7 @@ namespace ContainerExecutor {
     reset_args(&buff);
     int ret = 0;
     std::string container_executor_cfg_contents = "[docker]\n"
-        "  docker.privileged-containers.registries=hadoop\n"
+        "  docker.trusted.registries=hadoop\n"
         "  docker.allowed.devices=/dev/test-device,/dev/device2,regex:/dev/nvidia.*,regex:/dev/gpu-uvm.*";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -910,7 +910,7 @@ namespace ContainerExecutor {
     struct configuration container_cfg, cmd_cfg;
     struct args buff = ARGS_INITIAL_VALUE;
     int ret = 0;
-    std::string container_executor_cfg_contents = "[docker]\n  docker.privileged-containers.registries=hadoop\n  "
+    std::string container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n  "
                                                               "docker.allowed.rw-mounts=/opt,/var,/usr/bin/cut\n  "
                                                               "docker.allowed.ro-mounts=/etc/passwd";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
@@ -1037,7 +1037,7 @@ namespace ContainerExecutor {
     struct args buff = ARGS_INITIAL_VALUE;
     int ret = 0;
 
-    std::string container_executor_cfg_contents = "[docker]\n  docker.privileged-containers.registries=hadoop\n  "
+    std::string container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n  "
                                                               "docker.allowed.rw-mounts=/home/,/var,/usr/bin/cut\n  "
                                                               "docker.allowed.ro-mounts=/etc/passwd,/etc/group";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
@@ -1118,7 +1118,7 @@ namespace ContainerExecutor {
       free(actual);
     }
 
-    container_executor_cfg_contents = "[docker]\n  docker.privileged-containers.registries=hadoop\n";
+    container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n";
     write_container_executor_cfg(container_executor_cfg_contents);
     ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
     if (ret != 0) {
@@ -1136,7 +1136,7 @@ namespace ContainerExecutor {
     std::string container_executor_contents = "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
         "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
         "  docker.privileged-containers.enabled=1\n  docker.allowed.capabilities=CHOWN,SETUID\n"
-        "  docker.allowed.devices=/dev/test\n  docker.privileged-containers.registries=hadoop\n";
+        "  docker.allowed.devices=/dev/test\n  docker.trusted.registries=hadoop\n";
     write_file(container_executor_cfg_file, container_executor_contents);
     int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
     if (ret != 0) {
@@ -1180,7 +1180,7 @@ namespace ContainerExecutor {
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
-            " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
+            " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
     // Test non-privileged container and drop all privileges
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -1202,7 +1202,7 @@ namespace ContainerExecutor {
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
-            " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
+            " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
     // Test privileged container
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -1237,7 +1237,7 @@ namespace ContainerExecutor {
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge --cap-drop=ALL "
             "--hostname=host-id --group-add 1000 --group-add 1001 "
-            "docker-image"));
+            "docker-image bash test_script.sh arg1 arg2"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
 
@@ -1318,7 +1318,7 @@ namespace ContainerExecutor {
         "  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
         "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
         "  docker.privileged-containers.enabled=1\n  docker.allowed.capabilities=CHOWN,SETUID\n"
-        "  docker.allowed.devices=/dev/test\n  docker.privileged-containers.registries=hadoop\n";
+        "  docker.allowed.devices=/dev/test\n  docker.trusted.registries=hadoop\n";
     write_file(container_executor_cfg_file, container_executor_contents);
     int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
     if (ret != 0) {
@@ -1357,12 +1357,12 @@ namespace ContainerExecutor {
   TEST_F(TestDockerUtil, test_docker_run_no_privileged) {
 
     std::string container_executor_contents[] = {"[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n"
                                                      "  docker.allowed.capabilities=CHOWN,SETUID\n"
                                                      "  docker.allowed.devices=/dev/test",
                                                  "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n"
                                                      "  docker.allowed.capabilities=CHOWN,SETUID\n"
                                                      "  privileged=0\n"
@@ -1386,7 +1386,7 @@ namespace ContainerExecutor {
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n"
               "  user=nobody\n  launch-command=bash,test_script.sh,arg1,arg2",
-          "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image"));
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL docker-image bash test_script.sh arg1 arg2"));
 
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
@@ -1407,7 +1407,7 @@ namespace ContainerExecutor {
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
-              " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
+              " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
@@ -1428,7 +1428,7 @@ namespace ContainerExecutor {
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
-              " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image"));
+              " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
       std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
       bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -1549,23 +1549,23 @@ namespace ContainerExecutor {
   TEST_F(TestDockerUtil, test_docker_no_new_privileges) {
 
     std::string container_executor_contents[] = {"[docker]\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.privileged-containers.enabled=false\n"
                                                      "  docker.no-new-privileges.enabled=true",
                                                  "[docker]\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.privileged-containers.enabled=true\n"
                                                      "  docker.no-new-privileges.enabled=true",
                                                  "[docker]\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.privileged-containers.enabled=true\n"
                                                      "  docker.no-new-privileges.enabled=true",
                                                  "[docker]\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.privileged-containers.enabled=false\n"
                                                      "  docker.no-new-privileges.enabled=false",
                                                  "[docker]\n"
-                                                     "  docker.privileged-containers.registries=hadoop\n"
+                                                     "  docker.trusted.registries=hadoop\n"
                                                      "  docker.privileged-containers.enabled=true\n"
                                                      "  docker.no-new-privileges.enabled=false"};
     for (int i = 0; i < 2; ++i) {
