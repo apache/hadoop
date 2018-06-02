@@ -27,8 +27,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -41,10 +39,8 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -60,14 +56,9 @@ import com.google.inject.Inject;
  */
 public class HsJobBlock extends HtmlBlock {
   final AppContext appContext;
-  private UserGroupInformation ugi;
-  private boolean isFilterAppListByUserEnabled;
 
-  @Inject HsJobBlock(Configuration conf, AppContext appctx, ViewContext ctx) {
-    super(ctx);
+  @Inject HsJobBlock(AppContext appctx) {
     appContext = appctx;
-    isFilterAppListByUserEnabled = conf
-        .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
   }
 
   /*
@@ -85,13 +76,6 @@ public class HsJobBlock extends HtmlBlock {
     Job j = appContext.getJob(jobID);
     if (j == null) {
       html.p().__("Sorry, ", jid, " not found.").__();
-      return;
-    }
-    ugi = getCallerUGI();
-    if (isFilterAppListByUserEnabled && ugi != null
-        && !j.checkAccess(ugi, JobACL.VIEW_JOB)) {
-      html.p().__("Sorry, ", jid, " could not be viewed for '",
-          ugi.getUserName(), "'.").__();
       return;
     }
     if(j instanceof UnparsedJob) {
