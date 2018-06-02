@@ -1435,6 +1435,7 @@ public class TimelineReaderWebServices {
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Configuration config = timelineReaderManager.getConfig();
     Set<TimelineEntity> entities = null;
     try {
       DateRange range = parseDateRange(dateRange);
@@ -1454,15 +1455,15 @@ public class TimelineReaderWebServices {
     long endTime = Time.monotonicNow();
     if (entities == null) {
       entities = Collections.emptySet();
-    } else if (isDisplayEntityPerUserFilterEnabled(
-        timelineReaderManager.getConfig())) {
+    } else if (isDisplayEntityPerUserFilterEnabled(config)) {
       Set<TimelineEntity> userEntities = new LinkedHashSet<>();
       userEntities.addAll(entities);
       for (TimelineEntity entity : userEntities) {
         if (entity.getInfo() != null) {
           String userId =
               (String) entity.getInfo().get(FlowActivityEntity.USER_INFO_KEY);
-          if (!validateAuthUserWithEntityUser(callerUGI, userId)) {
+          if (!validateAuthUserWithEntityUser(timelineReaderManager, callerUGI,
+              userId)) {
             entities.remove(entity);
           }
         }
@@ -3422,11 +3423,16 @@ public class TimelineReaderWebServices {
   }
 
   private boolean isDisplayEntityPerUserFilterEnabled(Configuration config) {
-    return config
+    return !config
+        .getBoolean(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_READ_AUTH_ENABLED)
+        && config
         .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
   }
 
-  private boolean validateAuthUserWithEntityUser(UserGroupInformation ugi,
+  // TODO to be removed/modified once ACL story has played
+  private boolean validateAuthUserWithEntityUser(
+      TimelineReaderManager readerManager, UserGroupInformation ugi,
       String entityUser) {
     String authUser = TimelineReaderWebServicesUtils.getUserName(ugi);
     String requestedUser = TimelineReaderWebServicesUtils.parseStr(entityUser);
@@ -3434,6 +3440,6 @@ public class TimelineReaderWebServices {
       LOG.debug(
           "Authenticated User: " + authUser + " Requested User:" + entityUser);
     }
-    return authUser.equals(requestedUser);
+    return (readerManager.checkAccess(ugi) || authUser.equals(requestedUser));
   }
 }
