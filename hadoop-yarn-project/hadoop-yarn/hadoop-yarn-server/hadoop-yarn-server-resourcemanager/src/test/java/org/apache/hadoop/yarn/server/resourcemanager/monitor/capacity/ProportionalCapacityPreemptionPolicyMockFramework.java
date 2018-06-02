@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -296,9 +298,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
           .thenReturn(pendingForDefaultPartition);
 
       // need to set pending resource in resource usage as well
-      ResourceUsage ru = new ResourceUsage();
+      ResourceUsage ru = Mockito.spy(new ResourceUsage());
       ru.setUsed(label, used);
+      when(ru.getCachedUsed(anyString())).thenReturn(used);
       when(app.getAppAttemptResourceUsage()).thenReturn(ru);
+      when(app.getSchedulingResourceUsage()).thenReturn(ru);
 
       start = end + 1;
     }
@@ -573,6 +577,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         when(leafQueue.getApplications()).thenReturn(apps);
         when(leafQueue.getAllApplications()).thenReturn(apps);
         OrderingPolicy<FiCaSchedulerApp> so = mock(OrderingPolicy.class);
+        String opName = conf.get(CapacitySchedulerConfiguration.PREFIX
+            + CapacitySchedulerConfiguration.ROOT + "." + getQueueName(q)
+            + ".ordering-policy", "fifo");
+        if (opName.equals("fair")) {
+          so = Mockito.spy(new FairOrderingPolicy<FiCaSchedulerApp>());
+        }
         when(so.getPreemptionIterator()).thenAnswer(new Answer() {
           public Object answer(InvocationOnMock invocation) {
             return apps.descendingIterator();
