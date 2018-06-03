@@ -36,6 +36,7 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,9 +68,11 @@ public class TestReencryptionHandler {
   private ReencryptionHandler mockReencryptionhandler(final Configuration conf)
       throws IOException {
     // mock stuff to create a mocked ReencryptionHandler
+    FileSystemTestHelper helper = new FileSystemTestHelper();
+    Path targetFile = new Path(new File(helper.getTestRootDir())
+        .getAbsolutePath(), "test.jks");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + new Path(
-            new FileSystemTestHelper().getTestRootDir(), "test.jks").toUri());
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + targetFile.toUri());
     final EncryptionZoneManager ezm = Mockito.mock(EncryptionZoneManager.class);
     final KeyProvider kp = KMSUtil.createKeyProvider(conf,
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
