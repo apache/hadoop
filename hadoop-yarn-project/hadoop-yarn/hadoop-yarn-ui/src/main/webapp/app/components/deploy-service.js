@@ -152,7 +152,8 @@ export default Ember.Component.extend({
 
   isUserNameGiven: Ember.computed.empty('userName'),
 
-  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue', 'serviceDef.serviceComponents.[]', function () {
+  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue',
+      'serviceDef.version', 'serviceDef.serviceComponents.[]', function () {
     return this.get('serviceDef').isValidServiceDef();
   }),
 

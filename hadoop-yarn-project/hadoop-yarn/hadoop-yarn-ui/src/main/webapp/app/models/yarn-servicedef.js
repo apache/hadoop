@@ -22,6 +22,7 @@ import Ember from 'ember';
 export default DS.Model.extend({
   name: DS.attr('string', {defaultValue: ''}),
   queue: DS.attr('string', {defaultValue: ''}),
+  version: DS.attr('string', {defaultValue: ''}),
   lifetime: DS.attr('string', {defaultValue: ''}),
   isCached: DS.attr('boolean', {defaultValue: false}),
 
@@ -44,6 +45,7 @@ export default DS.Model.extend({
   clear() {
     this.set('name', '');
     this.set('queue', '');
+    this.set('version', '');
     this.set('lifetime', '');
     this.get('serviceComponents').clear();
     this.get('serviceConfigs').clear();
@@ -52,7 +54,8 @@ export default DS.Model.extend({
   },
 
   isValidServiceDef() {
-    return this.get('name') !== '' && this.get('queue') !== '' &&  this.get('serviceComponents.length') > 0;
+    return this.get('name') !== '' && this.get('queue') !== '' &&
+      this.get('version') !== '' && this.get('serviceComponents.length') > 0;
   },
 
   createNewServiceComponent() {
@@ -115,6 +118,7 @@ export default DS.Model.extend({
     var json = {
       name: "",
       queue: "",
+      version: "",
       lifetime: "-1",
       components: [],
       configuration: {
@@ -131,6 +135,7 @@ export default DS.Model.extend({
 
     json['name'] = this.get('name');
     json['queue'] = this.get('queue');
+    json['version'] = this.get('version');
 
     if (this.get('lifetime')) {
       json['lifetime'] = this.get('lifetime');
@@ -266,6 +271,7 @@ export default DS.Model.extend({
     var clone = this.createNewServiceDef();
     clone.set('name', this.get('name'));
     clone.set('queue', this.get('queue'));
+    clone.set('version', this.get('version'));
     clone.set('lifetime', this.get('lifetime'));
     clone.get('serviceComponents', this.get('serviceComponents'));
     clone.get('serviceConfigs', this.get('serviceConfigs'));
