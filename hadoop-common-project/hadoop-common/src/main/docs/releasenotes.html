@@ -1,5 +1,5 @@
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop  2.7.6 Release Notes</title>
+<title>Hadoop  2.7.7 Release Notes</title>
 <STYLE type="text/css">
 	H1 {font-family: sans-serif}
 	H2 {font-family: sans-serif; margin-left: 7mm}
@@ -7,194 +7,34 @@
 </STYLE>
 </head>
 <body>
-<h1>Hadoop  2.7.6 Release Notes</h1>
+<h1>Hadoop  2.7.7 Release Notes</h1>
 These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 <a name="changes"/>
-<h2>Changes since Hadoop 2.7.5</h2>
+<h2>Changes since Hadoop 2.7.6</h2>
 <ul>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-7661">YARN-7661</a>.
-     Major bug reported by Yang Wang and fixed by Yang Wang <br>
-     <b>NodeManager metrics return wrong value after update node resource</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-13602">HDFS-13602</a>.
+     Major improvement reported by Erik Krogen and fixed by Chao Sun (ha , namenode)<br>
+     <b>Add checkOperation(WRITE) checks in FSNamesystem</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-7590">YARN-7590</a>.
-     Major improvement reported by Eric Yang and fixed by Eric Yang (security , yarn)<br>
-     <b>Improve container-executor validation check</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-7249">YARN-7249</a>.
-     Blocker bug reported by Wangda Tan and fixed by Wangda Tan <br>
-     <b>Fix CapacityScheduler NPE issue when a container preempted while the node is being removed</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-6633">YARN-6633</a>.
-     Major task reported by &#205;&#241;igo Goiri and fixed by &#205;&#241;igo Goiri <br>
-     <b>Backport YARN-4167 to branch 2.7</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-6632">YARN-6632</a>.
-     Major bug reported by &#205;&#241;igo Goiri and fixed by &#205;&#241;igo Goiri <br>
-     <b>Backport YARN-3425 to branch 2.7</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-4167">YARN-4167</a>.
-     Minor bug reported by Bibin A Chundatt and fixed by Bibin A Chundatt <br>
-     <b>NPE on RMActiveServices#serviceStop when store is null</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-3425">YARN-3425</a>.
-     Minor bug reported by Bibin A Chundatt and fixed by Bibin A Chundatt (resourcemanager)<br>
-     <b>NPE from RMNodeLabelsManager.serviceStop when NodeLabelsManager.serviceInit failed</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-7052">MAPREDUCE-7052</a>.
-     Major bug reported by Peter Bacsko and fixed by Peter Bacsko (client , test)<br>
-     <b>TestFixedLengthInputFormat#testFormatCompressedIn is flaky</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-7048">MAPREDUCE-7048</a>.
-     Major improvement reported by Peter Bacsko and fixed by Peter Bacsko (mr-am)<br>
-     <b>Uber AM can crash due to unknown task in statusUpdate</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-7028">MAPREDUCE-7028</a>.
-     Blocker bug reported by Gergo Repas and fixed by Gergo Repas (mr-am)<br>
-     <b>Concurrent task progress updates causing NPE in Application Master</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-7020">MAPREDUCE-7020</a>.
-     Major bug reported by Akira Ajisaka and fixed by Peter Bacsko (mr-am)<br>
-     <b>Task timeout in uber mode can crash AM</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5124">MAPREDUCE-5124</a>.
-     Major bug reported by Jason Lowe and fixed by Peter Bacsko (mr-am)<br>
-     <b>AM lacks flow control for task events</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-13195">HDFS-13195</a>.
-     Minor bug reported by maobaolong and fixed by maobaolong (datanode)<br>
-     <b>DataNode conf page  cannot display the current value after reconfig</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-13126">HDFS-13126</a>.
-     Major bug reported by Erik Krogen and fixed by Erik Krogen (datanode , webhdfs)<br>
-     <b>Backport [HDFS-7959] to branch-2.7 to re-enable HTTP request logging for WebHDFS</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-13120">HDFS-13120</a>.
-     Major bug reported by Xiaoyu Yao and fixed by Xiaoyu Yao (namenode , snapshots)<br>
-     <b>Snapshot diff could be corrupted after concat</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-13112">HDFS-13112</a>.
-     Critical bug reported by Daryn Sharp and fixed by Daryn Sharp (namenode)<br>
-     <b>Token expiration edits may cause log corruption or deadlock</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-12884">HDFS-12884</a>.
-     Major improvement reported by Konstantin Shvachko and fixed by chencan (namenode)<br>
-     <b>BlockUnderConstructionFeature.truncateBlock should be of type BlockInfo</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-12881">HDFS-12881</a>.
-     Major bug reported by Jason Lowe and fixed by Ajay Kumar <br>
-     <b>Output streams closed with IOUtils suppressing write errors</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-12371">HDFS-12371</a>.
-     Major bug reported by Sai Nukavarapu and fixed by Hanisha Koneru (metrics)<br>
-     <b>"BlockVerificationFailures" and "BlocksVerified" show up as 0 in Datanode JMX</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-12347">HDFS-12347</a>.
-     Critical bug reported by Xiao Chen and fixed by Bharat Viswanadham (test)<br>
-     <b>TestBalancerRPCDelay#testBalancerRPCDelay fails very frequently</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-12299">HDFS-12299</a>.
-     Critical bug reported by Brahma Reddy Battula and fixed by Brahma Reddy Battula <br>
-     <b>Race Between update pipeline and DN Re-Registration</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-11187">HDFS-11187</a>.
-     Major improvement reported by Wei-Chiu Chuang and fixed by Gabor Bota (datanode)<br>
-     <b>Optimize disk access for last partial chunk checksum of Finalized replica</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-11003">HDFS-11003</a>.
-     Major improvement reported by Brahma Reddy Battula and fixed by Brahma Reddy Battula <br>
-     <b>Expose "XmitsInProgress" through DataNodeMXBean</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-10453">HDFS-10453</a>.
-     Major bug reported by He Xiaoqiao and fixed by He Xiaoqiao (namenode)<br>
-     <b>ReplicationMonitor thread could stuck for long time due to the race between replication and delete of same file in a large cluster.</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-7959">HDFS-7959</a>.
-     Critical bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
-     <b>WebHdfs logging is missing on Datanode</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-4210">HDFS-4210</a>.
-     Trivial bug reported by Damien Hardy and fixed by John Zhuge (ha , journal-node , namenode)<br>
-     <b>Throw helpful exception when DNS entry for JournalNode cannot be resolved</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15345">HADOOP-15345</a>.
-     Major improvement reported by He Xiaoqiao and fixed by He Xiaoqiao <br>
-     <b>Backport HADOOP-12185 to branch-2.7: NetworkTopology is not efficient adding/getting/removing nodes</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15283">HADOOP-15283</a>.
-     Major bug reported by Xiao Chen and fixed by Akira Ajisaka <br>
-     <b>Upgrade from findbugs 3.0.1 to spotbugs 3.1.2 in branch-2 to fix docker image build</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15279">HADOOP-15279</a>.
-     Minor improvement reported by Allen Wittenauer and fixed by Allen Wittenauer (build , documentation , test)<br>
-     <b>increase maven heap size recommendations</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15212">HADOOP-15212</a>.
-     Major improvement reported by Daryn Sharp and fixed by Daryn Sharp (security)<br>
-     <b>Add independent secret manager method for logging expired tokens</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15206">HADOOP-15206</a>.
-     Major bug reported by Aki Tanaka and fixed by Aki Tanaka <br>
-     <b>BZip2 drops and duplicates records when input split size is small</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15177">HADOOP-15177</a>.
-     Blocker task reported by Akira Ajisaka and fixed by Bharat Viswanadham (build)<br>
-     <b>Update the release year to 2018</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15143">HADOOP-15143</a>.
-     Major bug reported by Jitendra Nath Pandey and fixed by Mukul Kumar Singh <br>
-     <b>NPE due to Invalid KerberosTicket in UGI</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-14246">HADOOP-14246</a>.
-     Major improvement reported by Robert Kanter and fixed by Robert Kanter (security)<br>
-     <b>Authentication Tokens should use SecureRandom instead of Random and 256 bit secrets</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-13508">HADOOP-13508</a>.
-     Major bug reported by Atul Sikaria and fixed by Atul Sikaria <br>
-     <b>FsPermission string constructor does not recognize sticky bit</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-13375">HADOOP-13375</a>.
-     Major bug reported by Mingliang Liu and fixed by Weiwei Yang (security , test)<br>
-     <b>o.a.h.security.TestGroupsCaching.testBackgroundRefreshCounters seems flaky</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-13263">HADOOP-13263</a>.
-     Major improvement reported by Stephen O'Donnell and fixed by Stephen O'Donnell <br>
-     <b>Reload cached groups in background after expiry</b><br>
-     <blockquote>hadoop.security.groups.cache.background.reload can be set to true to enable background reload of expired groups cache entries. This setting can improve the performance of services that use Groups.java (e.g. the NameNode) when group lookups are slow. The setting is disabled by default.</blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-13105">HADOOP-13105</a>.
-     Major improvement reported by Chris Nauroth and fixed by Mingliang Liu (security)<br>
-     <b>Support timeouts in LDAP queries in LdapGroupsMapping.</b><br>
-     <blockquote>This patch adds two new config keys for supporting timeouts in LDAP query operations. The property "hadoop.security.group.mapping.ldap.connection.timeout.ms" is the connection timeout (in milliseconds), within which period if the LDAP provider doesn't establish a connection, it will abort the connect attempt. The property "hadoop.security.group.mapping.ldap.read.timeout.ms" is the read timeout (in milliseconds), within which period if the LDAP provider doesn't get a LDAP response, it will abort the read attempt.</blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12862">HADOOP-12862</a>.
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-13486">HDFS-13486</a>.
      Major bug reported by Wei-Chiu Chuang and fixed by Wei-Chiu Chuang <br>
-     <b>LDAP Group Mapping over SSL can not specify trust store</b><br>
+     <b>Backport HDFS-11817 (A faulty node can cause a lease leak and NPE on accessing data) to branch-2.7</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12751">HADOOP-12751</a>.
-     Critical bug reported by Bolke de Bruin and fixed by Bolke de Bruin (security)<br>
-     <b>While using kerberos Hadoop incorrectly assumes names with '@' to be non-simple</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-12156">HDFS-12156</a>.
+     Major bug reported by Akira Ajisaka and fixed by Akira Ajisaka (test)<br>
+     <b>TestFSImage fails without -Pnative</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12611">HADOOP-12611</a>.
-     Major bug reported by Wei-Chiu Chuang and fixed by Eric Badger <br>
-     <b>TestZKSignerSecretProvider#testMultipleInit occasionally fail</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15486">HADOOP-15486</a>.
+     Major improvement reported by Nanda kumar and fixed by Nanda kumar (net)<br>
+     <b>Make NetworkTopology#netLock fair</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12568">HADOOP-12568</a>.
-     Minor improvement reported by Wei-Chiu Chuang and fixed by Wei-Chiu Chuang (documentation)<br>
-     <b>Update core-default.xml to describe posixGroups support</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-15473">HADOOP-15473</a>.
+     Critical bug reported by Gabor Bota and fixed by Gabor Bota (kms)<br>
+     <b>Configure serialFilter in KeyProvider to avoid UnrecoverableKeyException caused by JDK-8189997</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12472">HADOOP-12472</a>.
-     Minor improvement reported by Steve Loughran and fixed by Steve Loughran (test)<br>
-     <b>Make GenericTestUtils.assertExceptionContains robust</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-14970">HADOOP-14970</a>.
+     Minor bug reported by Erik Krogen and fixed by Erik Krogen <br>
+     <b>MiniHadoopClusterManager doesn't respect lack of format option</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12181">HADOOP-12181</a>.
-     Minor bug reported by Masatake Iwasaki and fixed by Masatake Iwasaki <br>
-     <b>Fix intermittent test failure of TestZKSignerSecretProvider</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-12001">HADOOP-12001</a>.
-     Blocker bug reported by Patrick White and fixed by Patrick White (security)<br>
-     <b>Limiting LDAP search conflicts with posixGroup addition</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9477">HADOOP-9477</a>.
-     Major new feature reported by Kai Zheng and fixed by Dapeng Sun <br>
-     <b>Add posixGroups support for LDAP groups mapping service</b><br>
-     <blockquote>Add posixGroups support for LDAP groups mapping service. The change in LDAPGroupMapping is compatible with previous scenario. In LDAP, the group mapping between {{posixAccount}} and {{posixGroup}} is different from the general LDAPGroupMapping, one of the differences is the {{"memberUid"}} will be used to mapping {{posixAccount}} and {{posixGroup}}. The feature will handle the mapping in internal when configuration {{hadoop.security.group.mapping.ldap.search.filter.user}} is set as "posixAccount" and {{hadoop.security.group.mapping.ldap.search.filter.group}} is "posixGroup".</blockquote></li>
 </ul>
 </body></html>
