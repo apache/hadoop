@@ -8,9 +8,26 @@ Release 2.7.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-15486. Make NetworkTopology#netLock fair.
+    Contributed by Nanda kumar.
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-15473. Configure serialFilter in KeyProvider to avoid
+    UnrecoverableKeyException caused by JDK-8189997.
+    Contributed by Gabor Bota.
+
+    Additional check when unpacking archives.
+    Contributed by Jason Lowe and Akira Ajisaka.
+
+    Skip the proxy user check if the ugi has not been initialized.
+    Contributed by Daryn Sharp
+
+    HADOOP-14970. MiniHadoopClusterManager doesn't respect lack of
+    format option.
+    Contributed by Erik Krogen
 
 Release 2.7.6 - 2018-04-16
 

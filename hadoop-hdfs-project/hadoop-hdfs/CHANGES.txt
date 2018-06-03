@@ -8,9 +8,19 @@ Release 2.7.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-13602. Add checkOperation(WRITE) checks in FSNamesystem.
+    Contributed by Chao Sun.
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-13486. Backport HDFS-11817 (A faulty node can cause a lease
+    leak and NPE on accessing data) to branch-2.7.
+    Contributed by Kihwal Lee.
+
+    HDFS-12156. TestFSImage fails without -Pnative
+    Contributed Akira Ajisaka.
 
 Release 2.7.6 - 2018-04-16
 

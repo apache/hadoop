@@ -12,6 +12,9 @@ Release 2.7.7 - UNRELEASED
 
   BUG FIXES
 
+    Addendum fix in container executor.
+    Contributed by Wilfred Spiegelenburg.
+
 Release 2.7.6 - 2018-04-16
 
   INCOMPATIBLE CHANGES
