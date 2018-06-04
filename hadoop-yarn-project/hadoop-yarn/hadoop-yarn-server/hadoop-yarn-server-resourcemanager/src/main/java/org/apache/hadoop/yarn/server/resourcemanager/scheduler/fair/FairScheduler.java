@@ -1009,7 +1009,7 @@ public class FairScheduler extends
         return;
       }
 
-      final NodeId nodeID = node.getNodeID();
+      final NodeId nodeID = (node != null ? node.getNodeID() : null);
       if (!nodeTracker.exists(nodeID)) {
         // The node might have just been removed while this thread was waiting
         // on the synchronized lock before it entered this synchronized method
