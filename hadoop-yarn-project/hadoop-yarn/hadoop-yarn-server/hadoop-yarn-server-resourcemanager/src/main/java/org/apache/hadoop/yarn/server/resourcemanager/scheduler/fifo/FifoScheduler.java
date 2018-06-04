@@ -966,8 +966,10 @@ public class FifoScheduler extends
       return;
     }
 
-    if (Resources.greaterThanOrEqual(resourceCalculator, getClusterResource(),
-        node.getUnallocatedResource(), minimumAllocation)) {
+    // A decommissioned node might be removed before we get here
+    if (node != null &&
+        Resources.greaterThanOrEqual(resourceCalculator, getClusterResource(),
+            node.getUnallocatedResource(), minimumAllocation)) {
       LOG.debug("Node heartbeat " + nm.getNodeID() +
           " available resource = " + node.getUnallocatedResource());
 
