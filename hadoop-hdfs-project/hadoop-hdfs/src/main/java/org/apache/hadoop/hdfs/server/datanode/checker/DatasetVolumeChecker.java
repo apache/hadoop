@@ -46,6 +46,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -102,6 +103,8 @@ public class DatasetVolumeChecker {
 
   private static final VolumeCheckContext IGNORED_CONTEXT =
       new VolumeCheckContext();
+
+  private final ExecutorService checkVolumeResultHandlerExecutorService;
 
   /**
    * @param conf Configuration object.
@@ -163,6 +166,12 @@ public class DatasetVolumeChecker {
                 .setNameFormat("DataNode DiskChecker thread %d")
                 .setDaemon(true)
                 .build()));
+
+    checkVolumeResultHandlerExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+            .setNameFormat("VolumeCheck ResultHandler thread %d")
+            .setDaemon(true)
+            .build());
   }
 
   /**
@@ -292,7 +301,9 @@ public class DatasetVolumeChecker {
       numVolumeChecks.incrementAndGet();
       Futures.addCallback(olf.get(),
           new ResultHandler(volumeReference, new HashSet<>(), new HashSet<>(),
-          new AtomicLong(1), callback));
+              new AtomicLong(1), callback),
+          checkVolumeResultHandlerExecutorService
+      );
       return true;
     } else {
       IOUtils.cleanup(null, volumeReference);
