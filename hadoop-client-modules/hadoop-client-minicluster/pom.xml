@@ -115,6 +115,10 @@
           <artifactId>netty</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
