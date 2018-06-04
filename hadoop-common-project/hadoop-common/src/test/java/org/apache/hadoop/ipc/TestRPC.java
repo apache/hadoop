@@ -279,7 +279,7 @@ public class TestRPC extends TestRpcBase {
         SocketFactory factory, int rpcTimeout,
         RetryPolicy connectionRetryPolicy) throws IOException {
       return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
-          rpcTimeout, connectionRetryPolicy, null);
+          rpcTimeout, connectionRetryPolicy, null, null);
     }
 
     @SuppressWarnings("unchecked")
@@ -288,7 +288,8 @@ public class TestRPC extends TestRpcBase {
         Class<T> protocol, long clientVersion, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout, RetryPolicy connectionRetryPolicy,
-        AtomicBoolean fallbackToSimpleAuth) throws IOException {
+        AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
+        throws IOException {
       T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
           new Class[] { protocol }, new StoppedInvocationHandler());
       return new ProtocolProxy<T>(protocol, proxy, false);
