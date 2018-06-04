@@ -88,6 +88,10 @@ public class VersionResponse {
     values.put(key, value);
   }
 
+  public String getValue(String key) {
+    return this.values.get(key);
+  }
+
   /**
    * Return a protobuf message.
    * @return SCMVersionResponseProto.

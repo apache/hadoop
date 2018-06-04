@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.RPC;
@@ -145,7 +146,7 @@ public class TestDatanodeStateMachine {
     } catch (Exception e) {
       //ignore all execption from the shutdown
     } finally {
-      testRoot.delete();
+      FileUtil.fullyDelete(testRoot);
     }
   }
 

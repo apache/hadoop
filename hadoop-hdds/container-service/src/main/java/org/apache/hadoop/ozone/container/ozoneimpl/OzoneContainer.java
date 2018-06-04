@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -82,6 +83,7 @@ public class OzoneContainer {
   private final ChunkManager chunkManager;
   private final KeyManager keyManager;
   private final BlockDeletingService blockDeletingService;
+  private final List<StorageLocation> locations;
 
   /**
    * Creates a network endpoint and enables Ozone container.
@@ -93,7 +95,7 @@ public class OzoneContainer {
       DatanodeDetails datanodeDetails, Configuration ozoneConfig)
       throws IOException {
     this.ozoneConfig = ozoneConfig;
-    List<StorageLocation> locations = new LinkedList<>();
+    locations = new LinkedList<>();
     String[] paths = ozoneConfig.getStrings(
         OzoneConfigKeys.OZONE_METADATA_DIRS);
     if (paths != null && paths.length > 0) {
@@ -135,6 +137,10 @@ public class OzoneContainer {
       XceiverServerRatis
           .newXceiverServerRatis(datanodeDetails, this.ozoneConfig, dispatcher)
     };
+  }
+
+  public List<StorageLocation> getLocations() {
+    return Collections.unmodifiableList(this.locations);
   }
 
   /**
