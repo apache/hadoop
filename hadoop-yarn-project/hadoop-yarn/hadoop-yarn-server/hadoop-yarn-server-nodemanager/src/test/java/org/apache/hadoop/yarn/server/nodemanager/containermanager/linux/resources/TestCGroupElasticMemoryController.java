@@ -38,7 +38,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.apache.hadoop.test.PlatformAssumptions.assumeMacOS;
 
 /**
  * Test for elastic non-strict memory controller based on cgroups.
@@ -257,26 +256,20 @@ public class TestCGroupElasticMemoryController {
 
   /**
    * Test that node manager can exit listening.
-   * This is done by running a long running listener for 10 seconds.
+   * This is done by running a long running listener for 10000 seconds.
    * Then we wait for 2 seconds and stop listening.
+   * We do not use a script this time to avoid leaking the child process.
    * @throws Exception exception occurred
    */
   @Test(timeout = 20000)
   public void testNormalExit() throws Exception {
-    // TODO This may hang on Linux
-    assumeMacOS();
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
-        script.getAbsolutePath());
+        "sleep");
     ExecutorService service = Executors.newFixedThreadPool(1);
     try {
-      FileUtils.writeStringToFile(script,
-          "#!/bin/bash\nsleep 10000;",
-          Charset.defaultCharset(), false);
-      assertTrue("Could not set executable",
-          script.setExecutable(true));
-
       CGroupsHandler cgroups = mock(CGroupsHandler.class);
-      when(cgroups.getPathForCGroup(any(), any())).thenReturn("");
+      // This will be passed to sleep as an argument
+      when(cgroups.getPathForCGroup(any(), any())).thenReturn("10000");
       when(cgroups.getCGroupParam(any(), any(), any()))
           .thenReturn("under_oom 0");
 
@@ -308,8 +301,6 @@ public class TestCGroupElasticMemoryController {
       controller.run();
     } finally {
       service.shutdown();
-      assertTrue(String.format("Could not clean up script %s",
-          script.getAbsolutePath()), script.delete());
     }
   }
 

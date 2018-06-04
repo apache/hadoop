@@ -25,7 +25,6 @@ import org.junit.internal.AssumptionViolatedException;
 public final class PlatformAssumptions {
   public static final String OS_NAME = System.getProperty("os.name");
   public static final boolean WINDOWS = OS_NAME.startsWith("Windows");
-  public static final boolean MAC_OS = OS_NAME.startsWith("Mac OS X");
 
   private PlatformAssumptions() { }
 
@@ -43,13 +42,6 @@ public final class PlatformAssumptions {
     if (!WINDOWS) {
       throw new AssumptionViolatedException(
           "Expected Windows platform but got " + OS_NAME);
-    }
-  }
-
-  public static void assumeMacOS() {
-    if (!MAC_OS) {
-      throw new AssumptionViolatedException(
-          "Expected MacOS platform but got " + OS_NAME);
     }
   }
 }
