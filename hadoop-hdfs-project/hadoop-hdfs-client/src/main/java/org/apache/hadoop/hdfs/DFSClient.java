@@ -164,7 +164,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
-import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
@@ -239,7 +238,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
-  private final ClientGCIContext alignmentContext;
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -391,8 +389,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
-    this.alignmentContext = new ClientGCIContext();
-    Client.setAlignmentContext(alignmentContext);
   }
 
   /**
@@ -539,11 +535,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** @return true if the client is running */
   public boolean isClientRunning() {
     return clientRunning;
-  }
-
-  @VisibleForTesting
-  ClientGCIContext getAlignmentContext() {
-    return alignmentContext;
   }
 
   long getLastLeaseRenewal() {

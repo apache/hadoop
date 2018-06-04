@@ -216,16 +216,19 @@ public class WritableRpcEngine implements RpcEngine {
     private Client client;
     private boolean isClosed = false;
     private final AtomicBoolean fallbackToSimpleAuth;
+    private final AlignmentContext alignmentContext;
 
     public Invoker(Class<?> protocol,
                    InetSocketAddress address, UserGroupInformation ticket,
                    Configuration conf, SocketFactory factory,
-                   int rpcTimeout, AtomicBoolean fallbackToSimpleAuth)
+                   int rpcTimeout, AtomicBoolean fallbackToSimpleAuth,
+                   AlignmentContext alignmentContext)
         throws IOException {
       this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
           ticket, rpcTimeout, null, conf);
       this.client = CLIENTS.getClient(conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
+      this.alignmentContext = alignmentContext;
     }
 
     @Override
@@ -248,7 +251,7 @@ public class WritableRpcEngine implements RpcEngine {
       try {
         value = (ObjectWritable)
           client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args),
-            remoteId, fallbackToSimpleAuth);
+            remoteId, fallbackToSimpleAuth, alignmentContext);
       } finally {
         if (traceScope != null) traceScope.close();
       }
@@ -291,7 +294,7 @@ public class WritableRpcEngine implements RpcEngine {
                          int rpcTimeout, RetryPolicy connectionRetryPolicy)
     throws IOException {
     return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
-      rpcTimeout, connectionRetryPolicy, null);
+      rpcTimeout, connectionRetryPolicy, null, null);
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
@@ -303,7 +306,8 @@ public class WritableRpcEngine implements RpcEngine {
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
                          int rpcTimeout, RetryPolicy connectionRetryPolicy,
-                         AtomicBoolean fallbackToSimpleAuth)
+                         AtomicBoolean fallbackToSimpleAuth,
+                         AlignmentContext alignmentContext)
     throws IOException {    
 
     if (connectionRetryPolicy != null) {
@@ -313,7 +317,7 @@ public class WritableRpcEngine implements RpcEngine {
 
     T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
         new Class[] { protocol }, new Invoker(protocol, addr, ticket, conf,
-            factory, rpcTimeout, fallbackToSimpleAuth));
+            factory, rpcTimeout, fallbackToSimpleAuth, alignmentContext));
     return new ProtocolProxy<T>(protocol, proxy, true);
   }
   

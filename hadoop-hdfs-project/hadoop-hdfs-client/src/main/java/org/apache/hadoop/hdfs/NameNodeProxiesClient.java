@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.ha.ClientHAProxyFactory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -338,6 +339,15 @@ public class NameNodeProxiesClient {
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       boolean withRetries, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
+    return createProxyWithAlignmentContext(address, conf, ugi, withRetries,
+        fallbackToSimpleAuth, null);
+  }
+
+  public static ClientProtocol createProxyWithAlignmentContext(
+      InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
+      boolean withRetries, AtomicBoolean fallbackToSimpleAuth,
+      AlignmentContext alignmentContext)
+      throws IOException {
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine.class);
 
@@ -355,7 +365,7 @@ public class NameNodeProxiesClient {
         ClientNamenodeProtocolPB.class, version, address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf),
         org.apache.hadoop.ipc.Client.getTimeout(conf), defaultPolicy,
-        fallbackToSimpleAuth).getProxy();
+        fallbackToSimpleAuth, alignmentContext).getProxy();
 
     if (withRetries) { // create the proxy with retries
       Map<String, RetryPolicy> methodNameToPolicyMap = new HashMap<>();
