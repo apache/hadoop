@@ -19,6 +19,7 @@ package org.apache.hadoop.utils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 /**
@@ -94,7 +95,7 @@ public final class MetadataKeyFilters {
       if (Strings.isNullOrEmpty(keyPrefix)) {
         accept = true;
       } else {
-        byte [] prefixBytes = keyPrefix.getBytes();
+        byte [] prefixBytes = DFSUtil.string2Bytes(keyPrefix);
         if (currentKey != null && prefixMatch(prefixBytes, currentKey)) {
           keysHinted++;
           accept = true;
