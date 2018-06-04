@@ -208,8 +208,7 @@ public class FairScheduler extends
   public FairScheduler() {
     super(FairScheduler.class.getName());
     context = new FSContext(this);
-    allocsLoader =
-        new AllocationFileLoaderService(new AllocationReloadListener());
+    allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
@@ -1438,6 +1437,7 @@ public class FairScheduler extends
     }
 
     allocsLoader.init(conf);
+    allocsLoader.setReloadListener(new AllocationReloadListener());
     // If we fail to load allocations file on initialize, we want to fail
     // immediately.  After a successful load, exceptions on future reloads
     // will just result in leaving things as they are.
