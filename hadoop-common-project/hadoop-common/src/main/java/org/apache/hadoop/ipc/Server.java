@@ -836,10 +836,15 @@ public abstract class Server {
     final Writable rpcRequest;    // Serialized Rpc request from client
     ByteBuffer rpcResponse;       // the response for this call
 
+    private RpcResponseHeaderProto bufferedHeader; // the response header
+    private Writable bufferedRv;                   // the byte response
+
     RpcCall(RpcCall call) {
       super(call);
       this.connection = call.connection;
       this.rpcRequest = call.rpcRequest;
+      this.bufferedRv = call.bufferedRv;
+      this.bufferedHeader = call.bufferedHeader;
     }
 
     RpcCall(Connection connection, int id) {
@@ -858,6 +863,14 @@ public abstract class Server {
       super(id, retryCount, kind, clientId, traceScope, context);
       this.connection = connection;
       this.rpcRequest = param;
+    }
+
+    public void setBufferedHeader(RpcResponseHeaderProto header) {
+      this.bufferedHeader = header;
+    }
+
+    public void setBufferedRv(Writable rv) {
+      this.bufferedRv = rv;
     }
 
     @Override
@@ -948,6 +961,13 @@ public abstract class Server {
         setupResponse(call,
             RpcStatusProto.FATAL, RpcErrorCodeProto.ERROR_RPC_SERVER,
             null, t.getClass().getName(), StringUtils.stringifyException(t));
+      } else if (alignmentContext != null) {
+        // rebuild response with state context in header
+        RpcResponseHeaderProto.Builder responseHeader =
+            call.bufferedHeader.toBuilder();
+        alignmentContext.updateResponseState(responseHeader);
+        RpcResponseHeaderProto builtHeader = responseHeader.build();
+        setupResponse(call, builtHeader, call.bufferedRv);
       }
       connection.sendResponse(call);
     }
@@ -2937,9 +2957,6 @@ public abstract class Server {
     headerBuilder.setRetryCount(call.retryCount);
     headerBuilder.setStatus(status);
     headerBuilder.setServerIpcVersionNum(CURRENT_VERSION);
-    if(alignmentContext != null) {
-      alignmentContext.updateResponseState(headerBuilder);
-    }
 
     if (status == RpcStatusProto.SUCCESS) {
       RpcResponseHeaderProto header = headerBuilder.build();
@@ -2966,6 +2983,12 @@ public abstract class Server {
 
   private void setupResponse(RpcCall call,
       RpcResponseHeaderProto header, Writable rv) throws IOException {
+    if (alignmentContext != null && call.bufferedHeader == null
+        && call.bufferedRv == null) {
+      call.setBufferedHeader(header);
+      call.setBufferedRv(rv);
+    }
+
     final byte[] response;
     if (rv == null || (rv instanceof RpcWritable.ProtobufWrapper)) {
       response = setupResponseForProtobuf(header, rv);
