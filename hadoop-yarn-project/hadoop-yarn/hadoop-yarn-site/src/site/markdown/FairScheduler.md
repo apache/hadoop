@@ -111,6 +111,7 @@ The allocation file must be in XML format. The format contains five types of ele
     * **fairSharePreemptionThreshold**: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue. Default value is 0.5f.
 
     * **allowPreemptionFrom**: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
+    * **allowOversubscription**: determines whether the scheduler is allowed to assign OPPORTUNISTIC resources to applications running in the queue when over-subscription is turned on. The default is true.
 
     * **reservation**: indicates to the `ReservationSystem` that the queue's resources is available for users to reserve. This only applies for leaf queues. A leaf queue is not reservable if this property isn't configured.
 

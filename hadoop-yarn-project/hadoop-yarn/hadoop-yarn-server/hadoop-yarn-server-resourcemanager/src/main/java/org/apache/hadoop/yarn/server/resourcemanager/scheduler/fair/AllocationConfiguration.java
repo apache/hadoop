@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -103,6 +104,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private ReservationQueueConfiguration globalReservationQueueConfig;
 
   private final Set<String> nonPreemptableQueues;
+  private final Map<String, Boolean> queueOversubscriptionSetting;
 
   public AllocationConfiguration(QueueProperties queueProperties,
       AllocationFileParser allocationFileParser,
@@ -138,6 +140,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     this.placementPolicy = newPlacementPolicy;
     this.configuredQueues = queueProperties.getConfiguredQueues();
     this.nonPreemptableQueues = queueProperties.getNonPreemptableQueues();
+    this.queueOversubscriptionSetting =
+        queueProperties.getQueueOversubscriptionSetting();
   }
 
   public AllocationConfiguration(Configuration conf) {
@@ -167,6 +171,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     placementPolicy =
         QueuePlacementPolicy.fromConfiguration(conf, configuredQueues);
     nonPreemptableQueues = new HashSet<>();
+    queueOversubscriptionSetting = new HashMap<>(0);
   }
 
   /**
@@ -219,6 +224,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   public boolean isPreemptable(String queueName) {
     return !nonPreemptableQueues.contains(queueName);
+  }
+
+  public Optional<Boolean> isOversubscriptionAllowed(String queueName) {
+    return Optional.ofNullable(queueOversubscriptionSetting.get(queueName));
   }
 
   private float getQueueWeight(String queue) {

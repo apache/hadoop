@@ -68,6 +68,7 @@ public class AllocationFileQueueParser {
   private static final String ACL_SUBMIT_RESERVATIONS = "aclSubmitReservations";
   private static final String RESERVATION = "reservation";
   private static final String ALLOW_PREEMPTION_FROM = "allowPreemptionFrom";
+  private static final String ALLOW_OVERSUBSCRIPTION ="allowOversubscription";
   private static final String QUEUE = "queue";
   private static final String POOL = "pool";
 
@@ -207,6 +208,9 @@ public class AllocationFileQueueParser {
         if (!Boolean.parseBoolean(text)) {
           builder.nonPreemptableQueues(queueName);
         }
+      } else if (ALLOW_OVERSUBSCRIPTION.equals(field.getTagName())) {
+        Boolean allow = Boolean.parseBoolean(getTrimmedTextData(field));
+        builder.addQueueOversubscriptionSetting(queueName, allow);
       } else if (QUEUE.endsWith(field.getTagName())
           || POOL.equals(field.getTagName())) {
         loadQueue(queueName, field, builder);

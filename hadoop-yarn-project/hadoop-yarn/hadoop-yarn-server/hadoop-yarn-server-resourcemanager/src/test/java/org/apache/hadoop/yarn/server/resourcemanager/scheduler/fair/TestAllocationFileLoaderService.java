@@ -538,6 +538,67 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
+  public void testQueueOptOutOfOversubscription() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    // Queue A has the default value of allowOversubscription
+    out.println("<queue name=\"queueA\">");
+    // The child queue of A, queueA.child1 has overridden the parent's setting
+    out.println("<queue name=\"child1\">");
+    out.println("<allowOversubscription>false</allowOversubscription>");
+    out.println("</queue>");
+    // The child queue of A, queueA.child2 inherits the setting from its parent
+    out.println("<queue name=\"child2\" />");
+    out.println("</queue>");
+    // Queue A has opted out of oversubscription
+    out.println("<queue name=\"queueB\">");
+    // The child queue of B, queueB.child has overridden the parent's setting
+    out.println("<allowOversubscription>true</allowOversubscription>");
+    // The child queue of A, queueA.child1 has overridden the parent's setting
+    out.println("<queue name=\"child1\" />");
+    // The child queue of B, queueB.child2 inherits the setting from its parent
+    out.println("<queue name=\"child2\">");
+    out.println("<allowOversubscription>false</allowOversubscription>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+    AllocationConfiguration queueConf = confHolder.allocConf;
+
+    assertTrue("allowOversubscription is not set for queueA",
+        !queueConf.isOversubscriptionAllowed("root.queueA").isPresent());
+    assertTrue("allowOversubscription is not set for queueA.child2",
+        !queueConf.isOversubscriptionAllowed("root.queueA.child2").isPresent());
+    assertTrue("allowOversubscription is not set for queueB.child1",
+        !queueConf.isOversubscriptionAllowed("root.queueB.child1").isPresent());
+
+    assertTrue("allowOversubscription is set for queueB",
+        queueConf.isOversubscriptionAllowed("root.queueB").isPresent());
+    assertTrue("queueB does allow oversubscription",
+        queueConf.isOversubscriptionAllowed("root.queueB").get());
+    assertTrue("allowOversubscription is set for queueB.child2",
+        queueConf.isOversubscriptionAllowed("root.queueB.child2").isPresent());
+    assertTrue("queueB.child2 does not allow oversubscription",
+        !queueConf.isOversubscriptionAllowed("root.queueB.child2").get());
+
+    assertTrue("allowOversubscription is set for queueA.child1",
+        queueConf.isOversubscriptionAllowed("root.queueA.child1").isPresent());
+    assertTrue("queueA.child1 does not allow oversubscription",
+        !queueConf.isOversubscriptionAllowed("root.queueA.child1").get());
+
+  }
+
+  @Test
   public void testSimplePlacementPolicyFromConf() throws Exception {
     Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);

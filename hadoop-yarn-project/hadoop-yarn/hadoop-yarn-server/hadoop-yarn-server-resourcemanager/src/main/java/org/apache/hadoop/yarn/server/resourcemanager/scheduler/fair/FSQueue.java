@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -75,6 +76,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private ConfigurableResource maxShare;
   protected int maxRunningApps;
   private ConfigurableResource maxChildQueueResource;
+  private boolean isOversubscriptionAllowed;
 
   // maxAMShare is a value between 0 and 1.
   protected float maxAMShare;
@@ -93,6 +95,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, name);
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
+    this.isOversubscriptionAllowed = true;
     setPolicy(scheduler.getAllocationConfiguration().getSchedulingPolicy(name));
     reinit(false);
   }
@@ -111,6 +114,14 @@ public abstract class FSQueue implements Queue, Schedulable {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     allocConf.initFSQueue(this);
     updatePreemptionVariables();
+
+    Optional<Boolean> allowed = allocConf.isOversubscriptionAllowed(name);
+    if (allowed.isPresent()) {
+      isOversubscriptionAllowed = allowed.get();
+    } else if (getParent() != null){
+      // inherit from the parent queue if it is not explicitly set
+      isOversubscriptionAllowed = getParent().isOversubscriptionAllowed();
+    }
 
     if (recursive) {
       for (FSQueue child : getChildQueues()) {
@@ -211,6 +222,15 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public long getStartTime() {
     return 0;
+  }
+
+  public boolean isOversubscriptionAllowed() {
+    return isOversubscriptionAllowed;
+  }
+
+  @VisibleForTesting
+  public void allowOversubscription(boolean allowed) {
+    this.isOversubscriptionAllowed = allowed;
   }
 
   @Override
@@ -583,7 +603,6 @@ public abstract class FSQueue implements Queue, Schedulable {
     dumpStateInternal(sb);
     return sb.toString();
   }
-
 
   /**
    * Recursively dump states of all queues.

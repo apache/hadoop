@@ -642,4 +642,74 @@ public class TestQueueManager {
     assertNotNull("root.a does not exist", p);
   }
 
+  /**
+   * Test queues created dynamically inherit the oversubscription setting
+   * from its parent queue, in which oversubscription is enabled.
+   */
+  @Test
+  public void testCreateQueueWithParentOversubscriptionSettingsEnabled() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+    queueManager.updateAllocationConfiguration(allocConf);
+
+    FSQueue q1 = queueManager.createQueue("root.queue1",
+        FSQueueType.PARENT);
+
+    assertNotNull("Parent queue root.queue1 was not created",
+        queueManager.getParentQueue("root.queue1", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1", q1.getName());
+    assertTrue("root queue should always allow oversubscription",
+        queueManager.getParentQueue("root", false).isOversubscriptionAllowed());
+    assertTrue("root.queue1 should allow oversubscription as its parent",
+        queueManager.getParentQueue("root.queue1", false)
+            .isOversubscriptionAllowed());
+
+    FSQueue q2 = queueManager.createQueue("root.queue1.queue2",
+        FSQueueType.LEAF);
+    assertNotNull("Leaf queue root.queue1.queue2 was not created",
+        queueManager.getLeafQueue("root.queue1.queue2", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1.queue2", q2.getName());
+    assertTrue("root.queue1.queue2 should allow oversubscription as its parent",
+        queueManager.getLeafQueue("root.queue1.queue2", false)
+            .isOversubscriptionAllowed());
+
+  }
+
+  /**
+   * Test queues created dynamically inherit the oversubscription setting
+   * from its parent queue, in which oversubscription is disabled.
+   */
+  @Test
+  public void testCreateQueueWithParentOversubscriptionSettingsDisabled() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+
+      queueManager.updateAllocationConfiguration(allocConf);
+    FSQueue q1 = queueManager.createQueue("root.queue1",
+        FSQueueType.PARENT);
+    q1.allowOversubscription(false);
+
+    assertNotNull("Parent queue root.queue1 was not created",
+        queueManager.getParentQueue("root.queue1", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1", q1.getName());
+
+    assertTrue("root queue should always allow oversubscription",
+        queueManager.getParentQueue("root", false).isOversubscriptionAllowed());
+    assertTrue("root.queue1 should not allow oversubscription",
+        !queueManager.getParentQueue("root.queue1", false)
+            .isOversubscriptionAllowed());
+
+    FSQueue q2 = queueManager.createQueue("root.queue1.queue2",
+        FSQueueType.LEAF);
+    assertNotNull("Leaf queue root.queue1.queue2 was not created",
+        queueManager.getLeafQueue("root.queue1.queue2", false));
+    assertEquals("createQueue() returned wrong queue",
+        "root.queue1.queue2", q2.getName());
+    assertTrue(
+        "root.queue1.queue2 should not allow oversubscription as its parent",
+        !queueManager.getLeafQueue("root.queue1.queue2", false)
+            .isOversubscriptionAllowed());
+
+  }
 }

@@ -378,6 +378,11 @@ public class FSLeafQueue extends FSQueue {
           getName() + " fairShare: " + getFairShare());
     }
 
+    if (opportunistic && !isOversubscriptionAllowed()) {
+      // do not proceed if the queue is opted out of over-subscription
+      return assigned;
+    }
+
     if (!assignContainerPreCheck(node, opportunistic)) {
       return assigned;
     }

@@ -52,6 +52,7 @@ public class QueueProperties {
           reservationAcls;
   private final Set<String> reservableQueues;
   private final Set<String> nonPreemptableQueues;
+  private final Map<String, Boolean> queueOversubscriptionSetting;
   private final Map<FSQueueType, Set<String>> configuredQueues;
 
   QueueProperties(Builder builder) {
@@ -70,6 +71,7 @@ public class QueueProperties {
     this.maxChildQueueResources = builder.maxChildQueueResources;
     this.reservationAcls = builder.reservationAcls;
     this.queueAcls = builder.queueAcls;
+    this.queueOversubscriptionSetting = builder.queueOversubscriptionSetting;
   }
 
   public Map<FSQueueType, Set<String>> getConfiguredQueues() {
@@ -133,6 +135,9 @@ public class QueueProperties {
     return nonPreemptableQueues;
   }
 
+  public Map<String, Boolean> getQueueOversubscriptionSetting() {
+    return queueOversubscriptionSetting;
+  }
   /**
    * Builder class for {@link QueueProperties}.
    * All methods are adding queue properties to the maps of this builder
@@ -160,6 +165,8 @@ public class QueueProperties {
             reservationAcls = new HashMap<>();
     private Set<String> reservableQueues = new HashSet<>();
     private Set<String> nonPreemptableQueues = new HashSet<>();
+    private Map<String, Boolean> queueOversubscriptionSetting =
+        new HashMap<>(0);
     // Remember all queue names so we can display them on web UI, etc.
     // configuredQueues is segregated based on whether it is a leaf queue
     // or a parent queue. This information is used for creating queues
@@ -250,6 +257,12 @@ public class QueueProperties {
 
     public Builder nonPreemptableQueues(String queue) {
       this.nonPreemptableQueues.add(queue);
+      return this;
+    }
+
+    public Builder addQueueOversubscriptionSetting(
+        String queue, Boolean allow) {
+      this.queueOversubscriptionSetting.put(queue, allow);
       return this;
     }
 

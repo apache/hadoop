@@ -68,6 +68,7 @@ public class FairSchedulerQueueInfo {
   private String schedulingPolicy;
 
   private boolean preemptable;
+  private boolean allowOversubscription;
 
   private FairSchedulerQueueInfoList childQueues;
 
@@ -118,6 +119,7 @@ public class FairSchedulerQueueInfo {
     }
 
     preemptable = queue.isPreemptable();
+    allowOversubscription = queue.isOversubscriptionAllowed();
     childQueues = getChildQueues(queue, scheduler);
   }
 
@@ -254,5 +256,9 @@ public class FairSchedulerQueueInfo {
 
   public boolean isPreemptable() {
     return preemptable;
+  }
+
+  public boolean isOversubscriptionAllowed() {
+    return allowOversubscription;
   }
 }
