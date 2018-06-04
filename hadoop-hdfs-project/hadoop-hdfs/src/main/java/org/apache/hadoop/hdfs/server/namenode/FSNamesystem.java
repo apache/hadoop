@@ -2283,7 +2283,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           dir, pc, src, flag, createParent);
 
       FileEncryptionInfo feInfo = null;
-      if (provider != null) {
+      if (!iip.isRaw() && provider != null) {
         EncryptionKeyInfo ezInfo = FSDirEncryptionZoneOp.getEncryptionKeyInfo(
             this, iip, supportedVersions);
         // if the path has an encryption zone, the lock was released while

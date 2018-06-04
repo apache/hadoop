@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -2164,6 +2166,33 @@ public class TestEncryptionZones {
     for (int i = 0; i < 1024; i++) {
       in.seek(i);
       Assert.assertEquals((data[i] & 0XFF), in.read());
+    }
+  }
+
+  /**
+   * Tests that namenode doesn't generate edek if we are writing to
+   * /.reserved/raw directory.
+   * @throws Exception
+   */
+  @Test
+  public void testWriteToEZReservedRaw() throws Exception {
+    String unEncryptedBytes = "hello world";
+    // Create an Encryption Zone.
+    final Path zonePath = new Path("/zone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    Path p1 = new Path(zonePath, "p1");
+    Path reservedRawPath = new Path("/.reserved/raw/" + p1.toString());
+    // Create an empty file with /.reserved/raw/ path.
+    OutputStream os = fs.create(reservedRawPath);
+    os.close();
+    try {
+      fs.getXAttr(reservedRawPath, HdfsServerConstants
+          .CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
+      fail("getXAttr should have thrown an exception");
+    } catch (IOException ioe) {
+      assertExceptionContains("At least one of the attributes provided was " +
+          "not found.", ioe);
     }
   }
 }
