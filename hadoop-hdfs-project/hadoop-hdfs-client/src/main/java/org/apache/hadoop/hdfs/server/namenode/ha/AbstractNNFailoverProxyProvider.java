@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,11 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     return fallbackToSimpleAuth;
   }
 
-  /**
+  public synchronized AlignmentContext getAlignmentContext() {
+    return null; // by default the context is null
+  }
+
+      /**
    * ProxyInfo to a NameNode. Includes its address.
    */
   public static class NNProxyInfo<T> extends ProxyInfo<T> {

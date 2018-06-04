@@ -50,7 +50,8 @@ public interface RpcEngine {
                   UserGroupInformation ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout,
                   RetryPolicy connectionRetryPolicy,
-                  AtomicBoolean fallbackToSimpleAuth) throws IOException;
+                  AtomicBoolean fallbackToSimpleAuth,
+                  AlignmentContext alignmentContext) throws IOException;
 
   /** 
    * Construct a server for a protocol implementation instance.
