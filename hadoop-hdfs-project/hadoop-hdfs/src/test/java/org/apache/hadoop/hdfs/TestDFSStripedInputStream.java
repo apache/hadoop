@@ -105,7 +105,13 @@ public class TestDFSStripedInputStream {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
+        GenericTestUtils.getRandomizedTempPath());
     SimulatedFSDataset.setFactory(conf);
+    startUp();
+  }
+
+  private void startUp() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
@@ -326,7 +332,7 @@ public class TestDFSStripedInputStream {
     if (cellMisalignPacket) {
       conf.setInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT + 1);
       tearDown();
-      setup();
+      startUp();
     }
     DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
         stripesPerBlock, false, ecPolicy);
