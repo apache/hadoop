@@ -18,7 +18,6 @@
 package org.apache.hadoop.security;
 
 import java.net.InetAddress;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -96,11 +95,57 @@ public class SaslPropertiesResolver implements Configurable{
   }
 
   /**
+   * Identify the Sasl Properties to be used for a connection with a  client.
+   * @param clientAddress  client's address
+   * @param ingressPort the port that the client is connecting
+   * @return the sasl properties to be used for the connection.
+   */
+  public Map<String, String> getServerProperties(InetAddress clientAddress,
+      int ingressPort){
+    return properties;
+  }
+
+  /**
    * Identify the Sasl Properties to be used for a connection with a server.
    * @param serverAddress server's address
    * @return the sasl properties to be used for the connection.
    */
   public Map<String, String> getClientProperties(InetAddress serverAddress){
     return properties;
+  }
+
+  /**
+   * Identify the Sasl Properties to be used for a connection with a server.
+   * @param serverAddress server's address
+   * @param ingressPort the port that is used to connect to server
+   * @return the sasl properties to be used for the connection.
+   */
+  public Map<String, String> getClientProperties(InetAddress serverAddress,
+      int ingressPort) {
+    return properties;
+  }
+
+  /**
+   * A util function to retrieve specific additional sasl property from config.
+   * Used by subclasses to read sasl properties used by themselves.
+   * @param conf the configuration
+   * @param configKey the config key to look for
+   * @param defaultQOP the default QOP if the key is missing
+   * @return sasl property associated with the given key
+   */
+  static Map<String, String> getSaslProperties(Configuration conf,
+      String configKey, QualityOfProtection defaultQOP) {
+    Map<String, String> saslProps = new TreeMap<>();
+    String[] qop = conf.getStrings(configKey, defaultQOP.toString());
+
+    for (int i=0; i < qop.length; i++) {
+      qop[i] = QualityOfProtection.valueOf(
+          StringUtils.toUpperCase(qop[i])).getSaslQop();
+    }
+
+    saslProps.put(Sasl.QOP, StringUtils.join(",", qop));
+    saslProps.put(Sasl.SERVER_AUTH, "true");
+
+    return saslProps;
   }
 }
