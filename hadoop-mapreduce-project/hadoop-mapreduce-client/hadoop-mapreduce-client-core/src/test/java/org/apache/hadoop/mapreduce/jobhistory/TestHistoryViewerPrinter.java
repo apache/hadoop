@@ -41,6 +41,8 @@ public class TestHistoryViewerPrinter {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHistoryViewerPrinter.class);
 
+  private final String LINE_SEPARATOR = System.lineSeparator();
+
   @Test
   public void testHumanPrinter() throws Exception {
     JobHistoryParser.JobInfo job = createJobInfo();
@@ -61,12 +63,16 @@ public class TestHistoryViewerPrinter {
         "Counters: \n" +
         "\n" +
         "|Group Name                    |Counter name                  |Map Value |Reduce Value|Total Value|\n" +
-        "---------------------------------------------------------------------------------------\n" +
-        "|group1                        |counter1                      |5         |5         |5         \n" +
-        "|group1                        |counter2                      |10        |10        |10        \n" +
-        "|group2                        |counter1                      |15        |15        |15        \n" +
-        "\n" +
-        "=====================================\n" +
+        "---------------------------------------------------------------------------------------" +
+        LINE_SEPARATOR +
+        "|group1                        |counter1                      |5         |5         |5         " +
+        LINE_SEPARATOR +
+        "|group1                        |counter2                      |10        |10        |10        " +
+        LINE_SEPARATOR +
+        "|group2                        |counter1                      |15        |15        |15        " +
+        "\n\n" +
+        "=====================================" +
+        LINE_SEPARATOR +
         "\n" +
         "Task Summary\n" +
         "============================\n" +
@@ -77,46 +83,66 @@ public class TestHistoryViewerPrinter {
         "Reduce\t1\t1\t\t0\t0\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\n" +
         "Cleanup\t1\t1\t\t0\t0\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\n" +
         "============================\n" +
+        LINE_SEPARATOR +
         "\n" +
-        "\n" +
-        "Analysis\n" +
-        "=========\n" +
+        "Analysis" +
+        LINE_SEPARATOR +
+        "=========" +
+        LINE_SEPARATOR +
         "\n" +
         "Time taken by best performing map task task_1317928501754_0001_m_000003: 3sec\n" +
         "Average time taken by map tasks: 5sec\n" +
         "Worse performing map tasks: \n" +
-        "TaskId\t\tTimetaken\n" +
-        "task_1317928501754_0001_m_000007 7sec\n" +
-        "task_1317928501754_0001_m_000006 6sec\n" +
-        "task_1317928501754_0001_m_000005 5sec\n" +
-        "task_1317928501754_0001_m_000004 4sec\n" +
-        "task_1317928501754_0001_m_000003 3sec\n" +
-        "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)\n" +
+        "TaskId\t\tTimetaken" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000007 7sec" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000006 6sec" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000005 5sec" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000004 4sec" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000003 3sec" +
+        LINE_SEPARATOR +
+        "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)" +
+        LINE_SEPARATOR +
         "\n" +
         "Time taken by best performing shuffle task task_1317928501754_0001_r_000008: 8sec\n" +
         "Average time taken by shuffle tasks: 8sec\n" +
         "Worse performing shuffle tasks: \n" +
-        "TaskId\t\tTimetaken\n" +
-        "task_1317928501754_0001_r_000008 8sec\n" +
-        "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
+        "TaskId\t\tTimetaken" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_r_000008 8sec" +
+        LINE_SEPARATOR +
+        "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+        LINE_SEPARATOR +
         "\n" +
         "Time taken by best performing reduce task task_1317928501754_0001_r_000008: 0sec\n" +
         "Average time taken by reduce tasks: 0sec\n" +
         "Worse performing reduce tasks: \n" +
-        "TaskId\t\tTimetaken\n" +
-        "task_1317928501754_0001_r_000008 0sec\n" +
-        "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
-        "=========\n" +
+        "TaskId\t\tTimetaken"+
+        LINE_SEPARATOR  +
+        "task_1317928501754_0001_r_000008 0sec" +
+        LINE_SEPARATOR +
+        "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+        LINE_SEPARATOR +
+        "=========" +
+        LINE_SEPARATOR +
         "\n" +
         "FAILED MAP task list for job_1317928501754_0001\n" +
         "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-        "====================================================\n" +
-        "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t\n" +
+        "====================================================" +
+        LINE_SEPARATOR +
+        "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t" +
+        LINE_SEPARATOR +
         "\n" +
         "FAILED task attempts by nodes\n" +
         "Hostname\tFailedTasks\n" +
-        "===============================\n" +
-        "localhost\ttask_1317928501754_0001_m_000002, \n", outStr);
+        "===============================" +
+        LINE_SEPARATOR +
+        "localhost\ttask_1317928501754_0001_m_000002, " +
+        LINE_SEPARATOR, outStr);
   }
 
   @Test
@@ -140,12 +166,16 @@ public class TestHistoryViewerPrinter {
           "Counters: \n" +
           "\n" +
           "|Group Name                    |Counter name                  |Map Value |Reduce Value|Total Value|\n" +
-          "---------------------------------------------------------------------------------------\n" +
-          "|group1                        |counter1                      |5         |5         |5         \n" +
-          "|group1                        |counter2                      |10        |10        |10        \n" +
+          "---------------------------------------------------------------------------------------" +
+          LINE_SEPARATOR +
+          "|group1                        |counter1                      |5         |5         |5         " +
+          LINE_SEPARATOR +
+          "|group1                        |counter2                      |10        |10        |10        " +
+          LINE_SEPARATOR +
           "|group2                        |counter1                      |15        |15        |15        \n" +
           "\n" +
-          "=====================================\n" +
+          "=====================================" +
+          LINE_SEPARATOR +
           "\n" +
           "Task Summary\n" +
           "============================\n" +
@@ -156,111 +186,160 @@ public class TestHistoryViewerPrinter {
           "Reduce\t1\t1\t\t0\t0\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\n" +
           "Cleanup\t1\t1\t\t0\t0\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\n" +
           "============================\n" +
+          LINE_SEPARATOR +
           "\n" +
-          "\n" +
-          "Analysis\n" +
-          "=========\n" +
+          "Analysis" +
+          LINE_SEPARATOR +
+          "=========" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing map task task_1317928501754_0001_m_000003: 3sec\n" +
           "Average time taken by map tasks: 5sec\n" +
           "Worse performing map tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_m_000007 7sec\n" +
-          "task_1317928501754_0001_m_000006 6sec\n" +
-          "task_1317928501754_0001_m_000005 5sec\n" +
-          "task_1317928501754_0001_m_000004 4sec\n" +
-          "task_1317928501754_0001_m_000003 3sec\n" +
-          "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000007 7sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000006 6sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000005 5sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000004 4sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000003 3sec" +
+          LINE_SEPARATOR +
+          "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing shuffle task task_1317928501754_0001_r_000008: 8sec\n" +
           "Average time taken by shuffle tasks: 8sec\n" +
           "Worse performing shuffle tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_r_000008 8sec\n" +
-          "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008 8sec" +
+          LINE_SEPARATOR +
+          "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing reduce task task_1317928501754_0001_r_000008: 0sec\n" +
           "Average time taken by reduce tasks: 0sec\n" +
           "Worse performing reduce tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_r_000008 0sec\n" +
-          "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
-          "=========\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008 0sec" +
+          LINE_SEPARATOR +
+          "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+          LINE_SEPARATOR +
+          "=========" +
+          LINE_SEPARATOR +
           "\n" +
           "FAILED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED JOB_SETUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_s_000001\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_s_000001\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
           "task_1317928501754_0001_m_000006\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\t\t\n" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
           "task_1317928501754_0001_m_000005\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\t\t\n" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
           "task_1317928501754_0001_m_000004\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\t\t\n" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
           "task_1317928501754_0001_m_000003\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\t\t\n" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
           "task_1317928501754_0001_m_000007\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\t\t\n" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED REDUCE task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_r_000008\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED JOB_CLEANUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_c_000009\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_c_000009\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "JOB_SETUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_s_000001_1\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_s_000001_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_s_000001_1\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_s_000001_1" +
+          LINE_SEPARATOR +
           "\n" +
           "MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
           "====================================================\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000002_1\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000002_1\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000006_1\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000006_1\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000005_1\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000005_1\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000004_1\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000004_1\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000003_1\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000003_1\n" +
+          LINE_SEPARATOR +
           "attempt_1317928501754_0001_m_000007_1\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000007_1\n" +
+          LINE_SEPARATOR +
           "\n" +
           "REDUCE task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tShuffleFinished\tSortFinished\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_r_000008_1\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t6-Oct-2011 19:15:18 (0sec)6-Oct-2011 19:15:18 (8sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_r_000008_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_r_000008_1\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t6-Oct-2011 19:15:18 (0sec)6-Oct-2011 19:15:18 (8sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_r_000008_1" +
+          LINE_SEPARATOR +
           "\n" +
           "JOB_CLEANUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_c_000009_1\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_c_000009_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_c_000009_1\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_c_000009_1" +
+          LINE_SEPARATOR +
           "\n" +
           "FAILED task attempts by nodes\n" +
           "Hostname\tFailedTasks\n" +
-          "===============================\n" +
-          "localhost\ttask_1317928501754_0001_m_000002, \n", outStr);
+          "===============================" +
+          LINE_SEPARATOR +
+          "localhost\ttask_1317928501754_0001_m_000002, " +
+          LINE_SEPARATOR, outStr);
     } else {
       Assert.assertEquals("\n" +
           "Hadoop job: job_1317928501754_0001\n" +
@@ -275,12 +354,16 @@ public class TestHistoryViewerPrinter {
           "Counters: \n" +
           "\n" +
           "|Group Name                    |Counter name                  |Map Value |Reduce Value|Total Value|\n" +
-          "---------------------------------------------------------------------------------------\n" +
-          "|group1                        |counter1                      |5         |5         |5         \n" +
-          "|group1                        |counter2                      |10        |10        |10        \n" +
+          "---------------------------------------------------------------------------------------" +
+          LINE_SEPARATOR +
+          "|group1                        |counter1                      |5         |5         |5         " +
+          LINE_SEPARATOR +
+          "|group1                        |counter2                      |10        |10        |10        " +
+          LINE_SEPARATOR +
           "|group2                        |counter1                      |15        |15        |15        \n" +
           "\n" +
-          "=====================================\n" +
+          "=====================================" +
+          LINE_SEPARATOR +
           "\n" +
           "Task Summary\n" +
           "============================\n" +
@@ -291,111 +374,160 @@ public class TestHistoryViewerPrinter {
           "Reduce\t1\t1\t\t0\t0\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\n" +
           "Cleanup\t1\t1\t\t0\t0\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\n" +
           "============================\n" +
+          LINE_SEPARATOR +
           "\n" +
-          "\n" +
-          "Analysis\n" +
-          "=========\n" +
+          "Analysis" +
+          LINE_SEPARATOR +
+          "=========" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing map task task_1317928501754_0001_m_000003: 3sec\n" +
           "Average time taken by map tasks: 5sec\n" +
           "Worse performing map tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_m_000007 7sec\n" +
-          "task_1317928501754_0001_m_000006 6sec\n" +
-          "task_1317928501754_0001_m_000005 5sec\n" +
-          "task_1317928501754_0001_m_000004 4sec\n" +
-          "task_1317928501754_0001_m_000003 3sec\n" +
-          "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000007 7sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000006 6sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000005 5sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000004 4sec" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000003 3sec" +
+          LINE_SEPARATOR +
+          "The last map task task_1317928501754_0001_m_000007 finished at (relative to the Job launch time): 6-Oct-2011 19:15:16 (14sec)" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing shuffle task task_1317928501754_0001_r_000008: 8sec\n" +
           "Average time taken by shuffle tasks: 8sec\n" +
           "Worse performing shuffle tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_r_000008 8sec\n" +
-          "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008 8sec" +
+          LINE_SEPARATOR +
+          "The last shuffle task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+          LINE_SEPARATOR +
           "\n" +
           "Time taken by best performing reduce task task_1317928501754_0001_r_000008: 0sec\n" +
           "Average time taken by reduce tasks: 0sec\n" +
           "Worse performing reduce tasks: \n" +
-          "TaskId\t\tTimetaken\n" +
-          "task_1317928501754_0001_r_000008 0sec\n" +
-          "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)\n" +
-          "=========\n" +
+          "TaskId\t\tTimetaken" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008 0sec" +
+          LINE_SEPARATOR +
+          "The last reduce task task_1317928501754_0001_r_000008 finished at (relative to the Job launch time): 6-Oct-2011 19:15:18 (16sec)" +
+          LINE_SEPARATOR +
+          "=========" +
+          LINE_SEPARATOR +
           "\n" +
           "FAILED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000002\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED JOB_SETUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_s_000001\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_s_000001\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000007\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000007\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000006\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000006\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000005\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000005\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000004\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000004\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\tInputSplits\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_m_000003\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\t\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_m_000003\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\t\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED REDUCE task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_r_000008\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_r_000008\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "SUCCEEDED JOB_CLEANUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tError\n" +
-          "====================================================\n" +
-          "task_1317928501754_0001_c_000009\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\t\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "task_1317928501754_0001_c_000009\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\t" +
+          LINE_SEPARATOR +
           "\n" +
           "JOB_SETUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_s_000001_1\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_s_000001_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_s_000001_1\t6-Oct-2011 19:15:03\t6-Oct-2011 19:15:04 (1sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_s_000001_1" +
+          LINE_SEPARATOR +
           "\n" +
           "MAP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_m_000007_1\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000007_1\n" +
-          "attempt_1317928501754_0001_m_000002_1\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000002_1\n" +
-          "attempt_1317928501754_0001_m_000006_1\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000006_1\n" +
-          "attempt_1317928501754_0001_m_000005_1\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000005_1\n" +
-          "attempt_1317928501754_0001_m_000004_1\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000004_1\n" +
-          "attempt_1317928501754_0001_m_000003_1\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000003_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000007_1\t6-Oct-2011 19:15:09\t6-Oct-2011 19:15:16 (7sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000007_1" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000002_1\t6-Oct-2011 19:15:04\t6-Oct-2011 19:15:06 (2sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000002_1" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000006_1\t6-Oct-2011 19:15:08\t6-Oct-2011 19:15:14 (6sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000006_1" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000005_1\t6-Oct-2011 19:15:07\t6-Oct-2011 19:15:12 (5sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000005_1" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000004_1\t6-Oct-2011 19:15:06\t6-Oct-2011 19:15:10 (4sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000004_1" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_m_000003_1\t6-Oct-2011 19:15:05\t6-Oct-2011 19:15:08 (3sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_m_000003_1" +
+          LINE_SEPARATOR +
           "\n" +
           "REDUCE task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tShuffleFinished\tSortFinished\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_r_000008_1\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t6-Oct-2011 19:15:18 (0sec)6-Oct-2011 19:15:18 (8sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_r_000008_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_r_000008_1\t6-Oct-2011 19:15:10\t6-Oct-2011 19:15:18 (8sec)\t6-Oct-2011 19:15:18 (0sec)6-Oct-2011 19:15:18 (8sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_r_000008_1" +
+          LINE_SEPARATOR +
           "\n" +
           "JOB_CLEANUP task list for job_1317928501754_0001\n" +
           "TaskId\t\tStartTime\tFinishTime\tHostName\tError\tTaskLogs\n" +
-          "====================================================\n" +
-          "attempt_1317928501754_0001_c_000009_1\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_c_000009_1\n" +
+          "====================================================" +
+          LINE_SEPARATOR +
+          "attempt_1317928501754_0001_c_000009_1\t6-Oct-2011 19:15:11\t6-Oct-2011 19:15:20 (9sec)\tlocalhost\thttp://t:1234/tasklog?attemptid=attempt_1317928501754_0001_c_000009_1" +
+          LINE_SEPARATOR +
           "\n" +
           "FAILED task attempts by nodes\n" +
           "Hostname\tFailedTasks\n" +
-          "===============================\n" +
-          "localhost\ttask_1317928501754_0001_m_000002, \n", outStr);
+          "===============================" +
+          LINE_SEPARATOR +
+          "localhost\ttask_1317928501754_0001_m_000002, " +
+          LINE_SEPARATOR, outStr);
     }
   }
 
