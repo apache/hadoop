@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
@@ -99,13 +100,13 @@ public class HeartbeatEndpointTask
     try {
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
-      SCMHeartbeatRequestProto request = SCMHeartbeatRequestProto.newBuilder()
-          .setDatanodeDetails(datanodeDetailsProto)
-          .setNodeReport(context.getNodeReport())
-          .build();
+      SCMHeartbeatRequestProto.Builder requestBuilder =
+          SCMHeartbeatRequestProto.newBuilder()
+              .setDatanodeDetails(datanodeDetailsProto);
+      addReports(requestBuilder);
 
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(request);
+          .sendHeartbeat(requestBuilder.build());
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
@@ -115,6 +116,19 @@ public class HeartbeatEndpointTask
       rpcEndpoint.unlock();
     }
     return rpcEndpoint.getState();
+  }
+
+  /**
+   * Adds all the available reports to heartbeat.
+   *
+   * @param requestBuilder builder to which the report has to be added.
+   */
+  private void addReports(SCMHeartbeatRequestProto.Builder requestBuilder) {
+    for (GeneratedMessage report : context.getAllAvailableReports()) {
+      requestBuilder.setField(
+          SCMHeartbeatRequestProto.getDescriptor().findFieldByName(
+              report.getDescriptorForType().getName()), report);
+    }
   }
 
   /**

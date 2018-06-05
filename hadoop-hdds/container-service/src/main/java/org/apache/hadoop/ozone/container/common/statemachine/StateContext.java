@@ -16,9 +16,8 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine;
 
+import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .InitDatanodeState;
@@ -28,7 +27,9 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -51,8 +52,8 @@ public class StateContext {
   private final DatanodeStateMachine parent;
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
+  private final Queue<GeneratedMessage> reports;
   private DatanodeStateMachine.DatanodeStates state;
-  private NodeReportProto dnReport;
 
   /**
    * Constructs a StateContext.
@@ -67,9 +68,9 @@ public class StateContext {
     this.state = state;
     this.parent = parent;
     commandQueue = new LinkedList<>();
+    reports = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
-    dnReport = NodeReportProto.getDefaultInstance();
   }
 
   /**
@@ -141,19 +142,53 @@ public class StateContext {
   }
 
   /**
-   * Returns the node report of the datanode state context.
-   * @return the node report.
+   * Adds the report to report queue.
+   *
+   * @param report report to be added
    */
-  public NodeReportProto getNodeReport() {
-    return dnReport;
+  public void addReport(GeneratedMessage report) {
+    synchronized (reports) {
+      reports.add(report);
+    }
   }
 
   /**
-   * Sets the storage location report of the datanode state context.
-   * @param nodeReport node report
+   * Returns the next report, or null if the report queue is empty.
+   *
+   * @return report
    */
-  public void setNodeReport(NodeReportProto nodeReport) {
-    this.dnReport = nodeReport;
+  public GeneratedMessage getNextReport() {
+    synchronized (reports) {
+      return reports.poll();
+    }
+  }
+
+  /**
+   * Returns all the available reports from the report queue, or empty list if
+   * the queue is empty.
+   *
+   * @return List<reports>
+   */
+  public List<GeneratedMessage> getAllAvailableReports() {
+    return getReports(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Returns available reports from the report queue with a max limit on
+   * list size, or empty list if the queue is empty.
+   *
+   * @return List<reports>
+   */
+  public List<GeneratedMessage> getReports(int maxLimit) {
+    List<GeneratedMessage> results = new ArrayList<>();
+    synchronized (reports) {
+      GeneratedMessage report = reports.poll();
+      while(results.size() < maxLimit && report != null) {
+        results.add(report);
+        report = reports.poll();
+      }
+    }
+    return results;
   }
 
   /**
