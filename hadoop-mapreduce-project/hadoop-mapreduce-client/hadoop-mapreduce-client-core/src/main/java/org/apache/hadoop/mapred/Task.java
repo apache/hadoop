@@ -86,6 +86,7 @@ abstract public class Task implements Writable, Configurable {
 
   public static String MERGED_OUTPUT_PREFIX = ".merged";
   public static final long DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
+  private static final String HDFS_URI_SCHEME = "hdfs";
   
   /**
    * @deprecated Provided for compatibility. Use {@link TaskCounter} instead.
@@ -1125,7 +1126,8 @@ abstract public class Task implements Writable, Configurable {
   class FileSystemStatisticUpdater {
     private List<FileSystem.Statistics> stats;
     private Counters.Counter readBytesCounter, writeBytesCounter,
-        readOpsCounter, largeReadOpsCounter, writeOpsCounter;
+        readOpsCounter, largeReadOpsCounter, writeOpsCounter,
+        readBytesEcCounter;
     private String scheme;
     FileSystemStatisticUpdater(List<FileSystem.Statistics> stats, String scheme) {
       this.stats = stats;
@@ -1153,23 +1155,33 @@ abstract public class Task implements Writable, Configurable {
         writeOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.WRITE_OPS);
       }
+      if (readBytesEcCounter == null && scheme.equals(HDFS_URI_SCHEME)) {
+        // EC bytes only applies to hdfs
+        readBytesEcCounter =
+            counters.findCounter(scheme, FileSystemCounter.BYTES_READ_EC);
+      }
       long readBytes = 0;
       long writeBytes = 0;
       long readOps = 0;
       long largeReadOps = 0;
       long writeOps = 0;
+      long readBytesEC = 0;
       for (FileSystem.Statistics stat: stats) {
         readBytes = readBytes + stat.getBytesRead();
         writeBytes = writeBytes + stat.getBytesWritten();
         readOps = readOps + stat.getReadOps();
         largeReadOps = largeReadOps + stat.getLargeReadOps();
         writeOps = writeOps + stat.getWriteOps();
+        readBytesEC = readBytesEC + stat.getBytesReadErasureCoded();
       }
       readBytesCounter.setValue(readBytes);
       writeBytesCounter.setValue(writeBytes);
       readOpsCounter.setValue(readOps);
       largeReadOpsCounter.setValue(largeReadOps);
       writeOpsCounter.setValue(writeOps);
+      if (readBytesEcCounter != null) {
+        readBytesEcCounter.setValue(readBytesEC);
+      }
     }
   }
   
