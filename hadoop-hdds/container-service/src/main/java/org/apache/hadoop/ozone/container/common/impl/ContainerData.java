@@ -56,6 +56,7 @@ public class ContainerData {
   private final AtomicLong writeBytes;
   private final AtomicLong readCount;
   private final AtomicLong writeCount;
+  private final AtomicLong bytesUsed;
 
 
   /**
@@ -73,6 +74,7 @@ public class ContainerData {
     this.readBytes =  new AtomicLong(0L);
     this.writeCount =  new AtomicLong(0L);
     this.writeBytes =  new AtomicLong(0L);
+    this.bytesUsed = new AtomicLong(0L);
   }
 
   /**
@@ -230,5 +232,41 @@ public class ContainerData {
   public void incrWriteCount() {
     this.writeCount.incrementAndGet();
   }
+
+  /**
+   * Sets the number of bytes used by the container.
+   * @param used
+   */
+  public void setBytesUsed(long used) {
+    this.bytesUsed.set(used);
+  }
+
+  /**
+   * Get the number of bytes used by the container.
+   * @return the number of bytes used by the container.
+   */
+  public long getBytesUsed() {
+    return bytesUsed.get();
+  }
+
+  /**
+   * Increase the number of bytes used by the container.
+   * @param used number of bytes used by the container.
+   * @return the current number of bytes used by the container afert increase.
+   */
+  public long incrBytesUsed(long used) {
+    return this.bytesUsed.addAndGet(used);
+  }
+
+
+  /**
+   * Decrease the number of bytes used by the container.
+   * @param reclaimed the number of bytes reclaimed from the container.
+   * @return the current number of bytes used by the container after decrease.
+   */
+  public long decrBytesUsed(long reclaimed) {
+    return this.bytesUsed.addAndGet(-1L * reclaimed);
+  }
+
 
 }

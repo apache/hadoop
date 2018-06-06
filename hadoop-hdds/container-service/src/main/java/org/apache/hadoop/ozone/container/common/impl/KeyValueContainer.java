@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 
 
@@ -40,11 +41,14 @@ public class KeyValueContainer implements Container {
   private KeyValueContainerData containerData;
 
   public KeyValueContainer(KeyValueContainerData containerData) {
+    Preconditions.checkNotNull(containerData, "KeyValueContainerData cannot " +
+        "be null");
     this.containerData = containerData;
   }
 
   @Override
   public void create(ContainerData cData) throws StorageContainerException {
+
 
   }
 
@@ -61,8 +65,8 @@ public class KeyValueContainer implements Container {
   }
 
   @Override
-  public ContainerData getContainerData() throws StorageContainerException {
-    return null;
+  public ContainerData getContainerData()  {
+    return containerData;
   }
 
   @Override
