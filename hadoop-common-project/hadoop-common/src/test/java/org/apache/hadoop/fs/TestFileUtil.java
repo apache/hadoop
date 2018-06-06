@@ -968,6 +968,160 @@ public class TestFileUtil {
     Assert.assertFalse(link.exists());
   }
 
+  /**
+   * This test validates the correctness of
+   * {@link FileUtil#symLink(String, String)} in case of null pointer inputs.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSymlinkWithNullInput() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    // Create the same symbolic link
+    // The operation should fail and returns 1
+    int result = FileUtil.symLink(null, null);
+    Assert.assertEquals(1, result);
+
+    // Create the same symbolic link
+    // The operation should fail and returns 1
+    result = FileUtil.symLink(file.getAbsolutePath(), null);
+    Assert.assertEquals(1, result);
+
+    // Create the same symbolic link
+    // The operation should fail and returns 1
+    result = FileUtil.symLink(null, link.getAbsolutePath());
+    Assert.assertEquals(1, result);
+
+    file.delete();
+    link.delete();
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link FileUtil#symLink(String, String)} in case the file already exists.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSymlinkFileAlreadyExists() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    // Create a symbolic link
+    // The operation should succeed
+    int result1 =
+        FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertEquals(0, result1);
+
+    // Create the same symbolic link
+    // The operation should fail and returns 1
+    result1 = FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertEquals(1, result1);
+
+    file.delete();
+    link.delete();
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link FileUtil#symLink(String, String)} in case the file and the link are
+   * the same file.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSymlinkSameFile() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+
+    // Create a symbolic link
+    // The operation should succeed
+    int result =
+        FileUtil.symLink(file.getAbsolutePath(), file.getAbsolutePath());
+
+    Assert.assertEquals(0, result);
+
+    file.delete();
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link FileUtil#symLink(String, String)} in case we want to use a link for
+   * 2 different files.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSymlink2DifferentFile() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+    File file = new File(del, FILE);
+    File fileSecond = new File(del, FILE + "_1");
+    File link = new File(del, "_link");
+
+    // Create a symbolic link
+    // The operation should succeed
+    int result =
+        FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertEquals(0, result);
+
+    // The operation should fail and returns 1
+    result =
+        FileUtil.symLink(fileSecond.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertEquals(1, result);
+
+    file.delete();
+    fileSecond.delete();
+    link.delete();
+  }
+
+  /**
+   * This test validates the correctness of
+   * {@link FileUtil#symLink(String, String)} in case we want to use a 2
+   * different links for the same file.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testSymlink2DifferentLinks() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+    File linkSecond = new File(del, "_link_1");
+
+    // Create a symbolic link
+    // The operation should succeed
+    int result =
+        FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertEquals(0, result);
+
+    // The operation should succeed
+    result =
+        FileUtil.symLink(file.getAbsolutePath(), linkSecond.getAbsolutePath());
+
+    Assert.assertEquals(0, result);
+
+    file.delete();
+    link.delete();
+    linkSecond.delete();
+  }
+
   private void doUntarAndVerify(File tarFile, File untarDir) 
                                  throws IOException {
     if (untarDir.exists() && !FileUtil.fullyDelete(untarDir)) {

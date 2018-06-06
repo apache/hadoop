@@ -1033,6 +1033,13 @@ public class FileUtil {
    * @return 0 on success
    */
   public static int symLink(String target, String linkname) throws IOException{
+
+    if (target == null || linkname == null) {
+      LOG.warn("Can not create a symLink with a target = " + target
+          + " and link =" + linkname);
+      return 1;
+    }
+
     // Run the input paths through Java's File so that they are converted to the
     // native OS form
     File targetFile = new File(
