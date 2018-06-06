@@ -83,13 +83,6 @@
       <artifactId>hadoop-minicluster</artifactId>
       <optional>true</optional>
       <exclusions>
-        <!-- Exclude the in-development timeline service and
-             add it as an optional runtime dependency
-          -->
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-timelineservice</artifactId>
-        </exclusion>
         <!-- exclude everything that comes in via the shaded runtime and api  TODO remove once we have a filter for "is in these artifacts" -->
         <!-- Skip jersey, since we need it again here. -->
         <exclusion>
@@ -148,10 +141,6 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-common</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.zookeeper</groupId>
-          <artifactId>zookeeper</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.fusesource.leveldbjni</groupId>
@@ -668,8 +657,6 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
-                      <!-- Keep optional runtime deps out of the shading -->
-                      <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice</exclude>
                       <exclude>log4j:log4j</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                     </excludes>
