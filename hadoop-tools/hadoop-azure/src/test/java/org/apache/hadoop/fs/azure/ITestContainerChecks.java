@@ -75,7 +75,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       assertTrue("Should've thrown.", false);
     } catch (FileNotFoundException ex) {
       assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("does not exist."));
+          ex.getMessage().contains("is not found"));
     }
     assertFalse(container.exists());
 
@@ -115,7 +115,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       assertTrue("Should've thrown.", false);
     } catch (FileNotFoundException ex) {
       assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("does not exist."));
+          ex.getMessage().contains("is not found"));
     }
     assertFalse(container.exists());
 
@@ -143,7 +143,7 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
       assertTrue("Should've thrown.", false);
     } catch (FileNotFoundException ex) {
       assertTrue("Unexpected exception: " + ex,
-          ex.getMessage().contains("does not exist."));
+          ex.getMessage().contains("is not found"));
     }
     assertFalse(container.exists());
 
@@ -164,6 +164,9 @@ public class ITestContainerChecks extends AbstractWasbTestWithTimeout {
     // Neither should a rename
     assertFalse(fs.rename(foo, bar));
     assertFalse(container.exists());
+
+    // Create a container outside of the WASB FileSystem
+    container.create();
 
     // But a write should.
     assertTrue(fs.createNewFile(foo));
