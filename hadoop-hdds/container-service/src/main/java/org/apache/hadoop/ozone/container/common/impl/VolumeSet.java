@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,32 +54,28 @@ public class VolumeSet {
   private static final Logger LOG = LoggerFactory.getLogger(VolumeSet.class);
 
   private Configuration conf;
+
   /**
-   * {@link VolumeSet#volumeList} maintains a list of active volumes in the
+   * {@link VolumeSet#volumeMap} maintains a map of all active volumes in the
    * DataNode. Each volume has one-to-one mapping with a volumeInfo object.
-   */
-  private List<VolumeInfo> volumeList;
-  /**
-   * {@link VolumeSet#failedVolumeList} maintains a list of volumes which have
-   * failed. This list is mutually exclusive to {@link VolumeSet#volumeList}.
-   */
-  private List<VolumeInfo> failedVolumeList;
-  /**
-   * {@link VolumeSet#volumeMap} maintains a map of all volumes in the
-   * DataNode irrespective of their state.
    */
   private Map<Path, VolumeInfo> volumeMap;
   /**
-   * {@link VolumeSet#volumeStateMap} maintains a list of volumes per
+   * {@link VolumeSet#failedVolumeMap} maintains a map of volumes which have
+   * failed. The keys in this map and {@link VolumeSet#volumeMap} are
+   * mutually exclusive.
+   */
+  private Map<Path, VolumeInfo> failedVolumeMap;
+  /**
+   * {@link VolumeSet#volumeStateMap} maintains a list of active volumes per
    * StorageType.
    */
   private EnumMap<StorageType, List<VolumeInfo>> volumeStateMap;
 
   /**
    * Lock to synchronize changes to the VolumeSet. Any update to
-   * {@link VolumeSet#volumeList}, {@link VolumeSet#failedVolumeList},
-   * {@link VolumeSet#volumeMap} or {@link VolumeSet#volumeStateMap} should
-   * be done after acquiring this lock.
+   * {@link VolumeSet#volumeMap}, {@link VolumeSet#failedVolumeMap}, or
+   * {@link VolumeSet#volumeStateMap} should be done after acquiring this lock.
    */
   private final AutoCloseableLock volumeSetLock;
 
@@ -100,9 +95,8 @@ public class VolumeSet {
 
   // Add DN volumes configured through ConfigKeys to volumeMap.
   private void initializeVolumeSet() throws DiskOutOfSpaceException {
-    volumeList = new ArrayList<>();
-    failedVolumeList = new ArrayList<>();
     volumeMap = new ConcurrentHashMap<>();
+    failedVolumeMap = new ConcurrentHashMap<>();
     volumeStateMap = new EnumMap<>(StorageType.class);
 
     Collection<String> datanodeDirs = conf.getTrimmedStringCollection(
@@ -123,7 +117,6 @@ public class VolumeSet {
       try {
         VolumeInfo volumeInfo = getVolumeInfo(dir);
 
-        volumeList.add(volumeInfo);
         volumeMap.put(volumeInfo.getRootDir(), volumeInfo);
         volumeStateMap.get(volumeInfo.getStorageType()).add(volumeInfo);
       } catch (IOException e) {
@@ -131,7 +124,7 @@ public class VolumeSet {
       }
     }
 
-    if (volumeList.size() == 0) {
+    if (volumeMap.size() == 0) {
       throw new DiskOutOfSpaceException("No storage location configured");
     }
   }
@@ -148,7 +141,7 @@ public class VolumeSet {
     StorageLocation location = StorageLocation.parse(rootDir);
     StorageType storageType = location.getStorageType();
 
-    VolumeInfo.Builder volumeBuilder = new VolumeInfo.Builder(rootDir);
+    VolumeInfo.Builder volumeBuilder = new VolumeInfo.Builder(rootDir, conf);
     volumeBuilder.storageType(storageType);
     return volumeBuilder.build();
   }
@@ -159,21 +152,17 @@ public class VolumeSet {
 
     try (AutoCloseableLock lock = volumeSetLock.acquire()) {
       if (volumeMap.containsKey(dirPath)) {
-        VolumeInfo volumeInfo = volumeMap.get(dirPath);
-        if (volumeInfo.isFailed()) {
-          volumeInfo.setState(VolumeState.NORMAL);
-          failedVolumeList.remove(volumeInfo);
-          volumeList.add(volumeInfo);
-        } else {
-          LOG.warn("Volume : " + volumeInfo.getRootDir() + " already " +
-              "exists in VolumeMap");
-        }
+        LOG.warn("Volume : {} already exists in VolumeMap", dataDir);
       } else {
-        VolumeInfo volumeInfo = getVolumeInfo(dataDir);
+        if (failedVolumeMap.containsKey(dirPath)) {
+          failedVolumeMap.remove(dirPath);
+        }
 
-        volumeList.add(volumeInfo);
-        volumeMap.put(volumeInfo.getRootDir(), volumeInfo);
+        VolumeInfo volumeInfo = getVolumeInfo(dirPath.toString());
+        volumeMap.put(dirPath, volumeInfo);
         volumeStateMap.get(volumeInfo.getStorageType()).add(volumeInfo);
+
+        LOG.debug("Added Volume : {} to VolumeSet", dataDir);
       }
     }
   }
@@ -185,13 +174,17 @@ public class VolumeSet {
     try (AutoCloseableLock lock = volumeSetLock.acquire()) {
       if (volumeMap.containsKey(dirPath)) {
         VolumeInfo volumeInfo = volumeMap.get(dirPath);
-        if (!volumeInfo.isFailed()) {
-          volumeInfo.setState(VolumeState.FAILED);
-          volumeList.remove(volumeInfo);
-          failedVolumeList.add(volumeInfo);
-        }
+        volumeInfo.failVolume();
+
+        volumeMap.remove(dirPath);
+        volumeStateMap.get(volumeInfo.getStorageType()).remove(volumeInfo);
+        failedVolumeMap.put(dirPath, volumeInfo);
+
+        LOG.debug("Moving Volume : {} to failed Volumes", dataDir);
+      } else if (failedVolumeMap.containsKey(dirPath)) {
+        LOG.debug("Volume : {} is not active", dataDir);
       } else {
-        LOG.warn("Volume : " + dataDir + " does not exist in VolumeMap");
+        LOG.warn("Volume : {} does not exist in VolumeSet", dataDir);
       }
     }
   }
@@ -203,39 +196,47 @@ public class VolumeSet {
     try (AutoCloseableLock lock = volumeSetLock.acquire()) {
       if (volumeMap.containsKey(dirPath)) {
         VolumeInfo volumeInfo = volumeMap.get(dirPath);
-        if (!volumeInfo.isFailed()) {
-          volumeList.remove(volumeInfo);
-        } else {
-          failedVolumeList.remove(volumeInfo);
-        }
+        volumeInfo.shutdown();
+
         volumeMap.remove(dirPath);
         volumeStateMap.get(volumeInfo.getStorageType()).remove(volumeInfo);
+
+        LOG.debug("Removed Volume : {} from VolumeSet", dataDir);
+      } else if (failedVolumeMap.containsKey(dirPath)) {
+        VolumeInfo volumeInfo = failedVolumeMap.get(dirPath);
+        volumeInfo.setState(VolumeState.NON_EXISTENT);
+
+        failedVolumeMap.remove(dirPath);
+        LOG.debug("Removed Volume : {} from failed VolumeSet", dataDir);
       } else {
-        LOG.warn("Volume: " + dataDir + " does not exist in " + "volumeMap.");
+        LOG.warn("Volume : {} does not exist in VolumeSet", dataDir);
       }
     }
   }
 
-  /**
-   * Return an iterator over {@link VolumeSet#volumeList}.
-   */
-  public Iterator<VolumeInfo> getIterator() {
-    return volumeList.iterator();
-  }
-
   public VolumeInfo chooseVolume(long containerSize,
       VolumeChoosingPolicy choosingPolicy) throws IOException {
-    return choosingPolicy.chooseVolume(volumeList, containerSize);
+    return choosingPolicy.chooseVolume(getVolumesList(), containerSize);
+  }
+
+  public void shutdown() {
+    for (VolumeInfo volumeInfo : volumeMap.values()) {
+      try {
+        volumeInfo.shutdown();
+      } catch (Exception e) {
+        LOG.error("Failed to shutdown volume : " + volumeInfo.getRootDir(), e);
+      }
+    }
   }
 
   @VisibleForTesting
   public List<VolumeInfo> getVolumesList() {
-    return ImmutableList.copyOf(volumeList);
+    return ImmutableList.copyOf(volumeMap.values());
   }
 
   @VisibleForTesting
   public List<VolumeInfo> getFailedVolumesList() {
-    return ImmutableList.copyOf(failedVolumeList);
+    return ImmutableList.copyOf(failedVolumeMap.values());
   }
 
   @VisibleForTesting

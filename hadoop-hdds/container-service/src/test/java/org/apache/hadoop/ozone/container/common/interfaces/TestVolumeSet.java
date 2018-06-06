@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.container.common.impl.VolumeInfo;
 import org.apache.hadoop.ozone.container.common.impl.VolumeSet;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
@@ -73,8 +74,10 @@ public class TestVolumeSet {
     // VolumeSet initialization should add volume1 and volume2 to VolumeSet
     assertEquals("VolumeSet intialization is incorrect",
         volumesList.size(), volumes.size());
-    assertEquals(volume1, volumesList.get(0).getRootDir().toString());
-    assertEquals(volume2, volumesList.get(1).getRootDir().toString());
+    assertTrue("VolumeSet not initailized correctly",
+        checkVolumeExistsInVolumeSet(volume1));
+    assertTrue("VolumeSet not initailized correctly",
+        checkVolumeExistsInVolumeSet(volume2));
   }
 
   @Test
@@ -88,9 +91,8 @@ public class TestVolumeSet {
     volumeSet.addVolume(volume3);
 
     assertEquals(3, volumeSet.getVolumesList().size());
-    assertEquals("AddVolume did not add requested volume to VolumeSet",
-        volume3,
-        volumeSet.getVolumesList().get(2).getRootDir().toString());
+    assertTrue("AddVolume did not add requested volume to VolumeSet",
+        checkVolumeExistsInVolumeSet(volume3));
   }
 
   @Test
@@ -103,15 +105,15 @@ public class TestVolumeSet {
     assertEquals(1, volumeSet.getVolumesList().size());
 
     // Failed volume should be added to FailedVolumeList
-    assertEquals("Failed volume not present in FailedVolumeList",
+    assertEquals("Failed volume not present in FailedVolumeMap",
         1, volumeSet.getFailedVolumesList().size());
     assertEquals("Failed Volume list did not match", volume1,
         volumeSet.getFailedVolumesList().get(0).getRootDir().toString());
+    assertTrue(volumeSet.getFailedVolumesList().get(0).isFailed());
 
-    // Failed volume should exist in VolumeMap with isFailed flag set to true
+    // Failed volume should not exist in VolumeMap
     Path volume1Path = new Path(volume1);
-    assertTrue(volumeSet.getVolumeMap().containsKey(volume1Path));
-    assertTrue(volumeSet.getVolumeMap().get(volume1Path).isFailed());
+    assertFalse(volumeSet.getVolumeMap().containsKey(volume1Path));
   }
 
   @Test
@@ -130,9 +132,18 @@ public class TestVolumeSet {
         LogFactory.getLog(VolumeSet.class));
     volumeSet.removeVolume(volume1);
     assertEquals(1, volumeSet.getVolumesList().size());
-    String expectedLogMessage = "Volume: " + volume1 + " does not exist in "
-        + "volumeMap.";
+    String expectedLogMessage = "Volume : " + volume1 + " does not exist in "
+        + "VolumeSet";
     assertTrue("Log output does not contain expected log message: "
         + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));
+  }
+
+  private boolean checkVolumeExistsInVolumeSet(String volume) {
+    for (VolumeInfo volumeInfo : volumeSet.getVolumesList()) {
+      if (volumeInfo.getRootDir().toString().equals(volume)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

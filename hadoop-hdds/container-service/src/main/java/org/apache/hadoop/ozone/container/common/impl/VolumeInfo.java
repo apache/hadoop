@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Stores information about a disk/volume.
@@ -36,24 +37,29 @@ public class VolumeInfo {
   private final Path rootDir;
   private final StorageType storageType;
   private VolumeState state;
+
+  // Space usage calculator
+  private VolumeUsage usage;
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
   // query from the filesystem.
   private long configuredCapacity;
-  private volatile AtomicLong scmUsed = new AtomicLong(0);
 
   public static class Builder {
+    private final Configuration conf;
     private final Path rootDir;
     private StorageType storageType;
     private VolumeState state;
     private long configuredCapacity;
 
-    public Builder(Path rootDir) {
+    public Builder(Path rootDir, Configuration conf) {
       this.rootDir = rootDir;
+      this.conf = conf;
     }
 
-    public Builder(String rootDirStr) {
+    public Builder(String rootDirStr, Configuration conf) {
       this.rootDir = new Path(rootDirStr);
+      this.conf = conf;
     }
 
     public Builder storageType(StorageType storageType) {
@@ -76,9 +82,17 @@ public class VolumeInfo {
     }
   }
 
-  private VolumeInfo(Builder b) {
+  private VolumeInfo(Builder b) throws IOException {
 
     this.rootDir = b.rootDir;
+    File root = new File(rootDir.toString());
+
+    Boolean succeeded = root.isDirectory() || root.mkdirs();
+
+    if (!succeeded) {
+      LOG.error("Unable to create the volume root dir at : {}", root);
+      throw new IOException("Unable to create the volume root dir at " + root);
+    }
 
     this.storageType = (b.storageType != null ?
         b.storageType : StorageType.DEFAULT);
@@ -88,19 +102,42 @@ public class VolumeInfo {
 
     this.state = (b.state != null ? b.state : VolumeState.NOT_FORMATTED);
 
-    LOG.info("Creating Volume : " + rootDir + " of  storage type : " +
+    this.usage = new VolumeUsage(root, b.conf);
+
+    LOG.info("Creating Volume : " + rootDir + " of storage type : " +
         storageType + " and capacity : " + configuredCapacity);
   }
 
-  public void addSpaceUsed(long spaceUsed) {
-    this.scmUsed.getAndAdd(spaceUsed);
+  public long getCapacity() {
+    return configuredCapacity < 0 ? usage.getCapacity() : configuredCapacity;
   }
 
-  public long getAvailable() {
-    return configuredCapacity - scmUsed.get();
+  public long getAvailable() throws IOException {
+    return usage.getAvailable();
   }
 
-  public void setState(VolumeState state) {
+  public long getScmUsed() throws IOException {
+    return usage.getScmUsed();
+  }
+
+  void shutdown() {
+    this.state = VolumeState.NON_EXISTENT;
+    shutdownUsageThread();
+  }
+
+  void failVolume() {
+    setState(VolumeState.FAILED);
+    shutdownUsageThread();
+  }
+
+  private void shutdownUsageThread() {
+    if (usage != null) {
+      usage.shutdown();
+    }
+    usage = null;
+  }
+
+  void setState(VolumeState state) {
     this.state = state;
   }
 

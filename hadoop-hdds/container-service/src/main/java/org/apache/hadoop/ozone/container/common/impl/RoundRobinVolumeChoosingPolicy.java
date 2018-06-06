@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Choose volumes in round-robin order.
- * Use fine-grained locks to synchronize volume choosing.
+ * The caller should synchronize access to the list of volumes.
  */
 public class RoundRobinVolumeChoosingPolicy implements VolumeChoosingPolicy {
 
