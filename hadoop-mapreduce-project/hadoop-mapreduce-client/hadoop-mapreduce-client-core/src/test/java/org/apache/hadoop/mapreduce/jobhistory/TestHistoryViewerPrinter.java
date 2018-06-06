@@ -43,8 +43,6 @@ public class TestHistoryViewerPrinter {
 
   private final String LINE_SEPARATOR = System.lineSeparator();
 
-  private final String LINE_SEPARATOR = System.lineSeparator();
-
   @Test
   public void testHumanPrinter() throws Exception {
     JobHistoryParser.JobInfo job = createJobInfo();
