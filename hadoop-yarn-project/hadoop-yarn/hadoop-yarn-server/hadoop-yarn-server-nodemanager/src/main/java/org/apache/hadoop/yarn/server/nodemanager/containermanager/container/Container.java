@@ -37,7 +37,15 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   ContainerId getContainerId();
 
+  /**
+   * The timestamp when the container start request is received.
+   */
   long getContainerStartTime();
+
+  /**
+   * The timestamp when the container is allowed to be launched.
+   */
+  long getContainerLaunchTime();
 
   Resource getResource();
 

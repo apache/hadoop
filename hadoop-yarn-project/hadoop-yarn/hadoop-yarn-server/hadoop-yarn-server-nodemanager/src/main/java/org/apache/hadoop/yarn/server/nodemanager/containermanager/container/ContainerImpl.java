@@ -883,6 +883,11 @@ public class ContainerImpl implements Container {
   }
 
   @Override
+  public long getContainerLaunchTime() {
+    return this.containerLaunchStartTime;
+  }
+
+  @Override
   public Resource getResource() {
     return Resources.clone(
         this.containerTokenIdentifier.getResource());
