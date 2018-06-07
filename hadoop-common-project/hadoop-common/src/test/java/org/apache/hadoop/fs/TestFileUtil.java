@@ -1287,4 +1287,56 @@ public class TestFileUtil {
     }
   }
 
+  /**
+   * This test validates the correctness of {@link FileUtil#readLink(File)} in
+   * case of null pointer inputs.
+   */
+  @Test
+  public void testReadSymlinkWithNullInput() {
+    String result = FileUtil.readLink(null);
+    Assert.assertEquals("", result);
+  }
+
+  /**
+   * This test validates the correctness of {@link FileUtil#readLink(File)}.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testReadSymlink() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    // Create a symbolic link
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    String result = FileUtil.readLink(link);
+    Assert.assertEquals(file.getAbsolutePath(), result);
+
+    file.delete();
+    link.delete();
+  }
+
+  /**
+   * This test validates the correctness of {@link FileUtil#readLink(File)} when
+   * it gets a file in input.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testReadSymlinkWithAFileAsInput() throws IOException {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+
+    String result = FileUtil.readLink(file);
+    Assert.assertEquals("", result);
+
+    file.delete();
+  }
+
 }
