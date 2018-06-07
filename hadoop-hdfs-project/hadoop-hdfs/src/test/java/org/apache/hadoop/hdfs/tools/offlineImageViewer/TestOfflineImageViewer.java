@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import com.google.common.collect.ImmutableMap;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
@@ -100,8 +102,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -580,6 +584,22 @@ public class TestOfflineImageViewer {
     } finally {
       // shutdown the viewer
       viewer.close();
+    }
+  }
+
+  @Test
+  public void testWebImageViewerSecureMode() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    try (WebImageViewer viewer =
+        new WebImageViewer(
+            NetUtils.createSocketAddr("localhost:0"), conf)) {
+      RuntimeException ex = LambdaTestUtils.intercept(RuntimeException.class,
+          "WebImageViewer does not support secure mode.",
+          () -> viewer.start("foo"));
+    } finally {
+      conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+      UserGroupInformation.setConfiguration(conf);
     }
   }
 
