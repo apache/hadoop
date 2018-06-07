@@ -72,6 +72,7 @@ public class OfflineImageViewerPB {
       + "     rather than a number of bytes. (false by default)\n"
       + "  * Web: Run a viewer to expose read-only WebHDFS API.\n"
       + "    -addr specifies the address to listen. (localhost:5978 by default)\n"
+      + "    It does not support secure mode nor HTTPS.\n"
       + "  * Delimited (experimental): Generate a text file with all of the elements common\n"
       + "    to both inodes and inodes-under-construction, separated by a\n"
       + "    delimiter. The default delimiter is \\t, though this may be\n"
@@ -200,7 +201,7 @@ public class OfflineImageViewerPB {
       case "WEB":
         String addr = cmd.getOptionValue("addr", "localhost:5978");
         try (WebImageViewer viewer =
-            new WebImageViewer(NetUtils.createSocketAddr(addr))) {
+            new WebImageViewer(NetUtils.createSocketAddr(addr), conf)) {
           viewer.start(inputFile);
         }
         break;
