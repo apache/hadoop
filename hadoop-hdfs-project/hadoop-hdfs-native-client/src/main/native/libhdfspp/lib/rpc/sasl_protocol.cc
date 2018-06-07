@@ -91,8 +91,10 @@ void SaslProtocol::Authenticate(std::function<void(const Status & status, const 
   std::shared_ptr<RpcSaslProto> resp_msg = std::make_shared<RpcSaslProto>();
   auto self(shared_from_this());
   connection->AsyncRpc_locked(SASL_METHOD_NAME, req_msg.get(), resp_msg,
-                       [self, req_msg, resp_msg] (const Status & status) {
-            self->OnServerResponse(status, resp_msg.get()); } );
+    [self, req_msg, resp_msg, connection] (const Status & status) {
+      assert(connection);
+      self->OnServerResponse(status, resp_msg.get());
+    });
 } // authenticate() method
 
 AuthInfo::AuthMethod ParseMethod(const std::string & method)
@@ -340,9 +342,10 @@ bool SaslProtocol::SendSaslMessage(RpcSaslProto & message)
   std::shared_ptr<RpcSaslProto> resp_msg = std::make_shared<RpcSaslProto>();
   auto self(shared_from_this());
   connection->AsyncRpc(SASL_METHOD_NAME, &message, resp_msg,
-                       [self, resp_msg] (const Status & status) {
-                         self->OnServerResponse(status, resp_msg.get());
-                       } );
+    [self, resp_msg, connection] (const Status & status) {
+      assert(connection);
+      self->OnServerResponse(status, resp_msg.get());
+    });
 
   return true;
 } // SendSaslMessage() method
@@ -370,7 +373,9 @@ bool SaslProtocol::AuthComplete(const Status & status, const AuthInfo & auth_inf
 
 void SaslProtocol::OnServerResponse(const Status & status, const hadoop::common::RpcSaslProto * response)
 {
+
   std::lock_guard<std::mutex> state_lock(sasl_state_lock_);
+
   LOG_TRACE(kRPC, << "Received SASL response: " << status.ToString());
 
   if (status.ok()) {
