@@ -198,6 +198,12 @@ public class FileUtil {
      * use getCanonicalPath in File to get the target of the symlink but that
      * does not indicate if the given path refers to a symlink.
      */
+
+    if (f == null) {
+      LOG.warn("Can not read a null symLink");
+      return "";
+    }
+
     try {
       return Shell.execCommand(
           Shell.getReadlinkCommand(f.toString())).trim();
