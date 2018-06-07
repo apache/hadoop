@@ -87,7 +87,7 @@ public:
   virtual void cancel() {}
   virtual void close() {}
 protected:
-  virtual ProducerResult Produce() = 0;
+  ProducerResult Produce() override = 0;
   ::asio::io_service *io_service_;
 
 private:
