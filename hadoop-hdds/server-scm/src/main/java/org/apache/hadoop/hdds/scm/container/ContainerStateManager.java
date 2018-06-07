@@ -445,6 +445,15 @@ public class ContainerStateManager implements Closeable {
         factor, type);
   }
 
+  /**
+   * Returns the containerInfo for the given container id.
+   * @param containerID id of the container
+   * @return ContainerInfo containerInfo
+   * @throws IOException
+   */
+  public ContainerInfo getContainer(ContainerID containerID) {
+    return containers.getContainerInfo(containerID.getId());
+  }
   @Override
   public void close() throws IOException {
   }

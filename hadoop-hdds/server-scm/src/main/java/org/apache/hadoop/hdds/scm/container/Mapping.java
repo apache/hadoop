@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -103,4 +104,9 @@ public interface Mapping extends Closeable {
                                ContainerReportsProto reports)
       throws IOException;
 
+  /**
+   * Returns the nodeManager.
+   * @return NodeManager
+   */
+  NodeManager getNodeManager();
 }
