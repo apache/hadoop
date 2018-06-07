@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-import AbstractAdapter from './abstract';
+import { moduleFor, test } from 'ember-qunit';
 
-export default AbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
-  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
-  serverName: "ATS",
+moduleFor('adapter:yarn-app-log', 'Unit | Adapter | yarn app log', {
+  // Specify the other units that are required for this test.
+  // needs: ['serializer:foo']
+});
 
-  urlForQuery(query/*, modelName*/) {
-    var url = this._buildURL();
-    var containerId = query['containerId'];
-    delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
-  }
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let adapter = this.subject();
+  assert.ok(adapter);
 });

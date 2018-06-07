@@ -16,18 +16,23 @@
  * limitations under the License.
  */
 
-import AbstractAdapter from './abstract';
+import DS from 'ember-data';
+import Converter from 'yarn-ui/utils/converter';
 
-export default AbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
-  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
-  serverName: "ATS",
-
-  urlForQuery(query/*, modelName*/) {
-    var url = this._buildURL();
-    var containerId = query['containerId'];
-    delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
-  }
+export default DS.JSONAPISerializer.extend({
+  normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
+    // Convert plain text response into JSON.
+    // ID is of the form containerId!fileName
+    var splits = Converter.splitForAppLogs(id);
+    var convertedPayload = {
+      id: id,
+      type: primaryModelClass.modelName,
+      attributes: {
+        logs: payload,
+        containerID: splits[1],
+        logFileName: splits[2]
+      }
+    };
+    return { data: convertedPayload };
+  },
 });

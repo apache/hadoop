@@ -112,6 +112,16 @@ export default {
       return [splits[0], splits[1], fileName];
     }
   },
+  splitForAppLogs: function(id) {
+    if (id) {
+      var splits = id.split(Constants.PARAM_SEPARATOR);
+      var splitLen = splits.length;
+      if (splitLen < 2) {
+        return null;
+      }
+      return [splits[0], splits[1]];
+    }
+  },
   memoryToSimpliedUnit: function(mb) {
     var unit = "MB";
     var value = mb;
