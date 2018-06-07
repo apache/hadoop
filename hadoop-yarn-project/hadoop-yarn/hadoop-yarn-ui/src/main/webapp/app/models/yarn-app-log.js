@@ -16,18 +16,10 @@
  * limitations under the License.
  */
 
-import AbstractAdapter from './abstract';
+import DS from 'ember-data';
 
-export default AbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
-  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
-  serverName: "ATS",
-
-  urlForQuery(query/*, modelName*/) {
-    var url = this._buildURL();
-    var containerId = query['containerId'];
-    delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
-  }
+export default DS.Model.extend({
+  logs: DS.attr('string'),
+  containerID: DS.attr('string'),
+  logFileName: DS.attr('string')
 });
