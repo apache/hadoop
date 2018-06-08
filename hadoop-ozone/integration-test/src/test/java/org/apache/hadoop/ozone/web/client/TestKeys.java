@@ -23,8 +23,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -172,10 +172,10 @@ public class TestKeys {
    * @return Key composed of multiple parts delimited by "/"
    */
   static String getMultiPartKey(String delimiter) {
-    int numParts = RandomUtils.nextInt(5) + 1;
+    int numParts = RandomUtils.nextInt(0, 5) + 1;
     String[] nameParts = new String[numParts];
     for (int i = 0; i < numParts; i++) {
-      int stringLength = numParts == 1 ? 5 : RandomUtils.nextInt(5);
+      int stringLength = numParts == 1 ? 5 : RandomUtils.nextInt(0, 5);
       nameParts[i] = RandomStringUtils.randomAlphanumeric(stringLength);
     }
     return StringUtils.join(delimiter, nameParts);
