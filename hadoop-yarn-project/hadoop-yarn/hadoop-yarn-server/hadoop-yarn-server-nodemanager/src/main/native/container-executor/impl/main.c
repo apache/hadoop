@@ -247,14 +247,19 @@ static int validate_arguments(int argc, char **argv , int *operation) {
   }
 
   if (strcmp("--mount-cgroups", argv[1]) == 0) {
-    if (argc < 4) {
-      display_usage(stdout);
-      return INVALID_ARGUMENT_NUMBER;
+    if (is_mount_cgroups_support_enabled()) {
+      if (argc < 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.cgroups_hierarchy = argv[optind++];
+      *operation = MOUNT_CGROUPS;
+      return 0;
+    } else {
+      display_feature_disabled_message("mount cgroup");
+      return FEATURE_DISABLED;
     }
-    optind++;
-    cmd_input.cgroups_hierarchy = argv[optind++];
-    *operation = MOUNT_CGROUPS;
-    return 0;
   }
 
   if (strcmp("--tc-modify-state", argv[1]) == 0) {
