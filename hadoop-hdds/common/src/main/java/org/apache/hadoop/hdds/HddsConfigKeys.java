@@ -94,4 +94,23 @@ public final class HddsConfigKeys {
       "hdds.lock.max.concurrency";
   public static final int HDDS_LOCK_MAX_CONCURRENCY_DEFAULT = 100;
 
+  public static final String HDDS_KEY_LEN = "hdds.key.len";
+  public static final int HDDS_DEFAULT_KEY_LEN = 2048;
+  public static final String HDDS_KEY_ALGORITHM = "hdds.key.algo";
+  public static final String HDDS_DEFAULT_KEY_ALGORITHM = "RSA";
+  public static final String HDDS_SECURITY_PROVIDER = "hdds.security.provider";
+  public static final String HDDS_DEFAULT_SECURITY_PROVIDER = "BC";
+  public static final String HDDS_KEY_DIR_NAME = "hdds.key.dir.name";
+  public static final String HDDS_KEY_DIR_NAME_DEFAULT = "keys";
+
+  // TODO : Talk to StorageIO classes and see if they can return a secure
+  // storage location for each node.
+  public static final String HDDS_METADATA_DIR_NAME = "hdds.metadata.dir";
+  public static final String HDDS_PRIVATE_KEY_FILE_NAME =
+      "hdds.priv.key.file.name";
+  public static final String HDDS_PRIVATE_KEY_FILE_NAME_DEFAULT = "private.pem";
+  public static final String HDDS_PUBLIC_KEY_FILE_NAME = "hdds.public.key.file"
+      + ".name";
+  public static final String HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT = "public.pem";
+>>>>>>> HDDS-100. SCM CA: generate public/private key pair for SCM/OM/DNs. Contributed by Ajay Kumar.
 }

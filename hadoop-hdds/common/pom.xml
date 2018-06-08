@@ -77,7 +77,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>rocksdbjni</artifactId>
       <version>5.14.2</version>
     </dependency>
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -106,6 +105,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>2.6.0</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.49</version>
+    </dependency>
   </dependencies>
 
   <build>

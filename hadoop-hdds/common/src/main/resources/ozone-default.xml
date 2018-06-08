@@ -1291,4 +1291,44 @@
       OzoneManager http server kerberos keytab.
     </description>
   </property>
+  <property>
+    <name>hdds.key.len</name>
+    <value>2048</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      SCM CA key length.  This is an algorithm-specific metric, such as modulus length, specified in number of bits.
+    </description>
+  </property>
+  <property>
+    <name>hdds.key.dir.name</name>
+    <value>keys</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      Directory to store public/private key for SCM CA. This is relative to ozone/hdds meteadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.metadata.dir</name>
+    <value/>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Absolute path to HDDS metadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.priv.key.file.name</name>
+    <value>private.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores private key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>hdds.public.key.file.name</name>
+    <value>public.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores public key generated for SCM CA.
+    </description>
+  </property>
 </configuration>
