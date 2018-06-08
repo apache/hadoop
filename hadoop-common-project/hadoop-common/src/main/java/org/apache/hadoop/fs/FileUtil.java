@@ -34,8 +34,10 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -1028,17 +1030,15 @@ public class FileUtil {
   }
 
   /**
-   * Create a soft link between a src and destination
-   * only on a local disk. HDFS does not support this.
-   * On Windows, when symlink creation fails due to security
-   * setting, we will log a warning. The return code in this
-   * case is 2.
+   * Create a soft link between a src and destination only on a local disk. On
+   * Windows, when symlink creation fails due to security setting, we will log a
+   * warning. The return code in this case is 2.
    *
    * @param target the target for symlink
    * @param linkname the symlink
    * @return 0 on success
    */
-  public static int symLink(String target, String linkname) throws IOException{
+  public static int symLink(String target, String linkname) throws IOException {
 
     if (target == null || linkname == null) {
       LOG.warn("Can not create a symLink with a target = " + target
@@ -1053,44 +1053,32 @@ public class FileUtil {
     File linkFile = new File(
         Path.getPathWithoutSchemeAndAuthority(new Path(linkname)).toString());
 
-    String[] cmd = Shell.getSymlinkCommand(
-        targetFile.toString(),
-        linkFile.toString());
-
-    ShellCommandExecutor shExec;
     try {
-      if (Shell.WINDOWS &&
-          linkFile.getParentFile() != null &&
-          !new Path(target).isAbsolute()) {
-        // Relative links on Windows must be resolvable at the time of
-        // creation. To ensure this we run the shell command in the directory
-        // of the link.
-        //
-        shExec = new ShellCommandExecutor(cmd, linkFile.getParentFile());
-      } else {
-        shExec = new ShellCommandExecutor(cmd);
-      }
-      shExec.execute();
-    } catch (Shell.ExitCodeException ec) {
-      int returnVal = ec.getExitCode();
-      if (Shell.WINDOWS && returnVal == SYMLINK_NO_PRIVILEGE) {
-        LOG.warn("Fail to create symbolic links on Windows. "
-            + "The default security settings in Windows disallow non-elevated "
-            + "administrators and all non-administrators from creating symbolic links. "
-            + "This behavior can be changed in the Local Security Policy management console");
-      } else if (returnVal != 0) {
-        LOG.warn("Command '" + StringUtils.join(" ", cmd) + "' failed "
-            + returnVal + " with: " + ec.getMessage());
-      }
-      return returnVal;
+      Files.createSymbolicLink(Paths.get(linkFile.toString()),
+          Paths.get(targetFile.toString()));
+    } catch (SecurityException e3) {
+      LOG.warn("Fail to create symbolic links on Windows. "
+          + "The default security settings in Windows disallow non-elevated "
+          + "administrators and all non-administrators from creating symbolic"
+          + " links. This behavior can be changed in the Local Security Policy"
+          + " management console");
+      return SYMLINK_NO_PRIVILEGE;
+
+    } catch (FileAlreadyExistsException | UnsupportedOperationException e) {
+      LOG.warn("Fail to create symbolic links. ErrorMessage = "
+          + e.getLocalizedMessage());
+      return 1;
+
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Error while create symlink " + linkname + " to " + target
             + "." + " Exception: " + StringUtils.stringifyException(e));
       }
       throw e;
+
     }
-    return shExec.getExitCode();
+
+    return 0;
   }
 
   /**

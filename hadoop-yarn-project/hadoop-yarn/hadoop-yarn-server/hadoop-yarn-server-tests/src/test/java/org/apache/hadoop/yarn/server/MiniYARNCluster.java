@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -42,7 +43,6 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -202,14 +202,13 @@ public class MiniYARNCluster extends CompositeService {
       // Guarantee target exists before creating symlink.
       targetWorkDir.mkdirs();
 
-      ShellCommandExecutor shexec = new ShellCommandExecutor(
-        Shell.getSymlinkCommand(targetPath, linkPath));
       try {
-        shexec.execute();
+        FileUtil.symLink(targetPath, linkPath);
       } catch (IOException e) {
-        throw new YarnRuntimeException(String.format(
-          "failed to create symlink from %s to %s, shell output: %s", linkPath,
-          targetPath, shexec.getOutput()), e);
+        throw new YarnRuntimeException(
+            String.format("failed to create symlink from %s to %s.",
+                linkPath, targetPath),
+            e);
       }
 
       this.testWorkDir = link;

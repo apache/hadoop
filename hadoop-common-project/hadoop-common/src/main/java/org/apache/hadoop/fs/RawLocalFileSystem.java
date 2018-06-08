@@ -925,7 +925,6 @@ public class RawLocalFileSystem extends FileSystem {
     return true;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(Path target, Path link, boolean createParent)
       throws IOException {
@@ -941,7 +940,6 @@ public class RawLocalFileSystem extends FileSystem {
       mkdirs(link.getParent());
     }
 
-    // NB: Use createSymbolicLink in java.nio.file.Path once available
     int result = FileUtil.symLink(target.toString(),
         makeAbsolute(link).toString());
     if (result != 0) {

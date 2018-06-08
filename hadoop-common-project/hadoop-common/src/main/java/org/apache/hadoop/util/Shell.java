@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -297,7 +296,13 @@ public abstract class Shell {
         : new String[] { "chown", owner };
   }
 
-  /** Return a command to create symbolic links. */
+  /**
+   * Return a command to create symbolic links.
+   *
+   * Deprecated and likely to be deleted in the near future. Please use
+   * FileUtil.symlink().
+   */
+  @Deprecated
   public static String[] getSymlinkCommand(String target, String link) {
     return WINDOWS ?
        new String[] { getWinUtilsPath(), "symlink", link, target }
