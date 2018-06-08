@@ -43,6 +43,16 @@ The following settings are related to limiting resource usage of YARN containers
 | `yarn.nodemanager.resource.percentage-physical-cpu-limit` | This setting lets you limit the cpu usage of all YARN containers. It sets a hard upper limit on the cumulative CPU usage of the containers. For example, if set to 60, the combined CPU usage of all YARN containers will not exceed 60%. |
 | `yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage` | CGroups allows cpu usage limits to be hard or soft. When this setting is true, containers cannot use more CPU usage than allocated even if spare CPU is available. This ensures that containers can only use CPU that they were allocated. When set to false, containers can use spare CPU if available. It should be noted that irrespective of whether set to true or false, at no time can the combined CPU usage of all containers exceed the value specified in "yarn.nodemanager.resource.percentage-physical-cpu-limit". |
 
+CGroups mount options
+---------------------
+
+YARN uses CGroups through a directory structure mounted into the file system by the kernel. There are three options to attach to CGroups.
+
+| Option | Description |
+|:---- |:---- |
+| Discover CGroups mounted already | This should be used on newer systems like RHEL7 or Ubuntu16 or if the administrator mounts CGroups before YARN starts. Set `yarn.nodemanager.linux-container-executor.cgroups.mount` to false and leave other settings set to their defaults. YARN will locate the mount points in `/proc/mounts`. Common locations include `/sys/fs/cgroup` and `/cgroup`. The default location can vary depending on the Linux distribution in use.|
+| CGroups mounted by YARN | IMPORTANT: This option is deprecated due to security reasons with the `container-executor.cfg` option `feature.mount-cgroup.enabled=0` by default. Please mount cgroups before launching YARN.|
+
 CGroups and security
 --------------------
 
