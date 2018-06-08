@@ -52,11 +52,11 @@ public class ConfiguredFailoverProxyProvider<T> extends
   protected final Configuration conf;
   protected final List<AddressRpcProxyPair<T>> proxies =
       new ArrayList<AddressRpcProxyPair<T>>();
-  private final UserGroupInformation ugi;
+  protected final UserGroupInformation ugi;
   protected final Class<T> xface;
 
   private int currentProxyIndex = 0;
-  private final HAProxyFactory<T> factory;
+  protected final HAProxyFactory<T> factory;
 
   public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory) {
@@ -122,6 +122,10 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public synchronized ProxyInfo<T> getProxy() {
     AddressRpcProxyPair<T> current = proxies.get(currentProxyIndex);
+    return getProxy(current);
+  }
+
+  protected ProxyInfo<T> getProxy(AddressRpcProxyPair<T> current) {
     if (current.namenode == null) {
       try {
         current.namenode = factory.createProxy(conf,
@@ -147,7 +151,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
    * A little pair object to store the address and connected RPC proxy object to
    * an NN. Note that {@link AddressRpcProxyPair#namenode} may be null.
    */
-  private static class AddressRpcProxyPair<T> {
+  protected static class AddressRpcProxyPair<T> {
     public final InetSocketAddress address;
     public T namenode;
 
