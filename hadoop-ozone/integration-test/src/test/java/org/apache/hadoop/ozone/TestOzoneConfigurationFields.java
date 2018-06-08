@@ -38,5 +38,11 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
     xmlPropsToSkipCompare.add("hadoop.tags.custom");
+    addPropertiesNotInXml();
+  }
+
+  private void addPropertiesNotInXml() {
+    configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_KEY_ALGORITHM);
+    configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_SECURITY_PROVIDER);
   }
 }
