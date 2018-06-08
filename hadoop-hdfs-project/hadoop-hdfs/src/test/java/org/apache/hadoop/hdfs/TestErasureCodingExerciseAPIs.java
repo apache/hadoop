@@ -71,7 +71,7 @@ public class TestErasureCodingExerciseAPIs {
   private DistributedFileSystem fs;
   private HdfsAdmin dfsAdmin;
   private FileSystemTestWrapper fsWrapper;
-  private static final int BLOCK_SIZE = 1 << 14; // 16k
+  private static final int BLOCK_SIZE = 1 << 20; // 1MB
   private ErasureCodingPolicy ecPolicy;
 
   private static ErasureCodingPolicy getEcPolicy() {

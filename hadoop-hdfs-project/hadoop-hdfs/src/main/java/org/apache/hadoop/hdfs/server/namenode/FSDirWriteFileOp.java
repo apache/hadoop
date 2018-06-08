@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -543,13 +542,8 @@ class FSDirWriteFileOp {
       boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = null;
       if (!shouldReplicate) {
-        if (!StringUtils.isEmpty(ecPolicyName)) {
-          ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicyByName(
-              fsd.getFSNamesystem(), ecPolicyName);
-        } else {
-          ecPolicy = FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
-              fsd.getFSNamesystem(), existing);
-        }
+        ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
+            fsd.getFSNamesystem(), ecPolicyName, existing);
         if (ecPolicy != null && (!ecPolicy.isReplicationPolicy())) {
           isStriped = true;
         }

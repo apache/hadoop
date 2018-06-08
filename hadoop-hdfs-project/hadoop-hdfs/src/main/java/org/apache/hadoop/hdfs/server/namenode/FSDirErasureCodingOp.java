@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.XAttr;
@@ -344,16 +345,28 @@ final class FSDirErasureCodingOp {
   }
 
   /**
-   * Check if the file or directory has an erasure coding policy.
+   * Get the erasure coding policy information for specified path and policy
+   * name. If ec policy name is given, it will be parsed and the corresponding
+   * policy will be returned. Otherwise, get the policy from the parents of the
+   * iip.
    *
    * @param fsn namespace
+   * @param ecPolicyName the ec policy name
    * @param iip inodes in the path containing the file
-   * @return Whether the file or directory has an erasure coding policy.
+   * @return {@link ErasureCodingPolicy}, or null if no policy is found
    * @throws IOException
    */
-  static boolean hasErasureCodingPolicy(final FSNamesystem fsn,
-      final INodesInPath iip) throws IOException {
-    return unprotectedGetErasureCodingPolicy(fsn, iip) != null;
+  static ErasureCodingPolicy getErasureCodingPolicy(FSNamesystem fsn,
+      String ecPolicyName, INodesInPath iip) throws IOException {
+    ErasureCodingPolicy ecPolicy;
+    if (!StringUtils.isEmpty(ecPolicyName)) {
+      ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicyByName(
+          fsn, ecPolicyName);
+    } else {
+      ecPolicy = FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+          fsn, iip);
+    }
+    return ecPolicy;
   }
 
   /**
