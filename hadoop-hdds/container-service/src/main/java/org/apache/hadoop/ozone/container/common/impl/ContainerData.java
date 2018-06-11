@@ -42,7 +42,7 @@ public class ContainerData {
   private final long containerId;
 
   // Layout version of the container data
-  private final ChunkLayOutVersion layOutVersion;
+  private final int layOutVersion;
 
   // Metadata of the container will be a key value pair.
   // This can hold information like volume name, owner etc.,
@@ -67,7 +67,27 @@ public class ContainerData {
   public ContainerData(ContainerType type, long containerId) {
     this.containerType = type;
     this.containerId = containerId;
-    this.layOutVersion = ChunkLayOutVersion.getLatestVersion();
+    this.layOutVersion = ChunkLayOutVersion.getLatestVersion().getVersion();
+    this.metadata = new TreeMap<>();
+    this.state = ContainerLifeCycleState.OPEN;
+    this.readCount = new AtomicLong(0L);
+    this.readBytes =  new AtomicLong(0L);
+    this.writeCount =  new AtomicLong(0L);
+    this.writeBytes =  new AtomicLong(0L);
+    this.bytesUsed = new AtomicLong(0L);
+  }
+
+  /**
+   * Creates a ContainerData Object, which holds metadata of the container.
+   * @param type - ContainerType
+   * @param containerId - ContainerId
+   * @param layOutVersion - Container layOutVersion
+   */
+  public ContainerData(ContainerType type, long containerId, int
+      layOutVersion) {
+    this.containerType = type;
+    this.containerId = containerId;
+    this.layOutVersion = layOutVersion;
     this.metadata = new TreeMap<>();
     this.state = ContainerLifeCycleState.OPEN;
     this.readCount = new AtomicLong(0L);
@@ -113,8 +133,8 @@ public class ContainerData {
    * Returns the layOutVersion of the actual container data format.
    * @return layOutVersion
    */
-  public ChunkLayOutVersion getLayOutVersion() {
-    return layOutVersion;
+  public int getLayOutVersion() {
+    return ChunkLayOutVersion.getChunkLayOutVersion(layOutVersion).getVersion();
   }
 
   /**

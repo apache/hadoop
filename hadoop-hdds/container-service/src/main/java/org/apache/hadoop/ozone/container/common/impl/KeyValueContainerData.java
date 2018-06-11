@@ -53,11 +53,22 @@ public class KeyValueContainerData extends ContainerData {
   }
 
   /**
+   * Constructs KeyValueContainerData object.
+   * @param type - containerType
+   * @param id - ContainerId
+   * @param layOutVersion
+   */
+  public KeyValueContainerData(ContainerProtos.ContainerType type, long id,
+                               int layOutVersion) {
+    super(type, id, layOutVersion);
+    this.numPendingDeletionBlocks = 0;
+  }
+  /**
    * Returns path.
    *
    * @return - path
    */
-  public String getDBPath() {
+  public String getDbPath() {
     return dbPath;
   }
 
@@ -66,7 +77,7 @@ public class KeyValueContainerData extends ContainerData {
    *
    * @param path - String.
    */
-  public void setDBPath(String path) {
+  public void setDbPath(String path) {
     this.dbPath = path;
   }
 
@@ -74,7 +85,7 @@ public class KeyValueContainerData extends ContainerData {
    * Get container file path.
    * @return - Physical path where container file and checksum is stored.
    */
-  public String getContainerPath() {
+  public String getContainerFilePath() {
     return containerFilePath;
   }
 
@@ -82,7 +93,7 @@ public class KeyValueContainerData extends ContainerData {
    * Set container Path.
    * @param containerPath - File path.
    */
-  public void setContainerPath(String containerPath) {
+  public void setContainerFilePath(String containerPath) {
     this.containerFilePath = containerPath;
   }
 

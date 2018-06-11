@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 
+import com.google.common.base.Preconditions;
+
 /**
  * Defines layout versions for the Chunks.
  */
@@ -40,6 +42,22 @@ public final class ChunkLayOutVersion {
   private ChunkLayOutVersion(int version, String description) {
     this.version = version;
     this.description = description;
+  }
+
+  /**
+   * Return ChunkLayOutVersion object for the chunkVersion.
+   * @param chunkVersion
+   * @return ChunkLayOutVersion
+   */
+  public static ChunkLayOutVersion getChunkLayOutVersion(int chunkVersion) {
+    Preconditions.checkArgument((chunkVersion <= ChunkLayOutVersion
+        .getLatestVersion().getVersion()));
+    for(ChunkLayOutVersion chunkLayOutVersion : CHUNK_LAYOUT_VERSION_INFOS) {
+      if(chunkLayOutVersion.getVersion() == chunkVersion) {
+        return chunkLayOutVersion;
+      }
+    }
+    return null;
   }
 
   /**

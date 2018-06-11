@@ -38,8 +38,6 @@ public class TestKeyValueContainerData {
     long containerId = 1L;
     ContainerProtos.ContainerType containerType = ContainerProtos
         .ContainerType.KeyValueContainer;
-    String path = "/tmp";
-    String containerDBType = "RocksDB";
     int layOutVersion = 1;
     ContainerProtos.ContainerLifeCycleState state = ContainerProtos
         .ContainerLifeCycleState.OPEN;
@@ -57,10 +55,9 @@ public class TestKeyValueContainerData {
 
     KeyValueContainerData kvData = KeyValueContainerData.getFromProtoBuf(
         containerData);
-
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerId());
-    assertEquals(layOutVersion, kvData.getLayOutVersion().getVersion());
+    assertEquals(layOutVersion, kvData.getLayOutVersion());
     assertEquals(state, kvData.getState());
     assertEquals(2, kvData.getMetadata().size());
     assertEquals("ozone", kvData.getMetadata().get("VOLUME"));
@@ -75,11 +72,9 @@ public class TestKeyValueContainerData {
         .ContainerType.KeyValueContainer;
     String path = "/tmp";
     String containerDBType = "RocksDB";
-    int layOutVersion = 1;
     ContainerProtos.ContainerLifeCycleState state = ContainerProtos
         .ContainerLifeCycleState.CLOSED;
     AtomicLong val = new AtomicLong(0);
-    AtomicLong updatedVal = new AtomicLong(100);
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerType,
         containerId);
@@ -97,8 +92,8 @@ public class TestKeyValueContainerData {
 
     kvData.setState(state);
     kvData.setContainerDBType(containerDBType);
-    kvData.setContainerPath(path);
-    kvData.setDBPath(path);
+    kvData.setContainerFilePath(path);
+    kvData.setDbPath(path);
     kvData.incrReadBytes(10);
     kvData.incrWriteBytes(10);
     kvData.incrReadCount();
@@ -106,8 +101,8 @@ public class TestKeyValueContainerData {
 
     assertEquals(state, kvData.getState());
     assertEquals(containerDBType, kvData.getContainerDBType());
-    assertEquals(path, kvData.getContainerPath());
-    assertEquals(path, kvData.getDBPath());
+    assertEquals(path, kvData.getContainerFilePath());
+    assertEquals(path, kvData.getDbPath());
 
     assertEquals(10, kvData.getReadBytes());
     assertEquals(10, kvData.getWriteBytes());
