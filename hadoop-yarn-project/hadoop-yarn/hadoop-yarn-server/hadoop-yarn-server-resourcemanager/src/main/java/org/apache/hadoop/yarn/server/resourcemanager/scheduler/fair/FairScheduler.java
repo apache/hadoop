@@ -199,7 +199,7 @@ public class FairScheduler extends
 
   private AllocationFileLoaderService allocsLoader;
   @VisibleForTesting
-  AllocationConfiguration allocConf;
+  volatile AllocationConfiguration allocConf;
 
   // Container size threshold for making a reservation.
   @VisibleForTesting
