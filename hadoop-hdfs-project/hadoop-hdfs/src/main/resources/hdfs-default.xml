@@ -3393,6 +3393,18 @@
 </property>
 
 <property>
+  <name>dfs.client.failover.random.order</name>
+  <value>false</value>
+  <description>
+    Determines if the failover proxies are picked in random order instead of the
+    configured order. The prefix can be used with an optional nameservice ID
+    (of form dfs.client.failover.random.order[.nameservice]) in case multiple
+    nameservices exist and random order should be enabled for specific
+    nameservices.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.key.provider.cache.expiry</name>
   <value>864000000</value>
   <description>

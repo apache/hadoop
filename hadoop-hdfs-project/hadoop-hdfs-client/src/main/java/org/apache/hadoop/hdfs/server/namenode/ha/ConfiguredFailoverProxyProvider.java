@@ -94,9 +94,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
         proxies.add(new AddressRpcProxyPair<T>(address));
       }
       // Randomize the list to prevent all clients pointing to the same one
-      boolean randomized = conf.getBoolean(
-          HdfsClientConfigKeys.Failover.RANDOM_ORDER,
-          HdfsClientConfigKeys.Failover.RANDOM_ORDER_DEFAULT);
+      boolean randomized = getRandomOrder(conf, uri);
       if (randomized) {
         Collections.shuffle(proxies);
       }
@@ -109,6 +107,31 @@ public class ConfiguredFailoverProxyProvider<T> extends
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Check whether random order is configured for failover proxy provider
+   * for the namenode/nameservice.
+   *
+   * @param conf Configuration
+   * @param nameNodeUri The URI of namenode/nameservice
+   * @return random order configuration
+   */
+  private static boolean getRandomOrder(
+      Configuration conf, URI nameNodeUri) {
+    String host = nameNodeUri.getHost();
+    String configKeyWithHost = HdfsClientConfigKeys.Failover.RANDOM_ORDER
+        + "." + host;
+
+    if (conf.get(configKeyWithHost) != null) {
+      return conf.getBoolean(
+          configKeyWithHost,
+          HdfsClientConfigKeys.Failover.RANDOM_ORDER_DEFAULT);
+    }
+
+    return conf.getBoolean(
+        HdfsClientConfigKeys.Failover.RANDOM_ORDER,
+        HdfsClientConfigKeys.Failover.RANDOM_ORDER_DEFAULT);
   }
 
   @Override

@@ -42,6 +42,7 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     xmlFilename = new String("hdfs-default.xml");
       configurationClasses =
           new Class[] { HdfsClientConfigKeys.class, DFSConfigKeys.class,
+              HdfsClientConfigKeys.Failover.class,
               HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.class };
 
     // Set error modes
