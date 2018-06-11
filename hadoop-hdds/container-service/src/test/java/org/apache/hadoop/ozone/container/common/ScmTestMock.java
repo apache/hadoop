@@ -57,28 +57,6 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
       new HashMap();
   private Map<DatanodeDetails, NodeReportProto> nodeReports = new HashMap<>();
-  private UUID scmUuid;
-
-  public ScmTestMock() {
-    scmUuid = UUID.randomUUID();
-  }
-
-  /**
-   * Return scmUuid.
-   * @return UUID
-   */
-  public UUID getScmUuid() {
-    return scmUuid;
-  }
-
-  /**
-   * set scmUuid.
-   * @param id
-   */
-  public void setSCMUuid(UUID id) {
-    this.scmUuid = id;
-  }
-
   /**
    * Returns the number of heartbeats made to this class.
    *
@@ -169,11 +147,9 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     rpcCount.incrementAndGet();
     sleepIfNeeded();
     VersionInfo versionInfo = VersionInfo.getLatestVersion();
-
     return VersionResponse.newBuilder()
         .setVersion(versionInfo.getVersion())
         .addValue(VersionInfo.DESCRIPTION_KEY, versionInfo.getDescription())
-        .addValue("scmUuid", scmUuid.toString())
         .build().getProtobufMessage();
   }
 
