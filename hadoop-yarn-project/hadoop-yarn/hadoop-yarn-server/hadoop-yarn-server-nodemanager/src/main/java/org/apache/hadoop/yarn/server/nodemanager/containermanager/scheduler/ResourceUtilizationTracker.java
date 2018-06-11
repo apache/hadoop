@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
@@ -38,22 +39,20 @@ public interface ResourceUtilizationTracker {
   ResourceUtilization getCurrentUtilization();
 
   /**
-   * Add Container's resources to Node Utilization.
-   * @param container Container.
+   * Get the amount of resources currently available to launch containers.
+   * @return Resource resources available to launch containers
    */
-  void addContainerResources(Container container);
+  Resource getAvailableResources();
 
   /**
-   * Subtract Container's resources to Node Utilization.
+   * Add Container's resources to Node Utilization upon container launch.
    * @param container Container.
    */
-  void subtractContainerResource(Container container);
+  void containerLaunched(Container container);
 
   /**
-   * Check if NM has resources available currently to run the container.
+   * Subtract Container's resources to Node Utilization upon container release.
    * @param container Container.
-   * @return True, if NM has resources available currently to run the container.
    */
-  boolean hasResourcesAvailable(Container container);
-
+  void containerReleased(Container container);
 }

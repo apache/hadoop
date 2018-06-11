@@ -26,6 +26,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -344,6 +345,40 @@ public abstract class BaseContainerManagerTest {
     Assert.assertTrue("ContainerState is not correct (timedout)",
           fStates.contains(containerStatus.getState()));
   }
+
+  public static void waitForContainerSubState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      ContainerSubState finalState)
+      throws InterruptedException, YarnException, IOException {
+    waitForContainerSubState(containerManager, containerID,
+        Arrays.asList(finalState), 20);
+  }
+  public static void waitForContainerSubState(
+      ContainerManagementProtocol containerManager, ContainerId containerID,
+      List<ContainerSubState> finalStates, int timeOutMax)
+      throws InterruptedException, YarnException, IOException {
+    List<ContainerId> list = new ArrayList<>();
+    list.add(containerID);
+    GetContainerStatusesRequest request =
+        GetContainerStatusesRequest.newInstance(list);
+    ContainerStatus containerStatus;
+    HashSet<ContainerSubState> fStates = new HashSet<>(finalStates);
+    int timeoutSecs = 0;
+    do {
+      Thread.sleep(1000);
+      containerStatus =
+          containerManager.getContainerStatuses(request)
+              .getContainerStatuses().get(0);
+      LOG.info("Waiting for container to get into one of states " + fStates
+          + ". Current state is " + containerStatus.getContainerSubState());
+      timeoutSecs += 1;
+    } while (!fStates.contains(containerStatus.getContainerSubState())
+        && timeoutSecs < timeOutMax);
+    LOG.info("Container state is " + containerStatus.getContainerSubState());
+    Assert.assertTrue("ContainerSubState is not correct (timedout)",
+        fStates.contains(containerStatus.getContainerSubState()));
+  }
+
 
   public static void waitForApplicationState(
       ContainerManagerImpl containerManager, ApplicationId appID,

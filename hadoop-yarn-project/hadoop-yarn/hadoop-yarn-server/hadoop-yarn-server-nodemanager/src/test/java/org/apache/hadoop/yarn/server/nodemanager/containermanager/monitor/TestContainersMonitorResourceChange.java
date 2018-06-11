@@ -288,7 +288,7 @@ public class TestContainersMonitorResourceChange {
     // will be 0.
     assertEquals(
         "Resource utilization must be default with MonitorThread's first run",
-        0, containersMonitor.getContainersUtilization()
+        0, containersMonitor.getContainersUtilization(false).getUtilization()
             .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
 
     // Verify the container utilization value. Since atleast one round is done,
@@ -303,8 +303,9 @@ public class TestContainersMonitorResourceChange {
       ContainersMonitorImpl containersMonitor, int timeoutMsecs)
       throws InterruptedException {
     int timeWaiting = 0;
-    while (0 == containersMonitor.getContainersUtilization()
-        .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f))) {
+    while (0 == containersMonitor.getContainersUtilization(false)
+        .getUtilization().compareTo(
+            ResourceUtilization.newInstance(0, 0, 0.0f))) {
       if (timeWaiting >= timeoutMsecs) {
         break;
       }
@@ -316,7 +317,7 @@ public class TestContainersMonitorResourceChange {
     }
 
     assertTrue("Resource utilization is not changed from second run onwards",
-        0 != containersMonitor.getContainersUtilization()
+        0 != containersMonitor.getContainersUtilization(false).getUtilization()
             .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
   }
 
