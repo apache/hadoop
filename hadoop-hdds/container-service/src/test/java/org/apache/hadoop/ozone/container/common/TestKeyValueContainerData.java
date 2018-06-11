@@ -92,8 +92,8 @@ public class TestKeyValueContainerData {
 
     kvData.setState(state);
     kvData.setContainerDBType(containerDBType);
-    kvData.setContainerFilePath(path);
-    kvData.setDbPath(path);
+    kvData.setChunksPath(path);
+    kvData.setMetadataPath(path);
     kvData.incrReadBytes(10);
     kvData.incrWriteBytes(10);
     kvData.incrReadCount();
@@ -101,8 +101,8 @@ public class TestKeyValueContainerData {
 
     assertEquals(state, kvData.getState());
     assertEquals(containerDBType, kvData.getContainerDBType());
-    assertEquals(path, kvData.getContainerFilePath());
-    assertEquals(path, kvData.getDbPath());
+    assertEquals(path, kvData.getChunksPath());
+    assertEquals(path, kvData.getMetadataPath());
 
     assertEquals(10, kvData.getReadBytes());
     assertEquals(10, kvData.getWriteBytes());

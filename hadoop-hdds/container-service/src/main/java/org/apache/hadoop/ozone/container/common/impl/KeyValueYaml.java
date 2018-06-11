@@ -144,8 +144,8 @@ public final class KeyValueYaml {
           // When a new field needs to be added, it needs to be added here.
           if (name.equals("containerType") || name.equals("containerId") ||
               name.equals("layOutVersion") || name.equals("state") ||
-              name.equals("metadata") || name.equals("dbPath") ||
-              name.equals("containerFilePath") || name.equals(
+              name.equals("metadata") || name.equals("metadataPath") ||
+              name.equals("chunksPath") || name.equals(
                   "containerDBType")) {
             filtered.add(prop);
           }
@@ -186,8 +186,9 @@ public final class KeyValueYaml {
         KeyValueContainerData kvData = new KeyValueContainerData(containerType,
             (long) nodes.get("containerId"), lv);
         kvData.setContainerDBType((String)nodes.get("containerDBType"));
-        kvData.setDbPath((String) nodes.get("dbPath"));
-        kvData.setContainerFilePath((String) nodes.get("containerFilePath"));
+        kvData.setMetadataPath((String) nodes.get(
+            "metadataPath"));
+        kvData.setChunksPath((String) nodes.get("chunksPath"));
         Map<String, String> meta = (Map) nodes.get("metadata");
         meta.forEach((key, val) -> {
           try {

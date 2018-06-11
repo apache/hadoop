@@ -47,8 +47,8 @@ public class TestKeyValueYaml {
     KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
         ContainerProtos.ContainerType.KeyValueContainer, Long.MAX_VALUE);
     keyValueContainerData.setContainerDBType("RocksDB");
-    keyValueContainerData.setDbPath(path);
-    keyValueContainerData.setContainerFilePath(path);
+    keyValueContainerData.setMetadataPath(path);
+    keyValueContainerData.setChunksPath(path);
 
     File containerFile = new File(filePath, containerPath);
 
@@ -65,8 +65,8 @@ public class TestKeyValueYaml {
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
-    assertEquals(path, kvData.getContainerFilePath());
-    assertEquals(path, kvData.getDbPath());
+    assertEquals(path, kvData.getMetadataPath());
+    assertEquals(path, kvData.getChunksPath());
     assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
@@ -90,8 +90,8 @@ public class TestKeyValueYaml {
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
-    assertEquals(path, kvData.getContainerFilePath());
-    assertEquals(path, kvData.getDbPath());
+    assertEquals(path, kvData.getMetadataPath());
+    assertEquals(path, kvData.getChunksPath());
     assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
@@ -143,9 +143,9 @@ public class TestKeyValueYaml {
           .getContainerType());
       assertEquals(9223372036854775807L, kvData.getContainerId());
       assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData
-          .getDbPath());
+          .getChunksPath());
       assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData
-          .getContainerFilePath());
+          .getMetadataPath());
       assertEquals(1, kvData.getLayOutVersion());
       assertEquals(2, kvData.getMetadata().size());
 

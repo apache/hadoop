@@ -30,11 +30,11 @@ import java.io.IOException;
  */
 public class KeyValueContainerData extends ContainerData {
 
-  // Path to Level DB/RocksDB Store.
-  private String dbPath;
+  // Path to Container metadata Level DB/RocksDB Store and .container file.
+  private String metadataPath;
 
-  // Path to Physical file system where container and checksum are stored.
-  private String containerFilePath;
+  // Path to Physical file system where chunks are stored.
+  private String chunksPath;
 
   //Type of DB used to store key to chunks mapping
   private String containerDBType;
@@ -64,37 +64,37 @@ public class KeyValueContainerData extends ContainerData {
     this.numPendingDeletionBlocks = 0;
   }
   /**
-   * Returns path.
+   * Returns container metadata path.
    *
    * @return - path
    */
-  public String getDbPath() {
-    return dbPath;
+  public String getMetadataPath() {
+    return metadataPath;
   }
 
   /**
-   * Sets path.
+   * Sets container metadata path.
    *
    * @param path - String.
    */
-  public void setDbPath(String path) {
-    this.dbPath = path;
+  public void setMetadataPath(String path) {
+    this.metadataPath = path;
   }
 
   /**
-   * Get container file path.
+   * Get chunks path.
    * @return - Physical path where container file and checksum is stored.
    */
-  public String getContainerFilePath() {
-    return containerFilePath;
+  public String getChunksPath() {
+    return chunksPath;
   }
 
   /**
-   * Set container Path.
-   * @param containerPath - File path.
+   * Set chunks Path.
+   * @param chunkPath - File path.
    */
-  public void setContainerFilePath(String containerPath) {
-    this.containerFilePath = containerPath;
+  public void setChunksPath(String chunkPath) {
+    this.chunksPath = chunkPath;
   }
 
   /**
