@@ -181,7 +181,8 @@ public class AllocationFileLoaderService extends AbstractService {
    * path is relative, it is searched for in the
    * classpath, but loaded like a regular File.
    */
-  public Path getAllocationFile(Configuration conf)
+  @VisibleForTesting
+  Path getAllocationFile(Configuration conf)
       throws UnsupportedFileSystemException {
     String allocFilePath = conf.get(FairSchedulerConfiguration.ALLOCATION_FILE,
         FairSchedulerConfiguration.DEFAULT_ALLOCATION_FILE);
