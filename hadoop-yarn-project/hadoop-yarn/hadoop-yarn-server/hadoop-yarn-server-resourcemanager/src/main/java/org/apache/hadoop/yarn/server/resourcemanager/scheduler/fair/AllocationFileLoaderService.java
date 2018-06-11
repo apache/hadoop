@@ -109,7 +109,7 @@ public class AllocationFileLoaderService extends AbstractService {
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     this.allocFile = getAllocationFile(conf);
-    if(this.allocFile != null) {
+    if (this.allocFile != null) {
       this.fs = allocFile.getFileSystem(conf);
       reloadThread = new Thread(() -> {
         while (running) {
@@ -138,7 +138,7 @@ public class AllocationFileLoaderService extends AbstractService {
               lastReloadAttemptFailed = true;
             }
           } catch (IOException e) {
-            LOG.info("Exception while loading allocation file: " + e);
+            LOG.error("Exception while loading allocation file: " + e);
           }
           try {
             Thread.sleep(reloadIntervalMs);
