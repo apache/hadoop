@@ -638,7 +638,8 @@ public class TestKeySpaceManager {
     MetadataStore store = cluster.getKeySpaceManager().
         getMetadataManager().getStore();
     List<Map.Entry<byte[], byte[]>> list = store.getRangeKVs(null, 10,
-        new MetadataKeyFilters.KeyPrefixFilter(DELETING_KEY_PREFIX));
+        new MetadataKeyFilters.KeyPrefixFilter()
+            .addFilter(DELETING_KEY_PREFIX));
     Assert.assertEquals(1, list.size());
 
     // Delete the key again to test deleting non-existing key.

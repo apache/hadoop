@@ -64,9 +64,14 @@ public class BenchMarkContainerStateMap {
             .setPipeline(pipeline)
             // This is bytes allocated for blocks inside container, not the
             // container size
-            .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
-            .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
-            .setContainerID(x).build();
+            .setAllocatedBytes(0)
+            .setUsedBytes(0)
+            .setNumberOfKeys(0)
+            .setStateEnterTime(Time.monotonicNow())
+            .setOwner("OZONE")
+            .setContainerID(x)
+            .setDeleteTransactionId(0)
+            .build();
         stateMap.addContainer(containerInfo);
         currentCount++;
       } catch (SCMException e) {
@@ -80,9 +85,14 @@ public class BenchMarkContainerStateMap {
             .setPipeline(pipeline)
             // This is bytes allocated for blocks inside container, not the
             // container size
-            .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
-            .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
-            .setContainerID(y).build();
+            .setAllocatedBytes(0)
+            .setUsedBytes(0)
+            .setNumberOfKeys(0)
+            .setStateEnterTime(Time.monotonicNow())
+            .setOwner("OZONE")
+            .setContainerID(y)
+            .setDeleteTransactionId(0)
+            .build();
         stateMap.addContainer(containerInfo);
         currentCount++;
       } catch (SCMException e) {
@@ -95,9 +105,14 @@ public class BenchMarkContainerStateMap {
           .setPipeline(pipeline)
           // This is bytes allocated for blocks inside container, not the
           // container size
-          .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
-          .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
-          .setContainerID(currentCount++).build();
+          .setAllocatedBytes(0)
+          .setUsedBytes(0)
+          .setNumberOfKeys(0)
+          .setStateEnterTime(Time.monotonicNow())
+          .setOwner("OZONE")
+          .setContainerID(currentCount++)
+          .setDeleteTransactionId(0)
+          .build();
       stateMap.addContainer(containerInfo);
     } catch (SCMException e) {
       e.printStackTrace();
@@ -155,9 +170,14 @@ public class BenchMarkContainerStateMap {
         .setPipeline(pipeline)
         // This is bytes allocated for blocks inside container, not the
         // container size
-        .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
-        .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
-        .setContainerID(cid).build();
+        .setAllocatedBytes(0)
+        .setUsedBytes(0)
+        .setNumberOfKeys(0)
+        .setStateEnterTime(Time.monotonicNow())
+        .setOwner("OZONE")
+        .setContainerID(cid)
+        .setDeleteTransactionId(0)
+        .build();
     state.stateMap.addContainer(containerInfo);
   }
 

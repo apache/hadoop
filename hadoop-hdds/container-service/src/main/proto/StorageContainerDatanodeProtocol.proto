@@ -160,6 +160,7 @@ message ContainerInfo {
   optional int64 writeBytes = 8;
   optional string finalhash = 9;
   optional hadoop.hdds.LifeCycleState state = 10;
+  optional int64 deleteTransactionId = 11;
 }
 
 /*

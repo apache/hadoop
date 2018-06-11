@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
@@ -102,6 +103,16 @@ public interface Mapping extends Closeable {
    */
   void processContainerReports(DatanodeDetails datanodeDetails,
                                ContainerReportsProto reports)
+      throws IOException;
+
+  /**
+   * Update deleteTransactionId according to deleteTransactionMap.
+   *
+   * @param deleteTransactionMap Maps the containerId to latest delete
+   *                             transaction id for the container.
+   * @throws IOException
+   */
+  void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
       throws IOException;
 
   /**

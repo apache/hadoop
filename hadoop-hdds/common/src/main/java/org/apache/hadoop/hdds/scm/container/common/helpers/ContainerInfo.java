@@ -32,6 +32,8 @@ import org.apache.hadoop.util.Time;
 import java.io.IOException;
 import java.util.Comparator;
 
+import static java.lang.Math.max;
+
 /**
  * Class wraps ozone container info.
  */
@@ -60,6 +62,7 @@ public class ContainerInfo
   private long stateEnterTime;
   private String owner;
   private long containerID;
+  private long deleteTransactionId;
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,
@@ -68,7 +71,8 @@ public class ContainerInfo
       long usedBytes,
       long numberOfKeys,
       long stateEnterTime,
-      String owner) {
+      String owner,
+      long deleteTransactionId) {
     this.containerID = containerID;
     this.pipeline = pipeline;
     this.allocatedBytes = allocatedBytes;
@@ -78,6 +82,7 @@ public class ContainerInfo
     this.state = state;
     this.stateEnterTime = stateEnterTime;
     this.owner = owner;
+    this.deleteTransactionId = deleteTransactionId;
   }
 
   /**
@@ -96,6 +101,7 @@ public class ContainerInfo
     builder.setStateEnterTime(info.getStateEnterTime());
     builder.setOwner(info.getOwner());
     builder.setContainerID(info.getContainerID());
+    builder.setDeleteTransactionId(info.getDeleteTransactionId());
     return builder.build();
   }
 
@@ -141,6 +147,14 @@ public class ContainerInfo
     return numberOfKeys;
   }
 
+  public long getDeleteTransactionId() {
+    return deleteTransactionId;
+  }
+
+  public void updateDeleteTransactionId(long transactionId) {
+    deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
   public ContainerID containerID() {
     return new ContainerID(getContainerID());
   }
@@ -174,6 +188,7 @@ public class ContainerInfo
     builder.setState(state);
     builder.setStateEnterTime(stateEnterTime);
     builder.setContainerID(getContainerID());
+    builder.setDeleteTransactionId(deleteTransactionId);
 
     if (getOwner() != null) {
       builder.setOwner(getOwner());
@@ -292,6 +307,7 @@ public class ContainerInfo
     private long stateEnterTime;
     private String owner;
     private long containerID;
+    private long deleteTransactionId;
 
     public Builder setContainerID(long id) {
       Preconditions.checkState(id >= 0);
@@ -334,10 +350,15 @@ public class ContainerInfo
       return this;
     }
 
+    public Builder setDeleteTransactionId(long deleteTransactionId) {
+      this.deleteTransactionId = deleteTransactionId;
+      return this;
+    }
+
     public ContainerInfo build() {
       return new
-          ContainerInfo(containerID, state, pipeline,
-          allocated, used, keys, stateEnterTime, owner);
+          ContainerInfo(containerID, state, pipeline, allocated,
+              used, keys, stateEnterTime, owner, deleteTransactionId);
     }
   }
 }

@@ -186,6 +186,9 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         LOG.debug("Block {} not found or already under deletion in"
                 + " container {}, skip deleting it.", blk, containerId);
       }
+      containerDB.put(DFSUtil.string2Bytes(
+          OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX + delTX.getContainerID()),
+          Longs.toByteArray(delTX.getTxID()));
     }
 
     // update pending deletion blocks count in in-memory container status

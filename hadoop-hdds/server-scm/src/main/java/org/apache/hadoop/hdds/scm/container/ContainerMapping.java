@@ -342,6 +342,39 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Update deleteTransactionId according to deleteTransactionMap.
+   *
+   * @param deleteTransactionMap Maps the containerId to latest delete
+   *                             transaction id for the container.
+   * @throws IOException
+   */
+  public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
+      throws IOException {
+    lock.lock();
+    try {
+      for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
+        long containerID = entry.getKey();
+        byte[] dbKey = Longs.toByteArray(containerID);
+        byte[] containerBytes = containerStore.get(dbKey);
+        if (containerBytes == null) {
+          throw new SCMException(
+              "Failed to increment number of deleted blocks for container "
+                  + containerID + ", reason : " + "container doesn't exist.",
+              SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+        }
+        ContainerInfo containerInfo = ContainerInfo.fromProtobuf(
+            HddsProtos.SCMContainerInfo.parseFrom(containerBytes));
+        containerInfo.updateDeleteTransactionId(entry.getValue());
+        containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
+        containerStateManager
+            .updateDeleteTransactionId(containerID, entry.getValue());
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
    * Returns the container State Manager.
    *
    * @return ContainerStateManager
@@ -441,6 +474,7 @@ public class ContainerMapping implements Mapping {
     builder.setState(knownState.getState());
     builder.setStateEnterTime(knownState.getStateEnterTime());
     builder.setContainerID(knownState.getContainerID());
+    builder.setDeleteTransactionId(knownState.getDeleteTransactionId());
     if (knownState.getOwner() != null) {
       builder.setOwner(knownState.getOwner());
     }
@@ -571,6 +605,7 @@ public class ContainerMapping implements Mapping {
               .setPipeline(oldInfo.getPipeline())
               .setState(oldInfo.getState())
               .setUsedBytes(oldInfo.getUsedBytes())
+              .setDeleteTransactionId(oldInfo.getDeleteTransactionId())
               .build();
           containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
         } else {

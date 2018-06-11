@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static java.lang.Math.max;
+
 /**
  * This class maintains the information about a container in the ozone world.
  * <p>
@@ -57,6 +59,7 @@ public class ContainerData {
    * Number of pending deletion blocks in container.
    */
   private int numPendingDeletionBlocks;
+  private long deleteTransactionId;
   private AtomicLong readBytes;
   private AtomicLong writeBytes;
   private AtomicLong readCount;
@@ -78,6 +81,7 @@ public class ContainerData {
     this.containerID = containerID;
     this.state = ContainerLifeCycleState.OPEN;
     this.numPendingDeletionBlocks = 0;
+    this.deleteTransactionId = 0;
     this.readCount = new AtomicLong(0L);
     this.readBytes =  new AtomicLong(0L);
     this.writeCount =  new AtomicLong(0L);
@@ -101,6 +105,7 @@ public class ContainerData {
     this.containerID = containerID;
     this.state = state;
     this.numPendingDeletionBlocks = 0;
+    this.deleteTransactionId = 0;
     this.readCount = new AtomicLong(0L);
     this.readBytes =  new AtomicLong(0L);
     this.writeCount =  new AtomicLong(0L);
@@ -423,6 +428,22 @@ public class ContainerData {
    */
   public int getNumPendingDeletionBlocks() {
     return this.numPendingDeletionBlocks;
+  }
+
+  /**
+   * Sets deleteTransactionId to latest delete transactionId for the container.
+   *
+   * @param transactionId latest transactionId of the container.
+   */
+  public void updateDeleteTransactionId(long transactionId) {
+    deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
+  /**
+   * Return the latest deleteTransactionId of the container.
+   */
+  public long getDeleteTransactionId() {
+    return deleteTransactionId;
   }
 
   /**

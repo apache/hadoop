@@ -352,8 +352,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
           ResultCodes.FAILED_BUCKET_NOT_FOUND);
     }
 
-    MetadataKeyFilter filter = new KeyPrefixFilter(
-                getKeyWithDBPrefix(volumeName, bucketName, keyPrefix));
+    MetadataKeyFilter filter = new KeyPrefixFilter()
+        .addFilter(getKeyWithDBPrefix(volumeName, bucketName, keyPrefix));
 
     List<Map.Entry<byte[], byte[]>> rangeResult;
     if (!Strings.isNullOrEmpty(startKey)) {
@@ -449,7 +449,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
 
   private VolumeList getAllVolumes() throws IOException {
     // Scan all users in database
-    KeyPrefixFilter filter = new KeyPrefixFilter(OzoneConsts.KSM_USER_PREFIX);
+    KeyPrefixFilter filter =
+        new KeyPrefixFilter().addFilter(OzoneConsts.KSM_USER_PREFIX);
     // We are not expecting a huge number of users per cluster,
     // it should be fine to scan all users in db and return us a
     // list of volume names in string per user.
@@ -497,7 +498,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
     long now = Time.now();
     final MetadataKeyFilter openKeyFilter =
-        new KeyPrefixFilter(OPEN_KEY_PREFIX);
+        new KeyPrefixFilter().addFilter(OPEN_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> rangeResult =
         store.getSequentialRangeKVs(null, Integer.MAX_VALUE,
             openKeyFilter);

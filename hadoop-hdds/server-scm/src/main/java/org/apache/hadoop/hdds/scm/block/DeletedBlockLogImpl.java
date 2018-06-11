@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -306,12 +307,15 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
    * {@inheritDoc}
    *
    * @param containerBlocksMap a map of containerBlocks.
+   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
   @Override
-  public void addTransactions(Map<Long, List<Long>> containerBlocksMap)
+  public Map<Long, Long> addTransactions(
+      Map<Long, List<Long>> containerBlocksMap)
       throws IOException {
     BatchOperation batch = new BatchOperation();
+    Map<Long, Long> deleteTransactionsMap = new HashMap<>();
     lock.lock();
     try {
       long currentLatestID = lastTxID;
@@ -321,11 +325,13 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
         byte[] key = Longs.toByteArray(currentLatestID);
         DeletedBlocksTransaction tx = constructNewTransaction(currentLatestID,
             entry.getKey(), entry.getValue());
+        deleteTransactionsMap.put(entry.getKey(), currentLatestID);
         batch.put(key, tx.toByteArray());
       }
       lastTxID = currentLatestID;
       batch.put(LATEST_TXID, Longs.toByteArray(lastTxID));
       deletedStore.writeBatch(batch);
+      return deleteTransactionsMap;
     } finally {
       lock.unlock();
     }

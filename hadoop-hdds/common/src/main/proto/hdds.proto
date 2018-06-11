@@ -146,6 +146,7 @@ message SCMContainerInfo {
     required uint64 numberOfKeys = 6;
     optional int64 stateEnterTime = 7;
     required string owner = 8;
+    optional int64 deleteTransactionId = 9;
 }
 
 message GetScmInfoRequestProto {

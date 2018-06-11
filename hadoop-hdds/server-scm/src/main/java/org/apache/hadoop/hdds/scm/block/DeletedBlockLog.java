@@ -108,9 +108,10 @@ public interface DeletedBlockLog extends Closeable {
    * number of containers) together (on success) or non (on failure).
    *
    * @param containerBlocksMap a map of containerBlocks.
+   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
-  void addTransactions(Map<Long, List<Long>> containerBlocksMap)
+  Map<Long, Long> addTransactions(Map<Long, List<Long>> containerBlocksMap)
       throws IOException;
 
   /**

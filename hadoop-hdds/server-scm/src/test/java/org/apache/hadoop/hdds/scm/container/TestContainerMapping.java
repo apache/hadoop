@@ -203,7 +203,8 @@ public class TestContainerMapping {
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
         .setWriteBytes(2000000000L)
-        .setContainerID(info.getContainerID());
+        .setContainerID(info.getContainerID())
+        .setDeleteTransactionId(0);
 
     reports.add(ciBuilder.build());
 
@@ -237,7 +238,8 @@ public class TestContainerMapping {
         .setWriteCount(500000000L)
         .setReadBytes(5368705120L)
         .setWriteBytes(5368705120L)
-        .setContainerID(info.getContainerID());
+        .setContainerID(info.getContainerID())
+        .setDeleteTransactionId(0);
 
     reports.add(ciBuilder.build());
 

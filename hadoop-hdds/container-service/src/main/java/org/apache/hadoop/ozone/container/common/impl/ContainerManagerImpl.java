@@ -20,11 +20,13 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
@@ -246,12 +248,18 @@ public class ContainerManagerImpl implements ContainerManager {
       }
       containerData = ContainerData.getFromProtBuf(containerDataProto, conf);
 
-      // Initialize pending deletion blocks count in in-memory
-      // container status.
+      // Initialize pending deletion blocks and deleted blocks count in
+      // in-memory containerData.
       MetadataStore metadata = KeyUtils.getDB(containerData, conf);
       List<Map.Entry<byte[], byte[]>> underDeletionBlocks = metadata
           .getSequentialRangeKVs(null, Integer.MAX_VALUE,
               MetadataKeyFilters.getDeletingKeyFilter());
+      byte[] transactionID = metadata.get(DFSUtil.string2Bytes(
+          OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX + containerID));
+      if (transactionID != null) {
+        containerData
+            .updateDeleteTransactionId(Longs.fromByteArray(transactionID));
+      }
       containerData.incrPendingDeletionBlocks(underDeletionBlocks.size());
 
       List<Map.Entry<byte[], byte[]>> liveKeys = metadata
@@ -908,7 +916,8 @@ public class ContainerManagerImpl implements ContainerManager {
           .setWriteCount(container.getWriteCount())
           .setReadBytes(container.getReadBytes())
           .setWriteBytes(container.getWriteBytes())
-          .setState(getState(containerId));
+          .setState(getState(containerId))
+          .setDeleteTransactionId(container.getDeleteTransactionId());
 
       crBuilder.addReports(ciBuilder.build());
     }
