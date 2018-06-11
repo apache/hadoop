@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Abstract native raw encoder for all native coders to extend with.
@@ -34,34 +35,44 @@ abstract class AbstractNativeRawEncoder extends RawErasureEncoder {
   public static Logger LOG =
       LoggerFactory.getLogger(AbstractNativeRawEncoder.class);
 
+  // Protect ISA-L coder data structure in native layer from being accessed and
+  // updated concurrently by the init, release and encode functions.
+  protected final ReentrantReadWriteLock encoderLock =
+      new ReentrantReadWriteLock();
+
   public AbstractNativeRawEncoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
   }
 
   @Override
-  protected synchronized void doEncode(ByteBufferEncodingState encodingState)
+  protected void doEncode(ByteBufferEncodingState encodingState)
       throws IOException {
-    if (nativeCoder == 0) {
-      throw new IOException(String.format("%s closed",
-          getClass().getSimpleName()));
-    }
-    int[] inputOffsets = new int[encodingState.inputs.length];
-    int[] outputOffsets = new int[encodingState.outputs.length];
-    int dataLen = encodingState.inputs[0].remaining();
+    encoderLock.readLock().lock();
+    try {
+      if (nativeCoder == 0) {
+        throw new IOException(String.format("%s closed",
+            getClass().getSimpleName()));
+      }
+      int[] inputOffsets = new int[encodingState.inputs.length];
+      int[] outputOffsets = new int[encodingState.outputs.length];
+      int dataLen = encodingState.inputs[0].remaining();
 
-    ByteBuffer buffer;
-    for (int i = 0; i < encodingState.inputs.length; ++i) {
-      buffer = encodingState.inputs[i];
-      inputOffsets[i] = buffer.position();
-    }
+      ByteBuffer buffer;
+      for (int i = 0; i < encodingState.inputs.length; ++i) {
+        buffer = encodingState.inputs[i];
+        inputOffsets[i] = buffer.position();
+      }
 
-    for (int i = 0; i < encodingState.outputs.length; ++i) {
-      buffer = encodingState.outputs[i];
-      outputOffsets[i] = buffer.position();
-    }
+      for (int i = 0; i < encodingState.outputs.length; ++i) {
+        buffer = encodingState.outputs[i];
+        outputOffsets[i] = buffer.position();
+      }
 
-    performEncodeImpl(encodingState.inputs, inputOffsets, dataLen,
-        encodingState.outputs, outputOffsets);
+      performEncodeImpl(encodingState.inputs, inputOffsets, dataLen,
+          encodingState.outputs, outputOffsets);
+    } finally {
+      encoderLock.readLock().unlock();
+    }
   }
 
   protected abstract void performEncodeImpl(

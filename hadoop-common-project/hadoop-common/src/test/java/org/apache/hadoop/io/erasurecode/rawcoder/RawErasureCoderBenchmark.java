@@ -230,6 +230,12 @@ public final class RawErasureCoderBenchmark {
       throw e;
     } finally {
       executor.shutdown();
+      if (encoder != null) {
+        encoder.release();
+      }
+      if (decoder != null) {
+        decoder.release();
+      }
     }
   }
 
