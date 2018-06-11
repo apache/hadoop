@@ -309,7 +309,13 @@ public abstract class Shell {
        : new String[] { "ln", "-s", target, link };
   }
 
-  /** Return a command to read the target of the a symbolic link. */
+  /**
+   * Return a command to read the target of the a symbolic link.
+   *
+   * Deprecated and likely to be deleted in the near future. Please use
+   * FileUtil.symlink().
+   */
+  @Deprecated
   public static String[] getReadlinkCommand(String link) {
     return WINDOWS ?
         new String[] { getWinUtilsPath(), "readlink", link }

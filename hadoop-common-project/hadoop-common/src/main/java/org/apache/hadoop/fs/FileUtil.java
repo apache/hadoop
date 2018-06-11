@@ -196,22 +196,25 @@ public class FileUtil {
    *         a symlink.
    */
   public static String readLink(File f) {
-    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
-     * use getCanonicalPath in File to get the target of the symlink but that
-     * does not indicate if the given path refers to a symlink.
-     */
 
     if (f == null) {
       LOG.warn("Can not read a null symLink");
       return "";
     }
 
-    try {
-      return Shell.execCommand(
-          Shell.getReadlinkCommand(f.toString())).trim();
-    } catch (IOException x) {
-      return "";
+    if (Files.isSymbolicLink(f.toPath())) {
+      java.nio.file.Path p = null;
+      try {
+        p = Files.readSymbolicLink(f.toPath());
+      } catch (Exception e) {
+        LOG.warn("Exception while reading the symbolic link "
+            + f.getAbsolutePath() + ". Exception= " + e.getMessage());
+        return "";
+      }
+      return p.toAbsolutePath().toString();
     }
+    LOG.warn("The file " + f.getAbsolutePath() + " is not a symbolic link.");
+    return "";
   }
 
   /*
