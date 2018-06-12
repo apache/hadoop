@@ -1920,7 +1920,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testInvalidEnvVariableSubstitutionType1() throws IOException {
     Map<String, String> env = new HashMap<String, String>();
     // invalid env
-    env.put("testVar", "version${foo.version}");
+    String invalidEnv = "version${foo.version}";
+    if (Shell.WINDOWS) {
+      invalidEnv = "version%foo%<>^&|=:version%";
+    }
+    env.put("testVar", invalidEnv);
     validateShellExecutorForDifferentEnvs(env);
   }
 
@@ -1931,7 +1935,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testInvalidEnvVariableSubstitutionType2() throws IOException {
     Map<String, String> env = new HashMap<String, String>();
     // invalid env
-    env.put("testPath", "/abc:/${foo.path}:/$bar");
+    String invalidEnv = "/abc:/${foo.path}:/$bar";
+    if (Shell.WINDOWS) {
+      invalidEnv = "/abc:/%foo%<>^&|=:path%:/%bar%";
+    }
+    env.put("testPath", invalidEnv);
     validateShellExecutorForDifferentEnvs(env);
   }
 
