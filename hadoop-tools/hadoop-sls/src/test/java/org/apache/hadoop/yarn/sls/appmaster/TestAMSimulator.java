@@ -48,8 +48,8 @@ public class TestAMSimulator {
   private YarnConfiguration conf;
   private Path metricOutputDir;
 
-  private Class slsScheduler;
-  private Class scheduler;
+  private Class<?> slsScheduler;
+  private Class<?> scheduler;
 
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
@@ -59,7 +59,7 @@ public class TestAMSimulator {
     });
   }
 
-  public TestAMSimulator(Class slsScheduler, Class scheduler) {
+  public TestAMSimulator(Class<?> slsScheduler, Class<?> scheduler) {
     this.slsScheduler = slsScheduler;
     this.scheduler = scheduler;
   }
@@ -110,7 +110,8 @@ public class TestAMSimulator {
   }
 
   private void createMetricOutputDir() {
-    Path testDir = Paths.get(System.getProperty("test.build.data"));
+    Path testDir =
+        Paths.get(System.getProperty("test.build.data", "target/test-dir"));
     try {
       metricOutputDir = Files.createTempDirectory(testDir, "output");
     } catch (IOException e) {
@@ -148,7 +149,9 @@ public class TestAMSimulator {
 
   @After
   public void tearDown() {
-    rm.stop();
+    if (rm != null) {
+      rm.stop();
+    }
 
     deleteMetricOutputDir();
   }
