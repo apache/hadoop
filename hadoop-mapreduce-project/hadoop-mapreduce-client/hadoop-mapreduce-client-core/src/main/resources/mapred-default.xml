@@ -1719,6 +1719,15 @@
 </property>
 
 <property>
+  <name>mapreduce.jobhistory.always-scan-user-dir</name>
+  <value>false</value>
+  <description>Some Cloud FileSystems do not currently update the
+  modification time of directories. To support these filesystems, this
+  configuration value should be set to 'true'.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.jobhistory.done-dir</name>
   <value>${yarn.app.mapreduce.am.staging-dir}/history/done</value>
   <description></description>

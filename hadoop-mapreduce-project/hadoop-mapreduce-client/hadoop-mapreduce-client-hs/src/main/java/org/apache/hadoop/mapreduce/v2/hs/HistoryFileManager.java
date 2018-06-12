@@ -322,7 +322,13 @@ public class HistoryFileManager extends AbstractService {
       // so we need to have additional check.
       // Note: modTime (X second Y millisecond) could be casted to X second or
       // X+1 second.
-      if (modTime != newModTime
+      // MAPREDUCE-7101: Some Cloud FileSystems do not currently update the
+      // modification time of directories. For these, we scan every time if
+      // the 'alwaysScan' is true.
+      boolean alwaysScan = conf.getBoolean(
+          JHAdminConfig.MR_HISTORY_ALWAYS_SCAN_USER_DIR,
+          JHAdminConfig.DEFAULT_MR_HISTORY_ALWAYS_SCAN_USER_DIR);
+      if (alwaysScan || modTime != newModTime
           || (scanTime/1000) == (modTime/1000)
           || (scanTime/1000 + 1) == (modTime/1000)) {
         // reset scanTime before scanning happens
