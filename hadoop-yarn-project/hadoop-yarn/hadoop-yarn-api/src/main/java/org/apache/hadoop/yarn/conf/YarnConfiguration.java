@@ -2665,6 +2665,15 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_PREFIX + "read.authentication.enabled";
 
   /**
+   * The name for setting that controls how often in-memory app level
+   * aggregation is kicked off in timeline collector.
+   */
+  public static final String TIMELINE_SERVICE_AGGREGATION_INTERVAL_SECS =
+      TIMELINE_SERVICE_PREFIX + "app-aggregation-interval-secs";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_AGGREGATION_INTERVAL_SECS = 15;
+  /**
    * The default setting for authentication checks for reading timeline
    * service v2 data.
    */
