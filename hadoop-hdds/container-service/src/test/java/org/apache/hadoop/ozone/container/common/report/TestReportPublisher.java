@@ -18,13 +18,25 @@
 package org.apache.hadoop.ozone.container.common.report;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessage;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -101,6 +113,73 @@ public class TestReportPublisher {
     Assert.assertEquals(1, ((DummyReportPublisher)publisher).getReportCount);
     verify(dummyContext, times(1)).addReport(null);
 
+  }
+
+  @Test
+  public void testAddingReportToHeartbeat() {
+    Configuration conf = new OzoneConfiguration();
+    ReportPublisherFactory factory = new ReportPublisherFactory(conf);
+    ReportPublisher nodeReportPublisher = factory.getPublisherFor(
+        NodeReportProto.class);
+    ReportPublisher containerReportPubliser = factory.getPublisherFor(
+        ContainerReportsProto.class);
+    GeneratedMessage nodeReport = nodeReportPublisher.getReport();
+    GeneratedMessage containerReport = containerReportPubliser.getReport();
+    SCMHeartbeatRequestProto.Builder heartbeatBuilder =
+        SCMHeartbeatRequestProto.newBuilder();
+    heartbeatBuilder.setDatanodeDetails(
+        getDatanodeDetails().getProtoBufMessage());
+    addReport(heartbeatBuilder, nodeReport);
+    addReport(heartbeatBuilder, containerReport);
+    SCMHeartbeatRequestProto heartbeat = heartbeatBuilder.build();
+    Assert.assertTrue(heartbeat.hasNodeReport());
+    Assert.assertTrue(heartbeat.hasContainerReport());
+  }
+
+  /**
+   * Get a datanode details.
+   *
+   * @return DatanodeDetails
+   */
+  private static DatanodeDetails getDatanodeDetails() {
+    String uuid = UUID.randomUUID().toString();
+    Random random = new Random();
+    String ipAddress =
+        random.nextInt(256) + "." + random.nextInt(256) + "." + random
+            .nextInt(256) + "." + random.nextInt(256);
+
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
+    DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
+    builder.setUuid(uuid)
+        .setHostName("localhost")
+        .setIpAddress(ipAddress)
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort);
+    return builder.build();
+  }
+
+  /**
+   * Adds the report to heartbeat.
+   *
+   * @param requestBuilder builder to which the report has to be added.
+   * @param report the report to be added.
+   */
+  private static void addReport(SCMHeartbeatRequestProto.Builder requestBuilder,
+                          GeneratedMessage report) {
+    String reportName = report.getDescriptorForType().getFullName();
+    for (Descriptors.FieldDescriptor descriptor :
+        SCMHeartbeatRequestProto.getDescriptor().getFields()) {
+      String heartbeatFieldName = descriptor.getMessageType().getFullName();
+      if (heartbeatFieldName.equals(reportName)) {
+        requestBuilder.setField(descriptor, report);
+      }
+    }
   }
 
 }

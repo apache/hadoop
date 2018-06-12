@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -125,9 +126,14 @@ public class HeartbeatEndpointTask
    */
   private void addReports(SCMHeartbeatRequestProto.Builder requestBuilder) {
     for (GeneratedMessage report : context.getAllAvailableReports()) {
-      requestBuilder.setField(
-          SCMHeartbeatRequestProto.getDescriptor().findFieldByName(
-              report.getDescriptorForType().getName()), report);
+      String reportName = report.getDescriptorForType().getFullName();
+      for (Descriptors.FieldDescriptor descriptor :
+          SCMHeartbeatRequestProto.getDescriptor().getFields()) {
+        String heartbeatFieldName = descriptor.getMessageType().getFullName();
+        if (heartbeatFieldName.equals(reportName)) {
+          requestBuilder.setField(descriptor, report);
+        }
+      }
     }
   }
 
