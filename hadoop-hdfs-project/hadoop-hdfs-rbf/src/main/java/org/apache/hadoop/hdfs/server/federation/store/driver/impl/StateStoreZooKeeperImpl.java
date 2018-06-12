@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,8 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
   /** Interface to ZooKeeper. */
   private ZKCuratorManager zkManager;
+  /** ACLs for ZooKeeper. */
+  private List<ACL> zkAcl;
 
 
   @Override
@@ -83,6 +86,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start();
+      this.zkAcl = ZKCuratorManager.getZKAcls(conf);
     } catch (IOException e) {
       LOG.error("Cannot initialize the ZK connection", e);
       return false;
@@ -95,7 +99,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       String className, Class<T> clazz) {
     try {
       String checkPath = getNodePath(baseZNode, className);
-      zkManager.createRootDirRecursively(checkPath);
+      zkManager.createRootDirRecursively(checkPath, zkAcl);
       return true;
     } catch (Exception e) {
       LOG.error("Cannot initialize ZK node for {}: {}",
