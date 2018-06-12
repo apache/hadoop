@@ -137,7 +137,8 @@ public class TestDiskChecker {
    * @throws java.io.IOException if any
    */
   protected File createTempFile() throws java.io.IOException {
-    File testDir = new File(System.getProperty("test.build.data"));
+    File testDir =
+        new File(System.getProperty("test.build.data", "target/test-dir"));
     return Files.createTempFile(testDir.toPath(), "test", "tmp").toFile();
   }
 
@@ -147,7 +148,8 @@ public class TestDiskChecker {
    * @throws java.io.IOException if any
    */
   protected File createTempDir() throws java.io.IOException {
-    File testDir = new File(System.getProperty("test.build.data"));
+    File testDir =
+        new File(System.getProperty("test.build.data", "target/test-dir"));
     return Files.createTempDirectory(testDir.toPath(), "test").toFile();
   }
 
