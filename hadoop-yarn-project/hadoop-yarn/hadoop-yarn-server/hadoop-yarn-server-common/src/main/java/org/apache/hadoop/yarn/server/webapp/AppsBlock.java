@@ -32,8 +32,8 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -108,7 +108,7 @@ public class AppsBlock extends HtmlBlock {
         "app.started-time.end must be greater than app.started-time.begin");
     }
     request.setStartRange(
-        new LongRange(appStartedTimeBegain, appStartedTimeEnd));
+        Range.between(appStartedTimeBegain, appStartedTimeEnd));
 
     if (callerUGI == null) {
       appReports = getApplicationReport(request);
@@ -174,19 +174,19 @@ public class AppsBlock extends HtmlBlock {
         .append(app.getAppId())
         .append("</a>\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
               .getUser())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getName())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getType())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getQueue()))).append("\",\"").append(String
                 .valueOf(app.getPriority()))
         .append("\",\"").append(app.getStartedTime())

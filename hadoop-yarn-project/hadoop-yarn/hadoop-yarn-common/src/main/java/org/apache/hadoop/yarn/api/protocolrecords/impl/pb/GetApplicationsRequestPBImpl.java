@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
@@ -51,8 +51,8 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   Set<String> users = null;
   Set<String> queues = null;
   long limit = Long.MAX_VALUE;
-  LongRange start = null;
-  LongRange finish = null;
+  Range<Long> start = null;
+  Range<Long> finish = null;
   private Set<String> applicationTags;
   private ApplicationsRequestScope scope;
 
@@ -103,12 +103,12 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       builder.setScope(ProtoUtils.convertToProtoFormat(scope));
     }
     if (start != null) {
-      builder.setStartBegin(start.getMinimumLong());
-      builder.setStartEnd(start.getMaximumLong());
+      builder.setStartBegin(start.getMinimum());
+      builder.setStartEnd(start.getMaximum());
     }
     if (finish != null) {
-      builder.setFinishBegin(finish.getMinimumLong());
-      builder.setFinishEnd(finish.getMaximumLong());
+      builder.setFinishBegin(finish.getMinimum());
+      builder.setFinishEnd(finish.getMaximum());
     }
     if (limit != Long.MAX_VALUE) {
       builder.setLimit(limit);
@@ -316,20 +316,20 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
-  public LongRange getStartRange() {
+  public Range<Long> getStartRange() {
     if (this.start == null) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
       if (p.hasStartBegin() || p.hasStartEnd()) {
         long begin = p.hasStartBegin() ? p.getStartBegin() : 0L;
         long end = p.hasStartEnd() ? p.getStartEnd() : Long.MAX_VALUE;
-        this.start = new LongRange(begin, end);
+        this.start = Range.between(begin, end);
       }
     }
     return this.start;
   }
 
   @Override
-  public void setStartRange(LongRange range) {
+  public void setStartRange(Range<Long> range) {
     this.start = range;
   }
 
@@ -340,24 +340,24 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       throw new IllegalArgumentException("begin > end in range (begin, " +
           "end): (" + begin + ", " + end + ")");
     }
-    this.start = new LongRange(begin, end);
+    this.start = Range.between(begin, end);
   }
 
   @Override
-  public LongRange getFinishRange() {
+  public Range<Long> getFinishRange() {
     if (this.finish == null) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
       if (p.hasFinishBegin() || p.hasFinishEnd()) {
         long begin = p.hasFinishBegin() ? p.getFinishBegin() : 0L;
         long end = p.hasFinishEnd() ? p.getFinishEnd() : Long.MAX_VALUE;
-        this.finish = new LongRange(begin, end);
+        this.finish = Range.between(begin, end);
       }
     }
     return this.finish;
   }
 
   @Override
-  public void setFinishRange(LongRange range) {
+  public void setFinishRange(Range<Long> range) {
     this.finish = range;
   }
 
@@ -367,7 +367,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       throw new IllegalArgumentException("begin > end in range (begin, " +
           "end): (" + begin + ", " + end + ")");
     }
-    this.finish = new LongRange(begin, end);
+    this.finish = Range.between(begin, end);
   }
 
   @Override

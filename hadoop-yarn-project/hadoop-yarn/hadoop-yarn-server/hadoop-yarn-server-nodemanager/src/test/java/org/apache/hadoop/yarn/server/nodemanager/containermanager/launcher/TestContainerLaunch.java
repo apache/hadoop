@@ -1461,13 +1461,13 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // Basic tests: less length, exact length, max+1 length 
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("A", 1024)));
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat(
+        org.apache.commons.lang3.StringUtils.repeat(
             "E", Shell.WINDOWS_MAX_SHELL_LENGTH - callCmd.length())));
     try {
       builder.command(Arrays.asList(
-          org.apache.commons.lang.StringUtils.repeat(
+          org.apache.commons.lang3.StringUtils.repeat(
               "X", Shell.WINDOWS_MAX_SHELL_LENGTH -callCmd.length() + 1)));
       fail("longCommand was expected to throw");
     } catch(IOException e) {
@@ -1476,21 +1476,21 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // Composite tests, from parts: less, exact and +
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("A", 1024),
-        org.apache.commons.lang.StringUtils.repeat("A", 1024),
-        org.apache.commons.lang.StringUtils.repeat("A", 1024)));
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024),
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024),
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
 
     // buildr.command joins the command parts with an extra space
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("E", 4095),
-        org.apache.commons.lang.StringUtils.repeat("E", 2047),
-        org.apache.commons.lang.StringUtils.repeat("E", 2047 - callCmd.length())));
+        org.apache.commons.lang3.StringUtils.repeat("E", 4095),
+        org.apache.commons.lang3.StringUtils.repeat("E", 2047),
+        org.apache.commons.lang3.StringUtils.repeat("E", 2047 - callCmd.length())));
 
     try {
       builder.command(Arrays.asList(
-          org.apache.commons.lang.StringUtils.repeat("X", 4095), 
-          org.apache.commons.lang.StringUtils.repeat("X", 2047),
-          org.apache.commons.lang.StringUtils.repeat("X", 2048 - callCmd.length())));
+          org.apache.commons.lang3.StringUtils.repeat("X", 4095),
+          org.apache.commons.lang3.StringUtils.repeat("X", 2047),
+          org.apache.commons.lang3.StringUtils.repeat("X", 2048 - callCmd.length())));
       fail("long commands was expected to throw");
     } catch(IOException e) {
       assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
@@ -1508,11 +1508,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test env
-    builder.env("somekey", org.apache.commons.lang.StringUtils.repeat("A", 1024));
-    builder.env("somekey", org.apache.commons.lang.StringUtils.repeat(
+    builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat("A", 1024));
+    builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat(
         "A", Shell.WINDOWS_MAX_SHELL_LENGTH - ("@set somekey=").length()));
     try {
-      builder.env("somekey", org.apache.commons.lang.StringUtils.repeat(
+      builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat(
           "A", Shell.WINDOWS_MAX_SHELL_LENGTH - ("@set somekey=").length()) + 1);
       fail("long env was expected to throw");
     } catch(IOException e) {
@@ -1533,11 +1533,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test mkdir
-    builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat("A", 1024)));
-    builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat("E",
+    builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
+    builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat("E",
         (Shell.WINDOWS_MAX_SHELL_LENGTH - mkDirCmd.length()) / 2)));
     try {
-      builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat(
+      builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat(
           "X", (Shell.WINDOWS_MAX_SHELL_LENGTH - mkDirCmd.length())/2 +1)));
       fail("long mkdir was expected to throw");
     } catch(IOException e) {
@@ -1557,18 +1557,18 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test link
-    builder.link(new Path(org.apache.commons.lang.StringUtils.repeat("A", 1024)),
-        new Path(org.apache.commons.lang.StringUtils.repeat("B", 1024)));
+    builder.link(new Path(org.apache.commons.lang3.StringUtils.repeat("A", 1024)),
+        new Path(org.apache.commons.lang3.StringUtils.repeat("B", 1024)));
     builder.link(
-        new Path(org.apache.commons.lang.StringUtils.repeat(
+        new Path(org.apache.commons.lang3.StringUtils.repeat(
             "E", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2)),
-        new Path(org.apache.commons.lang.StringUtils.repeat(
+        new Path(org.apache.commons.lang3.StringUtils.repeat(
             "F", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2)));
     try {
       builder.link(
-          new Path(org.apache.commons.lang.StringUtils.repeat(
+          new Path(org.apache.commons.lang3.StringUtils.repeat(
               "X", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2 + 1)),
-          new Path(org.apache.commons.lang.StringUtils.repeat(
+          new Path(org.apache.commons.lang3.StringUtils.repeat(
               "Y", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2) + 1));
       fail("long link was expected to throw");
     } catch(IOException e) {

@@ -36,7 +36,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -538,7 +538,7 @@ public final class FederationStateStoreFacade {
         throws CacheLoaderException {
       // The FACADE does not use the Cache's getAll API. Hence this is not
       // required to be implemented
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
   }
 

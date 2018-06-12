@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -457,7 +457,7 @@ public class ResourceUtils {
     }
     String units = resourceValue.substring(i);
 
-    if((StringUtils.isAlpha(units))) {
+    if (StringUtils.isAlpha(units) || units.equals("")) {
       resource[0] = units;
       resource[1] = resourceValue.substring(0, i);
       return resource;

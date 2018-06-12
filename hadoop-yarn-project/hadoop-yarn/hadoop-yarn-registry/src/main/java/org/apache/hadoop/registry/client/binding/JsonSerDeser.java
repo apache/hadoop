@@ -19,7 +19,7 @@
 package org.apache.hadoop.registry.client.binding;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;

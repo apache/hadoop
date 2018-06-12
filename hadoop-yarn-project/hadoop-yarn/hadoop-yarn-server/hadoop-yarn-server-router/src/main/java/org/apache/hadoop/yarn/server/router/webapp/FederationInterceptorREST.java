@@ -39,7 +39,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1040,213 +1040,213 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public ClusterInfo getClusterInfo() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
       String appId, String time) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateApplicationPriority(AppPriority targetPriority,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response postDelegationToken(DelegationToken tokenData,
       HttpServletRequest hsr) throws AuthorizationException, IOException,
       InterruptedException, Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response postDelegationTokenExpiration(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response cancelDelegationToken(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response listReservation(String queue, String reservationId,
       long startTime, long endTime, boolean includeResourceAllocations,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr, String appId,
       String type) throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ContainerInfo getContainer(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override

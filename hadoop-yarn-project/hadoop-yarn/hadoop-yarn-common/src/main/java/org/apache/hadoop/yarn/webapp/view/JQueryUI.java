@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeEcmaScript;
 import static org.apache.hadoop.yarn.util.StringHelper.djoin;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.split;
@@ -146,7 +146,7 @@ public class JQueryUI extends HtmlBlock {
       }      
       int pos = init.indexOf('{') + 1;  
       init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
-      list.add(join("  $('", escapeJavaScript(selector), "').dataTable(", init,
+      list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
                ").fnSetFilteringDelay(288);"));      
       
     }
@@ -174,7 +174,7 @@ public class JQueryUI extends HtmlBlock {
       if (init.isEmpty()) {
         init = defaultInit;
       }
-      list.add(join("  $('", escapeJavaScript(selector),
+      list.add(join("  $('", escapeEcmaScript(selector),
                "').click(function() { $(this).children('.dialog').dialog(",
                init, "); return false; });"));
     }

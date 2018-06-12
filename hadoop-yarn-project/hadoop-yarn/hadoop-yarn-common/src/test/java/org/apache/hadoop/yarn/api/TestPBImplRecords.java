@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.api;
 import java.io.IOException;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
@@ -360,7 +360,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
 
   @BeforeClass
   public static void setup() throws Exception {
-    typeValueCache.put(LongRange.class, new LongRange(1000, 2000));
+    typeValueCache.put(Range.class, Range.between(1000L, 2000L));
     typeValueCache.put(URL.class, URL.newInstance(
         "http", "localhost", 8080, "file0"));
     typeValueCache.put(SerializedException.class,

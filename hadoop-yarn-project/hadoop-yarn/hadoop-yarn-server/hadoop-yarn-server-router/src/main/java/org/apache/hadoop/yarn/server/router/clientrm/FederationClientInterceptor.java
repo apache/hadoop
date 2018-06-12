@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -564,172 +564,172 @@ public class FederationClientInterceptor
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetClusterNodesResponse getClusterNodes(GetClusterNodesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetNewReservationResponse getNewReservation(
       GetNewReservationRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ReservationListResponse listReservations(
       ReservationListRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ReservationUpdateResponse updateReservation(
       ReservationUpdateRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetNodesToLabelsResponse getNodeToLabels(
       GetNodesToLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetLabelsToNodesResponse getLabelsToNodes(
       GetLabelsToNodesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetClusterNodeLabelsResponse getClusterNodeLabels(
       GetClusterNodeLabelsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public FailApplicationAttemptResponse failApplicationAttempt(
       FailApplicationAttemptRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public UpdateApplicationPriorityResponse updateApplicationPriority(
       UpdateApplicationPriorityRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetAllResourceProfilesResponse getResourceProfiles(
       GetAllResourceProfilesRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetResourceProfileResponse getResourceProfile(
       GetResourceProfileRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 }
