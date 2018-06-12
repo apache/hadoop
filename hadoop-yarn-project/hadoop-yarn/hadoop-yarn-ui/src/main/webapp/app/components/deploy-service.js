@@ -167,7 +167,7 @@ export default Ember.Component.extend({
     if (this.get('isLoading')) {
       return false;
     }
-    if (this.get('isUserNameGiven')) {
+    if (this.get('isSecurityNotEnabled') && this.get('isUserNameGiven')) {
       return false;
     }
     if (this.get('isStandardViewType')) {
