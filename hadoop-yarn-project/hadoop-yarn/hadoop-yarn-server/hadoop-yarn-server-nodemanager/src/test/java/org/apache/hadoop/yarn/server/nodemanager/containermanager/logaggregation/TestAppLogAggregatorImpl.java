@@ -316,7 +316,7 @@ public class TestAppLogAggregatorImpl {
           for(int i = 0; i < tasks.length; i++) {
             FileDeletionTask task = (FileDeletionTask) tasks[i];
             for (Path path: task.getBaseDirs()) {
-              paths.add(path.toUri().getRawPath());
+              paths.add(new File(path.toUri().getRawPath()).getAbsolutePath());
             }
           }
           verifyFilesToDelete(expectedPathsForDeletion, paths);
