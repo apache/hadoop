@@ -90,7 +90,7 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     this.confStorePath = getNodePath(znodeParentPath, CONF_STORE_PATH);
     this.fencingNodePath = getNodePath(znodeParentPath, FENCING_PATH);
 
-    zkManager.createRootDirRecursively(znodeParentPath);
+    zkManager.createRootDirRecursively(znodeParentPath, zkAcl);
     zkManager.delete(fencingNodePath);
 
     if (!zkManager.exists(logsPath)) {

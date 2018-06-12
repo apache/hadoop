@@ -379,7 +379,7 @@ public class ZKRMStateStore extends RMStateStore {
   @Override
   public synchronized void startInternal() throws Exception {
     // ensure root dirs exist
-    zkManager.createRootDirRecursively(znodeWorkingPath);
+    zkManager.createRootDirRecursively(znodeWorkingPath, zkAcl);
     create(zkRootNodePath);
     setRootNodeAcls();
     delete(fencingNodePath);
