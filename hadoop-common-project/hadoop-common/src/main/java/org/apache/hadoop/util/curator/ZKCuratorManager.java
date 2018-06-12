@@ -301,6 +301,18 @@ public final class ZKCuratorManager {
    * @throws Exception If it cannot create the file.
    */
   public void createRootDirRecursively(String path) throws Exception {
+    createRootDirRecursively(path, null);
+  }
+
+  /**
+   * Utility function to ensure that the configured base znode exists.
+   * This recursively creates the znode as well as all of its parents.
+   * @param path Path of the znode to create.
+   * @param zkAcl ACLs for ZooKeeper.
+   * @throws Exception If it cannot create the file.
+   */
+  public void createRootDirRecursively(String path, List<ACL> zkAcl)
+      throws Exception {
     String[] pathParts = path.split("/");
     Preconditions.checkArgument(
         pathParts.length >= 1 && pathParts[0].isEmpty(),
@@ -309,7 +321,7 @@ public final class ZKCuratorManager {
 
     for (int i = 1; i < pathParts.length; i++) {
       sb.append("/").append(pathParts[i]);
-      create(sb.toString());
+      create(sb.toString(), zkAcl);
     }
   }
 
