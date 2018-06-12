@@ -105,7 +105,7 @@ function updateConfigs(application) {
     $.ajax({
       type: 'GET',
       dataType: 'json',
-      async: true,
+      async: false,
       context: this,
       url: getTimeLineURL(rmhost, isHttpsSchemeEnabled),
       success: function(data) {
