@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.NullWritable;
@@ -526,16 +527,15 @@ public class TestFileOutputCommitter {
 
     // Ensure getReaders call works and also ignores
     // hidden filenames (_ or . prefixes)
+    MapFile.Reader[] readers = {};
     try {
-      MapFileOutputFormat.getReaders(outDir, conf);
-    } catch (Exception e) {
-      fail("Fail to read from MapFileOutputFormat: " + e);
-      e.printStackTrace();
+      readers = MapFileOutputFormat.getReaders(outDir, conf);
+      // validate output
+      validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);
+    } finally {
+      IOUtils.cleanupWithLogger(null, readers);
+      FileUtil.fullyDelete(new File(outDir.toString()));
     }
-
-    // validate output
-    validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);
-    FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
   @Test
