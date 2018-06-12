@@ -25,6 +25,7 @@ import org.apache.curator.test.TestingServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.io.Text;
@@ -206,7 +207,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     private RMStateStore createStore(Configuration conf) throws Exception {
       workingZnode = "/jira/issue/3077/rmstore";
-      conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+      conf.set(CommonConfigurationKeys.ZK_ADDRESS,
           curatorTestingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
@@ -338,7 +339,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       public RMStateStore getRMStateStore() throws Exception {
         YarnConfiguration conf = new YarnConfiguration();
         workingZnode = "/jira/issue/3077/rmstore";
-        conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+        conf.set(CommonConfigurationKeys.ZK_ADDRESS,
             curatorTestingServer.getConnectString());
         conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
         this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
@@ -379,9 +380,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.set(YarnConfiguration.RM_STORE, ZKRMStateStore.class.getName());
-    conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+    conf.set(CommonConfigurationKeys.ZK_ADDRESS,
         curatorTestServer.getConnectString());
-    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
+    conf.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
     conf.set(YarnConfiguration.RM_HA_ID, rmId);
     conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "localhost:0");
     conf.setBoolean(
@@ -418,31 +419,37 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   public void testZKRootPathAcls() throws Exception {
     StateChangeRequestInfo req = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
-    String rootPath =
-        YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH + "/" +
-            ZKRMStateStore.ROOT_ZNODE_NAME;
+    String parentPath = YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH;
+    String rootPath = parentPath + "/" + ZKRMStateStore.ROOT_ZNODE_NAME;
 
     // Start RM with HA enabled
     Configuration conf =
         createHARMConf("rm1,rm2", "rm1", 1234, false, curatorTestingServer);
+    conf.set(YarnConfiguration.RM_ZK_ACL, "world:anyone:rwca");
+    int perm = 23;// rwca=1+2+4+16
     ResourceManager rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    List<ACL> acls =
-        ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    ZKRMStateStore stateStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
+    List<ACL> acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 2);
     // CREATE and DELETE permissions for root node based on RM ID
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
         "world", "anyone", Perms.ALL ^ (Perms.CREATE | Perms.DELETE), acls);
+
+    acls = stateStore.getACL(parentPath);
+    assertEquals(1, acls.size());
+    assertEquals(perm, acls.get(0).getPerms());
     rm.close();
 
     // Now start RM with HA disabled. NoAuth Exception should not be thrown.
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, false);
+    conf.set(YarnConfiguration.RM_ZK_ACL, YarnConfiguration.DEFAULT_RM_ZK_ACL);
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    acls = ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 1);
     verifyZKACL("world", "anyone", Perms.ALL, acls);
     rm.close();
@@ -452,7 +459,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm = new MockRM(conf);
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
-    acls = ((ZKRMStateStore)rm.getRMContext().getStateStore()).getACL(rootPath);
+    acls = stateStore.getACL(rootPath);
     assertEquals(acls.size(), 2);
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
