@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.OzoneVolume;
@@ -35,14 +36,19 @@ import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -53,9 +59,22 @@ import static org.junit.Assert.assertTrue;
 /**
  * Test Ozone Volumes Lifecycle.
  */
+@RunWith(value = Parameterized.class)
 public class TestVolume {
   private static MiniOzoneCluster cluster = null;
   private static ClientProtocol client = null;
+  private static OzoneConfiguration conf;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> clientProtocol() {
+    Object[][] params = new Object[][] {
+        {RpcClient.class},
+        {RestClient.class}};
+    return Arrays.asList(params);
+  }
+
+  @Parameterized.Parameter
+  public Class clientProtocol;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -68,7 +87,7 @@ public class TestVolume {
    */
   @BeforeClass
   public static void init() throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    conf = new OzoneConfiguration();
 
     String path = GenericTestUtils
         .getTempPath(TestVolume.class.getSimpleName());
@@ -81,8 +100,15 @@ public class TestVolume {
 
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
+  }
 
-    client = new RpcClient(conf);
+  @Before
+  public void setup() throws Exception {
+    if (clientProtocol.equals(RestClient.class)) {
+      client = new RestClient(conf);
+    } else {
+      client = new RpcClient(conf);
+    }
   }
 
   /**
@@ -202,6 +228,9 @@ public class TestVolume {
 
   @Test
   public void testListVolume() throws OzoneException, IOException {
+    if (clientProtocol.equals(RestClient.class)) {
+      return;
+    }
     runTestListVolume(client);
   }
 
@@ -286,6 +315,9 @@ public class TestVolume {
 
   @Test
   public void testListVolumes() throws Exception {
+    if (clientProtocol.equals(RestClient.class)) {
+      return;
+    }
     runTestListVolumes(client);
   }
 
