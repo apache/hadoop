@@ -103,13 +103,13 @@ public class ServiceClientTest extends ServiceClient {
   }
 
   @Override
-  public int actionStart(String serviceName)
+  public ApplicationId actionStartAndGetId(String serviceName)
       throws YarnException, IOException {
     if (serviceName != null && serviceName.equals("jenkins")) {
       ApplicationId appId =
           ApplicationId.newInstance(System.currentTimeMillis(), 1);
       serviceAppId.put(serviceName, appId);
-      return EXIT_SUCCESS;
+      return appId;
     } else {
       throw new ApplicationNotFoundException("");
     }

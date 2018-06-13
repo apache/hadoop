@@ -1003,6 +1003,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
   @Override
   public int actionStart(String serviceName) throws YarnException, IOException {
+    actionStartAndGetId(serviceName);
+    return EXIT_SUCCESS;
+  }
+
+  public ApplicationId actionStartAndGetId(String serviceName) throws
+      YarnException, IOException {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     Service liveService = getStatus(serviceName);
     if (liveService == null ||
@@ -1019,11 +1025,11 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       // write app definition on to hdfs
       Path appJson = ServiceApiUtil.writeAppDefinition(fs, appDir, service);
       LOG.info("Persisted service " + service.getName() + " at " + appJson);
-      return 0;
+      return appId;
     } else {
       LOG.info("Finalize service {} upgrade");
-      ApplicationReport appReport =
-          yarnClient.getApplicationReport(getAppId(serviceName));
+      ApplicationId appId = getAppId(serviceName);
+      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (StringUtils.isEmpty(appReport.getHost())) {
         throw new YarnException(serviceName + " AM hostname is empty");
       }
@@ -1032,7 +1038,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       RestartServiceRequestProto.Builder requestBuilder =
           RestartServiceRequestProto.newBuilder();
       proxy.restart(requestBuilder.build());
-      return 0;
+      return appId;
     }
   }
 
