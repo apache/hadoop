@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public class BytesWritable extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
+  private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
   private static final int LENGTH_BYTES = 4;
   private static final byte[] EMPTY_BYTES = {};
 
@@ -121,7 +122,7 @@ public class BytesWritable extends BinaryComparable
   public void setSize(int size) {
     if (size > getCapacity()) {
       // Avoid overflowing the int too early by casting to a long.
-      long newSize = Math.min(Integer.MAX_VALUE, (3L * size) / 2L);
+      long newSize = Math.min(MAX_ARRAY_SIZE, (3L * size) / 2L);
       setCapacity((int) newSize);
     }
     this.size = size;
