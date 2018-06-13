@@ -62,6 +62,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -270,6 +271,7 @@ public class EditLogTailer {
         LOG.debug("lastTxnId: " + lastTxnId);
       }
       Collection<EditLogInputStream> streams;
+      long startTime = Time.monotonicNow();
       try {
         streams = editLog.selectInputStreams(lastTxnId + 1, 0,
             null, inProgressOk, true);
@@ -280,6 +282,9 @@ public class EditLogTailer {
         LOG.warn("Edits tailer failed to find any streams. Will try again " +
             "later.", ioe);
         return;
+      } finally {
+        NameNode.getNameNodeMetrics().addEditLogFetchTime(
+            Time.monotonicNow() - startTime);
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("edit streams to load from: " + streams.size());
@@ -299,6 +304,7 @@ public class EditLogTailer {
           LOG.debug(String.format("Loaded %d edits starting from txid %d ",
               editsLoaded, lastTxnId));
         }
+        NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
 
       if (editsLoaded > 0) {
@@ -423,10 +429,15 @@ public class EditLogTailer {
           // name system lock will be acquired to further block even the block
           // state updates.
           namesystem.cpLockInterruptibly();
+          long startTime = Time.monotonicNow();
           try {
+            NameNode.getNameNodeMetrics().addEditLogTailInterval(
+                startTime - lastLoadTimeMs);
             doTailEdits();
           } finally {
             namesystem.cpUnlock();
+            NameNode.getNameNodeMetrics().addEditLogTailTime(
+                Time.monotonicNow() - startTime);
           }
           //Update NameDirSize Metric
           namesystem.getFSImage().getStorage().updateNameDirSize();

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -1054,5 +1055,45 @@ public class TestNameNodeMetrics {
         tmpCluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testEditLogTailing() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 60);
+    MiniDFSCluster dfsCluster = null;
+    try {
+      dfsCluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .nnTopology(MiniDFSNNTopology.simpleHATopology())
+          .build();
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+      dfsCluster.transitionToActive(0);
+      dfsCluster.waitActive();
+
+      Path testDir = new Path("/testdir");
+      dfs.mkdir(testDir, FsPermission.getDefault());
+
+      dfsCluster.getNameNodeRpc(0).rollEditLog();
+      Thread.sleep(2 * 1000);
+
+      // We need to get the metrics for the SBN (excluding the NN from dfs
+      // cluster created in setUp() and the ANN).
+      MetricsRecordBuilder rb = getMetrics(NN_METRICS+"-2");
+      assertQuantileGauges("EditLogTailTime60s", rb);
+      assertQuantileGauges("EditLogFetchTime60s", rb);
+      assertQuantileGauges("NumEditLogLoaded60s", rb, "Count");
+      assertQuantileGauges("EditLogTailInterval60s", rb);
+      assertCounterGt("EditLogTailTimeNumOps", 0L, rb);
+      assertCounterGt("EditLogFetchTimeNumOps", 0L, rb);
+      assertCounterGt("NumEditLogLoadedNumOps", 0L, rb);
+      assertCounterGt("EditLogTailIntervalNumOps", 0L, rb);
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+
   }
 }
