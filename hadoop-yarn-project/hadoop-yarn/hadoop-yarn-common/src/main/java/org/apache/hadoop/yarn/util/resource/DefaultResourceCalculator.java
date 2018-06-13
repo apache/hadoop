@@ -136,13 +136,18 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean isAnyMajorResourceZero(Resource resource) {
-    return resource.getMemorySize() == 0f;
-  }
-
-  @Override
   public Resource normalizeDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
         roundDown((r.getMemorySize()), stepFactor.getMemorySize()));
+  }
+
+  @Override
+  public boolean isAnyMajorResourceZeroOrNegative(Resource resource) {
+    return resource.getMemorySize() <= 0;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceAboveZero(Resource resource) {
+    return resource.getMemorySize() > 0;
   }
 }

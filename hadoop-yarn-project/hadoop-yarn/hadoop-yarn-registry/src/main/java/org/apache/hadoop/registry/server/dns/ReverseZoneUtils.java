@@ -21,7 +21,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_DNS_SPLIT_REVERSE_ZONE_RANGE;

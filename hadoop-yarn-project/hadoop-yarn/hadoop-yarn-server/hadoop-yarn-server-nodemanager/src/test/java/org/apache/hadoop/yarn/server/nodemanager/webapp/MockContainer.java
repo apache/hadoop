@@ -242,6 +242,11 @@ public class MockContainer implements Container {
   }
 
   @Override
+  public long getContainerLaunchTime() {
+    return 0;
+  }
+
+  @Override
   public ResourceMappings getResourceMappings() {
     return null;
   }

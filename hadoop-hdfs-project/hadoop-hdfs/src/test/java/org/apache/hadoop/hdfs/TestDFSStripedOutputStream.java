@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -220,5 +221,20 @@ public class TestDFSStripedOutputStream {
 
     StripedFileTestUtil.checkData(fs, testPath, writeBytes,
         new ArrayList<DatanodeInfo>(), null, blockSize * dataBlocks);
+  }
+
+  @Test
+  public void testFileBlockSizeSmallerThanCellSize() throws Exception {
+    final Path path = new Path("testFileBlockSizeSmallerThanCellSize");
+    final byte[] bytes = StripedFileTestUtil.generateBytes(cellSize * 2);
+    try {
+      DFSTestUtil.writeFile(fs, path, bytes, cellSize / 2);
+      fail("Creating a file with block size smaller than "
+          + "ec policy's cell size should fail");
+    } catch (IOException expected) {
+      LOG.info("Caught expected exception", expected);
+      GenericTestUtils
+          .assertExceptionContains("less than the cell size", expected);
+    }
   }
 }

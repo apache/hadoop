@@ -17,6 +17,7 @@
  */
 
 import Ember from 'ember';
+import Constants from 'yarn-ui/constants';
 
 export default Ember.Controller.extend({
   queryParams: ["service"],
@@ -118,16 +119,17 @@ export default Ember.Controller.extend({
       if (logFile) {
         this.set("_isLoadingBottomPanel", true);
         this.set("selectedLogFileName", logFile);
-        this.fetchContentForLogFile(this.get("selectedContainerId"), logFile)
+        var id = this.get("selectedContainerId") + Constants.PARAM_SEPARATOR + logFile;
+        this.fetchContentForLogFile(id)
           .then(
-            content => {
-              this.set("selectedLogFileContent", content.trim());
+            hash => {
+              this.set("selectedLogFileContent", hash.logs.get('logs').trim());
             },
             () => {
               this.set("selectedLogFileContent", "");
             }
           )
-          .always(() => {
+          .then(() => {
             this.set("_isLoadingBottomPanel", false);
           });
       } else {
@@ -224,9 +226,10 @@ export default Ember.Controller.extend({
     });
   },
 
-  fetchContentForLogFile(containerId, logFile) {
-    let logAdapter = this.store.adapterFor("yarn-log");
-    return logAdapter.fetchLogFileContent(containerId, logFile);
+  fetchContentForLogFile(id) {
+    return Ember.RSVP.hash({
+      logs: this.store.findRecord('yarn-app-log', id)
+    });
   },
 
   resetAfterRefresh() {

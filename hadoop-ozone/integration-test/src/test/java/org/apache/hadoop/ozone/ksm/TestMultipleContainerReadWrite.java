@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;

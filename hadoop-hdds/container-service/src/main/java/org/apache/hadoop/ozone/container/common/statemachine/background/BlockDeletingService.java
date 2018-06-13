@@ -175,8 +175,8 @@ public class BlockDeletingService extends BackgroundService{
       // Scan container's db and get list of under deletion blocks
       MetadataStore meta = KeyUtils.getDB(containerData, conf);
       // # of blocks to delete is throttled
-      KeyPrefixFilter filter = new KeyPrefixFilter(
-          OzoneConsts.DELETING_KEY_PREFIX);
+      KeyPrefixFilter filter =
+          new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
       List<Map.Entry<byte[], byte[]>> toDeleteBlocks =
           meta.getSequentialRangeKVs(null, blockLimitPerTask, filter);
       if (toDeleteBlocks.isEmpty()) {
@@ -214,10 +214,16 @@ public class BlockDeletingService extends BackgroundService{
         }
       });
 
-      // Once files are deleted ... clean up DB
+      // Once files are deleted... replace deleting entries with deleted entries
       BatchOperation batch = new BatchOperation();
-      succeedBlocks.forEach(entry ->
-          batch.delete(DFSUtil.string2Bytes(entry)));
+      succeedBlocks.forEach(entry -> {
+        String blockId =
+            entry.substring(OzoneConsts.DELETING_KEY_PREFIX.length());
+        String deletedEntry = OzoneConsts.DELETED_KEY_PREFIX + blockId;
+        batch.put(DFSUtil.string2Bytes(deletedEntry),
+            DFSUtil.string2Bytes(blockId));
+        batch.delete(DFSUtil.string2Bytes(entry));
+      });
       meta.writeBatch(batch);
       // update count of pending deletion blocks in in-memory container status
       containerManager.decrPendingDeletionBlocks(succeedBlocks.size(),

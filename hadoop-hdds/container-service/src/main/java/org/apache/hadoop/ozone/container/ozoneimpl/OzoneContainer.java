@@ -19,15 +19,14 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
@@ -41,6 +40,8 @@ import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background
     .BlockDeletingService;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.container.common.transport.server
+    .XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server
     .XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
@@ -123,8 +124,14 @@ public class OzoneContainer {
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
+    boolean useGrpc = this.ozoneConfig.getBoolean(
+        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     server = new XceiverServerSpi[]{
-        new XceiverServer(datanodeDetails, this.ozoneConfig, this.dispatcher),
+        useGrpc ? new XceiverServerGrpc(datanodeDetails,
+            this.ozoneConfig, this.dispatcher) :
+            new XceiverServer(datanodeDetails,
+                this.ozoneConfig, this.dispatcher),
       XceiverServerRatis
           .newXceiverServerRatis(datanodeDetails, this.ozoneConfig, dispatcher)
     };
@@ -212,7 +219,7 @@ public class OzoneContainer {
   /**
    * Returns node report of container storage usage.
    */
-  public SCMNodeReport getNodeReport() throws IOException {
+  public NodeReportProto getNodeReport() throws IOException {
     return this.manager.getNodeReport();
   }
 
@@ -248,7 +255,7 @@ public class OzoneContainer {
    * @return - container report.
    * @throws IOException
    */
-  public ContainerReportsRequestProto getContainerReport() throws IOException {
+  public ContainerReportsProto getContainerReport() throws IOException {
     return this.manager.getContainerReport();
   }
 
@@ -258,8 +265,8 @@ public class OzoneContainer {
    * @return - List of closed containers.
    * @throws IOException
    */
-  public List<ContainerData> getContainerReports() throws IOException {
-    return this.manager.getContainerReports();
+  public List<ContainerData> getClosedContainerReports() throws IOException {
+    return this.manager.getClosedContainerReports();
   }
 
   @VisibleForTesting
@@ -267,11 +274,4 @@ public class OzoneContainer {
     return this.manager;
   }
 
-  /**
-   * Get the container report state to send via HB to SCM.
-   * @return the container report state.
-   */
-  public ReportState getContainerReportState() {
-    return this.manager.getContainerReportState();
-  }
 }

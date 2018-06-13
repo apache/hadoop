@@ -71,8 +71,14 @@ public class ServiceMaster extends CompositeService {
       LoggerFactory.getLogger(ServiceMaster.class);
 
   public static final String YARNFILE_OPTION = "yarnfile";
+  public static final String SERVICE_NAME_OPTION = "service_name";
+  public static final String KEYTAB_OPTION = "keytab";
+  public static final String PRINCIPAL_NAME_OPTION = "principal_name";
 
-  private static String serviceDefPath;
+  private String serviceDefPath;
+  private String serviceName;
+  private String serviceKeytab;
+  private String servicePrincipalName;
   protected ServiceContext context;
 
   public ServiceMaster(String name) {
@@ -85,15 +91,24 @@ public class ServiceMaster extends CompositeService {
     context = new ServiceContext();
     Path appDir = getAppDir();
     context.serviceHdfsDir = appDir.toString();
-    SliderFileSystem fs = new SliderFileSystem(conf);
-    context.fs = fs;
-    fs.setAppDir(appDir);
-    loadApplicationJson(context, fs);
-
     context.tokens = recordTokensForContainers();
+    Credentials credentials = null;
     if (UserGroupInformation.isSecurityEnabled()) {
+      credentials = UserGroupInformation.getCurrentUser().getCredentials();
       doSecureLogin();
     }
+    SliderFileSystem fs = new SliderFileSystem(conf);
+    fs.setAppDir(appDir);
+    context.fs = fs;
+    loadApplicationJson(context, fs);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // add back the credentials
+      if (credentials != null) {
+        UserGroupInformation.getCurrentUser().addCredentials(credentials);
+      }
+      removeHdfsDelegationToken(UserGroupInformation.getLoginUser());
+    }
+
     // Take yarn config from YarnFile and merge them into YarnConfiguration
     for (Map.Entry<String, String> entry : context.service
         .getConfiguration().getProperties().entrySet()) {
@@ -157,13 +172,12 @@ public class ServiceMaster extends CompositeService {
   private void doSecureLogin()
       throws IOException, URISyntaxException {
     // read the localized keytab specified by user
-    File keytab = new File(String.format(KEYTAB_LOCATION,
-        context.service.getName()));
+    File keytab = new File(String.format(KEYTAB_LOCATION, getServiceName()));
     if (!keytab.exists()) {
       LOG.info("No keytab localized at " + keytab);
       // Check if there exists a pre-installed keytab at host
-      String preInstalledKeytab = context.service.getKerberosPrincipal()
-          .getKeytab();
+      String preInstalledKeytab = context.service == null ? this.serviceKeytab
+          : context.service.getKerberosPrincipal().getKeytab();
       if (!StringUtils.isEmpty(preInstalledKeytab)) {
         URI uri = new URI(preInstalledKeytab);
         if (uri.getScheme().equals("file")) {
@@ -177,29 +191,24 @@ public class ServiceMaster extends CompositeService {
       LOG.info("No keytab exists: " + keytab);
       return;
     }
-    String principal = context.service.getKerberosPrincipal()
-        .getPrincipalName();
+    String principal = context.service == null ? this.servicePrincipalName
+        : context.service.getKerberosPrincipal().getPrincipalName();
     if (StringUtils.isEmpty((principal))) {
       principal = UserGroupInformation.getLoginUser().getShortUserName();
       LOG.info("No principal name specified.  Will use AM " +
           "login identity {} to attempt keytab-based login", principal);
     }
 
-    Credentials credentials = UserGroupInformation.getCurrentUser()
-        .getCredentials();
     LOG.info("User before logged in is: " + UserGroupInformation
         .getCurrentUser());
     String principalName = SecurityUtil.getServerPrincipal(principal,
         ServiceUtils.getLocalHostName(getConfig()));
     UserGroupInformation.loginUserFromKeytab(principalName,
         keytab.getAbsolutePath());
-    // add back the credentials
-    UserGroupInformation.getCurrentUser().addCredentials(credentials);
     LOG.info("User after logged in is: " + UserGroupInformation
         .getCurrentUser());
     context.principal = principalName;
     context.keytab = keytab.getAbsolutePath();
-    removeHdfsDelegationToken(UserGroupInformation.getLoginUser());
   }
 
   // Remove HDFS delegation token from login user and ensure AM to use keytab
@@ -229,6 +238,10 @@ public class ServiceMaster extends CompositeService {
 
   protected Path getAppDir() {
     return new Path(serviceDefPath).getParent();
+  }
+
+  protected String getServiceName() {
+    return serviceName;
   }
 
   protected ServiceScheduler createServiceScheduler(ServiceContext context)
@@ -310,9 +323,18 @@ public class ServiceMaster extends CompositeService {
       opts.addOption(YARNFILE_OPTION, true, "HDFS path to JSON service " +
           "specification");
       opts.getOption(YARNFILE_OPTION).setRequired(true);
+      opts.addOption(SERVICE_NAME_OPTION, true, "Service name");
+      opts.getOption(SERVICE_NAME_OPTION).setRequired(true);
+      opts.addOption(KEYTAB_OPTION, true, "Service AM keytab");
+      opts.addOption(PRINCIPAL_NAME_OPTION, true,
+          "Service AM keytab principal");
       GenericOptionsParser parser = new GenericOptionsParser(conf, opts, args);
       CommandLine cmdLine = parser.getCommandLine();
       serviceMaster.serviceDefPath = cmdLine.getOptionValue(YARNFILE_OPTION);
+      serviceMaster.serviceName = cmdLine.getOptionValue(SERVICE_NAME_OPTION);
+      serviceMaster.serviceKeytab = cmdLine.getOptionValue(KEYTAB_OPTION);
+      serviceMaster.servicePrincipalName = cmdLine
+          .getOptionValue(PRINCIPAL_NAME_OPTION);
       serviceMaster.init(conf);
       serviceMaster.start();
     } catch (Throwable t) {

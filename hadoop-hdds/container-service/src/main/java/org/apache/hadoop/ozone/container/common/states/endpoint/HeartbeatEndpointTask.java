@@ -19,11 +19,15 @@
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.container.common.helpers
@@ -35,7 +39,6 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
-import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,9 +101,13 @@ public class HeartbeatEndpointTask
     try {
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
+      SCMHeartbeatRequestProto.Builder requestBuilder =
+          SCMHeartbeatRequestProto.newBuilder()
+              .setDatanodeDetails(datanodeDetailsProto);
+      addReports(requestBuilder);
+
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(datanodeDetailsProto, this.context.getNodeReport(),
-              this.context.getContainerReportState());
+          .sendHeartbeat(requestBuilder.build());
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
@@ -110,6 +117,24 @@ public class HeartbeatEndpointTask
       rpcEndpoint.unlock();
     }
     return rpcEndpoint.getState();
+  }
+
+  /**
+   * Adds all the available reports to heartbeat.
+   *
+   * @param requestBuilder builder to which the report has to be added.
+   */
+  private void addReports(SCMHeartbeatRequestProto.Builder requestBuilder) {
+    for (GeneratedMessage report : context.getAllAvailableReports()) {
+      String reportName = report.getDescriptorForType().getFullName();
+      for (Descriptors.FieldDescriptor descriptor :
+          SCMHeartbeatRequestProto.getDescriptor().getFields()) {
+        String heartbeatFieldName = descriptor.getMessageType().getFullName();
+        if (heartbeatFieldName.equals(reportName)) {
+          requestBuilder.setField(descriptor, report);
+        }
+      }
+    }
   }
 
   /**
@@ -127,17 +152,13 @@ public class HeartbeatEndpointTask
    */
   private void processResponse(SCMHeartbeatResponseProto response,
       final DatanodeDetailsProto datanodeDetails) {
-    for (SCMCommandResponseProto commandResponseProto : response
+    Preconditions.checkState(response.getDatanodeUUID()
+            .equalsIgnoreCase(datanodeDetails.getUuid()),
+        "Unexpected datanode ID in the response.");
+    // Verify the response is indeed for this datanode.
+    for (SCMCommandProto commandResponseProto : response
         .getCommandsList()) {
-      // Verify the response is indeed for this datanode.
-      Preconditions.checkState(commandResponseProto.getDatanodeUUID()
-          .equalsIgnoreCase(datanodeDetails.getUuid()),
-          "Unexpected datanode ID in the response.");
-      switch (commandResponseProto.getCmdType()) {
-      case sendContainerReport:
-        this.context.addCommand(SendContainerCommand.getFromProtobuf(
-            commandResponseProto.getSendReport()));
-        break;
+      switch (commandResponseProto.getCommandType()) {
       case reregisterCommand:
         if (rpcEndpoint.getState() == EndPointStates.HEARTBEAT) {
           if (LOG.isDebugEnabled()) {
@@ -154,7 +175,8 @@ public class HeartbeatEndpointTask
         break;
       case deleteBlocksCommand:
         DeleteBlocksCommand db = DeleteBlocksCommand
-            .getFromProtobuf(commandResponseProto.getDeleteBlocksProto());
+            .getFromProtobuf(
+                commandResponseProto.getDeleteBlocksCommandProto());
         if (!db.blocksTobeDeleted().isEmpty()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(DeletedContainerBlocksSummary
@@ -167,7 +189,7 @@ public class HeartbeatEndpointTask
       case closeContainerCommand:
         CloseContainerCommand closeContainer =
             CloseContainerCommand.getFromProtobuf(
-                commandResponseProto.getCloseContainerProto());
+                commandResponseProto.getCloseContainerCommandProto());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received SCM container close request for container {}",
               closeContainer.getContainerID());
@@ -176,7 +198,7 @@ public class HeartbeatEndpointTask
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "
-            + commandResponseProto.getCmdType().name());
+            + commandResponseProto.getCommandType().name());
       }
     }
   }

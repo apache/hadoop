@@ -259,4 +259,39 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.kms.key.authorization.enable</name>
+    <value>true</value>
+    <description>Boolean property to Enable/Disable per Key authorization</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.size</name>
+    <value>100</value>
+    <description>The size of the cache. This is the maximum number of EEKs that
+      can be cached under each key name.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.low.watermark</name>
+    <value>0.3</value>
+    <description>A low watermark on the cache. For each key name, if after a get call,
+      the number of cached EEKs are less than (size * low watermark),
+      then the cache under this key name will be filled asynchronously.
+      For each key name, only 1 thread could be running for the asynchronous filling.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.num.fill.threads</name>
+    <value>2</value>
+    <description>The maximum number of asynchronous threads overall, across key names,
+      allowed to fill the queue in a cache.</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.kms.encrypted.key.cache.expiry</name>
+    <value>43200000</value>
+    <description>The cache expiry time, in milliseconds. Internally Guava cache is used as the cache implementation.
+      The expiry approach is expireAfterAccess</description>
+  </property>
 </configuration>

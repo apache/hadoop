@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -78,13 +78,19 @@ public final class GenesisUtil {
         random.nextInt(256) + "." + random.nextInt(256) + "." + random
             .nextInt(256) + "." + random.nextInt(256);
 
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
     DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
     builder.setUuid(uuid)
         .setHostName("localhost")
         .setIpAddress(ipAddress)
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0);
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort);
     return builder.build();
   }
 }

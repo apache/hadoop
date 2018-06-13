@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -33,7 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
@@ -152,7 +153,8 @@ public class ContainerMapping implements Mapping {
     ContainerInfo containerInfo;
     lock.lock();
     try {
-      byte[] containerBytes = containerStore.get(Longs.toByteArray(containerID));
+      byte[] containerBytes = containerStore.get(
+          Longs.toByteArray(containerID));
       if (containerBytes == null) {
         throw new SCMException(
             "Specified key does not exist. key : " + containerID,
@@ -229,7 +231,8 @@ public class ContainerMapping implements Mapping {
           containerStateManager.allocateContainer(
               pipelineSelector, type, replicationFactor, owner);
 
-      byte[] containerIDBytes = Longs.toByteArray(containerInfo.getContainerID());
+      byte[] containerIDBytes = Longs.toByteArray(
+          containerInfo.getContainerID());
       containerStore.put(containerIDBytes, containerInfo.getProtobuf()
               .toByteArray());
     } finally {
@@ -339,6 +342,39 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Update deleteTransactionId according to deleteTransactionMap.
+   *
+   * @param deleteTransactionMap Maps the containerId to latest delete
+   *                             transaction id for the container.
+   * @throws IOException
+   */
+  public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
+      throws IOException {
+    lock.lock();
+    try {
+      for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
+        long containerID = entry.getKey();
+        byte[] dbKey = Longs.toByteArray(containerID);
+        byte[] containerBytes = containerStore.get(dbKey);
+        if (containerBytes == null) {
+          throw new SCMException(
+              "Failed to increment number of deleted blocks for container "
+                  + containerID + ", reason : " + "container doesn't exist.",
+              SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+        }
+        ContainerInfo containerInfo = ContainerInfo.fromProtobuf(
+            HddsProtos.SCMContainerInfo.parseFrom(containerBytes));
+        containerInfo.updateDeleteTransactionId(entry.getValue());
+        containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
+        containerStateManager
+            .updateDeleteTransactionId(containerID, entry.getValue());
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
    * Returns the container State Manager.
    *
    * @return ContainerStateManager
@@ -366,11 +402,12 @@ public class ContainerMapping implements Mapping {
    * @param reports Container report
    */
   @Override
-  public void processContainerReports(ContainerReportsRequestProto reports)
+  public void processContainerReports(DatanodeDetails datanodeDetails,
+                                      ContainerReportsProto reports)
       throws IOException {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
-    containerSupervisor.handleContainerReport(reports);
+    containerSupervisor.handleContainerReport(datanodeDetails, reports);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
       byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
@@ -400,7 +437,7 @@ public class ContainerMapping implements Mapping {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
                   " {}, for container: {}, reason: container doesn't exist in" +
-                  "container database.", reports.getDatanodeDetails(),
+                  "container database.", datanodeDetails,
               datanodeState.getContainerID());
         }
       } finally {
@@ -437,6 +474,7 @@ public class ContainerMapping implements Mapping {
     builder.setState(knownState.getState());
     builder.setStateEnterTime(knownState.getStateEnterTime());
     builder.setContainerID(knownState.getContainerID());
+    builder.setDeleteTransactionId(knownState.getDeleteTransactionId());
     if (knownState.getOwner() != null) {
       builder.setOwner(knownState.getOwner());
     }
@@ -567,6 +605,7 @@ public class ContainerMapping implements Mapping {
               .setPipeline(oldInfo.getPipeline())
               .setState(oldInfo.getState())
               .setUsedBytes(oldInfo.getUsedBytes())
+              .setDeleteTransactionId(oldInfo.getDeleteTransactionId())
               .build();
           containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
         } else {
@@ -582,6 +621,11 @@ public class ContainerMapping implements Mapping {
       throw new IOException("Error in flushing container info from container " +
           "state manager: " + failedContainers);
     }
+  }
+
+  @Override
+  public NodeManager getNodeManager() {
+    return nodeManager;
   }
 
   @VisibleForTesting

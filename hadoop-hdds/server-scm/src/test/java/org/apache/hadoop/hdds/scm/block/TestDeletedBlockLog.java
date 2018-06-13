@@ -265,21 +265,27 @@ public class TestDeletedBlockLog {
 
     int count = 0;
     long containerID = 0L;
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
     DatanodeDetails dnId1 = DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
         .setHostName("localhost")
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0)
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort)
         .build();
     DatanodeDetails dnId2 = DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
         .setHostName("localhost")
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0)
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort)
         .build();
     Mapping mappingService = mock(ContainerMapping.class);
     // Creates {TXNum} TX in the log.

@@ -21,7 +21,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationsRequestPBImpl;
@@ -90,11 +90,12 @@ public class TestGetApplicationsRequest {
     
     Assert.assertEquals(
         "StartRange from proto is not the same with original request",
-        requestFromProto.getStartRange(), new LongRange(startBegin, startEnd));
+        requestFromProto.getStartRange(), Range.between(startBegin, startEnd));
     
     Assert.assertEquals(
         "FinishRange from proto is not the same with original request",
-        requestFromProto.getFinishRange(), new LongRange(finishBegin, finishEnd));
+        requestFromProto.getFinishRange(),
+          Range.between(finishBegin, finishEnd));
     
     Assert.assertEquals(
         "Limit from proto is not the same with original request",

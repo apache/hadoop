@@ -125,7 +125,7 @@ public final class QueuePlacementRuleUtils {
 
   public static ApplicationPlacementContext getPlacementContext(
       QueueMappingEntity mapping, String leafQueueName) {
-    if (!org.apache.commons.lang.StringUtils.isEmpty(mapping.getParentQueue())) {
+    if (!org.apache.commons.lang3.StringUtils.isEmpty(mapping.getParentQueue())) {
       return new ApplicationPlacementContext(leafQueueName,
           mapping.getParentQueue());
     } else{

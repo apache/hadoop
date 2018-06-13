@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -167,7 +167,7 @@ public class RMAppBlock extends AppBlock{
           .append(nodeLink == null ? "#" : "href='" + nodeLink)
           .append("'>")
           .append(nodeLink == null ? "N/A" : StringEscapeUtils
-              .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
+              .escapeEcmaScript(StringEscapeUtils.escapeHtml4(nodeLink)))
           .append("</a>\",\"<a ")
           .append(logsLink == null ? "#" : "href='" + logsLink).append("'>")
           .append(logsLink == null ? "N/A" : "Logs").append("</a>\",")

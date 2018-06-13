@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodePoolManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
@@ -295,24 +295,21 @@ public class ContainerSupervisor implements Closeable {
    * @param containerReport  -- Container report for a specific container from
    * a datanode.
    */
-  public void handleContainerReport(
-      ContainerReportsRequestProto containerReport) {
-    DatanodeDetails datanodeDetails = DatanodeDetails.getFromProtoBuf(
-        containerReport.getDatanodeDetails());
+  public void handleContainerReport(DatanodeDetails datanodeDetails,
+      ContainerReportsProto containerReport) {
     inProgressPoolListLock.readLock().lock();
     try {
       String poolName = poolManager.getNodePool(datanodeDetails);
       for (InProgressPool ppool : inProgressPoolList) {
         if (ppool.getPoolName().equalsIgnoreCase(poolName)) {
-          ppool.handleContainerReport(containerReport);
+          ppool.handleContainerReport(datanodeDetails, containerReport);
           return;
         }
       }
       // TODO: Decide if we can do anything else with this report.
       LOG.debug("Discarding the container report for pool {}. " +
               "That pool is not currently in the pool reconciliation process." +
-              " Container Name: {}", poolName,
-          containerReport.getDatanodeDetails());
+              " Container Name: {}", poolName, datanodeDetails);
     } catch (SCMException e) {
       LOG.warn("Skipping processing container report from datanode {}, "
               + "cause: failed to get the corresponding node pool",

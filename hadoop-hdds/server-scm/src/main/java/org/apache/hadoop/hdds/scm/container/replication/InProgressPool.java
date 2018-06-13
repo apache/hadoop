@@ -21,12 +21,10 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodePoolManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,18 +34,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import static com.google.common.util.concurrent.Uninterruptibles
-    .sleepUninterruptibly;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
-    .HEALTHY;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
-    .INVALID;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
 /**
  * These are pools that are actively checking for replication status of the
@@ -177,54 +166,8 @@ public final class InProgressPool {
     nodeProcessed = new AtomicInteger(0);
     containerProcessedCount = new AtomicInteger(0);
     nodeCount = new AtomicInteger(0);
-    /*
-       Ask each datanode to send us commands.
-     */
-    SendContainerCommand cmd = SendContainerCommand.newBuilder().build();
-    for (DatanodeDetails dd : datanodeDetailsList) {
-      NodeState currentState = getNodestate(dd);
-      if (currentState == HEALTHY || currentState == STALE) {
-        nodeCount.incrementAndGet();
-        // Queue commands to all datanodes in this pool to send us container
-        // report. Since we ignore dead nodes, it is possible that we would have
-        // over replicated the container if the node comes back.
-        nodeManager.addDatanodeCommand(dd.getUuid(), cmd);
-      }
-    }
     this.status = ProgressStatus.InProgress;
     this.getPool().setLastProcessedTime(Time.monotonicNow());
-  }
-
-  /**
-   * Gets the node state.
-   *
-   * @param datanode - datanode information.
-   * @return NodeState.
-   */
-  private NodeState getNodestate(DatanodeDetails datanode) {
-    NodeState  currentState = INVALID;
-    int maxTry = 100;
-    // We need to loop to make sure that we will retry if we get
-    // node state unknown. This can lead to infinite loop if we send
-    // in unknown node ID. So max try count is used to prevent it.
-
-    int currentTry = 0;
-    while (currentState == INVALID && currentTry < maxTry) {
-      // Retry to make sure that we deal with the case of node state not
-      // known.
-      currentState = nodeManager.getNodeState(datanode);
-      currentTry++;
-      if (currentState == INVALID) {
-        // Sleep to make sure that this is not a tight loop.
-        sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
-      }
-    }
-    if (currentState == INVALID) {
-      LOG.error("Not able to determine the state of Node: {}, Exceeded max " +
-          "try and node manager returns INVALID state. This indicates we " +
-          "are dealing with a node that we don't know about.", datanode);
-    }
-    return currentState;
   }
 
   /**
@@ -235,21 +178,20 @@ public final class InProgressPool {
    *
    * @param containerReport - ContainerReport
    */
-  public void handleContainerReport(
-      ContainerReportsRequestProto containerReport) {
+  public void handleContainerReport(DatanodeDetails datanodeDetails,
+      ContainerReportsProto containerReport) {
     if (status == ProgressStatus.InProgress) {
-      executorService.submit(processContainerReport(containerReport));
+      executorService.submit(processContainerReport(datanodeDetails,
+          containerReport));
     } else {
       LOG.debug("Cannot handle container report when the pool is in {} status.",
           status);
     }
   }
 
-  private Runnable processContainerReport(
-      ContainerReportsRequestProto reports) {
+  private Runnable processContainerReport(DatanodeDetails datanodeDetails,
+      ContainerReportsProto reports) {
     return () -> {
-      DatanodeDetails datanodeDetails =
-          DatanodeDetails.getFromProtoBuf(reports.getDatanodeDetails());
       if (processedNodeSet.computeIfAbsent(datanodeDetails.getUuid(),
           (k) -> true)) {
         nodeProcessed.incrementAndGet();

@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.service.client;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -306,6 +306,16 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     List<Container> containersToUpgrade = ServiceApiUtil
         .validateAndResolveCompsUpgrade(persistedService, components);
     return actionUpgrade(persistedService, containersToUpgrade);
+  }
+
+  @Override
+  public int actionCleanUp(String appName, String userName) throws
+      IOException, YarnException {
+    if (cleanUpRegistry(appName, userName)) {
+      return EXIT_SUCCESS;
+    } else {
+      return EXIT_FALSE;
+    }
   }
 
   public int actionUpgrade(Service service, List<Container> compInstances)
@@ -639,9 +649,23 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     }
   }
 
+  private boolean cleanUpRegistry(String serviceName, String user) throws
+      SliderException {
+    String encodedName = RegistryUtils.registryUser(user);
+
+    String registryPath = RegistryUtils.servicePath(encodedName,
+        YarnServiceConstants.APP_TYPE, serviceName);
+    return cleanUpRegistryPath(registryPath, serviceName);
+  }
+
   private boolean cleanUpRegistry(String serviceName) throws SliderException {
     String registryPath =
         ServiceRegistryUtils.registryPathForInstance(serviceName);
+    return cleanUpRegistryPath(registryPath, serviceName);
+  }
+
+  private boolean cleanUpRegistryPath(String registryPath, String
+      serviceName) throws SliderException {
     try {
       if (getRegistryClient().exists(registryPath)) {
         getRegistryClient().delete(registryPath, true);
@@ -871,6 +895,17 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
     CLI.add("-" + ServiceMaster.YARNFILE_OPTION, new Path(appRootDir,
         app.getName() + ".json"));
+    CLI.add("-" + ServiceMaster.SERVICE_NAME_OPTION, app.getName());
+    if (app.getKerberosPrincipal() != null) {
+      if (!StringUtils.isEmpty(app.getKerberosPrincipal().getKeytab())) {
+        CLI.add("-" + ServiceMaster.KEYTAB_OPTION,
+            app.getKerberosPrincipal().getKeytab());
+      }
+      if (!StringUtils.isEmpty(app.getKerberosPrincipal().getPrincipalName())) {
+        CLI.add("-" + ServiceMaster.PRINCIPAL_NAME_OPTION,
+            app.getKerberosPrincipal().getPrincipalName());
+      }
+    }
     // pass the registry binding
     CLI.addConfOptionToCLI(conf, RegistryConstants.KEY_REGISTRY_ZK_ROOT,
         RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);
@@ -968,6 +1003,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
   @Override
   public int actionStart(String serviceName) throws YarnException, IOException {
+    actionStartAndGetId(serviceName);
+    return EXIT_SUCCESS;
+  }
+
+  public ApplicationId actionStartAndGetId(String serviceName) throws
+      YarnException, IOException {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     Service liveService = getStatus(serviceName);
     if (liveService == null ||
@@ -978,15 +1019,17 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       // see if it is actually running and bail out;
       verifyNoLiveAppInRM(serviceName, "start");
       ApplicationId appId = submitApp(service);
+      cachedAppInfo.put(serviceName, new AppInfo(appId, service
+          .getKerberosPrincipal().getPrincipalName()));
       service.setId(appId.toString());
       // write app definition on to hdfs
       Path appJson = ServiceApiUtil.writeAppDefinition(fs, appDir, service);
       LOG.info("Persisted service " + service.getName() + " at " + appJson);
-      return 0;
+      return appId;
     } else {
       LOG.info("Finalize service {} upgrade");
-      ApplicationReport appReport =
-          yarnClient.getApplicationReport(getAppId(serviceName));
+      ApplicationId appId = getAppId(serviceName);
+      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (StringUtils.isEmpty(appReport.getHost())) {
         throw new YarnException(serviceName + " AM hostname is empty");
       }
@@ -995,7 +1038,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       RestartServiceRequestProto.Builder requestBuilder =
           RestartServiceRequestProto.newBuilder();
       proxy.restart(requestBuilder.build());
-      return 0;
+      return appId;
     }
   }
 
@@ -1198,6 +1241,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     Service appSpec = new Service();
     appSpec.setName(serviceName);
+    appSpec.setState(ServiceState.STOPPED);
     ApplicationId currentAppId = getAppId(serviceName);
     if (currentAppId == null) {
       LOG.info("Service {} does not have an application ID", serviceName);

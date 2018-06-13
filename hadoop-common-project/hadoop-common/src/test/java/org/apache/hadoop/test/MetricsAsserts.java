@@ -367,17 +367,31 @@ public class MetricsAsserts {
   }
   
   /**
-   * Asserts that the NumOps and quantiles for a metric have been changed at
-   * some point to a non-zero value.
+   * Asserts that the NumOps and quantiles for a metric with value name
+   * "Latency" have been changed at some point to a non-zero value.
    * 
    * @param prefix of the metric
    * @param rb MetricsRecordBuilder with the metric
    */
-  public static void assertQuantileGauges(String prefix, 
+  public static void assertQuantileGauges(String prefix,
       MetricsRecordBuilder rb) {
+    assertQuantileGauges(prefix, rb, "Latency");
+  }
+
+  /**
+   * Asserts that the NumOps and quantiles for a metric have been changed at
+   * some point to a non-zero value, for the specified value name of the
+   * metrics (e.g., "Latency", "Count").
+   *
+   * @param prefix of the metric
+   * @param rb MetricsRecordBuilder with the metric
+   * @param valueName the value name for the metric
+   */
+  public static void assertQuantileGauges(String prefix,
+      MetricsRecordBuilder rb, String valueName) {
     verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
     for (Quantile q : MutableQuantiles.quantiles) {
-      String nameTemplate = prefix + "%dthPercentileLatency";
+      String nameTemplate = prefix + "%dthPercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
           eqName(info(String.format(nameTemplate, percentile), "")),

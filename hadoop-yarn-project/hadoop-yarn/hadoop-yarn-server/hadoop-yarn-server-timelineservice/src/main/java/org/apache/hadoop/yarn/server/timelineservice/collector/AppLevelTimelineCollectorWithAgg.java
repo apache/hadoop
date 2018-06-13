@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +51,7 @@ public class AppLevelTimelineCollectorWithAgg
       LoggerFactory.getLogger(TimelineCollector.class);
 
   private final static int AGGREGATION_EXECUTOR_NUM_THREADS = 1;
-  private final static int AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS = 15;
+  private int aggregationExecutorIntervalSecs;
   private static Set<String> entityTypesSkipAggregation
       = initializeSkipSet();
 
@@ -71,6 +72,11 @@ public class AppLevelTimelineCollectorWithAgg
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    aggregationExecutorIntervalSecs = conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_AGGREGATION_INTERVAL_SECS,
+        YarnConfiguration.
+            DEFAULT_TIMELINE_SERVICE_AGGREGATION_INTERVAL_SECS
+    );
     super.serviceInit(conf);
   }
 
@@ -84,10 +90,8 @@ public class AppLevelTimelineCollectorWithAgg
             .build());
     appAggregator = new AppLevelAggregator();
     appAggregationExecutor.scheduleAtFixedRate(appAggregator,
-        AppLevelTimelineCollectorWithAgg.
-          AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
-        AppLevelTimelineCollectorWithAgg.
-          AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
+        aggregationExecutorIntervalSecs,
+        aggregationExecutorIntervalSecs,
         TimeUnit.SECONDS);
     super.serviceStart();
   }

@@ -19,18 +19,16 @@ package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCloseContainerCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
+    .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
 
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType.closeContainerCommand;
 
 /**
  * Asks datanode to close a container.
  */
 public class CloseContainerCommand
-    extends SCMCommand<SCMCloseContainerCmdResponseProto> {
+    extends SCMCommand<CloseContainerCommandProto> {
 
   private long containerID;
 
@@ -44,8 +42,8 @@ public class CloseContainerCommand
    * @return Type
    */
   @Override
-  public SCMCmdType getType() {
-    return closeContainerCommand;
+  public SCMCommandProto.Type getType() {
+    return SCMCommandProto.Type.closeContainerCommand;
   }
 
   /**
@@ -58,13 +56,13 @@ public class CloseContainerCommand
     return getProto().toByteArray();
   }
 
-  public SCMCloseContainerCmdResponseProto getProto() {
-    return SCMCloseContainerCmdResponseProto.newBuilder()
+  public CloseContainerCommandProto getProto() {
+    return CloseContainerCommandProto.newBuilder()
         .setContainerID(containerID).build();
   }
 
   public static CloseContainerCommand getFromProtobuf(
-      SCMCloseContainerCmdResponseProto closeContainerProto) {
+      CloseContainerCommandProto closeContainerProto) {
     Preconditions.checkNotNull(closeContainerProto);
     return new CloseContainerCommand(closeContainerProto.getContainerID());
 

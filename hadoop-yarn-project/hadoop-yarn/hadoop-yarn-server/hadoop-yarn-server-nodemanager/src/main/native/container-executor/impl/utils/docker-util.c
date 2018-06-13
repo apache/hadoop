@@ -114,7 +114,7 @@ int check_trusted_image(const struct configuration *command_config, const struct
   int i = 0;
   int ret = 0;
   char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
-  char **privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char **privileged_registry = get_configuration_values_delimiter("docker.trusted.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char *registry_ptr = NULL;
   if (image_name == NULL) {
     ret = INVALID_DOCKER_IMAGE_NAME;
@@ -1097,7 +1097,6 @@ static int add_mounts(const struct configuration *command_config, const struct c
   if (ro != 0) {
     ro_suffix = ":ro";
   }
-
   if (values != NULL) {
     // Disable mount volumes if image is not trusted.
     if (check_trusted_image(command_config, conf) != 0) {
@@ -1374,6 +1373,18 @@ int get_docker_run_command(const char *command_file, const struct configuration 
       reset_args(args);
       return BUFFER_TOO_SMALL;
     }
+    char *no_new_privileges_enabled =
+        get_configuration_value("docker.no-new-privileges.enabled",
+        CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
+    if (no_new_privileges_enabled != NULL &&
+        strcasecmp(no_new_privileges_enabled, "True") == 0) {
+      ret = add_to_args(args, "--security-opt=no-new-privileges");
+      if (ret != 0) {
+        reset_args(args);
+        return BUFFER_TOO_SMALL;
+      }
+    }
+    free(no_new_privileges_enabled);
   }
   free(privileged);
 
@@ -1468,10 +1479,6 @@ int get_docker_run_command(const char *command_file, const struct configuration 
 
   launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
                                                       ",");
-  if (check_trusted_image(&command_config, conf) != 0) {
-    launch_command = NULL;
-  }
-
   if (launch_command != NULL) {
     for (i = 0; launch_command[i] != NULL; ++i) {
       ret = add_to_args(args, launch_command[i]);

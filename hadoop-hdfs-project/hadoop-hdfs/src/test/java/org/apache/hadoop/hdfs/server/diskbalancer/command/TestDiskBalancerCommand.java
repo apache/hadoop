@@ -615,15 +615,15 @@ public class TestDiskBalancerCommand {
     assertThat(
         outputs.get(3),
         is(allOf(containsString("DISK"),
-            containsString(cluster.getInstanceStorageDir(0, 0)
-                .getAbsolutePath()),
+            containsString(new Path(cluster.getInstanceStorageDir(0, 0)
+                .getAbsolutePath()).toString()),
             containsString("0.00"),
             containsString("1.00"))));
     assertThat(
         outputs.get(4),
         is(allOf(containsString("DISK"),
-            containsString(cluster.getInstanceStorageDir(0, 1)
-                .getAbsolutePath()),
+            containsString(new Path(cluster.getInstanceStorageDir(0, 1)
+                .getAbsolutePath()).toString()),
             containsString("0.00"),
             containsString("1.00"))));
   }
@@ -719,9 +719,7 @@ public class TestDiskBalancerCommand {
   @Test
   public void testPrintFullPathOfPlan()
       throws Exception {
-    final Path parent = new Path(
-        PathUtils.getTestPath(getClass()),
-        GenericTestUtils.getMethodName());
+    String parent = GenericTestUtils.getRandomizedTempPath();
 
     MiniDFSCluster miniCluster = null;
     try {
@@ -815,7 +813,8 @@ public class TestDiskBalancerCommand {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
-    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(numDatanodes).build();
     try {
       miniDFSCluster.waitActive();

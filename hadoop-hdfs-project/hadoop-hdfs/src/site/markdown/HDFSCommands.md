@@ -352,6 +352,7 @@ Usage:
         hdfs dfsadmin [-clrSpaceQuota [-storageType <storagetype>] <dirname>...<dirname>]
         hdfs dfsadmin [-finalizeUpgrade]
         hdfs dfsadmin [-rollingUpgrade [<query> |<prepare> |<finalize>]]
+        hdfs dfsadmin [-upgrade [query | finalize]
         hdfs dfsadmin [-refreshServiceAcl]
         hdfs dfsadmin [-refreshUserToGroupsMappings]
         hdfs dfsadmin [-refreshSuperUserGroupsConfiguration]
@@ -389,6 +390,7 @@ Usage:
 | `-clrSpaceQuota` `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-finalizeUpgrade` | Finalize upgrade of HDFS. Datanodes delete their previous version working directories, followed by Namenode doing the same. This completes the upgrade process. |
 | `-rollingUpgrade` [\<query\>\|\<prepare\>\|\<finalize\>] | See [Rolling Upgrade document](../hadoop-hdfs/HdfsRollingUpgrade.html#dfsadmin_-rollingUpgrade) for the detail. |
+| `-upgrade` query\|finalize | Query the current upgrade status.<br/>Finalize upgrade of HDFS (equivalent to -finalizeUpgrade). |
 | `-refreshServiceAcl` | Reload the service-level authorization policy file. |
 | `-refreshUserToGroupsMappings` | Refresh user-to-groups mappings. |
 | `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings |

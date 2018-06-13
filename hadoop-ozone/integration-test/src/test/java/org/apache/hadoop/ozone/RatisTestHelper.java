@@ -20,8 +20,10 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -31,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Helpers for Ratis tests.
@@ -52,7 +55,8 @@ public interface RatisTestHelper {
      *   RATIS_ENABLED = true, and
      *   OZONE_HANDLER_TYPE_KEY = "distributed".
      */
-    public RatisTestSuite(final Class<?> clazz) throws IOException {
+    public RatisTestSuite(final Class<?> clazz)
+        throws IOException, TimeoutException, InterruptedException {
       conf = newOzoneConfiguration(clazz, RPC);
       cluster = newMiniOzoneCluster(NUM_DATANODES, conf);
     }
@@ -65,9 +69,9 @@ public interface RatisTestHelper {
       return cluster;
     }
 
-    public OzoneRestClient newOzoneRestClient()
-        throws OzoneException, URISyntaxException {
-      return RatisTestHelper.newOzoneRestClient(getDatanodeOzoneRestPort());
+    public ClientProtocol newOzoneClient()
+        throws OzoneException, URISyntaxException, IOException {
+      return new RpcClient(conf);
     }
 
     @Override
@@ -77,7 +81,7 @@ public interface RatisTestHelper {
 
     public int getDatanodeOzoneRestPort() {
       return cluster.getHddsDatanodes().get(0).getDatanodeDetails()
-          .getOzoneRestPort();
+          .getPort(DatanodeDetails.Port.Name.REST).getValue();
     }
   }
 
@@ -97,14 +101,11 @@ public interface RatisTestHelper {
   }
 
   static MiniOzoneCluster newMiniOzoneCluster(
-      int numDatanodes, OzoneConfiguration conf) throws IOException {
+      int numDatanodes, OzoneConfiguration conf)
+      throws IOException, TimeoutException, InterruptedException {
     final MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(numDatanodes).build();
+    cluster.waitForClusterToBeReady();
     return cluster;
-  }
-
-  static OzoneRestClient newOzoneRestClient(int port)
-      throws OzoneException, URISyntaxException {
-    return new OzoneRestClient("http://localhost:" + port);
   }
 }

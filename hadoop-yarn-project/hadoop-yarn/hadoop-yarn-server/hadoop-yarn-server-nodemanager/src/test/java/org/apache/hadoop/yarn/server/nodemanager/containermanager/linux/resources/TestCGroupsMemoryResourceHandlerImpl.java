@@ -65,17 +65,15 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
-      Assert.fail("Pmem check should not be allowed to run with cgroups");
     } catch(ResourceHandlerException re) {
-      // do nothing
+      Assert.fail("Pmem check should be allowed to run with cgroups");
     }
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     try {
       cGroupsMemoryResourceHandler.bootstrap(conf);
-      Assert.fail("Vmem check should not be allowed to run with cgroups");
     } catch(ResourceHandlerException re) {
-      // do nothing
+      Assert.fail("Vmem check should be allowed to run with cgroups");
     }
   }
 

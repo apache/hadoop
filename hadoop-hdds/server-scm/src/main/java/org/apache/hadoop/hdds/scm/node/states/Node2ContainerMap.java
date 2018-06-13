@@ -92,7 +92,7 @@ public class Node2ContainerMap {
   }
 
   /**
-   * Removes datanode Entry from the map
+   * Removes datanode Entry from the map.
    * @param datanodeID - Datanode ID.
    */
   public void removeDatanode(UUID datanodeID) {

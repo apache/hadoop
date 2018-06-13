@@ -58,6 +58,7 @@
 #ifndef INCLUDE_HDFSPP_IOSERVICE_H_
 #define INCLUDE_HDFSPP_IOSERVICE_H_
 
+#include <functional>
 #include <memory>
 
 // forward decl

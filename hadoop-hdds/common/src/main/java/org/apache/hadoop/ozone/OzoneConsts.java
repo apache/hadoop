@@ -114,6 +114,8 @@ public final class OzoneConsts {
   public static final String OZONE_HANDLER_LOCAL = "local";
 
   public static final String DELETING_KEY_PREFIX = "#deleting#";
+  public static final String DELETED_KEY_PREFIX = "#deleted#";
+  public static final String DELETE_TRANSACTION_KEY_PREFIX = "#delTX#";
   public static final String OPEN_KEY_PREFIX = "#open#";
   public static final String OPEN_KEY_ID_DELIMINATOR = "#";
 

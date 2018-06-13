@@ -49,13 +49,13 @@ public class XceiverClientMetrics {
     this.containerOpsLatency = new MutableRate[numEnumEntries];
     for (int i = 0; i < numEnumEntries; i++) {
       pendingOpsArray[i] = registry.newCounter(
-          "numPending" + ContainerProtos.Type.valueOf(i + 1),
-          "number of pending" + ContainerProtos.Type.valueOf(i + 1) + " ops",
+          "numPending" + ContainerProtos.Type.forNumber(i + 1),
+          "number of pending" + ContainerProtos.Type.forNumber(i + 1) + " ops",
           (long) 0);
 
       containerOpsLatency[i] = registry.newRate(
-          ContainerProtos.Type.valueOf(i + 1) + "Latency",
-          "latency of " + ContainerProtos.Type.valueOf(i + 1)
+          ContainerProtos.Type.forNumber(i + 1) + "Latency",
+          "latency of " + ContainerProtos.Type.forNumber(i + 1)
           + " ops");
     }
   }

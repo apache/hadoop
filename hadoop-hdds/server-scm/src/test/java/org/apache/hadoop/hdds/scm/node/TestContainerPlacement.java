@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
@@ -34,11 +33,7 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -71,10 +66,6 @@ public class TestContainerPlacement {
   public ExpectedException thrown = ExpectedException.none();
   private static XceiverClientManager xceiverClientManager =
       new XceiverClientManager(new OzoneConfiguration());
-
-  private ReportState reportState = ReportState.newBuilder()
-      .setState(ReportState.states.noContainerReports)
-      .setCount(0).build();
 
   /**
    * Returns a new copy of Configuration.
@@ -140,13 +131,12 @@ public class TestContainerPlacement {
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(used).
-            setRemaining(remaining).build();
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            nrb.addStorageReport(srb).build(), reportState);
+        String id = UUID.randomUUID().toString();
+        String path = testDir.getAbsolutePath() + "/" + id;
+        List<StorageReportProto> reports = TestUtils
+            .createStorageReport(capacity, used, remaining, path, null, id, 1);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            TestUtils.createNodeReport(reports));
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),

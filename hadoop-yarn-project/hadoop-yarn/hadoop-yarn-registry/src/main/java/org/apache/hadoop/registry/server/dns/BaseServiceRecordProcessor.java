@@ -290,6 +290,26 @@ public abstract class BaseServiceRecordProcessor
           domain));
     }
 
+    /**
+     * Return the DNS name constructed from the component name.
+     *
+     * @return the DNS naem.
+     * @throws PathNotFoundException
+     * @throws TextParseException
+     */
+    protected Name getComponentName()
+        throws PathNotFoundException, TextParseException {
+      String service = RegistryPathUtils.lastPathEntry(
+          RegistryPathUtils.parentOf(RegistryPathUtils.parentOf(getPath())));
+      String component = getRecord().get("yarn:component").toLowerCase();
+      String user = RegistryPathUtils.getUsername(getPath());
+      return Name.fromString(MessageFormat.format("{0}.{1}.{2}.{3}",
+          component,
+          service,
+          user,
+          domain));
+    }
+
   }
 
   /**

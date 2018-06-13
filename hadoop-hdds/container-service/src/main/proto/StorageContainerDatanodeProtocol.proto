@@ -34,6 +34,42 @@ package hadoop.hdds;
 
 import "hdds.proto";
 
+/**
+ * Request for version info of the software stack on the server.
+ */
+message SCMVersionRequestProto {}
+
+/**
+* Generic response that is send to a version request. This allows keys to be
+* added on the fly and protocol to remain stable.
+*/
+message SCMVersionResponseProto {
+  required uint32 softwareVersion = 1;
+  repeated hadoop.hdds.KeyValue keys = 2;
+}
+
+message SCMRegisterRequestProto {
+  required DatanodeDetailsProto datanodeDetails = 1;
+  required NodeReportProto nodeReport = 2;
+  required ContainerReportsProto containerReport = 3;
+}
+
+/**
+ * Datanode ID returned by the SCM. This is similar to name node
+ * registeration of a datanode.
+ */
+message SCMRegisteredResponseProto {
+  enum ErrorCode {
+    success = 1;
+    errorNodeNotPermitted = 2;
+  }
+  required ErrorCode errorCode = 1;
+  required string datanodeUUID = 2;
+  required string clusterID = 3;
+  optional SCMNodeAddressList addressList = 4;
+  optional string hostname = 5;
+  optional string ipAddress = 6;
+}
 
 /**
 * This message is send by data node to indicate that it is alive or it is
@@ -41,99 +77,39 @@ import "hdds.proto";
 */
 message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
-  optional SCMNodeReport nodeReport = 2;
-  optional ReportState containerReportState = 3;
+  optional NodeReportProto nodeReport = 2;
+  optional ContainerReportsProto containerReport = 3;
+  optional ContainerActionsProto containerActions = 4;
 }
 
-enum DatanodeContainerState {
-  closed = 0;
-  open = 1;
+/*
+ * A group of commands for the datanode to execute
+ */
+message SCMHeartbeatResponseProto {
+  required string datanodeUUID = 1;
+  repeated SCMCommandProto commands = 2;
 }
 
-/**
-NodeState contains messages from datanode to SCM saying that it has
-some information that SCM might be interested in.*/
-message ReportState {
-  enum states {
-    noContainerReports = 0;
-    completeContinerReport = 1;
-    deltaContainerReport = 2;
-  }
-  required states state = 1;
-  required int64 count = 2 [default = 0];
-}
-
-
-/**
-This message is used to persist the information about a container in the
-SCM database, This information allows SCM to startup faster and avoid having
-all container info in memory all the time.
-  */
-message ContainerPersistanceProto {
-  required DatanodeContainerState state = 1;
-  required hadoop.hdds.Pipeline pipeline = 2;
-  required ContainerInfo info = 3;
-}
-
-/**
-This message is used to do a quick look up of which containers are effected
-if a node goes down
-*/
-message NodeContianerMapping {
-  repeated string contianerName = 1;
-}
-
-/**
-A container report contains the following information.
-*/
-message ContainerInfo {
-  optional string finalhash = 2;
-  optional int64 size = 3;
-  optional int64 used = 4;
-  optional int64 keyCount = 5;
-  // TODO: move the io count to separate message
-  optional int64 readCount = 6;
-  optional int64 writeCount = 7;
-  optional int64 readBytes = 8;
-  optional int64 writeBytes = 9;
-  required int64 containerID = 10;
-  optional hadoop.hdds.LifeCycleState state = 11;
-}
-
-// The deleted blocks which are stored in deletedBlock.db of scm.
-// We don't use BlockID because this only contians multiple localIDs
-// of the same containerID.
-message DeletedBlocksTransaction {
-  required int64 txID = 1;
-  required int64 containerID = 2;
-  repeated int64 localID = 3;
-  // the retry time of sending deleting command to datanode.
-  required int32 count = 4;
-}
-
-/**
-A set of container reports, max count is generally set to
-8192 since that keeps the size of the reports under 1 MB.
-*/
-message ContainerReportsRequestProto {
-  enum reportType {
-    fullReport = 0;
-    deltaReport = 1;
-  }
-  required DatanodeDetailsProto datanodeDetails = 1;
-  repeated ContainerInfo reports = 2;
-  required reportType type = 3;
-}
-
-message ContainerReportsResponseProto {
+message SCMNodeAddressList {
+  repeated string addressList = 1;
 }
 
 /**
 * This message is send along with the heart beat to report datanode
-* storage utilization by SCM.
+* storage utilization to SCM.
 */
-message SCMNodeReport {
-  repeated SCMStorageReport storageReport = 1;
+message NodeReportProto {
+  repeated StorageReportProto storageReport = 1;
+}
+
+message StorageReportProto {
+  required string storageUuid = 1;
+  required string storageLocation = 2;
+  optional uint64 capacity = 3 [default = 0];
+  optional uint64 scmUsed = 4 [default = 0];
+  optional uint64 remaining = 5 [default = 0];
+  optional StorageTypeProto storageType = 6 [default = DISK];
+  optional bool failed = 7 [default = false];
 }
 
 /**
@@ -147,119 +123,85 @@ enum StorageTypeProto {
   PROVIDED = 5;
 }
 
-message SCMStorageReport {
-  required string storageUuid = 1;
-  required string storageLocation = 2;
-  optional uint64 capacity = 3 [default = 0];
-  optional uint64 scmUsed = 4 [default = 0];
-  optional uint64 remaining = 5 [default = 0];
-  optional StorageTypeProto storageType = 6 [default = DISK];
-  optional bool failed = 7 [default = false];
+message ContainerReportsProto {
+  repeated ContainerInfo reports = 1;
 }
 
-message SCMRegisterRequestProto {
-  required DatanodeDetailsProto datanodeDetails = 1;
-  required SCMNodeReport nodeReport = 2;
-  required ContainerReportsRequestProto containerReport = 3;
+message ContainerActionsProto {
+  repeated ContainerAction containerActions = 1;
 }
 
-/**
- * Request for version info of the software stack on the server.
- */
-message SCMVersionRequestProto {
-
-}
-
-/**
-* Generic response that is send to a version request. This allows keys to be
-* added on the fly and protocol to remain stable.
-*/
-message SCMVersionResponseProto {
-  required uint32 softwareVersion = 1;
-  repeated hadoop.hdds.KeyValue keys = 2;
-}
-
-message SCMNodeAddressList {
-  repeated string addressList = 1;
-}
-
-/**
- * Datanode ID returned by the SCM. This is similar to name node
- * registeration of a datanode.
- */
-message SCMRegisteredCmdResponseProto {
-  enum ErrorCode {
-    success = 1;
-    errorNodeNotPermitted = 2;
+message ContainerAction {
+  enum Action {
+    CLOSE = 1;
   }
-  required ErrorCode errorCode = 2;
-  required string datanodeUUID = 3;
-  required string clusterID = 4;
-  optional SCMNodeAddressList addressList = 5;
-  optional string hostname = 6;
-  optional string ipAddress = 7;
+
+  enum Reason {
+    CONTAINER_FULL = 1;
+  }
+
+  required ContainerInfo container = 1;
+  required Action action = 2;
+  optional Reason reason = 3;
+}
+
+/**
+A container report contains the following information.
+*/
+message ContainerInfo {
+  required int64 containerID = 1;
+  optional int64 size = 2;
+  optional int64 used = 3;
+  optional int64 keyCount = 4;
+  // TODO: move the io count to separate message
+  optional int64 readCount = 5;
+  optional int64 writeCount = 6;
+  optional int64 readBytes = 7;
+  optional int64 writeBytes = 8;
+  optional string finalhash = 9;
+  optional hadoop.hdds.LifeCycleState state = 10;
+  optional int64 deleteTransactionId = 11;
+}
+
+/*
+ * These are commands returned by SCM for to the datanode to execute.
+ */
+message SCMCommandProto {
+  enum Type {
+    reregisterCommand = 1;
+    deleteBlocksCommand = 2;
+    closeContainerCommand = 3;
+    deleteContainerCommand = 4;
+  }
+  // TODO: once we start using protoc 3.x, refactor this message using "oneof"
+  required Type commandType = 1;
+  optional ReregisterCommandProto reregisterCommandProto = 2;
+  optional DeleteBlocksCommandProto deleteBlocksCommandProto = 3;
+  optional CloseContainerCommandProto closeContainerCommandProto = 4;
+  optional DeleteContainerCommandProto deleteContainerCommandProto = 5;
 }
 
 /**
  * SCM informs a datanode to register itself again.
  * With recieving this command, datanode will transit to REGISTER state.
  */
-message SCMReregisterCmdResponseProto {}
+message ReregisterCommandProto {}
 
-/**
-This command tells the data node to send in the container report when possible
-*/
-message SendContainerReportProto {
-}
-
-/**
-This command asks the datanode to close a specific container.
-*/
-message SCMCloseContainerCmdResponseProto {
-  required int64 containerID = 1;
-}
-
-/**
-Type of commands supported by SCM to datanode protocol.
-*/
-enum SCMCmdType {
-  versionCommand = 2;
-  registeredCommand = 3;
-  sendContainerReport = 4;
-  reregisterCommand = 5;
-  deleteBlocksCommand = 6;
-  closeContainerCommand = 7;
-}
-
-/*
- * These are commands returned by SCM for to the datanode to execute.
- */
-message SCMCommandResponseProto {
-  required SCMCmdType cmdType = 2; // Type of the command
-  optional SCMRegisteredCmdResponseProto registeredProto = 3;
-  optional SCMVersionResponseProto versionProto = 4;
-  optional SendContainerReportProto sendReport = 5;
-  optional SCMReregisterCmdResponseProto reregisterProto = 6;
-  optional SCMDeleteBlocksCmdResponseProto deleteBlocksProto = 7;
-  required string datanodeUUID = 8;
-  optional SCMCloseContainerCmdResponseProto closeContainerProto = 9;
-}
-
-
-/*
- * A group of commands for the datanode to execute
- */
-message SCMHeartbeatResponseProto {
-  repeated SCMCommandResponseProto commands = 1;
-}
 
 // HB response from SCM, contains a list of block deletion transactions.
-message SCMDeleteBlocksCmdResponseProto {
+message DeleteBlocksCommandProto {
   repeated DeletedBlocksTransaction deletedBlocksTransactions = 1;
 }
 
-// SendACK response returned by datanode to SCM, currently empty.
-message ContainerBlocksDeletionACKResponseProto {
+// The deleted blocks which are stored in deletedBlock.db of scm.
+// We don't use BlockID because this only contians multiple localIDs
+// of the same containerID.
+message DeletedBlocksTransaction {
+  required int64 txID = 1;
+  required int64 containerID = 2;
+  repeated int64 localID = 3;
+  // the retry time of sending deleting command to datanode.
+  required int32 count = 4;
 }
 
 // ACK message datanode sent to SCM, contains the result of
@@ -270,6 +212,24 @@ message ContainerBlocksDeletionACKProto {
     required bool success = 2;
   }
   repeated DeleteBlockTransactionResult results = 1;
+}
+
+// SendACK response returned by datanode to SCM, currently empty.
+message ContainerBlocksDeletionACKResponseProto {
+}
+
+/**
+This command asks the datanode to close a specific container.
+*/
+message CloseContainerCommandProto {
+  required int64 containerID = 1;
+}
+
+/**
+This command asks the datanode to close a specific container.
+*/
+message DeleteContainerCommandProto {
+  required int64 containerID = 1;
 }
 
 /**
@@ -346,7 +306,7 @@ service StorageContainerDatanodeProtocolService {
   /**
   * Registers a data node with SCM.
   */
-  rpc register (SCMRegisterRequestProto) returns (SCMRegisteredCmdResponseProto);
+  rpc register (SCMRegisterRequestProto) returns (SCMRegisteredResponseProto);
 
   /**
    * Send heartbeat from datanode to SCM. HB's under SCM looks more
@@ -354,12 +314,6 @@ service StorageContainerDatanodeProtocolService {
    * extremely light weight and contains no data payload.
    */
   rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
-
-  /**
-    send container reports sends the container report to SCM. This will
-    return a null command as response.
-  */
-  rpc sendContainerReport(ContainerReportsRequestProto) returns (ContainerReportsResponseProto);
 
   /**
    * Sends the block deletion ACK to SCM.

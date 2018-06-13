@@ -28,17 +28,14 @@ import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto
     .ErrorCode;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ipc.Server;
@@ -48,7 +45,6 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
@@ -595,7 +591,7 @@ public class SCMNodeManager
 
     DatanodeDetails datanodeDetails = hbItem.getDatanodeDetails();
     UUID datanodeUuid = datanodeDetails.getUuid();
-    SCMNodeReport nodeReport = hbItem.getNodeReport();
+    NodeReportProto nodeReport = hbItem.getNodeReport();
     long recvTimestamp = hbItem.getRecvTimestamp();
     long processTimestamp = Time.monotonicNow();
     if (LOG.isTraceEnabled()) {
@@ -609,8 +605,6 @@ public class SCMNodeManager
     if (healthyNodes.containsKey(datanodeUuid)) {
       healthyNodes.put(datanodeUuid, processTimestamp);
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -622,8 +616,6 @@ public class SCMNodeManager
       healthyNodeCount.incrementAndGet();
       staleNodeCount.decrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -635,8 +627,6 @@ public class SCMNodeManager
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeUuid,
-          hbItem.getContainerReportState().getState());
       return;
     }
 
@@ -646,7 +636,7 @@ public class SCMNodeManager
         new ReregisterCommand());
   }
 
-  private void updateNodeStat(UUID dnId, SCMNodeReport nodeReport) {
+  private void updateNodeStat(UUID dnId, NodeReportProto nodeReport) {
     SCMNodeStat stat = nodeStats.get(dnId);
     if (stat == null) {
       LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
@@ -658,8 +648,9 @@ public class SCMNodeManager
       long totalCapacity = 0;
       long totalRemaining = 0;
       long totalScmUsed = 0;
-      List<SCMStorageReport> storageReports = nodeReport.getStorageReportList();
-      for (SCMStorageReport report : storageReports) {
+      List<StorageReportProto> storageReports = nodeReport
+          .getStorageReportList();
+      for (StorageReportProto report : storageReports) {
         totalCapacity += report.getCapacity();
         totalRemaining +=  report.getRemaining();
         totalScmUsed+= report.getScmUsed();
@@ -668,22 +659,6 @@ public class SCMNodeManager
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
       nodeStats.put(dnId, stat);
       scmStat.add(stat);
-    }
-  }
-
-  private void updateCommandQueue(UUID dnId,
-                                  ReportState.states containerReportState) {
-    if (containerReportState != null) {
-      switch (containerReportState) {
-      case completeContinerReport:
-        commandQueue.addCommand(dnId,
-            SendContainerCommand.newBuilder().build());
-        return;
-      case deltaContainerReport:
-      case noContainerReports:
-      default:
-        // do nothing
-      }
     }
   }
 
@@ -735,7 +710,7 @@ public class SCMNodeManager
    * Register the node if the node finds that it is not registered with any
    * SCM.
    *
-   * @param datanodeDetailsProto - Send datanodeDetails with Node info.
+   * @param datanodeDetails - Send datanodeDetails with Node info.
    *                   This function generates and assigns new datanode ID
    *                   for the datanode. This allows SCM to be run independent
    *                   of Namenode if required.
@@ -744,13 +719,11 @@ public class SCMNodeManager
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(DatanodeDetailsProto datanodeDetailsProto,
-                             SCMNodeReport nodeReport) {
+  public RegisteredCommand register(
+      DatanodeDetails datanodeDetails, NodeReportProto nodeReport) {
 
     String hostname = null;
     String ip = null;
-    DatanodeDetails datanodeDetails = DatanodeDetails.getFromProtoBuf(
-        datanodeDetailsProto);
     InetAddress dnAddress = Server.getRemoteIp();
     if (dnAddress != null) {
       // Mostly called inside an RPC, update ip and peer hostname
@@ -759,7 +732,7 @@ public class SCMNodeManager
       datanodeDetails.setHostName(hostname);
       datanodeDetails.setIpAddress(ip);
     }
-    SCMCommand responseCommand = verifyDatanodeUUID(datanodeDetails);
+    RegisteredCommand responseCommand = verifyDatanodeUUID(datanodeDetails);
     if (responseCommand != null) {
       return responseCommand;
     }
@@ -810,7 +783,8 @@ public class SCMNodeManager
    * @param datanodeDetails - Datanode Details.
    * @return SCMCommand
    */
-  private SCMCommand verifyDatanodeUUID(DatanodeDetails datanodeDetails) {
+  private RegisteredCommand verifyDatanodeUUID(
+      DatanodeDetails datanodeDetails) {
     if (datanodeDetails.getUuid() != null &&
         nodes.containsKey(datanodeDetails.getUuid())) {
       LOG.trace("Datanode is already registered. Datanode: {}",
@@ -827,37 +801,23 @@ public class SCMNodeManager
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
-   * @param datanodeDetailsProto - DatanodeDetailsProto.
+   * @param datanodeDetails - DatanodeDetailsProto.
    * @param nodeReport - node report.
-   * @param containerReportState - container report state.
    * @return SCMheartbeat response.
    * @throws IOException
    */
   @Override
   public List<SCMCommand> sendHeartbeat(
-      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
-      ReportState containerReportState) {
+      DatanodeDetails datanodeDetails, NodeReportProto nodeReport) {
 
-    Preconditions.checkNotNull(datanodeDetailsProto, "Heartbeat is missing " +
+    Preconditions.checkNotNull(datanodeDetails, "Heartbeat is missing " +
         "DatanodeDetails.");
-    DatanodeDetails datanodeDetails = DatanodeDetails
-        .getFromProtoBuf(datanodeDetailsProto);
-    // Checking for NULL to make sure that we don't get
-    // an exception from ConcurrentList.
-    // This could be a problem in tests, if this function is invoked via
-    // protobuf, transport layer will guarantee that this is not null.
-    if (datanodeDetails != null) {
-      heartbeatQueue.add(
-          new HeartbeatQueueItem.Builder()
-              .setDatanodeDetails(datanodeDetails)
-              .setNodeReport(nodeReport)
-              .setContainerReportState(containerReportState)
-              .build());
-      return commandQueue.getCommand(datanodeDetails.getUuid());
-    } else {
-      LOG.error("Datanode ID in heartbeat is null");
-    }
-    return null;
+    heartbeatQueue.add(
+        new HeartbeatQueueItem.Builder()
+            .setDatanodeDetails(datanodeDetails)
+            .setNodeReport(nodeReport)
+            .build());
+    return commandQueue.getCommand(datanodeDetails.getUuid());
   }
 
   /**

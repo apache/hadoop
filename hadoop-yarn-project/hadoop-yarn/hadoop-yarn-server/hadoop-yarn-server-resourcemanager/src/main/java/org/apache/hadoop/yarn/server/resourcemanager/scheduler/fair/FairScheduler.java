@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -42,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions
+        .SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -73,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils.MaxResourceValidationResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -95,6 +99,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -194,7 +199,7 @@ public class FairScheduler extends
 
   private AllocationFileLoaderService allocsLoader;
   @VisibleForTesting
-  AllocationConfiguration allocConf;
+  volatile AllocationConfiguration allocConf;
 
   // Container size threshold for making a reservation.
   @VisibleForTesting
@@ -449,10 +454,7 @@ public class FairScheduler extends
       String message =
           "Reject application " + applicationId + " submitted by user " + user
               + " with an empty queue name.";
-      LOG.info(message);
-      rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-              message));
+      rejectApplicationWithMessage(applicationId, message);
       return;
     }
 
@@ -461,10 +463,7 @@ public class FairScheduler extends
           "Reject application " + applicationId + " submitted by user " + user
               + " with an illegal queue name " + queueName + ". "
               + "The queue name cannot start/end with period.";
-      LOG.info(message);
-      rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-              message));
+      rejectApplicationWithMessage(applicationId, message);
       return;
     }
 
@@ -476,6 +475,31 @@ public class FairScheduler extends
         return;
       }
 
+      if (rmApp != null && rmApp.getAMResourceRequests() != null) {
+        // Resources.fitsIn would always return false when queueMaxShare is 0
+        // for any resource, but only using Resources.fitsIn is not enough
+        // is it would return false for such cases when the requested
+        // resource is smaller than the max resource but that max resource is
+        // not zero, e.g. requested vCores = 2, max vCores = 1.
+        // With this check, we only reject those applications where resource
+        // requested is greater than 0 and we have 0
+        // of that resource on the queue.
+        List<MaxResourceValidationResult> invalidAMResourceRequests =
+                validateResourceRequests(rmApp.getAMResourceRequests(), queue);
+
+        if (!invalidAMResourceRequests.isEmpty()) {
+          String msg = String.format(
+                  "Cannot submit application %s to queue %s because "
+                          + "it has zero amount of resource for a requested "
+                          + "resource! Invalid requested AM resources: %s, "
+                          + "maximum queue resources: %s",
+                  applicationId, queue.getName(),
+                  invalidAMResourceRequests, queue.getMaxShare());
+          rejectApplicationWithMessage(applicationId, msg);
+          return;
+        }
+      }
+
       // Enforce ACLs
       UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(
           user);
@@ -485,9 +509,7 @@ public class FairScheduler extends
         String msg = "User " + userUgi.getUserName()
             + " cannot submit applications to queue " + queue.getName()
             + "(requested queuename is " + queueName + ")";
-        LOG.info(msg);
-        rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED, msg));
+        rejectApplicationWithMessage(applicationId, msg);
         return;
       }
 
@@ -495,6 +517,7 @@ public class FairScheduler extends
           new SchedulerApplication<FSAppAttempt>(queue, user);
       applications.put(applicationId, application);
       queue.getMetrics().submitApp(user);
+      queue.addAssignedApp(applicationId);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queue.getName()
@@ -604,10 +627,7 @@ public class FairScheduler extends
     }
 
     if (appRejectMsg != null && rmApp != null) {
-      LOG.error(appRejectMsg);
-      rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppEvent(rmApp.getApplicationId(),
-              RMAppEventType.APP_REJECTED, appRejectMsg));
+      rejectApplicationWithMessage(rmApp.getApplicationId(), appRejectMsg);
       return null;
     }
 
@@ -834,7 +854,6 @@ public class FairScheduler extends
       List<ResourceRequest> ask, List<SchedulingRequest> schedulingRequests,
       List<ContainerId> release, List<String> blacklistAdditions,
       List<String> blacklistRemovals, ContainerUpdates updateRequests) {
-
     // Make sure this application exists
     FSAppAttempt application = getSchedulerApp(appAttemptId);
     if (application == null) {
@@ -852,6 +871,24 @@ public class FairScheduler extends
       LOG.error("Calling allocate on previous or removed " +
           "or non existent application attempt " + appAttemptId);
       return EMPTY_ALLOCATION;
+    }
+
+    ApplicationId applicationId = application.getApplicationId();
+    FSLeafQueue queue = application.getQueue();
+    List<MaxResourceValidationResult> invalidAsks =
+            validateResourceRequests(ask, queue);
+
+    // We need to be fail-fast here if any invalid ask is detected.
+    // If we would have thrown exception later, this could be problematic as
+    // tokens and promoted / demoted containers would have been lost because
+    // scheduler would clear them right away and AM
+    // would not get this information.
+    if (!invalidAsks.isEmpty()) {
+      throw new SchedulerInvalidResoureRequestException(String.format(
+              "Resource request is invalid for application %s because queue %s "
+                      + "has 0 amount of resource for a resource type! "
+                      + "Validation result: %s",
+              applicationId, queue.getName(), invalidAsks));
     }
 
     // Handle promotions and demotions
@@ -912,12 +949,41 @@ public class FairScheduler extends
 
     Resource headroom = application.getHeadroom();
     application.setApplicationHeadroomForMetrics(headroom);
+
     return new Allocation(newlyAllocatedContainers, headroom,
         preemptionContainerIds, null, null,
         application.pullUpdatedNMTokens(), null, null,
         application.pullNewlyPromotedContainers(),
         application.pullNewlyDemotedContainers(),
         application.pullPreviousAttemptContainers());
+  }
+
+  private List<MaxResourceValidationResult> validateResourceRequests(
+      List<ResourceRequest> requests, FSLeafQueue queue) {
+    List<MaxResourceValidationResult> validationResults = Lists.newArrayList();
+
+    for (ResourceRequest resourceRequest : requests) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Validating resource request: " + resourceRequest);
+      }
+
+      MaxResourceValidationResult validationResult =
+              SchedulerUtils.validateResourceRequestsAgainstQueueMaxResource(
+                      resourceRequest, queue.getMaxShare());
+      if (!validationResult.isValid()) {
+        validationResults.add(validationResult);
+        LOG.warn(String.format("Queue %s cannot handle resource request" +
+                        "because it has zero available amount of resource " +
+                        "for a requested resource type, " +
+                        "so the resource request is ignored!"
+                        + " Requested resources: %s, " +
+                        "maximum queue resources: %s",
+                queue.getName(), resourceRequest.getCapability(),
+                queue.getMaxShare()));
+      }
+    }
+
+    return validationResults;
   }
 
   @Override
@@ -1030,7 +1096,7 @@ public class FairScheduler extends
         return;
       }
 
-      final NodeId nodeID = node.getNodeID();
+      final NodeId nodeID = (node != null ? node.getNodeID() : null);
       if (!nodeTracker.exists(nodeID)) {
         // The node might have just been removed while this thread was waiting
         // on the synchronized lock before it entered this synchronized method
@@ -1060,9 +1126,14 @@ public class FairScheduler extends
         Resource assignedResource = Resources.clone(Resources.none());
         Resource maxResourcesToAssign = Resources.multiply(
             node.getUnallocatedResource(), 0.5f);
+
         while (node.getReservedContainer() == null) {
           Resource assignment = queueMgr.getRootQueue().assignContainer(node);
+
           if (assignment.equals(Resources.none())) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("No container is allocated on node " + node);
+            }
             break;
           }
 
@@ -1254,9 +1325,7 @@ public class FairScheduler extends
           String message = "Application " + applicationId
               + " submitted to a reservation which is not yet "
               + "currently active: " + resQName;
-          this.rmContext.getDispatcher().getEventHandler().handle(
-              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-                  message));
+          rejectApplicationWithMessage(applicationId, message);
           return null;
         }
         if (!queue.getParent().getQueueName().equals(queueName)) {
@@ -1264,9 +1333,7 @@ public class FairScheduler extends
               "Application: " + applicationId + " submitted to a reservation "
                   + resQName + " which does not belong to the specified queue: "
                   + queueName;
-          this.rmContext.getDispatcher().getEventHandler().handle(
-              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-                  message));
+          rejectApplicationWithMessage(applicationId, message);
           return null;
         }
         // use the reservation queue to run the app
@@ -1279,7 +1346,13 @@ public class FairScheduler extends
     } finally {
       readLock.unlock();
     }
+  }
 
+  private void rejectApplicationWithMessage(ApplicationId applicationId,
+          String msg) {
+    LOG.info(msg);
+    rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
+            applicationId, RMAppEventType.APP_REJECTED, msg));
   }
 
   private String getDefaultQueueForPlanQueue(String queueName) {
@@ -1518,6 +1591,7 @@ public class FairScheduler extends
       // Commit the reload; also create any queue defined in the alloc file
       // if it does not already exist, so it can be displayed on the web UI.
 
+      Set<String> removedStaticQueues = getRemovedStaticQueues(queueInfo);
       writeLock.lock();
       try {
         if (queueInfo == null) {
@@ -1528,12 +1602,34 @@ public class FairScheduler extends
           setQueueAcls(allocConf.getQueueAcls());
           allocConf.getDefaultSchedulingPolicy().initialize(getContext());
           queueMgr.updateAllocationConfiguration(allocConf);
+          queueMgr.setQueuesToDynamic(removedStaticQueues);
           applyChildDefaults();
           maxRunningEnforcer.updateRunnabilityOnReload();
         }
       } finally {
         writeLock.unlock();
       }
+    }
+
+    private Set<String> getRemovedStaticQueues(
+        AllocationConfiguration queueInfo) {
+      if (queueInfo == null || allocConf == null) {
+        return Collections.emptySet();
+      }
+      Set<String> removedStaticQueues = new HashSet<>();
+      for (Set<String> queues : allocConf.getConfiguredQueues().values()) {
+        removedStaticQueues.addAll(queues);
+      }
+      for (Set<String> queues : queueInfo.getConfiguredQueues().values()) {
+        removedStaticQueues.removeAll(queues);
+      }
+      return removedStaticQueues;
+    }
+
+    @Override
+    public void onCheck() {
+      queueMgr.removeEmptyDynamicQueues();
+      queueMgr.removePendingIncompatibleQueues();
     }
   }
 

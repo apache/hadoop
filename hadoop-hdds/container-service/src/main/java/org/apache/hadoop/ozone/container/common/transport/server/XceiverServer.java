@@ -80,7 +80,8 @@ public final class XceiverServer implements XceiverServerSpi {
             + "fallback to use default port {}", this.port, e);
       }
     }
-    datanodeDetails.setContainerPort(port);
+    datanodeDetails.setPort(
+        DatanodeDetails.newPort(DatanodeDetails.Port.Name.STANDALONE, port));
     this.storageContainer = dispatcher;
   }
 

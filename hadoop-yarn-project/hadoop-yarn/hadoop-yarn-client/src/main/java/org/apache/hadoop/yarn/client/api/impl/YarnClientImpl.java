@@ -400,7 +400,7 @@ public class YarnClientImpl extends YarnClient {
             + e.getMessage());
         return null;
       }
-      throw e;
+      throw new IOException(e);
     } catch (NoClassDefFoundError e) {
       NoClassDefFoundError wrappedError = new NoClassDefFoundError(
           e.getMessage() + ". It appears that the timeline client "

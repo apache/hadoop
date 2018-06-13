@@ -21,12 +21,15 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.ozone.container.common.report.ReportManager;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
-    .CloseContainerHandler;
+    .CloseContainerCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CommandDispatcher;
-import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
-    .ContainerReportHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -59,6 +62,7 @@ public class DatanodeStateMachine implements Closeable {
   private final OzoneContainer container;
   private DatanodeDetails datanodeDetails;
   private final CommandDispatcher commandDispatcher;
+  private final ReportManager reportManager;
   private long commandsHandled;
   private AtomicLong nextHB;
   private Thread stateMachineThread = null;
@@ -88,13 +92,18 @@ public class DatanodeStateMachine implements Closeable {
      // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
-        .addHandler(new ContainerReportHandler())
-        .addHandler(new CloseContainerHandler())
+        .addHandler(new CloseContainerCommandHandler())
         .addHandler(new DeleteBlocksCommandHandler(
             container.getContainerManager(), conf))
         .setConnectionManager(connectionManager)
         .setContainer(container)
         .setContext(context)
+        .build();
+
+    reportManager = ReportManager.newBuilder(conf)
+        .setStateContext(context)
+        .addPublisherFor(NodeReportProto.class)
+        .addPublisherFor(ContainerReportsProto.class)
         .build();
   }
 
@@ -129,13 +138,12 @@ public class DatanodeStateMachine implements Closeable {
     long now = 0;
 
     container.start();
+    reportManager.init();
     initCommandHandlerThread(conf);
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
         nextHB.set(Time.monotonicNow() + heartbeatFrequency);
-        context.setReportState(container.getNodeReport());
-        context.setContainerReportState(container.getContainerReportState());
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();
@@ -312,6 +320,7 @@ public class DatanodeStateMachine implements Closeable {
   public synchronized void stopDaemon() {
     try {
       context.setState(DatanodeStates.SHUTDOWN);
+      reportManager.shutdown();
       this.close();
       LOG.info("Ozone container server stopped.");
     } catch (IOException e) {

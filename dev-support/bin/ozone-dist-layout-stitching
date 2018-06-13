@@ -145,6 +145,10 @@ run copy "${ROOT}/hadoop-ozone/ozone-manager/target/hadoop-ozone-ozone-manager-$
 run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}" .
 run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${HDDS_VERSION}" .
 run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${HDDS_VERSION}" .
+# Optional documentation, could be missing
+cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ksm/
+cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
+
 
 mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn

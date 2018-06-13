@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
+import org.apache.hadoop.yarn.webapp.View.ViewContext;
+import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.Params;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
@@ -223,7 +225,14 @@ public class TestBlocks {
     jobs.put(job.getID(), job);
     when(ctx.getAllJobs()).thenReturn(jobs);
 
-    HsJobsBlock block = new HsJobsBlockForTest(ctx);
+    Controller.RequestContext rc = mock(Controller.RequestContext.class);
+    ViewContext view = mock(ViewContext.class);
+    HttpServletRequest req =mock(HttpServletRequest.class);
+    when(rc.getRequest()).thenReturn(req);
+    when(view.requestContext()).thenReturn(rc);
+
+    Configuration conf = new Configuration();
+    HsJobsBlock block = new HsJobsBlockForTest(conf, ctx, view);
     PrintWriter pWriter = new PrintWriter(data);
     Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
     block.render(html);
@@ -400,8 +409,10 @@ public class TestBlocks {
   }
 
   private class HsJobsBlockForTest extends HsJobsBlock {
-    HsJobsBlockForTest(AppContext appCtx) {
-      super(appCtx);
+
+    HsJobsBlockForTest(Configuration conf, AppContext appCtx,
+        ViewContext view) {
+      super(conf, appCtx, view);
     }
 
     @Override

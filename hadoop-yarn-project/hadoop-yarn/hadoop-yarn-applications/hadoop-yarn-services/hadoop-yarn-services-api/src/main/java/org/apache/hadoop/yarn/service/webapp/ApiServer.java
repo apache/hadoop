@@ -641,20 +641,23 @@ public class ApiServer {
   private Response startService(String appName,
       final UserGroupInformation ugi) throws IOException,
       InterruptedException {
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws YarnException, IOException {
-        ServiceClient sc = getServiceClient();
-        sc.init(YARN_CONFIG);
-        sc.start();
-        sc.actionStart(appName);
-        sc.close();
-        return null;
-      }
-    });
+    ApplicationId appId =
+        ugi.doAs(new PrivilegedExceptionAction<ApplicationId>() {
+          @Override public ApplicationId run()
+              throws YarnException, IOException {
+            ServiceClient sc = getServiceClient();
+            sc.init(YARN_CONFIG);
+            sc.start();
+            ApplicationId appId = sc.actionStartAndGetId(appName);
+            sc.close();
+            return appId;
+          }
+        });
     LOG.info("Successfully started service " + appName);
     ServiceStatus status = new ServiceStatus();
-    status.setDiagnostics("Service " + appName + " is successfully started.");
+    status.setDiagnostics(
+        "Service " + appName + " is successfully started with ApplicationId: "
+            + appId);
     status.setState(ServiceState.ACCEPTED);
     return formatResponse(Status.OK, status);
   }

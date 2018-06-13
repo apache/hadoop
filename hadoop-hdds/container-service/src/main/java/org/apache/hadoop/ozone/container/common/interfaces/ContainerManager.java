@@ -27,11 +27,9 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 
 import java.io.IOException;
@@ -173,21 +171,21 @@ public interface ContainerManager extends RwLock {
    * Get the Node Report of container storage usage.
    * @return node report.
    */
-  SCMNodeReport getNodeReport() throws IOException;
+  NodeReportProto getNodeReport() throws IOException;
 
   /**
    * Gets container report.
    * @return container report.
    * @throws IOException
    */
-  ContainerReportsRequestProto getContainerReport() throws IOException;
+  ContainerReportsProto getContainerReport() throws IOException;
 
   /**
    * Gets container reports.
    * @return List of all closed containers.
    * @throws IOException
    */
-  List<ContainerData> getContainerReports() throws IOException;
+  List<ContainerData> getClosedContainerReports() throws IOException;
 
   /**
    * Increase pending deletion blocks count number of specified container.
@@ -266,9 +264,4 @@ public interface ContainerManager extends RwLock {
    */
   long getNumKeys(long containerId);
 
-  /**
-   * Get the container report state to send via HB to SCM.
-   * @return container report state.
-   */
-  ReportState getContainerReportState();
 }

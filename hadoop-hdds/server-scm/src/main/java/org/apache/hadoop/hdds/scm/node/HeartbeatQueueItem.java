@@ -21,9 +21,7 @@ package org.apache.hadoop.hdds.scm.node;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -33,22 +31,19 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 public class HeartbeatQueueItem {
   private DatanodeDetails datanodeDetails;
   private long recvTimestamp;
-  private SCMNodeReport nodeReport;
-  private ReportState containerReportState;
+  private NodeReportProto nodeReport;
 
   /**
    *
    * @param datanodeDetails - datanode ID of the heartbeat.
    * @param recvTimestamp - heartbeat receive timestamp.
    * @param nodeReport - node report associated with the heartbeat if any.
-   * @param containerReportState - container report state.
    */
   HeartbeatQueueItem(DatanodeDetails datanodeDetails, long recvTimestamp,
-      SCMNodeReport nodeReport, ReportState containerReportState) {
+      NodeReportProto nodeReport) {
     this.datanodeDetails = datanodeDetails;
     this.recvTimestamp = recvTimestamp;
     this.nodeReport = nodeReport;
-    this.containerReportState = containerReportState;
   }
 
   /**
@@ -61,15 +56,8 @@ public class HeartbeatQueueItem {
   /**
    * @return node report.
    */
-  public SCMNodeReport getNodeReport() {
+  public NodeReportProto getNodeReport() {
     return nodeReport;
-  }
-
-  /**
-   * @return container report state.
-   */
-  public ReportState getContainerReportState() {
-    return containerReportState;
   }
 
   /**
@@ -84,8 +72,7 @@ public class HeartbeatQueueItem {
    */
   public static class Builder {
     private DatanodeDetails datanodeDetails;
-    private SCMNodeReport nodeReport;
-    private ReportState containerReportState;
+    private NodeReportProto nodeReport;
     private long recvTimestamp = monotonicNow();
 
     public Builder setDatanodeDetails(DatanodeDetails dnDetails) {
@@ -93,13 +80,8 @@ public class HeartbeatQueueItem {
       return this;
     }
 
-    public Builder setNodeReport(SCMNodeReport scmNodeReport) {
-      this.nodeReport = scmNodeReport;
-      return this;
-    }
-
-    public Builder setContainerReportState(ReportState crs) {
-      this.containerReportState = crs;
+    public Builder setNodeReport(NodeReportProto report) {
+      this.nodeReport = report;
       return this;
     }
 
@@ -110,8 +92,7 @@ public class HeartbeatQueueItem {
     }
 
     public HeartbeatQueueItem build() {
-      return new HeartbeatQueueItem(datanodeDetails, recvTimestamp, nodeReport,
-          containerReportState);
+      return new HeartbeatQueueItem(datanodeDetails, recvTimestamp, nodeReport);
     }
   }
 }

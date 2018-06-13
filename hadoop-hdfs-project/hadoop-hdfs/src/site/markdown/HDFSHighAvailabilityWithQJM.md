@@ -632,6 +632,8 @@ When moving between versions of HDFS, sometimes the newer software can simply be
 
 Note that if at any time you want to restart the NameNodes before finalizing or rolling back the upgrade, you should start the NNs as normal, i.e. without any special startup flag.
 
+**To query status of upgrade**, the operator will use the `` `hdfs dfsadmin -upgrade query' `` command while atleast one of the NNs is running. The command will return whether the NN upgrade process is finalized or not, for each NN.
+
 **To finalize an HA upgrade**, the operator will use the `` `hdfs dfsadmin -finalizeUpgrade' `` command while the NNs are running and one of them is active. The active NN at the time this happens will perform the finalization of the shared log, and the NN whose local storage directories contain the previous FS state will delete its local state.
 
 **To perform a rollback** of an upgrade, both NNs should first be shut down. The operator should run the roll back command on the NN where they initiated the upgrade procedure, which will perform the rollback on the local dirs there, as well as on the shared log, either NFS or on the JNs. Afterward, this NN should be started and the operator should run `` `-bootstrapStandby' `` on the other NN to bring the two NNs in sync with this rolled-back file system state.

@@ -34,8 +34,10 @@ import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,6 +52,8 @@ public class ServiceClientTest extends ServiceClient {
   private Service goodServiceStatus = buildLiveGoodService();
   private boolean initialized;
   private Set<String> expectedInstances = new HashSet<>();
+  private Map<String, ApplicationId> serviceAppId = new HashMap<>();
+
 
   public ServiceClientTest() {
     super();
@@ -83,7 +87,10 @@ public class ServiceClientTest extends ServiceClient {
   public ApplicationId actionCreate(Service service) throws IOException {
     ServiceApiUtil.validateAndResolveService(service,
         new SliderFileSystem(conf), getConfig());
-    return ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    serviceAppId.put(service.getName(), appId);
+    return appId;
   }
 
   @Override
@@ -96,10 +103,13 @@ public class ServiceClientTest extends ServiceClient {
   }
 
   @Override
-  public int actionStart(String serviceName)
+  public ApplicationId actionStartAndGetId(String serviceName)
       throws YarnException, IOException {
     if (serviceName != null && serviceName.equals("jenkins")) {
-      return EXIT_SUCCESS;
+      ApplicationId appId =
+          ApplicationId.newInstance(System.currentTimeMillis(), 1);
+      serviceAppId.put(serviceName, appId);
+      return appId;
     } else {
       throw new ApplicationNotFoundException("");
     }
@@ -206,5 +216,11 @@ public class ServiceClientTest extends ServiceClient {
     }
     comp.setContainers(containers);
     return service;
+  }
+
+  @Override
+  public synchronized ApplicationId getAppId(String serviceName)
+      throws IOException, YarnException {
+    return serviceAppId.get(serviceName);
   }
 }

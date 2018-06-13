@@ -16,10 +16,13 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol
-    .proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-        .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+        .StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 
@@ -50,26 +53,43 @@ public final class TestUtils {
   public static DatanodeDetails getDatanodeDetails(SCMNodeManager nodeManager,
       String uuid) {
     DatanodeDetails datanodeDetails = getDatanodeDetails(uuid);
-    nodeManager.register(datanodeDetails.getProtoBufMessage(), null);
+    nodeManager.register(datanodeDetails, null);
     return datanodeDetails;
   }
 
   /**
    * Create Node Report object.
-   * @return SCMNodeReport
+   * @return NodeReportProto
    */
-  public static SCMNodeReport createNodeReport() {
-    SCMNodeReport.Builder nodeReport = SCMNodeReport.newBuilder();
-    for (int i = 0; i < 1; i++) {
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      nodeReport.addStorageReport(i, srb.setStorageUuid("disk")
-          .setCapacity(100)
-          .setScmUsed(10)
-          .setRemaining(90)
-          .build());
-    }
+  public static NodeReportProto createNodeReport(
+      List<StorageReportProto> reports) {
+    NodeReportProto.Builder nodeReport = NodeReportProto.newBuilder();
+    nodeReport.addAllStorageReport(reports);
     return nodeReport.build();
   }
+
+  /**
+   * Create SCM Storage Report object.
+   * @return list of SCMStorageReport
+   */
+  public static List<StorageReportProto> createStorageReport(long capacity,
+      long used, long remaining, String path, StorageTypeProto type, String id,
+      int count) {
+    List<StorageReportProto> reportList = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Preconditions.checkNotNull(path);
+      Preconditions.checkNotNull(id);
+      StorageReportProto.Builder srb = StorageReportProto.newBuilder();
+      srb.setStorageUuid(id).setStorageLocation(path).setCapacity(capacity)
+          .setScmUsed(used).setRemaining(remaining);
+      StorageTypeProto storageTypeProto =
+          type == null ? StorageTypeProto.DISK : type;
+      srb.setStorageType(storageTypeProto);
+      reportList.add(srb.build());
+    }
+    return reportList;
+  }
+
 
   /**
    * Get specified number of DatanodeDetails and registered them with node
@@ -104,13 +124,19 @@ public final class TestUtils {
             .nextInt(256) + "." + random.nextInt(256);
 
     String hostName = uuid;
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, 0);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, 0);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, 0);
     DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
     builder.setUuid(uuid)
         .setHostName("localhost")
         .setIpAddress(ipAddress)
-        .setContainerPort(0)
-        .setRatisPort(0)
-        .setOzoneRestPort(0);
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort);
     return builder.build();
   }
 

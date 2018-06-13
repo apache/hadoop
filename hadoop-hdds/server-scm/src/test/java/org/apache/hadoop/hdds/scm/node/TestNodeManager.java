@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
@@ -26,11 +28,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -67,8 +65,6 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -81,10 +77,6 @@ import static org.junit.Assert.assertTrue;
 public class TestNodeManager {
 
   private File testDir;
-
-  private ReportState reportState = ReportState.newBuilder()
-      .setState(ReportState.states.noContainerReports)
-      .setCount(0).build();
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -152,8 +144,8 @@ public class TestNodeManager {
       for (int x = 0; x < nodeManager.getMinimumChillModeNodes(); x++) {
         DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
             nodeManager);
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            null, reportState);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            null);
       }
 
       // Wait for 4 seconds max.
@@ -199,9 +191,8 @@ public class TestNodeManager {
 
       // Need 100 nodes to come out of chill mode, only one node is sending HB.
       nodeManager.setMinimumChillModeNodes(100);
-      nodeManager.sendHeartbeat(TestUtils.getDatanodeDetails(nodeManager)
-          .getProtoBufMessage(),
-          null, reportState);
+      nodeManager.sendHeartbeat(TestUtils.getDatanodeDetails(nodeManager),
+          null);
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
       assertFalse("Not enough heartbeat, Node manager should have" +
@@ -228,8 +219,8 @@ public class TestNodeManager {
 
       // Send 10 heartbeat from same node, and assert we never leave chill mode.
       for (int x = 0; x < 10; x++) {
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            null, reportState);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            null);
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
@@ -259,8 +250,8 @@ public class TestNodeManager {
     nodeManager.close();
 
     // These should never be processed.
-    nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-        null, reportState);
+    nodeManager.sendHeartbeat(datanodeDetails,
+        null);
 
     // Let us just wait for 2 seconds to prove that HBs are not processed.
     Thread.sleep(2 * 1000);
@@ -281,12 +272,15 @@ public class TestNodeManager {
     conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         100, TimeUnit.MILLISECONDS);
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    String dnId = datanodeDetails.getUuidString();
+    String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+    List<StorageReportProto> reports =
+        TestUtils.createStorageReport(100, 10, 90, storagePath, null, dnId, 1);
     try (SCMNodeManager nodemanager = createNodeManager(conf)) {
-      nodemanager.register(datanodeDetails.getProtoBufMessage(),
-          TestUtils.createNodeReport());
+      nodemanager.register(datanodeDetails,
+          TestUtils.createNodeReport(reports));
       List<SCMCommand> command = nodemanager.sendHeartbeat(
-          datanodeDetails.getProtoBufMessage(),
-          null, reportState);
+          datanodeDetails, null);
       Assert.assertTrue(nodemanager.getAllNodes().contains(datanodeDetails));
       Assert.assertTrue("On regular HB calls, SCM responses a "
           + "datanode with an empty command list", command.isEmpty());
@@ -304,10 +298,10 @@ public class TestNodeManager {
         GenericTestUtils.waitFor(new Supplier<Boolean>() {
           @Override public Boolean get() {
             List<SCMCommand> command =
-                nodemanager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-                    null, reportState);
+                nodemanager.sendHeartbeat(datanodeDetails,
+                    null);
             return command.size() == 1 && command.get(0).getType()
-                .equals(SCMCmdType.reregisterCommand);
+                .equals(SCMCommandProto.Type.reregisterCommand);
           }
         }, 100, 3 * 1000);
       } catch (TimeoutException e) {
@@ -336,8 +330,8 @@ public class TestNodeManager {
       for (int x = 0; x < count; x++) {
         DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
             nodeManager);
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            null, reportState);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            null);
       }
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
@@ -428,19 +422,19 @@ public class TestNodeManager {
       DatanodeDetails staleNode = TestUtils.getDatanodeDetails(nodeManager);
 
       // Heartbeat once
-      nodeManager.sendHeartbeat(staleNode.getProtoBufMessage(),
-          null, reportState);
+      nodeManager.sendHeartbeat(staleNode,
+          null);
 
       // Heartbeat all other nodes.
       for (DatanodeDetails dn : nodeList) {
-        nodeManager.sendHeartbeat(dn.getProtoBufMessage(), null, reportState);
+        nodeManager.sendHeartbeat(dn, null);
       }
 
       // Wait for 2 seconds .. and heartbeat good nodes again.
       Thread.sleep(2 * 1000);
 
       for (DatanodeDetails dn : nodeList) {
-        nodeManager.sendHeartbeat(dn.getProtoBufMessage(), null, reportState);
+        nodeManager.sendHeartbeat(dn, null);
       }
 
       // Wait for 2 seconds, wait a total of 4 seconds to make sure that the
@@ -457,7 +451,7 @@ public class TestNodeManager {
 
       // heartbeat good nodes again.
       for (DatanodeDetails dn : nodeList) {
-        nodeManager.sendHeartbeat(dn.getProtoBufMessage(), null, reportState);
+        nodeManager.sendHeartbeat(dn, null);
       }
 
       //  6 seconds is the dead window for this test , so we wait a total of
@@ -493,7 +487,7 @@ public class TestNodeManager {
   public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException,
       InterruptedException, TimeoutException {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      nodeManager.sendHeartbeat(null, null, reportState);
+      nodeManager.sendHeartbeat(null, null);
     } catch (NullPointerException npe) {
       GenericTestUtils.assertExceptionContains("Heartbeat is missing " +
           "DatanodeDetails.", npe);
@@ -516,42 +510,42 @@ public class TestNodeManager {
    * @throws InterruptedException
    * @throws TimeoutException
    */
+  /**
+   * These values are very important. Here is what it means so you don't
+   * have to look it up while reading this code.
+   *
+   *  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL - This the frequency of the
+   *  HB processing thread that is running in the SCM. This thread must run
+   *  for the SCM  to process the Heartbeats.
+   *
+   *  OZONE_SCM_HEARTBEAT_INTERVAL - This is the frequency at which
+   *  datanodes will send heartbeats to SCM. Please note: This is the only
+   *  config value for node manager that is specified in seconds. We don't
+   *  want SCM heartbeat resolution to be more than in seconds.
+   *  In this test it is not used, but we are forced to set it because we
+   *  have validation code that checks Stale Node interval and Dead Node
+   *  interval is larger than the value of
+   *  OZONE_SCM_HEARTBEAT_INTERVAL.
+   *
+   *  OZONE_SCM_STALENODE_INTERVAL - This is the time that must elapse
+   *  from the last heartbeat for us to mark a node as stale. In this test
+   *  we set that to 3. That is if a node has not heartbeat SCM for last 3
+   *  seconds we will mark it as stale.
+   *
+   *  OZONE_SCM_DEADNODE_INTERVAL - This is the time that must elapse
+   *  from the last heartbeat for a node to be marked dead. We have an
+   *  additional constraint that this must be at least 2 times bigger than
+   *  Stale node Interval.
+   *
+   *  With these we are trying to explore the state of this cluster with
+   *  various timeouts. Each section is commented so that you can keep
+   *  track of the state of the cluster nodes.
+   *
+   */
+
   @Test
   public void testScmClusterIsInExpectedState1() throws IOException,
       InterruptedException, TimeoutException {
-    /**
-     * These values are very important. Here is what it means so you don't
-     * have to look it up while reading this code.
-     *
-     *  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL - This the frequency of the
-     *  HB processing thread that is running in the SCM. This thread must run
-     *  for the SCM  to process the Heartbeats.
-     *
-     *  OZONE_SCM_HEARTBEAT_INTERVAL - This is the frequency at which
-     *  datanodes will send heartbeats to SCM. Please note: This is the only
-     *  config value for node manager that is specified in seconds. We don't
-     *  want SCM heartbeat resolution to be more than in seconds.
-     *  In this test it is not used, but we are forced to set it because we
-     *  have validation code that checks Stale Node interval and Dead Node
-     *  interval is larger than the value of
-     *  OZONE_SCM_HEARTBEAT_INTERVAL.
-     *
-     *  OZONE_SCM_STALENODE_INTERVAL - This is the time that must elapse
-     *  from the last heartbeat for us to mark a node as stale. In this test
-     *  we set that to 3. That is if a node has not heartbeat SCM for last 3
-     *  seconds we will mark it as stale.
-     *
-     *  OZONE_SCM_DEADNODE_INTERVAL - This is the time that must elapse
-     *  from the last heartbeat for a node to be marked dead. We have an
-     *  additional constraint that this must be at least 2 times bigger than
-     *  Stale node Interval.
-     *
-     *  With these we are trying to explore the state of this cluster with
-     *  various timeouts. Each section is commented so that you can keep
-     *  track of the state of the cluster nodes.
-     *
-     */
-
     OzoneConfiguration conf = getConf();
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100,
         MILLISECONDS);
@@ -571,11 +565,11 @@ public class TestNodeManager {
       DatanodeDetails deadNode =
           TestUtils.getDatanodeDetails(nodeManager);
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       nodeManager.sendHeartbeat(
-          staleNode.getProtoBufMessage(), null, reportState);
+          staleNode, null);
       nodeManager.sendHeartbeat(
-          deadNode.getProtoBufMessage(), null, reportState);
+          deadNode, null);
 
       // Sleep so that heartbeat processing thread gets to run.
       Thread.sleep(500);
@@ -602,15 +596,15 @@ public class TestNodeManager {
        */
 
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       nodeManager.sendHeartbeat(
-          staleNode.getProtoBufMessage(), null, reportState);
+          staleNode, null);
       nodeManager.sendHeartbeat(
-          deadNode.getProtoBufMessage(), null, reportState);
+          deadNode, null);
 
       Thread.sleep(1500);
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       Thread.sleep(2 * 1000);
       assertEquals(1, nodeManager.getNodeCount(HEALTHY));
 
@@ -631,12 +625,12 @@ public class TestNodeManager {
        */
 
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       nodeManager.sendHeartbeat(
-          staleNode.getProtoBufMessage(), null, reportState);
+          staleNode, null);
       Thread.sleep(1500);
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       Thread.sleep(2 * 1000);
 
       // 3.5 seconds have elapsed for stale node, so it moves into Stale.
@@ -670,11 +664,11 @@ public class TestNodeManager {
        * back all the nodes in healthy state.
        */
       nodeManager.sendHeartbeat(
-          healthyNode.getProtoBufMessage(), null, reportState);
+          healthyNode, null);
       nodeManager.sendHeartbeat(
-          staleNode.getProtoBufMessage(), null, reportState);
+          staleNode, null);
       nodeManager.sendHeartbeat(
-          deadNode.getProtoBufMessage(), null, reportState);
+          deadNode, null);
       Thread.sleep(500);
       //Assert all nodes are healthy.
       assertEquals(3, nodeManager.getAllNodes().size());
@@ -695,7 +689,7 @@ public class TestNodeManager {
                                 int sleepDuration) throws InterruptedException {
     while (!Thread.currentThread().isInterrupted()) {
       for (DatanodeDetails dn : list) {
-        manager.sendHeartbeat(dn.getProtoBufMessage(), null, reportState);
+        manager.sendHeartbeat(dn, null);
       }
       Thread.sleep(sleepDuration);
     }
@@ -781,7 +775,7 @@ public class TestNodeManager {
       // No Thread just one time HBs the node manager, so that these will be
       // marked as dead nodes eventually.
       for (DatanodeDetails dn : deadNodeList) {
-        nodeManager.sendHeartbeat(dn.getProtoBufMessage(), null, reportState);
+        nodeManager.sendHeartbeat(dn, null);
       }
 
 
@@ -946,7 +940,7 @@ public class TestNodeManager {
       DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
           nodeManager);
       nodeManager.sendHeartbeat(
-          datanodeDetails.getProtoBufMessage(), null, reportState);
+          datanodeDetails, null);
       String status = nodeManager.getChillModeStatus();
       Assert.assertThat(status, containsString("Still in chill " +
           "mode, waiting on nodes to report in."));
@@ -973,8 +967,7 @@ public class TestNodeManager {
       // Assert that node manager force enter cannot be overridden by nodes HBs.
       for (int x = 0; x < 20; x++) {
         DatanodeDetails datanode = TestUtils.getDatanodeDetails(nodeManager);
-        nodeManager.sendHeartbeat(datanode.getProtoBufMessage(),
-            null, reportState);
+        nodeManager.sendHeartbeat(datanode, null);
       }
 
       Thread.sleep(500);
@@ -1012,14 +1005,14 @@ public class TestNodeManager {
       for (int x = 0; x < nodeCount; x++) {
         DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
             nodeManager);
-
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(used).
-            setRemaining(capacity - used).build();
-        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
-            nrb.addStorageReport(srb).build(), reportState);
+        String dnId = datanodeDetails.getUuidString();
+        long free = capacity - used;
+        String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+        List<StorageReportProto> reports = TestUtils
+            .createStorageReport(capacity, used, free, storagePath,
+                null, dnId, 1);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            TestUtils.createNodeReport(reports));
       }
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
@@ -1055,21 +1048,21 @@ public class TestNodeManager {
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails(
-          nodeManager);
+      DatanodeDetails datanodeDetails =
+          TestUtils.getDatanodeDetails(nodeManager);
       final long capacity = 2000;
       final long usedPerHeartbeat = 100;
-
+      String dnId = datanodeDetails.getUuidString();
       for (int x = 0; x < heartbeatCount; x++) {
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(x * usedPerHeartbeat)
-            .setRemaining(capacity - x * usedPerHeartbeat).build();
-        nrb.addStorageReport(srb);
+        long scmUsed = x * usedPerHeartbeat;
+        long remaining = capacity - scmUsed;
+        String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+        List<StorageReportProto> reports = TestUtils
+            .createStorageReport(capacity, scmUsed, remaining, storagePath,
+                null, dnId, 1);
 
-        nodeManager.sendHeartbeat(
-            datanodeDetails.getProtoBufMessage(), nrb.build(), reportState);
+        nodeManager.sendHeartbeat(datanodeDetails,
+            TestUtils.createNodeReport(reports));
         Thread.sleep(100);
       }
 
@@ -1145,14 +1138,12 @@ public class TestNodeManager {
       assertEquals(0, foundRemaining);
 
       // Send a new report to bring the dead node back to healthy
-      SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-      SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-      srb.setStorageUuid(UUID.randomUUID().toString());
-      srb.setCapacity(capacity).setScmUsed(expectedScmUsed)
-          .setRemaining(expectedRemaining).build();
-      nrb.addStorageReport(srb);
-      nodeManager.sendHeartbeat(
-          datanodeDetails.getProtoBufMessage(), nrb.build(), reportState);
+      String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+      List<StorageReportProto> reports = TestUtils
+          .createStorageReport(capacity, expectedScmUsed, expectedRemaining,
+              storagePath, null, dnId, 1);
+      nodeManager.sendHeartbeat(datanodeDetails,
+          TestUtils.createNodeReport(reports));
 
       // Wait up to 5 seconds so that the dead node becomes healthy
       // Verify usage info should be updated.

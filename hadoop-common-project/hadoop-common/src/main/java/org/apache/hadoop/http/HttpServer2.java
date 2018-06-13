@@ -34,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -172,10 +174,16 @@ public final class HttpServer2 implements FilterContainer {
   private final SignerSecretProvider secretProvider;
   private XFrameOption xFrameOption;
   private boolean xFrameOptionIsEnabled;
-  private static final String X_FRAME_VALUE = "xFrameOption";
-  private static final String X_FRAME_ENABLED = "X_FRAME_ENABLED";
-
-
+  public static final String HTTP_HEADER_PREFIX = "hadoop.http.header.";
+  private static final String HTTP_HEADER_REGEX =
+          "hadoop\\.http\\.header\\.([a-zA-Z\\-_]+)";
+  static final String X_XSS_PROTECTION  =
+          "X-XSS-Protection:1; mode=block";
+  static final String X_CONTENT_TYPE_OPTIONS =
+          "X-Content-Type-Options:nosniff";
+  private static final String X_FRAME_OPTIONS = "X-FRAME-OPTIONS";
+  private static final Pattern PATTERN_HTTP_HEADER_REGEX =
+          Pattern.compile(HTTP_HEADER_REGEX);
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -574,10 +582,7 @@ public final class HttpServer2 implements FilterContainer {
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
 
-    Map<String, String> xFrameParams = new HashMap<>();
-    xFrameParams.put(X_FRAME_ENABLED,
-        String.valueOf(this.xFrameOptionIsEnabled));
-    xFrameParams.put(X_FRAME_VALUE,  this.xFrameOption.toString());
+    Map<String, String> xFrameParams = setHeaders(conf);
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
@@ -1415,8 +1420,11 @@ public final class HttpServer2 implements FilterContainer {
 
     if (servletContext.getAttribute(ADMINS_ACL) != null &&
         !userHasAdministratorAccess(servletContext, remoteUser)) {
-      response.sendError(HttpServletResponse.SC_FORBIDDEN, "User "
-          + remoteUser + " is unauthorized to access this page.");
+      response.sendError(HttpServletResponse.SC_FORBIDDEN,
+          "Unauthenticated users are not " +
+              "authorized to access this page.");
+      LOG.warn("User " + remoteUser + " is unauthorized to access the page "
+          + request.getRequestURI() + ".");
       return false;
     }
 
@@ -1475,9 +1483,11 @@ public final class HttpServer2 implements FilterContainer {
   public static class QuotingInputFilter implements Filter {
 
     private FilterConfig config;
+    private Map<String, String> headerMap;
 
     public static class RequestQuoter extends HttpServletRequestWrapper {
       private final HttpServletRequest rawRequest;
+
       public RequestQuoter(HttpServletRequest rawRequest) {
         super(rawRequest);
         this.rawRequest = rawRequest;
@@ -1566,6 +1576,7 @@ public final class HttpServer2 implements FilterContainer {
     @Override
     public void init(FilterConfig config) throws ServletException {
       this.config = config;
+      initHttpHeaderMap();
     }
 
     @Override
@@ -1593,11 +1604,7 @@ public final class HttpServer2 implements FilterContainer {
       } else if (mime.startsWith("application/xml")) {
         httpResponse.setContentType("text/xml; charset=utf-8");
       }
-
-      if(Boolean.valueOf(this.config.getInitParameter(X_FRAME_ENABLED))) {
-        httpResponse.addHeader("X-FRAME-OPTIONS",
-            this.config.getInitParameter(X_FRAME_VALUE));
-      }
+      headerMap.forEach((k, v) -> httpResponse.addHeader(k, v));
       chain.doFilter(quoted, httpResponse);
     }
 
@@ -1613,14 +1620,25 @@ public final class HttpServer2 implements FilterContainer {
       return (mime == null) ? null : mime;
     }
 
+    private void initHttpHeaderMap() {
+      Enumeration<String> params = this.config.getInitParameterNames();
+      headerMap = new HashMap<>();
+      while (params.hasMoreElements()) {
+        String key = params.nextElement();
+        Matcher m = PATTERN_HTTP_HEADER_REGEX.matcher(key);
+        if (m.matches()) {
+          String headerKey = m.group(1);
+          headerMap.put(headerKey, config.getInitParameter(key));
+        }
+      }
+    }
   }
-
-  /**
-   * The X-FRAME-OPTIONS header in HTTP response to mitigate clickjacking
-   * attack.
-   */
+    /**
+     * The X-FRAME-OPTIONS header in HTTP response to mitigate clickjacking
+     * attack.
+     */
   public enum XFrameOption {
-    DENY("DENY") , SAMEORIGIN ("SAMEORIGIN"), ALLOWFROM ("ALLOW-FROM");
+    DENY("DENY"), SAMEORIGIN("SAMEORIGIN"), ALLOWFROM("ALLOW-FROM");
 
     XFrameOption(String name) {
       this.name = name;
@@ -1650,5 +1668,31 @@ public final class HttpServer2 implements FilterContainer {
       }
       throw new IllegalArgumentException("Unexpected value in xFrameOption.");
     }
+  }
+
+
+  private Map<String, String> setHeaders(Configuration conf) {
+    Map<String, String> xFrameParams = new HashMap<>();
+    Map<String, String> headerConfigMap =
+            conf.getValByRegex(HTTP_HEADER_REGEX);
+
+    xFrameParams.putAll(getDefaultHeaders());
+    if(this.xFrameOptionIsEnabled) {
+      xFrameParams.put(HTTP_HEADER_PREFIX+X_FRAME_OPTIONS,
+              this.xFrameOption.toString());
+    }
+    xFrameParams.putAll(headerConfigMap);
+    return xFrameParams;
+  }
+
+  private Map<String, String> getDefaultHeaders() {
+    Map<String, String> headers = new HashMap<>();
+    String[] splitVal = X_CONTENT_TYPE_OPTIONS.split(":");
+    headers.put(HTTP_HEADER_PREFIX + splitVal[0],
+            splitVal[1]);
+    splitVal = X_XSS_PROTECTION.split(":");
+    headers.put(HTTP_HEADER_PREFIX + splitVal[0],
+            splitVal[1]);
+    return headers;
   }
 }

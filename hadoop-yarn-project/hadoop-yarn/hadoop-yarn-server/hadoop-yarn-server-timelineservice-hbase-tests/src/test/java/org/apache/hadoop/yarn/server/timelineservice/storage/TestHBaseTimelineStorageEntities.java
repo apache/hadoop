@@ -1879,7 +1879,9 @@ public class TestHBaseTimelineStorageEntities {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    util.shutdownMiniCluster();
+    if (util != null) {
+      util.shutdownMiniCluster();
+    }
   }
 
   private boolean verifyRowKeyForSubApplication(byte[] rowKey, String suAppUser,

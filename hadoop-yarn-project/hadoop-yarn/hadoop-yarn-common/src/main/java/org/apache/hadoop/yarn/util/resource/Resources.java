@@ -547,11 +547,6 @@ public class Resources {
     return ret;
   }
 
-  public static boolean isAnyMajorResourceZero(ResourceCalculator rc,
-      Resource resource) {
-    return rc.isAnyMajorResourceZero(resource);
-  }
-
   public static Resource normalizeDown(ResourceCalculator calculator,
       Resource resource, Resource factor) {
     return calculator.normalizeDown(resource, factor);

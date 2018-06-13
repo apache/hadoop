@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.web;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreRestHttpServer;
@@ -51,8 +52,10 @@ public class OzoneHddsDatanodeService implements ServicePlugin {
         objectStoreRestHttpServer = new ObjectStoreRestHttpServer(
             conf, null, handler);
         objectStoreRestHttpServer.start();
-        hddsDatanodeService.getDatanodeDetails().setOzoneRestPort(
+        DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+            DatanodeDetails.Port.Name.REST,
             objectStoreRestHttpServer.getHttpAddress().getPort());
+        hddsDatanodeService.getDatanodeDetails().setPort(restPort);
 
       } catch (IOException e) {
         throw new RuntimeException("Can't start the Object Store Rest server",

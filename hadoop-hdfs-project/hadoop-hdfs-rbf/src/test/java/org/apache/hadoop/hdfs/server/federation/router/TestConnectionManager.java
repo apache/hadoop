@@ -32,6 +32,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test functionalities of {@link ConnectionManager}, which manages a pool
@@ -147,6 +148,18 @@ public class TestConnectionManager {
     // Ask for more and this returns an active connection
     ConnectionContext cc = pool.getConnection();
     assertTrue(cc.isActive());
+  }
+
+  @Test
+  public void testValidClientIndex() throws Exception {
+    ConnectionPool pool = new ConnectionPool(
+        conf, TEST_NN_ADDRESS, TEST_USER1, 2, 2, ClientProtocol.class);
+    for(int i = -3; i <= 3; i++) {
+      pool.getClientIndex().set(i);
+      ConnectionContext conn = pool.getConnection();
+      assertNotNull(conn);
+      assertTrue(conn.isUsable());
+    }
   }
 
   @Test

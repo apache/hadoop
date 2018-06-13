@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -45,6 +45,7 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -1469,6 +1471,33 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  /**
+   * Attempt to perform a type-specific cleanup after application has completed.
+   *
+   * @param app application to clean up
+   */
+  static void appAdminClientCleanUp(RMAppImpl app) {
+    try {
+      AppAdminClient client = AppAdminClient.createAppAdminClient(app
+          .applicationType, app.conf);
+      int result = client.actionCleanUp(app.name, app.user);
+      if (result == 0) {
+        LOG.info("Type-specific cleanup of application " + app.applicationId
+            + " of type " + app.applicationType + " succeeded");
+      } else {
+        LOG.warn("Type-specific cleanup of application " + app.applicationId
+            + " of type " + app.applicationType + " did not succeed with exit"
+            + " code " + result);
+      }
+    } catch (IllegalArgumentException e) {
+      // no AppAdminClient class has been specified for the application type,
+      // so this does not need to be logged
+    } catch (Exception e) {
+      LOG.warn("Could not run type-specific cleanup on application " +
+          app.applicationId + " of type " + app.applicationType, e);
+    }
+  }
+
   private static class FinalTransition extends RMAppTransition {
 
     private final RMAppState finalState;
@@ -1503,6 +1532,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           .appFinished(app, finalState, app.finishTime);
       // set the memory free
       app.clearUnusedFields();
+
+      appAdminClientCleanUp(app);
     };
   }
 
@@ -2020,6 +2051,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void sendATSCreateEvent() {
     rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
     rmContext.getSystemMetricsPublisher().appCreated(this, this.startTime);
+    String appViewACLs = submissionContext.getAMContainerSpec()
+        .getApplicationACLs().get(ApplicationAccessType.VIEW_APP);
+    rmContext.getSystemMetricsPublisher().appACLsUpdated(
+        this, appViewACLs, System.currentTimeMillis());
   }
 
   @Private

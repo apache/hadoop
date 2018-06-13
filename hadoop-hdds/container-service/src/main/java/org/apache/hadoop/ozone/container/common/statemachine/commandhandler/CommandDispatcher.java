@@ -18,7 +18,8 @@
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -38,7 +39,7 @@ public final class CommandDispatcher {
   static final Logger LOG =
       LoggerFactory.getLogger(CommandDispatcher.class);
   private final StateContext context;
-  private final Map<SCMCmdType, CommandHandler> handlerMap;
+  private final Map<Type, CommandHandler> handlerMap;
   private final OzoneContainer container;
   private final SCMConnectionManager connectionManager;
 

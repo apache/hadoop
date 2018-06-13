@@ -450,6 +450,13 @@ message FinalizeUpgradeRequestProto { // no parameters
 message FinalizeUpgradeResponseProto { // void response
 }
 
+message UpgradeStatusRequestProto { // no parameters
+}
+
+message UpgradeStatusResponseProto {
+ required bool upgradeFinalized = 1;
+}
+
 enum RollingUpgradeActionProto {
   QUERY = 1;
   START = 2;
@@ -879,6 +886,8 @@ service ClientNamenodeProtocol {
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
   rpc finalizeUpgrade(FinalizeUpgradeRequestProto)
       returns(FinalizeUpgradeResponseProto);
+  rpc upgradeStatus(UpgradeStatusRequestProto)
+      returns(UpgradeStatusResponseProto);
   rpc rollingUpgrade(RollingUpgradeRequestProto)
       returns(RollingUpgradeResponseProto);
   rpc listCorruptFileBlocks(ListCorruptFileBlocksRequestProto)

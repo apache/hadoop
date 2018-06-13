@@ -48,11 +48,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Override
-  protected MetadataStore newMetadataStore() {
-    return new DynamoDBMetadataStore();
-  }
-
-  @Override
   public void setup() throws Exception {
     super.setup();
     Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard",

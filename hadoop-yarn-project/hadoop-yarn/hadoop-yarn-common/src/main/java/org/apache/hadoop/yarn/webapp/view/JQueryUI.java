@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeEcmaScript;
 import static org.apache.hadoop.yarn.util.StringHelper.djoin;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.split;
@@ -67,7 +67,7 @@ public class JQueryUI extends HtmlBlock {
   protected void render(Block html) {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
         .link(root_url("static/dt-1.9.4/css/jui-dt.css"))
-        .script(root_url("static/jquery/jquery-1.8.2.min.js"))
+        .script(root_url("static/jquery/jquery-3.3.1.min.js"))
         .script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js"))
         .script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
@@ -146,7 +146,7 @@ public class JQueryUI extends HtmlBlock {
       }      
       int pos = init.indexOf('{') + 1;  
       init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
-      list.add(join("  $('", escapeJavaScript(selector), "').dataTable(", init,
+      list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
                ").fnSetFilteringDelay(288);"));      
       
     }
@@ -174,7 +174,7 @@ public class JQueryUI extends HtmlBlock {
       if (init.isEmpty()) {
         init = defaultInit;
       }
-      list.add(join("  $('", escapeJavaScript(selector),
+      list.add(join("  $('", escapeEcmaScript(selector),
                "').click(function() { $(this).children('.dialog').dialog(",
                init, "); return false; });"));
     }

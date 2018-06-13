@@ -82,7 +82,7 @@ public:
     this->MockConnectionBase::async_write_some(buf, handler);
   }
 
-  void Cancel() {
+  void Cancel() override {
     /* no-op, declared pure virtual */
   }
 };

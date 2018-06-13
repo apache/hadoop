@@ -18,18 +18,16 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType;
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 
 import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCmdType.reregisterCommand;
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.ReregisterCommandProto;
 
 /**
  * Informs a datanode to register itself with SCM again.
  */
 public class ReregisterCommand extends
-    SCMCommand<SCMReregisterCmdResponseProto>{
+    SCMCommand<ReregisterCommandProto>{
 
   /**
    * Returns the type of this command.
@@ -37,8 +35,8 @@ public class ReregisterCommand extends
    * @return Type
    */
   @Override
-  public SCMCmdType getType() {
-    return reregisterCommand;
+  public SCMCommandProto.Type getType() {
+    return SCMCommandProto.Type.reregisterCommand;
   }
 
   /**
@@ -51,8 +49,8 @@ public class ReregisterCommand extends
     return getProto().toByteArray();
   }
 
-  public SCMReregisterCmdResponseProto getProto() {
-    return SCMReregisterCmdResponseProto
+  public ReregisterCommandProto getProto() {
+    return ReregisterCommandProto
         .newBuilder()
         .build();
   }

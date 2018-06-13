@@ -19,31 +19,52 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.*;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 /** The same as {@link TestVolume} except that this test is Ratis enabled. */
 @Ignore("Disabling Ratis tests for pipeline work.")
+@RunWith(value = Parameterized.class)
 public class TestVolumeRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
-  private static OzoneRestClient ozoneClient;
+  private static ClientProtocol client;
   private static MiniOzoneCluster cluster;
+  private static OzoneConfiguration conf;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> clientProtocol() {
+    Object[][] params = new Object[][] {
+        {RpcClient.class},
+        {RestClient.class}};
+    return Arrays.asList(params);
+  }
+
+  @Parameterized.Parameter
+  public Class clientProtocol;
 
   @BeforeClass
   public static void init() throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    conf = new OzoneConfiguration();
 
     // This enables Ratis in the cluster.
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY, true);
@@ -61,10 +82,17 @@ public class TestVolumeRatis {
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
     cluster.waitForClusterToBeReady();
     final int port = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails().getOzoneRestPort();
+        .getDatanodeDetails()
+        .getPort(DatanodeDetails.Port.Name.REST).getValue();
+  }
 
-    ozoneClient = new OzoneRestClient(
-        String.format("http://localhost:%d", port));
+  @Before
+  public void setup() throws Exception {
+    if (clientProtocol.equals(RestClient.class)) {
+      client = new RestClient(conf);
+    } else {
+      client = new RpcClient(conf);
+    }
   }
 
   @AfterClass
@@ -77,53 +105,53 @@ public class TestVolumeRatis {
 
   @Test
   public void testCreateVolume() throws Exception {
-    TestVolume.runTestCreateVolume(ozoneClient);
+    TestVolume.runTestCreateVolume(client);
   }
 
   @Test
-  public void testCreateDuplicateVolume() throws OzoneException {
-    TestVolume.runTestCreateDuplicateVolume(ozoneClient);
+  public void testCreateDuplicateVolume() throws OzoneException, IOException {
+    TestVolume.runTestCreateDuplicateVolume(client);
   }
 
   @Test
-  public void testDeleteVolume() throws OzoneException {
-    TestVolume.runTestDeleteVolume(ozoneClient);
+  public void testDeleteVolume() throws OzoneException, IOException {
+    TestVolume.runTestDeleteVolume(client);
   }
 
   @Test
   public void testChangeOwnerOnVolume() throws Exception {
-    TestVolume.runTestChangeOwnerOnVolume(ozoneClient);
+    TestVolume.runTestChangeOwnerOnVolume(client);
   }
 
   @Test
   public void testChangeQuotaOnVolume() throws Exception {
-    TestVolume.runTestChangeQuotaOnVolume(ozoneClient);
+    TestVolume.runTestChangeQuotaOnVolume(client);
   }
 
   // TODO: remove @Ignore below once the problem has been resolved.
   @Ignore("listVolumes not implemented in DistributedStorageHandler")
   @Test
   public void testListVolume() throws OzoneException, IOException {
-    TestVolume.runTestListVolume(ozoneClient);
+    TestVolume.runTestListVolume(client);
   }
 
   // TODO: remove @Ignore below once the problem has been resolved.
   @Ignore("See TestVolume.testListVolumePagination()")
   @Test
   public void testListVolumePagination() throws OzoneException, IOException {
-    TestVolume.runTestListVolumePagination(ozoneClient);
+    TestVolume.runTestListVolumePagination(client);
   }
 
   // TODO: remove @Ignore below once the problem has been resolved.
   @Ignore("See TestVolume.testListAllVolumes()")
   @Test
   public void testListAllVolumes() throws Exception {
-    TestVolume.runTestListAllVolumes(ozoneClient);
+    TestVolume.runTestListAllVolumes(client);
   }
 
   @Ignore("Disabling Ratis tests for pipeline work.")
   @Test
   public void testListVolumes() throws Exception {
-    TestVolume.runTestListVolumes(ozoneClient);
+    TestVolume.runTestListVolumes(client);
   }
 }

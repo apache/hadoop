@@ -772,7 +772,7 @@
   <property>
     <description>Maximum size in bytes for configurations that can be provided
       by application to RM for delegation token renewal.
-      By experiment, it's roughly 128 bytes per key-value pair.
+      By experiment, its roughly 128 bytes per key-value pair.
       The default value 12800 allows roughly 100 configs, may be less.
     </description>
     <name>yarn.resourcemanager.delegation-token.max-conf-size-bytes</name>
@@ -1811,6 +1811,20 @@
   </property>
 
   <property>
+    <description>The default list of read-only mounts to be bind-mounted
+      into all Docker containers that use DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-ro-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The default list of read-write mounts to be bind-mounted
+      into all Docker containers that use DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-rw-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
@@ -1857,14 +1871,6 @@
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-timeout-ms</name>
     <value>1000</value>
-  </property>
-
-  <property>
-    <description>
-    The UNIX group that the linux-container-executor should run as.
-    </description>
-    <name>yarn.nodemanager.linux-container-executor.group</name>
-    <value></value>
   </property>
 
   <property>
@@ -2158,7 +2164,7 @@
     <description>
     In the server side it indicates whether timeline service is enabled or not.
     And in the client side, users can enable it to indicate whether client wants
-    to use timeline service. If it's enabled in the client side along with
+    to use timeline service. If its enabled in the client side along with
     security, then yarn client tries to fetch the delegation tokens for the
     timeline server.
     </description>
@@ -2537,6 +2543,15 @@
     <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
     </name>
     <value>259200000</value>
+  </property>
+
+  <property>
+    <description>
+      The setting that controls how often in-memory app level
+      aggregation is kicked off in timeline collector.
+    </description>
+    <name>yarn.timeline-service.app-aggregation-interval-secs</name>
+    <value>15</value>
   </property>
 
   <property>
@@ -3404,7 +3419,7 @@
     <description>
       Defines the limit of the diagnostics message of an application
       attempt, in kilo characters (character count * 1024).
-      When using ZooKeeper to store application state behavior, it's
+      When using ZooKeeper to store application state behavior, its
       important to limit the size of the diagnostic messages to
       prevent YARN from overwhelming ZooKeeper. In cases where
       yarn.resourcemanager.state-store.max-completed-applications is set to
@@ -3537,7 +3552,7 @@
   </property>
  
   <property>
-    <name>yarn.resourcemanager.display.per-user-apps</name>
+    <name>yarn.webapp.filter-entity-list-by-user</name>
     <value>false</value>
       <description>
         Flag to enable display of applications per user as an admin
@@ -3819,4 +3834,57 @@
     <value>/usr/bin/numactl</value>
   </property>
 
+  <property>
+    <description>
+      Enable elastic memory control. This is a Linux only feature.
+      When enabled, the node manager adds a listener to receive an
+      event, if all the containers exceeded a limit.
+      The limit is specified by yarn.nodemanager.resource.memory-mb.
+      If this is not set, the limit is set based on the capabilities.
+      See yarn.nodemanager.resource.detect-hardware-capabilities
+      for details.
+      The limit applies to the physical or virtual (rss+swap) memory
+      depending on whether yarn.nodemanager.pmem-check-enabled or
+      yarn.nodemanager.vmem-check-enabled is set.
+    </description>
+    <name>yarn.nodemanager.elastic-memory-control.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The name of a JVM class. The class must implement the Runnable
+      interface. It is called,
+      if yarn.nodemanager.elastic-memory-control.enabled
+      is set and the system reaches its memory limit.
+      When called the handler must preempt a container,
+      since all containers are frozen by cgroups.
+      Once preempted some memory is released, so that the
+      kernel can resume all containers. Because of this the
+      handler has to act quickly.
+    </description>
+    <name>yarn.nodemanager.elastic-memory-control.oom-handler</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.DefaultOOMHandler</value>
+  </property>
+
+  <property>
+    <description>
+      The path to the oom-listener tool. Elastic memory control is only
+      supported on Linux. It relies on kernel events. The tool forwards
+      these kernel events to the standard input, so that the node manager
+      can preempt containers, in and out-of-memory scenario.
+      You rarely need to update this setting.
+    </description>
+    <name>yarn.nodemanager.elastic-memory-control.oom-listener.path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Maximum time to wait for an OOM situation to get resolved before
+      bringing down the node.
+    </description>
+    <name>yarn.nodemanager.elastic-memory-control.timeout-sec</name>
+    <value>5</value>
+  </property>
 </configuration>

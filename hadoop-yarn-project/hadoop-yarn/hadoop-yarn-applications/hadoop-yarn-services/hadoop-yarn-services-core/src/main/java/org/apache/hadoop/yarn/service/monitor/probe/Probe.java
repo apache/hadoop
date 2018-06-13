@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.service.monitor.probe;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 
 import java.io.IOException;

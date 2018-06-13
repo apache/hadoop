@@ -1482,6 +1482,13 @@ public class RouterRpcServer extends AbstractService
   }
 
   @Override // ClientProtocol
+  public boolean upgradeStatus() throws IOException {
+    String methodName = getMethodName();
+    throw new UnsupportedOperationException(
+        "Operation \"" + methodName + "\" is not supported");
+  }
+
+  @Override // ClientProtocol
   public RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
       throws IOException {
     checkOperation(OperationCategory.READ);

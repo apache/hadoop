@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -191,8 +191,6 @@ public class TestContainerMapping {
   public void testFullContainerReport() throws IOException {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
-    ContainerReportsRequestProto.reportType reportType =
-        ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
@@ -205,19 +203,21 @@ public class TestContainerMapping {
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
         .setWriteBytes(2000000000L)
-        .setContainerID(info.getContainerID());
+        .setContainerID(info.getContainerID())
+        .setDeleteTransactionId(0);
 
     reports.add(ciBuilder.build());
 
-    ContainerReportsRequestProto.Builder crBuilder =
-        ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
-        .setType(reportType).addAllReports(reports);
+    ContainerReportsProto.Builder crBuilder = ContainerReportsProto
+        .newBuilder();
+    crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
-    Assert.assertEquals(100000000L, updatedContainer.getNumberOfKeys());
+    ContainerInfo updatedContainer =
+        mapping.getContainer(info.getContainerID());
+    Assert.assertEquals(100000000L,
+        updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
   }
 
@@ -225,8 +225,6 @@ public class TestContainerMapping {
   public void testContainerCloseWithContainerReport() throws IOException {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
-    ContainerReportsRequestProto.reportType reportType =
-        ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
 
@@ -240,19 +238,21 @@ public class TestContainerMapping {
         .setWriteCount(500000000L)
         .setReadBytes(5368705120L)
         .setWriteBytes(5368705120L)
-        .setContainerID(info.getContainerID());
+        .setContainerID(info.getContainerID())
+        .setDeleteTransactionId(0);
 
     reports.add(ciBuilder.build());
 
-    ContainerReportsRequestProto.Builder crBuilder =
-        ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
-        .setType(reportType).addAllReports(reports);
+    ContainerReportsProto.Builder crBuilder =
+        ContainerReportsProto.newBuilder();
+    crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
-    Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());
+    ContainerInfo updatedContainer =
+        mapping.getContainer(info.getContainerID());
+    Assert.assertEquals(500000000L,
+        updatedContainer.getNumberOfKeys());
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
     NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainerIDs(

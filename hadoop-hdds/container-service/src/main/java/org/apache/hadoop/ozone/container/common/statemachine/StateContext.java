@@ -16,11 +16,8 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine;
 
+import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .InitDatanodeState;
@@ -30,7 +27,9 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -40,9 +39,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState.states
-    .noContainerReports;
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
 /**
@@ -56,11 +52,8 @@ public class StateContext {
   private final DatanodeStateMachine parent;
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
+  private final Queue<GeneratedMessage> reports;
   private DatanodeStateMachine.DatanodeStates state;
-  private SCMNodeReport nrState;
-  private ReportState  reportState;
-  private static final ReportState DEFAULT_REPORT_STATE =
-      ReportState.newBuilder().setState(noContainerReports).setCount(0).build();
 
   /**
    * Constructs a StateContext.
@@ -75,9 +68,9 @@ public class StateContext {
     this.state = state;
     this.parent = parent;
     commandQueue = new LinkedList<>();
+    reports = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
-    nrState = SCMNodeReport.getDefaultInstance();
   }
 
   /**
@@ -149,19 +142,53 @@ public class StateContext {
   }
 
   /**
-   * Returns the node report of the datanode state context.
-   * @return the node report.
+   * Adds the report to report queue.
+   *
+   * @param report report to be added
    */
-  public SCMNodeReport getNodeReport() {
-    return nrState;
+  public void addReport(GeneratedMessage report) {
+    synchronized (reports) {
+      reports.add(report);
+    }
   }
 
   /**
-   * Sets the storage location report of the datanode state context.
-   * @param nrReport - node report
+   * Returns the next report, or null if the report queue is empty.
+   *
+   * @return report
    */
-  public void setReportState(SCMNodeReport nrReport) {
-    this.nrState = nrReport;
+  public GeneratedMessage getNextReport() {
+    synchronized (reports) {
+      return reports.poll();
+    }
+  }
+
+  /**
+   * Returns all the available reports from the report queue, or empty list if
+   * the queue is empty.
+   *
+   * @return List<reports>
+   */
+  public List<GeneratedMessage> getAllAvailableReports() {
+    return getReports(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Returns available reports from the report queue with a max limit on
+   * list size, or empty list if the queue is empty.
+   *
+   * @return List<reports>
+   */
+  public List<GeneratedMessage> getReports(int maxLimit) {
+    List<GeneratedMessage> results = new ArrayList<>();
+    synchronized (reports) {
+      GeneratedMessage report = reports.poll();
+      while(results.size() < maxLimit && report != null) {
+        results.add(report);
+        report = reports.poll();
+      }
+    }
+    return results;
   }
 
   /**
@@ -212,7 +239,6 @@ public class StateContext {
       if (isExiting(newState)) {
         task.onExit();
       }
-      this.clearReportState();
       this.setState(newState);
     }
   }
@@ -251,35 +277,6 @@ public class StateContext {
    */
   public long getExecutionCount() {
     return stateExecutionCount.get();
-  }
-
-
-  /**
-   * Gets the ReportState.
-   * @return ReportState.
-   */
-  public synchronized  ReportState getContainerReportState() {
-    if (reportState == null) {
-      return DEFAULT_REPORT_STATE;
-    }
-    return reportState;
-  }
-
-  /**
-   * Sets the ReportState.
-   * @param rState - ReportState.
-   */
-  public synchronized  void setContainerReportState(ReportState rState) {
-    this.reportState = rState;
-  }
-
-  /**
-   * Clears report state after it has been communicated.
-   */
-  public synchronized void clearReportState() {
-    if(reportState != null) {
-      setContainerReportState(null);
-    }
   }
 
 }

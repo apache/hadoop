@@ -18,7 +18,8 @@
 package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -30,13 +31,17 @@ import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.junit.Assert;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
@@ -44,19 +49,32 @@ import static org.apache.hadoop.hdds.scm
 /**
  * Test for XceiverClientManager caching and eviction.
  */
+@RunWith(Parameterized.class)
 public class TestXceiverClientManager {
   private static OzoneConfiguration config;
   private static MiniOzoneCluster cluster;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static String containerOwner = "OZONE";
+  private static boolean shouldUseGrpc;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> withGrpc() {
+    return Arrays.asList(new Object[][] {{false}, {true}});
+  }
+
+  public TestXceiverClientManager(boolean useGrpc) {
+    shouldUseGrpc = useGrpc;
+  }
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @BeforeClass
-  public static void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     config = new OzoneConfiguration();
+    config.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        shouldUseGrpc);
     cluster = MiniOzoneCluster.newBuilder(config)
         .setNumDatanodes(3)
         .build();
@@ -65,8 +83,8 @@ public class TestXceiverClientManager {
         .getStorageContainerLocationClient();
   }
 
-  @AfterClass
-  public static void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -76,6 +94,8 @@ public class TestXceiverClientManager {
   @Test
   public void testCaching() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     ContainerInfo container1 = storageContainerLocationClient
@@ -106,6 +126,8 @@ public class TestXceiverClientManager {
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -140,10 +162,17 @@ public class TestXceiverClientManager {
     // After releasing the client, this connection should be closed
     // and any container operations should fail
     clientManager.releaseClient(client1);
-    exception.expect(IOException.class);
-    exception.expectMessage("This channel is not connected.");
-    ContainerProtocolCalls.createContainer(client1,
-        container1.getContainerID(), traceID1);
+
+    String expectedMessage = "This channel is not connected.";
+    try {
+      ContainerProtocolCalls.createContainer(client1,
+          container1.getContainerID(), traceID1);
+      Assert.fail("Create container should throw exception on closed"
+          + "client");
+    } catch (Exception e) {
+      Assert.assertEquals(e.getClass(), IOException.class);
+      Assert.assertTrue(e.getMessage().contains(expectedMessage));
+    }
     clientManager.releaseClient(client2);
   }
 
@@ -151,6 +180,8 @@ public class TestXceiverClientManager {
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
+    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
+        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -181,10 +212,16 @@ public class TestXceiverClientManager {
 
     // Any container operation should now fail
     String traceID2 = "trace" + RandomStringUtils.randomNumeric(4);
-    exception.expect(IOException.class);
-    exception.expectMessage("This channel is not connected.");
-    ContainerProtocolCalls.createContainer(client1,
-        container1.getContainerID(), traceID2);
+    String expectedMessage = "This channel is not connected.";
+    try {
+      ContainerProtocolCalls.createContainer(client1,
+          container1.getContainerID(), traceID2);
+      Assert.fail("Create container should throw exception on closed"
+          + "client");
+    } catch (Exception e) {
+      Assert.assertEquals(e.getClass(), IOException.class);
+      Assert.assertTrue(e.getMessage().contains(expectedMessage));
+    }
     clientManager.releaseClient(client2);
   }
 }

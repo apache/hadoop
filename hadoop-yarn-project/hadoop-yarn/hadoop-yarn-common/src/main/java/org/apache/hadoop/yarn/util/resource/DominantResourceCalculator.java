@@ -577,19 +577,6 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean isAnyMajorResourceZero(Resource resource) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
-    for (int i = 0; i < maxLength; i++) {
-      ResourceInformation resourceInformation = resource
-          .getResourceInformation(i);
-      if (resourceInformation.getValue() == 0L) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
   public Resource normalizeDown(Resource r, Resource stepFactor) {
     Resource ret = Resource.newInstance(r);
     int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
@@ -612,5 +599,31 @@ public class DominantResourceCalculator extends ResourceCalculator {
       tmp.setValue(value);
     }
     return ret;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceZeroOrNegative(Resource resource) {
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = resource.getResourceInformation(
+          i);
+      if (resourceInformation.getValue() <= 0L) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean isAnyMajorResourceAboveZero(Resource resource) {
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = resource.getResourceInformation(
+          i);
+      if (resourceInformation.getValue() > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }

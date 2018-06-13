@@ -31,6 +31,8 @@ import org.apache.ratis.util.TimeDuration;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class OzoneConfigKeys {
+  public static final String OZONE_TAGS_SYSTEM_KEY =
+      "ozone.tags.system";
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;

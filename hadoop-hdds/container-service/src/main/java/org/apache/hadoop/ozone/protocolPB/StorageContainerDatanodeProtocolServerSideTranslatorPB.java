@@ -19,18 +19,22 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisterRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos
     .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -55,9 +59,8 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
   }
 
   @Override
-  public StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto
-      getVersion(RpcController controller,
-      StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto request)
+  public SCMVersionResponseProto getVersion(RpcController controller,
+      SCMVersionRequestProto request)
       throws ServiceException {
     try {
       return impl.getVersion(request);
@@ -67,15 +70,13 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
   }
 
   @Override
-  public StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
-      register(RpcController controller, StorageContainerDatanodeProtocolProtos
-      .SCMRegisterRequestProto request) throws ServiceException {
+  public SCMRegisteredResponseProto register(RpcController controller,
+      SCMRegisterRequestProto request) throws ServiceException {
     try {
-      ContainerReportsRequestProto containerRequestProto = null;
-      SCMNodeReport scmNodeReport = null;
-      containerRequestProto = request.getContainerReport();
-      scmNodeReport = request.getNodeReport();
-      return impl.register(request.getDatanodeDetails(), scmNodeReport,
+      ContainerReportsProto containerRequestProto = request
+          .getContainerReport();
+      NodeReportProto dnNodeReport = request.getNodeReport();
+      return impl.register(request.getDatanodeDetails(), dnNodeReport,
           containerRequestProto);
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -83,28 +84,15 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
   }
 
   @Override
-  public SCMHeartbeatResponseProto
-      sendHeartbeat(RpcController controller,
+  public SCMHeartbeatResponseProto sendHeartbeat(RpcController controller,
       SCMHeartbeatRequestProto request) throws ServiceException {
     try {
-      return impl.sendHeartbeat(request.getDatanodeDetails(),
-          request.getNodeReport(),
-          request.getContainerReportState());
+      return impl.sendHeartbeat(request);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
-  @Override
-  public ContainerReportsResponseProto sendContainerReport(
-      RpcController controller, ContainerReportsRequestProto request)
-      throws ServiceException {
-    try {
-      return impl.sendContainerReport(request);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
 
   @Override
   public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(

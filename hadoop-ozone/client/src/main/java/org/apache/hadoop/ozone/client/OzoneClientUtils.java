@@ -18,14 +18,12 @@
 package org.apache.hadoop.ozone.client;
 
 import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeOwner;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-
-import static org.apache.hadoop.ozone.web.utils.OzoneUtils.formatTime;
 
 /** A utility class for OzoneClient. */
 public final class OzoneClientUtils {
@@ -43,7 +41,8 @@ public final class OzoneClientUtils {
   public static BucketInfo asBucketInfo(OzoneBucket bucket) {
     BucketInfo bucketInfo =
         new BucketInfo(bucket.getVolumeName(), bucket.getName());
-    bucketInfo.setCreatedOn(OzoneUtils.formatTime(bucket.getCreationTime()));
+    bucketInfo
+        .setCreatedOn(HddsClientUtils.formatDateTime(bucket.getCreationTime()));
     bucketInfo.setStorageType(bucket.getStorageType());
     bucketInfo.setVersioning(
         OzoneConsts.Versioning.getVersioning(bucket.getVersioning()));
@@ -60,9 +59,9 @@ public final class OzoneClientUtils {
    * @return VolumeInfo instance
    */
   public static VolumeInfo asVolumeInfo(OzoneVolume volume) {
-    VolumeInfo volumeInfo =
-        new VolumeInfo(volume.getName(), formatTime(volume.getCreationTime()),
-            volume.getOwner());
+    VolumeInfo volumeInfo = new VolumeInfo(volume.getName(),
+        HddsClientUtils.formatDateTime(volume.getCreationTime()),
+        volume.getOwner());
     volumeInfo.setQuota(OzoneQuota.getOzoneQuota(volume.getQuota()));
     volumeInfo.setOwner(new VolumeOwner(volume.getOwner()));
     return volumeInfo;
@@ -79,8 +78,9 @@ public final class OzoneClientUtils {
   public static KeyInfo asKeyInfo(OzoneKey key) {
     KeyInfo keyInfo = new KeyInfo();
     keyInfo.setKeyName(key.getName());
-    keyInfo.setCreatedOn(formatTime(key.getCreationTime()));
-    keyInfo.setModifiedOn(formatTime(key.getModificationTime()));
+    keyInfo.setCreatedOn(HddsClientUtils.formatDateTime(key.getCreationTime()));
+    keyInfo.setModifiedOn(
+        HddsClientUtils.formatDateTime(key.getModificationTime()));
     keyInfo.setSize(key.getDataSize());
     return keyInfo;
   }

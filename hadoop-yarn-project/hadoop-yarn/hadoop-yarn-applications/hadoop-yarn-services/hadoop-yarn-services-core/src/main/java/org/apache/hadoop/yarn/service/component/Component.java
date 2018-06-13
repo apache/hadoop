@@ -694,62 +694,66 @@ public class Component implements EventHandler<ComponentEvent> {
       // composite constraints then this AND-ed composite constraint is not
       // used.
       PlacementConstraint finalConstraint = null;
-      for (org.apache.hadoop.yarn.service.api.records.PlacementConstraint
-          yarnServiceConstraint : placementPolicy.getConstraints()) {
-        List<TargetExpression> targetExpressions = new ArrayList<>();
-        // Currently only intra-application allocation tags are supported.
-        if (!yarnServiceConstraint.getTargetTags().isEmpty()) {
-          targetExpressions.add(PlacementTargets.allocationTag(
-              yarnServiceConstraint.getTargetTags().toArray(new String[0])));
+      if (placementPolicy != null) {
+        for (org.apache.hadoop.yarn.service.api.records.PlacementConstraint
+            yarnServiceConstraint : placementPolicy.getConstraints()) {
+          List<TargetExpression> targetExpressions = new ArrayList<>();
+          // Currently only intra-application allocation tags are supported.
+          if (!yarnServiceConstraint.getTargetTags().isEmpty()) {
+            targetExpressions.add(PlacementTargets.allocationTag(
+                yarnServiceConstraint.getTargetTags().toArray(new String[0])));
+          }
+          // Add all node attributes
+          for (Map.Entry<String, List<String>> attribute : yarnServiceConstraint
+              .getNodeAttributes().entrySet()) {
+            targetExpressions
+                .add(PlacementTargets.nodeAttribute(attribute.getKey(),
+                    attribute.getValue().toArray(new String[0])));
+          }
+          // Add all node partitions
+          if (!yarnServiceConstraint.getNodePartitions().isEmpty()) {
+            targetExpressions
+                .add(PlacementTargets.nodePartition(yarnServiceConstraint
+                    .getNodePartitions().toArray(new String[0])));
+          }
+          PlacementConstraint constraint = null;
+          switch (yarnServiceConstraint.getType()) {
+          case AFFINITY:
+            constraint = PlacementConstraints
+                .targetIn(yarnServiceConstraint.getScope().getValue(),
+                    targetExpressions.toArray(new TargetExpression[0]))
+                .build();
+            break;
+          case ANTI_AFFINITY:
+            constraint = PlacementConstraints
+                .targetNotIn(yarnServiceConstraint.getScope().getValue(),
+                    targetExpressions.toArray(new TargetExpression[0]))
+                .build();
+            break;
+          case AFFINITY_WITH_CARDINALITY:
+            constraint = PlacementConstraints.targetCardinality(
+                yarnServiceConstraint.getScope().name().toLowerCase(),
+                yarnServiceConstraint.getMinCardinality() == null ? 0
+                    : yarnServiceConstraint.getMinCardinality().intValue(),
+                yarnServiceConstraint.getMaxCardinality() == null
+                    ? Integer.MAX_VALUE
+                    : yarnServiceConstraint.getMaxCardinality().intValue(),
+                targetExpressions.toArray(new TargetExpression[0])).build();
+            break;
+          }
+          // The default AND-ed final composite constraint
+          if (finalConstraint != null) {
+            finalConstraint = PlacementConstraints
+                .and(constraint.getConstraintExpr(),
+                    finalConstraint.getConstraintExpr())
+                .build();
+          } else {
+            finalConstraint = constraint;
+          }
+          LOG.debug("[COMPONENT {}] Placement constraint: {}",
+              componentSpec.getName(),
+              constraint.getConstraintExpr().toString());
         }
-        // Add all node attributes
-        for (Map.Entry<String, List<String>> attribute : yarnServiceConstraint
-            .getNodeAttributes().entrySet()) {
-          targetExpressions.add(PlacementTargets.nodeAttribute(
-              attribute.getKey(), attribute.getValue().toArray(new String[0])));
-        }
-        // Add all node partitions
-        if (!yarnServiceConstraint.getNodePartitions().isEmpty()) {
-          targetExpressions
-              .add(PlacementTargets.nodePartition(yarnServiceConstraint
-                  .getNodePartitions().toArray(new String[0])));
-        }
-        PlacementConstraint constraint = null;
-        switch (yarnServiceConstraint.getType()) {
-        case AFFINITY:
-          constraint = PlacementConstraints
-              .targetIn(yarnServiceConstraint.getScope().getValue(),
-                  targetExpressions.toArray(new TargetExpression[0]))
-              .build();
-          break;
-        case ANTI_AFFINITY:
-          constraint = PlacementConstraints
-              .targetNotIn(yarnServiceConstraint.getScope().getValue(),
-                  targetExpressions.toArray(new TargetExpression[0]))
-              .build();
-          break;
-        case AFFINITY_WITH_CARDINALITY:
-          constraint = PlacementConstraints.targetCardinality(
-              yarnServiceConstraint.getScope().name().toLowerCase(),
-              yarnServiceConstraint.getMinCardinality() == null ? 0
-                  : yarnServiceConstraint.getMinCardinality().intValue(),
-              yarnServiceConstraint.getMaxCardinality() == null
-                  ? Integer.MAX_VALUE
-                  : yarnServiceConstraint.getMaxCardinality().intValue(),
-              targetExpressions.toArray(new TargetExpression[0])).build();
-          break;
-        }
-        // The default AND-ed final composite constraint
-        if (finalConstraint != null) {
-          finalConstraint = PlacementConstraints
-              .and(constraint.getConstraintExpr(),
-                  finalConstraint.getConstraintExpr())
-              .build();
-        } else {
-          finalConstraint = constraint;
-        }
-        LOG.debug("[COMPONENT {}] Placement constraint: {}",
-            componentSpec.getName(), constraint.getConstraintExpr().toString());
       }
       ResourceSizing resourceSizing = ResourceSizing.newInstance((int) count,
           resource);

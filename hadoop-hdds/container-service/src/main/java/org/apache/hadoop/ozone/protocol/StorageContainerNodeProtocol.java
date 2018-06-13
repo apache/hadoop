@@ -18,13 +18,12 @@
 package org.apache.hadoop.ozone.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import java.util.List;
@@ -51,20 +50,19 @@ public interface StorageContainerNodeProtocol {
   /**
    * Register the node if the node finds that it is not registered with any SCM.
    * @param datanodeDetails DatanodeDetails
-   * @param nodeReport SCMNodeReport
+   * @param nodeReport NodeReportProto
    * @return  SCMHeartbeatResponseProto
    */
-  SCMCommand register(DatanodeDetailsProto datanodeDetails, SCMNodeReport
-      nodeReport);
+  RegisteredCommand register(DatanodeDetails datanodeDetails,
+                             NodeReportProto nodeReport);
 
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    * @param datanodeDetails - Datanode ID.
    * @param nodeReport - node report.
-   * @param reportState - container report.
    * @return SCMheartbeat response list
    */
-  List<SCMCommand> sendHeartbeat(DatanodeDetailsProto datanodeDetails,
-      SCMNodeReport nodeReport, ReportState reportState);
+  List<SCMCommand> sendHeartbeat(DatanodeDetails datanodeDetails,
+      NodeReportProto nodeReport);
 
 }

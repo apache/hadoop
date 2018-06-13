@@ -25,31 +25,47 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SendContainerReportProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMReregisterCmdResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto.DeleteBlockTransactionResult;
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReregisterCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos
+    .ContainerBlocksDeletionACKResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos
+    .ContainerBlocksDeletionACKProto.DeleteBlockTransactionResult;
 
 
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.versionCommand;
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.registeredCommand;
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.sendContainerReport;
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.reregisterCommand;
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.deleteBlocksCommand;
-import static org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType.closeContainerCommand;
+import static org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto
+    .Type.closeContainerCommand;
+import static org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto
+    .Type.deleteBlocksCommand;
+import static org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto
+    .Type.reregisterCommand;
+
 
 
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
@@ -152,98 +168,81 @@ public class SCMDatanodeProtocolServer implements
 
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
-      HddsProtos.DatanodeDetailsProto datanodeDetails,
-      StorageContainerDatanodeProtocolProtos.SCMNodeReport nodeReport,
-      StorageContainerDatanodeProtocolProtos.ReportState reportState)
+      SCMHeartbeatRequestProto heartbeat)
       throws IOException {
+    // TODO: Add a heartbeat dispatcher.
+    DatanodeDetails datanodeDetails = DatanodeDetails
+        .getFromProtoBuf(heartbeat.getDatanodeDetails());
+    NodeReportProto nodeReport = heartbeat.getNodeReport();
     List<SCMCommand> commands =
-        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport,
-            reportState);
-    List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
+        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport);
+    List<SCMCommandProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
-      cmdResponses.add(getCommandResponse(cmd, datanodeDetails.getUuid()));
+      cmdResponses.add(getCommandResponse(cmd));
     }
     return SCMHeartbeatResponseProto.newBuilder()
+        .setDatanodeUUID(datanodeDetails.getUuidString())
         .addAllCommands(cmdResponses).build();
   }
 
   @Override
-  public SCMRegisteredCmdResponseProto register(
-      HddsProtos.DatanodeDetailsProto datanodeDetails, SCMNodeReport nodeReport,
-      ContainerReportsRequestProto containerReportsRequestProto)
+  public SCMRegisteredResponseProto register(
+      HddsProtos.DatanodeDetailsProto datanodeDetailsProto,
+      NodeReportProto nodeReport,
+      ContainerReportsProto containerReportsProto)
       throws IOException {
+    DatanodeDetails datanodeDetails = DatanodeDetails
+        .getFromProtoBuf(datanodeDetailsProto);
     // TODO : Return the list of Nodes that forms the SCM HA.
-    RegisteredCommand registeredCommand = (RegisteredCommand) scm
-        .getScmNodeManager().register(datanodeDetails, nodeReport);
-    SCMCmdType type = registeredCommand.getType();
-    if (type == SCMCmdType.registeredCommand && registeredCommand.getError()
-        == SCMRegisteredCmdResponseProto.ErrorCode.success) {
-      scm.getScmContainerManager().processContainerReports(
-          containerReportsRequestProto);
+    RegisteredCommand registeredCommand = scm.getScmNodeManager()
+        .register(datanodeDetails, nodeReport);
+    if (registeredCommand.getError()
+        == SCMRegisteredResponseProto.ErrorCode.success) {
+      scm.getScmContainerManager().processContainerReports(datanodeDetails,
+          containerReportsProto);
     }
     return getRegisteredResponse(registeredCommand);
   }
 
   @VisibleForTesting
-  public static SCMRegisteredCmdResponseProto getRegisteredResponse(
-        SCMCommand cmd) {
-    Preconditions.checkState(cmd.getClass() == RegisteredCommand.class);
-    RegisteredCommand rCmd = (RegisteredCommand) cmd;
-    SCMCmdType type = cmd.getType();
-    if (type != SCMCmdType.registeredCommand) {
-      throw new IllegalArgumentException(
-          "Registered command is not well " + "formed. Internal Error.");
-    }
-    return SCMRegisteredCmdResponseProto.newBuilder()
+  public static SCMRegisteredResponseProto getRegisteredResponse(
+      RegisteredCommand cmd) {
+    return SCMRegisteredResponseProto.newBuilder()
         // TODO : Fix this later when we have multiple SCM support.
         // .setAddressList(addressList)
-        .setErrorCode(rCmd.getError())
-        .setClusterID(rCmd.getClusterID())
-        .setDatanodeUUID(rCmd.getDatanodeUUID())
+        .setErrorCode(cmd.getError())
+        .setClusterID(cmd.getClusterID())
+        .setDatanodeUUID(cmd.getDatanodeUUID())
         .build();
   }
 
-  @Override
-  public ContainerReportsResponseProto sendContainerReport(
-      ContainerReportsRequestProto reports)
+  public void processContainerReports(DatanodeDetails datanodeDetails,
+                                      ContainerReportsProto reports)
       throws IOException {
-    updateContainerReportMetrics(reports);
-
+    updateContainerReportMetrics(datanodeDetails, reports);
     // should we process container reports async?
-    scm.getScmContainerManager().processContainerReports(reports);
-    return ContainerReportsResponseProto.newBuilder().build();
+    scm.getScmContainerManager()
+        .processContainerReports(datanodeDetails, reports);
   }
 
-  private void updateContainerReportMetrics(
-      ContainerReportsRequestProto reports) {
-    ContainerStat newStat = null;
-    // TODO: We should update the logic once incremental container report
-    // type is supported.
-    if (reports
-        .getType() == StorageContainerDatanodeProtocolProtos
-        .ContainerReportsRequestProto.reportType.fullReport) {
-      newStat = new ContainerStat();
-      for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
-          .getReportsList()) {
-        newStat.add(new ContainerStat(info.getSize(), info.getUsed(),
-            info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
-            info.getReadCount(), info.getWriteCount()));
-      }
-
-      // update container metrics
-      StorageContainerManager.getMetrics().setLastContainerStat(newStat);
+  private void updateContainerReportMetrics(DatanodeDetails datanodeDetails,
+                                            ContainerReportsProto reports) {
+    ContainerStat newStat = new ContainerStat();
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
+        .getReportsList()) {
+      newStat.add(new ContainerStat(info.getSize(), info.getUsed(),
+          info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
+          info.getReadCount(), info.getWriteCount()));
     }
+    // update container metrics
+    StorageContainerManager.getMetrics().setLastContainerStat(newStat);
 
     // Update container stat entry, this will trigger a removal operation if it
     // exists in cache.
-    synchronized (scm.getContainerReportCache()) {
-      String datanodeUuid = reports.getDatanodeDetails().getUuid();
-      if (datanodeUuid != null && newStat != null) {
-        scm.getContainerReportCache().put(datanodeUuid, newStat);
-        // update global view container metrics
-        StorageContainerManager.getMetrics().incrContainerStat(newStat);
-      }
-    }
+    String datanodeUuid = datanodeDetails.getUuidString();
+    scm.getContainerReportCache().put(datanodeUuid, newStat);
+    // update global view container metrics
+    StorageContainerManager.getMetrics().incrContainerStat(newStat);
   }
 
 
@@ -302,33 +301,15 @@ public class SCMDatanodeProtocolServer implements
    * @throws IOException
    */
   @VisibleForTesting
-  public StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto
-      getCommandResponse(
-      SCMCommand cmd, final String datanodeID) throws IOException {
-    SCMCmdType type = cmd.getType();
-    SCMCommandResponseProto.Builder builder =
-        SCMCommandResponseProto.newBuilder().setDatanodeUUID(datanodeID);
-    switch (type) {
-    case registeredCommand:
-      return builder
-          .setCmdType(registeredCommand)
-          .setRegisteredProto(SCMRegisteredCmdResponseProto
-              .getDefaultInstance())
-          .build();
-    case versionCommand:
-      return builder
-          .setCmdType(versionCommand)
-          .setVersionProto(SCMVersionResponseProto.getDefaultInstance())
-          .build();
-    case sendContainerReport:
-      return builder
-          .setCmdType(sendContainerReport)
-          .setSendReport(SendContainerReportProto.getDefaultInstance())
-          .build();
+  public SCMCommandProto getCommandResponse(SCMCommand cmd)
+      throws IOException {
+    SCMCommandProto.Builder builder =
+        SCMCommandProto.newBuilder();
+    switch (cmd.getType()) {
     case reregisterCommand:
       return builder
-          .setCmdType(reregisterCommand)
-          .setReregisterProto(SCMReregisterCmdResponseProto
+          .setCommandType(reregisterCommand)
+          .setReregisterCommandProto(ReregisterCommandProto
               .getDefaultInstance())
           .build();
     case deleteBlocksCommand:
@@ -344,13 +325,14 @@ public class SCMDatanodeProtocolServer implements
               .collect(Collectors.toList());
       scm.getScmBlockManager().getDeletedBlockLog().incrementCount(txs);
       return builder
-          .setCmdType(deleteBlocksCommand)
-          .setDeleteBlocksProto(((DeleteBlocksCommand) cmd).getProto())
+          .setCommandType(deleteBlocksCommand)
+          .setDeleteBlocksCommandProto(((DeleteBlocksCommand) cmd).getProto())
           .build();
     case closeContainerCommand:
       return builder
-          .setCmdType(closeContainerCommand)
-          .setCloseContainerProto(((CloseContainerCommand) cmd).getProto())
+          .setCommandType(closeContainerCommand)
+          .setCloseContainerCommandProto(
+              ((CloseContainerCommand) cmd).getProto())
           .build();
     default:
       throw new IllegalArgumentException("Not implemented");

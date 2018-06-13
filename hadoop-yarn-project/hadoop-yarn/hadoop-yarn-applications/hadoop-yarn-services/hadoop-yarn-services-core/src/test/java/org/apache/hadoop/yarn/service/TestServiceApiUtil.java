@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
+import org.apache.hadoop.yarn.service.api.records.PlacementScope;
+import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
@@ -503,13 +505,48 @@ public class TestServiceApiUtil {
     PlacementPolicy pp = new PlacementPolicy();
     PlacementConstraint pc = new PlacementConstraint();
     pc.setName("CA1");
-    pc.setTargetTags(Collections.singletonList("comp-invalid"));
     pp.setConstraints(Collections.singletonList(pc));
     comp.setPlacementPolicy(pp);
 
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with empty placement");
+      Assert.fail(EXCEPTION_PREFIX + "constraint with no type");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TYPE_NULL,
+          "CA1 ", "comp-a"), e.getMessage());
+    }
+
+    // Set the type
+    pc.setType(PlacementType.ANTI_AFFINITY);
+
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "constraint with no scope");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL,
+          "CA1 ", "comp-a"), e.getMessage());
+    }
+
+    // Set the scope
+    pc.setScope(PlacementScope.NODE);
+
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "constraint with no tag(s)");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
+          "CA1 ", "comp-a"), e.getMessage());
+    }
+
+    // Set a target tag - but an invalid one
+    pc.setTargetTags(Collections.singletonList("comp-invalid"));
+
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "constraint with invalid tag name");
     } catch (IllegalArgumentException e) {
       assertEquals(
           String.format(
@@ -518,9 +555,10 @@ public class TestServiceApiUtil {
           e.getMessage());
     }
 
+    // Set valid target tags now
     pc.setTargetTags(Collections.singletonList("comp-a"));
 
-    // now it should succeed
+    // Finally it should succeed
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {

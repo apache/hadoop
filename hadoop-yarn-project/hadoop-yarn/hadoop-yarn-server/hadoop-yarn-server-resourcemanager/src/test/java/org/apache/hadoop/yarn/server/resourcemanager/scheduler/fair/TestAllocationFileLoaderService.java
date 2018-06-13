@@ -867,5 +867,9 @@ public class TestAllocationFileLoaderService {
     public void onReload(AllocationConfiguration info) {
       allocConf = info;
     }
+
+    @Override
+    public void onCheck() {
+    }
   }
 }

@@ -24,6 +24,7 @@
 
 // This file contains protocol buffers that are used to transfer data
 // to and from the datanode.
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdds.protocol.datanode.proto";
 option java_outer_classname = "ContainerProtos";
 option java_generate_equals_and_hash = true;
@@ -130,6 +131,7 @@ enum Result {
   UNCLOSED_CONTAINER_IO = 25;
   DELETE_ON_OPEN_CONTAINER = 26;
   CLOSED_CONTAINER_RETRY = 27;
+  INVALID_CONTAINER_STATE = 28;
 }
 
 /**
@@ -152,6 +154,7 @@ enum ContainerLifeCycleState {
     OPEN = 1;
     CLOSING = 2;
     CLOSED = 3;
+    INVALID = 4;
 }
 
 message ContainerCommandRequestProto {
@@ -225,6 +228,12 @@ message ContainerData {
   optional int64 size = 7;
   optional int64 keyCount = 8;
   optional ContainerLifeCycleState state = 9 [default = OPEN];
+  optional ContainerType containerType = 10 [default = KeyValueContainer];
+  optional string containerDBType = 11;
+}
+
+enum ContainerType {
+  KeyValueContainer = 1;
 }
 
 
@@ -410,4 +419,10 @@ message CopyContainerResponseProto {
   required bool eof = 4;
   repeated bytes data = 5;
   optional int64 checksum = 6;
+}
+
+service XceiverClientProtocolService {
+  // A client-to-datanode RPC to send container commands
+  rpc send(stream ContainerCommandRequestProto) returns
+    (stream ContainerCommandResponseProto) {}
 }

@@ -170,8 +170,9 @@ public class PipelineSelector {
       throws IOException {
     PipelineManager manager = getPipelineManager(replicationType);
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
-    LOG.debug("Getting replication pipeline forReplicationType {} : ReplicationFactor {}",
-        replicationType.toString(), replicationFactor.toString());
+    LOG.debug("Getting replication pipeline forReplicationType {} :" +
+            " ReplicationFactor {}", replicationType.toString(),
+        replicationFactor.toString());
     return manager.
         getPipeline(replicationFactor, replicationType);
   }

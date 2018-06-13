@@ -96,7 +96,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
         NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, null);
     this.deleteCGroupTimeout = conf.getLong(
         YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT,
-        YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT);
+        YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT) +
+        conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
+            YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS) + 1000;
     this.deleteCGroupDelay =
         conf.getLong(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY,
             YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY);
@@ -594,7 +596,11 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   @Override
   public String getCGroupParam(CGroupController controller, String cGroupId,
       String param) throws ResourceHandlerException {
-    String cGroupParamPath = getPathForCGroupParam(controller, cGroupId, param);
+    String cGroupParamPath =
+        param.equals(CGROUP_FILE_TASKS) ?
+            getPathForCGroup(controller, cGroupId)
+                + Path.SEPARATOR + param :
+        getPathForCGroupParam(controller, cGroupId, param);
 
     try {
       byte[] contents = Files.readAllBytes(Paths.get(cGroupParamPath));

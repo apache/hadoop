@@ -34,7 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -162,8 +162,10 @@ public abstract class LogAggregationFileController {
 
   /**
    * Close the writer.
+   * @throws LogAggregationDFSException if the closing of the writer fails
+   *         (for example due to HDFS quota being exceeded)
    */
-  public abstract void closeWriter();
+  public abstract void closeWriter() throws LogAggregationDFSException;
 
   /**
    * Write the log content.

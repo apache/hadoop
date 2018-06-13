@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.executor;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
@@ -92,5 +93,45 @@ public final class ContainerSignalContext {
 
   public Signal getSignal() {
     return this.signal;
+  }
+
+  /**
+   * Retrun true if we are trying to signal the same process.
+   * @param obj compare to this object
+   * @return whether we try to signal the same process id
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof ContainerSignalContext) {
+      ContainerSignalContext other = (ContainerSignalContext)obj;
+      boolean ret =
+          (other.getPid() == null && getPid() == null) ||
+              (other.getPid() != null && getPid() != null &&
+                  other.getPid().equals(getPid()));
+      ret = ret &&
+          (other.getSignal() == null && getSignal() == null) ||
+          (other.getSignal() != null && getSignal() != null &&
+              other.getSignal().equals(getSignal()));
+      ret = ret &&
+          (other.getContainer() == null && getContainer() == null) ||
+          (other.getContainer() != null && getContainer() != null &&
+              other.getContainer().equals(getContainer()));
+      ret = ret &&
+          (other.getUser() == null && getUser() == null) ||
+          (other.getUser() != null && getUser() != null &&
+              other.getUser().equals(getUser()));
+      return ret;
+    }
+    return super.equals(obj);
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().
+        append(getPid()).
+        append(getSignal()).
+        append(getContainer()).
+        append(getUser()).
+        toHashCode();
   }
 }

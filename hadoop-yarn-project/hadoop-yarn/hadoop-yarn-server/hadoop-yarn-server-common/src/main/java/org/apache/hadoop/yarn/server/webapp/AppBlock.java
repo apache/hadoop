@@ -28,7 +28,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -354,7 +354,7 @@ public class AppBlock extends HtmlBlock {
         .append(nodeLink == null ? "#" : "href='" + nodeLink)
         .append("'>")
         .append(nodeLink == null ? "N/A" : StringEscapeUtils
-            .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
+            .escapeEcmaScript(StringEscapeUtils.escapeHtml4(nodeLink)))
         .append("</a>\",\"<a ")
         .append(logsLink == null ? "#" : "href='" + logsLink).append("'>")
         .append(logsLink == null ? "N/A" : "Logs").append("</a>\"],\n");

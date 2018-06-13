@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.PriorityQueue;
-
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
@@ -31,6 +25,12 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.PriorityQueue;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
@@ -40,7 +40,8 @@ public class AbstractPreemptableResourceCalculator {
 
   protected final CapacitySchedulerPreemptionContext context;
   protected final ResourceCalculator rc;
-  private boolean isReservedPreemptionCandidatesSelector;
+  protected boolean isReservedPreemptionCandidatesSelector;
+  private Resource stepFactor;
 
   static class TQComparator implements Comparator<TempQueuePerPartition> {
     private ResourceCalculator rc;
@@ -90,6 +91,11 @@ public class AbstractPreemptableResourceCalculator {
     rc = preemptionContext.getResourceCalculator();
     this.isReservedPreemptionCandidatesSelector =
         isReservedPreemptionCandidatesSelector;
+
+    stepFactor = Resource.newInstance(0, 0);
+    for (ResourceInformation ri : stepFactor.getResources()) {
+      ri.setValue(1);
+    }
   }
 
   /**
@@ -122,23 +128,24 @@ public class AbstractPreemptableResourceCalculator {
     TQComparator tqComparator = new TQComparator(rc, totGuarant);
     PriorityQueue<TempQueuePerPartition> orderedByNeed = new PriorityQueue<>(10,
         tqComparator);
-    for (Iterator<TempQueuePerPartition> i = qAlloc.iterator(); i.hasNext();) {
+    for (Iterator<TempQueuePerPartition> i = qAlloc.iterator(); i.hasNext(); ) {
       TempQueuePerPartition q = i.next();
       Resource used = q.getUsed();
 
       Resource initIdealAssigned;
       if (Resources.greaterThan(rc, totGuarant, used, q.getGuaranteed())) {
-        initIdealAssigned =
-            Resources.add(q.getGuaranteed(), q.untouchableExtra);
-      } else {
+        initIdealAssigned = Resources.add(
+            Resources.componentwiseMin(q.getGuaranteed(), q.getUsed()),
+            q.untouchableExtra);
+      } else{
         initIdealAssigned = Resources.clone(used);
       }
 
       // perform initial assignment
       initIdealAssignment(totGuarant, q, initIdealAssigned);
 
-
       Resources.subtractFrom(unassigned, q.idealAssigned);
+
       // If idealAssigned < (allocated + used + pending), q needs more
       // resources, so
       // add it to the list of underserved queues, ordered by need.
@@ -152,7 +159,6 @@ public class AbstractPreemptableResourceCalculator {
     // left
     while (!orderedByNeed.isEmpty() && Resources.greaterThan(rc, totGuarant,
         unassigned, Resources.none())) {
-      Resource wQassigned = Resource.newInstance(0, 0);
       // we compute normalizedGuarantees capacity based on currently active
       // queues
       resetCapacity(unassigned, orderedByNeed, ignoreGuarantee);
@@ -166,11 +172,26 @@ public class AbstractPreemptableResourceCalculator {
       Collection<TempQueuePerPartition> underserved = getMostUnderservedQueues(
           orderedByNeed, tqComparator);
 
+      // This value will be used in every round to calculate ideal allocation.
+      // So make a copy to avoid it changed during calculation.
+      Resource dupUnassignedForTheRound = Resources.clone(unassigned);
+
       for (Iterator<TempQueuePerPartition> i = underserved.iterator(); i
           .hasNext();) {
+        if (!rc.isAnyMajorResourceAboveZero(unassigned)) {
+          break;
+        }
+
         TempQueuePerPartition sub = i.next();
-        Resource wQavail = Resources.multiplyAndNormalizeUp(rc, unassigned,
-            sub.normalizedGuarantee, Resource.newInstance(1, 1));
+
+        // How much resource we offer to the queue (to increase its ideal_alloc
+        Resource wQavail = Resources.multiplyAndNormalizeUp(rc,
+            dupUnassignedForTheRound,
+            sub.normalizedGuarantee, this.stepFactor);
+
+        // Make sure it is not beyond unassigned
+        wQavail = Resources.componentwiseMin(wQavail, unassigned);
+
         Resource wQidle = sub.offer(wQavail, rc, totGuarant,
             isReservedPreemptionCandidatesSelector);
         Resource wQdone = Resources.subtract(wQavail, wQidle);
@@ -180,9 +201,12 @@ public class AbstractPreemptableResourceCalculator {
           // queue, recalculating its order based on need.
           orderedByNeed.add(sub);
         }
-        Resources.addTo(wQassigned, wQdone);
+
+        Resources.subtractFrom(unassigned, wQdone);
+
+        // Make sure unassigned is always larger than 0
+        unassigned = Resources.componentwiseMax(unassigned, Resources.none());
       }
-      Resources.subtractFrom(unassigned, wQassigned);
     }
 
     // Sometimes its possible that, all queues are properly served. So intra

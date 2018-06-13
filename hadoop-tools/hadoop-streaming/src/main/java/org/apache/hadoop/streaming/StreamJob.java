@@ -72,6 +72,8 @@ import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
+import static org.apache.hadoop.util.RunJar.MATCH_ANY;
+
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
  */
@@ -1006,7 +1008,7 @@ public class StreamJob implements Tool {
     if (jar_ != null && isLocalHadoop()) {
       // getAbs became required when shell and subvm have different working dirs...
       File wd = new File(".").getAbsoluteFile();
-      RunJar.unJar(new File(jar_), wd);
+      RunJar.unJar(new File(jar_), wd, MATCH_ANY);
     }
 
     // if jobConf_ changes must recreate a JobClient

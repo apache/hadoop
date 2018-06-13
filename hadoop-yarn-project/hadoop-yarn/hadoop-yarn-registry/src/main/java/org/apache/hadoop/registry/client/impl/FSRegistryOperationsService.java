@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -238,12 +238,12 @@ public class FSRegistryOperationsService extends CompositeService
 
   @Override
   public boolean addWriteAccessor(String id, String pass) throws IOException {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public void clearWriteAccessors() {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
 }

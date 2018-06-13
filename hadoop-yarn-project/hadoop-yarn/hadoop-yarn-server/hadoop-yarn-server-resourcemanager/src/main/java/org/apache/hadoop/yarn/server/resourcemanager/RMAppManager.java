@@ -31,7 +31,6 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
@@ -466,10 +465,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Inform the ACLs Manager
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
-    String appViewACLs = submissionContext.getAMContainerSpec()
-        .getApplicationACLs().get(ApplicationAccessType.VIEW_APP);
-    rmContext.getSystemMetricsPublisher().appACLsUpdated(
-        application, appViewACLs, System.currentTimeMillis());
     return application;
   }
 

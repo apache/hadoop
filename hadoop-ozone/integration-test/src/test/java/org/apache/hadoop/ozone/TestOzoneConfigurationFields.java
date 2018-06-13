@@ -34,5 +34,6 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
             KSMConfigKeys.class};
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
+    xmlPropsToSkipCompare.add("hadoop.tags.custom");
   }
 }

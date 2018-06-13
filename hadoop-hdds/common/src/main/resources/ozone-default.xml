@@ -72,6 +72,15 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.grpc.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT, PIPELINE, RATIS</tag>
+    <description>Ozone supports different kinds of replication pipelines
+      protocols. grpc is one of the replication pipeline protocol supported by
+      ozone.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.ipc</name>
     <value>9858</value>
     <tag>OZONE, CONTAINER, PIPELINE, RATIS, MANAGEMENT</tag>
@@ -1006,12 +1015,12 @@
   </property>
 
   <property>
-    <name>hadoop.custom.tags</name>
+    <name>hadoop.tags.custom</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
   </property>
 
   <property>
-    <name>ozone.system.tags</name>
+    <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
   </property>
 

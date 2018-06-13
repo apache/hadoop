@@ -69,13 +69,16 @@ public abstract class Handler {
       throw new OzoneClientException(
           "Ozone URI is needed to execute this command.");
     }
-    URIBuilder ozoneURI = new URIBuilder(uri);
+    URIBuilder ozoneURI = new URIBuilder(stringToUri(uri));
     if (ozoneURI.getPort() == 0) {
       ozoneURI.setPort(Shell.DEFAULT_OZONE_PORT);
     }
 
     Configuration conf = new OzoneConfiguration();
     String scheme = ozoneURI.getScheme();
+    if (ozoneURI.getScheme() == null || scheme.isEmpty()) {
+      scheme = OZONE_URI_SCHEME;
+    }
     if (scheme.equals(OZONE_HTTP_SCHEME)) {
       if (ozoneURI.getHost() != null) {
         if (ozoneURI.getPort() == -1) {
@@ -87,7 +90,7 @@ public abstract class Handler {
       } else {
         client = OzoneClientFactory.getRestClient(conf);
       }
-    } else if (scheme.equals(OZONE_URI_SCHEME) || scheme.isEmpty()) {
+    } else if (scheme.equals(OZONE_URI_SCHEME)) {
       if (ozoneURI.getHost() != null) {
         if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
@@ -102,5 +105,47 @@ public abstract class Handler {
       throw new OzoneClientException("Invalid URI: " + ozoneURI);
     }
     return ozoneURI.build();
+  }
+
+  /** Construct a URI from a String with unescaped special characters
+   *  that have non-standard semantics. e.g. /, ?, #. A custom parsing
+   *  is needed to prevent misbehavior.
+   *  @param pathString The input path in string form
+   *  @return URI
+   */
+  private static URI stringToUri(String pathString) throws IOException {
+    // parse uri components
+    String scheme = null;
+    String authority = null;
+    int start = 0;
+
+    // parse uri scheme, if any
+    int colon = pathString.indexOf(':');
+    int slash = pathString.indexOf('/');
+    if (colon > 0 && (slash == colon +1)) {
+      // has a non zero-length scheme
+      scheme = pathString.substring(0, colon);
+      start = colon + 1;
+    }
+
+    // parse uri authority, if any
+    if (pathString.startsWith("//", start) &&
+        (pathString.length()-start > 2)) {
+      start += 2;
+      int nextSlash = pathString.indexOf('/', start);
+      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
+      authority = pathString.substring(start, authEnd);
+      start = authEnd;
+    }
+    // uri path is the rest of the string. ? or # are not interpreted,
+    // but any occurrence of them will be quoted by the URI ctor.
+    String path = pathString.substring(start, pathString.length());
+
+    // Construct the URI
+    try {
+      return new URI(scheme, authority, path, null, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 }

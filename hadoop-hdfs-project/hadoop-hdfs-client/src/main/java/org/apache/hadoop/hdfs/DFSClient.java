@@ -2341,6 +2341,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * @see ClientProtocol#upgradeStatus()
+   */
+  public boolean upgradeStatus() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("isUpgradeFinalized")) {
+      return namenode.upgradeStatus();
+    }
+  }
+
   RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
       throws IOException {
     checkOpen();
@@ -2929,6 +2939,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (stats != null) {
       stats.incrementBytesRead(nRead);
       stats.incrementBytesReadByDistance(distance, nRead);
+    }
+  }
+
+  void updateFileSystemECReadStats(int nRead) {
+    if (stats != null) {
+      stats.incrementBytesReadErasureCoded(nRead);
     }
   }
 

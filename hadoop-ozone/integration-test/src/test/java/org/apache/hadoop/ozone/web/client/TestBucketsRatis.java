@@ -17,30 +17,61 @@
  */
 package org.apache.hadoop.ozone.web.client;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.RatisTestHelper;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 /** The same as {@link TestBuckets} except that this test is Ratis enabled. */
 @Ignore("Disabling Ratis tests for pipeline work.")
+@RunWith(value = Parameterized.class)
 public class TestBucketsRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
   private static RatisTestHelper.RatisTestSuite suite;
-  private static OzoneRestClient ozoneRestClient;
+  private static ClientProtocol client;
+  private static OzoneConfiguration conf;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> clientProtocol() {
+    Object[][] params = new Object[][] {
+        {RpcClient.class},
+        {RestClient.class}};
+    return Arrays.asList(params);
+  }
+
+  @Parameterized.Parameter
+  public static Class clientProtocol;
 
   @BeforeClass
   public static void init() throws Exception {
     suite = new RatisTestHelper.RatisTestSuite(TestBucketsRatis.class);
-    ozoneRestClient = suite.newOzoneRestClient();
+    conf = suite.getConf();
+  }
+
+  @Before
+  public void setup() throws Exception {
+    if (clientProtocol.equals(RestClient.class)) {
+      client = new RestClient(conf);
+    } else {
+      client = new RpcClient(conf);
+    }
   }
 
   @AfterClass
@@ -52,25 +83,25 @@ public class TestBucketsRatis {
 
   @Test
   public void testCreateBucket() throws Exception {
-    TestBuckets.runTestCreateBucket(ozoneRestClient);
+    TestBuckets.runTestCreateBucket(client);
   }
 
   @Test
   public void testAddBucketAcls() throws Exception {
-    TestBuckets.runTestAddBucketAcls(ozoneRestClient);
+    TestBuckets.runTestAddBucketAcls(client);
   }
 
   @Test
   public void testRemoveBucketAcls() throws Exception {
-    TestBuckets.runTestRemoveBucketAcls(ozoneRestClient);
+    TestBuckets.runTestRemoveBucketAcls(client);
   }
 
   @Test
   public void testDeleteBucket() throws OzoneException, IOException {
-    TestBuckets.runTestDeleteBucket(ozoneRestClient);
+    TestBuckets.runTestDeleteBucket(client);
   }
   @Test
   public void testListBucket() throws Exception {
-    TestBuckets.runTestListBucket(ozoneRestClient);
+    TestBuckets.runTestListBucket(client);
   }
 }

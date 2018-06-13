@@ -61,6 +61,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>ratis-grpc</artifactId>
       <groupId>org.apache.ratis</groupId>
     </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <version>2.2.0</version>
+      <optional>true</optional>
+    </dependency>
 
     <dependency>
       <groupId>org.rocksdb</groupId>
@@ -108,7 +114,15 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goals>
                 <goal>compile</goal>
                 <goal>test-compile</goal>
+                <goal>compile-custom</goal>
+                <goal>test-compile-custom</goal>
               </goals>
+              <configuration>
+                <pluginId>grpc-java</pluginId>
+                <pluginArtifact>
+                  io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
+                </pluginArtifact>
+              </configuration>
           </execution>
         </executions>
       </plugin>
@@ -120,6 +134,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <tasks>
                 <replace token="com.google.protobuf" value="org.apache.ratis.shaded.com.google.protobuf"
+                  dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
+                </replace>
+                <replace token="io.grpc" value="org.apache.ratis.shaded.io.grpc"
                   dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
                 </replace>
               </tasks>

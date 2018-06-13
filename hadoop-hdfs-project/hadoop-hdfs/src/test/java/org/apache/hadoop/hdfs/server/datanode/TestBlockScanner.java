@@ -93,7 +93,8 @@ public class TestBlockScanner {
 
     TestContext(Configuration conf, int numNameServices) throws Exception {
       this.numNameServices = numNameServices;
-      MiniDFSCluster.Builder bld = new MiniDFSCluster.Builder(conf).
+      File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+      MiniDFSCluster.Builder bld = new MiniDFSCluster.Builder(conf, basedir).
           numDataNodes(1).
           storagesPerDatanode(1);
       if (numNameServices > 1) {

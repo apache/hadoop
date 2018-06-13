@@ -28,7 +28,11 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -82,7 +86,8 @@ public class TestDFSAdminWithHA {
     conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         security);
-    cluster = new MiniQJMHACluster.Builder(conf).build();
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    cluster = new MiniQJMHACluster.Builder(conf).baseDir(baseDir).build();
     setHAConf(conf, cluster.getDfsCluster().getNameNode(0).getHostAndPort(),
         cluster.getDfsCluster().getNameNode(1).getHostAndPort());
     cluster.getDfsCluster().getNameNode(0).getHostAndPort();
@@ -674,6 +679,70 @@ public class TestDFSAdminWithHA {
     assertNotEquals(err.toString().trim(), 0, exitCode);
     String message = ".*2 exceptions.*";
     assertOutputMatches(message + newLine);
+  }
+
+  @Test (timeout = 300000)
+  public void testUpgradeCommand() throws Exception {
+    final String finalizedMsg = "Upgrade finalized for.*";
+    final String notFinalizedMsg = "Upgrade not finalized for.*";
+    final String failMsg = "Getting upgrade status failed for.*" + newLine +
+        "upgrade: .*";
+    final String finalizeSuccessMsg = "Finalize upgrade successful for.*";
+
+    setUpHaCluster(false);
+    MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+
+    // Before upgrade is initialized, the query should return upgrade
+    // finalized (as no upgrade is in progress)
+    String message = finalizedMsg + newLine + finalizedMsg + newLine;
+    verifyUpgradeQueryOutput(message, 0);
+
+    // Shutdown the NNs
+    dfsCluster.shutdownNameNode(0);
+    dfsCluster.shutdownNameNode(1);
+
+    // Start NN1 with -upgrade option
+    dfsCluster.getNameNodeInfos()[0].setStartOpt(
+        HdfsServerConstants.StartupOption.UPGRADE);
+    dfsCluster.restartNameNode(0, true);
+
+    // Running -upgrade query should return "not finalized" for NN1 and
+    // connection exception for NN2 (as NN2 is down)
+    message = notFinalizedMsg + newLine;
+    verifyUpgradeQueryOutput(message, -1);
+    String errorMsg =  failMsg + newLine;
+    verifyUpgradeQueryOutput(errorMsg, -1);
+
+    // Bootstrap the standby (NN2) with the upgraded info.
+    int rc = BootstrapStandby.run(
+        new String[]{"-force"},
+        dfsCluster.getConfiguration(1));
+    assertEquals(0, rc);
+    out.reset();
+
+    // Restart NN2.
+    dfsCluster.restartNameNode(1);
+
+    // Both NNs should return "not finalized" msg for -upgrade query
+    message = notFinalizedMsg + newLine + notFinalizedMsg + newLine;
+    verifyUpgradeQueryOutput(message, 0);
+
+    // Finalize the upgrade
+    int exitCode = admin.run(new String[] {"-upgrade", "finalize"});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    message = finalizeSuccessMsg + newLine + finalizeSuccessMsg + newLine;
+    assertOutputMatches(message);
+
+    // NNs should return "upgrade finalized" msg
+    message = finalizedMsg + newLine + finalizedMsg + newLine;
+    verifyUpgradeQueryOutput(message, 0);
+  }
+
+  private void verifyUpgradeQueryOutput(String message, int expected) throws
+      Exception {
+    int exitCode = admin.run(new String[] {"-upgrade", "query"});
+    assertEquals(err.toString().trim(), expected, exitCode);
+    assertOutputMatches(message);
   }
 
   @Test (timeout = 30000)

@@ -94,13 +94,19 @@ public final class ContainerTestHelper {
   public static DatanodeDetails createDatanodeDetails() throws IOException {
     ServerSocket socket = new ServerSocket(0);
     int port = socket.getLocalPort();
+    DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE, port);
+    DatanodeDetails.Port ratisPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.RATIS, port);
+    DatanodeDetails.Port restPort = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.REST, port);
     DatanodeDetails datanodeDetails = DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress(socket.getInetAddress().getHostAddress())
         .setHostName(socket.getInetAddress().getHostName())
-        .setContainerPort(port)
-        .setRatisPort(port)
-        .setOzoneRestPort(port)
+        .addPort(containerPort)
+        .addPort(ratisPort)
+        .addPort(restPort)
         .build();
 
     socket.close();

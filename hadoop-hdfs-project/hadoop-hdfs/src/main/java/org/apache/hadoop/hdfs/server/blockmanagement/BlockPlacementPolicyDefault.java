@@ -485,9 +485,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                  throws NotEnoughReplicasException {
     final int numOfResults = results.size();
     if (numOfResults == 0) {
-      writer = chooseLocalStorage(writer, excludedNodes, blocksize,
-          maxNodesPerRack, results, avoidStaleNodes, storageTypes, true)
-          .getDatanodeDescriptor();
+      DatanodeStorageInfo storageInfo = chooseLocalStorage(writer,
+          excludedNodes, blocksize, maxNodesPerRack, results, avoidStaleNodes,
+          storageTypes, true);
+
+      writer = (storageInfo != null) ? storageInfo.getDatanodeDescriptor()
+                                     : null;
+
       if (--numOfReplicas == 0) {
         return writer;
       }

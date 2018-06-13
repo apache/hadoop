@@ -242,7 +242,8 @@ public class ContainerServiceRecordProcessor extends
       }
       try {
         this.setTarget(InetAddress.getByName(ip));
-        this.setNames(new Name[] {getContainerName(), getContainerIDName()});
+        this.setNames(new Name[] {getContainerName(), getContainerIDName(),
+            getComponentName()});
       } catch (Exception e) {
         throw new IllegalStateException(e);
       }

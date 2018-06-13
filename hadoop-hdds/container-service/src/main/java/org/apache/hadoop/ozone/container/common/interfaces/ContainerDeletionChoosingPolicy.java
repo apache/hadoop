@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.impl.ContainerStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +40,6 @@ public interface ContainerDeletionChoosingPolicy {
    * @throws StorageContainerException
    */
   List<ContainerData> chooseContainerForBlockDeletion(int count,
-      Map<Long, ContainerStatus> candidateContainers)
+      Map<Long, ContainerData> candidateContainers)
       throws StorageContainerException;
 }

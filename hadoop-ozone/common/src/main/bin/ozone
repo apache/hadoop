@@ -47,6 +47,7 @@ function hadoop_usage
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager "
   hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -117,6 +118,9 @@ function ozonecmd_case
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    genconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.genconf.GenerateOzoneRequiredConfigurations
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

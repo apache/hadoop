@@ -125,7 +125,8 @@ public final class ContainerCache extends LRUMap {
    */
   public MetadataStore getDB(long containerID, String containerDBPath)
       throws IOException {
-    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative.");
     lock.lock();
     try {
       MetadataStore db = (MetadataStore) this.get(containerID);
@@ -153,7 +154,8 @@ public final class ContainerCache extends LRUMap {
    * @param containerID - ID of the container.
    */
   public void removeDB(long containerID) {
-    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative.");
     lock.lock();
     try {
       MetadataStore db = (MetadataStore)this.get(containerID);

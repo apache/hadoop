@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
@@ -167,7 +167,7 @@ public class NotRunningJob implements MRClientProtocol {
   public GetTaskAttemptReportResponse getTaskAttemptReport(
       GetTaskAttemptReportRequest request) throws IOException {
     //not invoked by anybody
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
@@ -222,26 +222,26 @@ public class NotRunningJob implements MRClientProtocol {
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws IOException {
     /* Should not be invoked by anyone. */
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws IOException {
     /* Should not be invoked by anyone. */
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws IOException {
     /* Should not be invoked by anyone. */
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public InetSocketAddress getConnectAddress() {
     /* Should not be invoked by anyone.  Normally used to set token service */
-    throw new NotImplementedException();
+    throw new NotImplementedException("Code is not implemented");
   }
 }

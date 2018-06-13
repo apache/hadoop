@@ -243,6 +243,8 @@ public final class ContainerProtocolCalls  {
     ContainerProtos.ContainerData.Builder containerData = ContainerProtos
         .ContainerData.newBuilder();
     containerData.setContainerID(containerID);
+    containerData.setContainerType(ContainerProtos.ContainerType
+        .KeyValueContainer);
     createRequest.setContainerData(containerData.build());
 
     String id = client.getPipeline().getLeader().getUuidString();

@@ -18,17 +18,17 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto;
+    .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,11 +104,11 @@ public final class RegisterEndpointTask implements
     rpcEndPoint.lock();
     try {
 
-      ContainerReportsRequestProto contianerReport = datanodeContainerManager
+      ContainerReportsProto contianerReport = datanodeContainerManager
           .getContainerReport();
-      SCMNodeReport nodeReport = datanodeContainerManager.getNodeReport();
+      NodeReportProto nodeReport = datanodeContainerManager.getNodeReport();
       // TODO : Add responses to the command Queue.
-      SCMRegisteredCmdResponseProto response = rpcEndPoint.getEndPoint()
+      SCMRegisteredResponseProto response = rpcEndPoint.getEndPoint()
           .register(datanodeDetails.getProtoBufMessage(), nodeReport,
               contianerReport);
       Preconditions.checkState(UUID.fromString(response.getDatanodeUUID())

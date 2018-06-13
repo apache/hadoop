@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -550,7 +550,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   protected RMApp submitApp(String user, String queue, String nodeLabel)
       throws Exception {
     RMApp app = mockRM.submitApp(GB,
-        "test-auto-queue-creation" + RandomUtils.nextInt(100), user, null,
+        "test-auto-queue-creation" + RandomUtils.nextInt(0, 100), user, null,
         queue, nodeLabel);
     Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions

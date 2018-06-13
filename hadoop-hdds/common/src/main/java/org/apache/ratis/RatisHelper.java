@@ -48,11 +48,13 @@ public interface RatisHelper {
   Logger LOG = LoggerFactory.getLogger(RatisHelper.class);
 
   static String toRaftPeerIdString(DatanodeDetails id) {
-    return id.getUuidString() + "_" + id.getRatisPort();
+    return id.getUuidString() + "_" +
+        id.getPort(DatanodeDetails.Port.Name.RATIS).getValue();
   }
 
   static String toRaftPeerAddressString(DatanodeDetails id) {
-    return id.getIpAddress() + ":" + id.getRatisPort();
+    return id.getIpAddress() + ":" +
+        id.getPort(DatanodeDetails.Port.Name.RATIS).getValue();
   }
 
   static RaftPeerId toRaftPeerId(DatanodeDetails id) {

@@ -16,14 +16,17 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
@@ -45,7 +48,8 @@ public interface Mapping extends Closeable {
    * The max size of the searching range cannot exceed the
    * value of count.
    *
-   * @param startContainerID start containerID, >=0, start searching at the head if 0.
+   * @param startContainerID start containerID, >=0,
+   * start searching at the head if 0.
    * @param count count must be >= 0
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big.
@@ -53,7 +57,8 @@ public interface Mapping extends Closeable {
    * @return a list of container.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(long startContainerID, int count) throws IOException;
+  List<ContainerInfo> listContainer(long startContainerID, int count)
+      throws IOException;
 
   /**
    * Allocates a new container for a given keyName and replication factor.
@@ -64,7 +69,8 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor replicationFactor, String owner) throws IOException;
+      HddsProtos.ReplicationFactor replicationFactor, String owner)
+      throws IOException;
 
   /**
    * Deletes a container from SCM.
@@ -95,7 +101,23 @@ public interface Mapping extends Closeable {
    *
    * @param reports Container report
    */
-  void processContainerReports(ContainerReportsRequestProto reports)
+  void processContainerReports(DatanodeDetails datanodeDetails,
+                               ContainerReportsProto reports)
       throws IOException;
 
+  /**
+   * Update deleteTransactionId according to deleteTransactionMap.
+   *
+   * @param deleteTransactionMap Maps the containerId to latest delete
+   *                             transaction id for the container.
+   * @throws IOException
+   */
+  void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
+      throws IOException;
+
+  /**
+   * Returns the nodeManager.
+   * @return NodeManager
+   */
+  NodeManager getNodeManager();
 }
