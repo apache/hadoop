@@ -648,8 +648,7 @@ public class ApiServer {
             ServiceClient sc = getServiceClient();
             sc.init(YARN_CONFIG);
             sc.start();
-            sc.actionStart(appName);
-            ApplicationId appId = sc.getAppId(appName);
+            ApplicationId appId = sc.actionStartAndGetId(appName);
             sc.close();
             return appId;
           }

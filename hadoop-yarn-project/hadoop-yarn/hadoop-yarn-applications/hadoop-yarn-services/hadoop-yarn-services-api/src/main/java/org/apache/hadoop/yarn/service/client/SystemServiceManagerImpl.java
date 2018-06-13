@@ -29,7 +29,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.service.SystemServiceManager;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -228,12 +230,31 @@ public class SystemServiceManagerImpl extends AbstractService
           userUgi.doAs(new PrivilegedExceptionAction<ApplicationId>() {
             @Override public ApplicationId run()
                 throws IOException, YarnException {
-              ApplicationId applicationId = serviceClient.actionCreate(service);
-              return applicationId;
+              boolean tryStart = true;
+              try {
+                serviceClient.actionBuild(service);
+              } catch (Exception e) {
+                if (e instanceof SliderException && ((SliderException) e)
+                    .getExitCode() == SliderExitCodes.EXIT_INSTANCE_EXISTS) {
+                  LOG.info("Service {} already exists, will attempt to start " +
+                      "service", service.getName());
+                } else {
+                  tryStart = false;
+                  LOG.info("Got exception saving {}, will not attempt to " +
+                      "start service", service.getName(), e);
+                }
+              }
+              if (tryStart) {
+                return serviceClient.actionStartAndGetId(service.getName());
+              } else {
+                return null;
+              }
             }
           });
-      LOG.info("Service {} submitted with Application ID: {}",
-          service.getName(), applicationId);
+      if (applicationId != null) {
+        LOG.info("Service {} submitted with Application ID: {}",
+            service.getName(), applicationId);
+      }
     }
   }
 

@@ -22,7 +22,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,6 +53,7 @@ public class TestSystemServiceManagerImpl {
 
   private String[] users = new String[] {"user1", "user2"};
   private static Map<String, Set<String>> loadedServices = new HashMap<>();
+  private static Map<String, Set<String>> savedServices = new HashMap<>();
   private static Map<String, Set<String>> submittedServices = new HashMap<>();
 
   @Before
@@ -72,7 +75,7 @@ public class TestSystemServiceManagerImpl {
   }
 
   @After
-  public void teadDown() {
+  public void tearDown() {
     systemService.stop();
   }
 
@@ -100,6 +103,11 @@ public class TestSystemServiceManagerImpl {
     verifyForLaunchedUserServices();
 
     // 2nd time launch service to handle if service exist scenario
+    systemService.launchUserService(userServices);
+    verifyForLaunchedUserServices();
+
+    // verify start of stopped services
+    submittedServices.clear();
     systemService.launchUserService(userServices);
     verifyForLaunchedUserServices();
   }
@@ -149,7 +157,27 @@ public class TestSystemServiceManagerImpl {
     }
 
     @Override
-    public ApplicationId actionCreate(Service service)
+    public int actionBuild(Service service)
+        throws YarnException, IOException {
+      String userName =
+          UserGroupInformation.getCurrentUser().getShortUserName();
+      Set<String> services = savedServices.get(userName);
+      if (services == null) {
+        services = new HashSet<>();
+        savedServices.put(userName, services);
+      }
+      if (services.contains(service.getName())) {
+        String message = "Failed to save service " + service.getName()
+            + ", because it already exists.";
+        throw new SliderException(SliderExitCodes.EXIT_INSTANCE_EXISTS,
+            message);
+      }
+      services.add(service.getName());
+      return 0;
+    }
+
+    @Override
+    public ApplicationId actionStartAndGetId(String serviceName)
         throws YarnException, IOException {
       String userName =
           UserGroupInformation.getCurrentUser().getShortUserName();
@@ -158,12 +186,12 @@ public class TestSystemServiceManagerImpl {
         services = new HashSet<>();
         submittedServices.put(userName, services);
       }
-      if (services.contains(service.getName())) {
-        String message = "Failed to create service " + service.getName()
-            + ", because it already exists.";
+      if (services.contains(serviceName)) {
+        String message = "Failed to create service " + serviceName
+            + ", because it is already running.";
         throw new YarnException(message);
       }
-      services.add(service.getName());
+      services.add(serviceName);
       return ApplicationId.newInstance(System.currentTimeMillis(), 1);
     }
   }
