@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client.rest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -30,13 +31,13 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
@@ -48,6 +49,9 @@ import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
+import org.apache.hadoop.ozone.web.response.ListKeys;
+import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpEntity;
@@ -342,14 +346,45 @@ public class RestClient implements ClientProtocol {
   public List<OzoneVolume> listVolumes(String volumePrefix, String prevKey,
                                        int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    return listVolumes(null, volumePrefix, prevKey, maxListResult);
   }
 
   @Override
   public List<OzoneVolume> listVolumes(String user, String volumePrefix,
                                        String prevKey, int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    try {
+      URIBuilder builder = new URIBuilder(ozoneRestUri);
+      builder.setPath(PATH_SEPARATOR);
+      builder.addParameter(Header.OZONE_INFO_QUERY_TAG,
+          Header.OZONE_LIST_QUERY_SERVICE);
+      builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS,
+          String.valueOf(maxListResult));
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREFIX, volumePrefix, builder);
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREVKEY, prevKey, builder);
+      HttpGet httpGet = new HttpGet(builder.build());
+      if (!Strings.isNullOrEmpty(user)) {
+        httpGet.addHeader(Header.OZONE_USER, user);
+      }
+      addOzoneHeaders(httpGet);
+      HttpEntity response = executeHttpRequest(httpGet);
+      ListVolumes volumeList =
+          ListVolumes.parse(EntityUtils.toString(response));
+      EntityUtils.consume(response);
+      return volumeList.getVolumes().stream().map(volInfo -> {
+        long creationTime = 0;
+        try {
+          creationTime = HddsClientUtils.formatDateTime(volInfo.getCreatedOn());
+        } catch (ParseException e) {
+          LOG.warn("Parse exception in getting creation time for volume", e);
+        }
+        return new OzoneVolume(conf, this, volInfo.getVolumeName(),
+            volInfo.getCreatedBy(), volInfo.getOwner().getName(),
+            volInfo.getQuota().sizeInBytes(), creationTime, null);
+      }).collect(Collectors.toList());
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -546,7 +581,38 @@ public class RestClient implements ClientProtocol {
   public List<OzoneBucket> listBuckets(String volumeName, String bucketPrefix,
                                        String prevBucket, int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    try {
+      HddsClientUtils.verifyResourceName(volumeName);
+      URIBuilder builder = new URIBuilder(ozoneRestUri);
+      builder.setPath(PATH_SEPARATOR + volumeName);
+      builder.addParameter(Header.OZONE_INFO_QUERY_TAG,
+          Header.OZONE_INFO_QUERY_BUCKET);
+      builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS,
+          String.valueOf(maxListResult));
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREFIX, bucketPrefix, builder);
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREVKEY, prevBucket, builder);
+      HttpGet httpGet = new HttpGet(builder.build());
+      addOzoneHeaders(httpGet);
+      HttpEntity response = executeHttpRequest(httpGet);
+      ListBuckets bucketList =
+          ListBuckets.parse(EntityUtils.toString(response));
+      EntityUtils.consume(response);
+      return bucketList.getBuckets().stream().map(bucketInfo -> {
+        long creationTime = 0;
+        try {
+          creationTime =
+              HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn());
+        } catch (ParseException e) {
+          LOG.warn("Parse exception in getting creation time for volume", e);
+        }
+        return new OzoneBucket(conf, this, volumeName,
+            bucketInfo.getBucketName(), bucketInfo.getAcls(),
+            bucketInfo.getStorageType(),
+            getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime);
+      }).collect(Collectors.toList());
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   /**
@@ -689,7 +755,37 @@ public class RestClient implements ClientProtocol {
                                  String keyPrefix, String prevKey,
                                  int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    try {
+      HddsClientUtils.verifyResourceName(volumeName);
+      URIBuilder builder = new URIBuilder(ozoneRestUri);
+      builder
+          .setPath(PATH_SEPARATOR + volumeName + PATH_SEPARATOR + bucketName);
+      builder.addParameter(Header.OZONE_INFO_QUERY_TAG,
+          Header.OZONE_INFO_QUERY_KEY);
+      builder.addParameter(Header.OZONE_LIST_QUERY_MAXKEYS,
+          String.valueOf(maxListResult));
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREFIX, keyPrefix, builder);
+      addQueryParamter(Header.OZONE_LIST_QUERY_PREVKEY, prevKey, builder);
+      HttpGet httpGet = new HttpGet(builder.build());
+      addOzoneHeaders(httpGet);
+      HttpEntity response = executeHttpRequest(httpGet);
+      ListKeys keyList = ListKeys.parse(EntityUtils.toString(response));
+      EntityUtils.consume(response);
+      return keyList.getKeyList().stream().map(keyInfo -> {
+        long creationTime = 0, modificationTime = 0;
+        try {
+          creationTime = HddsClientUtils.formatDateTime(keyInfo.getCreatedOn());
+          modificationTime =
+              HddsClientUtils.formatDateTime(keyInfo.getModifiedOn());
+        } catch (ParseException e) {
+          LOG.warn("Parse exception in getting creation time for volume", e);
+        }
+        return new OzoneKey(volumeName, bucketName, keyInfo.getKeyName(),
+            keyInfo.getSize(), creationTime, modificationTime);
+      }).collect(Collectors.toList());
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -803,5 +899,12 @@ public class RestClient implements ClientProtocol {
   @Override
   public void close() throws IOException {
     httpClient.close();
+  }
+
+  private void addQueryParamter(String param, String value,
+      URIBuilder builder) {
+    if (!Strings.isNullOrEmpty(value)) {
+      builder.addParameter(param, value);
+    }
   }
 }

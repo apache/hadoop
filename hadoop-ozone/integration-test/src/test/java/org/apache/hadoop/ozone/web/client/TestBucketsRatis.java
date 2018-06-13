@@ -102,9 +102,6 @@ public class TestBucketsRatis {
   }
   @Test
   public void testListBucket() throws Exception {
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     TestBuckets.runTestListBucket(client);
   }
 }

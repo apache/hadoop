@@ -289,9 +289,6 @@ public class TestBuckets {
 
   @Test
   public void testListBucket() throws Exception {
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     runTestListBucket(client);
   }
 

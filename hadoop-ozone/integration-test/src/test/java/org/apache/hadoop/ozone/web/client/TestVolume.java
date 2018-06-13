@@ -228,9 +228,6 @@ public class TestVolume {
 
   @Test
   public void testListVolume() throws OzoneException, IOException {
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     runTestListVolume(client);
   }
 
@@ -315,9 +312,6 @@ public class TestVolume {
 
   @Test
   public void testListVolumes() throws Exception {
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     runTestListVolumes(client);
   }
 
@@ -377,5 +371,11 @@ public class TestVolume {
     // test start key parameter of listing volumes
     volumeList = client.listVolumes(user2, null, "test-vol15", 10);
     assertEquals(2, volumeList.size());
+
+    String volumeName;
+    for (int x = 0; x < volCount; x++) {
+      volumeName = "test-vol" + x;
+      client.deleteVolume(volumeName);
+    }
   }
 }
