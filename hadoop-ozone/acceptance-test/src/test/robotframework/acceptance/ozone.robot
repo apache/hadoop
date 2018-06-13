@@ -48,9 +48,9 @@ Test rest interface
                     Should contain      ${result}       200 OK
 
 Check webui static resources
-    ${result} =			Execute on		scm		curl -s -I http://localhost:9876/static/bootstrap-3.0.2/js/bootstrap.min.js
+    ${result} =			Execute on		scm		curl -s -I http://localhost:9876/static/bootstrap-3.3.7/js/bootstrap.min.js
 	 Should contain		${result}		200
-    ${result} =			Execute on		ksm		curl -s -I http://localhost:9874/static/bootstrap-3.0.2/js/bootstrap.min.js
+    ${result} =			Execute on		ksm		curl -s -I http://localhost:9874/static/bootstrap-3.3.7/js/bootstrap.min.js
 	 Should contain		${result}		200
 
 Start freon testing

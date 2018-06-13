@@ -143,8 +143,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/router/robots.txt</exclude>
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
-            <exclude>webapps/static/bootstrap-3.0.2/**</exclude>
-            <exclude>webapps/static/jquery-1.10.2.min.js</exclude>
+            <exclude>webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>webapps/static/jquery-3.3.1.min.js</exclude>
             <exclude>webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>

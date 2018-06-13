@@ -67,7 +67,7 @@ public class JQueryUI extends HtmlBlock {
   protected void render(Block html) {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
         .link(root_url("static/dt-1.9.4/css/jui-dt.css"))
-        .script(root_url("static/jquery/jquery-1.8.2.min.js"))
+        .script(root_url("static/jquery/jquery-3.3.1.min.js"))
         .script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js"))
         .script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
