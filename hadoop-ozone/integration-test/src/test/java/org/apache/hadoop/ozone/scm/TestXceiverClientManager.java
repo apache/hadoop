@@ -163,8 +163,7 @@ public class TestXceiverClientManager {
     // and any container operations should fail
     clientManager.releaseClient(client1);
 
-    String expectedMessage = shouldUseGrpc ? "Channel shutdown invoked" :
-        "This channel is not connected.";
+    String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
           container1.getContainerID(), traceID1);
@@ -213,8 +212,7 @@ public class TestXceiverClientManager {
 
     // Any container operation should now fail
     String traceID2 = "trace" + RandomStringUtils.randomNumeric(4);
-    String expectedMessage = shouldUseGrpc ? "Channel shutdown invoked" :
-        "This channel is not connected.";
+    String expectedMessage = "This channel is not connected.";
     try {
       ContainerProtocolCalls.createContainer(client1,
           container1.getContainerID(), traceID2);
