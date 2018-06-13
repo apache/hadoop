@@ -151,9 +151,9 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     tEvent.setEventInfo(eventInfo);
 
     entity.addEvent(tEvent);
-    // sync sending of finish event to avoid possibility of saving application
-    // finished state in RMStateStore save without publishing in ATS.
-    putEntity(entity); // sync event so that ATS update is done without fail.
+
+    getDispatcher().getEventHandler().handle(new TimelineV1PublishEvent(
+        SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
   }
 
   @SuppressWarnings("unchecked")
