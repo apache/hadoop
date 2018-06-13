@@ -15,7 +15,7 @@
 
 load hadoop-functions_test_helper
 
-@test "hadoop_stop_daemon" {
+@test "hadoop_stop_daemon_changing_pid" {
   old_pid=12345
   new_pid=54321
   HADOOP_STOP_TIMEOUT=3
@@ -28,4 +28,26 @@ load hadoop-functions_test_helper
 
   [ -f pidfile ]
   [ "$(cat pidfile)" = "${new_pid}" ]
+}
+
+@test "hadoop_stop_daemon_force_kill" {
+
+  HADOOP_STOP_TIMEOUT=4
+
+  # Run the following in a sub-shell so that its termination doesn't affect the test
+  (sh ${TESTBINDIR}/process_with_sigterm_trap.sh ${TMP}/pidfile &)
+
+  # Wait for the process to go into tight loop
+  sleep 1
+
+  [ -f ${TMP}/pidfile ]
+  pid=$(cat "${TMP}/pidfile")
+
+  run hadoop_stop_daemon my_command ${TMP}/pidfile 2>&1
+
+  # The process should no longer be alive
+  ! kill -0 ${pid} > /dev/null 2>&1
+
+  # The PID file should be gone
+  [ ! -f ${TMP}/pidfile ]
 }

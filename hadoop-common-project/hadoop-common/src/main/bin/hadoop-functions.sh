@@ -2030,6 +2030,35 @@ function hadoop_start_secure_daemon_wrapper
   return 0
 }
 
+## @description  Wait till process dies or till timeout
+## @audience     private
+## @stability    evolving
+## @param        pid
+## @param        timeout
+function wait_process_to_die_or_timeout
+{
+  local pid=$1
+  local timeout=$2
+
+  # Normalize timeout
+  # Round up or down
+  timeout=$(printf "%.0f\n" "${timeout}")
+  if [[ ${timeout} -lt 1  ]]; then
+    # minimum 1 second
+    timeout=1
+  fi
+
+  # Wait to see if it's still alive
+  for (( i=0; i < "${timeout}"; i++ ))
+  do
+    if kill -0 "${pid}" > /dev/null 2>&1; then
+      sleep 1
+    else
+      break
+    fi
+  done
+}
+
 ## @description  Stop the non-privileged `command` daemon with that
 ## @description  that is running at `pidfile`.
 ## @audience     public
@@ -2050,11 +2079,14 @@ function hadoop_stop_daemon
     pid=$(cat "$pidfile")
 
     kill "${pid}" >/dev/null 2>&1
-    sleep "${HADOOP_STOP_TIMEOUT}"
+
+    wait_process_to_die_or_timeout "${pid}" "${HADOOP_STOP_TIMEOUT}"
+
     if kill -0 "${pid}" > /dev/null 2>&1; then
       hadoop_error "WARNING: ${cmd} did not stop gracefully after ${HADOOP_STOP_TIMEOUT} seconds: Trying to kill with kill -9"
       kill -9 "${pid}" >/dev/null 2>&1
     fi
+    wait_process_to_die_or_timeout "${pid}" "${HADOOP_STOP_TIMEOUT}"
     if ps -p "${pid}" > /dev/null 2>&1; then
       hadoop_error "ERROR: Unable to kill ${pid}"
     else
