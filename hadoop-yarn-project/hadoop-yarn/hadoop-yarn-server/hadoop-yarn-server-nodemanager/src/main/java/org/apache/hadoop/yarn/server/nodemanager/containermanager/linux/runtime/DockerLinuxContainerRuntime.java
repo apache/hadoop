@@ -194,6 +194,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
       "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
   private static final int HOST_NAME_LENGTH = 64;
+  private static final String DEFAULT_PROCFS = "/proc";
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -1196,24 +1197,15 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
   private void executeLivelinessCheck(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    PrivilegedOperation signalOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
-    signalOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
-        ctx.getExecutionAttribute(USER), Integer.toString(
-            PrivilegedOperation.RunAsUserCommand.SIGNAL_CONTAINER.getValue()),
-        ctx.getExecutionAttribute(PID),
-        Integer.toString(ctx.getExecutionAttribute(SIGNAL).getValue()));
-    signalOp.disableFailureLogging();
-    try {
-      privilegedOperationExecutor.executePrivilegedOperation(null, signalOp,
-          null, ctx.getContainer().getLaunchContext().getEnvironment(), false,
-          false);
-    } catch (PrivilegedOperationException e) {
-      String msg = "Liveliness check failed for PID: "
-          + ctx.getExecutionAttribute(PID)
+    String procFs = ctx.getExecutionAttribute(PROCFS);
+    if (procFs == null || procFs.isEmpty()) {
+      procFs = DEFAULT_PROCFS;
+    }
+    String pid = ctx.getExecutionAttribute(PID);
+    if (!new File(procFs + File.separator + pid).exists()) {
+      String msg = "Liveliness check failed for PID: " + pid
           + ". Container may have already completed.";
-      throw new ContainerExecutionException(msg, e.getExitCode(), e.getOutput(),
-          e.getErrorOutput());
+      throw new ContainerExecutionException(msg);
     }
   }
 

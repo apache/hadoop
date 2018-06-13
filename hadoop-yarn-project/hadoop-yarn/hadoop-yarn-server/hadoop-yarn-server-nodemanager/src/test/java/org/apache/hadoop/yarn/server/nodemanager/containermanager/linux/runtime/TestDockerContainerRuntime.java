@@ -54,7 +54,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -98,6 +100,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.NM_PRIVATE_TOKENS_PATH;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PID;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PID_FILE_PATH;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.PROCFS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RESOURCES_OPTIONS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RUN_AS_USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
@@ -151,6 +154,9 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
+
+  @Rule
+  public TemporaryFolder tempDir = new TemporaryFolder();
 
   @Before
   public void setup() {
@@ -1465,9 +1471,24 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testContainerLivelinessCheck()
-      throws ContainerExecutionException, PrivilegedOperationException {
+  public void testContainerLivelinessFileExistsNoException() throws Exception {
+    File testTempDir = tempDir.newFolder();
+    File procPidPath = new File(testTempDir + File.separator + signalPid);
+    procPidPath.createNewFile();
+    procPidPath.deleteOnExit();
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user)
+        .setExecutionAttribute(PID, signalPid)
+        .setExecutionAttribute(SIGNAL, ContainerExecutor.Signal.NULL)
+        .setExecutionAttribute(PROCFS, testTempDir.getAbsolutePath());
+    runtime.initialize(enableMockContainerExecutor(conf), null);
+    runtime.signalContainer(builder.build());
+  }
 
+  @Test(expected = ContainerExecutionException.class)
+  public void testContainerLivelinessNoFileException() throws Exception {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
@@ -1476,15 +1497,6 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(SIGNAL, ContainerExecutor.Signal.NULL);
     runtime.initialize(enableMockContainerExecutor(conf), null);
     runtime.signalContainer(builder.build());
-
-    PrivilegedOperation op = capturePrivilegedOperation();
-    Assert.assertEquals(op.getOperationType(),
-        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
-    Assert.assertEquals(runAsUser, op.getArguments().get(0));
-    Assert.assertEquals(submittingUser, op.getArguments().get(1));
-    Assert.assertEquals("2", op.getArguments().get(2));
-    Assert.assertEquals("1234", op.getArguments().get(3));
-    Assert.assertEquals("0", op.getArguments().get(4));
   }
 
   @Test

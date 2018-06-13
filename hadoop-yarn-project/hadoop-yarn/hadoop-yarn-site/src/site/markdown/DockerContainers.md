@@ -378,6 +378,21 @@ Trusted images are allowed to mount external devices such as HDFS via NFS gatewa
 
 For [YARN Service HTTPD example](./yarn-service/Examples.html), container-executor.cfg must define centos docker registry to be trusted for the example to run.
 
+Container Reacquisition Requirements
+------------------------------------
+On restart, the NodeManager, as part of the NodeManager's recovery process, will
+validate that a container is still running by checking for the existence of the
+container's PID directory in the /proc filesystem. For security purposes,
+operating system administrator may enable the _hidepid_ mount option for the
+/proc filesystem. If the _hidepid_ option is enabled, the _yarn_ user's primary
+group must be whitelisted by setting the gid mount flag similar to below.
+Without the _yarn_ user's primary group whitelisted, container reacquisition
+will fail and the container will be killed on NodeManager restart.
+
+```
+proc     /proc     proc     nosuid,nodev,noexec,hidepid=2,gid=yarn     0 0
+```
+
 Connecting to a Secure Docker Repository
 ----------------------------------------
 
