@@ -63,7 +63,8 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     if (info.getState() == HddsProtos.LifeCycleState.OPEN) {
       for (DatanodeDetails datanode : info.getPipeline().getMachines()) {
         containerManager.getNodeManager().addDatanodeCommand(datanode.getUuid(),
-            new CloseContainerCommand(containerID.getId()));
+            new CloseContainerCommand(containerID.getId(),
+                info.getPipeline().getType()));
       }
       try {
         // Finalize event will make sure the state of the container transitions

@@ -223,6 +223,7 @@ This command asks the datanode to close a specific container.
 */
 message CloseContainerCommandProto {
   required int64 containerID = 1;
+  required hadoop.hdds.ReplicationType replicationType = 2;
 }
 
 /**

@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -28,6 +30,8 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.UUID;
 
 /**
  * Handler for close container command received from SCM.
@@ -67,8 +71,23 @@ public class CloseContainerCommandHandler implements CommandHandler {
           CloseContainerCommandProto
               .parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
+      HddsProtos.ReplicationType replicationType =
+          closeContainerProto.getReplicationType();
 
-      container.getContainerManager().closeContainer(containerID);
+      ContainerProtos.CloseContainerRequestProto.Builder closeRequest =
+          ContainerProtos.CloseContainerRequestProto.newBuilder();
+      closeRequest.setContainerID(containerID);
+
+      ContainerProtos.ContainerCommandRequestProto.Builder request =
+          ContainerProtos.ContainerCommandRequestProto.newBuilder();
+      request.setCmdType(ContainerProtos.Type.CloseContainer);
+      request.setCloseContainer(closeRequest);
+      request.setTraceID(UUID.randomUUID().toString());
+      request.setDatanodeUuid(
+          context.getParent().getDatanodeDetails().getUuidString());
+      // submit the close container request for the XceiverServer to handle
+      container.submitContainerRequest(
+          request.build(), replicationType);
 
     } catch (Exception e) {
       LOG.error("Can't close container " + containerID, e);
