@@ -50,7 +50,8 @@ public final class ReportManager {
                         List<ReportPublisher> publishers) {
     this.context = context;
     this.publishers = publishers;
-    this.executorService = HadoopExecutors.newScheduledThreadPool(1,
+    this.executorService = HadoopExecutors.newScheduledThreadPool(
+        publishers.size(),
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Datanode ReportManager Thread - %d").build());
   }

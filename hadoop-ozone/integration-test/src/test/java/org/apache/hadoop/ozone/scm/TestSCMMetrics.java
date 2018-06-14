@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.server.report
+    .SCMDatanodeContainerReportHandler;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -80,7 +82,11 @@ public class TestSCMMetrics {
       DatanodeDetails fstDatanodeDetails = TestUtils.getDatanodeDetails();
       ContainerReportsProto request = createContainerReport(numReport, stat);
       String fstDatanodeUuid = fstDatanodeDetails.getUuidString();
-      scmManager.getDatanodeProtocolServer().processContainerReports(
+      SCMDatanodeContainerReportHandler containerReportHandler =
+          new SCMDatanodeContainerReportHandler();
+      containerReportHandler.setConf(conf);
+      containerReportHandler.init(scmManager);
+      containerReportHandler.processReport(
           fstDatanodeDetails, request);
 
       // verify container stat metrics
@@ -105,7 +111,7 @@ public class TestSCMMetrics {
       DatanodeDetails sndDatanodeDetails = TestUtils.getDatanodeDetails();
       request = createContainerReport(1, stat);
       String sndDatanodeUuid = sndDatanodeDetails.getUuidString();
-      scmManager.getDatanodeProtocolServer().processContainerReports(
+      containerReportHandler.processReport(
           sndDatanodeDetails, request);
 
       scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -128,11 +134,11 @@ public class TestSCMMetrics {
       // Re-send reports but with different value for validating
       // the aggregation.
       stat = new ContainerStat(100, 50, 3, 50, 60, 5, 6);
-      scmManager.getDatanodeProtocolServer().processContainerReports(
+      containerReportHandler.processReport(
           fstDatanodeDetails, createContainerReport(1, stat));
 
       stat = new ContainerStat(1, 1, 1, 1, 1, 1, 1);
-      scmManager.getDatanodeProtocolServer().processContainerReports(
+      containerReportHandler.processReport(
           sndDatanodeDetails, createContainerReport(1, stat));
 
       // the global container metrics value should be updated
@@ -176,8 +182,12 @@ public class TestSCMMetrics {
 
       DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
           .getDatanodeDetails();
+      SCMDatanodeContainerReportHandler containerReportHandler =
+          new SCMDatanodeContainerReportHandler();
+      containerReportHandler.setConf(conf);
+      containerReportHandler.init(scmManager);
       ContainerReportsProto request = createContainerReport(numReport, stat);
-      scmManager.getDatanodeProtocolServer().processContainerReports(
+      containerReportHandler.processReport(
           datanodeDetails, request);
 
       MetricsRecordBuilder scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
