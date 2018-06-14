@@ -678,4 +678,52 @@ public class TestAuxServices {
       super("RecoverableServiceB", "Bsrv");
     }
   }
+
+  static class ConfChangeAuxService extends AuxiliaryService
+      implements Service {
+
+    ConfChangeAuxService() {
+      super("ConfChangeAuxService");
+    }
+
+    @Override
+    protected void serviceInit(Configuration conf) throws Exception {
+      conf.set("dummyConfig", "changedTestValue");
+      super.serviceInit(conf);
+    }
+
+    @Override
+    public void initializeApplication(
+        ApplicationInitializationContext initAppContext) {
+    }
+
+    @Override
+    public void stopApplication(ApplicationTerminationContext stopAppContext) {
+    }
+
+    @Override
+    public ByteBuffer getMetaData() {
+      return null;
+    }
+  }
+
+  @Test
+  public void testAuxServicesConfChange() {
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+        new String[]{"ConfChangeAuxService"});
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT,
+        "ConfChangeAuxService"), ConfChangeAuxService.class, Service.class);
+    AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER, MOCK_CONTEXT,
+        MOCK_DEL_SERVICE);
+    conf.set("dummyConfig", "testValue");
+    aux.init(conf);
+    aux.start();
+    for (AuxiliaryService s : aux.getServices()) {
+      assertEquals(STARTED, s.getServiceState());
+      assertEquals(conf.get("dummyConfig"), "testValue");
+    }
+
+    aux.stop();
+  }
 }

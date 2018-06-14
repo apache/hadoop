@@ -29,11 +29,5 @@ export default AbstractAdapter.extend({
     var containerId = query['containerId'];
     delete query.containerId;
     return url + '/containers/' + containerId + '/logs';
-  },
-
-  fetchLogFileContent(containerId, logFile) {
-    var url = this._buildURL();
-    url = url + '/containers/' + containerId + '/logs/' + logFile;
-    return Ember.$.ajax({url: url, type: 'GET', dataType: 'text'});
   }
 });

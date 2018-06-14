@@ -1333,6 +1333,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(evictWriters);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
+    } else if ("triggerBlockReport".equalsIgnoreCase(cmd)) {
+      System.out.println(triggerBlockReport);
     } else if ("listOpenFiles".equalsIgnoreCase(cmd)) {
       System.out.println(listOpenFiles);
     } else if ("help".equals(cmd)) {

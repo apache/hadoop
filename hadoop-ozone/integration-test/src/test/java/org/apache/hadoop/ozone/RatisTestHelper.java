@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Helpers for Ratis tests.
@@ -54,7 +55,8 @@ public interface RatisTestHelper {
      *   RATIS_ENABLED = true, and
      *   OZONE_HANDLER_TYPE_KEY = "distributed".
      */
-    public RatisTestSuite(final Class<?> clazz) throws IOException {
+    public RatisTestSuite(final Class<?> clazz)
+        throws IOException, TimeoutException, InterruptedException {
       conf = newOzoneConfiguration(clazz, RPC);
       cluster = newMiniOzoneCluster(NUM_DATANODES, conf);
     }
@@ -99,9 +101,11 @@ public interface RatisTestHelper {
   }
 
   static MiniOzoneCluster newMiniOzoneCluster(
-      int numDatanodes, OzoneConfiguration conf) throws IOException {
+      int numDatanodes, OzoneConfiguration conf)
+      throws IOException, TimeoutException, InterruptedException {
     final MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(numDatanodes).build();
+    cluster.waitForClusterToBeReady();
     return cluster;
   }
 }

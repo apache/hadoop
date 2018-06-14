@@ -55,6 +55,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   private XceiverClientMetrics metrics;
   private ManagedChannel channel;
   private final Semaphore semaphore;
+  private boolean closed = false;
 
   /**
    * Constructs a client that can communicate with the Container framework on
@@ -105,6 +106,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   @Override
   public void close() {
+    closed = true;
     channel.shutdownNow();
     try {
       channel.awaitTermination(60, TimeUnit.MINUTES);
@@ -153,6 +155,14 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public CompletableFuture<ContainerCommandResponseProto>
       sendCommandAsync(ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
+    if(closed){
+      throw new IOException("This channel is not connected.");
+    }
+
+    if(channel == null || !isConnected()) {
+      reconnect();
+    }
+
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();
     semaphore.acquire();
@@ -190,6 +200,19 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     requestObserver.onNext(request);
     requestObserver.onCompleted();
     return replyFuture;
+  }
+
+  private void reconnect() throws IOException {
+    try {
+      connect();
+    } catch (Exception e) {
+      LOG.error("Error while connecting: ", e);
+      throw new IOException(e);
+    }
+
+    if (channel == null || !isConnected()) {
+      throw new IOException("This channel is not connected.");
+    }
   }
 
   /**

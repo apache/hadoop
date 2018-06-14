@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
@@ -190,6 +191,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
       "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
   private static final int HOST_NAME_LENGTH = 64;
+  private static final String DEFAULT_PROCFS = "/proc";
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -724,6 +726,25 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return id;
   }
 
+  /**
+   * Check if system is default to disable docker override or
+   * user requested a Docker container with ENTRY_POINT support.
+   *
+   * @param environment - Docker container environment variables
+   * @return true if Docker launch command override is disabled
+   */
+  private boolean checkUseEntryPoint(Map<String, String> environment) {
+    boolean overrideDisable = false;
+    String overrideDisableKey = Environment.
+        YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.
+            name();
+    String overrideDisableValue = (environment.get(overrideDisableKey) != null)
+        ? environment.get(overrideDisableKey) :
+            System.getenv(overrideDisableKey);
+    overrideDisable = Boolean.parseBoolean(overrideDisableValue);
+    return overrideDisable;
+  }
+
   @Override
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
@@ -734,8 +755,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
-    boolean useEntryPoint = Boolean.parseBoolean(environment
-              .get(ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE));
+    boolean useEntryPoint = checkUseEntryPoint(environment);
 
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
@@ -1173,24 +1193,15 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
   private void executeLivelinessCheck(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    PrivilegedOperation signalOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
-    signalOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
-        ctx.getExecutionAttribute(USER), Integer.toString(
-            PrivilegedOperation.RunAsUserCommand.SIGNAL_CONTAINER.getValue()),
-        ctx.getExecutionAttribute(PID),
-        Integer.toString(ctx.getExecutionAttribute(SIGNAL).getValue()));
-    signalOp.disableFailureLogging();
-    try {
-      privilegedOperationExecutor.executePrivilegedOperation(null, signalOp,
-          null, ctx.getContainer().getLaunchContext().getEnvironment(), false,
-          false);
-    } catch (PrivilegedOperationException e) {
-      String msg = "Liveliness check failed for PID: "
-          + ctx.getExecutionAttribute(PID)
+    String procFs = ctx.getExecutionAttribute(PROCFS);
+    if (procFs == null || procFs.isEmpty()) {
+      procFs = DEFAULT_PROCFS;
+    }
+    String pid = ctx.getExecutionAttribute(PID);
+    if (!new File(procFs + File.separator + pid).exists()) {
+      String msg = "Liveliness check failed for PID: " + pid
           + ". Container may have already completed.";
-      throw new ContainerExecutionException(msg, e.getExitCode(), e.getOutput(),
-          e.getErrorOutput());
+      throw new ContainerExecutionException(msg);
     }
   }
 

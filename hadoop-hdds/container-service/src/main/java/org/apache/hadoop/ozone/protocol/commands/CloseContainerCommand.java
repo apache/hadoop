@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -31,9 +32,12 @@ public class CloseContainerCommand
     extends SCMCommand<CloseContainerCommandProto> {
 
   private long containerID;
+  private HddsProtos.ReplicationType replicationType;
 
-  public CloseContainerCommand(long containerID) {
+  public CloseContainerCommand(long containerID,
+      HddsProtos.ReplicationType replicationType) {
     this.containerID = containerID;
+    this.replicationType = replicationType;
   }
 
   /**
@@ -58,13 +62,15 @@ public class CloseContainerCommand
 
   public CloseContainerCommandProto getProto() {
     return CloseContainerCommandProto.newBuilder()
-        .setContainerID(containerID).build();
+        .setContainerID(containerID)
+        .setReplicationType(replicationType).build();
   }
 
   public static CloseContainerCommand getFromProtobuf(
       CloseContainerCommandProto closeContainerProto) {
     Preconditions.checkNotNull(closeContainerProto);
-    return new CloseContainerCommand(closeContainerProto.getContainerID());
+    return new CloseContainerCommand(closeContainerProto.getContainerID(),
+        closeContainerProto.getReplicationType());
 
   }
 

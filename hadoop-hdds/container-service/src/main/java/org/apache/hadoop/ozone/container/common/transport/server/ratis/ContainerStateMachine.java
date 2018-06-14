@@ -265,7 +265,8 @@ public class ContainerStateMachine extends BaseStateMachine {
         Message message = runCommand(requestProto);
         if (cmdType == ContainerProtos.Type.CreateContainer) {
           long containerID =
-              requestProto.getCreateContainer().getContainerData().getContainerID();
+              requestProto.getCreateContainer()
+                  .getContainerData().getContainerID();
           createContainerFutureMap.remove(containerID).complete(message);
         }
         return CompletableFuture.completedFuture(message);

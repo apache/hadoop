@@ -1420,4 +1420,28 @@ public class TestDelegationTokenRenewer {
     delegationTokenRenewer.setTimerForTokenRenewal(mockDttr);
     assertNull(mockDttr.timerTask);
   }
+
+  /**
+   * Test that the DelegationTokenRenewer class can gracefully handle
+   * interactions that occur when it has been stopped.
+   */
+  @Test
+  public void testShutDown() {
+    DelegationTokenRenewer dtr = createNewDelegationTokenRenewer(conf, counter);
+    RMContext mockContext = mock(RMContext.class);
+    when(mockContext.getSystemCredentialsForApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, ByteBuffer>());
+    ClientRMService mockClientRMService = mock(ClientRMService.class);
+    when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
+    InetSocketAddress sockAddr =
+        InetSocketAddress.createUnresolved("localhost", 1234);
+    when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    dtr.setRMContext(mockContext);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
+    dtr.init(conf);
+    dtr.start();
+    delegationTokenRenewer.stop();
+    delegationTokenRenewer.applicationFinished(
+        BuilderUtils.newApplicationId(0, 1));
+  }
 }

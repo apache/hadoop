@@ -122,7 +122,9 @@ public class TestReconstructStripedFile {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dnNum).build();
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
+        .build();
     cluster.waitActive();
 
     fs = cluster.getFileSystem();

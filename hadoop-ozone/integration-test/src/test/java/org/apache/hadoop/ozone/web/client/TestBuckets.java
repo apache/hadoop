@@ -27,23 +27,29 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -54,6 +60,7 @@ import static org.junit.Assert.fail;
 /**
  * Test Ozone Bucket Lifecycle.
  */
+@RunWith(value = Parameterized.class)
 public class TestBuckets {
   /**
    * Set the timeout for every test.
@@ -63,6 +70,18 @@ public class TestBuckets {
 
   private static MiniOzoneCluster cluster = null;
   private static ClientProtocol client = null;
+  private static OzoneConfiguration conf;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> clientProtocol() {
+    Object[][] params = new Object[][] {
+        {RpcClient.class},
+        {RestClient.class}};
+    return Arrays.asList(params);
+  }
+
+  @Parameterized.Parameter
+  public static Class clientProtocol;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -74,9 +93,10 @@ public class TestBuckets {
    * @throws IOException
    */
   @BeforeClass
-  public static void init() throws IOException,
-      URISyntaxException, OzoneException {
-    OzoneConfiguration conf = new OzoneConfiguration();
+  public static void init()
+      throws IOException, URISyntaxException, OzoneException, TimeoutException,
+      InterruptedException {
+    conf = new OzoneConfiguration();
 
     String path = GenericTestUtils
         .getTempPath(TestBuckets.class.getSimpleName());
@@ -87,7 +107,16 @@ public class TestBuckets {
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
         .build();
-    client = new RpcClient(conf);
+    cluster.waitForClusterToBeReady();
+  }
+
+  @Before
+  public void setup() throws Exception {
+    if (clientProtocol.equals(RestClient.class)) {
+      client = new RestClient(conf);
+    } else {
+      client = new RpcClient(conf);
+    }
   }
 
   /**

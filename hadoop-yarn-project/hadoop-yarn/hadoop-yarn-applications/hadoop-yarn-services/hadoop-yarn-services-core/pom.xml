@@ -198,11 +198,6 @@
     </dependency>
 
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-client</artifactId>
     </dependency>

@@ -269,6 +269,8 @@ public class ApplicationMaster {
   private String containerResourceProfile = "";
   Map<String, Resource> resourceProfiles;
 
+  private boolean keepContainersAcrossAttempts = false;
+
   // Counter for completed containers ( complete denotes successful or failed )
   private AtomicInteger numCompletedContainers = new AtomicInteger();
   // Allocated container count so that we know how many containers has the RM
@@ -483,6 +485,13 @@ public class ApplicationMaster {
             + " the number of container retry attempts");
     opts.addOption("placement_spec", true, "Placement specification");
     opts.addOption("debug", false, "Dump out debug information");
+    opts.addOption("keep_containers_across_application_attempts", false,
+        "Flag to indicate whether to keep containers across application "
+            + "attempts."
+            + " If the flag is true, running containers will not be killed when"
+            + " application attempt fails and these containers will be "
+            + "retrieved by"
+            + " the new application attempt ");
 
     opts.addOption("help", false, "Print usage");
     CommandLine cliParser = new GnuParser().parse(opts, args);
@@ -645,6 +654,9 @@ public class ApplicationMaster {
     }
     containerResourceProfile =
         cliParser.getOptionValue("container_resource_profile", "");
+
+    keepContainersAcrossAttempts = cliParser.hasOption(
+        "keep_containers_across_application_attempts");
 
     if (this.placementSpecs == null) {
       numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
@@ -1152,9 +1164,15 @@ public class ApplicationMaster {
       }
     }
 
-    @Override
-    public void onShutdownRequest() {
-      done = true;
+    @Override public void onShutdownRequest() {
+      if (keepContainersAcrossAttempts) {
+        LOG.info("Shutdown request received. Ignoring since "
+            + "keep_containers_across_application_attempts is enabled");
+      } else{
+        LOG.info("Shutdown request received. Processing since "
+            + "keep_containers_across_application_attempts is disabled");
+        done = true;
+      }
     }
 
     @Override

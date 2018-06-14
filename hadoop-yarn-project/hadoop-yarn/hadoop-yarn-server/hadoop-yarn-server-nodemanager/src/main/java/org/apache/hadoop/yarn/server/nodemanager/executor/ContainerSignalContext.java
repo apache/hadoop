@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.executor;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;

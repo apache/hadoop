@@ -77,6 +77,10 @@ public final class CommandDispatcher {
     }
   }
 
+  public CommandHandler getCloseContainerHandler() {
+    return handlerMap.get(Type.closeContainerCommand);
+  }
+
   /**
    * Dispatch the command to the correct handler.
    *

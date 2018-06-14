@@ -1952,6 +1952,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     if (!isInSafeMode() && res.updateAccessTime()) {
       String src = srcArg;
+      checkOperation(OperationCategory.WRITE);
       writeLock();
       final long now = now();
       try {
@@ -2034,6 +2035,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FileStatus stat = null;
     boolean success = false;
     final FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2137,6 +2139,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new UnsupportedOperationException("Symlinks not supported");
     }
     FileStatus auditStat = null;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2400,11 +2403,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       iip = FSDirWriteFileOp.resolvePathForStartFile(
           dir, pc, src, flag, createParent);
 
-      if (shouldReplicate ||
-          (org.apache.commons.lang.StringUtils.isEmpty(ecPolicyName) &&
-          !FSDirErasureCodingOp.hasErasureCodingPolicy(this, iip))) {
-        blockManager.verifyReplication(src, replication, clientMachine);
-      }
 
       if (blockSize < minBlockSize) {
         throw new IOException("Specified block size is less than configured" +
@@ -2412,8 +2410,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + "): " + blockSize + " < " + minBlockSize);
       }
 
+      if (shouldReplicate) {
+        blockManager.verifyReplication(src, replication, clientMachine);
+      } else {
+        final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
+            .getErasureCodingPolicy(this, ecPolicyName, iip);
+        if (ecPolicy != null && (!ecPolicy.isReplicationPolicy())) {
+          if (blockSize < ecPolicy.getCellSize()) {
+            throw new IOException("Specified block size (" + blockSize
+                + ") is less than the cell size (" + ecPolicy.getCellSize()
+                +") of the erasure coding policy (" + ecPolicy + ").");
+          }
+        } else {
+          blockManager.verifyReplication(src, replication, clientMachine);
+        }
+      }
+
       FileEncryptionInfo feInfo = null;
-      if (provider != null) {
+      if (!iip.isRaw() && provider != null) {
         EncryptionKeyInfo ezInfo = FSDirEncryptionZoneOp.getEncryptionKeyInfo(
             this, iip, supportedVersions);
         // if the path has an encryption zone, the lock was released while
@@ -5306,6 +5320,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String clientName, ExtendedBlock oldBlock, ExtendedBlock newBlock,
       DatanodeID[] newNodes, String[] newStorageIDs, boolean logRetryCache)
       throws IOException {
+    checkOperation(OperationCategory.WRITE);
     LOG.info("updatePipeline(" + oldBlock.getLocalBlock()
              + ", newGS=" + newBlock.getGenerationStamp()
              + ", newLength=" + newBlock.getNumBytes()
@@ -6605,6 +6620,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String rootPath = null;
     BlocksMapUpdateInfo blocksToBeDeleted = null;
     final FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6645,6 +6661,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.READ);
     readLock();
     try {
+      checkOperation(OperationCategory.READ);
       if (!isRollingUpgrade()) {
         return null;
       }
@@ -6897,6 +6914,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6928,6 +6946,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6953,6 +6972,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "removeCacheDirective";
     boolean success = false;
     String idStr = "{id: " + Long.toString(id) + "}";
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6997,6 +7017,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void addCachePool(CachePoolInfo req, boolean logRetryCache)
       throws IOException {
     final String operationName = "addCachePool";
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     String poolInfoStr = null;
@@ -7021,6 +7042,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void modifyCachePool(CachePoolInfo req, boolean logRetryCache)
       throws IOException {
     final String operationName = "modifyCachePool";
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     String poolNameStr = "{poolName: " +
@@ -7047,6 +7069,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void removeCachePool(String cachePoolName, boolean logRetryCache)
       throws IOException {
     final String operationName = "removeCachePool";
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     boolean success = false;
     String poolNameStr = "{poolName: " + cachePoolName + "}";

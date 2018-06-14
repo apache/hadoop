@@ -39,6 +39,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TAGS_SYSTEM_KEY;
+
 /**
  * A servlet to print out the running configuration data.
  */
@@ -154,7 +156,8 @@ public class HddsConfServlet extends HttpServlet {
 
     switch (cmd) {
     case "getOzoneTags":
-      out.write(gson.toJson(config.get("ozone.tags.system").split(",")));
+      out.write(gson.toJson(config.get(OZONE_TAGS_SYSTEM_KEY)
+          .split(",")));
       break;
     case "getPropertyByTag":
       String tags = request.getParameter("tags");

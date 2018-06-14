@@ -27,8 +27,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
@@ -100,8 +100,8 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       resourceRequestTableData.append("[\"")
           .append(String.valueOf(resourceRequest.getPriority())).append("\",\"")
           .append(resourceRequest.getResourceName()).append("\",\"")
-          .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils
-              .escapeHtml(String.valueOf(resourceRequest.getCapability()))))
+          .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils
+              .escapeHtml4(String.valueOf(resourceRequest.getCapability()))))
           .append("\",\"")
           .append(String.valueOf(resourceRequest.getNumContainers()))
           .append("\",\"")

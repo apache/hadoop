@@ -424,13 +424,8 @@ public class TestRegistryDNS extends Assert {
     assertEquals("Questions do not match", query.getQuestion(),
         response.getQuestion());
     Record[] recs = response.getSectionArray(Section.ANSWER);
-    boolean found = false;
-    for (Record r : recs) {
-      if (r.getType()==Type.A) {
-        found = true;
-      }
-    }
-    assertTrue("No A records in answer", found);
+    assertEquals(1, recs.length);
+    assertEquals(recs[0].getType(), type);
     return recs;
   }
 

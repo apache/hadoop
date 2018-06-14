@@ -21,7 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.ratis.shaded.io.netty.channel.Channel;
 import org.apache.ratis.shaded.io.netty.channel.ChannelHandlerContext;
 import org.apache.ratis.shaded.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos

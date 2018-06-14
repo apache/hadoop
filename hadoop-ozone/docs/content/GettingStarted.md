@@ -17,118 +17,144 @@ menu: main
   limitations under the License. See accompanying LICENSE file.
 -->
 
-Ozone - Object store for Hadoop
-==============================
+# Ozone - Object store for Apache Hadoop
 
-Introduction
-------------
-Ozone is an object store for Hadoop. It  is a redundant, distributed object
-store build by leveraging primitives present in HDFS. Ozone supports REST
-API for accessing the store.
 
-Getting Started
----------------
-Ozone is a work in progress and currently lives in the hadoop source tree.
-The subprojects (ozone/hdds) are part of the hadoop source tree but by default
-not compiled and not part of the official releases. To
-use it, you have to build a package by yourself and deploy a cluster.
+## Introduction
+
+Ozone is a scalable distributed object store for Hadoop. Ozone supports RPC
+and REST APIs for working with Volumes, Buckets and Keys.
+
+Existing Hadoop applications can use Ozone transparently via a Hadoop Compatible
+FileSystem shim.
+
+### Basic terminology
+1. **Volumes** - Volumes are a notion similar to accounts. Volumes can be
+created or deleted only by administrators.
+1. **Buckets** - A volume can contain zero or more buckets.
+1. **Keys** - Keys are unique within a given bucket.
+
+### Services in a minimal Ozone cluster
+1. **Ozone Manager (OM)** - stores Ozone Metadata namely Volumes,
+Buckets and Key names.
+1. **Storage Container Manager (SCM)** - handles Storage Container lifecycle.
+Containers are the unit of replication in Ozone and not exposed to users.
+1. **DataNodes** - These are HDFS DataNodes which understand how to store
+Ozone Containers. Ozone has been designed to efficiently share storage space
+with HDFS blocks.
+
+## Getting Started
+
+Ozone is currently work-in-progress and lives in the Hadoop source tree.
+The sub-projects (`hadoop-ozone` and `hadoop-hdds`) are part of
+the Hadoop source tree but they are not compiled by default and not
+part of official Apache Hadoop releases.
+
+To use Ozone, you have to build a package by yourself and deploy a cluster.
 
 ### Building Ozone
 
-To build Ozone, please checkout the hadoop sources from github. Then
-checkout the trunk branch and build it.
+To build Ozone, please checkout the Hadoop sources from the
+[Apache Hadoop git repo](https://git-wip-us.apache.org/repos/asf?p=hadoop.git).
+Then checkout the `trunk` branch and build it with the `hdds` profile enabled.
 
-`mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Phdds -Dtar -DskipShade`
+`
+git checkout trunk
+mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Phdds -Dtar -DskipShade
+`
 
-skipShade is just to make compilation faster and not really required.
+`skipShade` is just to make compilation faster and not required.
 
-This will give you a tarball in your distribution directory. This is the
-tarball that can be used for deploying your hadoop cluster. Here is an
-example of the tarball that will be generated.
+This builds a tarball in your distribution directory which can be used to deploy your
+Ozone cluster. The tarball path is `hadoop-dist/target/ozone-${project.version}.tar.gz`.
 
-* `~/apache/hadoop/hadoop-dist/target/${project.version}.tar.gz`
-
-At this point we have an option to setup a physical cluster or run ozone via
+At this point you can either setup a physical cluster or run Ozone via
 docker.
 
-Running Ozone via Docker
-------------------------
+### Running Ozone via Docker
 
-This assumes that you have a running docker setup on the machine. Please run
-these following commands to see ozone in action.
+This is the quickest way to bring up an Ozone cluster for development/testing
+or if you just want to get a feel for Ozone. It assumes that you have docker installed
+on the machine.
 
- Go to the directory where the docker compose files exist.
+Go to the directory where the docker compose files exist and tell
+`docker-compose` to start Ozone. This will start SCM, OM and a single datanode
+in the background.
+```
+cd hadoop-dist/target/compose/ozone
+
+docker-compose up -d
+```
+
+Now let us run some workload against Ozone. To do that we will run
+_freon_, the Ozone load generator after logging into one of the docker
+containers for OM, SCM or DataNode. Let's take DataNode for example:.
+```
+docker-compose exec datanode bash
+
+ozone freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100
+```
+
+You can checkout the OM UI to see the requests information.
+```
+http://localhost:9874/
+```
+
+If you need more datanodes you can scale up:
+```
+docker-compose up --scale datanode=3 -d
+```
+
+## Running Ozone using a real cluster
+
+### Configuration
+
+First initialize Hadoop cluster configuration files like hadoop-env.sh,
+core-site.xml, hdfs-site.xml and any other configuration files that are
+needed for your cluster.
+
+#### Update hdfs-site.xml
+
+The container manager part of Ozone runs inside DataNodes as a pluggable module.
+To activate ozone you should define the service plugin implementation class.
+**Important**: It should be added to the **hdfs-site.xml** as the plugin should
+be activated as part of the normal HDFS Datanode bootstrap.
+```
+<property>
+   <name>dfs.datanode.plugins</name>
+   <value>org.apache.hadoop.ozone.HddsDatanodeService</value>
+</property>
+```
 
 
- - `cd hadoop-dist/target/compose/ozone`
+#### Create ozone-site.xml
 
-Tell docker to start ozone, this will start a KSM, SCM and a single datanode in
-the background.
+Ozone relies on its own configuration file called `ozone-site.xml`.
+The following are the most important settings.
 
-
- - `docker-compose up -d`
-
-Now let us run some work load against ozone, to do that we will run freon.
-
-This will log into the datanode and run bash.
-
- - `docker-compose exec datanode bash`
-
-Now you can run the `ozone` command shell or freon, the ozone load generator.
-
-This is the command to run freon.
-
- - `ozone freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
-
-You can checkout the KSM UI to see the requests information.
-
- - `http://localhost:9874/`
-
-If you need more datanode you can scale up:
-
- - `docker-compose scale datanode=3`
-
-Running Ozone using a real cluster
-----------------------------------
-
-Please proceed to setup a hadoop cluster by creating the hdfs-site.xml and
-other configuration files that are needed for your cluster.
-
-
-### Ozone Configuration
-
-Ozone relies on its own configuration file called `ozone-site.xml`. It is
-just for convenience and ease of management --  you can add these settings
-to `hdfs-site.xml`, if you don't want to keep ozone settings separate.
-This document refers to `ozone-site.xml` so that ozone settings are in one
-place  and not mingled with HDFS settings.
-
- * _*ozone.enabled*_  This is the most important setting for ozone.
+ 1. _*ozone.enabled*_  This is the most important setting for ozone.
  Currently, Ozone is an opt-in subsystem of HDFS. By default, Ozone is
  disabled. Setting this flag to `true` enables ozone in the HDFS cluster.
  Here is an example,
-
-```
+    ```
     <property>
        <name>ozone.enabled</name>
        <value>True</value>
     </property>
-```
- *  _*ozone.metadata.dirs*_ Ozone is designed with modern hardware
- in mind. It tries to use SSDs effectively. So users can specify where the
+    ```
+ 1.  **ozone.metadata.dirs** Administrators can specify where the
  metadata must reside. Usually you pick your fastest disk (SSD if
- you have them on your nodes). KSM, SCM and datanode will write the metadata
+ you have them on your nodes). OM, SCM and datanode will write the metadata
  to these disks. This is a required setting, if this is missing Ozone will
  fail to come up. Here is an example,
-
-```
+    ```
    <property>
       <name>ozone.metadata.dirs</name>
       <value>/data/disk1/meta</value>
    </property>
-```
+    ```
 
-* _*ozone.scm.names*_ Ozone is build on top of container framework. Storage
+1. **ozone.scm.names** Ozone is build on top of container framework. Storage
  container manager(SCM) is a distributed block service which is used by ozone
  and other storage services.
  This property allows datanodes to discover where SCM is, so that
@@ -136,128 +162,104 @@ place  and not mingled with HDFS settings.
  and datanodes assume there are multiple instances of SCM which form a highly
  available ring. The HA feature of SCM is a work in progress. So we
  configure ozone.scm.names to be a single machine. Here is an example,
-
-```
+    ```
     <property>
       <name>ozone.scm.names</name>
       <value>scm.hadoop.apache.org</value>
     </property>
-```
+    ```
 
-* _*ozone.scm.datanode.id*_ Each datanode that speaks to SCM generates an ID
-just like HDFS.  This is an optional setting. Please note:
+1. **ozone.scm.datanode.id** Each datanode that speaks to SCM generates an ID
+just like HDFS.  This is a mandatory setting. Please note:
 This path will be created by datanodes if it doesn't exist already. Here is an
  example,
-
-```
+    ```
    <property>
       <name>ozone.scm.datanode.id</name>
       <value>/data/disk1/scm/meta/node/datanode.id</value>
    </property>
-```
+    ```
 
-* _*ozone.scm.block.client.address*_ Storage Container Manager(SCM) offers a
+1. **ozone.scm.block.client.address** Storage Container Manager(SCM) offers a
  set of services that can be used to build a distributed storage system. One
- of the services offered is the block services. KSM and HDFS would use this
- service. This property describes where KSM can discover SCM's block service
+ of the services offered is the block services. OM and HDFS would use this
+ service. This property describes where OM can discover SCM's block service
  endpoint. There is corresponding ports etc, but assuming that we are using
  default ports, the server address is the only required field. Here is an
  example,
-
-```
+    ```
     <property>
       <name>ozone.scm.block.client.address</name>
       <value>scm.hadoop.apache.org</value>
     </property>
-```
+    ```
 
-* _*ozone.ksm.address*_ KSM server address. This is used by Ozonehandler and
+1. **ozone.ksm.address** OM server address. This is used by OzoneClient and
 Ozone File System.
-
-```
+    ```
     <property>
        <name>ozone.ksm.address</name>
        <value>ksm.hadoop.apache.org</value>
     </property>
-```
+    ```
 
-* _*dfs.datanode.plugin*_ Datanode service plugins: the container manager part
- of ozone is running inside the datanode as a service plugin. To activate ozone
- you should define the service plugin implementation class. **Important**
- It should be added to the **hdfs-site.xml** as the plugin should be activated
- as part of the normal HDFS Datanode bootstrap.
-
-```
-    <property>
-       <name>dfs.datanode.plugins</name>
-       <value>org.apache.hadoop.ozone.HddsDatanodeService</value>
-    </property>
-```
-
-Here is a quick summary of settings needed by Ozone.
+#### Ozone Settings Summary
 
 | Setting                        | Value                        | Comment |
 |--------------------------------|------------------------------|------------------------------------------------------------------|
 | ozone.enabled                  | True                         | This enables SCM and  containers in HDFS cluster.                |
 | ozone.metadata.dirs            | file path                    | The metadata will be stored here.                                |
 | ozone.scm.names                | SCM server name              | Hostname:port or or IP:port address of SCM.                      |
-| ozone.scm.block.client.address | SCM server name and port     | Used by services like KSM                                        |
+| ozone.scm.block.client.address | SCM server name and port     | Used by services like OM                                        |
 | ozone.scm.client.address       | SCM server name and port     | Used by client side                                              |
 | ozone.scm.datanode.address     | SCM server name and port     | Used by datanode to talk to SCM                                  |
-| ozone.ksm.address              | KSM server name              | Used by Ozone handler and Ozone file system.                     |
+| ozone.ksm.address              | OM server name              | Used by Ozone handler and Ozone file system.                     |
 
- Here is a working example of`ozone-site.xml`.
 
-```
-    <?xml version="1.0" encoding="UTF-8"?>
-    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-    <configuration>
-      <property>
-          <name>ozone.enabled</name>
-          <value>True</value>
-        </property>
-
-        <property>
-          <name>ozone.metadata.dirs</name>
-          <value>/data/disk1/ozone/meta</value>
-        </property>
-
-        <property>
-          <name>ozone.scm.names</name>
-          <value>127.0.0.1</value>
-        </property>
-
-        <property>
-           <name>ozone.scm.client.address</name>
-           <value>127.0.0.1:9860</value>
-        </property>
-
-         <property>
-           <name>ozone.scm.block.client.address</name>
-           <value>127.0.0.1:9863</value>
-         </property>
-
-         <property>
-           <name>ozone.scm.datanode.address</name>
-           <value>127.0.0.1:9861</value>
-         </property>
-
-         <property>
-           <name>ozone.ksm.address</name>
-           <value>127.0.0.1:9874</value>
-         </property>
-    </configuration>
-```
-
-And don't forget to enable the datanode component with adding the
-following configuration to the hdfs-site.xml:
+#### Sample ozone-site.xml
 
 ```
-    <property>
-       <name>dfs.datanode.plugins</name>
-       <value>org.apache.hadoop.ozone.HddsDatanodeService</value>
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+      <name>ozone.enabled</name>
+      <value>True</value>
     </property>
+
+    <property>
+      <name>ozone.metadata.dirs</name>
+      <value>/data/disk1/ozone/meta</value>
+    </property>
+
+    <property>
+      <name>ozone.scm.names</name>
+      <value>127.0.0.1</value>
+    </property>
+
+    <property>
+       <name>ozone.scm.client.address</name>
+       <value>127.0.0.1:9860</value>
+    </property>
+
+     <property>
+       <name>ozone.scm.block.client.address</name>
+       <value>127.0.0.1:9863</value>
+     </property>
+
+     <property>
+       <name>ozone.scm.datanode.address</name>
+       <value>127.0.0.1:9861</value>
+     </property>
+
+     <property>
+       <name>ozone.ksm.address</name>
+       <value>127.0.0.1:9874</value>
+     </property>
+</configuration>
 ```
+
+
 
 ### Starting Ozone
 
@@ -270,35 +272,40 @@ is running, please verify it is fully functional by running some commands like
    - *./hdfs dfs -ls /*
 
  Once you are sure that HDFS is running, start Ozone. To start  ozone, you
- need to start SCM and KSM. Currently we assume that both KSM and SCM
-  is running on the same node, this will change in future.
+ need to start SCM and OM.
 
- The first time you bring up Ozone, SCM must be initialized.
+The first time you bring up Ozone, SCM must be initialized.
+```
+ozone scm -init
+```
 
-   - `./ozone scm -init`
+Start SCM.
+```
+ozone --daemon start scm
+```
 
- Start SCM.
+Once SCM gets started, OM must be initialized.
+```
+ozone ksm -createObjectStore
+```
 
-   - `./ozone --daemon start scm`
+Start OM.
+```
+ozone --daemon start ksm
+```
 
- Once SCM gets started, KSM must be initialized.
-
-   - `./ozone ksm -createObjectStore`
-
- Start KSM.
-
-   - `./ozone --daemon start ksm`
-
-if you would like to start HDFS and Ozone together, you can do that by running
+If you would like to start HDFS and Ozone together, you can do that by running
  a single command.
- - `$HADOOP/sbin/start-ozone.sh`
+```
+$HADOOP/sbin/start-ozone.sh
+```
 
- This command will start HDFS and then start the ozone components.
+This command will start HDFS and then start the ozone components.
 
- Once you have ozone running you can use these ozone [shell](./OzoneCommandShell.html)
- commands to  create a  volume, bucket and keys.
+Once you have ozone running you can use these ozone [shell](./OzoneCommandShell.html)
+commands to start creating a  volume, bucket and keys.
 
-### Diagnosing issues
+## Diagnosing issues
 
 Ozone tries not to pollute the existing HDFS streams of configuration and
 logging. So ozone logs are by default configured to be written to a file
@@ -337,16 +344,18 @@ Here is the log4j properties that are added by ozone.
 
 If you would like to have a single datanode log instead of ozone stuff
 getting written to ozone.log, please remove this line or set this to true.
+```
+log4j.additivity.org.apache.hadoop.ozone=false
+```
 
- ` log4j.additivity.org.apache.hadoop.ozone=false`
+On the SCM/OM side, you will be able to see
+1. `hadoop-hdfs-ksm-hostname.log`
+1. `hadoop-hdfs-scm-hostname.log`
 
-On the SCM/KSM side, you will be able to see
+## Reporting Bugs
+Please file any issues you see under [Apache HDDS Project Jira](https://issues.apache.org/jira/projects/HDDS/issues/).
 
-  - `hadoop-hdfs-ksm-hostname.log`
-  - `hadoop-hdfs-scm-hostname.log`
-
-Please file any issues you see under the related issues:
-
+## References
  - [Object store in HDFS: HDFS-7240](https://issues.apache.org/jira/browse/HDFS-7240)
  - [Ozone File System: HDFS-13074](https://issues.apache.org/jira/browse/HDFS-13074)
  - [Building HDFS on top of new storage layer (HDDS): HDFS-10419](https://issues.apache.org/jira/browse/HDFS-10419)

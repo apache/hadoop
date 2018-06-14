@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.UnrecognizedOptionException;
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -754,7 +754,7 @@ public class ClientRMService extends AbstractService implements
       message.append(" at ").append(remoteAddress.getHostAddress());
     }
 
-    String diagnostics = org.apache.commons.lang.StringUtils
+    String diagnostics = org.apache.commons.lang3.StringUtils
         .trimToNull(request.getDiagnostics());
     if (diagnostics != null) {
       message.append(" with diagnostic message: ");
@@ -812,8 +812,8 @@ public class ClientRMService extends AbstractService implements
     Set<String> queues = request.getQueues();
     Set<String> tags = request.getApplicationTags();
     long limit = request.getLimit();
-    LongRange start = request.getStartRange();
-    LongRange finish = request.getFinishRange();
+    Range<Long> start = request.getStartRange();
+    Range<Long> finish = request.getFinishRange();
     ApplicationsRequestScope scope = request.getScope();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
@@ -888,11 +888,11 @@ public class ClientRMService extends AbstractService implements
         continue;
       }
 
-      if (start != null && !start.containsLong(application.getStartTime())) {
+      if (start != null && !start.contains(application.getStartTime())) {
         continue;
       }
 
-      if (finish != null && !finish.containsLong(application.getFinishTime())) {
+      if (finish != null && !finish.contains(application.getFinishTime())) {
         continue;
       }
 

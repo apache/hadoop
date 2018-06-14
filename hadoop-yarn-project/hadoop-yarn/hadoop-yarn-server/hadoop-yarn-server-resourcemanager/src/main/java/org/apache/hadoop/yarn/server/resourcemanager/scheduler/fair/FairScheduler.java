@@ -199,7 +199,7 @@ public class FairScheduler extends
 
   private AllocationFileLoaderService allocsLoader;
   @VisibleForTesting
-  AllocationConfiguration allocConf;
+  volatile AllocationConfiguration allocConf;
 
   // Container size threshold for making a reservation.
   @VisibleForTesting
@@ -208,8 +208,7 @@ public class FairScheduler extends
   public FairScheduler() {
     super(FairScheduler.class.getName());
     context = new FSContext(this);
-    allocsLoader =
-        new AllocationFileLoaderService(new AllocationReloadListener());
+    allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
@@ -1097,7 +1096,7 @@ public class FairScheduler extends
         return;
       }
 
-      final NodeId nodeID = node.getNodeID();
+      final NodeId nodeID = (node != null ? node.getNodeID() : null);
       if (!nodeTracker.exists(nodeID)) {
         // The node might have just been removed while this thread was waiting
         // on the synchronized lock before it entered this synchronized method
@@ -1438,6 +1437,7 @@ public class FairScheduler extends
     }
 
     allocsLoader.init(conf);
+    allocsLoader.setReloadListener(new AllocationReloadListener());
     // If we fail to load allocations file on initialize, we want to fail
     // immediately.  After a successful load, exceptions on future reloads
     // will just result in leaving things as they are.

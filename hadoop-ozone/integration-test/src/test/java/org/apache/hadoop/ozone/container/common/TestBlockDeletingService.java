@@ -66,8 +66,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL;
-import static org.apache.hadoop.ozone.container
-    .ContainerTestHelper.createSingleNodePipeline;
 
 /**
  * Tests to test block deleting service.
@@ -183,8 +181,15 @@ public class TestBlockDeletingService {
   private int getUnderDeletionBlocksCount(MetadataStore meta)
       throws IOException {
     List<Map.Entry<byte[], byte[]>> underDeletionBlocks =
-        meta.getRangeKVs(null, 100, new MetadataKeyFilters.KeyPrefixFilter(
-            OzoneConsts.DELETING_KEY_PREFIX));
+        meta.getRangeKVs(null, 100, new MetadataKeyFilters.KeyPrefixFilter()
+            .addFilter(OzoneConsts.DELETING_KEY_PREFIX));
+    return underDeletionBlocks.size();
+  }
+
+  private int getDeletedBlocksCount(MetadataStore db) throws IOException {
+    List<Map.Entry<byte[], byte[]>> underDeletionBlocks =
+        db.getRangeKVs(null, 100, new MetadataKeyFilters.KeyPrefixFilter()
+            .addFilter(OzoneConsts.DELETED_KEY_PREFIX));
     return underDeletionBlocks.size();
   }
 
@@ -205,20 +210,34 @@ public class TestBlockDeletingService {
     List<ContainerData> containerData = Lists.newArrayList();
     containerManager.listContainer(0L, 1, containerData);
     Assert.assertEquals(1, containerData.size());
-    MetadataStore meta = KeyUtils.getDB(containerData.get(0), conf);
 
-    // Ensure there is 100 blocks under deletion
+    MetadataStore meta = KeyUtils.getDB(containerData.get(0), conf);
+    Map<Long, ContainerData> containerMap =
+        ((ContainerManagerImpl) containerManager).getContainerMap();
+    long transactionId =
+        containerMap.get(containerData.get(0).getContainerID())
+            .getDeleteTransactionId();
+
+    // Number of deleted blocks in container should be equal to 0 before
+    // block delete
+    Assert.assertEquals(0, transactionId);
+
+    // Ensure there are 3 blocks under deletion and 0 deleted blocks
     Assert.assertEquals(3, getUnderDeletionBlocksCount(meta));
+    Assert.assertEquals(0, getDeletedBlocksCount(meta));
 
     // An interval will delete 1 * 2 blocks
     deleteAndWait(svc, 1);
     Assert.assertEquals(1, getUnderDeletionBlocksCount(meta));
+    Assert.assertEquals(2, getDeletedBlocksCount(meta));
 
     deleteAndWait(svc, 2);
     Assert.assertEquals(0, getUnderDeletionBlocksCount(meta));
+    Assert.assertEquals(3, getDeletedBlocksCount(meta));
 
     deleteAndWait(svc, 3);
     Assert.assertEquals(0, getUnderDeletionBlocksCount(meta));
+    Assert.assertEquals(3, getDeletedBlocksCount(meta));
 
     svc.shutdown();
     shutdownContainerMangaer(containerManager);

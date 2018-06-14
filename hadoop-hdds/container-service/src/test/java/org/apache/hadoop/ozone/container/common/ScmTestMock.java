@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -179,6 +180,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     List<SCMCommandProto>
         cmdResponses = new LinkedList<>();
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
+        .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
         .build();
   }
 
@@ -197,6 +199,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       throws IOException {
     rpcCount.incrementAndGet();
     updateNodeReport(datanodeDetailsProto, nodeReport);
+    updateContainerReport(containerReportsRequestProto, datanodeDetailsProto);
     sleepIfNeeded();
     return StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto
         .newBuilder().setClusterID(UUID.randomUUID().toString())
@@ -226,6 +229,35 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     nodeReports.put(datanode, nodeReportProto.build());
 
   }
+
+  /**
+   * Update the cotainerReport.
+   *
+   * @param reports Container report
+   * @param datanodeDetails DataNode Info
+   * @throws IOException
+   */
+  public void updateContainerReport(
+      StorageContainerDatanodeProtocolProtos.ContainerReportsProto reports,
+      DatanodeDetailsProto datanodeDetails) throws IOException {
+    Preconditions.checkNotNull(reports);
+    containerReportsCount.incrementAndGet();
+    DatanodeDetails datanode = DatanodeDetails.getFromProtoBuf(
+        datanodeDetails);
+    if (reports.getReportsCount() > 0) {
+      Map containers = nodeContainers.get(datanode);
+      if (containers == null) {
+        containers = new LinkedHashMap();
+        nodeContainers.put(datanode, containers);
+      }
+
+      for (StorageContainerDatanodeProtocolProtos.ContainerInfo report : reports
+          .getReportsList()) {
+        containers.put(report.getContainerID(), report);
+      }
+    }
+  }
+
 
   /**
    * Return the number of StorageReports of a datanode.

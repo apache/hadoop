@@ -87,7 +87,7 @@ public class AllocationFileLoaderService extends AbstractService {
   private Path allocFile;
   private FileSystem fs;
 
-  private final Listener reloadListener;
+  private Listener reloadListener;
 
   @VisibleForTesting
   long reloadIntervalMs = ALLOC_RELOAD_INTERVAL_MS;
@@ -95,22 +95,21 @@ public class AllocationFileLoaderService extends AbstractService {
   private Thread reloadThread;
   private volatile boolean running = true;
 
-  public AllocationFileLoaderService(Listener reloadListener) {
-    this(reloadListener, SystemClock.getInstance());
+  public AllocationFileLoaderService() {
+    this(SystemClock.getInstance());
   }
 
   private List<Permission> defaultPermissions;
 
-  public AllocationFileLoaderService(Listener reloadListener, Clock clock) {
+  public AllocationFileLoaderService(Clock clock) {
     super(AllocationFileLoaderService.class.getName());
     this.clock = clock;
-    this.reloadListener = reloadListener;
   }
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     this.allocFile = getAllocationFile(conf);
-    if(this.allocFile != null) {
+    if (this.allocFile != null) {
       this.fs = allocFile.getFileSystem(conf);
       reloadThread = new Thread(() -> {
         while (running) {
@@ -139,7 +138,7 @@ public class AllocationFileLoaderService extends AbstractService {
               lastReloadAttemptFailed = true;
             }
           } catch (IOException e) {
-            LOG.info("Exception while loading allocation file: " + e);
+            LOG.error("Exception while loading allocation file: " + e);
           }
           try {
             Thread.sleep(reloadIntervalMs);
@@ -182,7 +181,8 @@ public class AllocationFileLoaderService extends AbstractService {
    * path is relative, it is searched for in the
    * classpath, but loaded like a regular File.
    */
-  public Path getAllocationFile(Configuration conf)
+  @VisibleForTesting
+  Path getAllocationFile(Configuration conf)
       throws UnsupportedFileSystemException {
     String allocFilePath = conf.get(FairSchedulerConfiguration.ALLOCATION_FILE,
         FairSchedulerConfiguration.DEFAULT_ALLOCATION_FILE);
@@ -207,6 +207,10 @@ public class AllocationFileLoaderService extends AbstractService {
       allocPath = new Path("file", null, allocFilePath);
     }
     return allocPath;
+  }
+
+  public synchronized void setReloadListener(Listener reloadListener) {
+    this.reloadListener = reloadListener;
   }
 
   /**
@@ -350,6 +354,7 @@ public class AllocationFileLoaderService extends AbstractService {
   public interface Listener {
     void onReload(AllocationConfiguration info) throws IOException;
 
-    void onCheck();
+    default void onCheck() {
+    }
   }
 }

@@ -160,6 +160,7 @@ message ContainerInfo {
   optional int64 writeBytes = 8;
   optional string finalhash = 9;
   optional hadoop.hdds.LifeCycleState state = 10;
+  optional int64 deleteTransactionId = 11;
 }
 
 /*
@@ -222,6 +223,7 @@ This command asks the datanode to close a specific container.
 */
 message CloseContainerCommandProto {
   required int64 containerID = 1;
+  required hadoop.hdds.ReplicationType replicationType = 2;
 }
 
 /**

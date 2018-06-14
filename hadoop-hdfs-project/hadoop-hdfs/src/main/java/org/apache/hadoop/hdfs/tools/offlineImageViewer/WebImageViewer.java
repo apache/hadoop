@@ -34,6 +34,9 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -53,8 +56,12 @@ public class WebImageViewer implements Closeable {
   private final EventLoopGroup bossGroup;
   private final EventLoopGroup workerGroup;
   private final ChannelGroup allChannels;
+  private final Configuration conf;
 
   public WebImageViewer(InetSocketAddress address) {
+    this(address, new Configuration());
+  }
+  public WebImageViewer(InetSocketAddress address, Configuration conf) {
     this.address = address;
     this.bossGroup = new NioEventLoopGroup();
     this.workerGroup = new NioEventLoopGroup();
@@ -62,15 +69,25 @@ public class WebImageViewer implements Closeable {
     this.bootstrap = new ServerBootstrap()
       .group(bossGroup, workerGroup)
       .channel(NioServerSocketChannel.class);
+    this.conf = conf;
+    UserGroupInformation.setConfiguration(conf);
   }
 
   /**
    * Start WebImageViewer and wait until the thread is interrupted.
    * @param fsimage the fsimage to load.
    * @throws IOException if failed to load the fsimage.
+   * @throws RuntimeException if security is enabled in configuration.
    */
   public void start(String fsimage) throws IOException {
     try {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        throw new RuntimeException(
+            "WebImageViewer does not support secure mode. To start in " +
+                "non-secure mode, pass -D" +
+                CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION +
+                "=simple");
+      }
       initServer(fsimage);
       channel.closeFuture().await();
     } catch (InterruptedException e) {

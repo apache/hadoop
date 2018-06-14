@@ -18,56 +18,57 @@
 
 package org.apache.hadoop.ozone.genconf;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.hamcrest.CoreMatchers;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 
 
 /**
  * Tests GenerateOzoneRequiredConfigurations.
  */
 public class TestGenerateOzoneRequiredConfigurations {
-  private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
-
+  private static File outputBaseDir;
   /**
-   * Create a MiniDFSCluster for testing.
-   * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "distributed"
+   * Creates output directory which will be used by the test-cases.
+   * If a test-case needs a separate directory, it has to create a random
+   * directory inside {@code outputBaseDir}.
    *
-   * @throws IOException
+   * @throws Exception In case of exception while creating output directory.
    */
   @BeforeClass
   public static void init() throws Exception {
-    conf = new OzoneConfiguration();
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
-    cluster.waitForClusterToBeReady();
+    outputBaseDir = GenericTestUtils.getTestDir();
+    FileUtils.forceMkdir(outputBaseDir);
   }
 
   /**
-   * Shutdown MiniDFSCluster.
+   * Cleans up the output base directory.
    */
   @AfterClass
-  public static void shutdown() {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
+  public static void cleanup() throws IOException {
+    FileUtils.deleteDirectory(outputBaseDir);
   }
 
   /**
-   * Tests a valid path and generates ozone-site.xml.
+   * Tests a valid path and generates ozone-site.xml by calling
+   * {@code GenerateOzoneRequiredConfigurations#generateConfigurations}.
+   *
    * @throws Exception
    */
   @Test
-  public void generateConfigurationsSuccess() throws Exception {
-    String[] args = new String[]{"-output", "."};
-    GenerateOzoneRequiredConfigurations.main(args);
+  public void testGenerateConfigurations() throws Exception {
+    File tempPath = getRandomTempDir();
+    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
 
     Assert.assertEquals("Path is valid",
         true, GenerateOzoneRequiredConfigurations.isValidPath(args[1]));
@@ -77,6 +78,27 @@ public class TestGenerateOzoneRequiredConfigurations {
 
     Assert.assertEquals("Config file generated",
         0, GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
+  }
+
+  /**
+   * Tests ozone-site.xml generation by calling
+   * {@code GenerateOzoneRequiredConfigurations#main}.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testGenerateConfigurationsThroughMainMethod() throws Exception {
+    File tempPath = getRandomTempDir();
+    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
+    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    PrintStream oldStream = System.out;
+    try (PrintStream ps = new PrintStream(outContent)) {
+      System.setOut(ps);
+      GenerateOzoneRequiredConfigurations.main(args);
+      Assert.assertThat(outContent.toString(),
+              CoreMatchers.containsString("ozone-site.xml has been generated at"));
+      System.setOut(oldStream);
+    }
   }
 
   /**
@@ -96,5 +118,11 @@ public class TestGenerateOzoneRequiredConfigurations {
 
     Assert.assertEquals("Config file not generated",
         1, GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
+  }
+
+  private File getRandomTempDir() throws IOException {
+    File tempDir = new File(outputBaseDir, RandomStringUtils.randomAlphanumeric(5));
+    FileUtils.forceMkdir(tempDir);
+    return tempDir;
   }
 }

@@ -2547,6 +2547,15 @@
 
   <property>
     <description>
+      The setting that controls how often in-memory app level
+      aggregation is kicked off in timeline collector.
+    </description>
+    <name>yarn.timeline-service.app-aggregation-interval-secs</name>
+    <value>15</value>
+  </property>
+
+  <property>
+    <description>
     The default hdfs location for flowrun coprocessor jar.
     </description>
     <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location

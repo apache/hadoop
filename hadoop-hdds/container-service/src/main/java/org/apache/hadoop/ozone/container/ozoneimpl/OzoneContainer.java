@@ -18,7 +18,9 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -72,7 +74,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
  * layer.
  */
 public class OzoneContainer {
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(OzoneContainer.class);
 
   private final Configuration ozoneConfig;
@@ -269,9 +271,65 @@ public class OzoneContainer {
     return this.manager.getClosedContainerReports();
   }
 
+  private XceiverServerSpi getRatisSerer() {
+    for (XceiverServerSpi serverInstance : server) {
+      if (serverInstance instanceof XceiverServerRatis) {
+        return serverInstance;
+      }
+    }
+    return null;
+  }
+
+  private XceiverServerSpi getStandaAloneSerer() {
+    for (XceiverServerSpi serverInstance : server) {
+      if (!(serverInstance instanceof XceiverServerRatis)) {
+        return serverInstance;
+      }
+    }
+    return null;
+  }
+
   @VisibleForTesting
   public ContainerManager getContainerManager() {
     return this.manager;
   }
 
+  public void submitContainerRequest(
+      ContainerProtos.ContainerCommandRequestProto request,
+      HddsProtos.ReplicationType replicationType) throws IOException {
+    XceiverServerSpi serverInstance;
+    long containerId = getContainerIdForCmd(request);
+    if (replicationType == HddsProtos.ReplicationType.RATIS) {
+      serverInstance = getRatisSerer();
+      Preconditions.checkNotNull(serverInstance);
+      serverInstance.submitRequest(request);
+      LOG.info("submitting {} request over RATIS server for container {}",
+          request.getCmdType(), containerId);
+    } else {
+      serverInstance = getStandaAloneSerer();
+      Preconditions.checkNotNull(serverInstance);
+      getStandaAloneSerer().submitRequest(request);
+      LOG.info(
+          "submitting {} request over STAND_ALONE server for container {}",
+          request.getCmdType(), containerId);
+    }
+
+  }
+
+  private long getContainerIdForCmd(
+      ContainerProtos.ContainerCommandRequestProto request)
+      throws IllegalArgumentException {
+    ContainerProtos.Type type = request.getCmdType();
+    switch (type) {
+    case CloseContainer:
+      return request.getCloseContainer().getContainerID();
+      // Right now, we handle only closeContainer via queuing it over the
+      // over the XceiVerServer. For all other commands we throw Illegal
+      // argument exception here. Will need to extend the switch cases
+      // in case we want add another commands here.
+    default:
+      throw new IllegalArgumentException("Cmd " + request.getCmdType()
+          + " not supported over HearBeat Response");
+    }
+  }
 }

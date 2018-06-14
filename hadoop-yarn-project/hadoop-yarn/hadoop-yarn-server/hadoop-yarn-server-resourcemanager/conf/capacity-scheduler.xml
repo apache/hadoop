@@ -149,6 +149,8 @@
       attempts to schedule rack-local containers.
       When setting this parameter, the size of the cluster should be taken into account.
       We use 40 as the default value, which is approximately the number of nodes in one rack.
+      Note, if this value is -1, the locality constraint in the container request
+      will be ignored, which disables the delay scheduling.
     </description>
   </property>
 

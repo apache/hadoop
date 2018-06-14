@@ -17,8 +17,9 @@
 package org.apache.hadoop.ozone.ksm;
 
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.net.NetUtils;
@@ -638,7 +639,8 @@ public class TestKeySpaceManager {
     MetadataStore store = cluster.getKeySpaceManager().
         getMetadataManager().getStore();
     List<Map.Entry<byte[], byte[]>> list = store.getRangeKVs(null, 10,
-        new MetadataKeyFilters.KeyPrefixFilter(DELETING_KEY_PREFIX));
+        new MetadataKeyFilters.KeyPrefixFilter()
+            .addFilter(DELETING_KEY_PREFIX));
     Assert.assertEquals(1, list.size());
 
     // Delete the key again to test deleting non-existing key.
@@ -1114,10 +1116,12 @@ public class TestKeySpaceManager {
     KeyInfo keyInfo = storageHandler.getKeyInfo(keyArgs);
     // Compare the time in second unit since the date string reparsed to
     // millisecond will lose precision.
-    Assert.assertTrue((OzoneUtils.formatDate(keyInfo.getCreatedOn())
-        / 1000) >= (currentTime / 1000));
-    Assert.assertTrue((OzoneUtils.formatDate(keyInfo.getModifiedOn())
-        / 1000) >= (currentTime / 1000));
+    Assert.assertTrue(
+        (HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()) / 1000) >= (
+            currentTime / 1000));
+    Assert.assertTrue(
+        (HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()) / 1000) >= (
+            currentTime / 1000));
     Assert.assertEquals(keyName, keyInfo.getKeyName());
     // with out data written, the size would be 0
     Assert.assertEquals(0, keyInfo.getSize());

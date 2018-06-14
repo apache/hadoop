@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.storage;
 
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
@@ -55,7 +56,6 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
@@ -209,7 +209,8 @@ public final class DistributedStorageHandler implements StorageHandler {
       info.setOwner(new VolumeOwner(infoProto.getOwnerName()));
       info.setQuota(OzoneQuota.getOzoneQuota(infoProto.getQuotaInBytes()));
       info.setVolumeName(infoProto.getVolume());
-      info.setCreatedOn(OzoneUtils.formatTime(infoProto.getCreationTime()));
+      info.setCreatedOn(
+          HddsClientUtils.formatDateTime(infoProto.getCreationTime()));
       result.addVolume(info);
     }
 
@@ -233,7 +234,8 @@ public final class DistributedStorageHandler implements StorageHandler {
             volumeArgs.getAdminName());
     volInfo.setOwner(new VolumeOwner(volumeArgs.getOwnerName()));
     volInfo.setQuota(OzoneQuota.getOzoneQuota(volumeArgs.getQuotaInBytes()));
-    volInfo.setCreatedOn(OzoneUtils.formatTime(volumeArgs.getCreationTime()));
+    volInfo.setCreatedOn(
+        HddsClientUtils.formatDateTime(volumeArgs.getCreationTime()));
     return volInfo;
   }
 
@@ -363,7 +365,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         bk.setBucketName(bucketInfo.getBucketName());
         bk.setStorageType(bucketInfo.getStorageType());
         bk.setAcls(bucketInfo.getAcls());
-        bk.setCreatedOn(OzoneUtils.formatTime(bucketInfo.getCreationTime()));
+        bk.setCreatedOn(
+            HddsClientUtils.formatDateTime(bucketInfo.getCreationTime()));
         result.addBucket(bk);
       }
       return result;
@@ -391,7 +394,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     bucketInfo.setStorageType(ksmBucketInfo.getStorageType());
     bucketInfo.setAcls(ksmBucketInfo.getAcls());
     bucketInfo.setCreatedOn(
-        OzoneUtils.formatTime(ksmBucketInfo.getCreationTime()));
+        HddsClientUtils.formatDateTime(ksmBucketInfo.getCreationTime()));
     return bucketInfo;
   }
 
@@ -481,9 +484,9 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfo.setKeyName(ksmKeyInfo.getKeyName());
     keyInfo.setSize(ksmKeyInfo.getDataSize());
     keyInfo.setCreatedOn(
-        OzoneUtils.formatTime(ksmKeyInfo.getCreationTime()));
+        HddsClientUtils.formatDateTime(ksmKeyInfo.getCreationTime()));
     keyInfo.setModifiedOn(
-        OzoneUtils.formatTime(ksmKeyInfo.getModificationTime()));
+        HddsClientUtils.formatDateTime(ksmKeyInfo.getModificationTime()));
     return keyInfo;
   }
 
@@ -524,9 +527,9 @@ public final class DistributedStorageHandler implements StorageHandler {
         tempInfo.setKeyName(info.getKeyName());
         tempInfo.setSize(info.getDataSize());
         tempInfo.setCreatedOn(
-            OzoneUtils.formatTime(info.getCreationTime()));
+            HddsClientUtils.formatDateTime(info.getCreationTime()));
         tempInfo.setModifiedOn(
-            OzoneUtils.formatTime(info.getModificationTime()));
+            HddsClientUtils.formatDateTime(info.getModificationTime()));
 
         result.addKey(tempInfo);
       }

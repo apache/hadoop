@@ -26,7 +26,8 @@ The Offline Image Viewer provides several output processors:
 
 1.  Web is the default output processor. It launches a HTTP server
     that exposes read-only WebHDFS API. Users can investigate the namespace
-    interactively by using HTTP REST API.
+    interactively by using HTTP REST API. It does not support secure mode, nor
+    HTTPS.
 
 2.  XML creates an XML document of the fsimage and includes all of the
     information within the fsimage. The

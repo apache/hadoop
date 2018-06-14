@@ -212,7 +212,8 @@ public class TestContainerCloser {
         .setReadCount(100000000L)
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
-        .setWriteBytes(2000000000L);
+        .setWriteBytes(2000000000L)
+        .setDeleteTransactionId(0);
     reports.addReports(ciBuilder);
     mapping.processContainerReports(TestUtils.getDatanodeDetails(),
         reports.build());

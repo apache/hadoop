@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -359,7 +360,7 @@ public class DFSInputStream extends FSInputStream
       return 0;
     }
 
-    throw new IOException("Cannot obtain block length for " + locatedblock);
+    throw new CannotObtainBlockLengthException(locatedblock);
   }
 
   public long getFileLength() {
@@ -593,8 +594,8 @@ public class DFSInputStream extends FSInputStream
           fetchBlockAt(target);
         } else {
           connectFailedOnce = true;
-          DFSClient.LOG.warn("Failed to connect to {} for block {}, " +
-              "add to deadNodes and continue. ", targetAddr,
+          DFSClient.LOG.warn("Failed to connect to {} for file {} for block "
+                  + "{}, add to deadNodes and continue. ", targetAddr, src,
               targetBlock.getBlock(), ex);
           // Put chosen node into dead list, continue
           addToDeadNodes(chosenNode);
@@ -1082,6 +1083,9 @@ public class DFSInputStream extends FSInputStream
         IOUtilsClient.updateReadStatistics(readStatistics, nread, reader);
         dfsClient.updateFileSystemReadStats(
             reader.getNetworkDistance(), nread);
+        if (readStatistics.getBlockType() == BlockType.STRIPED) {
+          dfsClient.updateFileSystemECReadStats(nread);
+        }
         if (nread != len) {
           throw new IOException("truncated return from reader.read(): " +
               "excpected " + len + ", got " + nread);

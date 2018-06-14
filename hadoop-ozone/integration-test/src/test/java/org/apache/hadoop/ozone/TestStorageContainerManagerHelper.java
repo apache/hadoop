@@ -20,7 +20,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
@@ -120,7 +121,7 @@ public class TestStorageContainerManagerHelper {
     List<String> pendingDeletionBlocks = Lists.newArrayList();
     MetadataStore meta = getContainerMetadata(containerID);
     KeyPrefixFilter filter =
-        new KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX);
+        new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> kvs = meta
         .getRangeKVs(null, Integer.MAX_VALUE, filter);
     kvs.forEach(entry -> {
@@ -147,7 +148,8 @@ public class TestStorageContainerManagerHelper {
         (preKey, currentKey, nextKey) -> !DFSUtil.bytes2String(currentKey)
             .startsWith(OzoneConsts.DELETING_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> kvs =
-        meta.getRangeKVs(null, Integer.MAX_VALUE, filter);
+        meta.getRangeKVs(null, Integer.MAX_VALUE,
+            MetadataKeyFilters.getNormalKeyFilter());
     kvs.forEach(entry -> {
       allBlocks.add(Longs.fromByteArray(entry.getKey()));
     });

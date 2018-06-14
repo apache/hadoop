@@ -361,13 +361,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         }
       }
 
-      // We update SCM DB first, so if this step fails, we end up here,
-      // nothing gets into the delLog so no blocks will be accidentally
-      // removed. If we write the log first, once log is written, the
-      // async deleting service will start to scan and might be picking
-      // up some blocks to do real deletions, that might cause data loss.
       try {
-        deletedBlockLog.addTransactions(containerBlocks);
+        Map<Long, Long> deleteTransactionsMap =
+            deletedBlockLog.addTransactions(containerBlocks);
+        containerManager.updateDeleteTransactionId(deleteTransactionsMap);
       } catch (IOException e) {
         throw new IOException(
             "Skip writing the deleted blocks info to"

@@ -57,7 +57,7 @@ class FsUrlConnection extends URLConnection {
     try {
       LOG.debug("Connecting to {}", url);
       FileSystem fs = FileSystem.get(url.toURI(), conf);
-      is = fs.open(new Path(url.getPath()));
+      is = fs.open(new Path(url.toURI()));
     } catch (URISyntaxException e) {
       throw new IOException(e.toString());
     }

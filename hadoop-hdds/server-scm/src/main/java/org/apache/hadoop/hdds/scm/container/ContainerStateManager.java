@@ -304,6 +304,7 @@ public class ContainerStateManager implements Closeable {
         .setStateEnterTime(Time.monotonicNow())
         .setOwner(owner)
         .setContainerID(containerCount.incrementAndGet())
+        .setDeleteTransactionId(0)
         .build();
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
@@ -351,6 +352,17 @@ public class ContainerStateManager implements Closeable {
     return containers.getContainerInfo(info);
   }
 
+  /**
+   * Update deleteTransactionId for a container.
+   *
+   * @param containerID ContainerID of the container whose delete
+   *                    transactionId needs to be updated.
+   * @param transactionId latest transactionId to be updated for the container
+   */
+  public void updateDeleteTransactionId(Long containerID, long transactionId) {
+    containers.getContainerMap().get(ContainerID.valueof(containerID))
+        .updateDeleteTransactionId(transactionId);
+  }
 
   /**
    * Return a container matching the attributes specified.
@@ -445,6 +457,15 @@ public class ContainerStateManager implements Closeable {
         factor, type);
   }
 
+  /**
+   * Returns the containerInfo for the given container id.
+   * @param containerID id of the container
+   * @return ContainerInfo containerInfo
+   * @throws IOException
+   */
+  public ContainerInfo getContainer(ContainerID containerID) {
+    return containers.getContainerInfo(containerID.getId());
+  }
   @Override
   public void close() throws IOException {
   }

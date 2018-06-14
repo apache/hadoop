@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.hdds.scm.storage.ChunkInputStream;

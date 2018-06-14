@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.service.provider.docker;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.AbstractProviderService;
@@ -50,6 +50,26 @@ public class DockerProviderService extends AbstractProviderService
         compInstance.getCompSpec().getRunPrivilegedContainer());
   }
 
+  /**
+   * Check if system is default to disable docker override or
+   * user requested a Docker container with ENTRY_POINT support.
+   *
+   * @param component - YARN Service component
+   * @return true if Docker launch command override is disabled
+   */
+  private boolean checkUseEntryPoint(Component component) {
+    boolean overrideDisable = false;
+    String overrideDisableKey = Environment.
+        YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.
+            name();
+    String overrideDisableValue = (component
+        .getConfiguration().getEnv(overrideDisableKey) != null) ?
+            component.getConfiguration().getEnv(overrideDisableKey) :
+                System.getenv(overrideDisableKey);
+    overrideDisable = Boolean.parseBoolean(overrideDisableValue);
+    return overrideDisable;
+  }
+
   @Override
   public void buildContainerLaunchCommand(AbstractLauncher launcher,
       Service service, ComponentInstance instance,
@@ -58,9 +78,7 @@ public class DockerProviderService extends AbstractProviderService
       Map<String, String> tokensForSubstitution)
           throws IOException, SliderException {
     Component component = instance.getComponent().getComponentSpec();
-    boolean useEntryPoint = Boolean.parseBoolean(component
-        .getConfiguration().getEnv(Environment
-          .YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.name()));
+    boolean useEntryPoint = checkUseEntryPoint(component);
     if (useEntryPoint) {
       String launchCommand = component.getLaunchCommand();
       if (!StringUtils.isEmpty(launchCommand)) {

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.commons.lang3.Range;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -101,7 +102,7 @@ public class BasePBImplRecordsTest {
       ParameterizedType pt = (ParameterizedType)type;
       Type rawType = pt.getRawType();
       Type [] params = pt.getActualTypeArguments();
-      // only support EnumSet<T>, List<T>, Set<T>, Map<K,V>
+      // only support EnumSet<T>, List<T>, Set<T>, Map<K,V>, Range<T>
       if (rawType.equals(EnumSet.class)) {
         if (params[0] instanceof Class) {
           Class c = (Class)(params[0]);
@@ -115,6 +116,11 @@ public class BasePBImplRecordsTest {
         Map<Object, Object> map = Maps.newHashMap();
         map.put(genTypeValue(params[0]), genTypeValue(params[1]));
         ret = map;
+      } else if (rawType.equals(Range.class)) {
+        ret = typeValueCache.get(rawType);
+        if (ret != null) {
+          return ret;
+        }
       }
     }
     if (ret == null) {

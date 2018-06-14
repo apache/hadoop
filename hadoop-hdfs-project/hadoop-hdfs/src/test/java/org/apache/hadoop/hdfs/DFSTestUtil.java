@@ -1559,8 +1559,9 @@ public class DFSTestUtil {
       out.write("replicated".getBytes());
     }
 
-    try (FSDataOutputStream out = filesystem.createFile(
-        new Path(ecDir, "RS-3-2")).ecPolicyName(ecPolicyRS32.getName()).build()) {
+    try (FSDataOutputStream out = filesystem
+        .createFile(new Path(ecDir, "RS-3-2"))
+        .ecPolicyName(ecPolicyRS32.getName()).blockSize(1024 * 1024).build()) {
       out.write("RS-3-2".getBytes());
     }
   }

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
-import static org.apache.commons.lang.StringEscapeUtils.escapeJavaScript;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeHtml4;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeEcmaScript;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
@@ -125,6 +125,6 @@ public class AppsBlock extends HtmlBlock {
   }
 
   private static String escape(String str) {
-    return escapeJavaScript(escapeHtml(str));
+    return escapeEcmaScript(escapeHtml4(str));
   }
 }

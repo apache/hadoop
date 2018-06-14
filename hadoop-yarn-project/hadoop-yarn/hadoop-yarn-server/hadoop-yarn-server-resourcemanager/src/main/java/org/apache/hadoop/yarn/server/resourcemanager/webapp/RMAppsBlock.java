@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -119,19 +119,19 @@ public class RMAppsBlock extends AppsBlock {
         .append(app.getAppId())
         .append("</a>\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(app.getUser())))
+          StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(app.getUser())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(app.getName())))
+          StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(app.getName())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getType())))
         .append("\",\"")
         .append(
-          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+          StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
              .getQueue()))).append("\",\"").append(String
              .valueOf(app.getPriority()))
         .append("\",\"").append(app.getStartedTime())

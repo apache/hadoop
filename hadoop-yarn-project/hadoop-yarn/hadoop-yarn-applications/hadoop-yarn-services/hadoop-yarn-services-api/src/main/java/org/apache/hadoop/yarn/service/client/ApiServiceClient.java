@@ -27,7 +27,7 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -585,6 +585,17 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to upgrade components: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
+    return result;
+  }
+
+  @Override
+  public int actionCleanUp(String appName, String userName) throws
+      IOException, YarnException {
+    ServiceClient sc = new ServiceClient();
+    sc.init(getConfig());
+    sc.start();
+    int result = sc.actionCleanUp(appName, userName);
+    sc.close();
     return result;
   }
 

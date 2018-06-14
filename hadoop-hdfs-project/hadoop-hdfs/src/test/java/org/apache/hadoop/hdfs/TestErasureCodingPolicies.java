@@ -63,7 +63,7 @@ public class TestErasureCodingPolicies {
   private Configuration conf;
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
-  private static final int BLOCK_SIZE = 16 * 1024;
+  private static final int BLOCK_SIZE = 1024 * 1024;
   private ErasureCodingPolicy ecPolicy;
   private FSNamesystem namesystem;
 

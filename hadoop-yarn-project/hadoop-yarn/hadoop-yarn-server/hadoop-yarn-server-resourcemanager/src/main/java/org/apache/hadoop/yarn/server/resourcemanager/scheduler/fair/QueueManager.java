@@ -53,8 +53,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class QueueManager {
-  public static final Log LOG = LogFactory.getLog(
-    QueueManager.class.getName());
+  private static final Log LOG =
+      LogFactory.getLog(QueueManager.class.getName());
 
   private final class IncompatibleQueueRemovalTask {
 
@@ -91,8 +91,8 @@ public class QueueManager {
   private final FairScheduler scheduler;
 
   private final Collection<FSLeafQueue> leafQueues = 
-      new CopyOnWriteArrayList<FSLeafQueue>();
-  private final Map<String, FSQueue> queues = new HashMap<String, FSQueue>();
+      new CopyOnWriteArrayList<>();
+  private final Map<String, FSQueue> queues = new HashMap<>();
   private Set<IncompatibleQueueRemovalTask> incompatibleQueuesPendingRemoval =
       new HashSet<>();
   private FSParentQueue rootQueue;
@@ -123,7 +123,8 @@ public class QueueManager {
   }
 
   /**
-   * Get a leaf queue by name, creating it if the create param is true and is necessary.
+   * Get a leaf queue by name, creating it if the create param is
+   * true and is necessary.
    * If the queue is not or can not be a leaf queue, i.e. it already exists as a
    * parent queue, or one of the parents in its name is already a leaf queue,
    * null is returned.
@@ -137,7 +138,7 @@ public class QueueManager {
     return getLeafQueue(name, create, true);
   }
 
-  public FSLeafQueue getLeafQueue(
+  private FSLeafQueue getLeafQueue(
       String name,
       boolean create,
       boolean recomputeSteadyShares) {
@@ -154,7 +155,7 @@ public class QueueManager {
   }
 
   /**
-   * Remove a leaf queue if empty
+   * Remove a leaf queue if empty.
    * @param name name of the queue
    * @return true if queue was removed or false otherwise
    */
@@ -166,8 +167,10 @@ public class QueueManager {
 
 
   /**
-   * Get a parent queue by name, creating it if the create param is true and is necessary.
-   * If the queue is not or can not be a parent queue, i.e. it already exists as a
+   * Get a parent queue by name, creating it if the create param is
+   * true and is necessary.
+   * If the queue is not or can not be a parent queue,
+   * i.e. it already exists as a
    * leaf queue, or one of the parents in its name is already a leaf queue,
    * null is returned.
    * 
@@ -318,7 +321,8 @@ public class QueueManager {
       SchedulingPolicy childPolicy = scheduler.getAllocationConfiguration().
           getSchedulingPolicy(queueName);
       if (!parent.getPolicy().isChildPolicyAllowed(childPolicy)) {
-        LOG.error("Can't create queue '" + queueName + "'.");
+        LOG.error("Can't create queue '" + queueName + "'," +
+                "the child scheduling policy is not allowed by parent queue!");
         return null;
       }
 
@@ -359,8 +363,8 @@ public class QueueManager {
    * @param child the child queue
    * @param queueConf the {@link AllocationConfiguration}
    */
-  void setChildResourceLimits(FSParentQueue parent, FSQueue child,
-      AllocationConfiguration queueConf) {
+  private void setChildResourceLimits(FSParentQueue parent, FSQueue child,
+          AllocationConfiguration queueConf) {
     Map<FSQueueType, Set<String>> configuredQueues =
         queueConf.getConfiguredQueues();
 
@@ -396,8 +400,8 @@ public class QueueManager {
       FSQueueType queueType) {
     queueToCreate = ensureRootPrefix(queueToCreate);
 
-    // Ensure queueToCreate is not root and doesn't have the default queue in its
-    // ancestry.
+    // Ensure queueToCreate is not root and doesn't
+    // have the default queue in its ancestry.
     if (queueToCreate.equals(ROOT_QUEUE) ||
         queueToCreate.startsWith(
             ROOT_QUEUE + "." + YarnConfiguration.DEFAULT_QUEUE_NAME + ".")) {
@@ -551,7 +555,7 @@ public class QueueManager {
   }
   
   /**
-   * Get a collection of all leaf queues
+   * Get a collection of all leaf queues.
    */
   public Collection<FSLeafQueue> getLeafQueues() {
     synchronized (queues) {
@@ -560,7 +564,7 @@ public class QueueManager {
   }
   
   /**
-   * Get a collection of all queues
+   * Get a collection of all queues.
    */
   public Collection<FSQueue> getQueues() {
     synchronized (queues) {
@@ -568,7 +572,7 @@ public class QueueManager {
     }
   }
   
-  private String ensureRootPrefix(String name) {
+  private static String ensureRootPrefix(String name) {
     if (!name.startsWith(ROOT_QUEUE + ".") && !name.equals(ROOT_QUEUE)) {
       name = ROOT_QUEUE + "." + name;
     }
@@ -576,7 +580,8 @@ public class QueueManager {
   }
   
   public void updateAllocationConfiguration(AllocationConfiguration queueConf) {
-    // Create leaf queues and the parent queues in a leaf's ancestry if they do not exist
+    // Create leaf queues and the parent queues in a leaf's
+    // ancestry if they do not exist
     synchronized (queues) {
       // Verify and set scheduling policies for existing queues before creating
       // any queue, since we need parent policies to determine if we can create

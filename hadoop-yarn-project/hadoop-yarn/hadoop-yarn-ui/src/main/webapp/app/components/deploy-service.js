@@ -152,7 +152,8 @@ export default Ember.Component.extend({
 
   isUserNameGiven: Ember.computed.empty('userName'),
 
-  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue', 'serviceDef.serviceComponents.[]', function () {
+  isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue',
+      'serviceDef.version', 'serviceDef.serviceComponents.[]', function () {
     return this.get('serviceDef').isValidServiceDef();
   }),
 
@@ -166,7 +167,7 @@ export default Ember.Component.extend({
     if (this.get('isLoading')) {
       return false;
     }
-    if (this.get('isUserNameGiven')) {
+    if (this.get('isSecurityNotEnabled') && this.get('isUserNameGiven')) {
       return false;
     }
     if (this.get('isStandardViewType')) {

@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.genesis;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.RocksDBStore;

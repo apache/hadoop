@@ -38,7 +38,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -311,14 +311,12 @@ public class TestOzoneShell {
   @Test
   public void testListVolume() throws Exception {
     LOG.info("Running testListVolume");
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
+    String protocol = clientProtocol.getName().toLowerCase();
     String commandOutput;
     List<VolumeInfo> volumes;
     final int volCount = 20;
-    final String user1 = "test-user-a";
-    final String user2 = "test-user-b";
+    final String user1 = "test-user-a-" + protocol;
+    final String user2 = "test-user-b-" + protocol;
 
     // Create 20 volumes, 10 for user1 and another 10 for user2.
     for (int x = 0; x < volCount; x++) {
@@ -328,11 +326,11 @@ public class TestOzoneShell {
       if (x % 2 == 0) {
         // create volume [test-vol0, test-vol2, ..., test-vol18] for user1
         userName = user1;
-        volumeName = "test-vol" + x;
+        volumeName = "test-vol-" + protocol + x;
       } else {
         // create volume [test-vol1, test-vol3, ..., test-vol19] for user2
         userName = user2;
-        volumeName = "test-vol" + x;
+        volumeName = "test-vol-" + protocol + x;
       }
       VolumeArgs volumeArgs = VolumeArgs.newBuilder()
           .setOwner(userName)
@@ -369,8 +367,8 @@ public class TestOzoneShell {
 
     // test -prefix option
     out.reset();
-    args = new String[] {"-listVolume", url + "/", "-user",
-        user1, "-length", "100", "-prefix", "test-vol1"};
+    args = new String[] { "-listVolume", url + "/", "-user", user1, "-length",
+        "100", "-prefix", "test-vol-" + protocol + "1" };
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -379,14 +377,15 @@ public class TestOzoneShell {
     assertEquals(5, volumes.size());
     // return volume names should be [test-vol10, test-vol12, ..., test-vol18]
     for (int i = 0; i < volumes.size(); i++) {
-      assertEquals(volumes.get(i).getVolumeName(), "test-vol" + ((i + 5) * 2));
+      assertEquals(volumes.get(i).getVolumeName(),
+          "test-vol-" + protocol + ((i + 5) * 2));
       assertEquals(volumes.get(i).getOwner().getName(), user1);
     }
 
     // test -start option
     out.reset();
-    args = new String[] {"-listVolume", url + "/", "-user",
-        user2, "-length", "100", "-start", "test-vol15"};
+    args = new String[] { "-listVolume", url + "/", "-user", user2, "-length",
+        "100", "-start", "test-vol-" + protocol + "15" };
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -394,8 +393,8 @@ public class TestOzoneShell {
 
     assertEquals(2, volumes.size());
 
-    assertEquals(volumes.get(0).getVolumeName(), "test-vol17");
-    assertEquals(volumes.get(1).getVolumeName(), "test-vol19");
+    assertEquals(volumes.get(0).getVolumeName(), "test-vol-" + protocol + "17");
+    assertEquals(volumes.get(1).getVolumeName(), "test-vol-" + protocol + "19");
     assertEquals(volumes.get(0).getOwner().getName(), user2);
     assertEquals(volumes.get(1).getOwner().getName(), user2);
 
@@ -549,9 +548,6 @@ public class TestOzoneShell {
   @Test
   public void testListBucket() throws Exception {
     LOG.info("Running testListBucket");
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     List<BucketInfo> buckets;
     String commandOutput;
     int bucketCount = 11;
@@ -780,9 +776,6 @@ public class TestOzoneShell {
   @Test
   public void testListKey() throws Exception {
     LOG.info("Running testListKey");
-    if (clientProtocol.equals(RestClient.class)) {
-      return;
-    }
     String commandOutput;
     List<KeyInfo> keys;
     int keyCount = 11;

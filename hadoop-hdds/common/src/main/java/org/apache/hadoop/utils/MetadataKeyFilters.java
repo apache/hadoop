@@ -19,7 +19,11 @@ package org.apache.hadoop.utils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConsts;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * An utility class to filter levelDB keys.
@@ -27,17 +31,28 @@ import org.apache.hadoop.ozone.OzoneConsts;
 public final class MetadataKeyFilters {
 
   private static KeyPrefixFilter deletingKeyFilter =
-      new MetadataKeyFilters.KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX);
+      new MetadataKeyFilters.KeyPrefixFilter()
+          .addFilter(OzoneConsts.DELETING_KEY_PREFIX);
+
+  private static KeyPrefixFilter deletedKeyFilter =
+      new MetadataKeyFilters.KeyPrefixFilter()
+          .addFilter(OzoneConsts.DELETED_KEY_PREFIX);
 
   private static KeyPrefixFilter normalKeyFilter =
-      new MetadataKeyFilters.KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX,
-          true);
+      new MetadataKeyFilters.KeyPrefixFilter()
+          .addFilter(OzoneConsts.DELETING_KEY_PREFIX, true)
+          .addFilter(OzoneConsts.DELETED_KEY_PREFIX, true)
+          .addFilter(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX, true);
 
   private MetadataKeyFilters() {
   }
 
   public static KeyPrefixFilter getDeletingKeyFilter() {
     return deletingKeyFilter;
+  }
+
+  public static KeyPrefixFilter getDeletedKeyFilter() {
+    return deletedKeyFilter;
   }
 
   public static KeyPrefixFilter getNormalKeyFilter() {
@@ -72,37 +87,95 @@ public final class MetadataKeyFilters {
    */
   public static class KeyPrefixFilter implements MetadataKeyFilter {
 
-    private String keyPrefix = null;
+    private List<String> positivePrefixList = new ArrayList<>();
+    private List<String> negativePrefixList = new ArrayList<>();
+    private boolean atleastOnePositiveMatch;
     private int keysScanned = 0;
     private int keysHinted = 0;
-    private Boolean negative;
 
-    public KeyPrefixFilter(String keyPrefix) {
-      this(keyPrefix, false);
+    public KeyPrefixFilter() {}
+
+    /**
+     * KeyPrefixFilter constructor. It is made of positive and negative prefix
+     * list. PositivePrefixList is the list of prefixes which are accepted
+     * whereas negativePrefixList contains the list of prefixes which are
+     * rejected.
+     *
+     * @param atleastOnePositiveMatch if positive it requires key to be accepted
+     *                               by atleast one positive filter.
+     */
+    public KeyPrefixFilter(boolean atleastOnePositiveMatch) {
+      this.atleastOnePositiveMatch = atleastOnePositiveMatch;
     }
 
-    public KeyPrefixFilter(String keyPrefix, boolean negative) {
-      this.keyPrefix = keyPrefix;
-      this.negative = negative;
+    public KeyPrefixFilter addFilter(String keyPrefix) {
+      addFilter(keyPrefix, false);
+      return this;
+    }
+
+    public KeyPrefixFilter addFilter(String keyPrefix, boolean negative) {
+      Preconditions.checkArgument(!Strings.isNullOrEmpty(keyPrefix),
+          "KeyPrefix is null or empty: " + keyPrefix);
+      // keyPrefix which needs to be added should not be prefix of any opposing
+      // filter already present. If keyPrefix is a negative filter it should not
+      // be a prefix of any positive filter. Nor should any opposing filter be
+      // a prefix of keyPrefix.
+      // For example if b0 is accepted b can not be rejected and
+      // if b is accepted b0 can not be rejected. If these scenarios need to be
+      // handled we need to add priorities.
+      if (negative) {
+        Preconditions.checkArgument(positivePrefixList.stream().noneMatch(
+            prefix -> prefix.startsWith(keyPrefix) || keyPrefix
+                .startsWith(prefix)),
+            "KeyPrefix: " + keyPrefix + " already accepted.");
+        this.negativePrefixList.add(keyPrefix);
+      } else {
+        Preconditions.checkArgument(negativePrefixList.stream().noneMatch(
+            prefix -> prefix.startsWith(keyPrefix) || keyPrefix
+                .startsWith(prefix)),
+            "KeyPrefix: " + keyPrefix + " already rejected.");
+        this.positivePrefixList.add(keyPrefix);
+      }
+      return this;
     }
 
     @Override
     public boolean filterKey(byte[] preKey, byte[] currentKey,
         byte[] nextKey) {
       keysScanned++;
-      boolean accept = false;
-      if (Strings.isNullOrEmpty(keyPrefix)) {
-        accept = true;
-      } else {
-        byte [] prefixBytes = keyPrefix.getBytes();
-        if (currentKey != null && prefixMatch(prefixBytes, currentKey)) {
-          keysHinted++;
-          accept = true;
-        } else {
-          accept = false;
-        }
+      if (currentKey == null) {
+        return false;
       }
-      return (negative) ? !accept : accept;
+      boolean accept;
+
+      // There are no filters present
+      if (positivePrefixList.isEmpty() && negativePrefixList.isEmpty()) {
+        return true;
+      }
+
+      accept = !positivePrefixList.isEmpty() && positivePrefixList.stream()
+          .anyMatch(prefix -> {
+            byte[] prefixBytes = DFSUtil.string2Bytes(prefix);
+            return prefixMatch(prefixBytes, currentKey);
+          });
+      if (accept) {
+        keysHinted++;
+        return true;
+      } else if (atleastOnePositiveMatch) {
+        return false;
+      }
+
+      accept = !negativePrefixList.isEmpty() && negativePrefixList.stream()
+          .allMatch(prefix -> {
+            byte[] prefixBytes = DFSUtil.string2Bytes(prefix);
+            return !prefixMatch(prefixBytes, currentKey);
+          });
+      if (accept) {
+        keysHinted++;
+        return true;
+      }
+
+      return false;
     }
 
     @Override
@@ -115,7 +188,7 @@ public final class MetadataKeyFilters {
       return keysHinted;
     }
 
-    private boolean prefixMatch(byte[] prefix, byte[] key) {
+    private static boolean prefixMatch(byte[] prefix, byte[] key) {
       Preconditions.checkNotNull(prefix);
       Preconditions.checkNotNull(key);
       if (key.length < prefix.length) {

@@ -41,12 +41,18 @@ public abstract class Verifier extends RpcAuthInfo {
   public static Verifier readFlavorAndVerifier(XDR xdr) {
     AuthFlavor flavor = AuthFlavor.fromValue(xdr.readInt());
     final Verifier verifer;
-    if(flavor == AuthFlavor.AUTH_NONE) {
+    if (flavor == AuthFlavor.AUTH_NONE) {
       verifer = new VerifierNone();
-    } else if(flavor == AuthFlavor.RPCSEC_GSS) {
+    } else if (flavor == AuthFlavor.AUTH_SYS) {
+      // Added in HADOOP-15307 based on HDFS-5085:
+      // When the auth flavor is AUTH_SYS, the corresponding verifier is
+      // AUTH_NONE. I.e., it is impossible to have a verifier with auth
+      // flavor AUTH_SYS.
+      verifer = new VerifierNone();
+    } else if (flavor == AuthFlavor.RPCSEC_GSS) {
       verifer = new VerifierGSS();
     } else {
-      throw new UnsupportedOperationException("Unsupported verifier flavor"
+      throw new UnsupportedOperationException("Unsupported verifier flavor: "
           + flavor);
     }
     verifer.read(xdr);
