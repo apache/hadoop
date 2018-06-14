@@ -98,7 +98,7 @@ class S3ABlockOutputStream extends OutputStream implements
   /** Multipart upload details; null means none started. */
   private MultiPartUpload multiPartUpload;
 
-  /** Closed flag. */
+  /** Stream state. */
   private final StreamState streamState;
 
   /** Current data block. Null means none currently active */
@@ -231,18 +231,17 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void flush() throws IOException {
-    streamState.acquireLock(false);
-    try {
-      if (streamState.isInState(StreamState.State.Open)) {
+    if (StreamState.State.Open.equals(acquireLock(false))) {
+      try {
         S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
         if (dataBlock != null) {
           dataBlock.flush();
         }
+      } catch (IOException ex) {
+        throw streamState.enterErrorState(ex);
+      } finally {
+        streamState.releaseLock();
       }
-    } catch (IOException ex) {
-      throw streamState.enterErrorState(ex);
-    } finally {
-      streamState.releaseLock();
     }
   }
 
@@ -269,14 +268,14 @@ class S3ABlockOutputStream extends OutputStream implements
    * @throws IOException on any problem
    */
   @Override
-  public synchronized void write(byte[] source, int offset, int len)
+  public void write(byte[] source, int offset, int len)
       throws IOException {
 
     S3ADataBlocks.validateWriteArgs(source, offset, len);
     if (len == 0) {
       return;
     }
-    streamState.acquireLock(true);
+    acquireLock(true);
     try {
       innerWrite(source, offset, len);
     } catch (IOException ex) {
@@ -284,6 +283,18 @@ class S3ABlockOutputStream extends OutputStream implements
     } finally {
       streamState.releaseLock();
     }
+  }
+
+  /**
+   * Acquire the lock.
+   * @param checkOpen should the lock
+   * @return The stream state
+   * @throws IOException if the checkOpen operation raises an exception.
+   */
+  private synchronized StreamState.State acquireLock(final boolean checkOpen)
+      throws IOException {
+    streamState.acquireLock(checkOpen);
+    return streamState.getState();
   }
 
   /**
@@ -361,17 +372,22 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void close() throws IOException {
-    synchronized (this) {
-      // this is synchronized to order its execution w.r.t any methods
-      // which are marked as synchronized.
-      // because the whole close() method is called, calling it on a stream
-      // which has just been closed isn't going to block it for the duration
-      // of the entire upload.
-      if (!streamState.enterClosedState()) {
-        // already closed
-        LOG.debug("Ignoring close() as stream is not open");
-        return;
+    acquireLock(false);
+    try {
+      synchronized (this) {
+        // this is synchronized to order its execution w.r.t any methods
+        // which are marked as synchronized.
+        // because the whole close() method is called, calling it on a stream
+        // which has just been closed isn't going to block it for the duration
+        // of the entire upload.
+        if (!streamState.enterClosedState()) {
+          // already closed
+          LOG.debug("Ignoring close() as stream is not open");
+          return;
+        }
       }
+    } finally {
+      streamState.releaseLock();
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();

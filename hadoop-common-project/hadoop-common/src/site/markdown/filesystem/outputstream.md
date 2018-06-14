@@ -36,8 +36,10 @@ so as to ensure that the data is reliably persisted and/or visible
 to other callers. This is done via the `Syncable` interface. It was
 originally intended that the presence of this interface could be interpreted
 as a guarantee that the stream supported it's methods, but this has proven
-impossible. A new interface, `StreamCapabilities` has been implemented
-to allow callers to probe the exact capabilities of a stream, even transitively
+impossible to guarantee as the static nature of the interface is incompatible
+with filesystems whose syncability semantics may vary on a store/path basis.
+As an example, erasure coded files in HDFS have 
+A new interface, `StreamCapabilities` has been implemented to allow callers to probe the exact capabilities of a stream, even transitively
 through a chain of streams.
 
 * HDFS's primary stream implementation is
@@ -55,14 +57,14 @@ both HDFS and the "file" filesystems.
 For this specification, an output stream can be viewed as a list of bytes
 stored in in the client
 
-```
+```python
 buffer: List[byte]`
 ```
 
 A flag, `open` tracks whether the stream is open: after the stream
 is closed no more data may be written to it:
 
-```
+```python
 open: bool
 buffer: List[byte]
 ```
@@ -71,16 +73,15 @@ The destination path of the stream, `path` can be tracked to form a triple
 `Path, open, buffer`
 
 
-```
+```python
 Stream = (path, open, buffer)
 ```
-
 
 (Immediately) after `Syncable` operations which flush data to the filesystem, 
 the data at the stream's destination path must match that of
 `buffer`. That is, the following condition holds:
  
-```
+```python
 FS'.Files(path) == buffer
 ```
 
@@ -95,13 +96,13 @@ guarantees, not visibility of data.
 The output stream returned by a `FileSystem.create(path)` call contains no
 data:
 
-```
+```python
 Stream' = (path, true, [])
 ```
 
 The filesystem `FS'` must contain a 0-byte file at the path:
  
-```
+```python
 data(FS', path) == []
 ```
 
@@ -118,27 +119,26 @@ The output stream returned from a call of
 can be modelled as a stream whose `buffer` is intialized to that of
 the original file:
 
-```
+```python
 Stream' = (path, true, data(FS, path))
 ```
 
+####  Persisting data
 
-####  Persisting data to the Filesystem
-
-When the stream writes data back to the Filesystem, be it in any 
+When the stream writes data back to its store, be it in any 
 supported flush operation, in the `close()` operation, or at any other
 time the stream chooses to do so, the contents of the file
 are replaced with the current buffer
 
-```
-Stream'=(path, true, buffer)
+```python
+Stream' = (path, true, buffer)
 FS' = FS where data(FS', path) == buffer
 ```
 
 After a call to `close()`, the stream is closed for all operations other
 than `close()`; they MAY fail with `IOException` or `RuntimeException`.
 
-```
+```python
 Stream' =  (path, false, [])
 ```
 
@@ -225,7 +225,7 @@ Writes a byte of data to the stream.
 
 #### Preconditions
 
-```
+```python
 Stream.open else raise ClosedChannelException, PathIOException, IOException
 ```
 
@@ -241,7 +241,7 @@ as a `PathIOException`.
 
 The buffer has the lower 8 bits of the data argument appended to it.
 
-```
+```python
 Stream'.buffer = Stream.buffer + [data & 0xff]
 ```
 
@@ -256,7 +256,7 @@ When a limit is reached, `write()` SHOULD fail with an `IOException`.
 
 The preconditions are all defined in `OutputStream.write()`
 
-```
+```python
 Stream.open else raise ClosedChannelException, PathIOException, IOException
 data != null else raise NullPointerException
 offset >= 0 else raise IndexOutOfBoundsException
@@ -274,7 +274,7 @@ of updates to the buffer while the `write()` operation is in progress is undefin
 
 #### Postconditions
 
-```
+```python
 Stream'.buffer = Stream.buffer + data[offset...(offset + len)]
 ```
 
@@ -282,7 +282,7 @@ Stream'.buffer = Stream.buffer + data[offset...(offset + len)]
 
 This is defined as the equivalent of:
 
-```
+```python
 write(data, 0, data.length)
 ```
 
@@ -300,12 +300,11 @@ specifications of behaviour.
 #### Preconditions
 
 
-```
+```python
 Stream.open else raise IOException
 ```
 
 #### Postconditions
-
 
 None.
 
@@ -313,7 +312,7 @@ If the implementation chooses to implement a stream-flushing operation,
 the data may be saved to the file system such that it becomes visible to
 others"
 
-```
+```python
 FS' = FS where data(FS, path) == buffer
 ```
 
@@ -341,7 +340,7 @@ MUST fail with an `IOException`.
 
 Any locking/leaseholding mechanism is also required to release its lock/lease.
 
-```
+```python
 Stream'.open = false
 FS' = FS where data(FS, path) == buffer
 ```
@@ -428,7 +427,7 @@ public interface Syncable {
 The purpose of `Syncable` interface is to provide guarantees that data is written
 to a filesystem for both visibility and durability.
 
-*SYNC-1*: An `OutputStream` which implements `Syncalbe` is 
+*SYNC-1*: An `OutputStream` which implements `Syncable` is 
 making an explicit declaration of an that it can meet those guarantees.
 meet those guarantees.
 
@@ -477,7 +476,7 @@ Thus implementations may cache the written data in memory
 
 #### Preconditions
 
-```
+```python
 hasCapability(Stream. "hflush")
 Stream.open else raise IOException
 ```
@@ -485,7 +484,7 @@ Stream.open else raise IOException
 
 #### Postconditions
 
-```
+```python
 FS' = FS where data(path) == cache
 ```
 
@@ -518,14 +517,14 @@ the disk hardware itself, where it is expected to be durable.
 
 #### Preconditions
 
-```
+```python
 hasCapability(Stream, "hsync")
 Stream.open else raise IOException
 ```
 
 #### Postconditions
 
-```
+```python
 FS' = FS where data(path) == buffer
 ```
 
@@ -646,7 +645,7 @@ then, the existing data is immediately unavailable; the data at the end of the
 path MUST consist of an empty byte sequence `[]`, with consistent metadata.
 
 
-```
+```python
 exists(FS, path)
 (Stream', FS') = create(FS, path) 
 exists(FS', path)
@@ -657,7 +656,7 @@ The metadata of a file (`length(FS, path)` in particular) SHOULD be consistent
 with the contents of the file after `flush()` and `sync()`.
 
 
-```
+```python
 (Stream', FS') = create(FS, path) 
 (Stream'', FS'') = write(Stream', data)
 (Stream''', FS''') hsync(Stream'')
@@ -791,7 +790,7 @@ stream after the output stream is created .
 
 That is: while `create(FS, path, boolean)` returns a new stream
 
-```
+```python
 Stream' = (path, true, [])
 ```
 

@@ -19,18 +19,23 @@
 package org.apache.hadoop.fs.store;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.StreamCapabilities;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.*;
-import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.*;
+import static org.apache.hadoop.fs.StreamCapabilities.HFLUSH;
+import static org.apache.hadoop.fs.StreamCapabilities.HSYNC;
 
 /**
  * Utility classes to help implementing filesystems and streams.
@@ -49,8 +54,37 @@ public final class StoreImplementationUtils {
    * @return true if either refers to one of the Syncable operations.
    */
   public static boolean supportsSyncable(String capability) {
-    return capability.equalsIgnoreCase(HSYNC.getValue()) ||
-        capability.equalsIgnoreCase((HFLUSH.getValue()));
+    return capability.equalsIgnoreCase(HSYNC) ||
+        capability.equalsIgnoreCase((HFLUSH));
+  }
+
+  /**
+   * Probe for an object having a capability; returns true
+   * iff the stream implements {@link StreamCapabilities} and its
+   * {@code hasCapabilities()} method returns true for the capability.
+   * This is a private method intended to provided a common implementation
+   * for input, output streams; only the stronger typed
+   * @param obj output stream
+   * @param capability capability to probe for
+   * @return true iff the object declares that it supports the capability.
+   */
+  private static boolean objectHasCapability(Object obj, String capability) {
+    if (obj instanceof StreamCapabilities) {
+      return ((StreamCapabilities) obj).hasCapability(capability);
+    }
+    return false;
+  }
+
+  /**
+   * Probe for an autput stream having a capability; returns true
+   * iff the stream implements {@link StreamCapabilities} and its
+   * {@code hasCapabilities()} method returns true for the capability.
+   * @param out output stream
+   * @param capability capability to probe for
+   * @return true iff the stream declares that it supports the capability.
+   */
+  public static boolean hasCapability(OutputStream out, String capability) {
+    return objectHasCapability(out, capability);
   }
 
   /**
@@ -164,15 +198,24 @@ public final class StoreImplementationUtils {
     /** Initial state: open. */
     private State state = State.Open;
 
+    /** Any exception to raise on the next checkOpen call. */
     private IOException exception;
 
-    public StreamState(Path path) {
+    public StreamState(final Path path) {
       this.path = path.toString();
     }
 
-
     public StreamState(final String path) {
       this.path = path;
+    }
+
+    /**
+     * Get the current state.
+     * Not synchronized; lock if you want consistency across calls.
+     * @return the current state.
+     */
+    public State getState() {
+      return state;
     }
 
     // Change state to close
@@ -187,24 +230,23 @@ public final class StoreImplementationUtils {
 
     }
 
-    // Change state to error and stores first error so it can be re-thrown.
-    // @return - null if state transitions from open to error
-    // @return - non-null if state is error or close.
-
     /**
      * Change state to error and stores first error so it can be re-thrown.
      * If already in error: return previous exception.
-     * @param ex
-     * @return an exception to throw
+     * @param ex the exception to record
+     * @return the exception set when the error state was entered.
      */
     public synchronized IOException enterErrorState(final IOException ex) {
+      Preconditions.checkArgument(ex != null, "Null exception");
       switch (state) {
+        // a stream can go into the error state when open or closed
       case Open:
       case Close:
         exception = ex;
         state = State.Error;
         break;
       case Error:
+        // already in this state; retain the previous exception.
         break;
       }
       return exception;
@@ -232,6 +274,7 @@ public final class StoreImplementationUtils {
         }
       }
     }
+
     /**
      * Acquire an exclusive lock.
      * @param checkOpen must the stream be open?
@@ -239,10 +282,18 @@ public final class StoreImplementationUtils {
      * and the stream is closed.
      */
     public void acquireLock(boolean checkOpen) throws IOException {
+      // fail fast if the stream is required to be open and it is not
       if (checkOpen) {
         checkOpen();
       }
+
+      // acquire the lock; this may suspend the thread
       lock.lock();
+
+      // now verify that the stream is still open.
+      if (checkOpen) {
+        checkOpen();
+      }
     }
 
     /**
