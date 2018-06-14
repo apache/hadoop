@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.transport.server;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -44,6 +45,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
       LOG = LoggerFactory.getLogger(XceiverServerGrpc.class);
   private int port;
   private Server server;
+  private final ContainerDispatcher storageContainer;
 
   /**
    * Constructs a Grpc server class.
@@ -77,6 +79,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         .maxMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
         .addService(new GrpcXceiverService(dispatcher))
         .build();
+    storageContainer = dispatcher;
   }
 
   @Override
@@ -102,5 +105,11 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
   @Override
   public void stop() {
     server.shutdown();
+  }
+
+  @Override
+  public void submitRequest(
+      ContainerProtos.ContainerCommandRequestProto request) throws IOException {
+    storageContainer.dispatch(request);
   }
 }

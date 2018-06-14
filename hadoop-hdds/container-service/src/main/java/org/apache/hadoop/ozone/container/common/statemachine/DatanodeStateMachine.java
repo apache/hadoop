@@ -403,4 +403,13 @@ public class DatanodeStateMachine implements Closeable {
   public long getCommandHandled() {
     return commandsHandled;
   }
+
+  /**
+   * returns the Command Dispatcher.
+   * @return CommandDispatcher
+   */
+  @VisibleForTesting
+  public CommandDispatcher getCommandDispatcher() {
+    return commandDispatcher;
+  }
 }

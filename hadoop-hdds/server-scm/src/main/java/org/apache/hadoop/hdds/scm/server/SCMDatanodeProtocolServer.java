@@ -69,7 +69,7 @@ import static org.apache.hadoop.hdds.protocol.proto
 
 
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.ContainerStat;
+import org.apache.hadoop.hdds.scm.server.report.SCMDatanodeHeartbeatDispatcher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -114,6 +114,7 @@ public class SCMDatanodeProtocolServer implements
 
   private final StorageContainerManager scm;
   private final InetSocketAddress datanodeRpcAddress;
+  private final SCMDatanodeHeartbeatDispatcher heartbeatDispatcher;
 
   public SCMDatanodeProtocolServer(final OzoneConfiguration conf,
       StorageContainerManager scm)  throws IOException {
@@ -148,14 +149,22 @@ public class SCMDatanodeProtocolServer implements
         updateRPCListenAddress(
             conf, OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr,
             datanodeRpcServer);
+
+    heartbeatDispatcher = SCMDatanodeHeartbeatDispatcher.newBuilder(conf, scm)
+        .addHandlerFor(NodeReportProto.class)
+        .addHandlerFor(ContainerReportsProto.class)
+        .build();
+  }
+
+  public void start() {
+    LOG.info(
+        StorageContainerManager.buildRpcServerStartMessage(
+            "RPC server for DataNodes", datanodeRpcAddress));
+    datanodeRpcServer.start();
   }
 
   public InetSocketAddress getDatanodeRpcAddress() {
     return datanodeRpcAddress;
-  }
-
-  public RPC.Server getDatanodeRpcServer() {
-    return datanodeRpcServer;
   }
 
   @Override
@@ -164,25 +173,6 @@ public class SCMDatanodeProtocolServer implements
       throws IOException {
     return scm.getScmNodeManager().getVersion(versionRequest)
         .getProtobufMessage();
-  }
-
-  @Override
-  public SCMHeartbeatResponseProto sendHeartbeat(
-      SCMHeartbeatRequestProto heartbeat)
-      throws IOException {
-    // TODO: Add a heartbeat dispatcher.
-    DatanodeDetails datanodeDetails = DatanodeDetails
-        .getFromProtoBuf(heartbeat.getDatanodeDetails());
-    NodeReportProto nodeReport = heartbeat.getNodeReport();
-    List<SCMCommand> commands =
-        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport);
-    List<SCMCommandProto> cmdResponses = new LinkedList<>();
-    for (SCMCommand cmd : commands) {
-      cmdResponses.add(getCommandResponse(cmd));
-    }
-    return SCMHeartbeatResponseProto.newBuilder()
-        .setDatanodeUUID(datanodeDetails.getUuidString())
-        .addAllCommands(cmdResponses).build();
   }
 
   @Override
@@ -216,35 +206,26 @@ public class SCMDatanodeProtocolServer implements
         .build();
   }
 
-  public void processContainerReports(DatanodeDetails datanodeDetails,
-                                      ContainerReportsProto reports)
+  @Override
+  public SCMHeartbeatResponseProto sendHeartbeat(
+      SCMHeartbeatRequestProto heartbeat)
       throws IOException {
-    updateContainerReportMetrics(datanodeDetails, reports);
-    // should we process container reports async?
-    scm.getScmContainerManager()
-        .processContainerReports(datanodeDetails, reports);
-  }
+    heartbeatDispatcher.dispatch(heartbeat);
 
-  private void updateContainerReportMetrics(DatanodeDetails datanodeDetails,
-                                            ContainerReportsProto reports) {
-    ContainerStat newStat = new ContainerStat();
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
-        .getReportsList()) {
-      newStat.add(new ContainerStat(info.getSize(), info.getUsed(),
-          info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
-          info.getReadCount(), info.getWriteCount()));
+    // TODO: Remove the below code after SCM refactoring.
+    DatanodeDetails datanodeDetails = DatanodeDetails
+        .getFromProtoBuf(heartbeat.getDatanodeDetails());
+    NodeReportProto nodeReport = heartbeat.getNodeReport();
+    List<SCMCommand> commands =
+        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport);
+    List<SCMCommandProto> cmdResponses = new LinkedList<>();
+    for (SCMCommand cmd : commands) {
+      cmdResponses.add(getCommandResponse(cmd));
     }
-    // update container metrics
-    StorageContainerManager.getMetrics().setLastContainerStat(newStat);
-
-    // Update container stat entry, this will trigger a removal operation if it
-    // exists in cache.
-    String datanodeUuid = datanodeDetails.getUuidString();
-    scm.getContainerReportCache().put(datanodeUuid, newStat);
-    // update global view container metrics
-    StorageContainerManager.getMetrics().incrContainerStat(newStat);
+    return SCMHeartbeatResponseProto.newBuilder()
+        .setDatanodeUUID(datanodeDetails.getUuidString())
+        .addAllCommands(cmdResponses).build();
   }
-
 
   @Override
   public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
@@ -269,28 +250,6 @@ public class SCMDatanodeProtocolServer implements
     }
     return ContainerBlocksDeletionACKResponseProto.newBuilder()
         .getDefaultInstanceForType();
-  }
-
-  public void start() {
-    LOG.info(
-        StorageContainerManager.buildRpcServerStartMessage(
-            "RPC server for DataNodes", getDatanodeRpcAddress()));
-    getDatanodeRpcServer().start();
-  }
-
-  public void stop() {
-    try {
-      LOG.info("Stopping the RPC server for DataNodes");
-      datanodeRpcServer.stop();
-    } catch (Exception ex) {
-      LOG.error(" datanodeRpcServer stop failed.", ex);
-    }
-    IOUtils.cleanupWithLogger(LOG, scm.getScmNodeManager());
-  }
-
-  public void join() throws InterruptedException {
-    LOG.trace("Join RPC server for DataNodes");
-    datanodeRpcServer.join();
   }
 
   /**
@@ -338,4 +297,22 @@ public class SCMDatanodeProtocolServer implements
       throw new IllegalArgumentException("Not implemented");
     }
   }
+
+
+  public void join() throws InterruptedException {
+    LOG.trace("Join RPC server for DataNodes");
+    datanodeRpcServer.join();
+  }
+
+  public void stop() {
+    try {
+      LOG.info("Stopping the RPC server for DataNodes");
+      datanodeRpcServer.stop();
+      heartbeatDispatcher.shutdown();
+    } catch (Exception ex) {
+      LOG.error(" datanodeRpcServer stop failed.", ex);
+    }
+    IOUtils.cleanupWithLogger(LOG, scm.getScmNodeManager());
+  }
+
 }

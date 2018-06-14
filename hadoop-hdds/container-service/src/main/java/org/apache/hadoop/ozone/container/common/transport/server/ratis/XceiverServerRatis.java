@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -33,10 +35,12 @@ import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.netty.NettyConfigKeys;
+import org.apache.ratis.protocol.*;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
+import org.apache.ratis.shaded.proto.RaftProtos;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -49,8 +53,10 @@ import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Creates a ratis server endpoint that acts as the communication layer for
@@ -58,6 +64,12 @@ import java.util.concurrent.TimeUnit;
  */
 public final class XceiverServerRatis implements XceiverServerSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
+  private static final AtomicLong callIdCounter = new AtomicLong();
+
+  private static long nextCallId() {
+    return callIdCounter.getAndIncrement() & Long.MAX_VALUE;
+  }
+
   private final int port;
   private final RaftServer server;
   private ThreadPoolExecutor writeChunkExecutor;
@@ -240,5 +252,47 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   @Override
   public HddsProtos.ReplicationType getServerType() {
     return HddsProtos.ReplicationType.RATIS;
+  }
+
+  @VisibleForTesting
+  public RaftServer getServer() {
+    return server;
+  }
+
+  private void processReply(RaftClientReply reply) {
+
+    // NotLeader exception is thrown only when the raft server to which the
+    // request is submitted is not the leader. The request will be rejected
+    // and will eventually be executed once the request comnes via the leader
+    // node.
+    NotLeaderException notLeaderException = reply.getNotLeaderException();
+    if (notLeaderException != null) {
+      LOG.info(reply.getNotLeaderException().getLocalizedMessage());
+    }
+    StateMachineException stateMachineException =
+        reply.getStateMachineException();
+    if (stateMachineException != null) {
+      // In case the request could not be completed, StateMachine Exception
+      // will be thrown. For now, Just log the message.
+      // If the container could not be closed, SCM will come to know
+      // via containerReports. CloseContainer should be re tried via SCM.
+      LOG.error(stateMachineException.getLocalizedMessage());
+    }
+  }
+
+  @Override
+  public void submitRequest(
+      ContainerProtos.ContainerCommandRequestProto request) throws IOException {
+    ClientId clientId = ClientId.randomId();
+    RaftClientRequest raftClientRequest =
+        new RaftClientRequest(clientId, server.getId(),
+            RatisHelper.emptyRaftGroup().getGroupId(), nextCallId(), 0,
+            Message.valueOf(request.toByteString()), RaftClientRequest
+            // ReplicationLevel.ALL ensures the transactions corresponding to
+            // the request here are applied on all the raft servers.
+            .writeRequestType(RaftProtos.ReplicationLevel.ALL));
+    CompletableFuture<RaftClientReply> reply =
+        server.submitClientRequestAsync(raftClientRequest);
+    reply.thenAccept(this::processReply);
   }
 }

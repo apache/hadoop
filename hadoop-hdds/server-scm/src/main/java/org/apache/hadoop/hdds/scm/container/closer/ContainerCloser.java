@@ -127,11 +127,12 @@ public class ContainerCloser {
     // to SCM. In that case also, data node will ignore this command.
 
     HddsProtos.Pipeline pipeline = info.getPipeline();
-    for (HddsProtos.DatanodeDetailsProto datanodeDetails :
-        pipeline.getPipelineChannel().getMembersList()) {
+    for (HddsProtos.DatanodeDetailsProto datanodeDetails : pipeline
+        .getPipelineChannel().getMembersList()) {
       nodeManager.addDatanodeCommand(
           DatanodeDetails.getFromProtoBuf(datanodeDetails).getUuid(),
-          new CloseContainerCommand(info.getContainerID()));
+          new CloseContainerCommand(info.getContainerID(),
+              pipeline.getPipelineChannel().getType()));
     }
     if (!commandIssued.containsKey(info.getContainerID())) {
       commandIssued.put(info.getContainerID(),

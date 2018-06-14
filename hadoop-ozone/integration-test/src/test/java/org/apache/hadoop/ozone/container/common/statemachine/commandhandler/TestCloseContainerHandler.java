@@ -83,12 +83,13 @@ public class TestCloseContainerHandler {
 
     Assert.assertFalse(isContainerClosed(cluster, containerID));
 
-    DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails();
+    DatanodeDetails datanodeDetails =
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails();
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
-            new CloseContainerCommand(containerID));
+            new CloseContainerCommand(containerID,
+                HddsProtos.ReplicationType.STAND_ALONE));
 
     GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerID),
             500,

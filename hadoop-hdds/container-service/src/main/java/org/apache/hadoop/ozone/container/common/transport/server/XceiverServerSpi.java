@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.IOException;
@@ -40,4 +41,10 @@ public interface XceiverServerSpi {
    */
   HddsProtos.ReplicationType getServerType();
 
+  /**
+   * submits a containerRequest to be performed by the replication pipeline.
+   * @param request ContainerCommandRequest
+   */
+  void submitRequest(ContainerProtos.ContainerCommandRequestProto request)
+      throws IOException;
 }
