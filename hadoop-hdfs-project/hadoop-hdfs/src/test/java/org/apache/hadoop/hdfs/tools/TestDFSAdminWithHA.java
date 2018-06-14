@@ -94,6 +94,13 @@ public class TestDFSAdminWithHA {
 
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
+
+    // Reduce the number of retries to speed up the tests.
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY,
+        500);
   }
 
   @After
