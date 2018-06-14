@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.impl;
+package org.apache.hadoop.ozone.container.common.volume;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +35,8 @@ public class VolumeInfo {
 
   private static final Logger LOG = LoggerFactory.getLogger(VolumeInfo.class);
 
-  private final Path rootDir;
+  private final String rootDir;
   private final StorageType storageType;
-  private VolumeState state;
 
   // Space usage calculator
   private VolumeUsage usage;
@@ -45,35 +45,27 @@ public class VolumeInfo {
   // query from the filesystem.
   private long configuredCapacity;
 
+  /**
+   * Builder for VolumeInfo.
+   */
   public static class Builder {
     private final Configuration conf;
-    private final Path rootDir;
+    private final String rootDir;
     private StorageType storageType;
-    private VolumeState state;
     private long configuredCapacity;
 
-    public Builder(Path rootDir, Configuration conf) {
-      this.rootDir = rootDir;
-      this.conf = conf;
+    public Builder(String root, Configuration config) {
+      this.rootDir = root;
+      this.conf = config;
     }
 
-    public Builder(String rootDirStr, Configuration conf) {
-      this.rootDir = new Path(rootDirStr);
-      this.conf = conf;
-    }
-
-    public Builder storageType(StorageType storageType) {
-      this.storageType = storageType;
+    public Builder storageType(StorageType st) {
+      this.storageType = st;
       return this;
     }
 
-    public Builder volumeState(VolumeState state) {
-      this.state = state;
-      return this;
-    }
-
-    public Builder configuredCapacity(long configuredCapacity) {
-      this.configuredCapacity = configuredCapacity;
+    public Builder configuredCapacity(long capacity) {
+      this.configuredCapacity = capacity;
       return this;
     }
 
@@ -85,7 +77,7 @@ public class VolumeInfo {
   private VolumeInfo(Builder b) throws IOException {
 
     this.rootDir = b.rootDir;
-    File root = new File(rootDir.toString());
+    File root = new File(this.rootDir);
 
     Boolean succeeded = root.isDirectory() || root.mkdirs();
 
@@ -100,12 +92,7 @@ public class VolumeInfo {
     this.configuredCapacity = (b.configuredCapacity != 0 ?
         b.configuredCapacity : -1);
 
-    this.state = (b.state != null ? b.state : VolumeState.NOT_FORMATTED);
-
     this.usage = new VolumeUsage(root, b.conf);
-
-    LOG.info("Creating Volume : " + rootDir + " of storage type : " +
-        storageType + " and capacity : " + configuredCapacity);
   }
 
   public long getCapacity() {
@@ -120,32 +107,14 @@ public class VolumeInfo {
     return usage.getScmUsed();
   }
 
-  void shutdown() {
-    this.state = VolumeState.NON_EXISTENT;
-    shutdownUsageThread();
-  }
-
-  void failVolume() {
-    setState(VolumeState.FAILED);
-    shutdownUsageThread();
-  }
-
-  private void shutdownUsageThread() {
+  protected void shutdownUsageThread() {
     if (usage != null) {
       usage.shutdown();
     }
     usage = null;
   }
 
-  void setState(VolumeState state) {
-    this.state = state;
-  }
-
-  public boolean isFailed() {
-    return (state == VolumeState.FAILED);
-  }
-
-  public Path getRootDir() {
+  public String getRootDir() {
     return this.rootDir;
   }
 
@@ -153,10 +122,11 @@ public class VolumeInfo {
     return this.storageType;
   }
 
-  public enum VolumeState {
-    NORMAL,
-    FAILED,
-    NON_EXISTENT,
-    NOT_FORMATTED,
+  /**
+   * Only for testing. Do not use otherwise.
+   */
+  @VisibleForTesting
+  public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
+    usage.setScmUsageForTesting(scmUsageForTest);
   }
 }

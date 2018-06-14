@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.container.common.interfaces;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.container.common.impl.VolumeInfo;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,6 +41,6 @@ public interface VolumeChoosingPolicy {
    * @return the chosen volume.
    * @throws IOException when disks are unavailable or are full.
    */
-  VolumeInfo chooseVolume(List<VolumeInfo> volumes, long maxContainerSize)
+  HddsVolume chooseVolume(List<HddsVolume> volumes, long maxContainerSize)
       throws IOException;
 }

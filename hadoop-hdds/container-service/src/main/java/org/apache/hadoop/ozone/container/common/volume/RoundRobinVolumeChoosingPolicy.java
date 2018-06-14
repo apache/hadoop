@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.container.common.impl;
+
+package org.apache.hadoop.ozone.container.common.volume;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,13 +34,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RoundRobinVolumeChoosingPolicy implements VolumeChoosingPolicy {
 
   public static final Log LOG = LogFactory.getLog(
-		RoundRobinVolumeChoosingPolicy.class);
+      RoundRobinVolumeChoosingPolicy.class);
 
   // Stores the index of the next volume to be returned.
   private AtomicInteger nextVolumeIndex = new AtomicInteger(0);
 
   @Override
-  public VolumeInfo chooseVolume(List<VolumeInfo> volumes,
+  public HddsVolume chooseVolume(List<HddsVolume> volumes,
       long maxContainerSize) throws IOException {
 
     // No volumes available to choose from
@@ -56,7 +57,7 @@ public class RoundRobinVolumeChoosingPolicy implements VolumeChoosingPolicy {
     long maxAvailable = 0;
 
     while (true) {
-      final VolumeInfo volume = volumes.get(currentVolumeIndex);
+      final HddsVolume volume = volumes.get(currentVolumeIndex);
       long availableVolumeSize = volume.getAvailable();
 
       currentVolumeIndex = (currentVolumeIndex + 1) % volumes.size();

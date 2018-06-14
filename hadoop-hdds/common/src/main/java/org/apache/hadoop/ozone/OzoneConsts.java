@@ -33,6 +33,11 @@ public final class OzoneConsts {
   public static final String OZONE_SIMPLE_ROOT_USER = "root";
   public static final String OZONE_SIMPLE_HDFS_USER = "hdfs";
 
+  public static final String STORAGE_ID = "storageID";
+  public static final String DATANODE_UUID = "datanodeUuid";
+  public static final String CLUSTER_ID = "clusterID";
+  public static final String LAYOUTVERSION = "layOutVersion";
+  public static final String CTIME = "ctime";
   /*
    * BucketName length is used for both buckets and volume lengths
    */

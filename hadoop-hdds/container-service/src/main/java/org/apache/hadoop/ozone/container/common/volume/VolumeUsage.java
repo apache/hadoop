@@ -16,8 +16,9 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.impl;
+package org.apache.hadoop.ozone.container.common.volume;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.DF;
@@ -185,5 +186,13 @@ public class VolumeUsage {
     } finally {
       IOUtils.cleanupWithLogger(null, out);
     }
+  }
+
+  /**
+   * Only for testing. Do not use otherwise.
+   */
+  @VisibleForTesting
+  public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
+    this.scmUsage = scmUsageForTest;
   }
 }

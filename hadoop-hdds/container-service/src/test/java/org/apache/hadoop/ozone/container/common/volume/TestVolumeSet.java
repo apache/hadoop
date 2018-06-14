@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.interfaces;
+package org.apache.hadoop.ozone.container.common.volume;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.ozone.container.common.impl.VolumeInfo;
-import org.apache.hadoop.ozone.container.common.impl.VolumeSet;
+import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,6 +36,7 @@ import org.junit.rules.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Tests {@link VolumeSet} operations.
@@ -43,14 +44,20 @@ import java.util.List;
 public class TestVolumeSet {
 
   private OzoneConfiguration conf;
-  protected VolumeSet volumeSet;
-  protected final String baseDir = MiniDFSCluster.getBaseDirectory();
-  protected final String volume1 = baseDir + "disk1";
-  protected final String volume2 = baseDir + "disk2";
+  private VolumeSet volumeSet;
+  private final String baseDir = MiniDFSCluster.getBaseDirectory();
+  private final String volume1 = baseDir + "disk1";
+  private final String volume2 = baseDir + "disk2";
   private final List<String> volumes = new ArrayList<>();
 
+  private static final String DUMMY_IP_ADDR = "0.0.0.0";
+
   private void initializeVolumeSet() throws Exception {
-    volumeSet = new VolumeSet(conf);
+    DatanodeDetails datanodeDetails = DatanodeDetails.newBuilder()
+        .setUuid(UUID.randomUUID().toString())
+        .setIpAddress(DUMMY_IP_ADDR)
+        .build();
+    volumeSet = new VolumeSet(datanodeDetails, conf);
   }
 
   @Rule
@@ -69,7 +76,7 @@ public class TestVolumeSet {
   @Test
   public void testVolumeSetInitialization() throws Exception {
 
-    List<VolumeInfo> volumesList = volumeSet.getVolumesList();
+    List<HddsVolume> volumesList = volumeSet.getVolumesList();
 
     // VolumeSet initialization should add volume1 and volume2 to VolumeSet
     assertEquals("VolumeSet intialization is incorrect",
@@ -83,7 +90,6 @@ public class TestVolumeSet {
   @Test
   public void testAddVolume() throws Exception {
 
-    List<VolumeInfo> volumesList = volumeSet.getVolumesList();
     assertEquals(2, volumeSet.getVolumesList().size());
 
     // Add a volume to VolumeSet
@@ -107,8 +113,9 @@ public class TestVolumeSet {
     // Failed volume should be added to FailedVolumeList
     assertEquals("Failed volume not present in FailedVolumeMap",
         1, volumeSet.getFailedVolumesList().size());
-    assertEquals("Failed Volume list did not match", volume1,
-        volumeSet.getFailedVolumesList().get(0).getRootDir().toString());
+    assertEquals("Failed Volume list did not match",
+        HddsVolumeUtil.getHddsRoot(volume1),
+        volumeSet.getFailedVolumesList().get(0).getHddsRootDir().getPath());
     assertTrue(volumeSet.getFailedVolumesList().get(0).isFailed());
 
     // Failed volume should not exist in VolumeMap
@@ -119,7 +126,7 @@ public class TestVolumeSet {
   @Test
   public void testRemoveVolume() throws Exception {
 
-    List<VolumeInfo> volumesList = volumeSet.getVolumesList();
+    List<HddsVolume> volumesList = volumeSet.getVolumesList();
     assertEquals(2, volumeSet.getVolumesList().size());
 
     // Remove a volume from VolumeSet
@@ -132,15 +139,16 @@ public class TestVolumeSet {
         LogFactory.getLog(VolumeSet.class));
     volumeSet.removeVolume(volume1);
     assertEquals(1, volumeSet.getVolumesList().size());
-    String expectedLogMessage = "Volume : " + volume1 + " does not exist in "
-        + "VolumeSet";
+    String expectedLogMessage = "Volume : " +
+        HddsVolumeUtil.getHddsRoot(volume1) + " does not exist in VolumeSet";
     assertTrue("Log output does not contain expected log message: "
         + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));
   }
 
   private boolean checkVolumeExistsInVolumeSet(String volume) {
-    for (VolumeInfo volumeInfo : volumeSet.getVolumesList()) {
-      if (volumeInfo.getRootDir().toString().equals(volume)) {
+    for (HddsVolume hddsVolume : volumeSet.getVolumesList()) {
+      if (hddsVolume.getHddsRootDir().getPath().equals(
+          HddsVolumeUtil.getHddsRoot(volume))) {
         return true;
       }
     }
