@@ -136,10 +136,35 @@ class ReplicaMap {
   }
 
   /**
+   * Add a replica's meta information into the map
+   * and without replacing if the previous value existed.
+   *
+   * @param bpid block pool id
+   * @param replicaInfo a replica's meta information
+   * @throws IllegalArgumentException if the input parameter is null
+   */
+  void addAndNotReplace(String bpid, ReplicaInfo replicaInfo) {
+    checkBlockPool(bpid);
+    checkBlock(replicaInfo);
+
+    FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
+    if (set == null) {
+      // Add an entry for block pool if it does not exist already
+      set = new FoldedTreeSet<>();
+      map.put(bpid, set);
+    }
+    set.add(replicaInfo);
+  }
+
+  /**
    * Add all entries from the given replica map into the local replica map.
    */
   void addAll(ReplicaMap other) {
-    map.putAll(other.map);
+    for (String bpid : other.getBlockPoolList()) {
+      for (ReplicaInfo replicaInfo : other.replicas(bpid)) {
+        addAndNotReplace(bpid, replicaInfo);
+      }
+    }
   }
   
   /**
