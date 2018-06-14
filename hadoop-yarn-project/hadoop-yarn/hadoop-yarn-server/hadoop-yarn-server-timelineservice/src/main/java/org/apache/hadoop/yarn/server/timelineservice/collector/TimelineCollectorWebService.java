@@ -60,6 +60,9 @@ import com.google.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.IllegalFormatException;
+
 /**
  * The main per-node REST end point for timeline service writes. It is
  * essentially a container service that routes requests to the appropriate
@@ -165,7 +168,7 @@ public class TimelineCollectorWebService {
       TimelineCollector collector = collectorManager.get(appID);
       if (collector == null) {
         LOG.error("Application: "+ appId + " is not found");
-        throw new NotFoundException(); // different exception?
+        throw new NotFoundException("Application: "+ appId + " is not found");
       }
 
       boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
@@ -178,7 +181,10 @@ public class TimelineCollectorWebService {
       }
 
       return Response.ok().build();
-    } catch (Exception e) {
+    } catch (NotFoundException | ForbiddenException e) {
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    } catch (IOException e) {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -192,7 +198,7 @@ public class TimelineCollectorWebService {
       } else {
         return null;
       }
-    } catch (Exception e) {
+    } catch (IllegalFormatException e) {
       LOG.error("Invalid application ID: " + appId);
       return null;
     }
