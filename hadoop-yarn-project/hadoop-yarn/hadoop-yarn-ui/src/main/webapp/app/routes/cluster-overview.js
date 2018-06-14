@@ -37,6 +37,13 @@ export default AbstractRoute.extend({
 
   afterModel() {
     this.controllerFor("ClusterOverview").set("loading", false);
+    var newpath = window.location.pathname;
+    if(newpath.indexOf("index.html") != -1) {
+      console.log('Original pathname:' + newpath);
+      newpath = newpath.replace('index.html', '');
+      console.log('Updated pathname post index.html correction:' + newpath);
+      window.history.pushState({}, "", newpath);
+    }
   },
 
   unloadAll() {

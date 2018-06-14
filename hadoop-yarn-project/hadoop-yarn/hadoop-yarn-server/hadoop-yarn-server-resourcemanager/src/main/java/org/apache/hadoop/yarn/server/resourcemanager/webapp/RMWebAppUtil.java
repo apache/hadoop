@@ -18,20 +18,26 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -39,7 +45,9 @@ import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
@@ -61,6 +69,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LogAggregationCo
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.WebAppException;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.FilterMapping;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 /**
  * Util class for ResourceManager WebApp.
@@ -374,5 +388,99 @@ public final class RMWebAppUtil {
     }
 
     return callerUGI;
+  }
+
+  /**
+   * UI2 Context doesn't have all custom filters configured for RM. Hence add
+   * all required filters to UI2 as well.
+   *
+   * Filters which are set as /* for pathSpec from Default Context:
+   * 1. NoCacheFilter
+   * 2. safety
+   * 3. org.apache.hadoop.security.http.XFrameOptionsFilter
+   * 4. AuthenticationFilter
+   *      Default context has multiple pathSpecs such as /cluster, /jmx etc.
+   *      These are not relevant for UI2 and hence only /* will be added as
+   *      pathSpec for UI2.
+   *
+   * Filters which are to be set as NULL (pathSpec) similar to Default Context:
+   * 1. SpnegoFilter
+   *      In Spnego Filter, pathSpec is specified as NULL. This is not ensure
+   *      that this filter should come after AuthenticationFilter in filter
+   *      chain. Hence using same for UI2 context as well.
+   *
+   * Filters which are skipped for UI2:
+   * 1. guice
+   *
+   * @param ui2Context New UI2 context.
+   * @param httpServer Default httpServer from context.
+   * @param conf Configuration Object.
+   */
+  public static void addFiltersForUI2Context(WebAppContext ui2Context,
+      HttpServer2 httpServer, Configuration conf) {
+
+    // Similar to Default context, DefaultServlet needs to be added to
+    // set jetty related configs for redirect/welcomes files etc.
+    ServletHolder holder = new ServletHolder(new DefaultServlet());
+    Map<String, String> params = ImmutableMap.<String, String> builder()
+        .put("acceptRanges", "true").put("dirAllowed", "false")
+        .put("gzip", "true").put("useFileMappedBuffer", "true")
+        .put("redirectWelcome", "true").build();
+    holder.setInitParameters(params);
+    ui2Context.setWelcomeFiles(new String[] {"index.html"});
+    ui2Context.addServlet(holder, "/");
+    ui2Context.setDisplayName("ui2");
+    String tempDirectory = conf.get(HttpServer2.HTTP_TEMP_DIR_KEY);
+    if (tempDirectory != null && !tempDirectory.isEmpty()) {
+      ui2Context.setTempDirectory(new File(tempDirectory));
+      ui2Context.setAttribute("javax.servlet.context.tempdir", tempDirectory);
+    }
+
+    ui2Context.getServletContext()
+        .setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
+    ui2Context.getServletContext().setAttribute(HttpServer2.ADMINS_ACL,
+        new AccessControlList(conf.get(YarnConfiguration.YARN_ADMIN_ACL,
+            YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)));
+
+    // Get filterHolders and filterMappings from default context's servlet.
+    FilterHolder[] filterHolders = httpServer.getWebAppContext()
+        .getServletHandler().getFilters();
+    FilterMapping[] filterMappings = httpServer.getWebAppContext()
+        .getServletHandler().getFilterMappings();
+
+    // To define a filter for UI2 context, URL path also needed which is
+    // available only in FilterMapping. Hence convert this to a map for easy
+    // access.
+    Set<String> nonNullFilterMappings = new HashSet<>();
+    for (FilterMapping filterMapping : filterMappings) {
+      if (filterMapping.getPathSpecs() != null) {
+        nonNullFilterMappings.add(filterMapping.getFilterName());
+      }
+    }
+
+    // Loop through all filterHolders and add one by one to UI2.
+    LOG.info("Add filters from default webapp context to UI2 context.");
+    for (FilterHolder filterHolder : filterHolders) {
+      // Skip guice filter for UI2.
+      if ("guice".equals(filterHolder.getName())) {
+        continue;
+      }
+
+      List<String> pathSpecs = new ArrayList<>();
+
+      // Given a filter from default context has some specific pathSpec,
+      // UI2 can apply the same filter at /* on the root context path.
+      if (nonNullFilterMappings.contains(filterHolder.getName())) {
+        pathSpecs.add("/*");
+      }
+
+      // Define filter to UI2 context with corrected pathSpec.
+      HttpServer2.defineFilter(ui2Context, filterHolder.getName(),
+          filterHolder.getClassName(), filterHolder.getInitParameters(),
+          pathSpecs.toArray(new String[pathSpecs.size()]));
+
+      LOG.info("UI2 context filter Name:" + filterHolder.getName()
+          + ", className=" + filterHolder.getClassName());
+    }
   }
 }

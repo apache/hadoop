@@ -481,6 +481,17 @@ public class WebApps {
       return webApp;
     }
 
+    public void startWithOutBuild(WebApp webApp) {
+      HttpServer2 httpServer = webApp.httpServer();
+      try {
+        httpServer.start();
+        LOG.info("Web app " + name + " started at "
+            + httpServer.getConnectorAddress(0).getPort());
+      } catch (IOException e) {
+        throw new WebAppException("Error starting http server", e);
+      }
+    }
+
     private void addFiltersForNewContext(WebAppContext ui2Context) {
       Map<String, String> params = getConfigParameters(csrfConfigPrefix);
 
