@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#basedir is the directory of the whole hadoop project. Used to calculate the
-#exact path to the hadoop-dist project
-BASEDIR=${DIR}/../../../..
 
 if [ ! "$(which robot)" ] ; then
     echo ""
@@ -29,10 +28,10 @@ if [ ! "$(which robot)" ] ; then
     exit -1
 fi
 
-OZONEDISTDIR="$BASEDIR/hadoop-dist/target/ozone"
+OZONEDISTDIR="$DIR/../../../../hadoop-dist/target/ozone"
 if [ ! -d "$OZONEDISTDIR" ]; then
    echo "Ozone can't be found in the $OZONEDISTDIR."
    echo "You may need a full build with -Phdds and -Pdist profiles"
    exit -1
 fi
-robot -v basedir:$BASEDIR $@
+robot -x junit-results.xml "$@"

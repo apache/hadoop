@@ -43,6 +43,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <goal>run</goal>
                 </goals>
                 <configuration>
+                  <testCasesDirectory>src/test/acceptance</testCasesDirectory>
                   <variables>
                     <variable>basedir:${project.basedir}/../..</variable>
                   </variables>
