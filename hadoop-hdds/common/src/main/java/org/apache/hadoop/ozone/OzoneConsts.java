@@ -101,6 +101,9 @@ public final class OzoneConsts {
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String KSM_DB_NAME = "ksm.db";
 
+  public static final String STORAGE_DIR_CHUNKS = "chunks";
+  public static final String CONTAINER_FILE_CHECKSUM_EXTENSION = ".chksm";
+
   /**
    * Supports Bucket Versioning.
    */

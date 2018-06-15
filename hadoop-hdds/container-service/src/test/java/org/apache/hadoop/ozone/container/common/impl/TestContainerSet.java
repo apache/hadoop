@@ -17,12 +17,14 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -51,7 +53,8 @@ public class TestContainerSet {
     KeyValueContainerData kvData = new KeyValueContainerData(
         ContainerProtos.ContainerType.KeyValueContainer, containerId);
     kvData.setState(state);
-    KeyValueContainer keyValueContainer = new KeyValueContainer(kvData);
+    KeyValueContainer keyValueContainer = new KeyValueContainer(kvData, new
+        OzoneConfiguration());
 
     //addContainer
     boolean result = containerSet.addContainer(keyValueContainer);
@@ -160,7 +163,8 @@ public class TestContainerSet {
       } else {
         kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
       }
-      KeyValueContainer kv = new KeyValueContainer(kvData);
+      KeyValueContainer kv = new KeyValueContainer(kvData, new
+          OzoneConfiguration());
       containerSet.addContainer(kv);
     }
     return containerSet;

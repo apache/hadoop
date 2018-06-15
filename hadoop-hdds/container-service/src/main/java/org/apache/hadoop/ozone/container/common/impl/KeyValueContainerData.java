@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
 
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -42,6 +43,8 @@ public class KeyValueContainerData extends ContainerData {
   //Number of pending deletion blocks in container.
   private int numPendingDeletionBlocks;
 
+  private File dbFile = null;
+
   /**
    * Constructs KeyValueContainerData object.
    * @param type - containerType
@@ -62,6 +65,24 @@ public class KeyValueContainerData extends ContainerData {
                                int layOutVersion) {
     super(type, id, layOutVersion);
     this.numPendingDeletionBlocks = 0;
+  }
+
+
+  /**
+   * Sets Container dbFile. This should be called only during creation of
+   * KeyValue container.
+   * @param containerDbFile
+   */
+  public void setDbFile(File containerDbFile) {
+    dbFile = containerDbFile;
+  }
+
+  /**
+   * Returns container DB file.
+   * @return dbFile
+   */
+  public File getDbFile() {
+    return dbFile;
   }
   /**
    * Returns container metadata path.

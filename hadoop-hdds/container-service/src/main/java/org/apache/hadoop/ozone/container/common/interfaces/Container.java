@@ -21,21 +21,26 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
-import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 
-import java.security.NoSuchAlgorithmException;
+import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+
+import java.util.Map;
+
 
 /**
  * Interface for Container Operations.
  */
-public interface Container {
+public interface Container extends RwLock {
 
   /**
    * Creates a container.
    *
    * @throws StorageContainerException
    */
-  void create(ContainerData containerData) throws StorageContainerException;
+  void create(VolumeSet volumeSet, VolumeChoosingPolicy volumeChoosingPolicy,
+              String scmId) throws StorageContainerException;
 
   /**
    * Deletes the container.
@@ -48,10 +53,11 @@ public interface Container {
   /**
    * Update the container.
    *
+   * @param metaData
    * @param forceUpdate if true, update container forcibly.
    * @throws StorageContainerException
    */
-  void update(boolean forceUpdate)
+  void update(Map<String, String> metaData, boolean forceUpdate)
       throws StorageContainerException;
 
   /**
@@ -68,8 +74,7 @@ public interface Container {
    *
    * @throws StorageContainerException
    */
-  void close() throws StorageContainerException,
-      NoSuchAlgorithmException;
+  void close() throws StorageContainerException;
 
 
 }
