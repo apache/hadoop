@@ -1640,6 +1640,16 @@
   </description>
 </property>
 <property>
+  <name>fs.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem</value>
+  <description>The implementation class of the Azure Blob Filesystem</description>
+</property>
+<property>
+  <name>fs.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
+  <description>The implementation class of the Secure Azure Blob Filesystem</description>
+</property>
+<property>
   <name>fs.azure.local.sas.key.mode</name>
   <value>false</value>
   <description>

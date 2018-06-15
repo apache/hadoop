@@ -67,6 +67,7 @@
             <!-- To run with the default Sun ruleset, 
                  comment out the configLocation line -->
             <configLocation>src/config/checkstyle.xml</configLocation>
+            <suppressionsLocation>src/config/checkstyle-suppressions.xml</suppressionsLocation>
           </configuration>
           
       </plugin>
@@ -149,8 +150,20 @@
     </dependency>
 
     <dependency>
+      <groupId>org.threadly</groupId>
+      <artifactId>threadly</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
       <scope>compile</scope>
     </dependency>
     
@@ -173,8 +186,38 @@
     </dependency>
 
     <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <scope>compile</scope>
+      <!-- we have a dependency on a lower version -->
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
       <scope>compile</scope>
     </dependency>
 
@@ -183,15 +226,8 @@
       <artifactId>jetty-util-ajax</artifactId>
       <scope>compile</scope>
     </dependency>
-    
-    
-    <!-- dependencies use for test only -->
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <scope>test</scope>
-    </dependency>
 
+    <!-- dependencies use for test only -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -228,10 +264,6 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
     </dependency>
 
   </dependencies>
@@ -398,8 +430,10 @@
                     <exclude>**/ITestNativeAzureFileSystemConcurrencyLive.java</exclude>
                     <exclude>**/ITestNativeAzureFileSystemLive.java</exclude>
                     <exclude>**/ITestNativeAzureFSPageBlobLive.java</exclude>
+                    <exclude>**/ITestAzureBlobFileSystemRandomRead.java</exclude>
                     <exclude>**/ITestWasbRemoteCallHelper.java</exclude>
                     <exclude>**/ITestBlockBlobInputStream.java</exclude>
+                    <exclude>**/ITestWasbAbfsCompatibility.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -424,12 +458,15 @@
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
                   </systemPropertyVariables>
                   <includes>
+                    <include>**/ITestWasbAbfsCompatibility.java</include>
                     <include>**/ITestFileSystemOperationsExceptionHandlingMultiThreaded.java</include>
                     <include>**/ITestFileSystemOperationsWithThreads.java</include>
                     <include>**/ITestOutOfBandAzureBlobOperationsLive.java</include>
                     <include>**/ITestNativeAzureFileSystemAuthorizationWithOwner.java</include>
                     <include>**/ITestNativeAzureFileSystemConcurrencyLive.java</include>
                     <include>**/ITestNativeAzureFileSystemLive.java</include>
+                    <include>**/ITestNativeAzureFSPageBlobLive.java</include>
+                    <include>**/ITestAzureBlobFileSystemRandomRead.java</include>
                     <include>**/ITestWasbRemoteCallHelper.java</include>
                     <include>**/ITestBlockBlobInputStream.java</include>
                   </includes>
