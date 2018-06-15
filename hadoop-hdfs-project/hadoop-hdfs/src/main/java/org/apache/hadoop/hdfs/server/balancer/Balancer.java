@@ -289,13 +289,17 @@ public class Balancer {
     final int maxNoMoveInterval = conf.getInt(
         DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_DEFAULT);
+    final long maxIterationTime = conf.getLong(
+        DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY,
+        DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_DEFAULT);
 
     this.nnc = theblockpool;
     this.dispatcher =
         new Dispatcher(theblockpool, p.getIncludedNodes(),
             p.getExcludedNodes(), movedWinWidth, moverThreads,
             dispatcherThreads, maxConcurrentMovesPerNode, getBlocksSize,
-            getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval, conf);
+            getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval,
+            maxIterationTime, conf);
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
