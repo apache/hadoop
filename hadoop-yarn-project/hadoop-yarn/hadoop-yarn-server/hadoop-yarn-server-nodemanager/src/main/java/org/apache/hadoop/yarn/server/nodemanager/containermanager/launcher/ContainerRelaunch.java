@@ -58,7 +58,6 @@ public class ContainerRelaunch extends ContainerLaunch {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Integer call() {
     if (!validateContainerState()) {
       return 0;
