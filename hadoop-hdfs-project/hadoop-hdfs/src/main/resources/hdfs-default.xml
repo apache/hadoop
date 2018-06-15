@@ -3538,6 +3538,16 @@
 </property>
 
 <property>
+  <name>dfs.balancer.max-iteration-time</name>
+  <value>1200000</value>
+  <description>
+    Maximum amount of time while an iteration can be run by the Balancer. After
+    this time the Balancer will stop the iteration, and reevaluate the work
+    needs to be done to Balance the cluster. The default value is 20 minutes.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.invalidate.limit</name>
   <value>1000</value>
   <description>
