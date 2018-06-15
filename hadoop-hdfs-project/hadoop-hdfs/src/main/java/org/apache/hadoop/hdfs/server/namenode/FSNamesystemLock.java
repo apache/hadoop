@@ -107,6 +107,8 @@ class FSNamesystemLock {
   private static final String WRITE_LOCK_METRIC_PREFIX = "FSNWriteLock";
   private static final String LOCK_METRIC_SUFFIX = "Nanos";
 
+  private static final String OVERALL_METRIC_NAME = "Overall";
+
   FSNamesystemLock(Configuration conf,
       MutableRatesWithAggregation detailedHoldTimeMetrics) {
     this(conf, detailedHoldTimeMetrics, new Timer());
@@ -299,12 +301,17 @@ class FSNamesystemLock {
    */
   private void addMetric(String operationName, long value, boolean isWrite) {
     if (metricsEnabled) {
-      String metricName =
-          (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
-          org.apache.commons.lang.StringUtils.capitalize(operationName) +
-          LOCK_METRIC_SUFFIX;
-      detailedHoldTimeMetrics.add(metricName, value);
+      String opMetric = getMetricName(operationName, isWrite);
+      detailedHoldTimeMetrics.add(opMetric, value);
+
+      String overallMetric = getMetricName(OVERALL_METRIC_NAME, isWrite);
+      detailedHoldTimeMetrics.add(overallMetric, value);
     }
   }
 
+  private static String getMetricName(String operationName, boolean isWrite) {
+    return (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
+        org.apache.commons.lang.StringUtils.capitalize(operationName) +
+        LOCK_METRIC_SUFFIX;
+  }
 }
