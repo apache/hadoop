@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -258,7 +259,8 @@ public class TestNameNodeMetrics {
     File dataDir = new File(fsVolume.getBasePath());
     long capacity = fsVolume.getCapacity();
     volumeReferences.close();
-    DataNodeTestUtils.injectDataDirFailure(dataDir);
+    File storageDir = new File(dataDir, Storage.STORAGE_DIR_CURRENT);
+    DataNodeTestUtils.injectDataDirFailure(storageDir);
     DataNodeTestUtils.waitForDiskError(dn, fsVolume);
     DataNodeTestUtils.triggerHeartbeat(dn);
     BlockManagerTestUtil.checkHeartbeat(bm);
