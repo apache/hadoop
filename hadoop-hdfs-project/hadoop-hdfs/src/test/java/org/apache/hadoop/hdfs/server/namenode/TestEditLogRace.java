@@ -84,6 +84,8 @@ public class TestEditLogRace {
     TestEditLogRace.useAsyncEditLog = useAsyncEditLog;
   }
 
+  private static final String NAME_DIR = MiniDFSCluster.getBaseDirectory() + "name1";
+
   private static final Log LOG = LogFactory.getLog(TestEditLogRace.class);
 
   // This test creates NUM_THREADS threads and each thread continuously writes
@@ -363,8 +365,8 @@ public class TestEditLogRace {
         useAsyncEditLog);
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    //conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, NAME_DIR);
-    //conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, NAME_DIR);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, NAME_DIR);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, NAME_DIR);
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     return conf;
   }
