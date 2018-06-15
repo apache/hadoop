@@ -14,4 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONEDIR=../../../hadoop-dist/target/ozone
+FROM docker:18-dind
+RUN apk add --update python3 bash curl jq sudo
+RUN pip3 install robotframework docker-compose
+WORKDIR /root
+USER root

@@ -410,7 +410,7 @@ public class TestRegistryDNS extends Assert {
     return recs;
   }
 
-  Record[] assertDNSQueryNotNull(String lookup, int type)
+  Record[] assertDNSQueryNotNull(String lookup, int type, int answerCount)
       throws IOException {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
@@ -424,7 +424,7 @@ public class TestRegistryDNS extends Assert {
     assertEquals("Questions do not match", query.getQuestion(),
         response.getQuestion());
     Record[] recs = response.getSectionArray(Section.ANSWER);
-    assertEquals(1, recs.length);
+    assertEquals(answerCount, recs.length);
     assertEquals(recs[0].getType(), type);
     return recs;
   }
@@ -656,7 +656,24 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Record[] recs =
-        assertDNSQueryNotNull("mail.yahoo.com.", Type.CNAME);
+        assertDNSQueryNotNull("mail.yahoo.com.", Type.CNAME, 1);
+  }
+
+  @Test
+  public void testRootLookup() throws Exception {
+    setRegistryDNS(new RegistryDNS("TestRegistry"));
+    Configuration conf = new Configuration();
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "dev.test");
+    conf.set(RegistryConstants.KEY_DNS_ZONE_SUBNET, "172.17.0");
+    conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
+    conf.set(RegistryConstants.KEY_DNS_ZONES_DIR,
+        getClass().getResource("/").getFile());
+    getRegistryDNS().setDomainName(conf);
+    getRegistryDNS().initializeZones(conf);
+
+    // start assessing whether correct records are available
+    Record[] recs =
+        assertDNSQueryNotNull(".", Type.NS, 13);
   }
 
   @Test

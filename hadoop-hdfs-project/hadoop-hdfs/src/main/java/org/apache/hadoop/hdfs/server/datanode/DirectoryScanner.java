@@ -165,7 +165,7 @@ public class DirectoryScanner implements Runnable {
     /**
      * Merges {@code that} ScanInfoPerBlockPool into this one
      *
-     * @param the ScanInfoPerBlockPool to merge
+     * @param that ScanInfoPerBlockPool to merge
      */
     public void addAll(ScanInfoPerBlockPool that) {
       if (that == null) return;
