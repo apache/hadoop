@@ -48,7 +48,9 @@
                     labelType: 'value',
                     duration: 500,
                     labelThreshold: 0.01,
-                    labelSunbeamLayout: true,
+                    valueFormat: function(d) {
+                        return d3.format('d')(d);
+                    },
                     legend: {
                         margin: {
                             top: 5,
