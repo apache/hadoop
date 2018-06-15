@@ -1,3 +1,5 @@
+package org.apache.hadoop.ozone.container.keyvalue.interfaces;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,33 +18,36 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.interfaces;
-
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
 /**
  * Chunk Manager allows read, write, delete and listing of chunks in
  * a container.
  */
+
 public interface ChunkManager {
 
   /**
    * writes a given chunk.
+   *
+   * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
    * @param stage - Chunk Stage write.
    * @throws StorageContainerException
    */
-  void writeChunk(BlockID blockID,
-      ChunkInfo info, byte[] data, ContainerProtos.Stage stage)
+  void writeChunk(Container container, BlockID blockID, ChunkInfo info,
+                  byte[] data, ContainerProtos.Stage stage)
       throws StorageContainerException;
 
   /**
    * reads the data defined by a chunk.
+   *
+   * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info - ChunkInfo.
    * @return  byte array
@@ -51,16 +56,18 @@ public interface ChunkManager {
    * TODO: Right now we do not support partial reads and writes of chunks.
    * TODO: Explore if we need to do that for ozone.
    */
-  byte[] readChunk(BlockID blockID, ChunkInfo info) throws
+  byte[] readChunk(Container container, BlockID blockID, ChunkInfo info) throws
       StorageContainerException;
 
   /**
    * Deletes a given chunk.
+   *
+   * @param container - Container for the chunk
    * @param blockID - ID of the block.
    * @param info  - Chunk Info
    * @throws StorageContainerException
    */
-  void deleteChunk(BlockID blockID, ChunkInfo info) throws
+  void deleteChunk(Container container, BlockID blockID, ChunkInfo info) throws
       StorageContainerException;
 
   // TODO : Support list operations.

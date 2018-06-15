@@ -20,14 +20,19 @@ package org.apache.hadoop.ozone.container.keyvalue.helpers;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.utils.MetadataStore;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNABLE_TO_READ_METADATA_DB;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.NO_SUCH_KEY;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNABLE_TO_READ_METADATA_DB;
 
 /**
  * Utils functions to help key functions.
@@ -79,4 +84,32 @@ public final class KeyUtils {
     cache.removeDB(container.getContainerId());
   }
 
+  /**
+   * Shutdown all DB Handles.
+   *
+   * @param cache - Cache for DB Handles.
+   */
+  @SuppressWarnings("unchecked")
+  public static void shutdownCache(ContainerCache cache)  {
+    cache.shutdownCache();
+  }
+
+  /**
+   * Parses the {@link KeyData} from a bytes array.
+   *
+   * @param bytes key data in bytes.
+   * @return key data.
+   * @throws IOException if the bytes array is malformed or invalid.
+   */
+  public static KeyData getKeyData(byte[] bytes) throws IOException {
+    try {
+      ContainerProtos.KeyData keyData = ContainerProtos.KeyData.parseFrom(
+          bytes);
+      KeyData data = KeyData.getFromProtoBuf(keyData);
+      return data;
+    } catch (IOException e) {
+      throw new StorageContainerException("Failed to parse key data from the" +
+          " bytes array.", NO_SUCH_KEY);
+    }
+  }
 }
