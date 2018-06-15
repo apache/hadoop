@@ -728,8 +728,8 @@ public class TestStartup {
       assertTrue(nnDirs.iterator().hasNext());
       assertEquals(
           "NN dir should be created after NN startup.",
-          nnDirStr,
-          nnDirs.iterator().next().getPath());
+          new File(nnDirStr),
+          new File(nnDirs.iterator().next().getPath()));
       final File nnDir = new File(nnDirStr);
       assertTrue(nnDir.exists());
       assertTrue(nnDir.isDirectory());
@@ -738,7 +738,7 @@ public class TestStartup {
         /* set read only */
         assertTrue(
             "Setting NN dir read only should succeed.",
-            nnDir.setReadOnly());
+            FileUtil.setWritable(nnDir, false));
         cluster.restartNameNodes();
         fail("Restarting NN should fail on read only NN dir.");
       } catch (InconsistentFSStateException e) {
@@ -750,7 +750,8 @@ public class TestStartup {
                 "storage directory does not exist or is not accessible."))));
       } finally {
         /* set back to writable in order to clean it */
-        assertTrue("Setting NN dir should succeed.", nnDir.setWritable(true));
+        assertTrue("Setting NN dir should succeed.",
+            FileUtil.setWritable(nnDir, true));
       }
     }
   }
