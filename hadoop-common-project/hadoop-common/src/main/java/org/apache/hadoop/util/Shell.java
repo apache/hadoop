@@ -1205,7 +1205,7 @@ public abstract class Shell {
 
     /**
      * Returns the timeout value set for the executor's sub-commands.
-     * @return The timeout value in seconds
+     * @return The timeout value in milliseconds
      */
     @VisibleForTesting
     public long getTimeoutInterval() {
