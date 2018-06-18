@@ -28,7 +28,6 @@ import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
@@ -92,13 +91,12 @@ public class TestMiniOzoneCluster {
     for(HddsDatanodeService dn : datanodes) {
       // Create a single member pipe line
       DatanodeDetails datanodeDetails = dn.getDatanodeDetails();
-      final PipelineChannel pipelineChannel =
-          new PipelineChannel(datanodeDetails.getUuidString(),
+      final Pipeline pipeline =
+          new Pipeline(datanodeDetails.getUuidString(),
               HddsProtos.LifeCycleState.OPEN,
               HddsProtos.ReplicationType.STAND_ALONE,
               HddsProtos.ReplicationFactor.ONE, "test");
-      pipelineChannel.addMember(datanodeDetails);
-      Pipeline pipeline = new Pipeline(pipelineChannel);
+      pipeline.addMember(datanodeDetails);
 
       // Verify client is able to connect to the container
       try (XceiverClient client = new XceiverClient(pipeline, conf)){

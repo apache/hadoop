@@ -519,11 +519,11 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Insert to sql container db, for container {}", containerID);
     String insertContainerInfo = String.format(
         INSERT_CONTAINER_INFO, containerID,
-        pipeline.getPipelineChannel().getLeaderID());
+        pipeline.getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
     for (HddsProtos.DatanodeDetailsProto dd :
-        pipeline.getPipelineChannel().getMembersList()) {
+        pipeline.getMembersList()) {
       String uuid = dd.getUuid();
       if (!uuidChecked.contains(uuid)) {
         // we may also not use this checked set, but catch exception instead

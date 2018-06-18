@@ -40,19 +40,13 @@ message Port {
     required uint32 value = 2;
 }
 
-message PipelineChannel {
+message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
     optional LifeCycleState state = 3 [default = OPEN];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
     optional string name = 6;
-}
-
-// A pipeline is composed of PipelineChannel (Ratis/StandAlone) that back a
-// container.
-message Pipeline {
-    required PipelineChannel pipelineChannel = 2;
 }
 
 message KeyValue {

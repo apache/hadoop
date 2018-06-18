@@ -20,7 +20,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
@@ -85,20 +84,20 @@ public class PipelineSelector {
    * The first of the list will be the leader node.
    * @return pipeline corresponding to nodes
    */
-  public static PipelineChannel newPipelineFromNodes(
+  public static Pipeline newPipelineFromNodes(
       List<DatanodeDetails> nodes, LifeCycleState state,
       ReplicationType replicationType, ReplicationFactor replicationFactor,
       String name) {
     Preconditions.checkNotNull(nodes);
     Preconditions.checkArgument(nodes.size() > 0);
     String leaderId = nodes.get(0).getUuidString();
-    PipelineChannel
-        pipelineChannel = new PipelineChannel(leaderId, state, replicationType,
+    Pipeline
+        pipeline = new Pipeline(leaderId, state, replicationType,
         replicationFactor, name);
     for (DatanodeDetails node : nodes) {
-      pipelineChannel.addMember(node);
+      pipeline.addMember(node);
     }
-    return pipelineChannel;
+    return pipeline;
   }
 
   /**

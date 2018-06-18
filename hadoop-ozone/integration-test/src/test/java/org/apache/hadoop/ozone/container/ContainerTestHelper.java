@@ -37,7 +37,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -136,14 +135,14 @@ public final class ContainerTestHelper {
     Preconditions.checkArgument(i.hasNext());
     final DatanodeDetails leader = i.next();
     String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(3);
-    final PipelineChannel pipelineChannel =
-        new PipelineChannel(leader.getUuidString(), LifeCycleState.OPEN,
+    final Pipeline pipeline =
+        new Pipeline(leader.getUuidString(), LifeCycleState.OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
-    pipelineChannel.addMember(leader);
+    pipeline.addMember(leader);
     for(; i.hasNext();) {
-      pipelineChannel.addMember(i.next());
+      pipeline.addMember(i.next());
     }
-    return new Pipeline(pipelineChannel);
+    return pipeline;
   }
 
   /**
@@ -207,8 +206,6 @@ public final class ContainerTestHelper {
         ContainerProtos.WriteChunkRequestProto
             .newBuilder();
 
-    Pipeline newPipeline =
-        new Pipeline(pipeline.getPipelineChannel());
     writeRequest.setBlockID(blockID.getDatanodeBlockIDProtobuf());
 
     byte[] data = getData(datalen);
@@ -223,7 +220,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.WriteChunk);
     request.setWriteChunk(writeRequest);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeUuid(newPipeline.getLeader().getUuidString());
+    request.setDatanodeUuid(pipeline.getLeader().getUuidString());
 
     return request.build();
   }
@@ -241,8 +238,6 @@ public final class ContainerTestHelper {
       throws Exception {
     ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.PutSmallFileRequestProto.newBuilder();
-    Pipeline newPipeline =
-        new Pipeline(pipeline.getPipelineChannel());
     byte[] data = getData(dataLen);
     ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, dataLen);
     setDataChecksum(info, data);
@@ -266,7 +261,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
     request.setPutSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeUuid(newPipeline.getLeader().getUuidString());
+    request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     return request.build();
   }
 

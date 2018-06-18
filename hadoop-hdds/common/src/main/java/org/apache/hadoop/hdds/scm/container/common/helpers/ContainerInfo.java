@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Comparator;
 
 import static java.lang.Math.max;
@@ -63,6 +65,13 @@ public class ContainerInfo
   private String owner;
   private long containerID;
   private long deleteTransactionId;
+  /**
+   * Allows you to maintain private data on ContainerInfo. This is not
+   * serialized via protobuf, just allows us to maintain some private data.
+   */
+  @JsonIgnore
+  private byte[] data;
+
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,
@@ -295,6 +304,29 @@ public class ContainerInfo
     return WRITER.writeValueAsString(this);
   }
 
+  /**
+   * Returns private data that is set on this containerInfo.
+   *
+   * @return blob, the user can interpret it any way they like.
+   */
+  public byte[] getData() {
+    if (this.data != null) {
+      return Arrays.copyOf(this.data, this.data.length);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Set private data on ContainerInfo object.
+   *
+   * @param data -- private data.
+   */
+  public void setData(byte[] data) {
+    if (data != null) {
+      this.data = Arrays.copyOf(data, data.length);
+    }
+  }
   /**
    * Builder class for ContainerInfo.
    */

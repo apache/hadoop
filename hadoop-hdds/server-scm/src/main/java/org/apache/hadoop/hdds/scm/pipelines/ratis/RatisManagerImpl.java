@@ -20,7 +20,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -68,12 +67,12 @@ public class RatisManagerImpl extends PipelineManager {
   }
 
   /**
-   * Allocates a new ratis PipelineChannel from the free nodes.
+   * Allocates a new ratis Pipeline from the free nodes.
    *
    * @param factor - One or Three
    * @return PipelineChannel.
    */
-  public PipelineChannel allocatePipelineChannel(ReplicationFactor factor) {
+  public Pipeline allocatePipeline(ReplicationFactor factor) {
     List<DatanodeDetails> newNodesList = new LinkedList<>();
     List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
     int count = getReplicationCount(factor);
@@ -87,22 +86,20 @@ public class RatisManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           ratisMembers.addAll(newNodesList);
-          LOG.info("Allocating a new ratis pipelineChannel of size: {}", count);
+          LOG.info("Allocating a new ratis pipeline of size: {}", count);
           // Start all channel names with "Ratis", easy to grep the logs.
           String conduitName = PREFIX +
               UUID.randomUUID().toString().substring(PREFIX.length());
-          PipelineChannel pipelineChannel =
+          Pipeline pipeline=
               PipelineSelector.newPipelineFromNodes(newNodesList,
               LifeCycleState.OPEN, ReplicationType.RATIS, factor, conduitName);
-          Pipeline pipeline =
-              new Pipeline(pipelineChannel);
           try (XceiverClientRatis client =
               XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
             client.createPipeline(pipeline.getPipelineName(), newNodesList);
           } catch (IOException e) {
             return null;
           }
-          return pipelineChannel;
+          return pipeline;
         }
       }
     }
