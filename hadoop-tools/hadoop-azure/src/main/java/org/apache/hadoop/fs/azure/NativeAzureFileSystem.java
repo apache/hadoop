@@ -2886,7 +2886,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // There is no metadata found for the path.
       LOG.debug("Did not find any metadata for path: {}", key);
 
-      throw new FileNotFoundException("File" + f + " does not exist.");
+      throw new FileNotFoundException(f + " is not found");
     }
 
     return status.toArray(new FileStatus[0]);
