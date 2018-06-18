@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeJava;
+import static org.apache.commons.lang3.StringEscapeUtils.escapeJava;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -1827,7 +1827,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         INodeFile inodeFile = ucFile.asFile();
 
         String fullPathName = inodeFile.getFullPathName();
-        if (org.apache.commons.lang.StringUtils.isEmpty(path)
+        if (org.apache.commons.lang3.StringUtils.isEmpty(path)
             || fullPathName.startsWith(path)) {
           openFileEntries.add(new OpenFileEntry(inodeFile.getId(),
               inodeFile.getFullPathName(),
@@ -2383,7 +2383,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     boolean shouldReplicate = flag.contains(CreateFlag.SHOULD_REPLICATE);
     if (shouldReplicate &&
-        (!org.apache.commons.lang.StringUtils.isEmpty(ecPolicyName))) {
+        (!org.apache.commons.lang3.StringUtils.isEmpty(ecPolicyName))) {
       throw new HadoopIllegalArgumentException("SHOULD_REPLICATE flag and " +
           "ecPolicyName are exclusive parameters. Set both is not allowed!");
     }

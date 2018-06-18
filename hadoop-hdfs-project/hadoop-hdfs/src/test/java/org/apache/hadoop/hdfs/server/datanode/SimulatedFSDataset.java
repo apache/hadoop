@@ -38,7 +38,7 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import com.google.common.math.LongMath;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
