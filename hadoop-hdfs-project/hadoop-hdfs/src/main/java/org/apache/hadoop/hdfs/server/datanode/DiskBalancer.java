@@ -43,11 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -84,8 +80,12 @@ public class DiskBalancer {
   private final BlockMover blockMover;
   private final ReentrantLock lock;
   private final ConcurrentHashMap<VolumePair, DiskBalancerWorkItem> workMap;
+  private final List<VolumePair> workToSubmitList;
+  private final Set<String> workingVolumeUuids;
+
   private boolean isDiskBalancerEnabled = false;
   private ExecutorService scheduler;
+  private ExecutorService executorService;
   private Future future;
   private String planID;
   private String planFile;
@@ -93,6 +93,8 @@ public class DiskBalancer {
   private long bandwidth;
   private long planValidityInterval;
   private final Configuration config;
+
+  private final static int PARALLEL_COPY = 3;
 
   /**
    * Constructs a Disk Balancer object. This object takes care of reading a
@@ -109,9 +111,13 @@ public class DiskBalancer {
     this.blockMover = blockMover;
     this.dataset = this.blockMover.getDataset();
     this.dataNodeUUID = dataNodeUUID;
-    scheduler = Executors.newSingleThreadExecutor();
+    scheduler = Executors.newSingleThreadExecutor();//submit thread
+    executorService = Executors.newFixedThreadPool(PARALLEL_COPY);//copy threadPool
     lock = new ReentrantLock();
-    workMap = new ConcurrentHashMap<>();
+    workMap = new ConcurrentHashMap<>();//volumePair to WorkItem
+    workToSubmitList = new ArrayList<>();//works to submit
+    workingVolumeUuids = Collections.synchronizedSet(new HashSet<String>());//volumes in working status
+
     this.planID = "";  // to keep protobuf happy.
     this.planFile = "";  // to keep protobuf happy.
     this.isDiskBalancerEnabled = conf.getBoolean(
@@ -139,6 +145,7 @@ public class DiskBalancer {
         this.currentResult = Result.PLAN_CANCELLED;
         this.blockMover.setExitFlag();
         scheduler.shutdown();
+        executorService.shutdown();
         needShutdown = true;
       }
     } finally {
@@ -159,11 +166,19 @@ public class DiskBalancer {
       if (!scheduler.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
         scheduler.shutdownNow();
         if (!scheduler.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
-          LOG.error("Disk Balancer : Scheduler did not terminate.");
+          LOG.error("Disk Balancer : Submit Scheduler did not terminate.");
+        }
+      }
+
+      if (!executorService.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
+        executorService.shutdownNow();
+        if (!executorService.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
+          LOG.error("Disk Balancer : Copy Scheduler did not terminate.");
         }
       }
     } catch (InterruptedException ex) {
       scheduler.shutdownNow();
+      executorService.shutdown();
       Thread.currentThread().interrupt();
     }
   }
@@ -281,6 +296,7 @@ public class DiskBalancer {
         this.currentResult = Result.PLAN_CANCELLED;
         this.blockMover.setExitFlag();
         scheduler.shutdown();
+        executorService.shutdown();
         needShutdown = true;
       }
     } finally {
@@ -527,24 +543,68 @@ public class DiskBalancer {
    */
   private void executePlan() {
     Preconditions.checkState(lock.isHeldByCurrentThread());
-    this.blockMover.setRunnable();
     if (this.scheduler.isShutdown()) {
       this.scheduler = Executors.newSingleThreadExecutor();
     }
 
     this.future = scheduler.submit(new Runnable() {
       @Override
+      //submit works in submitList in round-robin
       public void run() {
-        Thread.currentThread().setName("DiskBalancerThread");
-        LOG.info("Executing Disk balancer plan. Plan File: {}, Plan ID: {}",
-            planFile, planID);
-        for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry :
-            workMap.entrySet()) {
-          blockMover.setRunnable();
-          blockMover.copyBlocks(entry.getKey(), entry.getValue());
+        blockMover.setRunnable();
+        while(workToSubmitList.size()>0){
+          for(int i = 0; i < workToSubmitList.size(); ){
+            String source = workToSubmitList.get(i).getSourceVolUuid();
+            String destination = workToSubmitList.get(i).getDestVolUuid();
+            if(!workingVolumeUuids.contains(source) && !workingVolumeUuids.contains(destination)){
+              migrate(workToSubmitList.get(i), workMap.get(workToSubmitList.get(i)));
+              workingVolumeUuids.add(source);
+              workingVolumeUuids.add(destination);
+              workToSubmitList.remove(i);
+            }else{
+              i++;
+            }
+          }
         }
+        //wait the submitted works to finish
+        while(workingVolumeUuids.size() != 0){
+          try{
+            Thread.sleep(1000);
+          }catch (InterruptedException e){
+            LOG.error(e.getMessage());
+          }
+
+        }
+        executorService.shutdown();
+        /*no works in the submit list and no works in working list,
+        means the end of the copy migration
+        */
       }
     });
+  }
+
+  /**
+   * Starts migrate the data between the volume pair
+   */
+  private void migrate(VolumePair volumePair, DiskBalancerWorkItem workItem){
+    executorService.submit(new CopyRunnable(volumePair,workItem));
+  }
+
+  /**
+   * Copy Runnable
+   */
+  class CopyRunnable implements Runnable{
+    VolumePair volumePair;
+    DiskBalancerWorkItem workItem;
+    public CopyRunnable(VolumePair volumePair, DiskBalancerWorkItem workItem){
+      this.volumePair = volumePair;
+      this.workItem = workItem;
+    }
+    public void run(){
+      blockMover.copyBlocks(volumePair, workItem);
+      workingVolumeUuids.remove(volumePair.getSourceVolUuid());
+      workingVolumeUuids.remove(volumePair.getDestVolUuid());
+    }
   }
 
   /**
@@ -567,6 +627,9 @@ public class DiskBalancer {
     // we compress that into one work order.
     if (workMap.containsKey(volumePair)) {
       bytesToMove += workMap.get(volumePair).getBytesToCopy();
+    }
+    if(!workToSubmitList.contains(volumePair)){
+      workToSubmitList.add(volumePair);
     }
 
     DiskBalancerWorkItem work = new DiskBalancerWorkItem(bytesToMove, 0);
@@ -902,6 +965,9 @@ public class DiskBalancer {
         try {
           ExtendedBlock block = iter.nextBlock();
 
+          if(block == null){
+            return null;
+          }
           // A valid block is a finalized block, we iterate until we get
           // finalized blocks
           if (!this.dataset.isValidBlock(block)) {
@@ -1058,8 +1124,8 @@ public class DiskBalancer {
                       "blocks.",
                   source.getBaseURI(), dest.getBaseURI(),
                   item.getBytesCopied(), item.getBlocksCopied());
-              this.setExitFlag();
-              continue;
+              //this.setExitFlag();
+              break;
             }
 
             ExtendedBlock block = getNextBlock(poolIters, item);
@@ -1067,14 +1133,17 @@ public class DiskBalancer {
             if (block == null) {
               LOG.error("No source blocks, exiting the copy. Source: {}, " +
                   "Dest:{}", source.getBaseURI(), dest.getBaseURI());
-              this.setExitFlag();
-              continue;
+              //this.setExitFlag();
+              break;
             }
 
+            /*
             // check if someone told us exit, treat this as an interruption
             // point
             // for the thread, since both getNextBlock and moveBlocAcrossVolume
             // can take some time.
+            */
+
             if (!shouldRun()) {
               continue;
             }
