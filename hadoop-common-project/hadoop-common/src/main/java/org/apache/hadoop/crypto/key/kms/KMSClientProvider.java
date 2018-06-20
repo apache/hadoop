@@ -32,7 +32,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -543,7 +545,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         String requestMethod = conn.getRequestMethod();
         URL url = conn.getURL();
         conn = createConnection(url, requestMethod);
-        conn.setRequestProperty(CONTENT_TYPE, contentType);
+        if (contentType != null && !contentType.isEmpty()) {
+          conn.setRequestProperty(CONTENT_TYPE, contentType);
+        }
         return call(conn, jsonOutput, expectedResponse, klass,
             authRetryCount - 1);
       }
@@ -1087,8 +1091,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       actualUgi = currentUgi.getRealUser();
     }
     if (UserGroupInformation.isSecurityEnabled() &&
-        !containsKmsDt(actualUgi) &&
-        !actualUgi.hasKerberosCredentials()) {
+        !containsKmsDt(actualUgi) && !actualUgi.shouldRelogin()) {
       // Use login user is only necessary when Kerberos is enabled
       // but the actual user does not have either
       // Kerberos credential or KMS delegation token for KMS operations
