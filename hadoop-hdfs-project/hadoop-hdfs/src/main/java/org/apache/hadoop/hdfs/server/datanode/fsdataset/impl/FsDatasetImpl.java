@@ -1902,7 +1902,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public void checkBlock(ExtendedBlock b, long minLength, ReplicaState state)
       throws ReplicaNotFoundException, UnexpectedReplicaStateException,
-      FileNotFoundException, EOFException, IOException {
+      FileNotFoundException, EOFException, IOException, NullPointerException {
+    if(b == null){
+      throw new NullPointerException("Input Block is null!");
+    }
     final ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
         b.getLocalBlock());
     if (replicaInfo == null) {

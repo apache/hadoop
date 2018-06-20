@@ -901,7 +901,11 @@ public class DiskBalancer {
       while (!iter.atEnd() && item.getErrorCount() < getMaxError(item)) {
         try {
           ExtendedBlock block = iter.nextBlock();
-
+          
+          //null pointer should not be passed to FsDatasetSpi.isValidBlock()
+          if(block == null){
+            return block;
+          }
           // A valid block is a finalized block, we iterate until we get
           // finalized blocks
           if (!this.dataset.isValidBlock(block)) {
