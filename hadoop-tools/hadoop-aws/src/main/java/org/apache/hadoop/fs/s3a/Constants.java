@@ -402,6 +402,17 @@ public final class Constants {
       "fs.s3a.s3guard.ddb.table";
 
   /**
+   * Test table name to use during DynamoDB integration test.
+   *
+   * The table will be modified, and deleted in the end of the tests.
+   * If this value is not set, the integration tests that would be destructive
+   * won't run.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
+      "fs.s3a.s3guard.ddb.test.table";
+
+  /**
    * Whether to create the DynamoDB table if the table does not exist.
    */
   @InterfaceStability.Unstable
