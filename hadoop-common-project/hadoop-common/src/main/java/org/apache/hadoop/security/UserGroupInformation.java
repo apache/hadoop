@@ -830,7 +830,9 @@ public class UserGroupInformation {
     return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
   }
 
-  private boolean shouldRelogin() {
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public boolean shouldRelogin() {
     return hasKerberosCredentials() && isHadoopLogin();
   }
 
