@@ -505,6 +505,29 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   /**
+   * Update resource accounting upon promotion of an OPPORTUNISTIC container.
+   * @param rmContainer the OPPORTUNISTIC container that has been promoted
+   */
+  public void opportunisticContainerPromoted(RMContainer rmContainer) {
+    // only an OPPORTUNISTIC container can be promoted
+    assert (ExecutionType.OPPORTUNISTIC == rmContainer.getExecutionType());
+
+    // the container to be promoted must belong to the current app attempt
+    if (rmContainer.getApplicationAttemptId().equals(
+        getApplicationAttemptId())) {
+      Resource resource = rmContainer.getContainer().getResource();
+      try {
+        writeLock.lock();
+        attemptOpportunisticResourceUsage.decUsed(resource);
+        attemptResourceUsage.incUsed(resource);
+        getQueue().incUsedGuaranteedResource(resource);
+      } finally {
+        writeLock.unlock();
+      }
+    }
+  }
+
+  /**
    * Should be called when the scheduler assigns a container at a higher
    * degree of locality than the current threshold. Reset the allowed locality
    * level to a higher degree of locality.
@@ -1159,7 +1182,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
    *
    * @param node
    *     Node that the application has an existing reservation on
-   * @return whether the reservation on the given node is valid.
+   * @return true if the reservation is turned into an allocation
    */
   boolean assignReservedContainer(FSSchedulerNode node) {
     RMContainer rmContainer = node.getReservedContainer();
@@ -1186,8 +1209,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     if (Resources.fitsIn(node.getReservedContainer().getReservedResource(),
         node.getUnallocatedResource())) {
       assignContainer(node, false, true);
+      return true;
     }
-    return true;
+    return false;
   }
 
   /**
@@ -1355,12 +1379,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource getGuaranteedResourceUsage() {
-    return getCurrentConsumption();
+    return Resources.clone(attemptResourceUsage.getUsed());
   }
 
   @Override
   public Resource getOpportunisticResourceUsage() {
-    return attemptOpportunisticResourceUsage.getUsed();
+    return Resources.clone(attemptOpportunisticResourceUsage.getUsed());
   }
 
   @Override

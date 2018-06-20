@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -35,10 +36,13 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -65,6 +69,13 @@ public class FSSchedulerNode extends SchedulerNode {
   // Sum of resourcesPreemptedForApp values, total resources that are
   // slated for preemption
   private Resource totalResourcesPreempted = Resource.newInstance(0, 0);
+
+  // The set of containers that need to be handled before resource
+  // available on the node can be assigned to resource requests.
+  // This is a queue of reserved and opportunistic containers on
+  // the node.
+  private final LinkedHashSet<RMContainer> priorityContainers =
+      new LinkedHashSet(1);
 
   @VisibleForTesting
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
@@ -124,6 +135,7 @@ public class FSSchedulerNode extends SchedulerNode {
           + application.getApplicationId());
     }
     setReservedContainer(container);
+    priorityContainers.add(container);
     this.reservedAppSchedulable = (FSAppAttempt) application;
   }
 
@@ -142,7 +154,7 @@ public class FSSchedulerNode extends SchedulerNode {
           " for application " + reservedApplication.getApplicationId() + 
           " on node " + this);
     }
-    
+    priorityContainers.remove(getReservedContainer());
     setReservedContainer(null);
     this.reservedAppSchedulable = null;
   }
@@ -274,6 +286,13 @@ public class FSSchedulerNode extends SchedulerNode {
     } else {
       LOG.error("Allocated empty container" + rmContainer.getContainerId());
     }
+
+    // keep track of opportunistic containers allocated so that we can promote
+    // them before we assign resources available to resource requests.
+    if (ExecutionType.OPPORTUNISTIC.equals(
+        rmContainer.getContainer().getExecutionType())) {
+      priorityContainers.add(rmContainer);
+    }
   }
 
   /**
@@ -291,5 +310,41 @@ public class FSSchedulerNode extends SchedulerNode {
     if (container != null) {
       containersForPreemption.remove(container);
     }
+  }
+
+  /**
+   * Try to assign resources available to reserved container and opportunistic
+   * containers that have been allocated.
+   * @return the list of opportunistic containers that have been promoted
+   */
+  public synchronized List<RMContainer> handlePriorityContainers() {
+    boolean assigned = true;
+    List<RMContainer> promotedContainers = new ArrayList<>(0);
+
+    List<RMContainer> candidateContainers = new ArrayList<>(priorityContainers);
+    for (RMContainer rmContainer : candidateContainers) {
+      boolean isReservedContainer =
+          rmContainer.getReservedSchedulerKey() != null;
+      if (isReservedContainer) {
+        // attempt to assign resources that have been reserved
+        FSAppAttempt reservedApp = getReservedAppSchedulable();
+        if (reservedApp != null) {
+          reservedApp.assignReservedContainer(this);
+        }
+      } else {
+        if (super.tryToPromoteOpportunisticContainer(rmContainer)) {
+          priorityContainers.remove(rmContainer);
+          assigned = true;
+          promotedContainers.add(rmContainer);
+        }
+      }
+
+      if (!assigned) {
+        // break out of the loop because assigned being false indicates
+        // there is no more resources that are available for promotion.
+        break;
+      }
+    }
+    return promotedContainers;
   }
 }

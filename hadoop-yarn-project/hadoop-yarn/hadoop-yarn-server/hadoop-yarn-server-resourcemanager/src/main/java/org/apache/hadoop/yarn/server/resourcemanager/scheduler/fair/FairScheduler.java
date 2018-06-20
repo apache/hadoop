@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -70,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -104,6 +106,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1113,8 +1116,8 @@ public class FairScheduler extends
 
       // Assign new containers...
       // 1. Ensure containers are assigned to the apps that preempted
-      // 2. Check for reserved applications
-      // 3. Schedule GUARANTEED containers if there are no reservations
+      // 2. Check for reserved applications or promote OPPORTUNISTIC containers
+      // 3. Schedule GUARANTEED containers
       // 4. Schedule OPPORTUNISTIC containers if possible
 
       // Apps may wait for preempted containers
@@ -1123,12 +1126,14 @@ public class FairScheduler extends
       // when C does not qualify for preemption itself.
       attemptToAssignPreemptedResources(node);
 
-      boolean validReservation =  attemptToAssignReservedResources(node);
-      if (!validReservation) {
-        // only attempt to assign GUARANTEED containers if there is no
-        // reservation on the node because
-        attemptToAssignResourcesAsGuaranteedContainers(node);
-      }
+      // before we assign resources to outstanding resource requests, we
+      // need to assign the resources to either the container that has
+      // made a reservation or allocated OPPORTUNISTIC containers so that
+      // they can be promoted. This ensures that request requests that
+      // are eligible for guaranteed resources are satisfied in FIFO order
+      attemptToAssignReservedResourcesOrPromoteOpportunisticContainers(node);
+
+      attemptToAssignResourcesAsGuaranteedContainers(node);
 
       // attempt to assign OPPORTUNISTIC containers regardless of whether
       // we have made a reservation or assigned a GUARANTEED container
@@ -1143,15 +1148,27 @@ public class FairScheduler extends
   }
 
   /**
-   * Assign the reserved resource to the application that have reserved it.
+   * Attempt to assign reserved resources and promote OPPORTUNISTIC containers
+   * thata have already been allocated.
    */
-  private boolean attemptToAssignReservedResources(FSSchedulerNode node) {
-    boolean success = false;
-    FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
-    if (reservedAppSchedulable != null) {
-      success = reservedAppSchedulable.assignReservedContainer(node);
+  private void attemptToAssignReservedResourcesOrPromoteOpportunisticContainers(
+      FSSchedulerNode node) {
+    Map<Container, ContainerUpdateType> promotion = new HashMap<>(0);
+
+    List<RMContainer> promoted = node.handlePriorityContainers();
+    for (RMContainer rmContainer : promoted)  {
+      FSAppAttempt appAttempt = getSchedulerApp(
+          rmContainer.getApplicationAttemptId());
+      appAttempt.opportunisticContainerPromoted(rmContainer);
+
+      promotion.put(rmContainer.getContainer(),
+          ContainerUpdateType.PROMOTE_EXECUTION_TYPE);
     }
-    return success;
+
+    if (!promotion.isEmpty()) {
+      rmContext.getDispatcher().getEventHandler().handle(
+          new RMNodeUpdateContainerEvent(node.getNodeID(), promotion));
+    }
   }
 
   private void attemptToAssignResourcesAsGuaranteedContainers(

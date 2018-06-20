@@ -2309,9 +2309,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
           rc.getExecutionType());
     }
 
-    // Should only include GUARANTEED resources
     currentConsumption = applicationAttempt.getCurrentConsumption();
-    Assert.assertEquals(Resource.newInstance(2048, 1), currentConsumption);
+    Assert.assertEquals(Resource.newInstance(5120, 3), currentConsumption);
     allocResources =
         applicationAttempt.getQueue().getMetrics().getAllocatedResources();
     Assert.assertEquals(Resource.newInstance(2048, 1), allocResources);

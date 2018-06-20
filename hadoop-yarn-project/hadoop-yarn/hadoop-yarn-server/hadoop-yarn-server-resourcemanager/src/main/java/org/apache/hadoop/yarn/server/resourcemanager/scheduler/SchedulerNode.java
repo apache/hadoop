@@ -282,6 +282,33 @@ public abstract class SchedulerNode {
     return true;
   }
 
+  /**
+   * Attempt to promote an OPPORTUNISTIC container that has been allocated.
+   * @param rmContainer the OPPORTUNISTIC container to promote
+   * @return true if the given OPPORTUNISTIC container is promoted,
+   *         false otherwise
+   */
+  public synchronized boolean tryToPromoteOpportunisticContainer(
+      RMContainer rmContainer) {
+    assert (rmContainer.getExecutionType() == ExecutionType.OPPORTUNISTIC);
+
+    boolean promoted = false;
+    Resource resource = rmContainer.getContainer().getResource();
+    if (allocatedContainers.containsKey(rmContainer.getContainerId()) &&
+        Resources.fitsIn(resource, getUnallocatedResource())) {
+      Resources.subtractFrom(allocatedResourceOpportunistic, resource);
+      numOpportunisticContainers--;
+
+      Resources.addTo(allocatedResourceGuaranteed, resource);
+      numGuaranteedContainers++;
+      Resources.subtractFrom(unallocatedResource, resource);
+
+      promoted = true;
+    }
+
+    return promoted;
+  }
+
 
   /**
    * Get resources that are not allocated to GUARANTEED containers on the node.
