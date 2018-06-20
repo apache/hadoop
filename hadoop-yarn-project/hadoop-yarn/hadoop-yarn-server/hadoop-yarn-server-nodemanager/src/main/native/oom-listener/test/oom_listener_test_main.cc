@@ -20,6 +20,7 @@
 
 extern "C" {
 #include "oom_listener.h"
+#include <time.h>
 }
 
 #include <gtest/gtest.h>
@@ -49,10 +50,10 @@ int main(int argc, char **argv) {
 
 class OOMListenerTest : public ::testing::Test {
 private:
-  char cgroup[PATH_MAX] = {};
-  const char* cgroup_root = nullptr;
+  char cgroup[PATH_MAX];
+  const char* cgroup_root;
 public:
-  OOMListenerTest() = default;
+  OOMListenerTest() : cgroup_root(NULL) {}
 
   virtual ~OOMListenerTest() = default;
   virtual const char* GetCGroup() { return cgroup; }
@@ -99,7 +100,7 @@ public:
     if (cgroup[0] != '\0') {
       rmdir(cgroup);
     }
-    if (cgroup_root != nullptr &&
+    if (cgroup_root != NULL &&
         cgroup_root != cgroup_candidates[0]) {
       rmdir(cgroup_root);
     }
@@ -184,7 +185,7 @@ TEST_F(OOMListenerTest, test_oom) {
       std::cout << "Consuming too much memory" << std::endl;
       for (;;) {
         auto buffer = (char *) malloc(bufferSize);
-        if (buffer != nullptr) {
+        if (buffer != NULL) {
           for (int i = 0; i < bufferSize; ++i) {
             buffer[i] = (char) std::rand();
           }
@@ -213,15 +214,15 @@ TEST_F(OOMListenerTest, test_oom) {
     if (listener == 0) {
       // child listener forwarding cgroup events
       _oom_listener_descriptors descriptors = {
-          .command = "test",
-          .event_fd = mock_oom_event_as_user,
-          .event_control_fd = -1,
-          .oom_control_fd = -1,
-          .event_control_path = {0},
-          .oom_control_path = {0},
-          .oom_command = {0},
-          .oom_command_len = 0,
-          .watch_timeout = 100
+          "test",
+          mock_oom_event_as_user,
+          -1,
+          -1,
+          {0},
+          {0},
+          {0},
+          0,
+          100
       };
       int ret = oom_listener(&descriptors, GetCGroup(), test_pipe[1]);
       cleanup(&descriptors);
@@ -256,7 +257,7 @@ TEST_F(OOMListenerTest, test_oom) {
       __pid_t exited0 = wait(mem_hog_status);
       ASSERT_EQ(mem_hog_pid, exited0)
         << "Wrong process exited";
-      ASSERT_EQ(nullptr, mem_hog_status)
+      ASSERT_EQ(NULL, mem_hog_status)
         << "Test process killed with invalid status";
 
       if (mock_oom_event_as_user != -1) {
@@ -275,7 +276,7 @@ TEST_F(OOMListenerTest, test_oom) {
       __pid_t exited1 = wait(oom_listener_status);
       ASSERT_EQ(listener, exited1)
         << "Wrong process exited";
-      ASSERT_EQ(nullptr, oom_listener_status)
+      ASSERT_EQ(NULL, oom_listener_status)
         << "Listener process exited with invalid status";
     }
   }
