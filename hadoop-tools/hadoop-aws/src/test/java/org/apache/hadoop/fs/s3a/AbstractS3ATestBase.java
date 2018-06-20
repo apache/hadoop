@@ -29,13 +29,10 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -78,23 +75,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    // set hadoop temp dir to a default value
-    String testUniqueForkId =
-        System.getProperty(TEST_UNIQUE_FORK_ID);
-    String tmpDir = conf.get(Constants.HADOOP_TMP_DIR, "target/build/test");
-    if (testUniqueForkId != null) {
-      // patch temp dir for the specific branch
-      tmpDir = tmpDir + File.pathSeparatorChar + testUniqueForkId;
-      conf.set(Constants.HADOOP_TMP_DIR, tmpDir);
-    }
-    conf.set(Constants.BUFFER_DIR, tmpDir);
-    // add this so that even on tests where the FS is shared,
-    // the FS is always "magic"
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
+    return S3ATestUtils.prepareTestConfiguration(super.createConfiguration());
   }
 
   protected Configuration getConfiguration() {

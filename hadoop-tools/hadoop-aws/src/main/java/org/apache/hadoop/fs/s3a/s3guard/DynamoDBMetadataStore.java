@@ -261,6 +261,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @Override
   @Retries.OnceRaw
   public void initialize(FileSystem fs) throws IOException {
+    Preconditions.checkNotNull(fs, "Null filesystem");
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
     owner = (S3AFileSystem) fs;
