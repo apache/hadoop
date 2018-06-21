@@ -334,6 +334,24 @@ public class TestServiceApiUtil {
   }
 
   @Test
+  public void testComponentNameSameAsServiceName() throws IOException {
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
+    Service app = new Service();
+    app.setName("test");
+    app.setVersion("v1");
+    app.addComponent(createValidComponent("test"));
+
+    //component name same as service name
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "component name matches service name");
+    } catch (IllegalArgumentException e) {
+      assertEquals("Component name test must not be same as service name test",
+          e.getMessage());
+    }
+  }
+
+  @Test
   public void testExternalDuplicateComponent() throws IOException {
     Service ext = createValidApplication("comp1");
     SliderFileSystem sfs = ServiceTestUtils.initMockFs(ext);
