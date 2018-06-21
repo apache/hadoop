@@ -28,6 +28,8 @@ public interface RestApiErrorMessages {
           "than 63 characters";
   String ERROR_COMPONENT_NAME_INVALID =
       "Component name must be no more than %s characters: %s";
+  String ERROR_COMPONENT_NAME_CONFLICTS_WITH_SERVICE_NAME =
+      "Component name %s must not be same as service name %s";
   String ERROR_USER_NAME_INVALID =
       "User name must be no more than 63 characters";
 
