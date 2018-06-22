@@ -216,6 +216,21 @@ public class SysInfoLinux extends SysInfo {
   }
 
   /**
+   *
+   * Wrapper for Long.parseLong() that returns zero if the value is
+   * invalid. Under some circumstances, swapFree in /proc/meminfo can
+   * go negative, reported as a very large decimal value.
+   */
+  private long safeParseLong(String strVal) {
+    long parsedVal;
+    try {
+      parsedVal = Long.parseLong(strVal);
+    } catch (NumberFormatException nfe) {
+      parsedVal = 0;
+    }
+    return parsedVal;
+  }
+  /**
    * Read /proc/meminfo, parse and compute memory information.
    * @param readAgain if false, read only on the first time
    */
@@ -251,9 +266,9 @@ public class SysInfoLinux extends SysInfo {
           } else if (mat.group(1).equals(SWAPTOTAL_STRING)) {
             swapSize = Long.parseLong(mat.group(2));
           } else if (mat.group(1).equals(MEMFREE_STRING)) {
-            ramSizeFree = Long.parseLong(mat.group(2));
+            ramSizeFree = safeParseLong(mat.group(2));
           } else if (mat.group(1).equals(SWAPFREE_STRING)) {
-            swapSizeFree = Long.parseLong(mat.group(2));
+            swapSizeFree = safeParseLong(mat.group(2));
           } else if (mat.group(1).equals(INACTIVE_STRING)) {
             inactiveSize = Long.parseLong(mat.group(2));
           } else if (mat.group(1).equals(INACTIVEFILE_STRING)) {
