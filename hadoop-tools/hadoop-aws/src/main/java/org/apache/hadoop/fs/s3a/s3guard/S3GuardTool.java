@@ -805,7 +805,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private void compareDir(FileStatus msDir, FileStatus s3Dir,
                             PrintStream out) throws IOException {
-      Preconditions.checkArgument(!(msDir == null && s3Dir == null));
+      Preconditions.checkArgument(!(msDir == null && s3Dir == null),
+          "The path does not exist in metadata store and on s3.");
+
       if (msDir != null && s3Dir != null) {
         Preconditions.checkArgument(msDir.getPath().equals(s3Dir.getPath()),
             String.format("The path from metadata store and s3 are different:" +
