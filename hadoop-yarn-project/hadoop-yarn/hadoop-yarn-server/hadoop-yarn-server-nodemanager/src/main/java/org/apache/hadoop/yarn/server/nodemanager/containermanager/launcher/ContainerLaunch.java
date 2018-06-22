@@ -817,25 +817,6 @@ public class ContainerLaunch implements Callable<Integer> {
       }
     }
 
-    final int sleepMsec = 100;
-    int msecLeft = 2000;
-    if (pidFilePath != null) {
-      File file = new File(getExitCodeFile(pidFilePath.toString()));
-      while (!file.exists() && msecLeft >= 0) {
-        try {
-          Thread.sleep(sleepMsec);
-        } catch (InterruptedException e) {
-        }
-        msecLeft -= sleepMsec;
-      }
-      if (msecLeft < 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Timeout while waiting for the exit code file:  "
-              + file.getAbsolutePath());
-        }
-      }
-    }
-
     // Reap the container
     boolean result = exec.reapContainer(
         new ContainerReapContext.Builder()
