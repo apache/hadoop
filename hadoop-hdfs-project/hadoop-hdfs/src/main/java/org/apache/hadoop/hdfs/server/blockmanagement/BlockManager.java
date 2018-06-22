@@ -4519,7 +4519,7 @@ public class BlockManager implements BlockStatsMXBean {
               datanodesAndStorages.add(node.getDatanodeUuid());
               datanodesAndStorages.add(storage.getStorageID());
             }
-            LOG.info("StorageInfo TreeSet fill ratio {} : {}{}",
+            LOG.debug("StorageInfo TreeSet fill ratio {} : {}{}",
                      storage.getStorageID(), ratio,
                      (ratio < storageInfoDefragmentRatio)
                      ? " (queued for defragmentation)" : "");
