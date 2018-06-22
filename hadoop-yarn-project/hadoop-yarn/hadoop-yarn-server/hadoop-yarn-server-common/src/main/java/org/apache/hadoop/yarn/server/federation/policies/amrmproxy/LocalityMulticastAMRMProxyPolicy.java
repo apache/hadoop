@@ -361,15 +361,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     for (SubClusterId targetId : targetSCs) {
       // if the calculated request is non-empty add it to the answer
       if (containerNums.get(i) > 0) {
-        ResourceRequest out =
-            ResourceRequest.newInstance(originalResourceRequest.getPriority(),
-                originalResourceRequest.getResourceName(),
-                originalResourceRequest.getCapability(),
-                originalResourceRequest.getNumContainers(),
-                originalResourceRequest.getRelaxLocality(),
-                originalResourceRequest.getNodeLabelExpression(),
-                originalResourceRequest.getExecutionTypeRequest());
-        out.setAllocationRequestId(allocationId);
+        ResourceRequest out = ResourceRequest.clone(originalResourceRequest);
         out.setNumContainers(containerNums.get(i));
         if (ResourceRequest.isAnyLocation(out.getResourceName())) {
           allocationBookkeeper.addAnyRR(targetId, out);

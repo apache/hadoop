@@ -165,7 +165,7 @@ public class ResourceRequestSet {
       // the same numContainers value
       Map<String, ResourceRequest> newAsks = new HashMap<>();
       for (ResourceRequest rr : this.asks.values()) {
-        ResourceRequest clone = cloneResourceRequest(rr);
+        ResourceRequest clone = ResourceRequest.clone(rr);
         clone.setNumContainers(newValue);
         newAsks.put(clone.getResourceName(), clone);
       }
@@ -176,20 +176,10 @@ public class ResourceRequestSet {
         throw new YarnException(
             "No ANY RR found in requestSet with numContainers=" + oldValue);
       }
-      ResourceRequest clone = cloneResourceRequest(rr);
+      ResourceRequest clone = ResourceRequest.clone(rr);
       clone.setNumContainers(newValue);
       this.asks.put(ResourceRequest.ANY, clone);
     }
-  }
-
-  private ResourceRequest cloneResourceRequest(ResourceRequest rr) {
-    return ResourceRequest.newBuilder().priority(rr.getPriority())
-        .resourceName(rr.getResourceName()).capability(rr.getCapability())
-        .numContainers(rr.getNumContainers())
-        .relaxLocality(rr.getRelaxLocality())
-        .nodeLabelExpression(rr.getNodeLabelExpression())
-        .executionTypeRequest(rr.getExecutionTypeRequest())
-        .allocationRequestId(rr.getAllocationRequestId()).build();
   }
 
   @Override
