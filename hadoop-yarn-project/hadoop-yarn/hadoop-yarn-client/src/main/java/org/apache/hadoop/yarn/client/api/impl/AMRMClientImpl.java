@@ -417,14 +417,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for(ResourceRequest r : ask) {
       // create a copy of ResourceRequest as we might change it while the
       // RPC layer is using it to send info across
-      ResourceRequest rr = ResourceRequest.newBuilder()
-          .priority(r.getPriority()).resourceName(r.getResourceName())
-          .capability(r.getCapability()).numContainers(r.getNumContainers())
-          .relaxLocality(r.getRelaxLocality())
-          .nodeLabelExpression(r.getNodeLabelExpression())
-          .executionTypeRequest(r.getExecutionTypeRequest())
-          .allocationRequestId(r.getAllocationRequestId()).build();
-      askList.add(rr);
+      askList.add(ResourceRequest.clone(r));
     }
     return askList;
   }

@@ -305,9 +305,8 @@ public class Application {
     
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
-    ask.add(
-        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
-            request)); // clone to ensure the RM doesn't manipulate the same obj
+    // clone to ensure the RM doesn't manipulate the same obj
+    ask.add(ResourceRequest.clone(request));
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("addResourceRequest: applicationId=" + applicationId.getId()
@@ -463,9 +462,8 @@ public class Application {
 
     // Note this for next interaction with ResourceManager
     ask.remove(request);
-    ask.add(
-        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
-        request)); // clone to ensure the RM doesn't manipulate the same obj
+    // clone to ensure the RM doesn't manipulate the same obj
+    ask.add(ResourceRequest.clone(request));
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("updateResourceRequest:" + " application=" + applicationId

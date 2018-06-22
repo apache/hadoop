@@ -371,18 +371,6 @@ public class BuilderUtils {
     return request;
   }
 
-  public static ResourceRequest newResourceRequest(ResourceRequest r) {
-    ResourceRequest request = recordFactory
-        .newRecordInstance(ResourceRequest.class);
-    request.setPriority(r.getPriority());
-    request.setResourceName(r.getResourceName());
-    request.setCapability(r.getCapability());
-    request.setNumContainers(r.getNumContainers());
-    request.setNodeLabelExpression(r.getNodeLabelExpression());
-    request.setExecutionTypeRequest(r.getExecutionTypeRequest());
-    return request;
-  }
-
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
       String user, String queue, String name, String host, int rpcPort,

@@ -568,11 +568,7 @@ public class TestAMRMClientOnRMRestart {
         ContainerUpdates updateRequests) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
-        ResourceRequest reqCopy =
-            ResourceRequest.newInstance(req.getPriority(),
-                req.getResourceName(), req.getCapability(),
-                req.getNumContainers(), req.getRelaxLocality());
-        askCopy.add(reqCopy);
+        askCopy.add(ResourceRequest.clone(req));
       }
       lastAsk = ask;
       lastRelease = release;

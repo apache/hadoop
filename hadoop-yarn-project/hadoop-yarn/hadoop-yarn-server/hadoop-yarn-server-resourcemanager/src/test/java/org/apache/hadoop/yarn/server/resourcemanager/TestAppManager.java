@@ -563,7 +563,8 @@ public class TestAppManager{
     ResourceRequest req =
         ResourceRequest.newInstance(Priority.newInstance(0),
             ResourceRequest.ANY, Resources.createResource(1025), 1, true);
-    asContext.setAMContainerResourceRequest(cloneResourceRequest(req));
+    req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    asContext.setAMContainerResourceRequest(ResourceRequest.clone(req));
     // getAMContainerResourceRequests uses a singleton list of
     // getAMContainerResourceRequest
     Assert.assertEquals(req, asContext.getAMContainerResourceRequest());
@@ -920,25 +921,11 @@ public class TestAppManager{
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
   }
 
-  private static ResourceRequest cloneResourceRequest(ResourceRequest req) {
-    return ResourceRequest.newInstance(
-        Priority.newInstance(req.getPriority().getPriority()),
-        new String(req.getResourceName()),
-        Resource.newInstance(req.getCapability().getMemorySize(),
-            req.getCapability().getVirtualCores()),
-        req.getNumContainers(),
-        req.getRelaxLocality(),
-        req.getNodeLabelExpression() != null
-            ? new String(req.getNodeLabelExpression()) : null,
-        ExecutionTypeRequest.newInstance(
-            req.getExecutionTypeRequest().getExecutionType()));
-  }
-
   private static List<ResourceRequest> cloneResourceRequests(
       List<ResourceRequest> reqs) {
     List<ResourceRequest> cloneReqs = new ArrayList<>();
     for (ResourceRequest req : reqs) {
-      cloneReqs.add(cloneResourceRequest(req));
+      cloneReqs.add(ResourceRequest.clone(req));
     }
     return cloneReqs;
   }
