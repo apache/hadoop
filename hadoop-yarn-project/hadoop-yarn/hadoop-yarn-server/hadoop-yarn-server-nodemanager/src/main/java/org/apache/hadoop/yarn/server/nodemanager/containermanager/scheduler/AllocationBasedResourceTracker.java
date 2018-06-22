@@ -56,11 +56,8 @@ public class AllocationBasedResourceTracker
     return this.containersAllocation;
   }
 
-  /**
-   * Get the amount of resources that have not been allocated to containers.
-   * @return Resource resources that have not been allocated to containers.
-   */
-  protected Resource getUnallocatedResources() {
+  @Override
+  public Resource getUnallocatedResources() {
     // unallocated resources = node capacity - containers allocation
     // = -(container allocation - node capacity)
     ResourceUtilization allocationClone =
@@ -79,7 +76,6 @@ public class AllocationBasedResourceTracker
     }
     return unallocated;
   }
-
 
   @Override
   public Resource getAvailableResources() {

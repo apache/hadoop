@@ -271,7 +271,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   /**
    * Check all prerequisites for NM over-allocation.
    */
-  private void checkOverAllocationPrerequisites() throws YarnException {
+  protected void checkOverAllocationPrerequisites() throws YarnException {
     // LinuxContainerExecutor is required to enable overallocation
     if (!(containerExecutor instanceof LinuxContainerExecutor)) {
       throw new YarnException(LinuxContainerExecutor.class.getName() +

@@ -61,7 +61,7 @@ public class UtilizationBasedResourceTracker
 
   @Override
   public Resource getAvailableResources() {
-    Resource resourceBasedOnAllocation = getUnallocatedResources();
+    Resource resourceBasedOnAllocation = super.getUnallocatedResources();
     Resource resourceBasedOnUtilization =
         getResourcesAvailableBasedOnUtilization();
     if (LOG.isDebugEnabled()) {

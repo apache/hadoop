@@ -236,7 +236,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.dirsHandler = dirsHandler;
 
     // ContainerManager level dispatcher.
-    dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
+    dispatcher = createDispatcher();
     this.deletionService = deletionContext;
     this.metrics = metrics;
 
@@ -293,6 +293,10 @@ public class ContainerManagerImpl extends CompositeService implements
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
+  }
+
+  protected AsyncDispatcher createDispatcher() {
+    return new AsyncDispatcher("NM ContainerManager dispatcher");
   }
 
   @Override

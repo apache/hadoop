@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
@@ -114,6 +115,9 @@ public class TestContainerSchedulerWithOverAllocation
     conf.setFloat(
         YarnConfiguration.NM_OVERALLOCATION_MEMORY_UTILIZATION_THRESHOLD,
         0.75f);
+    // disable the monitor thread in ContainersMonitor to allow control over
+    // when opportunistic containers are launched with over-allocation
+    conf.setBoolean(YarnConfiguration.NM_CONTAINER_MONITOR_ENABLED, false);
     super.setup();
   }
 
@@ -190,6 +194,27 @@ public class TestContainerSchedulerWithOverAllocation
                 BuilderUtils.newResource(512, 1), false))
     ));
 
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+
+    // this container is not expected to be started immediately because
+    // opportunistic containers cannot be started if the node would be
+    // over-allocated
+    BaseContainerManagerTest.waitForContainerSubState(
+        containerManager, createContainerId(2), ContainerSubState.SCHEDULED);
+
+    verifyContainerStatuses(new HashMap<ContainerId, ContainerSubState>() {
+      {
+        put(createContainerId(0), ContainerSubState.RUNNING);
+        put(createContainerId(1), ContainerSubState.RUNNING);
+        put(createContainerId(2), ContainerSubState.SCHEDULED);
+      }
+    });
+
+    // try to start opportunistic containers out of band.
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .startContainersOutOfBandUponLowUtilization();
+
     // this container is expected to be started immediately because there
     // are (memory: 1024, vcore: 0.625) available based on over-allocation
     BaseContainerManagerTest.waitForContainerSubState(
@@ -244,6 +269,16 @@ public class TestContainerSchedulerWithOverAllocation
             createStartContainerRequest(2,
                 BuilderUtils.newResource(512, 1), false))
     ));
+
+    // try to start opportunistic containers out of band because they can
+    // not be launched at container scheduler event if the node would be
+    // over-allocated.
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .startContainersOutOfBandUponLowUtilization();
+
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+
     // this container will not start immediately because there is not
     // enough resource available at the moment either in terms of
     // resources unallocated or in terms of the actual utilization
@@ -298,6 +333,27 @@ public class TestContainerSchedulerWithOverAllocation
             createStartContainerRequest(2,
                 BuilderUtils.newResource(512, 1), false))
     ));
+
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+
+    // this container is not expected to be started immediately because
+    // opportunistic containers cannot be started if the node would be
+    // over-allocated
+    BaseContainerManagerTest.waitForContainerSubState(
+        containerManager, createContainerId(2), ContainerSubState.SCHEDULED);
+
+    verifyContainerStatuses(new HashMap<ContainerId, ContainerSubState>() {
+      {
+        put(createContainerId(0), ContainerSubState.RUNNING);
+        put(createContainerId(1), ContainerSubState.RUNNING);
+        put(createContainerId(2), ContainerSubState.SCHEDULED);
+      }
+    });
+
+    // try to start opportunistic containers out of band.
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .startContainersOutOfBandUponLowUtilization();
 
     // this container is expected to be started because there is resources
     // available because the actual utilization is very low
@@ -354,6 +410,9 @@ public class TestContainerSchedulerWithOverAllocation
     }
     containerManager.startContainers(
         StartContainersRequest.newInstance(moreContainerRequests));
+
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
 
     // All OPPORTUNISTIC containers but the last one should be queued.
     // The last OPPORTUNISTIC container to launch should be killed.
@@ -580,12 +639,26 @@ public class TestContainerSchedulerWithOverAllocation
           }
         }
     ));
-    // All three GUARANTEED containers are all expected to start
-    // because the containers utilization is low (0 at the point)
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+
+    // Two OPPORTUNISTIC containers are expected to start with the
+    // unallocated resources, but one will be queued because no
+    // over-allocation is allowed at container scheduler events.
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(0), ContainerSubState.RUNNING);
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
+    BaseContainerManagerTest.waitForContainerSubState(containerManager,
+        createContainerId(2), ContainerSubState.SCHEDULED);
+
+    // try to start the opportunistic container out of band because it can
+    // not be launched at container scheduler event if the node would be
+    // over-allocated.
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .startContainersOutOfBandUponLowUtilization();
+
+    // now the queued opportunistic container should also start
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.RUNNING);
 
@@ -625,7 +698,6 @@ public class TestContainerSchedulerWithOverAllocation
    * and fourth OPPORTUNISTIC container (which releases no resources) and
    * then the second OPPORTUNISTIC container.
    */
-  @Test
   public void
       testKillOppContainersConservativelyWithOverallocationHighUtilization()
           throws Exception {
@@ -730,7 +802,7 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.RUNNING);
 
-    // the contianers utilization is at the overallocation threshold
+    // the container utilization is at the overallocation threshold
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(1536, 0, 1.0f/2));
 
@@ -740,7 +812,7 @@ public class TestContainerSchedulerWithOverAllocation
             add(createStartContainerRequest(3,
                 BuilderUtils.newResource(512, 1), false));
             add(createStartContainerRequest(4,
-                BuilderUtils.newResource(512, 1), false));
+                BuilderUtils.newResource(800, 1), false));
           }
         }
     ));
@@ -759,12 +831,35 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.DONE);
 
-    // the two OPPORTUNISTIC containers are expected to start together
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+
+    // only one OPPORTUNISTIC container is start because no over-allocation
+    // is allowed to start OPPORTUNISTIC containers at container finish event.
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(3), ContainerSubState.RUNNING);
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
-        createContainerId(4), ContainerSubState.RUNNING);
+        createContainerId(4), ContainerSubState.SCHEDULED);
 
+    verifyContainerStatuses(new HashMap<ContainerId, ContainerSubState>() {
+      {
+        put(createContainerId(0), ContainerSubState.RUNNING);
+        put(createContainerId(1), ContainerSubState.RUNNING);
+        put(createContainerId(2), ContainerSubState.DONE);
+        put(createContainerId(3), ContainerSubState.RUNNING);
+        put(createContainerId(4), ContainerSubState.SCHEDULED);
+      }
+    });
+
+    // now try to start the OPPORTUNISTIC container that was queued because
+    // we don't start OPPORTUNISTIC containers at container finish event if
+    // the node would be over-allocated
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .startContainersOutOfBandUponLowUtilization();
+    ((LongRunningContainerSimulatingContainersManager) containerManager)
+        .drainAsyncEvents();
+    BaseContainerManagerTest.waitForContainerSubState(containerManager,
+        createContainerId(4), ContainerSubState.RUNNING);
     verifyContainerStatuses(new HashMap<ContainerId, ContainerSubState>() {
       {
         put(createContainerId(0), ContainerSubState.RUNNING);
@@ -817,7 +912,7 @@ public class TestContainerSchedulerWithOverAllocation
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(1536, 0, 1.0f/2));
 
-    // try to start containers out of band.
+    // try to start opportunistic containers out of band.
     ((LongRunningContainerSimulatingContainersManager)containerManager)
         .startContainersOutOfBandUponLowUtilization();
 
@@ -937,6 +1032,11 @@ public class TestContainerSchedulerWithOverAllocation
       return ugi;
     }
 
+    @Override
+    protected AsyncDispatcher createDispatcher() {
+      return new DrainDispatcher();
+    }
+
     /**
      * Create a container launcher that signals container processes
      * with a dummy pid. The container processes are simulated in
@@ -976,6 +1076,10 @@ public class TestContainerSchedulerWithOverAllocation
     public void startContainersOutOfBandUponLowUtilization() {
       ((ContainerMonitorForOverallocationTest) getContainersMonitor())
           .attemptToStartContainersUponLowUtilization();
+    }
+
+    public void drainAsyncEvents() {
+      ((DrainDispatcher) dispatcher).await();
     }
   }
 
@@ -1112,6 +1216,12 @@ public class TestContainerSchedulerWithOverAllocation
       return new ContainersMonitor.ContainersResourceUtilization(
           containerResourceUsage, System.currentTimeMillis());
     }
+
+    @Override
+    protected void checkOverAllocationPrerequisites() {
+      // do not check
+    }
+
 
     public void setContainerResourceUsage(
         ResourceUtilization containerResourceUsage) {

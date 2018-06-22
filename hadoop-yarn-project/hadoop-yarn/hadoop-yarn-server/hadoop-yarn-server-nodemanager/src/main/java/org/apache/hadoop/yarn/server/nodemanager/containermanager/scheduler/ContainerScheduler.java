@@ -218,7 +218,9 @@ public class ContainerScheduler extends AbstractService implements
       startPendingContainers(false);
       break;
     case SCHEDULE_CONTAINERS:
-      startPendingContainers(true);
+      // try to launch OPPORTUNISTIC containers allowing over-allocation if the
+      // node utilization is low.
+      startOpportunisticContainers(utilizationTracker.getAvailableResources());
       break;
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
@@ -410,11 +412,7 @@ public class ContainerScheduler extends AbstractService implements
         this.metrics.completeOpportunisticContainer(container.getResource());
       }
 
-      // In case of over-allocation being turned on, we may need to reclaim
-      // more resources since the opportunistic containers that have been
-      // killed or paused may have not released as much resource as we need.
-      boolean reclaimOpportunisticResources = context.isOverAllocationEnabled();
-      startPendingContainers(reclaimOpportunisticResources);
+      startPendingContainers(false);
     }
   }
 
@@ -434,22 +432,32 @@ public class ContainerScheduler extends AbstractService implements
       return;
     }
 
+    boolean guaranteedContainersLaunched = startGuaranteedContainers(
+        reclaimOpportunisticResources);
+
+    if (guaranteedContainersLaunched) {
+      // if all GUARANTEED containers are launched, try to launch OPPORTUNISTIC
+      // containers with unallocated resources only.
+      startOpportunisticContainers(
+          utilizationTracker.getUnallocatedResources());
+    }
+  }
+
+  private boolean startGuaranteedContainers(
+      boolean reclaimOpportunisticResources) {
     Resource available = utilizationTracker.getAvailableResources();
 
     // Start guaranteed containers that are queued, if resources available.
     boolean allGuaranteedContainersLaunched =
         startGuaranteedContainers(available);
-    // Start opportunistic containers, if resources available, which is true
-    // if all guaranteed containers in queue have been launched.
-    if (allGuaranteedContainersLaunched) {
-      startOpportunisticContainers(available);
-    } else {
+
+    if (!allGuaranteedContainersLaunched && reclaimOpportunisticResources) {
       // If not all guaranteed containers in queue are launched, we may need
       // to reclaim resources from opportunistic containers that are running.
-      if (reclaimOpportunisticResources) {
-        reclaimOpportunisticContainerResources();
-      }
+      reclaimOpportunisticContainerResources();
     }
+
+    return allGuaranteedContainersLaunched;
   }
 
   /**
@@ -693,8 +701,6 @@ public class ContainerScheduler extends AbstractService implements
    *
    * If the node is over-allocating itself, this may cause not enough
    * OPPORTUNISTIC containers being killed/paused in cases where the running
-   * OPPORTUNISTIC containers are not consuming fully their resource requests.
-   * We'd check again upon container completion events to see if more running
    * OPPORTUNISTIC containers need to be killed/paused.
    *
    * @return the amount of resource needed to be reclaimed for this container

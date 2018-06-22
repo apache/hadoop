@@ -45,6 +45,12 @@ public interface ResourceUtilizationTracker {
   Resource getAvailableResources();
 
   /**
+   * Get the amount of resources left un-allocated.
+   * @return Resource unallocated resources
+   */
+  Resource getUnallocatedResources();
+
+  /**
    * Add Container's resources to Node Utilization upon container launch.
    * @param container Container.
    */
