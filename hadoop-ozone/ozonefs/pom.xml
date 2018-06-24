@@ -18,14 +18,13 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
-    <relativePath>../../hadoop-project</relativePath>
+    <artifactId>hadoop-ozone</artifactId>
+    <version>0.2.1-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-filesystem</artifactId>
   <name>Apache Hadoop Ozone FileSystem</name>
   <packaging>jar</packaging>
-
+  <version>0.2.1-SNAPSHOT</version>
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
@@ -46,6 +45,46 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.1.1</version>
+        <configuration>
+          <artifactSet>
+            <includes>
+              <include>com.google.guava:guava:jar</include>
+              <include>org.slf4j:slf4j-api:jar</include>
+              <include>com.google.protobuf:protobuf-java</include>
+              <include>com.nimbusds:nimbus-jose-jwt:jar</include>
+              <include>com.github.stephenc.jcip:jcip-annotations</include>
+              <include>com.google.code.findbugs:jsr305:jar</include>
+              <include>org.apache.hadoop:hadoop-ozone-client</include>
+              <include>org.apache.hadoop:hadoop-hdds-client</include>
+              <include>org.apache.hadoop:hadoop-hdds-common</include>
+              <include>org.fusesource.leveldbjni:leveldbjni-all</include>
+              <include>org.apache.ratis:ratis-server</include>
+              <include>org.apache.ratis:ratis-proto-shaded:jar</include>
+              <include>com.google.auto.value:auto-value-annotations</include>
+              <include>com.squareup:javapoet:jar</include>
+              <include>org.jctools:jctools-core</include>
+              <include>org.apache.ratis:ratis-common</include>
+              <include>org.apache.ratis:ratis-client</include>
+              <include>org.apache.ratis:ratis-netty</include>
+              <include>org.apache.ratis:ratis-grpc</include>
+              <include>org.rocksdb:rocksdbjni</include>
+              <include>org.apache.hadoop:hadoop-ozone-common</include>
+            </includes>
+          </artifactSet>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -56,7 +95,9 @@
             </goals>
             <configuration>
               <!-- build a shellprofile -->
-              <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt</outputFile>
+              <outputFile>
+                ${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt
+              </outputFile>
             </configuration>
           </execution>
         </executions>
@@ -83,7 +124,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -108,12 +148,10 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-client</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -129,7 +167,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-client</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

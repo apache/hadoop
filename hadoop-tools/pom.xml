@@ -67,15 +67,4 @@
       </plugin>
     </plugins>
   </build>
-  <profiles>
-    <profile>
-      <id>hdds</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <modules>
-        <module>hadoop-ozone</module>
-      </modules>
-    </profile>
-  </profiles>
 </project>
