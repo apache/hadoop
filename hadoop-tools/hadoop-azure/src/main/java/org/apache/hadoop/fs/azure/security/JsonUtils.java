@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azure.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.util.JsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +38,7 @@ public final class JsonUtils {
 
   public static Map<?, ?> parse(final String jsonString) throws IOException {
     try {
-      ObjectMapper mapper = new ObjectMapper();
-      return mapper.readerFor(Map.class).readValue(jsonString);
+      return JsonSerialization.mapReader().readValue(jsonString);
     } catch (Exception e) {
       LOG.debug("JSON Parsing exception: {} while parsing {}", e.getMessage(),
           jsonString);

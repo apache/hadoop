@@ -42,6 +42,7 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
@@ -79,7 +80,6 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -131,9 +131,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final int DEFAULT_AUTH_RETRY = 1;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
-
-  private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
 
   private final Text dtService;
 
@@ -237,7 +234,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static void writeJson(Object obj, OutputStream os)
       throws IOException {
     Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-    WRITER.writeValue(writer, obj);
+    JsonSerialization.writer().writeValue(writer, obj);
   }
 
   /**
