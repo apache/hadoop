@@ -29,10 +29,21 @@ docker build -t apache/hadoop-runner .
 
 ## Usage
 
-Do a full build on the HDFS-7240 branch of apache hadoop repositry
+Do a full build on Apache Hadoop trunk with the `hdds` profile enabled.
+```
+mvn clean install package -DskipTests -Pdist,hdds -Dtar -Dmaven.javadoc.skip=true
+```
+
+Then start HDDS services with `docker-compose`.
 
 ```
-cd dev-support/compose/ozone
+cd hadoop-dist/target/compose/ozone
 docker-compose up -d
 ```
 
+## Troubleshooting
+
+If `docker-compose` fails to work, check that the `hadoop-dist/target/compose/ozone/.env` file exists and has a line like the following (the exact version number may be different):
+```
+    HDDS_VERSION=0.2.1-SNAPSHOT
+```
