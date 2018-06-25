@@ -94,7 +94,7 @@ public class ClusterMetricsInfo {
     if (rs instanceof CapacityScheduler) {
       this.totalMB = availableMB + allocatedMB + reservedMB;
       this.totalVirtualCores =
-          availableVirtualCores + allocatedVirtualCores + containersReserved;
+          availableVirtualCores + allocatedVirtualCores + reservedVirtualCores;
     } else {
       this.totalMB = availableMB + allocatedMB;
       this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
