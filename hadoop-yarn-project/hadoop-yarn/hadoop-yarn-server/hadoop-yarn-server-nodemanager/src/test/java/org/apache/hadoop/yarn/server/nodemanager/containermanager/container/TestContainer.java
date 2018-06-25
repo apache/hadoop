@@ -116,7 +116,7 @@ public class TestContainer {
   final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   final Configuration conf = new YarnConfiguration();
   final String FAKE_LOCALIZATION_ERROR = "Fake localization error";
-  
+
   /**
    * Verify correct container request events sent to localizer.
    */
@@ -591,9 +591,8 @@ public class TestContainer {
       Assert.assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           containerMetrics.exitCode.value());
       Assert.assertTrue(containerMetrics.startTime.value() > 0);
-      Assert.assertTrue(
-          containerMetrics.finishTime.value() > containerMetrics.startTime
-              .value());
+      Assert.assertTrue(containerMetrics.finishTime.value() >=
+              containerMetrics.startTime.value());
       Assert.assertEquals(ContainerEventType.KILL_CONTAINER,
           wc.initStateToEvent.get(ContainerState.NEW));
       Assert.assertEquals(ContainerState.DONE,
@@ -1612,4 +1611,5 @@ public class TestContainer {
       return ((ContainerImpl)c).getRetryPolicy();
     }
   }
+
 }
