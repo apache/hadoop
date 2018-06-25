@@ -836,7 +836,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       throws IOException {
     DirListingMetadata dirMeta = ms.listChildren(strToPath(pathStr));
     if (!allowMissing()) {
-      assertNotNull("Directory " + pathStr + " in cache", dirMeta);
+      assertNotNull("Directory " + pathStr + " is null in cache", dirMeta);
     }
     if (!allowMissing() || dirMeta != null) {
       dirMeta = dirMeta.withoutTombstones();
