@@ -55,6 +55,9 @@ public final class Options {
         ChecksumOpt csumOpt) {
       return new ChecksumParam(csumOpt);
     }
+    public static Progress progress(Progressable prog) {
+      return new Progress(prog);
+    }
     public static Perms perms(FsPermission perm) {
       return new Perms(perm);
     }
