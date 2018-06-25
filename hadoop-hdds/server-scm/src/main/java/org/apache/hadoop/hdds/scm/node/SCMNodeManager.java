@@ -25,6 +25,10 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.server.events.Event;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -42,11 +46,14 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+
+import com.google.protobuf.GeneratedMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +107,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  * as soon as you read it.
  */
 public class SCMNodeManager
-    implements NodeManager, StorageContainerNodeProtocol {
+    implements NodeManager, StorageContainerNodeProtocol,
+    EventHandler<CommandForDatanode> {
 
   @VisibleForTesting
   static final Logger LOG =
@@ -153,6 +161,9 @@ public class SCMNodeManager
   // Node pool manager.
   private final SCMNodePoolManager nodePoolManager;
   private final StorageContainerManager scmManager;
+
+  public static final Event<CommandForDatanode> DATANODE_COMMAND =
+      new TypedEvent<>(CommandForDatanode.class, "DATANODE_COMMAND");
 
   /**
    * Constructs SCM machine Manager.
@@ -870,5 +881,12 @@ public class SCMNodeManager
   @VisibleForTesting
   public void setStaleNodeIntervalMs(long interval) {
     this.staleNodeIntervalMs = interval;
+  }
+
+  @Override
+  public void onMessage(CommandForDatanode commandForDatanode,
+      EventPublisher publisher) {
+    addDatanodeCommand(commandForDatanode.getDatanodeId(),
+        commandForDatanode.getCommand());
   }
 }

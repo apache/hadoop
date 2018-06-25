@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -29,7 +30,10 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
@@ -1165,4 +1169,39 @@ public class TestNodeManager {
       assertEquals(expectedRemaining, foundRemaining);
     }
   }
+
+  @Test
+  public void testHandlingSCMCommandEvent() {
+    OzoneConfiguration conf = getConf();
+    conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        100, TimeUnit.MILLISECONDS);
+
+    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    String dnId = datanodeDetails.getUuidString();
+    String storagePath = testDir.getAbsolutePath() + "/" + dnId;
+    List<StorageReportProto> reports =
+        TestUtils.createStorageReport(100, 10, 90,
+            storagePath, null, dnId, 1);
+
+    EventQueue eq = new EventQueue();
+    try (SCMNodeManager nodemanager = createNodeManager(conf)) {
+      eq.addHandler(SCMNodeManager.DATANODE_COMMAND, nodemanager);
+
+      nodemanager
+          .register(datanodeDetails, TestUtils.createNodeReport(reports));
+      eq.fireEvent(SCMNodeManager.DATANODE_COMMAND,
+          new CommandForDatanode(datanodeDetails.getUuid(),
+              new CloseContainerCommand(1L, ReplicationType.STAND_ALONE)));
+
+      eq.processAll(1000L);
+      List<SCMCommand> command =
+          nodemanager.sendHeartbeat(datanodeDetails, null);
+      Assert.assertEquals(1, command.size());
+      Assert
+          .assertEquals(command.get(0).getClass(), CloseContainerCommand.class);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
 }

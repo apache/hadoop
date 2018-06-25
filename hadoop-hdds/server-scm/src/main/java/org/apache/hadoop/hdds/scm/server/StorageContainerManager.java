@@ -43,6 +43,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -51,6 +52,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.common.StorageInfo;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
@@ -161,8 +163,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       throw new SCMException("SCM not initialized.", ResultCodes
           .SCM_NOT_INITIALIZED);
     }
+    EventQueue eventQueue = new EventQueue();
 
-    scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
+    SCMNodeManager nm = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
+    scmNodeManager = nm;
+    eventQueue.addHandler(SCMNodeManager.DATANODE_COMMAND, nm);
+
     scmContainerManager = new ContainerMapping(conf, getScmNodeManager(),
         cacheSize);
 
