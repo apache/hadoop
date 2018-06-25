@@ -25,14 +25,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +68,26 @@ public class JsonSerialization<T> {
 
   private final Class<T> classType;
   private final ObjectMapper mapper;
+
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
+
+  private static final ObjectReader MAP_READER =
+      new ObjectMapper().readerFor(Map.class);
+
+  /**
+   * @return an ObjectWriter which pretty-prints its output
+   */
+  public static ObjectWriter writer() {
+    return WRITER;
+  }
+
+  /**
+   * @return an ObjectReader which returns simple Maps.
+   */
+  public static ObjectReader mapReader() {
+    return MAP_READER;
+  }
 
   /**
    * Create an instance bound to a specific type.
