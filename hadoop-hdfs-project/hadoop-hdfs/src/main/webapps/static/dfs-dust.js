@@ -118,7 +118,7 @@
         if (to_be_completed === 0) {
           success_cb(data);
         }
-      }).error(function (jqxhr, text, err) {
+      }).fail(function (jqxhr, text, err) {
         error = true;
         error_cb(b.url, jqxhr, text, err);
       });
