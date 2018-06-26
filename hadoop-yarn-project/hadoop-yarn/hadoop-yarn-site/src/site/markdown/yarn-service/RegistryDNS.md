@@ -58,7 +58,7 @@ primary DNS server can be configured to forward a zone to the registry DNS
 server.
 2. The DNS Server exposes a port that can receive both TCP and UDP requests per
 DNS standards. The default port for DNS protocols is not in the restricted
-range (5353). However, existing DNS assets may only allow zone forwarding to
+range (5335). However, existing DNS assets may only allow zone forwarding to
 non-custom ports. To support this, the registry DNS server can be started in
 privileged mode.
 
@@ -136,7 +136,7 @@ standard DNS requests from users or other DNS servers (for example, DNS servers 
 RegistryDNS service configured as a forwarder).
 
 ## Start the DNS Server
-By default, the DNS server runs on non-privileged port `5353`. Start the server
+By default, the DNS server runs on non-privileged port `5335`. Start the server
 with:
 ```
 yarn --daemon start registrydns
@@ -157,7 +157,7 @@ The Registry DNS server reads its configuration properties from the yarn-site.xm
 | hadoop.registry.dns.enabled | The DNS functionality is enabled for the cluster. Default is false. |
 | hadoop.registry.dns.domain-name  | The domain name for Hadoop cluster associated records.  |
 | hadoop.registry.dns.bind-address | Address associated with the network interface to which the DNS listener should bind.  |
-| hadoop.registry.dns.bind-port | The port number for the DNS listener. The default port is 5353.  |
+| hadoop.registry.dns.bind-port | The port number for the DNS listener. The default port is 5335.  |
 | hadoop.registry.dns.dnssec.enabled | Indicates whether the DNSSEC support is enabled. Default is false.  |
 | hadoop.registry.dns.public-key  | The base64 representation of the server’s public key. Leveraged for creating the DNSKEY Record provided for DNSSEC client requests.  |
 | hadoop.registry.dns.private-key-file  | The path to the standard DNSSEC private key file. Must only be readable by the DNS launching identity. See [dnssec-keygen](https://ftp.isc.org/isc/bind/cur/9.9/doc/arm/man.dnssec-keygen.html) documentation.  |
@@ -174,10 +174,10 @@ The Registry DNS server reads its configuration properties from the yarn-site.xm
   </property>
 
   <property>
-    <description>The port number for the DNS listener. The default port is 5353.
+    <description>The port number for the DNS listener. The default port is 5335.
     If the standard privileged port 53 is used, make sure start the DNS with jsvc support.</description>
     <name>hadoop.registry.dns.bind-port</name>
-    <value>5353</value>
+    <value>5335</value>
   </property>
 
   <property>

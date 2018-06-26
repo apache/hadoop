@@ -94,10 +94,10 @@ section of [Registry DNS](RegistryDNS.html).
   </property>
 
   <property>
-    <description>The port number for the DNS listener. The default port is 5353.
+    <description>The port number for the DNS listener. The default port is 5335.
     If the standard privileged port 53 is used, make sure start the DNS with jsvc support.</description>
     <name>hadoop.registry.dns.bind-port</name>
-    <value>5353</value>
+    <value>5335</value>
   </property>
 
   <property>
@@ -135,7 +135,7 @@ To configure Registry DNS to serve reverse lookup for `172.17.0.0/24`
   </property>
 ```
 ## Start Registry DNS Server
-By default, the DNS server runs on non-privileged port `5353`. Start the server
+By default, the DNS server runs on non-privileged port `5335`. Start the server
 with:
 ```
 yarn --daemon start registrydns
