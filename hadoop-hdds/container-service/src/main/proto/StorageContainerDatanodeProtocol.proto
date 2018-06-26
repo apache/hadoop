@@ -172,6 +172,7 @@ message SCMCommandProto {
     deleteBlocksCommand = 2;
     closeContainerCommand = 3;
     deleteContainerCommand = 4;
+    replicateContainerCommand = 5;
   }
   // TODO: once we start using protoc 3.x, refactor this message using "oneof"
   required Type commandType = 1;
@@ -179,6 +180,7 @@ message SCMCommandProto {
   optional DeleteBlocksCommandProto deleteBlocksCommandProto = 3;
   optional CloseContainerCommandProto closeContainerCommandProto = 4;
   optional DeleteContainerCommandProto deleteContainerCommandProto = 5;
+  optional ReplicateContainerCommandProto replicateContainerCommandProto = 6;
 }
 
 /**
@@ -227,10 +229,18 @@ message CloseContainerCommandProto {
 }
 
 /**
-This command asks the datanode to close a specific container.
+This command asks the datanode to delete a specific container.
 */
 message DeleteContainerCommandProto {
   required int64 containerID = 1;
+}
+
+/**
+This command asks the datanode to replicate a container from specific sources.
+*/
+message ReplicateContainerCommandProto {
+  required int64 containerID = 1;
+  repeated DatanodeDetailsProto sources = 2;
 }
 
 /**
