@@ -1111,7 +1111,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
                 "ws")
             .with(conf)
             .withServlet("API-Service", "/app/*",
-                ServletContainer.class, params)
+                ServletContainer.class, params, false)
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(

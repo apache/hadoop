@@ -83,6 +83,7 @@ public class WebApps {
       public String name;
       public String spec;
       public Map<String, String> params;
+      public boolean loadExistingFilters = true;
     }
     
     final String name;
@@ -151,12 +152,13 @@ public class WebApps {
 
     public Builder<T> withServlet(String name, String pathSpec,
         Class<? extends HttpServlet> servlet,
-        Map<String, String> params) {
+        Map<String, String> params,boolean loadExistingFilters) {
       ServletStruct struct = new ServletStruct();
       struct.clazz = servlet;
       struct.name = name;
       struct.spec = pathSpec;
       struct.params = params;
+      struct.loadExistingFilters = loadExistingFilters;
       servlets.add(struct);
       return this;
     }
@@ -256,9 +258,15 @@ public class WebApps {
           pathList.add("/" + wsName + "/*");
         }
       }
+
       for (ServletStruct s : servlets) {
         if (!pathList.contains(s.spec)) {
-          pathList.add(s.spec);
+          // The servlet told us to not load-existing filters, but we still want
+          // to add the default authentication filter always, so add it to the
+          // pathList
+          if (!s.loadExistingFilters) {
+            pathList.add(s.spec);
+          }
         }
       }
       if (conf == null) {
@@ -333,7 +341,7 @@ public class WebApps {
         HttpServer2 server = builder.build();
 
         for(ServletStruct struct: servlets) {
-          if (struct.params != null) {
+          if (!struct.loadExistingFilters) {
             server.addInternalServlet(struct.name, struct.spec,
                 struct.clazz, struct.params);
           } else {
