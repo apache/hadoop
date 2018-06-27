@@ -28,7 +28,6 @@ Startup Ozone cluster with size
 Daemons are running without error
     Is daemon running without error           ksm
     Is daemon running without error           scm
-    Is daemon running without error           namenode
     Is daemon running without error           datanode
 
 Check if datanode is connected to the scm
