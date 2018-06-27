@@ -73,7 +73,7 @@ import static org.apache.hadoop.hdds.protocol.proto
 
 
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.server.report.SCMDatanodeHeartbeatDispatcher;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -122,13 +122,18 @@ public class SCMDatanodeProtocolServer implements
   private final SCMDatanodeHeartbeatDispatcher heartbeatDispatcher;
 
   public SCMDatanodeProtocolServer(final OzoneConfiguration conf,
-      StorageContainerManager scm)  throws IOException {
+      StorageContainerManager scm, EventPublisher eventPublisher)
+      throws IOException {
 
     Preconditions.checkNotNull(scm, "SCM cannot be null");
+    Preconditions.checkNotNull(eventPublisher, "EventPublisher cannot be null");
+
     this.scm = scm;
     final int handlerCount =
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
+
+    heartbeatDispatcher = new SCMDatanodeHeartbeatDispatcher(eventPublisher);
 
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -155,10 +160,6 @@ public class SCMDatanodeProtocolServer implements
             conf, OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr,
             datanodeRpcServer);
 
-    heartbeatDispatcher = SCMDatanodeHeartbeatDispatcher.newBuilder(conf, scm)
-        .addHandlerFor(NodeReportProto.class)
-        .addHandlerFor(ContainerReportsProto.class)
-        .build();
   }
 
   public void start() {
@@ -319,7 +320,6 @@ public class SCMDatanodeProtocolServer implements
     try {
       LOG.info("Stopping the RPC server for DataNodes");
       datanodeRpcServer.stop();
-      heartbeatDispatcher.shutdown();
     } catch (Exception ex) {
       LOG.error(" datanodeRpcServer stop failed.", ex);
     }
