@@ -280,10 +280,11 @@ public class TestBlockDeletingService {
     ContainerManager containerManager = createContainerManager(conf);
     createToDeleteBlocks(containerManager, conf, 1, 3, 1, chunksDir);
 
-    // set timeout value as 1ms to trigger timeout behavior
+    // set timeout value as 1ns to trigger timeout behavior
     long timeout  = 1;
-    BlockDeletingService svc =
-        new BlockDeletingService(containerManager, 1000, timeout, conf);
+    BlockDeletingService svc = new BlockDeletingService(containerManager,
+        TimeUnit.MILLISECONDS.toNanos(1000), timeout, TimeUnit.NANOSECONDS,
+        conf);
     svc.start();
 
     LogCapturer log = LogCapturer.captureLogs(BackgroundService.LOG);
@@ -303,7 +304,9 @@ public class TestBlockDeletingService {
     // test for normal case that doesn't have timeout limitation
     timeout  = 0;
     createToDeleteBlocks(containerManager, conf, 1, 3, 1, chunksDir);
-    svc =  new BlockDeletingService(containerManager, 1000, timeout, conf);
+    svc = new BlockDeletingService(containerManager,
+        TimeUnit.MILLISECONDS.toNanos(1000), timeout, TimeUnit.NANOSECONDS,
+        conf);
     svc.start();
 
     // get container meta data

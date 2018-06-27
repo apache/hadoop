@@ -122,7 +122,7 @@ public class OzoneContainer {
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
     this.blockDeletingService = new BlockDeletingService(manager,
-        svcInterval, serviceTimeout, ozoneConfig);
+        svcInterval, serviceTimeout, TimeUnit.MILLISECONDS, ozoneConfig);
 
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
