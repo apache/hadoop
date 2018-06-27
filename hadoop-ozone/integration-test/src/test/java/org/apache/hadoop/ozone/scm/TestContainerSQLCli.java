@@ -51,9 +51,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 
+import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
+import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This class tests the CLI that transforms container into SQLite DB files.
@@ -171,6 +174,34 @@ public class TestContainerSQLCli {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testConvertNodepoolDB() throws Exception {
+    String dbOutPath = GenericTestUtils.getTempPath(
+        UUID.randomUUID() + "/out_sql.db");
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+    String dbPath = dbRootPath + "/" + NODEPOOL_DB;
+    String[] args = {"-p", dbPath, "-o", dbOutPath};
+
+    cli.run(args);
+
+    // verify the sqlite db
+    HashMap<String, String> expectedPool = new HashMap<>();
+    for (DatanodeDetails dnid : nodeManager.getAllNodes()) {
+      expectedPool.put(dnid.getUuidString(), "DefaultNodePool");
+    }
+    Connection conn = connectDB(dbOutPath);
+    String sql = "SELECT * FROM nodePool";
+    ResultSet rs = executeQuery(conn, sql);
+    while(rs.next()) {
+      String datanodeUUID = rs.getString("datanodeUUID");
+      String poolName = rs.getString("poolName");
+      assertTrue(expectedPool.remove(datanodeUUID).equals(poolName));
+    }
+    assertEquals(0, expectedPool.size());
+
+    Files.delete(Paths.get(dbOutPath));
   }
 
   @Test

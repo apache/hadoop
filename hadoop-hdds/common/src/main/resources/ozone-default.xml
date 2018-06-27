@@ -572,6 +572,25 @@
     </description>
   </property>
   <property>
+    <name>ozone.scm.container.report.processing.interval</name>
+    <value>60s</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>Time interval for scm to process container reports
+      for a node pool. Scm handles node pool reports in a cyclic clock
+      manner, it fetches pools periodically with this time interval.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.reports.wait.timeout</name>
+    <value>300s</value>
+    <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
+    <description>Maximum time to wait in seconds for processing all container
+      reports from
+      a node pool. It determines the timeout for a
+      node pool report.
+    </description>
+  </property>
+  <property>
     <name>ozone.scm.container.size.gb</name>
     <value>5</value>
     <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
@@ -774,6 +793,17 @@
     </description>
   </property>
   <property>
+    <name>ozone.scm.max.container.report.threads</name>
+    <value>100</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Maximum number of threads to process container reports in scm.
+      Each container report from a data node is processed by scm in a worker
+      thread, fetched from a thread pool. This property is used to control the
+      maximum size of the thread pool.
+    </description>
+  </property>
+  <property>
     <name>ozone.scm.max.hb.count.to.process</name>
     <value>5000</value>
     <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
@@ -782,6 +812,14 @@
       heartbeat process thread. Please see
       ozone.scm.heartbeat.thread.interval
       for more info.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
+    <description>
+      Number of node pools to process in parallel.
     </description>
   </property>
   <property>
@@ -803,6 +841,15 @@
     <description>
       The interval for stale node flagging. Please
       see ozone.scm.heartbeat.thread.interval before changing this value.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Controls the number of node pools that can be processed in parallel by
+      Container Supervisor.
     </description>
   </property>
   <property>
