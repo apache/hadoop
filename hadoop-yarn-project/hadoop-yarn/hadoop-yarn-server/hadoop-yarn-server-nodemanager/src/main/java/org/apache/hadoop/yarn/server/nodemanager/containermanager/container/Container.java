@@ -105,4 +105,10 @@ public interface Container extends EventHandler<ContainerEvent> {
   ResourceMappings getResourceMappings();
 
   void sendPauseEvent(String description);
+
+  /**
+   * Verify container is in final states.
+   * @return true/false based on container's state
+   */
+  boolean isContainerInFinalStates();
 }

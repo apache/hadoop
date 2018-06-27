@@ -250,4 +250,7 @@ public class MockContainer implements Container {
   public void sendPauseEvent(String description) {
 
   }
+  @Override public boolean isContainerInFinalStates() {
+    return false;
+  }
 }
