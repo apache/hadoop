@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.container;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.node.NodePoolManager;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -271,11 +270,6 @@ public class MockNodeManager implements NodeManager {
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
     return new SCMNodeMetric(nodeMetricMap.get(datanodeDetails.getUuid()));
-  }
-
-  @Override
-  public NodePoolManager getNodePoolManager() {
-    return Mockito.mock(NodePoolManager.class);
   }
 
   /**
