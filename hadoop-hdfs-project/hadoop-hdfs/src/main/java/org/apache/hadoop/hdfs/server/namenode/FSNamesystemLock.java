@@ -332,7 +332,7 @@ class FSNamesystemLock {
 
   private static String getMetricName(String operationName, boolean isWrite) {
     return (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
-        org.apache.commons.lang.StringUtils.capitalize(operationName) +
+        org.apache.commons.lang3.StringUtils.capitalize(operationName) +
         LOCK_METRIC_SUFFIX;
   }
 }

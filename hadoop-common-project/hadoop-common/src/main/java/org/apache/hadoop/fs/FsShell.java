@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 
-import org.apache.commons.lang.WordUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -275,7 +274,7 @@ public class FsShell extends Configured implements Tool {
         listing = null;
       }
 
-      for (String descLine : WordUtils.wrap(
+      for (String descLine : StringUtils.wrap(
           line, MAX_LINE_WIDTH, "\n", true).split("\n")) {
         out.println(prefix + descLine);
       }

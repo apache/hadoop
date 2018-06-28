@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import com.microsoft.azure.storage.blob.BlockEntry;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;

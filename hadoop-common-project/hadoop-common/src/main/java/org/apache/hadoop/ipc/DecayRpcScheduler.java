@@ -39,7 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -429,7 +429,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       updateAverageResponseTime(true);
     } catch (Exception ex) {
       LOG.error("decayCurrentCounts exception: " +
-          ExceptionUtils.getFullStackTrace(ex));
+          ExceptionUtils.getStackTrace(ex));
       throw ex;
     }
   }
