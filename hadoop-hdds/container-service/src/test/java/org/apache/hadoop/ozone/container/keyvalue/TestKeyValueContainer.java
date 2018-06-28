@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
@@ -85,8 +86,7 @@ public class TestKeyValueContainer {
     Mockito.when(volumeChoosingPolicy.chooseVolume(anyList(), anyLong()))
         .thenReturn(hddsVolume);
 
-    keyValueContainerData = new KeyValueContainerData(
-        ContainerProtos.ContainerType.KeyValueContainer, 1L);
+    keyValueContainerData = new KeyValueContainerData(1L);
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -197,7 +197,8 @@ public class TestKeyValueContainer {
     File containerFile = KeyValueContainerLocationUtil.getContainerFile(
         containerMetaDataLoc, containerName);
 
-    keyValueContainerData = KeyValueYaml.readContainerFile(containerFile);
+    keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
     assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
         keyValueContainerData.getState());
   }
@@ -237,7 +238,8 @@ public class TestKeyValueContainer {
     File containerFile = KeyValueContainerLocationUtil.getContainerFile(
         containerMetaDataLoc, containerName);
 
-    keyValueContainerData = KeyValueYaml.readContainerFile(containerFile);
+    keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
     assertEquals(2, keyValueContainerData.getMetadata().size());
 
   }

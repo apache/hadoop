@@ -53,8 +53,7 @@ public class TestContainerSet {
     ContainerProtos.ContainerLifeCycleState state = ContainerProtos
         .ContainerLifeCycleState.CLOSED;
 
-    KeyValueContainerData kvData = new KeyValueContainerData(
-        ContainerProtos.ContainerType.KeyValueContainer, containerId);
+    KeyValueContainerData kvData = new KeyValueContainerData(containerId);
     kvData.setState(state);
     KeyValueContainer keyValueContainer = new KeyValueContainer(kvData, new
         OzoneConfiguration());
@@ -164,8 +163,7 @@ public class TestContainerSet {
   private ContainerSet createContainerSet() throws StorageContainerException {
     ContainerSet containerSet = new ContainerSet();
     for (int i=0; i<10; i++) {
-      KeyValueContainerData kvData = new KeyValueContainerData(
-          ContainerProtos.ContainerType.KeyValueContainer, i);
+      KeyValueContainerData kvData = new KeyValueContainerData(i);
       if (i%2 == 0) {
         kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
       } else {

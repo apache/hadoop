@@ -27,8 +27,13 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
+import org.apache.hadoop.ozone.container.common.impl.StorageLocationReport;
 import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume.VolumeState;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
@@ -308,5 +313,48 @@ public class VolumeSet {
   @VisibleForTesting
   public Map<StorageType, List<HddsVolume>> getVolumeStateMap() {
     return ImmutableMap.copyOf(volumeStateMap);
+  }
+
+  public StorageContainerDatanodeProtocolProtos.NodeReportProto getNodeReport()
+      throws IOException {
+    boolean failed;
+    StorageLocationReport[] reports =
+        new StorageLocationReport[volumeMap.size()];
+    int counter = 0;
+    for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
+      HddsVolume hddsVolume = entry.getValue();
+      VolumeInfo volumeInfo = hddsVolume.getVolumeInfo();
+      long scmUsed = 0;
+      long remaining = 0;
+      failed = false;
+      try {
+        scmUsed = volumeInfo.getScmUsed();
+        remaining = volumeInfo.getAvailable();
+      } catch (IOException ex) {
+        LOG.warn("Failed to get scmUsed and remaining for container " +
+            "storage location {}", volumeInfo.getRootDir());
+        // reset scmUsed and remaining if df/du failed.
+        scmUsed = 0;
+        remaining = 0;
+        failed = true;
+      }
+
+      StorageLocationReport.Builder builder =
+          StorageLocationReport.newBuilder();
+      builder.setStorageLocation(volumeInfo.getRootDir())
+          .setId(hddsVolume.getStorageID())
+          .setFailed(failed)
+          .setCapacity(hddsVolume.getCapacity())
+          .setRemaining(remaining)
+          .setScmUsed(scmUsed)
+          .setStorageType(hddsVolume.getStorageType());
+      StorageLocationReport r = builder.build();
+      reports[counter++] = r;
+    }
+    NodeReportProto.Builder nrb = NodeReportProto.newBuilder();
+    for (int i = 0; i < reports.length; i++) {
+      nrb.addStorageReport(reports[i].getProtoBufMessage());
+    }
+    return nrb.build();
   }
 }

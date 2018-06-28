@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.sun.jersey.spi.resource.Singleton;
@@ -93,16 +94,16 @@ public class KeyValueHandler extends Handler {
   // TODO : Add metrics and populate it.
 
   public static KeyValueHandler getInstance(Configuration config,
-      ContainerSet contSet, VolumeSet volSet, String scmID) {
+      ContainerSet contSet, VolumeSet volSet) {
     if (INSTANCE == null) {
-      INSTANCE = new KeyValueHandler(config, contSet, volSet, scmID);
+      INSTANCE = new KeyValueHandler(config, contSet, volSet);
     }
     return INSTANCE;
   }
 
   private KeyValueHandler(Configuration config, ContainerSet contSet,
-      VolumeSet volSet, String scmID) {
-    super(config, contSet, volSet, scmID);
+      VolumeSet volSet) {
+    super(config, contSet, volSet);
     containerType = ContainerType.KeyValueContainer;
     keyManager = new KeyManagerImpl(config);
     chunkManager = new ChunkManagerImpl();
@@ -156,6 +157,16 @@ public class KeyValueHandler extends Handler {
     return null;
   }
 
+  @VisibleForTesting
+  public ChunkManager getChunkManager() {
+    return this.chunkManager;
+  }
+
+  @VisibleForTesting
+  public KeyManager getKeyManager() {
+    return this.keyManager;
+  }
+
   /**
    * Handles Create Container Request. If successful, adds the container to
    * ContainerSet.
@@ -180,7 +191,7 @@ public class KeyValueHandler extends Handler {
     }
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
-        containerType, containerID);
+        containerID);
     // TODO: Add support to add metadataList to ContainerData. Add metadata
     // to container during creation.
     KeyValueContainer newContainer = new KeyValueContainer(
@@ -262,7 +273,6 @@ public class KeyValueHandler extends Handler {
 
     boolean forceDelete = request.getDeleteContainer().getForceDelete();
     kvContainer.writeLock();
-
     try {
       // Check if container is open
       if (kvContainer.getContainerData().isOpen()) {

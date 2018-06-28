@@ -74,9 +74,10 @@ public class TestKeyValueHandler {
         .build();
     this.volumeSet = new VolumeSet(datanodeDetails, conf);
 
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, SCM_ID);
-    this.handler = (KeyValueHandler) dispatcher.getHandlerForContainerType(
+    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
+    this.handler = (KeyValueHandler) dispatcher.getHandler(
         ContainerProtos.ContainerType.KeyValueContainer);
+    dispatcher.setScmId(UUID.randomUUID().toString());
   }
 
   @Test
@@ -87,8 +88,7 @@ public class TestKeyValueHandler {
     // Create mock HddsDispatcher and KeyValueHandler.
     this.handler = Mockito.mock(KeyValueHandler.class);
     this.dispatcher = Mockito.mock(HddsDispatcher.class);
-    Mockito.when(dispatcher.getHandlerForContainerType(any())).thenReturn
-        (handler);
+    Mockito.when(dispatcher.getHandler(any())).thenReturn(handler);
     Mockito.when(dispatcher.dispatch(any())).thenCallRealMethod();
     Mockito.when(dispatcher.getContainer(anyLong())).thenReturn(
         Mockito.mock(KeyValueContainer.class));

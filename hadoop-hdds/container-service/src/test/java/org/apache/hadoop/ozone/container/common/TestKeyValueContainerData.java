@@ -42,8 +42,7 @@ public class TestKeyValueContainerData {
         .ContainerLifeCycleState.CLOSED;
     AtomicLong val = new AtomicLong(0);
 
-    KeyValueContainerData kvData = new KeyValueContainerData(containerType,
-        containerId);
+    KeyValueContainerData kvData = new KeyValueContainerData(containerId);
 
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerId());

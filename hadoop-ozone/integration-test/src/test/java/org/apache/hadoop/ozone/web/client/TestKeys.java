@@ -44,9 +44,10 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
@@ -698,13 +699,16 @@ public class TestKeys {
         List<KsmKeyLocationInfo> locations =
             keyInfo.getLatestVersionLocations().getLocationList();
         for (KsmKeyLocationInfo location : locations) {
-          KeyData keyData = new KeyData(location.getBlockID());
-          KeyData blockInfo = cm.getContainerManager()
-              .getKeyManager().getKey(keyData);
-          ContainerData containerData = cm.getContainerManager()
-              .readContainer(keyData.getContainerID());
-          File dataDir = ContainerUtils
-              .getDataDirectory(containerData).toFile();
+          KeyValueHandler  keyValueHandler = (KeyValueHandler) cm
+              .getDispatcher().getHandler(ContainerProtos.ContainerType
+                  .KeyValueContainer);
+          KeyValueContainer container = (KeyValueContainer) cm.getContainerSet()
+              .getContainer(location.getBlockID().getContainerID());
+          KeyData blockInfo = keyValueHandler
+              .getKeyManager().getKey(container, location.getBlockID());
+          KeyValueContainerData containerData = (KeyValueContainerData) container
+              .getContainerData();
+          File dataDir = new File(containerData.getChunksPath());
           for (ContainerProtos.ChunkInfo chunkInfo : blockInfo.getChunks()) {
             File chunkFile = dataDir.toPath()
                 .resolve(chunkInfo.getChunkName()).toFile();

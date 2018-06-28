@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.yaml.snakeyaml.nodes.Tag;
 
 
 import java.io.File;
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,6 +34,14 @@ import java.util.Map;
  * by the .container file.
  */
 public class KeyValueContainerData extends ContainerData {
+
+  // Yaml Tag used for KeyValueContainerData.
+  public static final Tag YAML_TAG = new Tag("KeyValueContainerData");
+
+  // Fields need to be stored in .container file.
+  public static final List<String> YAML_FIELDS = Lists.newArrayList(
+      "containerType", "containerId", "layOutVersion", "state", "metadata",
+      "metadataPath", "chunksPath", "containerDBType");
 
   // Path to Container metadata Level DB/RocksDB Store and .container file.
   private String metadataPath;
@@ -49,23 +59,21 @@ public class KeyValueContainerData extends ContainerData {
 
   /**
    * Constructs KeyValueContainerData object.
-   * @param type - containerType
    * @param id - ContainerId
    */
-  public KeyValueContainerData(ContainerProtos.ContainerType type, long id) {
-    super(type, id);
+  public KeyValueContainerData(long id) {
+    super(ContainerProtos.ContainerType.KeyValueContainer, id);
     this.numPendingDeletionBlocks = 0;
   }
 
   /**
    * Constructs KeyValueContainerData object.
-   * @param type - containerType
    * @param id - ContainerId
    * @param layOutVersion
    */
-  public KeyValueContainerData(ContainerProtos.ContainerType type, long id,
+  public KeyValueContainerData(long id,
                                int layOutVersion) {
-    super(type, id, layOutVersion);
+    super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion);
     this.numPendingDeletionBlocks = 0;
   }
 

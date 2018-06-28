@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.KeyValueYaml;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -36,7 +35,7 @@ import static org.junit.Assert.fail;
 /**
  * This class tests create/read .container files.
  */
-public class TestKeyValueYaml {
+public class TestContainerDataYaml {
 
   @Test
   public void testCreateContainerFile() throws IOException {
@@ -46,8 +45,7 @@ public class TestKeyValueYaml {
     File filePath = new File(new FileSystemTestHelper().getTestRootDir());
     filePath.mkdirs();
 
-    KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
-        ContainerProtos.ContainerType.KeyValueContainer, Long.MAX_VALUE);
+    KeyValueContainerData keyValueContainerData = new KeyValueContainerData(Long.MAX_VALUE);
     keyValueContainerData.setContainerDBType("RocksDB");
     keyValueContainerData.setMetadataPath(path);
     keyValueContainerData.setChunksPath(path);
@@ -55,14 +53,15 @@ public class TestKeyValueYaml {
     File containerFile = new File(filePath, containerPath);
 
     // Create .container file with ContainerData
-    KeyValueYaml.createContainerFile(containerFile, keyValueContainerData);
+    ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
+            .KeyValueContainer, containerFile, keyValueContainerData);
 
     //Check .container file exists or not.
     assertTrue(containerFile.exists());
 
     // Read from .container file, and verify data.
-    KeyValueContainerData kvData = KeyValueYaml.readContainerFile(
-        containerFile);
+    KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
     assertEquals(Long.MAX_VALUE, kvData.getContainerId());
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
@@ -82,10 +81,12 @@ public class TestKeyValueYaml {
 
     // Update .container file with new ContainerData.
     containerFile = new File(filePath, containerPath);
-    KeyValueYaml.createContainerFile(containerFile, kvData);
+    ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
+            .KeyValueContainer, containerFile, kvData);
 
     // Reading newly updated data from .container file
-    kvData =  KeyValueYaml.readContainerFile(containerFile);
+    kvData =  (KeyValueContainerData) ContainerDataYaml.readContainerFile(
+        containerFile);
 
     // verify data.
     assertEquals(Long.MAX_VALUE, kvData.getContainerId());
@@ -113,7 +114,8 @@ public class TestKeyValueYaml {
       //Get file from resources folder
       ClassLoader classLoader = getClass().getClassLoader();
       File file = new File(classLoader.getResource(path).getFile());
-      KeyValueContainerData kvData = KeyValueYaml.readContainerFile(file);
+      KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
+          .readContainerFile(file);
       fail("testIncorrectContainerFile failed");
     } catch (IllegalStateException ex) {
       GenericTestUtils.assertExceptionContains("Unexpected " +
@@ -135,7 +137,8 @@ public class TestKeyValueYaml {
       //Get file from resources folder
       ClassLoader classLoader = getClass().getClassLoader();
       File file = new File(classLoader.getResource(path).getFile());
-      KeyValueContainerData kvData = KeyValueYaml.readContainerFile(file);
+      KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
+          .readContainerFile(file);
 
       //Checking the Container file data is consistent or not
       assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData

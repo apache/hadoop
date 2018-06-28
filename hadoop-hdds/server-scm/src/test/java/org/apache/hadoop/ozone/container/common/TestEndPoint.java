@@ -20,6 +20,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.VersionInfo;
@@ -125,12 +126,14 @@ public class TestEndPoint {
    * how the state machine would make the call.
    */
   public void testGetVersionTask() throws Exception {
-    Configuration conf = SCMTestUtils.getConf();
+    OzoneConfiguration conf = SCMTestUtils.getConf();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, 1000)) {
+      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
+          conf);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
-          conf);
+          conf, ozoneContainer);
       EndpointStateMachine.EndPointStates newState = versionTask.call();
 
       // if version call worked the endpoint should automatically move to the
@@ -149,14 +152,16 @@ public class TestEndPoint {
    * expect that versionTask should be able to handle it.
    */
   public void testGetVersionToInvalidEndpoint() throws Exception {
-    Configuration conf = SCMTestUtils.getConf();
+    OzoneConfiguration conf = SCMTestUtils.getConf();
     InetSocketAddress nonExistentServerAddress = SCMTestUtils
         .getReuseableAddress();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         nonExistentServerAddress, 1000)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
+      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
           conf);
+      VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
+          conf, ozoneContainer);
       EndpointStateMachine.EndPointStates newState = versionTask.call();
 
       // This version call did NOT work, so endpoint should remain in the same
@@ -175,13 +180,15 @@ public class TestEndPoint {
   public void testGetVersionAssertRpcTimeOut() throws Exception {
     final long rpcTimeout = 1000;
     final long tolerance = 100;
-    Configuration conf = SCMTestUtils.getConf();
+    OzoneConfiguration conf = SCMTestUtils.getConf();
 
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, (int) rpcTimeout)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
+      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
           conf);
+      VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
+          conf, ozoneContainer);
 
       scmServerImpl.setRpcResponseDelay(1500);
       long start = Time.monotonicNow();
@@ -386,4 +393,5 @@ public class TestEndPoint {
     }
     return reportsBuilder.build();
   }
+
 }

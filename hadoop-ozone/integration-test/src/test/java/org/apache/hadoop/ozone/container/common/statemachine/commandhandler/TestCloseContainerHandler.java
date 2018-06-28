@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
@@ -104,8 +104,8 @@ public class TestCloseContainerHandler {
     ContainerData containerData;
     try {
       containerData = cluster.getHddsDatanodes().get(0)
-          .getDatanodeStateMachine().getContainer().getContainerManager()
-          .readContainer(containerID);
+          .getDatanodeStateMachine().getContainer().getContainerSet()
+          .getContainer(containerID).getContainerData();
       return !containerData.isOpen();
     } catch (StorageContainerException e) {
       throw new AssertionError(e);

@@ -31,7 +31,6 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 
-import java.io.IOException;
 
 /**
  * Dispatcher sends ContainerCommandRequests to Handler. Each Container Type
@@ -42,22 +41,20 @@ public class Handler {
   protected final Configuration conf;
   protected final ContainerSet containerSet;
   protected final VolumeSet volumeSet;
-  protected final String scmID;
+  protected String scmID;
 
   protected Handler(Configuration config, ContainerSet contSet,
-      VolumeSet volumeSet, String scmID) {
+      VolumeSet volumeSet) {
     conf = config;
     containerSet = contSet;
     this.volumeSet = volumeSet;
-    this.scmID = scmID;
   }
 
   public static Handler getHandlerForContainerType(ContainerType containerType,
-      Configuration config, ContainerSet contSet, VolumeSet volumeSet,
-      String scmID) {
+      Configuration config, ContainerSet contSet, VolumeSet volumeSet) {
     switch (containerType) {
     case KeyValueContainer:
-      return KeyValueHandler.getInstance(config, contSet, volumeSet, scmID);
+      return KeyValueHandler.getInstance(config, contSet, volumeSet);
     default:
       throw new IllegalArgumentException("Handler for ContainerType: " +
         containerType + "doesn't exist.");
@@ -67,5 +64,9 @@ public class Handler {
   public ContainerCommandResponseProto handle(
       ContainerCommandRequestProto msg, Container container) {
     return null;
+  }
+
+  public void setScmID(String scmId) {
+    this.scmID = scmId;
   }
 }

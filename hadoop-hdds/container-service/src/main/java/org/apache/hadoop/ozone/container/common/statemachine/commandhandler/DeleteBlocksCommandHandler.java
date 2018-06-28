@@ -18,8 +18,10 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
@@ -29,11 +31,13 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers
     .DeletedContainerBlocksSummary;
-import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -51,6 +55,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_NOT_FOUND;
+
 /**
  * Handle block deletion commands.
  */
@@ -59,14 +65,14 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(DeleteBlocksCommandHandler.class);
 
-  private ContainerManager containerManager;
-  private Configuration conf;
+  private final ContainerSet containerSet;
+  private final Configuration conf;
   private int invocationCount;
   private long totalTime;
 
-  public DeleteBlocksCommandHandler(ContainerManager containerManager,
+  public DeleteBlocksCommandHandler(ContainerSet cset,
       Configuration conf) {
-    this.containerManager = containerManager;
+    this.containerSet = cset;
     this.conf = conf;
   }
 
@@ -105,8 +111,24 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
           DeleteBlockTransactionResult.newBuilder();
       txResultBuilder.setTxID(entry.getTxID());
       try {
-        deleteContainerBlocks(entry, conf);
-        txResultBuilder.setSuccess(true);
+        long containerId = entry.getContainerID();
+        Container cont = containerSet.getContainer(containerId);
+        if(cont == null) {
+          throw new StorageContainerException("Unable to find the container "
+              + containerId, CONTAINER_NOT_FOUND);
+        }
+        ContainerProtos.ContainerType containerType = cont.getContainerType();
+        switch (containerType) {
+        case KeyValueContainer:
+          KeyValueContainerData containerData = (KeyValueContainerData)
+              cont.getContainerData();
+          deleteKeyValueContainerBlocks(containerData, entry);
+          txResultBuilder.setSuccess(true);
+          break;
+        default:
+          LOG.error("Delete Blocks Command Handler is not implemented for " +
+              "containerType {}", containerType);
+        }
       } catch (IOException e) {
         LOG.warn("Failed to delete blocks for container={}, TXID={}",
             entry.getContainerID(), entry.getTxID(), e);
@@ -145,21 +167,21 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
    * Move a bunch of blocks from a container to deleting state.
    * This is a meta update, the actual deletes happen in async mode.
    *
+   * @param containerData - KeyValueContainerData
    * @param delTX a block deletion transaction.
-   * @param config configuration.
    * @throws IOException if I/O error occurs.
    */
-  private void deleteContainerBlocks(DeletedBlocksTransaction delTX,
-      Configuration config) throws IOException {
+  private void deleteKeyValueContainerBlocks(
+      KeyValueContainerData containerData, DeletedBlocksTransaction delTX)
+      throws IOException {
     long containerId = delTX.getContainerID();
-    ContainerData containerInfo = containerManager.readContainer(containerId);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Processing Container : {}, DB path : {}", containerId,
-          containerInfo.getDBPath());
+          containerData.getMetadataPath());
     }
 
     int newDeletionBlocks = 0;
-    MetadataStore containerDB = KeyUtils.getDB(containerInfo, config);
+    MetadataStore containerDB = KeyUtils.getDB(containerData, conf);
     for (Long blk : delTX.getLocalIDList()) {
       BatchOperation batch = new BatchOperation();
       byte[] blkBytes = Longs.toByteArray(blk);
@@ -187,12 +209,12 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
                 + " container {}, skip deleting it.", blk, containerId);
       }
       containerDB.put(DFSUtil.string2Bytes(
-          OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX + delTX.getContainerID()),
+          OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX + containerId),
           Longs.toByteArray(delTX.getTxID()));
     }
 
     // update pending deletion blocks count in in-memory container status
-    containerManager.incrPendingDeletionBlocks(newDeletionBlocks, containerId);
+    containerData.incrPendingDeletionBlocks(newDeletionBlocks);
   }
 
   @Override

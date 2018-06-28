@@ -38,6 +38,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 
@@ -151,7 +152,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     return VersionResponse.newBuilder()
         .setVersion(versionInfo.getVersion())
         .addValue(VersionInfo.DESCRIPTION_KEY, versionInfo.getDescription())
+        .addValue(OzoneConsts.SCM_ID, UUID.randomUUID().toString())
+        .addValue(OzoneConsts.CLUSTER_ID, UUID.randomUUID().toString())
         .build().getProtobufMessage();
+
   }
 
   private void sleepIfNeeded() {

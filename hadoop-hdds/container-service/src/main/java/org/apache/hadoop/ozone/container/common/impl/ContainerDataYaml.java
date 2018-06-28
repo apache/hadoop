@@ -16,11 +16,12 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.keyvalue;
+package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.yaml.snakeyaml.Yaml;
 
 import java.beans.IntrospectionException;
@@ -46,13 +47,16 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 
+import static org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData.YAML_FIELDS;
+import static org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData.YAML_TAG;
+
 /**
  * Class for creating and reading .container files.
  */
 
-public final class KeyValueYaml {
+public final class ContainerDataYaml {
 
-  private KeyValueYaml() {
+  private ContainerDataYaml() {
 
   }
   /**
@@ -62,29 +66,39 @@ public final class KeyValueYaml {
    * @param containerData
    * @throws IOException
    */
-  public static void createContainerFile(File containerFile, ContainerData
-      containerData) throws IOException {
+  public static void createContainerFile(ContainerProtos.ContainerType
+                                             containerType, File containerFile,
+                                         ContainerData containerData) throws
+      IOException {
 
     Preconditions.checkNotNull(containerFile, "yamlFile cannot be null");
     Preconditions.checkNotNull(containerData, "containerData cannot be null");
+    Preconditions.checkNotNull(containerType, "containerType cannot be null");
 
     PropertyUtils propertyUtils = new PropertyUtils();
     propertyUtils.setBeanAccess(BeanAccess.FIELD);
     propertyUtils.setAllowReadOnlyProperties(true);
 
-    Representer representer = new KeyValueContainerDataRepresenter();
-    representer.setPropertyUtils(propertyUtils);
-    representer.addClassTag(
-        KeyValueContainerData.class, new Tag("KeyValueContainerData"));
+    switch(containerType) {
+    case KeyValueContainer:
+      Representer representer = new ContainerDataRepresenter();
+      representer.setPropertyUtils(propertyUtils);
+      representer.addClassTag(KeyValueContainerData.class,
+          KeyValueContainerData.YAML_TAG);
 
-    Constructor keyValueDataConstructor = new KeyValueDataConstructor();
+      Constructor keyValueDataConstructor = new ContainerDataConstructor();
 
-    Yaml yaml = new Yaml(keyValueDataConstructor, representer);
-
-    Writer writer = new OutputStreamWriter(new FileOutputStream(containerFile),
-        "UTF-8");
-    yaml.dump(containerData, writer);
-    writer.close();
+      Yaml yaml = new Yaml(keyValueDataConstructor, representer);
+      Writer writer = new OutputStreamWriter(new FileOutputStream(
+          containerFile), "UTF-8");
+      yaml.dump(containerData, writer);
+      writer.close();
+      break;
+    default:
+      throw new StorageContainerException("Unrecognized container Type " +
+          "format " + containerType, ContainerProtos.Result
+          .UNKNOWN_CONTAINER_TYPE);
+    }
   }
 
   /**
@@ -93,57 +107,53 @@ public final class KeyValueYaml {
    * @param containerFile
    * @throws IOException
    */
-  public static KeyValueContainerData readContainerFile(File containerFile)
+  public static ContainerData readContainerFile(File containerFile)
       throws IOException {
     Preconditions.checkNotNull(containerFile, "containerFile cannot be null");
 
     InputStream input = null;
-    KeyValueContainerData keyValueContainerData;
+    ContainerData containerData;
     try {
       PropertyUtils propertyUtils = new PropertyUtils();
       propertyUtils.setBeanAccess(BeanAccess.FIELD);
       propertyUtils.setAllowReadOnlyProperties(true);
 
-      Representer representer = new KeyValueContainerDataRepresenter();
+      Representer representer = new ContainerDataRepresenter();
       representer.setPropertyUtils(propertyUtils);
-      representer.addClassTag(
-          KeyValueContainerData.class, new Tag("KeyValueContainerData"));
 
-      Constructor keyValueDataConstructor = new KeyValueDataConstructor();
+      Constructor containerDataConstructor = new ContainerDataConstructor();
 
-      Yaml yaml = new Yaml(keyValueDataConstructor, representer);
+      Yaml yaml = new Yaml(containerDataConstructor, representer);
       yaml.setBeanAccess(BeanAccess.FIELD);
 
       input = new FileInputStream(containerFile);
-      keyValueContainerData = (KeyValueContainerData)
+      containerData = (ContainerData)
           yaml.load(input);
     } finally {
       if (input!= null) {
         input.close();
       }
     }
-    return keyValueContainerData;
+    return containerData;
   }
 
   /**
    * Representer class to define which fields need to be stored in yaml file.
    */
-  private static class KeyValueContainerDataRepresenter extends Representer {
+  private static class ContainerDataRepresenter extends Representer {
     @Override
     protected Set<Property> getProperties(Class<? extends Object> type)
         throws IntrospectionException {
       Set<Property> set = super.getProperties(type);
       Set<Property> filtered = new TreeSet<Property>();
+
+      // When a new Container type is added, we need to add what fields need
+      // to be filtered here
       if (type.equals(KeyValueContainerData.class)) {
         // filter properties
         for (Property prop : set) {
           String name = prop.getName();
-          // When a new field needs to be added, it needs to be added here.
-          if (name.equals("containerType") || name.equals("containerId") ||
-              name.equals("layOutVersion") || name.equals("state") ||
-              name.equals("metadata") || name.equals("metadataPath") ||
-              name.equals("chunksPath") || name.equals(
-                  "containerDBType")) {
+          if (YAML_FIELDS.contains(name)) {
             filtered.add(prop);
           }
         }
@@ -155,11 +165,12 @@ public final class KeyValueYaml {
   /**
    * Constructor class for KeyValueData, which will be used by Yaml.
    */
-  private static class KeyValueDataConstructor extends Constructor {
-    KeyValueDataConstructor() {
+  private static class ContainerDataConstructor extends Constructor {
+    ContainerDataConstructor() {
       //Adding our own specific constructors for tags.
-      this.yamlConstructors.put(new Tag("KeyValueContainerData"),
-          new ConstructKeyValueContainerData());
+      // When a new Container type is added, we need to add yamlConstructor
+      // for that
+      this.yamlConstructors.put(YAML_TAG, new ConstructKeyValueContainerData());
       this.yamlConstructors.put(Tag.INT, new ConstructLong());
     }
 
@@ -167,21 +178,14 @@ public final class KeyValueYaml {
       public Object construct(Node node) {
         MappingNode mnode = (MappingNode) node;
         Map<Object, Object> nodes = constructMapping(mnode);
-        String type = (String) nodes.get("containerType");
-
-        ContainerProtos.ContainerType containerType = ContainerProtos
-            .ContainerType.KeyValueContainer;
-        if (type.equals("KeyValueContainer")) {
-          containerType = ContainerProtos.ContainerType.KeyValueContainer;
-        }
 
         //Needed this, as TAG.INT type is by default converted to Long.
         long layOutVersion = (long) nodes.get("layOutVersion");
         int lv = (int) layOutVersion;
 
         //When a new field is added, it needs to be added here.
-        KeyValueContainerData kvData = new KeyValueContainerData(containerType,
-            (long) nodes.get("containerId"), lv);
+        KeyValueContainerData kvData = new KeyValueContainerData((long) nodes
+            .get("containerId"), lv);
         kvData.setContainerDBType((String)nodes.get("containerDBType"));
         kvData.setMetadataPath((String) nodes.get(
             "metadataPath"));

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -88,6 +89,16 @@ public class Dispatcher implements ContainerDispatcher {
 
   @Override
   public void shutdown() {
+  }
+
+  @Override
+  public Handler getHandler(ContainerProtos.ContainerType containerType) {
+    return null;
+  }
+
+  @Override
+  public void setScmId(String scmId) {
+    // DO nothing, this will be removed when cleanup.
   }
 
   @Override

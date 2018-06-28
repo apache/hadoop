@@ -130,6 +130,10 @@ public final class HddsVolume {
     initialize();
   }
 
+  public VolumeInfo getVolumeInfo() {
+    return volumeInfo;
+  }
+
   /**
    * Initializes the volume.
    * Creates the Version file if not present,
@@ -327,4 +331,6 @@ public final class HddsVolume {
   public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
     volumeInfo.setScmUsageForTesting(scmUsageForTest);
   }
+
+
 }

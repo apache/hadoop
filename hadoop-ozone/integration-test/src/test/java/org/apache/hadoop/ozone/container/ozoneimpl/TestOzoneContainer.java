@@ -35,10 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -66,7 +63,11 @@ public class TestOzoneContainer {
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT, pipeline.getLeader()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
-      container = new OzoneContainer(TestUtils.getDatanodeDetails(), conf);
+
+      container = new OzoneContainer(TestUtils.getDatanodeDetails(),
+          conf);
+      //Setting scmId, as we start manually ozone container.
+      container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();
 
       XceiverClient client = new XceiverClient(pipeline, conf);
@@ -392,7 +393,7 @@ public class TestOzoneContainer {
       response = client.sendCommand(request);
 
       Assert.assertNotNull(response);
-      Assert.assertEquals(ContainerProtos.Result.UNCLOSED_CONTAINER_IO,
+      Assert.assertEquals(ContainerProtos.Result.DELETE_ON_OPEN_CONTAINER,
           response.getResult());
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
 

@@ -52,7 +52,6 @@ public class TestHandler {
   private VolumeSet volumeSet;
   private Handler handler;
 
-  private final static String SCM_ID = UUID.randomUUID().toString();
   private final static String DATANODE_UUID = UUID.randomUUID().toString();
 
   @Before
@@ -61,12 +60,12 @@ public class TestHandler {
     this.containerSet = Mockito.mock(ContainerSet.class);
     this.volumeSet = Mockito.mock(VolumeSet.class);
 
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, SCM_ID);
+    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
   }
 
   @Test
   public void testGetKeyValueHandler() throws Exception {
-    Handler kvHandler = dispatcher.getHandlerForContainerType(
+    Handler kvHandler = dispatcher.getHandler(
         ContainerProtos.ContainerType.KeyValueContainer);
 
     Assert.assertTrue("getHandlerForContainerType returned incorrect handler",
@@ -83,8 +82,7 @@ public class TestHandler {
     Assert.assertEquals("New ContainerType detected. Not an invalid " +
         "containerType", invalidContainerType, null);
 
-    Handler handler = dispatcher.getHandlerForContainerType(
-        invalidContainerType);
+    Handler handler = dispatcher.getHandler(invalidContainerType);
     Assert.assertEquals("Get Handler for Invalid ContainerType should " +
         "return null.", handler, null);
   }

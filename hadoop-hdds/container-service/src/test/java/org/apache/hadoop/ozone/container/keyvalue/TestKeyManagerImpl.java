@@ -79,8 +79,7 @@ public class TestKeyManagerImpl {
     Mockito.when(volumeChoosingPolicy.chooseVolume(anyList(), anyLong()))
         .thenReturn(hddsVolume);
 
-    keyValueContainerData = new KeyValueContainerData(
-        ContainerProtos.ContainerType.KeyValueContainer, 1L);
+    keyValueContainerData = new KeyValueContainerData(1L);
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, config);

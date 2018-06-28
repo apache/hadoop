@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -261,6 +262,15 @@ public class TestContainerServer {
 
     @Override
     public void shutdown() {
+    }
+    @Override
+    public Handler getHandler(ContainerProtos.ContainerType containerType) {
+      return null;
+    }
+
+    @Override
+    public void setScmId(String scmId) {
+
     }
   }
 }

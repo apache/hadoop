@@ -32,7 +32,7 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
@@ -183,7 +183,7 @@ public class TestCloseContainerByPipeline {
     for (DatanodeDetails datanodeDetails : datanodes) {
       GenericTestUtils.waitFor(
           () -> isContainerClosed(cluster, containerID, datanodeDetails), 500,
-          5 * 1000);
+          15 * 1000);
       //double check if it's really closed (waitFor also throws an exception)
       Assert.assertTrue(isContainerClosed(cluster, containerID, datanodeDetails));
     }
@@ -204,7 +204,7 @@ public class TestCloseContainerByPipeline {
         if (datanode.equals(datanodeService.getDatanodeDetails())) {
           containerData =
               datanodeService.getDatanodeStateMachine().getContainer()
-                  .getContainerManager().readContainer(containerID);
+                  .getContainerSet().getContainer(containerID).getContainerData();
           if (!containerData.isOpen()) {
             // make sure the closeContainerHandler on the Datanode is invoked
             Assert.assertTrue(

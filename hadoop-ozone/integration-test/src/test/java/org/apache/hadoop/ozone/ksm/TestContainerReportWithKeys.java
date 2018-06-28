@@ -27,8 +27,8 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -119,8 +119,8 @@ public class TestContainerReportWithKeys {
 
     ContainerData cd = getContainerData(keyInfo.getContainerID());
 
-    LOG.info("DN Container Data:  keyCount: {} used: {} ",
-        cd.getKeyCount(), cd.getBytesUsed());
+/*    LOG.info("DN Container Data:  keyCount: {} used: {} ",
+        cd.getKeyCount(), cd.getBytesUsed());*/
 
     ContainerInfo cinfo = scm.getContainerInfo(keyInfo.getContainerID());
 
@@ -132,9 +132,9 @@ public class TestContainerReportWithKeys {
   private static ContainerData getContainerData(long containerID) {
     ContainerData containerData;
     try {
-      ContainerManager containerManager = cluster.getHddsDatanodes().get(0)
-          .getDatanodeStateMachine().getContainer().getContainerManager();
-      containerData = containerManager.readContainer(containerID);
+      ContainerSet containerManager = cluster.getHddsDatanodes().get(0)
+          .getDatanodeStateMachine().getContainer().getContainerSet();
+      containerData = containerManager.getContainer(containerID).getContainerData();
     } catch (StorageContainerException e) {
       throw new AssertionError(e);
     }

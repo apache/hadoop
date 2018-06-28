@@ -52,24 +52,23 @@ public class HddsDispatcher implements ContainerDispatcher {
   private final Configuration conf;
   private final ContainerSet containerSet;
   private final VolumeSet volumeSet;
-  private final String scmID;
+  private String scmID;
 
   /**
    * Constructs an OzoneContainer that receives calls from
    * XceiverServerHandler.
    */
   public HddsDispatcher(Configuration config, ContainerSet contSet,
-      VolumeSet volumes, String scmId) {
-    // TODO: Pass ContainerSet, VolumeSet and scmID, intialize metrics
+      VolumeSet volumes) {
+    //TODO: initialize metrics
     this.conf = config;
     this.containerSet = contSet;
     this.volumeSet = volumes;
-    this.scmID = scmId;
     this.handlers = Maps.newHashMap();
     for (ContainerType containerType : ContainerType.values()) {
       handlers.put(containerType,
           Handler.getHandlerForContainerType(
-              containerType, conf, containerSet, volumeSet, scmID));
+              containerType, conf, containerSet, volumeSet));
     }
   }
 
@@ -103,7 +102,7 @@ public class HddsDispatcher implements ContainerDispatcher {
       return ContainerUtils.logAndReturnError(LOG, ex, msg);
     }
 
-    Handler handler = getHandlerForContainerType(containerType);
+    Handler handler = getHandler(containerType);
     if (handler == null) {
       StorageContainerException ex = new StorageContainerException("Invalid " +
           "ContainerType " + containerType,
@@ -113,9 +112,20 @@ public class HddsDispatcher implements ContainerDispatcher {
     return handler.handle(msg, container);
   }
 
-  @VisibleForTesting
-  public Handler getHandlerForContainerType(ContainerType type) {
-    return handlers.get(type);
+  @Override
+  public Handler getHandler(ContainerProtos.ContainerType containerType) {
+    return handlers.get(containerType);
+  }
+
+  @Override
+  public void setScmId(String scmId) {
+    Preconditions.checkNotNull(scmId, "scmId Cannot be null");
+    if (this.scmID == null) {
+      this.scmID = scmId;
+      for (Map.Entry<ContainerType, Handler> handlerMap : handlers.entrySet()) {
+        handlerMap.getValue().setScmID(scmID);
+      }
+    }
   }
 
   private long getContainerID(ContainerCommandRequestProto request)

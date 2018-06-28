@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
@@ -33,6 +32,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -47,21 +47,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_ALREADY_EXISTS;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CONTAINER_CHECKSUM_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_METADATA_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -74,8 +69,6 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.ERROR_IN_COMPACT_DB;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.INVALID_CONTAINER_STATE;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.NO_SUCH_ALGORITHM;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
 
@@ -198,10 +191,12 @@ public class KeyValueContainer implements Container {
     try {
       tempContainerFile = createTempFile(containerFile);
       tempCheckSumFile = createTempFile(containerCheckSumFile);
-      KeyValueYaml.createContainerFile(tempContainerFile, containerData);
+      ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
+              .KeyValueContainer, tempContainerFile, containerData);
 
       //Compute Checksum for container file
-      String checksum = computeCheckSum(tempContainerFile);
+      String checksum = KeyValueContainerUtil.computeCheckSum(containerId,
+          tempContainerFile);
       containerCheckSumStream = new FileOutputStream(tempCheckSumFile);
       writer = new OutputStreamWriter(containerCheckSumStream, "UTF-8");
       writer.write(checksum);
@@ -307,43 +302,6 @@ public class KeyValueContainer implements Container {
     }
   }
 
-
-  /**
-   * Compute checksum of the .container file.
-   * @param containerFile
-   * @throws StorageContainerException
-   */
-  private String computeCheckSum(File containerFile) throws
-      StorageContainerException {
-
-    MessageDigest sha;
-    FileInputStream containerFileStream = null;
-    try {
-      sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-    } catch (NoSuchAlgorithmException e) {
-      throw new StorageContainerException("Unable to create Message Digest,"
-          + " usually this is a java configuration issue.",
-          NO_SUCH_ALGORITHM);
-    }
-
-    try {
-      containerFileStream = new FileInputStream(containerFile);
-      byte[] byteArray = new byte[1024];
-      int bytesCount = 0;
-
-      while ((bytesCount = containerFileStream.read(byteArray)) != -1) {
-        sha.update(byteArray, 0, bytesCount);
-      }
-      String checksum = DigestUtils.sha256Hex(sha.digest());
-      return checksum;
-    } catch (IOException ex) {
-      throw new StorageContainerException("Error during update of " +
-          "check sum file. Container Name: " + containerData.getContainerId(),
-          ex, CONTAINER_CHECKSUM_ERROR);
-    } finally {
-      IOUtils.closeStream(containerFileStream);
-    }
-  }
 
   @Override
   public void delete(boolean forceDelete)
