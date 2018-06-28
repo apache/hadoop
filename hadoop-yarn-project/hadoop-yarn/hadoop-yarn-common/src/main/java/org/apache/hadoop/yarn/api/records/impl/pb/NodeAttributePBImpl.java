@@ -152,15 +152,19 @@ public class NodeAttributePBImpl extends NodeAttribute {
     }
     if (obj instanceof NodeAttribute) {
       NodeAttribute other = (NodeAttribute) obj;
-      getAttributeKey().equals(other.getAttributeKey());
-      return true;
+      return getAttributeKey().equals(other.getAttributeKey());
     }
     return false;
   }
 
   @Override
   public String toString() {
-    return getAttributeKey().toString() + ":Value-" + getAttributeValue()
-        + ":Type-" + getAttributeType();
+    StringBuilder strBuilder = new StringBuilder();
+    NodeAttributeKey key = this.getAttributeKey();
+    strBuilder.append(key.getAttributePrefix()).append("/")
+        .append(key.getAttributeName()).append("(")
+        .append(this.getAttributeType()).append(")=")
+        .append(this.getAttributeValue());
+    return strBuilder.toString();
   }
 }

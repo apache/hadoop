@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -74,7 +77,32 @@ public class TestClusterCLI {
     pw.close();
     verify(sysOut).println(baos.toString("UTF-8"));
   }
-  
+
+  @Test
+  public void testGetClusterNodeAttributes() throws Exception {
+    YarnClient client = mock(YarnClient.class);
+    when(client.getClusterAttributes()).thenReturn(ImmutableSet
+        .of(NodeAttributeInfo.newInstance(NodeAttributeKey.newInstance("GPU"),
+            NodeAttributeType.STRING), NodeAttributeInfo
+            .newInstance(NodeAttributeKey.newInstance("CPU"),
+                NodeAttributeType.STRING)));
+    ClusterCLI cli = new ClusterCLI();
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+
+    int rc = cli.run(new String[] {ClusterCLI.CMD,
+        "-" + ClusterCLI.LIST_CLUSTER_ATTRIBUTES});
+    assertEquals(0, rc);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("rm.yarn.io/GPU(STRING)");
+    pw.println("rm.yarn.io/CPU(STRING)");
+    pw.close();
+    verify(sysOut).println(baos.toString("UTF-8"));
+  }
+
   @Test
   public void testGetClusterNodeLabelsWithLocalAccess() throws Exception {
     YarnClient client = mock(YarnClient.class);
@@ -157,6 +185,8 @@ public class TestClusterCLI {
     pw.println("                                           option is UNSTABLE, could be");
     pw.println("                                           removed in future releases.");
     pw.println(" -h,--help                                 Displays help for all commands.");
+    pw.println(" -lna,--list-node-attributes               List cluster node-attribute");
+    pw.println("                                           collection");
     pw.println(" -lnl,--list-node-labels                   List cluster node-label");
     pw.println("                                           collection");
     pw.close();

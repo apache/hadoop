@@ -292,8 +292,8 @@ public class MockNodes {
     }
 
     @Override
-    public Map<String, Set<NodeAttribute>> getAllNodeAttributes() {
-      return null;
+    public Set<NodeAttribute> getAllNodeAttributes() {
+      return Collections.emptySet();
     }
 
     @Override

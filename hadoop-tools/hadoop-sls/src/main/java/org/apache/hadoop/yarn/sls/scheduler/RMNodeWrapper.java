@@ -209,13 +209,7 @@ public class RMNodeWrapper implements RMNode {
   }
   
   @Override
-  public void setNodeAttributes(String prefix,
-      Set<NodeAttribute> nodeAttributes) {
-    node.setNodeAttributes(prefix, nodeAttributes);
-  }
-
-  @Override
-  public Map<String, Set<NodeAttribute>> getAllNodeAttributes() {
+  public Set<NodeAttribute> getAllNodeAttributes() {
     return node.getAllNodeAttributes();
   }
 

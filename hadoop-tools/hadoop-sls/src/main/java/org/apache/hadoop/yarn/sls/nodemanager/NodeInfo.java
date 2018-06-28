@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.sls.nodemanager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -220,16 +221,9 @@ public class NodeInfo {
       return null;
     }
 
-
     @Override
-    public void setNodeAttributes(String prefix,
-        Set<NodeAttribute> nodeAttributes) {
-
-    }
-
-    @Override
-    public Map<String, Set<NodeAttribute>> getAllNodeAttributes() {
-      return null;
+    public Set<NodeAttribute> getAllNodeAttributes() {
+      return Collections.emptySet();
     }
 
     @Override

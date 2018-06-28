@@ -197,15 +197,8 @@ public interface RMNode {
    */
   RMContext getRMContext();
 
- /**
-   * Sets node attributes per prefix.
-   * @param prefix node attribute prefix
-   * @param nodeAttributes node attributes
-   */
-  void setNodeAttributes(String prefix, Set<NodeAttribute> nodeAttributes);
-
   /**
-   * @return all node attributes grouped by their prefix as a map.
+   * @return all node attributes as a Set.
    */
-  Map<String, Set<NodeAttribute>> getAllNodeAttributes();
+  Set<NodeAttribute> getAllNodeAttributes();
 }

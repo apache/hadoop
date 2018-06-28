@@ -983,12 +983,11 @@ public class AdminService extends CompositeService implements
     List<NodeToAttributes> nodesToAttributes = request.getNodesToAttributes();
     boolean failOnUnknownNodes = request.getFailOnUnknownNodes();
 
-    Map<String, Set<NodeAttribute>> nodeAttributeMapping =
-        validateAndFetch(nodesToAttributes, failOnUnknownNodes);
-
     NodeAttributesManager nodeAttributesManager =
         rm.getRMContext().getNodeAttributesManager();
     try {
+      Map<String, Set<NodeAttribute>> nodeAttributeMapping =
+          validateAndFetch(nodesToAttributes, failOnUnknownNodes);
       switch (request.getOperation()) {
       case ADD:
         nodeAttributesManager.addNodeAttributes(nodeAttributeMapping);

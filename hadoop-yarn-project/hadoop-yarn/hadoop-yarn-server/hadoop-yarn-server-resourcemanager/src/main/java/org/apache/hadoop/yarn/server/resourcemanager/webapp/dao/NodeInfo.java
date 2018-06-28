@@ -116,16 +116,11 @@ public class NodeInfo {
     }
 
     // add attributes
-    Map<String, Set<NodeAttribute>> nodeAttributes =
-        ni.getAllNodeAttributes();
+    Set<NodeAttribute> attrs = ni.getAllNodeAttributes();
     nodeAttributesInfo = new NodeAttributesInfo();
-    if (nodeAttributes != null) {
-      for (Set<NodeAttribute> attrs : nodeAttributes.values()) {
-        for (NodeAttribute attribute : attrs) {
-          NodeAttributeInfo info = new NodeAttributeInfo(attribute);
-          this.nodeAttributesInfo.addNodeAttributeInfo(info);
-        }
-      }
+    for (NodeAttribute attribute : attrs) {
+      NodeAttributeInfo info = new NodeAttributeInfo(attribute);
+      this.nodeAttributesInfo.addNodeAttributeInfo(info);
     }
 
     // add allocation tags

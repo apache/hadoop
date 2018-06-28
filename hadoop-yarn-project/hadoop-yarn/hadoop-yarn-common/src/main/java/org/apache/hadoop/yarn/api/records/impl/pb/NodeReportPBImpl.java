@@ -18,17 +18,21 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
@@ -50,6 +54,7 @@ public class NodeReportPBImpl extends NodeReport {
   private ResourceUtilization containersUtilization = null;
   private ResourceUtilization nodeUtilization = null;
   Set<String> labels;
+  private Set<NodeAttribute> nodeAttributes;
 
   public NodeReportPBImpl() {
     builder = NodeReportProto.newBuilder();
@@ -268,6 +273,14 @@ public class NodeReportPBImpl extends NodeReport {
       builder.clearNodeLabels();
       builder.addAllNodeLabels(this.labels);
     }
+    if (this.nodeAttributes != null) {
+      builder.clearNodeAttributes();
+      List<NodeAttributeProto> attrList = new ArrayList<>();
+      for (NodeAttribute attr : this.nodeAttributes) {
+        attrList.add(convertToProtoFormat(attr));
+      }
+      builder.addAllNodeAttributes(attrList);
+    }
     if (this.nodeUtilization != null
         && !((ResourceUtilizationPBImpl) this.nodeUtilization).getProto()
             .equals(builder.getNodeUtilization())) {
@@ -306,7 +319,16 @@ public class NodeReportPBImpl extends NodeReport {
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl) nodeId).getProto();
   }
-  
+
+  private NodeAttributeProto convertToProtoFormat(NodeAttribute nodeAttr) {
+    return ((NodeAttributePBImpl) nodeAttr).getProto();
+  }
+
+  private NodeAttributePBImpl convertFromProtoFormat(
+      NodeAttributeProto nodeAttr) {
+    return new NodeAttributePBImpl(nodeAttr);
+  }
+
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
   }
@@ -426,5 +448,25 @@ public class NodeReportPBImpl extends NodeReport {
       return;
     }
     builder.setNodeUpdateType(ProtoUtils.convertToProtoFormat(nodeUpdateType));
+  }
+
+  @Override
+  public void setNodeAttributes(Set<NodeAttribute> nodeAttrs) {
+    maybeInitBuilder();
+    builder.clearNodeAttributes();
+    this.nodeAttributes = nodeAttrs;
+  }
+
+  @Override
+  public Set<NodeAttribute> getNodeAttributes() {
+    if (nodeAttributes != null) {
+      return nodeAttributes;
+    }
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.nodeAttributes = new HashSet<>();
+    for (NodeAttributeProto nattrProto : p.getNodeAttributesList()) {
+      nodeAttributes.add(convertFromProtoFormat(nattrProto));
+    }
+    return nodeAttributes;
   }
 }
