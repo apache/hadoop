@@ -26,6 +26,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.fileStatsToString;
@@ -78,6 +80,16 @@ public class ITestS3ABlocksize extends AbstractS3ATestBase {
     FileStatus status = fs.getFileStatus(new Path("/"));
     assertTrue("Invalid root blocksize",
         status.getBlockSize() >= 0);
+  }
+
+  @Test
+  public void testVerifyBucketExists() {
+    S3AFileSystem fs = getFileSystem();
+    try {
+      fs.verifyBucketExists();
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
   }
 
 }
