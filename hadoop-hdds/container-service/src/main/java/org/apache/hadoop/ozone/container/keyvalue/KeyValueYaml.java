@@ -16,12 +16,12 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.impl;
+package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.yaml.snakeyaml.Yaml;
-
 
 import java.beans.IntrospectionException;
 import java.io.IOException;
@@ -30,10 +30,7 @@ import java.io.Writer;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-
 import java.io.File;
-
-
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map;
@@ -77,8 +74,8 @@ public final class KeyValueYaml {
 
     Representer representer = new KeyValueContainerDataRepresenter();
     representer.setPropertyUtils(propertyUtils);
-    representer.addClassTag(org.apache.hadoop.ozone.container.common.impl
-        .KeyValueContainerData.class, new Tag("KeyValueContainerData"));
+    representer.addClassTag(
+        KeyValueContainerData.class, new Tag("KeyValueContainerData"));
 
     Constructor keyValueDataConstructor = new KeyValueDataConstructor();
 
@@ -109,8 +106,8 @@ public final class KeyValueYaml {
 
       Representer representer = new KeyValueContainerDataRepresenter();
       representer.setPropertyUtils(propertyUtils);
-      representer.addClassTag(org.apache.hadoop.ozone.container.common.impl
-          .KeyValueContainerData.class, new Tag("KeyValueContainerData"));
+      representer.addClassTag(
+          KeyValueContainerData.class, new Tag("KeyValueContainerData"));
 
       Constructor keyValueDataConstructor = new KeyValueDataConstructor();
 

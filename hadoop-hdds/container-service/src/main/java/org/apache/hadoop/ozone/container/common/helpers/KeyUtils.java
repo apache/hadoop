@@ -103,7 +103,7 @@ public final class KeyUtils {
    */
   public static ContainerProtos.ContainerCommandResponseProto
       getKeyResponse(ContainerProtos.ContainerCommandRequestProto msg) {
-    return ContainerUtils.getContainerResponse(msg);
+    return ContainerUtils.getSuccessResponse(msg);
   }
 
 
@@ -114,8 +114,7 @@ public final class KeyUtils {
         .GetKeyResponseProto.newBuilder();
     getKey.setKeyData(data.getProtoBufMessage());
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        ContainerUtils.getContainerResponse(msg, ContainerProtos.Result
-            .SUCCESS, "");
+        ContainerUtils.getSuccessResponseBuilder(msg);
     builder.setGetKey(getKey);
     return  builder.build();
   }

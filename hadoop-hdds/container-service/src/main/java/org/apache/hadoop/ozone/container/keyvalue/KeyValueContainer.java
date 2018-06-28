@@ -18,29 +18,29 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
-
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
-
-
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.impl.ContainerData;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueYaml;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers
+    .KeyValueContainerLocationUtil;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
@@ -116,9 +116,9 @@ public class KeyValueContainer implements Container {
     Preconditions.checkNotNull(scmId, "scmId cannot be null");
 
     File containerMetaDataPath = null;
+    //acquiring volumeset lock and container lock
+    volumeSet.acquireLock();
     try {
-      //acquiring volumeset lock and container lock
-      volumeSet.acquireLock();
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
           .getVolumesList(), containerMaxSize);
       String containerBasePath = containerVolume.getHddsRootDir().toString();
@@ -404,10 +404,19 @@ public class KeyValueContainer implements Container {
   }
 
   @Override
-  public ContainerData getContainerData()  {
+  public KeyValueContainerData getContainerData()  {
     return containerData;
   }
 
+  @Override
+  public ContainerLifeCycleState getContainerState() {
+    return containerData.getState();
+  }
+
+  @Override
+  public ContainerProtos.ContainerType getContainerType() {
+    return ContainerProtos.ContainerType.KeyValueContainer;
+  }
 
   @Override
   public void update(Map<String, String> metadata, boolean forceUpdate)

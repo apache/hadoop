@@ -29,6 +29,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .DatanodeBlockID;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetKeyRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetKeyResponseProto;
@@ -73,16 +75,16 @@ public final class ContainerProtocolCalls  {
    * Calls the container protocol to get a container key.
    *
    * @param xceiverClient client to perform call
-   * @param containerKeyData key data to identify container
+   * @param datanodeBlockID blockID to identify container
    * @param traceID container protocol call args
    * @return container protocol get key response
    * @throws IOException if there is an I/O error while performing the call
    */
   public static GetKeyResponseProto getKey(XceiverClientSpi xceiverClient,
-      KeyData containerKeyData, String traceID) throws IOException {
+      DatanodeBlockID datanodeBlockID, String traceID) throws IOException {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto
         .newBuilder()
-        .setKeyData(containerKeyData);
+        .setBlockID(datanodeBlockID);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
@@ -240,18 +242,15 @@ public final class ContainerProtocolCalls  {
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto
             .newBuilder();
-    ContainerProtos.ContainerData.Builder containerData = ContainerProtos
-        .ContainerData.newBuilder();
-    containerData.setContainerID(containerID);
-    containerData.setContainerType(ContainerProtos.ContainerType
+    createRequest.setContainerID(containerID);
+    createRequest.setContainerType(ContainerProtos.ContainerType
         .KeyValueContainer);
-    createRequest.setContainerData(containerData.build());
 
     String id = client.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
-    request.setCreateContainer(createRequest);
+    request.setCreateContainer(createRequest.build());
     request.setDatanodeUuid(id);
     request.setTraceID(traceID);
     ContainerCommandResponseProto response = client.sendCommand(
@@ -348,14 +347,9 @@ public final class ContainerProtocolCalls  {
    */
   public static GetSmallFileResponseProto readSmallFile(XceiverClientSpi client,
       BlockID blockID, String traceID) throws IOException {
-    KeyData containerKeyData = KeyData
-        .newBuilder()
-        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
-        .build();
-
     GetKeyRequestProto.Builder getKey = GetKeyRequestProto
         .newBuilder()
-        .setKeyData(containerKeyData);
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf());
     ContainerProtos.GetSmallFileRequestProto getSmallFileRequest =
         GetSmallFileRequestProto
             .newBuilder().setKey(getKey)

@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerExcep
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -37,6 +39,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Class used to test ContainerSet operations.
@@ -59,8 +62,13 @@ public class TestContainerSet {
     //addContainer
     boolean result = containerSet.addContainer(keyValueContainer);
     assertTrue(result);
-    result = containerSet.addContainer(keyValueContainer);
-    assertFalse(result);
+    try {
+      result = containerSet.addContainer(keyValueContainer);
+      fail("Adding same container ID twice should fail.");
+    } catch (StorageContainerException ex) {
+      GenericTestUtils.assertExceptionContains("Container already exists with" +
+          " container Id " + containerId, ex);
+    }
 
     //getContainer
     KeyValueContainer container = (KeyValueContainer) containerSet

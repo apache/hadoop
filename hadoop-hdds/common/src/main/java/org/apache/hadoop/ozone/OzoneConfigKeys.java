@@ -256,6 +256,18 @@ public final class OzoneConfigKeys {
       "hdds.datanode.storage.utilization.critical.threshold";
   public static final double
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
+
+  public static final String
+      HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY =
+      "hdds.write.lock.reporting.threshold.ms";
+  public static final long
+      HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
+  public static final String
+      HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_KEY =
+      "hdds.lock.suppress.warning.interval.ms";
+  public static final long
+      HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT = 10000L;
+
   /**
    * There is no need to instantiate this class.
    */

@@ -22,13 +22,20 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
@@ -42,12 +49,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result
-    .INVALID_ARGUMENT;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result
-    .UNABLE_TO_FIND_DATA_DIR;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
-
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CLOSED_CONTAINER_IO;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.INVALID_CONTAINER_STATE;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.SUCCESS;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_DATA_DIR;
 
 /**
  * A set of helper functions to create proper responses.
@@ -59,28 +68,61 @@ public final class ContainerUtils {
   }
 
   /**
-   * Returns a CreateContainer Response. This call is used by create and delete
-   * containers which have null success responses.
-   *
-   * @param msg Request
-   * @return Response.
+   * Returns a Container Command Response Builder with the specified result
+   * and message.
+   * @param request requestProto message.
+   * @param result result of the command.
+   * @param message response message.
+   * @return ContainerCommand Response Builder.
    */
-  public static ContainerProtos.ContainerCommandResponseProto
-      getContainerResponse(ContainerProtos.ContainerCommandRequestProto msg) {
-    ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        getContainerResponse(msg, ContainerProtos.Result.SUCCESS, "");
+  public static ContainerCommandResponseProto.Builder
+  getContainerCommandResponse(
+      ContainerCommandRequestProto request, Result result, String message) {
+    return
+        ContainerCommandResponseProto.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setTraceID(request.getTraceID())
+            .setResult(result)
+            .setMessage(message);
+  }
+
+  /**
+   * Returns a Container Command Response Builder. This call is used to build
+   * success responses. Calling function can add other fields to the response
+   * as required.
+   * @param request requestProto message.
+   * @return ContainerCommand Response Builder with result as SUCCESS.
+   */
+  public static ContainerCommandResponseProto.Builder getSuccessResponseBuilder(
+      ContainerCommandRequestProto request) {
+    return
+        ContainerCommandResponseProto.newBuilder()
+            .setCmdType(request.getCmdType())
+            .setTraceID(request.getTraceID())
+            .setResult(Result.SUCCESS);
+  }
+
+  /**
+   * Returns a Container Command Response. This call is used for creating null
+   * success responses.
+   * @param request requestProto message.
+   * @return ContainerCommand Response with result as SUCCESS.
+   */
+  public static ContainerCommandResponseProto getSuccessResponse(
+      ContainerCommandRequestProto request) {
+    ContainerCommandResponseProto.Builder builder =
+        getContainerCommandResponse(request, Result.SUCCESS, "");
     return builder.build();
   }
 
   /**
    * Returns a ReadContainer Response.
-   *
-   * @param msg Request
-   * @param containerData - data
-   * @return Response.
+   * @param msg requestProto message.
+   * @param containerData container data to be returned.
+   * @return ReadContainer Response
    */
   public static ContainerProtos.ContainerCommandResponseProto
-      getReadContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
+    getReadContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
       ContainerData containerData) {
     Preconditions.checkNotNull(containerData);
 
@@ -89,7 +131,7 @@ public final class ContainerUtils {
     response.setContainerData(containerData.getProtoBufMessage());
 
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        getContainerResponse(msg, ContainerProtos.Result.SUCCESS, "");
+        getSuccessResponseBuilder(msg);
     builder.setReadContainer(response);
     return builder.build();
   }
@@ -98,78 +140,43 @@ public final class ContainerUtils {
    * We found a command type but no associated payload for the command. Hence
    * return malformed Command as response.
    *
-   * @param msg - Protobuf message.
-   * @param result - result
-   * @param message - Error message.
+   * @param request - Protobuf message.
    * @return ContainerCommandResponseProto - MALFORMED_REQUEST.
    */
-  public static ContainerProtos.ContainerCommandResponseProto.Builder
-      getContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
-      ContainerProtos.Result result, String message) {
-    return
-        ContainerProtos.ContainerCommandResponseProto.newBuilder()
-            .setCmdType(msg.getCmdType())
-            .setTraceID(msg.getTraceID())
-            .setResult(result)
-            .setMessage(message);
-  }
-
-  /**
-   * Logs the error and returns a response to the caller.
-   *
-   * @param log - Logger
-   * @param ex - Exception
-   * @param msg - Request Object
-   * @return Response
-   */
-  public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
-      Logger log, StorageContainerException ex,
-      ContainerProtos.ContainerCommandRequestProto msg) {
-    log.info("Operation: {} : Trace ID: {} : Message: {} : Result: {}",
-        msg.getCmdType().name(), msg.getTraceID(),
-        ex.getMessage(), ex.getResult().getValueDescriptor().getName());
-    return getContainerResponse(msg, ex.getResult(), ex.getMessage()).build();
-  }
-
-  /**
-   * Logs the error and returns a response to the caller.
-   *
-   * @param log - Logger
-   * @param ex - Exception
-   * @param msg - Request Object
-   * @return Response
-   */
-  public static ContainerProtos.ContainerCommandResponseProto logAndReturnError(
-      Logger log, RuntimeException ex,
-      ContainerProtos.ContainerCommandRequestProto msg) {
-    log.info("Operation: {} : Trace ID: {} : Message: {} ",
-        msg.getCmdType().name(), msg.getTraceID(), ex.getMessage());
-    return getContainerResponse(msg, INVALID_ARGUMENT, ex.getMessage()).build();
-  }
-
-  /**
-   * We found a command type but no associated payload for the command. Hence
-   * return malformed Command as response.
-   *
-   * @param msg - Protobuf message.
-   * @return ContainerCommandResponseProto - MALFORMED_REQUEST.
-   */
-  public static ContainerProtos.ContainerCommandResponseProto
-      malformedRequest(ContainerProtos.ContainerCommandRequestProto msg) {
-    return getContainerResponse(msg, ContainerProtos.Result.MALFORMED_REQUEST,
+  public static ContainerCommandResponseProto malformedRequest(
+      ContainerCommandRequestProto request) {
+    return getContainerCommandResponse(request, Result.MALFORMED_REQUEST,
         "Cmd type does not match the payload.").build();
   }
 
   /**
    * We found a command type that is not supported yet.
    *
-   * @param msg - Protobuf message.
-   * @return ContainerCommandResponseProto - MALFORMED_REQUEST.
+   * @param request - Protobuf message.
+   * @return ContainerCommandResponseProto - UNSUPPORTED_REQUEST.
    */
-  public static ContainerProtos.ContainerCommandResponseProto
-      unsupportedRequest(ContainerProtos.ContainerCommandRequestProto msg) {
-    return getContainerResponse(msg, ContainerProtos.Result.UNSUPPORTED_REQUEST,
+  public static ContainerCommandResponseProto unsupportedRequest(
+      ContainerCommandRequestProto request) {
+    return getContainerCommandResponse(request, Result.UNSUPPORTED_REQUEST,
         "Server does not support this command yet.").build();
+  }
+
+  /**
+   * Logs the error and returns a response to the caller.
+   *
+   * @param log - Logger
+   * @param ex - Exception
+   * @param request - Request Object
+   * @return Response
+   */
+  public static ContainerCommandResponseProto logAndReturnError(
+      Logger log, StorageContainerException ex,
+      ContainerCommandRequestProto request) {
+    log.info("Operation: {} : Trace ID: {} : Message: {} : Result: {}",
+        request.getCmdType().name(), request.getTraceID(),
+        ex.getMessage(), ex.getResult().getValueDescriptor().getName());
+    return getContainerCommandResponse(request, ex.getResult(), ex.getMessage())
+        .build();
   }
 
   /**
@@ -191,7 +198,7 @@ public final class ContainerUtils {
   }
 
   /**
-   * Verifies that this in indeed a new container.
+   * Verifies that this is indeed a new container.
    *
    * @param containerFile - Container File to verify
    * @throws IOException
@@ -343,7 +350,7 @@ public final class ContainerUtils {
     if(!forceDelete && !db.isEmpty()) {
       throw new StorageContainerException(
           "Container cannot be deleted because it is not empty.",
-          ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
+          Result.ERROR_CONTAINER_NOT_EMPTY);
     }
     // Close the DB connection and remove the DB handler from cache
     KeyUtils.removeDB(containerData, conf);

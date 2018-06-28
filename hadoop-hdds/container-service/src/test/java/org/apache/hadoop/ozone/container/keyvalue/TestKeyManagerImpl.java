@@ -26,9 +26,9 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -110,7 +110,7 @@ public class TestKeyManagerImpl {
 
     //Get Key
     KeyData fromGetKeyData = keyValueContainerManager.getKey(keyValueContainer,
-        keyData);
+        keyData.getBlockID());
 
     assertEquals(keyData.getContainerID(), fromGetKeyData.getContainerID());
     assertEquals(keyData.getLocalID(), fromGetKeyData.getLocalID());
@@ -168,8 +168,7 @@ public class TestKeyManagerImpl {
   @Test
   public void testGetNoSuchKey() throws Exception {
     try {
-      keyData = new KeyData(new BlockID(1L, 2L));
-      keyValueContainerManager.getKey(keyValueContainer, keyData);
+      keyValueContainerManager.getKey(keyValueContainer, new BlockID(1L, 2L));
       fail("testGetNoSuchKey failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Unable to find the key.", ex);

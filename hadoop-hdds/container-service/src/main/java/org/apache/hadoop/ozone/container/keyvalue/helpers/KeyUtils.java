@@ -21,9 +21,17 @@ package org.apache.hadoop.ozone.container.keyvalue.helpers;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .GetKeyResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.utils.MetadataStore;
 
@@ -111,5 +119,28 @@ public final class KeyUtils {
       throw new StorageContainerException("Failed to parse key data from the" +
           " bytes array.", NO_SUCH_KEY);
     }
+  }
+
+  /**
+   * Returns successful keyResponse.
+   * @param msg - Request.
+   * @return Response.
+   */
+  public static ContainerCommandResponseProto getKeyResponseSuccess(
+      ContainerCommandRequestProto msg) {
+    return ContainerUtils.getSuccessResponse(msg);
+  }
+
+
+  public static ContainerCommandResponseProto getKeyDataResponse(
+      ContainerCommandRequestProto msg, KeyData data) {
+    GetKeyResponseProto.Builder getKey = ContainerProtos
+        .GetKeyResponseProto
+        .newBuilder();
+    getKey.setKeyData(data.getProtoBufMessage());
+    ContainerProtos.ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(msg);
+    builder.setGetKey(getKey);
+    return  builder.build();
   }
 }

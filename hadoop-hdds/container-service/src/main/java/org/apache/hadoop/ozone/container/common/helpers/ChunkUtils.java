@@ -313,7 +313,7 @@ public final class ChunkUtils {
    */
   public static ContainerProtos.ContainerCommandResponseProto
       getChunkResponse(ContainerProtos.ContainerCommandRequestProto msg) {
-    return ContainerUtils.getContainerResponse(msg);
+    return ContainerUtils.getSuccessResponse(msg);
   }
 
   /**
@@ -336,8 +336,7 @@ public final class ChunkUtils {
     response.setBlockID(msg.getReadChunk().getBlockID());
 
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        ContainerUtils.getContainerResponse(msg, ContainerProtos.Result
-            .SUCCESS, "");
+        ContainerUtils.getSuccessResponseBuilder(msg);
     builder.setReadChunk(response);
     return builder.build();
   }

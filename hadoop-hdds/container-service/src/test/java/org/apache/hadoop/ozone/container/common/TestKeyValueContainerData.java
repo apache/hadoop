@@ -19,51 +19,17 @@
 package org.apache.hadoop.ozone.container.common;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is used to test the KeyValueContainerData.
  */
 public class TestKeyValueContainerData {
-
-  @Test
-  public void testGetFromProtoBuf() throws IOException {
-
-    long containerId = 1L;
-    ContainerProtos.ContainerType containerType = ContainerProtos
-        .ContainerType.KeyValueContainer;
-    int layOutVersion = 1;
-    ContainerProtos.ContainerLifeCycleState state = ContainerProtos
-        .ContainerLifeCycleState.OPEN;
-
-    ContainerProtos.KeyValue.Builder keyValBuilder =
-        ContainerProtos.KeyValue.newBuilder();
-    ContainerProtos.CreateContainerData containerData = ContainerProtos
-        .CreateContainerData.newBuilder()
-        .setContainerType(containerType)
-        .setContainerId(containerId)
-        .addMetadata(0, keyValBuilder.setKey("VOLUME").setValue("ozone")
-            .build())
-        .addMetadata(1, keyValBuilder.setKey("OWNER").setValue("hdfs")
-            .build()).build();
-
-    KeyValueContainerData kvData = KeyValueContainerData.getFromProtoBuf(
-        containerData);
-    assertEquals(containerType, kvData.getContainerType());
-    assertEquals(containerId, kvData.getContainerId());
-    assertEquals(layOutVersion, kvData.getLayOutVersion());
-    assertEquals(state, kvData.getState());
-    assertEquals(2, kvData.getMetadata().size());
-    assertEquals("ozone", kvData.getMetadata().get("VOLUME"));
-    assertEquals("hdfs", kvData.getMetadata().get("OWNER"));
-
-  }
 
   @Test
   public void testKeyValueData() {

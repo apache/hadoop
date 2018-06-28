@@ -158,7 +158,8 @@ public class TestOzoneContainer {
       // Get Key
       request = ContainerTestHelper.getKeyRequest(pipeline, putKeyRequest.getPutKey());
       response = client.sendCommand(request);
-      ContainerTestHelper.verifyGetKey(request, response);
+      int chunksCount = putKeyRequest.getPutKey().getKeyData().getChunksCount();
+      ContainerTestHelper.verifyGetKey(request, response, chunksCount);
 
 
       // Delete Key
@@ -331,7 +332,8 @@ public class TestOzoneContainer {
       request = ContainerTestHelper.getKeyRequest(client.getPipeline(),
           putKeyRequest.getPutKey());
       response = client.sendCommand(request);
-      ContainerTestHelper.verifyGetKey(request, response);
+      int chunksCount = putKeyRequest.getPutKey().getKeyData().getChunksCount();
+      ContainerTestHelper.verifyGetKey(request, response, chunksCount);
 
       // Delete Key must fail on a closed container.
       request =

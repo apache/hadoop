@@ -19,6 +19,9 @@
 package org.apache.hadoop.ozone.container.common.interfaces;
 
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
 
@@ -69,6 +72,14 @@ public interface Container extends RwLock {
   ContainerData getContainerData() throws StorageContainerException;
 
   /**
+   * Get the Container Lifecycle state.
+   *
+   * @return ContainerLifeCycleState - Container State.
+   * @throws StorageContainerException
+   */
+  ContainerLifeCycleState getContainerState();
+
+  /**
    * Closes a open container, if it is already closed or does not exist a
    * StorageContainerException is thrown.
    *
@@ -76,5 +87,9 @@ public interface Container extends RwLock {
    */
   void close() throws StorageContainerException;
 
+  /**
+   * Return the ContainerType for the container.
+   */
+  ContainerProtos.ContainerType getContainerType();
 
 }

@@ -15,21 +15,27 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.container.common.helpers;
+package org.apache.hadoop.ozone.container.keyvalue.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandResponseProto;
 
 /**
  * File Utils are helper routines used by putSmallFile and getSmallFile
  * RPCs.
  */
-public final class FileUtils {
+public final class SmallFileUtils {
   /**
    * Never Constructed.
    */
-  private FileUtils() {
+  private SmallFileUtils() {
   }
 
   /**
@@ -37,13 +43,12 @@ public final class FileUtils {
    * @param msg - ContainerCommandRequestProto
    * @return - ContainerCommandResponseProto
    */
-  public static ContainerProtos.ContainerCommandResponseProto
-      getPutFileResponse(ContainerProtos.ContainerCommandRequestProto msg) {
+  public static ContainerCommandResponseProto getPutFileResponseSuccess(
+      ContainerCommandRequestProto msg) {
     ContainerProtos.PutSmallFileResponseProto.Builder getResponse =
         ContainerProtos.PutSmallFileResponseProto.newBuilder();
-    ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        ContainerUtils.getContainerResponse(msg, ContainerProtos.Result
-            .SUCCESS, "");
+    ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(msg);
     builder.setCmdType(ContainerProtos.Type.PutSmallFile);
     builder.setPutSmallFile(getResponse);
     return  builder.build();
@@ -56,24 +61,21 @@ public final class FileUtils {
    * @param info  - Info
    * @return    Response.
    */
-  public static ContainerProtos.ContainerCommandResponseProto
-      getGetSmallFileResponse(ContainerProtos.ContainerCommandRequestProto msg,
-      byte[] data, ChunkInfo info) {
+  public static ContainerCommandResponseProto getGetSmallFileResponseSuccess(
+      ContainerCommandRequestProto msg, byte[] data, ChunkInfo info) {
     Preconditions.checkNotNull(msg);
 
     ContainerProtos.ReadChunkResponseProto.Builder readChunkresponse =
         ContainerProtos.ReadChunkResponseProto.newBuilder();
     readChunkresponse.setChunkData(info.getProtoBufMessage());
     readChunkresponse.setData(ByteString.copyFrom(data));
-    readChunkresponse.setBlockID(msg.getGetSmallFile().getKey().
-        getKeyData().getBlockID());
+    readChunkresponse.setBlockID(msg.getGetSmallFile().getKey().getBlockID());
 
     ContainerProtos.GetSmallFileResponseProto.Builder getSmallFile =
         ContainerProtos.GetSmallFileResponseProto.newBuilder();
     getSmallFile.setData(readChunkresponse.build());
-    ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        ContainerUtils.getContainerResponse(msg, ContainerProtos.Result
-            .SUCCESS, "");
+    ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(msg);
     builder.setCmdType(ContainerProtos.Type.GetSmallFile);
     builder.setGetSmallFile(getSmallFile);
     return builder.build();

@@ -281,10 +281,10 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
         LOG.debug("get key accessing {} {}",
             containerID, containerKey);
         groupInputStream.streamOffset[i] = length;
-          ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
-            .containerKeyDataForRead(blockID);
+        ContainerProtos.DatanodeBlockID datanodeBlockID = blockID
+            .getDatanodeBlockIDProtobuf();
         ContainerProtos.GetKeyResponseProto response = ContainerProtocolCalls
-            .getKey(xceiverClient, containerKeyData, requestId);
+            .getKey(xceiverClient, datanodeBlockID, requestId);
         List<ContainerProtos.ChunkInfo> chunks =
             response.getKeyData().getChunksList();
         for (ContainerProtos.ChunkInfo chunk : chunks) {

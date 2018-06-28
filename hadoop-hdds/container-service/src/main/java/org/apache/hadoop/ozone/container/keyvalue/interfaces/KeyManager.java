@@ -43,11 +43,11 @@ public interface KeyManager {
    * Gets an existing key.
    *
    * @param container - Container from which key need to be get.
-   * @param data - Key Data.
+   * @param blockID - BlockID of the Key.
    * @return Key Data.
    * @throws IOException
    */
-  KeyData getKey(Container container, KeyData data) throws IOException;
+  KeyData getKey(Container container, BlockID blockID) throws IOException;
 
   /**
    * Deletes an existing Key.

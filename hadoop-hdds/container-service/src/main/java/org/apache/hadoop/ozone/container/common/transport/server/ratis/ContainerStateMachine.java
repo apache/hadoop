@@ -208,7 +208,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   private CompletableFuture<Message> handleCreateContainer(
       ContainerCommandRequestProto requestProto) {
     long containerID =
-        requestProto.getCreateContainer().getContainerData().getContainerID();
+        requestProto.getCreateContainer().getContainerID();
     createContainerFutureMap.
         computeIfAbsent(containerID, k -> new CompletableFuture<>());
     return CompletableFuture.completedFuture(() -> ByteString.EMPTY);
@@ -265,8 +265,7 @@ public class ContainerStateMachine extends BaseStateMachine {
         Message message = runCommand(requestProto);
         if (cmdType == ContainerProtos.Type.CreateContainer) {
           long containerID =
-              requestProto.getCreateContainer()
-                  .getContainerData().getContainerID();
+              requestProto.getCreateContainer().getContainerID();
           createContainerFutureMap.remove(containerID).complete(message);
         }
         return CompletableFuture.completedFuture(message);

@@ -362,10 +362,7 @@ public final class ContainerTestHelper {
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto
             .newBuilder();
-    ContainerProtos.ContainerData.Builder containerData = ContainerProtos
-        .ContainerData.newBuilder();
-    containerData.setContainerID(containerID);
-    createRequest.setContainerData(containerData.build());
+    createRequest.setContainerID(containerID);
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -391,19 +388,16 @@ public final class ContainerTestHelper {
       long containerID, Map<String, String> metaData) throws IOException {
     ContainerProtos.UpdateContainerRequestProto.Builder updateRequestBuilder =
         ContainerProtos.UpdateContainerRequestProto.newBuilder();
-    ContainerProtos.ContainerData.Builder containerData = ContainerProtos
-        .ContainerData.newBuilder();
-    containerData.setContainerID(containerID);
+    updateRequestBuilder.setContainerID(containerID);
     String[] keys = metaData.keySet().toArray(new String[]{});
     for(int i=0; i<keys.length; i++) {
       KeyValue.Builder kvBuilder = KeyValue.newBuilder();
       kvBuilder.setKey(keys[i]);
       kvBuilder.setValue(metaData.get(keys[i]));
-      containerData.addMetadata(i, kvBuilder.build());
+      updateRequestBuilder.addMetadata(kvBuilder.build());
     }
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline();
-    updateRequestBuilder.setContainerData(containerData.build());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -478,10 +472,7 @@ public final class ContainerTestHelper {
 
     ContainerProtos.GetKeyRequestProto.Builder getRequest =
         ContainerProtos.GetKeyRequestProto.newBuilder();
-    ContainerProtos.KeyData.Builder keyData = ContainerProtos.KeyData
-        .newBuilder();
-    keyData.setBlockID(blockID);
-    getRequest.setKeyData(keyData);
+    getRequest.setBlockID(blockID);
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -499,13 +490,11 @@ public final class ContainerTestHelper {
    * @param response - Response
    */
   public static void verifyGetKey(ContainerCommandRequestProto request,
-      ContainerCommandResponseProto response) {
+      ContainerCommandResponseProto response, int expectedChunksCount) {
     Assert.assertEquals(request.getTraceID(), response.getTraceID());
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-    ContainerProtos.PutKeyRequestProto putKey = request.getPutKey();
-    ContainerProtos.GetKeyRequestProto getKey = request.getGetKey();
-    Assert.assertEquals(putKey.getKeyData().getChunksCount(),
-        getKey.getKeyData().getChunksCount());
+    Assert.assertEquals(expectedChunksCount,
+        response.getGetKey().getKeyData().getChunksCount());
   }
 
   /**

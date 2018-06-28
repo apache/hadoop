@@ -174,9 +174,7 @@ public class BenchMarkDatanodeDispatcher {
   private ContainerCommandRequestProto getCreateContainerCommand(long containerID) {
     CreateContainerRequestProto.Builder createRequest =
         CreateContainerRequestProto.newBuilder();
-    createRequest.setContainerData(
-        ContainerData.newBuilder().setContainerID(
-            containerID).build());
+    createRequest.setContainerID(containerID).build();
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -245,10 +243,9 @@ public class BenchMarkDatanodeDispatcher {
     return request.build();
   }
 
-  private ContainerCommandRequestProto getGetKeyCommand(
-      BlockID blockID, String chunkKey) {
+  private ContainerCommandRequestProto getGetKeyCommand(BlockID blockID) {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto.newBuilder()
-        .setKeyData(getKeyData(blockID, chunkKey));
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf());
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(ContainerProtos.Type.GetKey)
@@ -300,8 +297,7 @@ public class BenchMarkDatanodeDispatcher {
   @Benchmark
   public void getKey(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
-    String chunkKey = getNewChunkToWrite();
-    bmdd.dispatcher.dispatch(getGetKeyCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getGetKeyCommand(blockID));
   }
 
   // Chunks writes from benchmark only reaches certain containers

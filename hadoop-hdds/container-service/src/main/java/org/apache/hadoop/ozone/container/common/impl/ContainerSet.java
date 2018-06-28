@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
@@ -68,8 +69,10 @@ public class ContainerSet {
           containerId);
       return true;
     } else {
-      LOG.debug("Container already exists with container Id {}", containerId);
-      return false;
+      LOG.warn("Container already exists with container Id {}", containerId);
+      throw new StorageContainerException("Container already exists with " +
+          "container Id " + containerId,
+          ContainerProtos.Result.CONTAINER_EXISTS);
     }
   }
 

@@ -21,12 +21,21 @@ package org.apache.hadoop.ozone.container.keyvalue.helpers;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -292,4 +301,41 @@ public final class ChunkUtils {
         (Boolean.valueOf(overWrite));
   }
 
+  /**
+   * Returns a CreateContainer Response. This call is used by create and delete
+   * containers which have null success responses.
+   *
+   * @param msg Request
+   * @return Response.
+   */
+  public static ContainerCommandResponseProto getChunkResponseSuccess(
+      ContainerCommandRequestProto msg) {
+    return ContainerUtils.getSuccessResponse(msg);
+  }
+
+  /**
+   * Gets a response to the read chunk calls.
+   *
+   * @param msg - Msg
+   * @param data - Data
+   * @param info - Info
+   * @return Response.
+   */
+  public static ContainerCommandResponseProto getReadChunkResponse(
+      ContainerCommandRequestProto msg, byte[] data, ChunkInfo info) {
+    Preconditions.checkNotNull(msg);
+    Preconditions.checkNotNull("Chunk data is null", data);
+    Preconditions.checkNotNull("Chunk Info is null", info);
+
+    ReadChunkResponseProto.Builder response =
+        ReadChunkResponseProto.newBuilder();
+    response.setChunkData(info.getProtoBufMessage());
+    response.setData(ByteString.copyFrom(data));
+    response.setBlockID(msg.getReadChunk().getBlockID());
+
+    ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(msg);
+    builder.setReadChunk(response);
+    return builder.build();
+  }
 }

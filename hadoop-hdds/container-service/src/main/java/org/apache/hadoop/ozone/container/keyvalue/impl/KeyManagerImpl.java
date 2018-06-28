@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.keyvalue;
+package org.apache.hadoop.ozone.container.keyvalue.impl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
@@ -24,9 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.ozone.container.common.impl.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
@@ -89,21 +90,24 @@ public class KeyManagerImpl implements KeyManager {
    * Gets an existing key.
    *
    * @param container - Container from which key need to be get.
-   * @param data - Key Data.
+   * @param blockID - BlockID of the key.
    * @return Key Data.
    * @throws IOException
    */
-  public KeyData getKey(Container container, KeyData data) throws IOException {
-    Preconditions.checkNotNull(data, "Key data cannot be null");
-    Preconditions.checkNotNull(data.getContainerID(), "Container name cannot" +
-        " be null");
+  public KeyData getKey(Container container, BlockID blockID)
+      throws IOException {
+    Preconditions.checkNotNull(blockID,
+        "BlockID cannot be null in GetKet request");
+    Preconditions.checkNotNull(blockID.getContainerID(),
+        "Container name cannot be null");
+
     KeyValueContainerData containerData = (KeyValueContainerData) container
         .getContainerData();
     MetadataStore db = KeyUtils.getDB(containerData, config);
     // This is a post condition that acts as a hint to the user.
     // Should never fail.
     Preconditions.checkNotNull(db, "DB cannot be null here");
-    byte[] kData = db.get(Longs.toByteArray(data.getLocalID()));
+    byte[] kData = db.get(Longs.toByteArray(blockID.getLocalID()));
     if (kData == null) {
       throw new StorageContainerException("Unable to find the key.",
           NO_SUCH_KEY);

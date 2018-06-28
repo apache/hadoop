@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.helpers.FileUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.SmallFileUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -138,8 +138,6 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (StorageContainerException e) {
       // This useful since the trace ID will allow us to correlate failures.
       return ContainerUtils.logAndReturnError(LOG, e, msg);
-    } catch (IllegalStateException | NullPointerException e) {
-      return ContainerUtils.logAndReturnError(LOG, e, msg);
     }
   }
 
@@ -186,13 +184,13 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getContainerID(),
+          msg.getCreateContainer().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
-      return ContainerUtils.getContainerResponse(msg,
+      return ContainerUtils.getContainerCommandResponse(msg,
           ContainerProtos.Result.CONTAINER_INTERNAL_ERROR,
           ex.toString()).build();
     }
@@ -230,13 +228,13 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getContainerID(),
+          msg.getCreateContainer().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
-      return ContainerUtils.getContainerResponse(msg,
+      return ContainerUtils.getContainerCommandResponse(msg,
           ContainerProtos.Result.CONTAINER_INTERNAL_ERROR,
           ex.toString()).build();
     }
@@ -273,13 +271,13 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getContainerID(),
+          msg.getCreateContainer().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
 
       // TODO : Replace with finer error codes.
-      return ContainerUtils.getContainerResponse(msg,
+      return ContainerUtils.getContainerCommandResponse(msg,
           ContainerProtos.Result.CONTAINER_INTERNAL_ERROR,
           ex.toString()).build();
     }
@@ -318,15 +316,14 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    long containerID = msg.getUpdateContainer()
-        .getContainerData().getContainerID();
+    long containerID = msg.getUpdateContainer().getContainerID();
 
-    ContainerData data = ContainerData.getFromProtBuf(
-        msg.getUpdateContainer().getContainerData(), conf);
+    ContainerData data = new ContainerData(msg.getUpdateContainer()
+        .getContainerID(), conf);
     boolean forceUpdate = msg.getUpdateContainer().getForceUpdate();
     this.containerManager.updateContainer(containerID,
         data, forceUpdate);
-    return ContainerUtils.getContainerResponse(msg);
+    return ContainerUtils.getSuccessResponse(msg);
   }
 
   /**
@@ -371,7 +368,7 @@ public class Dispatcher implements ContainerDispatcher {
     long containerID = msg.getDeleteContainer().getContainerID();
     boolean forceDelete = msg.getDeleteContainer().getForceDelete();
     this.containerManager.deleteContainer(containerID, forceDelete);
-    return ContainerUtils.getContainerResponse(msg);
+    return ContainerUtils.getSuccessResponse(msg);
   }
 
   /**
@@ -388,12 +385,11 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    ContainerData cData = ContainerData.getFromProtBuf(
-        msg.getCreateContainer().getContainerData(), conf);
-    Preconditions.checkNotNull(cData, "Container data is null");
+    ContainerData cData = new ContainerData(
+        msg.getCreateContainer().getContainerID(), conf);
 
     this.containerManager.createContainer(cData);
-    return ContainerUtils.getContainerResponse(msg);
+    return ContainerUtils.getSuccessResponse(msg);
   }
 
   /**
@@ -417,7 +413,7 @@ public class Dispatcher implements ContainerDispatcher {
             "container.", CLOSED_CONTAINER_IO);
       }
       this.containerManager.closeContainer(containerID);
-      return ContainerUtils.getContainerResponse(msg);
+      return ContainerUtils.getSuccessResponse(msg);
     } catch (NoSuchAlgorithmException e) {
       throw new StorageContainerException("No such Algorithm", e,
           NO_SUCH_ALGORITHM);
@@ -561,7 +557,8 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    KeyData keyData = KeyData.getFromProtoBuf(msg.getGetKey().getKeyData());
+    KeyData keyData = new KeyData(
+        BlockID.getFromProtobuf(msg.getGetKey().getBlockID()));
     Preconditions.checkNotNull(keyData);
     KeyData responseData =
         this.containerManager.getKeyManager().getKey(keyData);
@@ -634,7 +631,7 @@ public class Dispatcher implements ContainerDispatcher {
       chunks.add(chunkInfo.getProtoBufMessage());
       keyData.setChunks(chunks);
       this.containerManager.getKeyManager().putKey(keyData);
-      return FileUtils.getPutFileResponse(msg);
+      return SmallFileUtils.getPutFileResponseSuccess(msg);
     } catch (StorageContainerException e) {
       return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException e) {
@@ -661,8 +658,8 @@ public class Dispatcher implements ContainerDispatcher {
     }
     try {
       long bytes = 0;
-      KeyData keyData = KeyData.getFromProtoBuf(msg.getGetSmallFile()
-          .getKey().getKeyData());
+      KeyData keyData = new KeyData(BlockID.getFromProtobuf(
+          msg.getGetSmallFile().getKey().getBlockID()));
       KeyData data = this.containerManager.getKeyManager().getKey(keyData);
       ContainerProtos.ChunkInfo c = null;
       for (ContainerProtos.ChunkInfo chunk : data.getChunks()) {
@@ -675,8 +672,8 @@ public class Dispatcher implements ContainerDispatcher {
         c = chunk;
       }
       metrics.incContainerBytesStats(Type.GetSmallFile, bytes);
-      return FileUtils.getGetSmallFileResponse(msg, dataBuf.toByteArray(),
-          ChunkInfo.getFromProtoBuf(c));
+      return SmallFileUtils.getGetSmallFileResponseSuccess(
+          msg, dataBuf.toByteArray(), ChunkInfo.getFromProtoBuf(c));
     } catch (StorageContainerException e) {
       return ContainerUtils.logAndReturnError(LOG, e, msg);
     } catch (IOException e) {

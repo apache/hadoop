@@ -16,13 +16,15 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.impl;
+package org.apache.hadoop.ozone.container.keyvalue;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * This class represents the KeyValueContainer metadata, which is the
@@ -161,31 +163,38 @@ public class KeyValueContainerData extends ContainerData {
     this.numPendingDeletionBlocks -= numBlocks;
   }
 
-
   /**
-   * Constructs a KeyValueContainerData object from ProtoBuf classes.
+   * Returns a ProtoBuf Message from ContainerData.
    *
-   * @param protoData - ProtoBuf Message
-   * @throws IOException
+   * @return Protocol Buffer Message
    */
-  public static KeyValueContainerData getFromProtoBuf(
-      ContainerProtos.CreateContainerData protoData) throws IOException {
+  public ContainerProtos.ContainerData getProtoBufMessage() {
+    ContainerProtos.ContainerData.Builder builder = ContainerProtos
+        .ContainerData.newBuilder();
+    builder.setContainerID(this.getContainerId());
+    builder.setDbPath(this.getDbFile().getPath());
+    builder.setContainerPath(this.getMetadataPath());
+    builder.setState(this.getState());
 
-    long containerID;
-    ContainerProtos.ContainerType containerType;
-
-    containerID = protoData.getContainerId();
-    containerType = protoData.getContainerType();
-
-    KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
-        containerType, containerID);
-
-    for (int x = 0; x < protoData.getMetadataCount(); x++) {
-      keyValueContainerData.addMetadata(protoData.getMetadata(x).getKey(),
-          protoData.getMetadata(x).getValue());
+    for (Map.Entry<String, String> entry : getMetadata().entrySet()) {
+      ContainerProtos.KeyValue.Builder keyValBuilder =
+          ContainerProtos.KeyValue.newBuilder();
+      builder.addMetadata(keyValBuilder.setKey(entry.getKey())
+          .setValue(entry.getValue()).build());
     }
 
-    return keyValueContainerData;
-  }
+    if (this.getBytesUsed() >= 0) {
+      builder.setBytesUsed(this.getBytesUsed());
+    }
 
+    if(this.getContainerType() != null) {
+      builder.setContainerType(ContainerProtos.ContainerType.KeyValueContainer);
+    }
+
+    if(this.getContainerDBType() != null) {
+      builder.setContainerDBType(containerDBType);
+    }
+
+    return builder.build();
+  }
 }
