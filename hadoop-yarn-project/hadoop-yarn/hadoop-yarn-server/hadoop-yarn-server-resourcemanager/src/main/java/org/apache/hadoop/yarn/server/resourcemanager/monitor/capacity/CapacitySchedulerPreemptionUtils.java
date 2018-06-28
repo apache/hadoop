@@ -151,6 +151,7 @@ public class CapacitySchedulerPreemptionUtils {
       Map<String, Resource> resourceToObtainByPartitions,
       RMContainer rmContainer, Resource clusterResource,
       Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource totalPreemptionAllowed, boolean conservativeDRF) {
     ApplicationAttemptId attemptId = rmContainer.getApplicationAttemptId();
 
@@ -218,7 +219,7 @@ public class CapacitySchedulerPreemptionUtils {
       }
 
       // Add to preemptMap
-      addToPreemptMap(preemptMap, attemptId, rmContainer);
+      addToPreemptMap(preemptMap, curCandidates, attemptId, rmContainer);
       return true;
     }
 
@@ -230,15 +231,23 @@ public class CapacitySchedulerPreemptionUtils {
     return context.getScheduler().getSchedulerNode(nodeId).getPartition();
   }
 
-  private static void addToPreemptMap(
+  protected static void addToPreemptMap(
       Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       ApplicationAttemptId appAttemptId, RMContainer containerToPreempt) {
-    Set<RMContainer> set = preemptMap.get(appAttemptId);
-    if (null == set) {
-      set = new HashSet<>();
-      preemptMap.put(appAttemptId, set);
+    Set<RMContainer> setForToPreempt = preemptMap.get(appAttemptId);
+    Set<RMContainer> setForCurCandidates = curCandidates.get(appAttemptId);
+    if (null == setForToPreempt) {
+      setForToPreempt = new HashSet<>();
+      preemptMap.put(appAttemptId, setForToPreempt);
     }
-    set.add(containerToPreempt);
+    setForToPreempt.add(containerToPreempt);
+
+    if (null == setForCurCandidates) {
+      setForCurCandidates = new HashSet<>();
+      curCandidates.put(appAttemptId, setForCurCandidates);
+    }
+    setForCurCandidates.add(containerToPreempt);
   }
 
   private static boolean preemptMapContains(

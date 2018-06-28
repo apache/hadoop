@@ -122,7 +122,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   public Map<ApplicationAttemptId, Set<RMContainer>> selectCandidates(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed) {
-
+    Map<ApplicationAttemptId, Set<RMContainer>> curCandidates = new HashMap<>();
     // 1. Calculate the abnormality within each queue one by one.
     computeIntraQueuePreemptionDemand(
         clusterResource, totalPreemptedResourceAllowed, selectedCandidates);
@@ -182,7 +182,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           leafQueue.getReadLock().lock();
           for (FiCaSchedulerApp app : apps) {
             preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
-                clusterResource, totalPreemptedResourceAllowed,
+                curCandidates, clusterResource, totalPreemptedResourceAllowed,
                 resToObtainByPartition, rollingResourceUsagePerUser);
           }
         } finally {
@@ -191,7 +191,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       }
     }
 
-    return selectedCandidates;
+    return curCandidates;
   }
 
   private void initializeUsageAndUserLimitForCompute(Resource clusterResource,
@@ -211,6 +211,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   private void preemptFromLeastStarvedApp(LeafQueue leafQueue,
       FiCaSchedulerApp app,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed,
       Map<String, Resource> resToObtainByPartition,
       Map<String, Resource> rollingResourceUsagePerUser) {
@@ -270,7 +271,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       boolean ret = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, selectedCandidates,
-              totalPreemptedResourceAllowed, true);
+              curCandidates, totalPreemptedResourceAllowed, true);
 
       // Subtract from respective user's resource usage once a container is
       // selected for preemption.
