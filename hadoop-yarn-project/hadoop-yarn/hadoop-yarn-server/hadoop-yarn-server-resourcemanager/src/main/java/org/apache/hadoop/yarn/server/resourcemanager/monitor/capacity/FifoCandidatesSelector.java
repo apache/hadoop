@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -42,19 +43,25 @@ public class FifoCandidatesSelector
   private static final Log LOG =
       LogFactory.getLog(FifoCandidatesSelector.class);
   private PreemptableResourceCalculator preemptableAmountCalculator;
+  private boolean allowQueuesBalanceAfterAllQueuesSatisfied;
 
   FifoCandidatesSelector(CapacitySchedulerPreemptionContext preemptionContext,
-      boolean includeReservedResource) {
+      boolean includeReservedResource,
+      boolean allowQueuesBalanceAfterAllQueuesSatisfied) {
     super(preemptionContext);
 
+    this.allowQueuesBalanceAfterAllQueuesSatisfied =
+        allowQueuesBalanceAfterAllQueuesSatisfied;
     preemptableAmountCalculator = new PreemptableResourceCalculator(
-        preemptionContext, includeReservedResource);
+        preemptionContext, includeReservedResource,
+        allowQueuesBalanceAfterAllQueuesSatisfied);
   }
 
   @Override
   public Map<ApplicationAttemptId, Set<RMContainer>> selectCandidates(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource, Resource totalPreemptionAllowed) {
+    Map<ApplicationAttemptId, Set<RMContainer>> curCandidates = new HashMap<>();
     // Calculate how much resources we need to preempt
     preemptableAmountCalculator.computeIdealAllocation(clusterResource,
         totalPreemptionAllowed);
@@ -110,7 +117,7 @@ public class FifoCandidatesSelector
               boolean preempted = CapacitySchedulerPreemptionUtils
                   .tryPreemptContainerAndDeductResToObtain(rc,
                       preemptionContext, resToObtainByPartition, c,
-                      clusterResource, selectedCandidates,
+                      clusterResource, selectedCandidates, curCandidates,
                       totalPreemptionAllowed, false);
               if (!preempted) {
                 continue;
@@ -134,7 +141,7 @@ public class FifoCandidatesSelector
 
           preemptFrom(fc, clusterResource, resToObtainByPartition,
               skippedAMContainerlist, skippedAMSize, selectedCandidates,
-              totalPreemptionAllowed);
+              curCandidates, totalPreemptionAllowed);
         }
 
         // Can try preempting AMContainers (still saving atmost
@@ -145,15 +152,15 @@ public class FifoCandidatesSelector
                 leafQueue.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL),
                 leafQueue.getMaxAMResourcePerQueuePercent());
 
-        preemptAMContainers(clusterResource, selectedCandidates, skippedAMContainerlist,
-            resToObtainByPartition, skippedAMSize, maxAMCapacityForThisQueue,
-            totalPreemptionAllowed);
+        preemptAMContainers(clusterResource, selectedCandidates, curCandidates,
+            skippedAMContainerlist, resToObtainByPartition, skippedAMSize,
+            maxAMCapacityForThisQueue, totalPreemptionAllowed);
       } finally {
         leafQueue.getReadLock().unlock();
       }
     }
 
-    return selectedCandidates;
+    return curCandidates;
   }
 
   /**
@@ -169,6 +176,7 @@ public class FifoCandidatesSelector
    */
   private void preemptAMContainers(Resource clusterResource,
       Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       List<RMContainer> skippedAMContainerlist,
       Map<String, Resource> resToObtainByPartition, Resource skippedAMSize,
       Resource maxAMCapacityForThisQueue, Resource totalPreemptionAllowed) {
@@ -187,7 +195,7 @@ public class FifoCandidatesSelector
       boolean preempted = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, preemptMap,
-              totalPreemptionAllowed, false);
+              curCandidates, totalPreemptionAllowed, false);
       if (preempted) {
         Resources.subtractFrom(skippedAMSize, c.getAllocatedResource());
       }
@@ -203,6 +211,7 @@ public class FifoCandidatesSelector
       Resource clusterResource, Map<String, Resource> resToObtainByPartition,
       List<RMContainer> skippedAMContainerlist, Resource skippedAMSize,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedContainers,
+      Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource totalPreemptionAllowed) {
     ApplicationAttemptId appId = app.getApplicationAttemptId();
 
@@ -219,9 +228,10 @@ public class FifoCandidatesSelector
       }
 
       // Try to preempt this container
-      CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
-          rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed, false);
+     CapacitySchedulerPreemptionUtils
+          .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
+              resToObtainByPartition, c, clusterResource, selectedContainers,
+              curCandidates, totalPreemptionAllowed, false);
 
       if (!preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
@@ -262,9 +272,14 @@ public class FifoCandidatesSelector
       }
 
       // Try to preempt this container
-      CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
-          rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed, false);
+      CapacitySchedulerPreemptionUtils
+          .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
+              resToObtainByPartition, c, clusterResource, selectedContainers,
+              curCandidates, totalPreemptionAllowed, false);
     }
+  }
+
+  public boolean getAllowQueuesBalanceAfterAllQueuesSatisfied() {
+    return allowQueuesBalanceAfterAllQueuesSatisfied;
   }
 }

@@ -48,11 +48,14 @@ public class PreemptableResourceCalculator
    * @param isReservedPreemptionCandidatesSelector this will be set by
    * different implementation of candidate selectors, please refer to
    * TempQueuePerPartition#offer for details.
+   * @param allowQueuesBalanceAfterAllQueuesSatisfied
    */
   public PreemptableResourceCalculator(
       CapacitySchedulerPreemptionContext preemptionContext,
-      boolean isReservedPreemptionCandidatesSelector) {
-    super(preemptionContext, isReservedPreemptionCandidatesSelector);
+      boolean isReservedPreemptionCandidatesSelector,
+      boolean allowQueuesBalanceAfterAllQueuesSatisfied) {
+    super(preemptionContext, isReservedPreemptionCandidatesSelector,
+        allowQueuesBalanceAfterAllQueuesSatisfied);
   }
 
   /**

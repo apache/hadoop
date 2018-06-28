@@ -34,6 +34,7 @@ import java.util.Set;
 public abstract class PreemptionCandidatesSelector {
   protected CapacitySchedulerPreemptionContext preemptionContext;
   protected ResourceCalculator rc;
+  private long maximumKillWaitTime = -1;
 
   PreemptionCandidatesSelector(
       CapacitySchedulerPreemptionContext preemptionContext) {
@@ -77,4 +78,14 @@ public abstract class PreemptionCandidatesSelector {
     });
   }
 
+  public long getMaximumKillWaitTimeMs() {
+    if (maximumKillWaitTime > 0) {
+      return maximumKillWaitTime;
+    }
+    return preemptionContext.getDefaultMaximumKillWaitTimeout();
+  }
+
+  public void setMaximumKillWaitTime(long maximumKillWaitTime) {
+    this.maximumKillWaitTime = maximumKillWaitTime;
+  }
 }

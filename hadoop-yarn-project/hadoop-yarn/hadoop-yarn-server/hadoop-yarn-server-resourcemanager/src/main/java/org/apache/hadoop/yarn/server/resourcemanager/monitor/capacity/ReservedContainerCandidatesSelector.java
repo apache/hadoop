@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +62,7 @@ public class ReservedContainerCandidatesSelector
       CapacitySchedulerPreemptionContext preemptionContext) {
     super(preemptionContext);
     preemptableAmountCalculator = new PreemptableResourceCalculator(
-        preemptionContext, true);
+        preemptionContext, true, false);
   }
 
   @Override
@@ -71,6 +70,7 @@ public class ReservedContainerCandidatesSelector
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Resource clusterResource,
       Resource totalPreemptedResourceAllowed) {
+    Map<ApplicationAttemptId, Set<RMContainer>> curCandidates = new HashMap<>();
     // Calculate how much resources we need to preempt
     preemptableAmountCalculator.computeIdealAllocation(clusterResource,
         totalPreemptedResourceAllowed);
@@ -101,14 +101,10 @@ public class ReservedContainerCandidatesSelector
           selectedCandidates, totalPreemptedResourceAllowed, false);
       if (null != preemptionResult) {
         for (RMContainer c : preemptionResult.selectedContainers) {
-          ApplicationAttemptId appId = c.getApplicationAttemptId();
-          Set<RMContainer> containers = selectedCandidates.get(appId);
-          if (null == containers) {
-            containers = new HashSet<>();
-            selectedCandidates.put(appId, containers);
-          }
+          // Add to preemptMap
+          CapacitySchedulerPreemptionUtils.addToPreemptMap(selectedCandidates,
+              curCandidates, c.getApplicationAttemptId(), c);
 
-          containers.add(c);
           if (LOG.isDebugEnabled()) {
             LOG.debug(this.getClass().getName() + " Marked container=" + c
                 .getContainerId() + " from queue=" + c.getQueueName()
@@ -118,7 +114,7 @@ public class ReservedContainerCandidatesSelector
       }
     }
 
-    return selectedCandidates;
+    return curCandidates;
   }
 
   private Resource getPreemptableResource(String queueName,
