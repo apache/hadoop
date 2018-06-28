@@ -38,7 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -165,7 +165,7 @@ public class DirectoryScanner implements Runnable {
     /**
      * Merges {@code that} ScanInfoPerBlockPool into this one
      *
-     * @param the ScanInfoPerBlockPool to merge
+     * @param that ScanInfoPerBlockPool to merge
      */
     public void addAll(ScanInfoPerBlockPool that) {
       if (that == null) return;

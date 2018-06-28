@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.util.Time;
@@ -150,14 +149,14 @@ public class BenchMarkContainerStateMap {
     Preconditions.checkArgument(i.hasNext());
     final DatanodeDetails leader = i.next();
     String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(5);
-    final PipelineChannel pipelineChannel =
-        new PipelineChannel(leader.getUuidString(), OPEN,
+    final Pipeline pipeline =
+        new Pipeline(leader.getUuidString(), OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
-    pipelineChannel.addMember(leader);
+    pipeline.addMember(leader);
     for (; i.hasNext();) {
-      pipelineChannel.addMember(i.next());
+      pipeline.addMember(i.next());
     }
-    return new Pipeline(pipelineChannel);
+    return pipeline;
   }
 
   @Benchmark

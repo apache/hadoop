@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -842,8 +842,8 @@ public class Journal implements Closeable {
         // Paranoid sanity check: if the new log is shorter than the log we
         // currently have, we should not end up discarding any transactions
         // which are already Committed.
-        if (txnRange(currentSegment).containsLong(committedTxnId.get()) &&
-            !txnRange(segment).containsLong(committedTxnId.get())) {
+        if (txnRange(currentSegment).contains(committedTxnId.get()) &&
+            !txnRange(segment).contains(committedTxnId.get())) {
           throw new AssertionError(
               "Cannot replace segment " +
               TextFormat.shortDebugString(currentSegment) +
@@ -862,7 +862,7 @@ public class Journal implements Closeable {
         
         // If we're shortening the log, update our highest txid
         // used for lag metrics.
-        if (txnRange(currentSegment).containsLong(highestWrittenTxId)) {
+        if (txnRange(currentSegment).contains(highestWrittenTxId)) {
           updateHighestWrittenTxId(segment.getEndTxId());
         }
       }
@@ -906,10 +906,10 @@ public class Journal implements Closeable {
         TextFormat.shortDebugString(newData) + " ; journal id: " + journalId);
   }
 
-  private LongRange txnRange(SegmentStateProto seg) {
+  private Range<Long> txnRange(SegmentStateProto seg) {
     Preconditions.checkArgument(seg.hasEndTxId(),
         "invalid segment: %s ; journal id: %s", seg, journalId);
-    return new LongRange(seg.getStartTxId(), seg.getEndTxId());
+    return Range.between(seg.getStartTxId(), seg.getEndTxId());
   }
 
   /**

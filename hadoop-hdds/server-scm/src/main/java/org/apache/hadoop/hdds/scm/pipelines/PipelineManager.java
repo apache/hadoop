@@ -17,7 +17,6 @@
 package org.apache.hadoop.hdds.scm.pipelines;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -36,12 +35,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
-  private final List<PipelineChannel> activePipelineChannels;
-  private final AtomicInteger conduitsIndex;
+  private final List<Pipeline> activePipelines;
+  private final AtomicInteger pipelineIndex;
 
   public PipelineManager() {
-    activePipelineChannels = new LinkedList<>();
-    conduitsIndex = new AtomicInteger(0);
+    activePipelines = new LinkedList<>();
+    pipelineIndex = new AtomicInteger(0);
   }
 
   /**
@@ -59,9 +58,9 @@ public abstract class PipelineManager {
     /**
      * In the Ozone world, we have a very simple policy.
      *
-     * 1. Try to create a pipelineChannel if there are enough free nodes.
+     * 1. Try to create a pipeline if there are enough free nodes.
      *
-     * 2. This allows all nodes to part of a pipelineChannel quickly.
+     * 2. This allows all nodes to part of a pipeline quickly.
      *
      * 3. if there are not enough free nodes, return conduits in a
      * round-robin fashion.
@@ -70,28 +69,28 @@ public abstract class PipelineManager {
      * Create a new placement policy that returns conduits in round robin
      * fashion.
      */
-    PipelineChannel pipelineChannel =
-        allocatePipelineChannel(replicationFactor);
-    if (pipelineChannel != null) {
-      LOG.debug("created new pipelineChannel:{} for container with " +
+    Pipeline pipeline =
+        allocatePipeline(replicationFactor);
+    if (pipeline != null) {
+      LOG.debug("created new pipeline:{} for container with " +
               "replicationType:{} replicationFactor:{}",
-          pipelineChannel.getName(), replicationType, replicationFactor);
-      activePipelineChannels.add(pipelineChannel);
+          pipeline.getPipelineName(), replicationType, replicationFactor);
+      activePipelines.add(pipeline);
     } else {
-      pipelineChannel =
-          findOpenPipelineChannel(replicationType, replicationFactor);
-      if (pipelineChannel != null) {
-        LOG.debug("re-used pipelineChannel:{} for container with " +
+      pipeline =
+          findOpenPipeline(replicationType, replicationFactor);
+      if (pipeline != null) {
+        LOG.debug("re-used pipeline:{} for container with " +
                 "replicationType:{} replicationFactor:{}",
-            pipelineChannel.getName(), replicationType, replicationFactor);
+            pipeline.getPipelineName(), replicationType, replicationFactor);
       }
     }
-    if (pipelineChannel == null) {
-      LOG.error("Get pipelineChannel call failed. We are not able to find" +
-              "free nodes or operational pipelineChannel.");
+    if (pipeline == null) {
+      LOG.error("Get pipeline call failed. We are not able to find" +
+              "free nodes or operational pipeline.");
       return null;
     } else {
-      return new Pipeline(pipelineChannel);
+      return pipeline;
     }
   }
 
@@ -106,19 +105,19 @@ public abstract class PipelineManager {
     }
   }
 
-  public abstract PipelineChannel allocatePipelineChannel(
+  public abstract Pipeline allocatePipeline(
       ReplicationFactor replicationFactor) throws IOException;
 
   /**
-   * Find a PipelineChannel that is operational.
+   * Find a Pipeline that is operational.
    *
    * @return - Pipeline or null
    */
-  private PipelineChannel findOpenPipelineChannel(
+  private Pipeline findOpenPipeline(
       ReplicationType type, ReplicationFactor factor) {
-    PipelineChannel pipelineChannel = null;
+    Pipeline pipeline = null;
     final int sentinal = -1;
-    if (activePipelineChannels.size() == 0) {
+    if (activePipelines.size() == 0) {
       LOG.error("No Operational conduits found. Returning null.");
       return null;
     }
@@ -126,26 +125,26 @@ public abstract class PipelineManager {
     int nextIndex = sentinal;
     for (; startIndex != nextIndex; nextIndex = getNextIndex()) {
       // Just walk the list in a circular way.
-      PipelineChannel temp =
-          activePipelineChannels
+      Pipeline temp =
+          activePipelines
               .get(nextIndex != sentinal ? nextIndex : startIndex);
-      // if we find an operational pipelineChannel just return that.
+      // if we find an operational pipeline just return that.
       if ((temp.getLifeCycleState() == LifeCycleState.OPEN) &&
           (temp.getFactor() == factor) && (temp.getType() == type)) {
-        pipelineChannel = temp;
+        pipeline = temp;
         break;
       }
     }
-    return pipelineChannel;
+    return pipeline;
   }
 
   /**
-   * gets the next index of the PipelineChannel to get.
+   * gets the next index of the Pipeline to get.
    *
    * @return index in the link list to get.
    */
   private int getNextIndex() {
-    return conduitsIndex.incrementAndGet() % activePipelineChannels.size();
+    return pipelineIndex.incrementAndGet() % activePipelines.size();
   }
 
   /**

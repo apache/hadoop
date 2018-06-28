@@ -251,14 +251,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
   }
 
   public ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest = ResourceRequest.newBuilder()
-        .priority(request.getPriority())
-        .allocationRequestId(request.getAllocationRequestId())
-        .resourceName(request.getResourceName())
-        .capability(request.getCapability())
-        .numContainers(1)
-        .relaxLocality(request.getRelaxLocality())
-        .nodeLabelExpression(request.getNodeLabelExpression()).build();
+    ResourceRequest newRequest = ResourceRequest.clone(request);
+    newRequest.setNumContainers(1);
     return newRequest;
   }
 

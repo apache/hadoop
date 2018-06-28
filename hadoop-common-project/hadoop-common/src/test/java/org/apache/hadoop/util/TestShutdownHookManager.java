@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;

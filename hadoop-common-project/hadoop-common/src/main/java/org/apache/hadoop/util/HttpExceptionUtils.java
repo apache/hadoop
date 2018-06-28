@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -56,11 +53,6 @@ public class HttpExceptionUtils {
 
   private static final String ENTER = System.getProperty("line.separator");
 
-  private static final ObjectReader READER =
-      new ObjectMapper().readerFor(Map.class);
-  private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
-
   /**
    * Creates a HTTP servlet response serializing the exception in it as JSON.
    *
@@ -82,7 +74,7 @@ public class HttpExceptionUtils {
     Map<String, Object> jsonResponse = new LinkedHashMap<String, Object>();
     jsonResponse.put(ERROR_JSON, json);
     Writer writer = response.getWriter();
-    WRITER.writeValue(writer, jsonResponse);
+    JsonSerialization.writer().writeValue(writer, jsonResponse);
     writer.flush();
   }
 
@@ -150,7 +142,7 @@ public class HttpExceptionUtils {
       InputStream es = null;
       try {
         es = conn.getErrorStream();
-        Map json = READER.readValue(es);
+        Map json = JsonSerialization.mapReader().readValue(es);
         json = (Map) json.get(ERROR_JSON);
         String exClass = (String) json.get(ERROR_CLASSNAME_JSON);
         String exMsg = (String) json.get(ERROR_MESSAGE_JSON);

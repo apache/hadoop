@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -32,7 +33,6 @@ import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -78,7 +78,7 @@ public class BenchMarkDatanodeDispatcher {
   private String baseDir;
   private String datanodeUuid;
   private Dispatcher dispatcher;
-  private PipelineChannel pipelineChannel;
+  private Pipeline pipeline;
   private ByteString data;
   private Random random;
   private AtomicInteger containerCount;
@@ -96,7 +96,7 @@ public class BenchMarkDatanodeDispatcher {
   @Setup(Level.Trial)
   public void initialize() throws IOException {
     datanodeUuid = UUID.randomUUID().toString();
-    pipelineChannel = new PipelineChannel("127.0.0.1",
+    pipeline = new Pipeline("127.0.0.1",
         LifeCycleState.OPEN, ReplicationType.STAND_ALONE,
         ReplicationFactor.ONE, "SA-" + UUID.randomUUID());
 

@@ -3189,25 +3189,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (prop.containsKey(CommonConfigurationKeys.HADOOP_TAGS_SYSTEM)) {
         String systemTags = prop.getProperty(CommonConfigurationKeys
             .HADOOP_TAGS_SYSTEM);
-        Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
+        TAGS.addAll(Arrays.asList(systemTags.split(",")));
       }
       // Get all custom tags
       if (prop.containsKey(CommonConfigurationKeys.HADOOP_TAGS_CUSTOM)) {
         String customTags = prop.getProperty(CommonConfigurationKeys
             .HADOOP_TAGS_CUSTOM);
-        Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+        TAGS.addAll(Arrays.asList(customTags.split(",")));
       }
 
       if (prop.containsKey(CommonConfigurationKeys.HADOOP_SYSTEM_TAGS)) {
         String systemTags = prop.getProperty(CommonConfigurationKeys
             .HADOOP_SYSTEM_TAGS);
-        Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
+        TAGS.addAll(Arrays.asList(systemTags.split(",")));
       }
       // Get all custom tags
       if (prop.containsKey(CommonConfigurationKeys.HADOOP_CUSTOM_TAGS)) {
         String customTags = prop.getProperty(CommonConfigurationKeys
             .HADOOP_CUSTOM_TAGS);
-        Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+        TAGS.addAll(Arrays.asList(customTags.split(",")));
       }
 
     } catch (Exception ex) {

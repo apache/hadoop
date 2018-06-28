@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CommandDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
+import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
+    .ReplicateContainerCommandHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
@@ -95,6 +97,7 @@ public class DatanodeStateMachine implements Closeable {
         .addHandler(new CloseContainerCommandHandler())
         .addHandler(new DeleteBlocksCommandHandler(container.getContainerSet(),
             conf))
+        .addHandler(new ReplicateContainerCommandHandler())
         .setConnectionManager(connectionManager)
         .setContainer(container)
         .setContext(context)

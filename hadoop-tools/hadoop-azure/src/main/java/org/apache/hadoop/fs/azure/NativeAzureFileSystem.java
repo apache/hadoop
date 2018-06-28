@@ -48,7 +48,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -2886,7 +2886,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // There is no metadata found for the path.
       LOG.debug("Did not find any metadata for path: {}", key);
 
-      throw new FileNotFoundException("File" + f + " does not exist.");
+      throw new FileNotFoundException(f + " is not found");
     }
 
     return status.toArray(new FileStatus[0]);

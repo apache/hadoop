@@ -776,8 +776,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     String testKey3 = "MOUNT_LIST";
     String testVal3 = "/home/a/b/c,/home/d/e/f,/home/g/e/h";
     conf.set("yarn.nodemanager.admin-env." + testKey3, testVal3);
-    Map<String, String> environment = new HashMap<>();
-    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
     ContainerLaunch launch = new ContainerLaunch(distContext, conf,
         dispatcher, exec, null, container, dirsHandler, containerManager);
     String testDir = System.getProperty("test.build.data",

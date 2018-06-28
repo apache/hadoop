@@ -34,7 +34,7 @@ function hadoop_usage
 
 
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
-  hadoop_add_subcommand "datanode" daemon "run a DFS datanode"
+  hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "freon" client "runs an ozone data generator"
   hadoop_add_subcommand "genesis" client "runs a collection of ozone benchmarks to help with tuning."
@@ -45,7 +45,7 @@ function hadoop_usage
   hadoop_add_subcommand "o3" client "command line interface for ozone"
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
-  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager "
+  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
 
@@ -68,10 +68,7 @@ function ozonecmd_case
     ;;
     datanode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_SECURE_CLASSNAME="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
-      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.datanode.DataNode'
-      hadoop_deprecate_envvar HADOOP_SECURE_DN_PID_DIR HADOOP_SECURE_PID_DIR
-      hadoop_deprecate_envvar HADOOP_SECURE_DN_LOG_DIR HADOOP_SECURE_LOG_DIR
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.HddsDatanodeService
     ;;
     envvars)
       echo "JAVA_HOME='${JAVA_HOME}'"

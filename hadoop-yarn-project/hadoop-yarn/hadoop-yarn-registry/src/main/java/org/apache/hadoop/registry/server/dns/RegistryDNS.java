@@ -1126,19 +1126,38 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    */
   private byte remoteLookup(Message response, Name name, int type,
       int iterations) {
+    // If retrieving the root zone, query for NS record type
+    if (name.toString().equals(".")) {
+      type = Type.NS;
+    }
+
+    // Always add any CNAMEs to the response first
+    if (type != Type.CNAME) {
+      Record[] cnameAnswers = getRecords(name, Type.CNAME);
+      if (cnameAnswers != null) {
+        for (Record cnameR : cnameAnswers) {
+          if (!response.findRecord(cnameR)) {
+            response.addRecord(cnameR, Section.ANSWER);
+          }
+        }
+      }
+    }
+
     // Forward lookup to primary DNS servers
     Record[] answers = getRecords(name, type);
     try {
       for (Record r : answers) {
-        if (r.getType() == Type.SOA) {
-          response.addRecord(r, Section.AUTHORITY);
-        } else {
-          response.addRecord(r, Section.ANSWER);
+        if (!response.findRecord(r)) {
+          if (r.getType() == Type.SOA) {
+            response.addRecord(r, Section.AUTHORITY);
+          } else {
+            response.addRecord(r, Section.ANSWER);
+          }
         }
         if (r.getType() == Type.CNAME) {
           Name cname = ((CNAMERecord) r).getAlias();
           if (iterations < 6) {
-            remoteLookup(response, cname, Type.CNAME, iterations + 1);
+            remoteLookup(response, cname, type, iterations + 1);
           }
         }
       }

@@ -35,8 +35,8 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.collections.map.LinkedMap;
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;

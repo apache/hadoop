@@ -22,8 +22,6 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -189,7 +187,6 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   @Override
-  @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
     if (!validateContainerState()) {
       return 0;
@@ -374,7 +371,6 @@ public class ContainerLaunch implements Callable<Integer> {
         .build());
   }
 
-  @SuppressWarnings("unchecked")
   protected boolean validateContainerState() {
     // CONTAINER_KILLED_ON_REQUEST should not be missed if the container
     // is already at KILLING
@@ -486,7 +482,6 @@ public class ContainerLaunch implements Callable<Integer> {
     return localResources;
   }
 
-  @SuppressWarnings("unchecked")
   protected int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
@@ -496,7 +491,6 @@ public class ContainerLaunch implements Callable<Integer> {
     return launchPrep;
   }
 
-  @SuppressWarnings("unchecked")
   protected int relaunchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
@@ -546,7 +540,6 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
-  @SuppressWarnings("unchecked")
   protected void handleContainerExitCode(int exitCode, Path containerLogDir) {
     ContainerId containerId = container.getContainerId();
 
@@ -592,7 +585,6 @@ public class ContainerLaunch implements Callable<Integer> {
    * @param containerLogDir
    * @param diagnosticInfo
    */
-  @SuppressWarnings("unchecked")
   protected void handleContainerExitWithFailure(ContainerId containerID,
       int ret, Path containerLogDir, StringBuilder diagnosticInfo) {
     LOG.warn("Container launch failed : " + diagnosticInfo.toString());
@@ -727,7 +719,6 @@ public class ContainerLaunch implements Callable<Integer> {
    * the process id is available.
    * @throws IOException
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   public void cleanupContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = containerId.toString();
@@ -817,25 +808,6 @@ public class ContainerLaunch implements Callable<Integer> {
       }
     }
 
-    final int sleepMsec = 100;
-    int msecLeft = 2000;
-    if (pidFilePath != null) {
-      File file = new File(getExitCodeFile(pidFilePath.toString()));
-      while (!file.exists() && msecLeft >= 0) {
-        try {
-          Thread.sleep(sleepMsec);
-        } catch (InterruptedException e) {
-        }
-        msecLeft -= sleepMsec;
-      }
-      if (msecLeft < 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Timeout while waiting for the exit code file:  "
-              + file.getAbsolutePath());
-        }
-      }
-    }
-
     // Reap the container
     boolean result = exec.reapContainer(
         new ContainerReapContext.Builder()
@@ -855,7 +827,6 @@ public class ContainerLaunch implements Callable<Integer> {
    *
    * @throws IOException
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   public void signalContainer(SignalContainerCommand command)
       throws IOException {
     ContainerId containerId =
@@ -994,7 +965,6 @@ public class ContainerLaunch implements Callable<Integer> {
    * executor to pause the container.
    * @throws IOException in case of errors.
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   public void pauseContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = containerId.toString();
@@ -1044,7 +1014,6 @@ public class ContainerLaunch implements Callable<Integer> {
    * executor to pause the container.
    * @throws IOException in case of error.
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   public void resumeContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = containerId.toString();
@@ -1357,6 +1326,7 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
+    @SuppressWarnings("unused")
     private void errorCheck() {
       line("hadoop_shell_errorcode=$?");
       line("if [[ \"$hadoop_shell_errorcode\" -ne 0 ]]");
@@ -1648,20 +1618,6 @@ public class ContainerLaunch implements Callable<Integer> {
         i = j + 1;
       }
       return deps;
-    }
-  }
-
-  private static void putEnvIfNotNull(
-      Map<String, String> environment, String variable, String value) {
-    if (value != null) {
-      environment.put(variable, value);
-    }
-  }
-  
-  private static void putEnvIfAbsent(
-      Map<String, String> environment, String variable) {
-    if (environment.get(variable) == null) {
-      putEnvIfNotNull(environment, variable, System.getenv(variable));
     }
   }
 

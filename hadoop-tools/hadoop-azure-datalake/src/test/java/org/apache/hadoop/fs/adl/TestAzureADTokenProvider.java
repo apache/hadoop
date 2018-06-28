@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 
 import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
-import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.adl.common.CustomMockTokenProvider;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;

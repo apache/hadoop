@@ -93,9 +93,7 @@ public class ContainerLocalizer {
   public static final String FILECACHE = "filecache";
   public static final String APPCACHE = "appcache";
   public static final String USERCACHE = "usercache";
-  public static final String OUTPUTDIR = "output";
   public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
-  public static final String WORKDIR = "work";
   private static final String APPCACHE_CTXT_FMT = "%s.app.cache.dirs";
   private static final String USERCACHE_CTXT_FMT = "%s.user.cache.dirs";
   private static final FsPermission FILECACHE_PERMS =
@@ -134,10 +132,7 @@ public class ContainerLocalizer {
     this.recordFactory = recordFactory;
     this.conf = new YarnConfiguration();
     this.diskValidator = DiskValidatorFactory.getInstance(
-        conf.get(YarnConfiguration.DISK_VALIDATOR,
-            YarnConfiguration.DEFAULT_DISK_VALIDATOR));
-    LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
-        " is loaded.");
+        YarnConfiguration.DEFAULT_DISK_VALIDATOR);
     this.appCacheDirContextName = String.format(APPCACHE_CTXT_FMT, appId);
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
   }

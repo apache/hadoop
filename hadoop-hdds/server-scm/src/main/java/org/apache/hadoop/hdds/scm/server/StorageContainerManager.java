@@ -43,6 +43,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -161,8 +162,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       throw new SCMException("SCM not initialized.", ResultCodes
           .SCM_NOT_INITIALIZED);
     }
+    EventQueue eventQueue = new EventQueue();
 
-    scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
+    SCMNodeManager nm = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
+    scmNodeManager = nm;
+    eventQueue.addHandler(SCMNodeManager.DATANODE_COMMAND, nm);
+
     scmContainerManager = new ContainerMapping(conf, getScmNodeManager(),
         cacheSize);
 
@@ -176,7 +181,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       scmAdminUsernames.add(scmUsername);
     }
 
-    datanodeProtocolServer = new SCMDatanodeProtocolServer(conf, this);
+    datanodeProtocolServer = new SCMDatanodeProtocolServer(conf, this,
+        eventQueue);
     blockProtocolServer = new SCMBlockProtocolServer(conf, this);
     clientProtocolServer = new SCMClientProtocolServer(conf, this);
     httpServer = new StorageContainerManagerHttpServer(conf);

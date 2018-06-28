@@ -853,7 +853,7 @@ public class TestTaskAttempt{
 
 
   @Test
-  public void testAppDiognosticEventOnUnassignedTask() throws Exception {
+  public void testAppDiagnosticEventOnUnassignedTask() {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
@@ -978,7 +978,7 @@ public class TestTaskAttempt{
   }
 
   @Test
-  public void testAppDiognosticEventOnNewTask() throws Exception {
+  public void testAppDiagnosticEventOnNewTask() {
     ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);

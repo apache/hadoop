@@ -27,7 +27,7 @@ import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.Metadata;

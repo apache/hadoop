@@ -126,7 +126,7 @@ public abstract class BackgroundService {
         try {
           // Collect task results
           BackgroundTaskResult result = serviceTimeout > 0
-              ? taskResultFuture.get(serviceTimeout, TimeUnit.MILLISECONDS)
+              ? taskResultFuture.get(serviceTimeout, unit)
               : taskResultFuture.get();
           if (LOG.isDebugEnabled()) {
             LOG.debug("task execution result size {}", result.getSize());

@@ -66,13 +66,17 @@ ENV HOME /home/${USER_NAME}
 
 UserSpecificDocker
 
+#If this env varible is empty, docker will be started
+# in non interactive mode
+DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
+
 # By mapping the .m2 directory you can do an mvn install from
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
-docker run --rm=true -t -i \
+docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${PWD}:/home/${USER_NAME}/hadoop${V_OPTS:-}" \
   -w "/home/${USER_NAME}/hadoop" \
   -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
   -u "${USER_NAME}" \
-  "hadoop-build-${USER_ID}"
+  "hadoop-build-${USER_ID}" "$@"
