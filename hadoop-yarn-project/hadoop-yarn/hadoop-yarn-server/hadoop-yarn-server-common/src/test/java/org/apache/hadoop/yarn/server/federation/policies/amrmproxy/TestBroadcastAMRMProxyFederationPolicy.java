@@ -89,7 +89,7 @@ public class TestBroadcastAMRMProxyFederationPolicy
   }
 
   @Test
-  public void testNotifyOfResponse() throws Exception {
+  public void testNotifyOfResponseFromUnknownSubCluster() throws Exception {
     String[] hosts = new String[] {"host1", "host2" };
     List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
         .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
@@ -97,13 +97,8 @@ public class TestBroadcastAMRMProxyFederationPolicy
         ((FederationAMRMProxyPolicy) getPolicy())
             .splitResourceRequests(resourceRequests);
 
-    try {
-      ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
-          SubClusterId.newInstance("sc3"), mock(AllocateResponse.class));
-      Assert.fail();
-    } catch (FederationPolicyException f) {
-      System.out.println("Expected: " + f.getMessage());
-    }
+    ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
+        SubClusterId.newInstance("sc3"), mock(AllocateResponse.class));
 
     ((FederationAMRMProxyPolicy) getPolicy()).notifyOfResponse(
         SubClusterId.newInstance("sc1"), mock(AllocateResponse.class));
