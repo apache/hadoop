@@ -1772,7 +1772,7 @@ function hadoop_java_exec
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the foreground.
@@ -1809,7 +1809,7 @@ function hadoop_start_daemon
 
   export CLASSPATH
   #shellcheck disable=SC2086
-  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  eval exec '"${JAVA}"' '"-Dproc_${command}"' ${HADOOP_OPTS} '"${class}"' '"$@"'
 }
 
 ## @description  Start a non-privileged daemon in the background.
@@ -1938,16 +1938,16 @@ function hadoop_start_secure_daemon
   fi
 
   # shellcheck disable=SC2086
-  exec "${jsvc}" \
-    "-Dproc_${daemonname}" \
-    -outfile "${daemonoutfile}" \
-    -errfile "${daemonerrfile}" \
-    -pidfile "${daemonpidfile}" \
+  eval exec '"${jsvc}"' \
+    '"-Dproc_${daemonname}"' \
+    -outfile '"${daemonoutfile}"' \
+    -errfile '"${daemonerrfile}"' \
+    -pidfile '"${daemonpidfile}"' \
     -nodetach \
-    -user "${HADOOP_SECURE_USER}" \
-    -cp "${CLASSPATH}" \
+    -user '"${HADOOP_SECURE_USER}"' \
+    -cp '"${CLASSPATH}"' \
     ${HADOOP_OPTS} \
-    "${class}" "$@"
+    '"${class}"' '"$@"'
 }
 
 ## @description  Start a privileged daemon in the background.
