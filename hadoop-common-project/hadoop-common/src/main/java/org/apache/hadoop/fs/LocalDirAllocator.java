@@ -418,7 +418,12 @@ public class LocalDirAllocator {
           }
         }
       } else {
-        int dirNum = ctx.getAndIncrDirNumLastAccessed();
+        // Start linear search with random increment if possible
+        int randomInc = 1;
+        if (numDirs > 2) {
+          randomInc += dirIndexRandomizer.nextInt(numDirs - 1);
+        }
+        int dirNum = ctx.getAndIncrDirNumLastAccessed(randomInc);
         while (numDirsSearched < numDirs) {
           long capacity = ctx.dirDF[dirNum].getAvailable();
           if (capacity > size) {
