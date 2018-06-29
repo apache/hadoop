@@ -36,6 +36,8 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +69,11 @@ public final class ChunkUtils {
    * @param chunkFile - File to write data to.
    * @param chunkInfo - Data stream to write.
    * @param data - The data buffer.
+   * @param volumeIOStats
    * @throws StorageContainerException
    */
   public static void writeData(File chunkFile, ChunkInfo chunkInfo,
-                               byte[] data) throws
+                               byte[] data, VolumeIOStats volumeIOStats) throws
       StorageContainerException, ExecutionException, InterruptedException,
       NoSuchAlgorithmException {
 
@@ -87,6 +90,12 @@ public final class ChunkUtils {
     FileLock lock = null;
 
     try {
+      if (chunkInfo.getChecksum() != null &&
+          !chunkInfo.getChecksum().isEmpty()) {
+        verifyChecksum(chunkInfo, data, log);
+      }
+
+      long writeTimeStart = Time.monotonicNow();
       file =
           AsynchronousFileChannel.open(chunkFile.toPath(),
               StandardOpenOption.CREATE,
@@ -94,11 +103,11 @@ public final class ChunkUtils {
               StandardOpenOption.SPARSE,
               StandardOpenOption.SYNC);
       lock = file.lock().get();
-      if (chunkInfo.getChecksum() != null &&
-          !chunkInfo.getChecksum().isEmpty()) {
-        verifyChecksum(chunkInfo, data, log);
-      }
       int size = file.write(ByteBuffer.wrap(data), chunkInfo.getOffset()).get();
+      // Increment volumeIO stats here.
+      volumeIOStats.incWriteTime(Time.monotonicNow() - writeTimeStart);
+      volumeIOStats.incWriteOpCount();
+      volumeIOStats.incWriteBytes(size);
       if (size != data.length) {
         log.error("Invalid write size found. Size:{}  Expected: {} ", size,
             data.length);
@@ -136,12 +145,15 @@ public final class ChunkUtils {
    *
    * @param chunkFile - file where data lives.
    * @param data - chunk definition.
+   * @param volumeIOStats
    * @return ByteBuffer
    * @throws StorageContainerException
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  public static ByteBuffer readData(File chunkFile, ChunkInfo data) throws
+  public static ByteBuffer readData(File chunkFile, ChunkInfo data,
+                                    VolumeIOStats volumeIOStats)
+      throws
       StorageContainerException, ExecutionException, InterruptedException,
       NoSuchAlgorithmException {
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
@@ -157,6 +169,7 @@ public final class ChunkUtils {
     AsynchronousFileChannel file = null;
     FileLock lock = null;
     try {
+      long readStartTime = Time.monotonicNow();
       file =
           AsynchronousFileChannel.open(chunkFile.toPath(),
               StandardOpenOption.READ);
@@ -165,10 +178,13 @@ public final class ChunkUtils {
       ByteBuffer buf = ByteBuffer.allocate((int) data.getLen());
       file.read(buf, data.getOffset()).get();
 
+      // Increment volumeIO stats here.
+      volumeIOStats.incReadTime(Time.monotonicNow() - readStartTime);
+      volumeIOStats.incReadOpCount();
+      volumeIOStats.incReadBytes(data.getLen());
       if (data.getChecksum() != null && !data.getChecksum().isEmpty()) {
         verifyChecksum(data, buf.array(), log);
       }
-
       return buf;
     } catch (IOException e) {
       throw new StorageContainerException(e, IO_EXCEPTION);

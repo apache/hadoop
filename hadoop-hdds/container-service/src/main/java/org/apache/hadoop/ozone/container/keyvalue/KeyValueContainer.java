@@ -145,6 +145,7 @@ public class KeyValueContainer implements Container {
       containerData.setChunksPath(chunksPath.getPath());
       containerData.setContainerDBType(impl);
       containerData.setDbFile(dbFile);
+      containerData.setVolume(containerVolume);
 
       // Create .container file and .chksm file
       createContainerFile(containerFile, containerCheckSumFile);

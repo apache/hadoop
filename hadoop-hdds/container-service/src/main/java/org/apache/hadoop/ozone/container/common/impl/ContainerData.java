@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerLifeCycleState;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -58,6 +59,8 @@ public class ContainerData {
   private final AtomicLong readCount;
   private final AtomicLong writeCount;
   private final AtomicLong bytesUsed;
+
+  private HddsVolume volume;
 
 
   /**
@@ -287,6 +290,23 @@ public class ContainerData {
    */
   public long decrBytesUsed(long reclaimed) {
     return this.bytesUsed.addAndGet(-1L * reclaimed);
+  }
+
+  /**
+   * Set the Volume for the Container.
+   * This should be called only from the createContainer.
+   * @param hddsVolume
+   */
+  public void setVolume(HddsVolume hddsVolume) {
+    this.volume = hddsVolume;
+  }
+
+  /**
+   * Returns the volume of the Container.
+   * @return HddsVolume
+   */
+  public HddsVolume getVolume() {
+    return volume;
   }
 
 

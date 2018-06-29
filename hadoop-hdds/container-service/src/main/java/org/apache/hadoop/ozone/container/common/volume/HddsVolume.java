@@ -52,6 +52,7 @@ public final class HddsVolume {
   private final File hddsRootDir;
   private final VolumeInfo volumeInfo;
   private VolumeState state;
+  private final VolumeIOStats volumeIOStats;
 
   // VERSION file properties
   private String storageID;       // id of the file system
@@ -117,6 +118,7 @@ public final class HddsVolume {
     this.state = VolumeState.NOT_INITIALIZED;
     this.clusterID = b.clusterID;
     this.datanodeUuid = b.datanodeUuid;
+    this.volumeIOStats = new VolumeIOStats();
 
     VolumeInfo.Builder volumeBuilder =
         new VolumeInfo.Builder(b.volumeRootStr, b.conf)
@@ -301,6 +303,10 @@ public final class HddsVolume {
 
   public boolean isFailed() {
     return (state == VolumeState.FAILED);
+  }
+
+  public VolumeIOStats getVolumeIOStats() {
+    return volumeIOStats;
   }
 
   public void failVolume() {

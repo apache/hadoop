@@ -26,6 +26,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerExcep
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.impl.ChunkLayOutVersion;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
@@ -64,13 +66,15 @@ public class ChunkManagerImpl implements ChunkManager {
    * @throws StorageContainerException
    */
   public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-                         byte[] data, ContainerProtos.Stage stage)
+      byte[] data, ContainerProtos.Stage stage)
       throws StorageContainerException {
 
     try {
 
       KeyValueContainerData containerData = (KeyValueContainerData) container
           .getContainerData();
+      HddsVolume volume = containerData.getVolume();
+      VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
       File chunkFile = ChunkUtils.validateChunk(containerData, info);
       File tmpChunkFile = getTmpChunkFile(chunkFile, info);
@@ -81,20 +85,23 @@ public class ChunkManagerImpl implements ChunkManager {
       switch (stage) {
       case WRITE_DATA:
         // Initially writes to temporary chunk file.
-        ChunkUtils.writeData(tmpChunkFile, info, data);
+        ChunkUtils.writeData(tmpChunkFile, info, data, volumeIOStats);
+        // No need to increment container stats here, as still data is not
+        // committed here.
         break;
       case COMMIT_DATA:
         // commit the data, means move chunk data from temporary chunk file
         // to actual chunk file.
-        long sizeDiff = tmpChunkFile.length() - chunkFile.length();
         commitChunk(tmpChunkFile, chunkFile);
-        containerData.incrBytesUsed(sizeDiff);
+        // Increment container stats here, as we commit the data.
+        containerData.incrBytesUsed(info.getLen());
         containerData.incrWriteCount();
-        containerData.incrWriteBytes(sizeDiff);
+        containerData.incrWriteBytes(info.getLen());
         break;
       case COMBINED:
         // directly write to the chunk file
-        ChunkUtils.writeData(chunkFile, info, data);
+        ChunkUtils.writeData(chunkFile, info, data, volumeIOStats);
+        // Increment container stats here, as we directly write to chunk file.
         containerData.incrBytesUsed(info.getLen());
         containerData.incrWriteCount();
         containerData.incrWriteBytes(info.getLen());
@@ -137,6 +144,8 @@ public class ChunkManagerImpl implements ChunkManager {
       KeyValueContainerData containerData = (KeyValueContainerData) container
           .getContainerData();
       ByteBuffer data;
+      HddsVolume volume = containerData.getVolume();
+      VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
       // Checking here, which layout version the container is, and reading
       // the chunk file in that format.
@@ -145,9 +154,10 @@ public class ChunkManagerImpl implements ChunkManager {
       if (containerData.getLayOutVersion() == ChunkLayOutVersion
           .getLatestVersion().getVersion()) {
         File chunkFile = ChunkUtils.getChunkFile(containerData, info);
-        data = ChunkUtils.readData(chunkFile, info);
+        data = ChunkUtils.readData(chunkFile, info, volumeIOStats);
         containerData.incrReadCount();
-        containerData.incrReadBytes(chunkFile.length());
+        long length = chunkFile.length();
+        containerData.incrReadBytes(length);
         return data.array();
       }
     } catch(NoSuchAlgorithmException ex) {

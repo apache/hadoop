@@ -58,7 +58,7 @@ public class TestKeyManagerImpl {
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
   private KeyData keyData;
-  private KeyManagerImpl keyValueContainerManager;
+  private KeyManagerImpl keyManager;
   private BlockID blockID;
 
   @Rule
@@ -98,17 +98,17 @@ public class TestKeyManagerImpl {
     keyData.setChunks(chunkList);
 
     // Create KeyValueContainerManager
-    keyValueContainerManager = new KeyManagerImpl(config);
+    keyManager = new KeyManagerImpl(config);
 
   }
 
   @Test
   public void testPutAndGetKey() throws Exception {
     //Put Key
-    keyValueContainerManager.putKey(keyValueContainer, keyData);
+    keyManager.putKey(keyValueContainer, keyData);
 
     //Get Key
-    KeyData fromGetKeyData = keyValueContainerManager.getKey(keyValueContainer,
+    KeyData fromGetKeyData = keyManager.getKey(keyValueContainer,
         keyData.getBlockID());
 
     assertEquals(keyData.getContainerID(), fromGetKeyData.getContainerID());
@@ -124,9 +124,15 @@ public class TestKeyManagerImpl {
   public void testDeleteKey() throws Exception {
     try {
       //Put Key
-      keyValueContainerManager.putKey(keyValueContainer, keyData);
+      keyManager.putKey(keyValueContainer, keyData);
       //Delete Key
-      keyValueContainerManager.deleteKey(keyValueContainer, blockID);
+      keyManager.deleteKey(keyValueContainer, blockID);
+      try {
+        keyManager.getKey(keyValueContainer, blockID);
+        fail("testDeleteKey");
+      } catch (StorageContainerException ex) {
+        GenericTestUtils.assertExceptionContains("Unable to find the key", ex);
+      }
     } catch (IOException ex) {
       fail("testDeleteKey failed");
     }
@@ -135,8 +141,8 @@ public class TestKeyManagerImpl {
   @Test
   public void testListKey() throws Exception {
     try {
-      keyValueContainerManager.putKey(keyValueContainer, keyData);
-      List<KeyData> listKeyData = keyValueContainerManager.listKey(
+      keyManager.putKey(keyValueContainer, keyData);
+      List<KeyData> listKeyData = keyManager.listKey(
           keyValueContainer, 1, 10);
       assertNotNull(listKeyData);
       assertTrue(listKeyData.size() == 1);
@@ -151,10 +157,10 @@ public class TestKeyManagerImpl {
             .getLocalID(), 0), 0, 1024);
         chunkList.add(info.getProtoBufMessage());
         keyData.setChunks(chunkList);
-        keyValueContainerManager.putKey(keyValueContainer, keyData);
+        keyManager.putKey(keyValueContainer, keyData);
       }
 
-      listKeyData = keyValueContainerManager.listKey(
+      listKeyData = keyManager.listKey(
           keyValueContainer, 1, 10);
       assertNotNull(listKeyData);
       assertTrue(listKeyData.size() == 10);
@@ -167,7 +173,8 @@ public class TestKeyManagerImpl {
   @Test
   public void testGetNoSuchKey() throws Exception {
     try {
-      keyValueContainerManager.getKey(keyValueContainer, new BlockID(1L, 2L));
+      keyData = new KeyData(new BlockID(1L, 2L));
+      keyManager.getKey(keyValueContainer, new BlockID(1L, 2L));
       fail("testGetNoSuchKey failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Unable to find the key.", ex);
