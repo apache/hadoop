@@ -57,6 +57,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileExistsException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -1638,4 +1639,53 @@ public class FileUtil {
     // check for ports
     return srcUri.getPort()==dstUri.getPort();
   }
+
+  /**
+   * Creates the directory named by the destination pathname, including any
+   * necessary but nonexistent parent directories. Note that if this operation
+   * fails it may have succeeded in creating some of the necessary parent
+   * directories.
+   *
+   * @param dst the directory which creation should be performed.
+   * @return 0 on success or if the directory was already present, 1 otherwise.
+   * @throws FileExistsException if the dst is an existing file
+   */
+  public static int mkDirs(String dst) throws FileAlreadyExistsException {
+    // Null pointer input check
+    if (dst == null) {
+      LOG.warn("Can not create a directory with null path");
+      return 1;
+    }
+    File directory = new File(dst);
+
+    // Create the directory(ies)
+    boolean result = false;
+    try {
+      result = directory.mkdirs();
+    } catch (SecurityException e) {
+      LOG.warn("Unable to create the directory {}. Exception = {}", dst,
+          e.getMessage());
+      return 1;
+    }
+
+    // Check if mkdir created successfully the directory(ies)
+    if (result) {
+      LOG.debug("Directory created successfully: {}", dst);
+      return 0;
+    } else {
+      // File already present check
+      if (directory.exists()) {
+        if (directory.isFile()) {
+          throw new FileAlreadyExistsException(
+              "Can not create a directory since a file is already present"
+                  + " at the destination " + dst);
+        }
+        LOG.debug("Directory already present {}", dst);
+        return 0;
+      }
+      LOG.warn("Unable to create the directory {}", dst);
+      return 1;
+    }
+  }
+
 }
