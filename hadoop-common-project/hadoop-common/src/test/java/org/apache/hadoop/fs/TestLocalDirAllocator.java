@@ -265,6 +265,65 @@ public class TestLocalDirAllocator {
     }
   }
 
+  /**
+   * Five buffer dirs, on read-write disk.
+   *
+   * Try to create a whole bunch of files.
+   *  Verify that each successive creation uses a different disk
+   *  than the previous one (for sized requests).
+   *
+   *  Would ideally check statistical properties of distribution, but
+   *  we don't have the nerve to risk false-positives here.
+   *
+   * @throws Exception
+   */
+  @Test (timeout = 30000)
+  public void testCreateManyFilesRandom() throws Exception {
+    assumeNotWindows();
+    final int numDirs = 5;
+    final int numTries = 100;
+    String[] dirs = new String[numDirs];
+    for (int d = 0; d < numDirs; ++d) {
+      dirs[d] = buildBufferDir(ROOT, d);
+    }
+    boolean next_dir_not_selected_at_least_once = false;
+    try {
+      conf.set(CONTEXT, dirs[0] + "," + dirs[1] + "," + dirs[2] + ","
+          + dirs[3] + "," + dirs[4]);
+      Path[] paths = new Path[5];
+      for (int d = 0; d < numDirs; ++d) {
+        paths[d] = new Path(dirs[d]);
+        assertTrue(localFs.mkdirs(paths[d]));
+      }
+
+      int inDir=0;
+      int prevDir = -1;
+      int[] counts = new int[5];
+      for(int i = 0; i < numTries; ++i) {
+        File result = createTempFile(SMALL_FILE_SIZE);
+        for (int d = 0; d < numDirs; ++d) {
+          if (result.getPath().startsWith(paths[d].toUri().getPath())) {
+            inDir = d;
+            break;
+          }
+        }
+        // Verify we always select a different dir
+        assertNotEquals(prevDir, inDir);
+        // Verify we are not always selecting the next dir - that was the old
+        // algorithm.
+        if ((prevDir != -1) && (inDir != ((prevDir + 1) % numDirs))) {
+          next_dir_not_selected_at_least_once = true;
+        }
+        prevDir = inDir;
+        counts[inDir]++;
+        result.delete();
+      }
+    } finally {
+      rmBufferDirs();
+    }
+    assertTrue(next_dir_not_selected_at_least_once);
+  }
+
   /** Two buffer dirs. The first dir does not exist & is on a read-only disk;
    * The second dir exists & is RW
    * getLocalPathForWrite with checkAccess set to false should create a parent
