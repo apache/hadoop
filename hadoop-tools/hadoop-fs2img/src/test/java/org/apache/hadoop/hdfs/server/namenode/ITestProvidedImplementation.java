@@ -132,7 +132,7 @@ public class ITestProvidedImplementation {
         nnDirPath.toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE,
         new Path(nnDirPath, fileNameFromBlockPoolID(bpid)).toString());
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, ",");
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, "\t");
 
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
         new File(providedPath.toUri()).toString());
