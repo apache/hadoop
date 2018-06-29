@@ -27,12 +27,14 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import java.util.concurrent.atomic.LongAccumulator;
 
 /**
+ * Global State Id context for the client.
+ * <p/>
  * This is the client side implementation responsible for receiving
  * state alignment info from server(s).
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-class ClientGCIContext implements AlignmentContext {
+class ClientGSIContext implements AlignmentContext {
 
   private final LongAccumulator lastSeenStateId =
       new LongAccumulator(Math::max, Long.MIN_VALUE);
