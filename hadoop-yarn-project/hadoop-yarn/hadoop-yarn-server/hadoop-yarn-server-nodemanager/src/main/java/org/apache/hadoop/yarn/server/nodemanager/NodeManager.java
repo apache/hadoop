@@ -128,6 +128,7 @@ public class NodeManager extends CompositeService
   // the NM collector service is set only if the timeline service v.2 is enabled
   private NMCollectorService nmCollectorService;
   private NodeStatusUpdater nodeStatusUpdater;
+  private AtomicBoolean resyncingWithRM = new AtomicBoolean(false);
   private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook;
   private NMStateStoreService nmStore = null;
@@ -371,7 +372,7 @@ public class NodeManager extends CompositeService
     addService(del);
 
     // NodeManager level dispatcher
-    this.dispatcher = new AsyncDispatcher("NM Event dispatcher");
+    this.dispatcher = createNMDispatcher();
 
     dirsHandler = new LocalDirsHandlerService(metrics);
     nodeHealthChecker =
@@ -489,31 +490,41 @@ public class NodeManager extends CompositeService
   }
 
   protected void resyncWithRM() {
-    //we do not want to block dispatcher thread here
-    new Thread() {
-      @Override
-      public void run() {
-        try {
-          if (!rmWorkPreservingRestartEnabled) {
-            LOG.info("Cleaning up running containers on resync");
-            containerManager.cleanupContainersOnNMResync();
-            // Clear all known collectors for resync.
-            if (context.getKnownCollectors() != null) {
-              context.getKnownCollectors().clear();
+    // Create a thread for resync because we do not want to block dispatcher
+    // thread here. Also use locking to make sure only one thread is running at
+    // a time.
+    if (this.resyncingWithRM.getAndSet(true)) {
+      // Some other thread is already created for resyncing, do nothing
+    } else {
+      // We have got the lock, create a new thread
+      new Thread() {
+        @Override
+        public void run() {
+          try {
+            if (!rmWorkPreservingRestartEnabled) {
+              LOG.info("Cleaning up running containers on resync");
+              containerManager.cleanupContainersOnNMResync();
+              // Clear all known collectors for resync.
+              if (context.getKnownCollectors() != null) {
+                context.getKnownCollectors().clear();
+              }
+            } else {
+              LOG.info("Preserving containers on resync");
+              // Re-register known timeline collectors.
+              reregisterCollectors();
             }
-          } else {
-            LOG.info("Preserving containers on resync");
-            // Re-register known timeline collectors.
-            reregisterCollectors();
+            ((NodeStatusUpdaterImpl) nodeStatusUpdater)
+                .rebootNodeStatusUpdaterAndRegisterWithRM();
+          } catch (YarnRuntimeException e) {
+            LOG.error("Error while rebooting NodeStatusUpdater.", e);
+            shutDown(NodeManagerStatus.EXCEPTION.getExitCode());
+          } finally {
+            // Release lock
+            resyncingWithRM.set(false);
           }
-          ((NodeStatusUpdaterImpl) nodeStatusUpdater)
-            .rebootNodeStatusUpdaterAndRegisterWithRM();
-        } catch (YarnRuntimeException e) {
-          LOG.error("Error while rebooting NodeStatusUpdater.", e);
-          shutDown(NodeManagerStatus.EXCEPTION.getExitCode());
         }
-      }
-    }.start();
+      }.start();
+    }
   }
 
   /**
@@ -861,7 +872,14 @@ public class NodeManager extends CompositeService
   ContainerManagerImpl getContainerManager() {
     return containerManager;
   }
-  
+
+  /**
+   * Unit test friendly.
+   */
+  protected AsyncDispatcher createNMDispatcher() {
+    return new AsyncDispatcher("NM Event dispatcher");
+  }
+
   //For testing
   Dispatcher getNMDispatcher(){
     return dispatcher;
