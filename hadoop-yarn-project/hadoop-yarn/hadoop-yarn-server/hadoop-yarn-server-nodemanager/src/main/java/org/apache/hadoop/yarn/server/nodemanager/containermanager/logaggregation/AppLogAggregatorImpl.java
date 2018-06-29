@@ -88,6 +88,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final ApplicationId appId;
   private final String applicationId;
   private boolean logAggregationDisabled = false;
+  private final boolean enableLocalCleanup;
   private final Configuration conf;
   private final DeletionService delService;
   private final UserGroupInformation userUgi;
@@ -174,6 +175,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.logAggregationContext = logAggregationContext;
     this.context = context;
     this.nodeId = nodeId;
+    this.enableLocalCleanup =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP);
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
     if (logAggregationFileController == null) {
@@ -328,11 +332,13 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             appFinished, finishedContainers.contains(container));
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
-          List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
-          uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
-          deletionTask = new FileDeletionTask(delService,
-              this.userUgi.getShortUserName(), null,
-              uploadedFilePathsInThisCycleList);
+          if (enableLocalCleanup) {
+            List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
+            uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
+            deletionTask = new FileDeletionTask(delService,
+                this.userUgi.getShortUserName(), null,
+                uploadedFilePathsInThisCycleList);
+          }
         }
 
         // This container is finished, and all its logs have been uploaded,
@@ -443,7 +449,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // do post clean up of log directories on any other exception
       LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
-      doAppLogAggregationPostCleanUp();
+      if (enableLocalCleanup) {
+        doAppLogAggregationPostCleanUp();
+      }
     } finally {
       if (!this.appAggregationFinished.get() && !this.aborted.get()) {
         LOG.warn("Log aggregation did not complete for application " + appId);
@@ -486,8 +494,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     try {
       // App is finished, upload the container logs.
       uploadLogsForContainers(true);
-
-      doAppLogAggregationPostCleanUp();
+      if (enableLocalCleanup) {
+        doAppLogAggregationPostCleanUp();
+      }
     } catch (LogAggregationDFSException e) {
       LOG.error("Error during log aggregation", e);
     }

@@ -1367,6 +1367,13 @@ public class YarnConfiguration extends Configuration {
       = 10 * 60 * 1000;
 
   /**
+   * Whether to clean up after nodemanager logs when log aggregation is enabled
+   */
+  public static final String LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP =
+      YARN_PREFIX + "log-aggregation.enable-local-cleanup";
+  public static final boolean DEFAULT_LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP = true;
+
+  /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log
    * aggregation is disabled
    */
