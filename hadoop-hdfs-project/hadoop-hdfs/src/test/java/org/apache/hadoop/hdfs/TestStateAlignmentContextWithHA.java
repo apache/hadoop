@@ -70,11 +70,11 @@ public class TestStateAlignmentContextWithHA {
   private static final int NUMFILES = 300;
   private static final Configuration CONF = new HdfsConfiguration();
   private static final String NAMESERVICE = "nameservice";
-  private static final List<ClientGCIContext> AC_LIST = new ArrayList<>();
+  private static final List<ClientGSIContext> AC_LIST = new ArrayList<>();
 
   private static MiniDFSCluster cluster;
   private static List<Worker> clients;
-  private static ClientGCIContext spy;
+  private static ClientGSIContext spy;
 
   private DistributedFileSystem dfs;
   private int active = 0;
@@ -83,7 +83,7 @@ public class TestStateAlignmentContextWithHA {
   static class AlignmentContextProxyProvider<T>
       extends ConfiguredFailoverProxyProvider<T> {
 
-    private ClientGCIContext alignmentContext;
+    private ClientGSIContext alignmentContext;
 
     public AlignmentContextProxyProvider(
         Configuration conf, URI uri, Class<T> xface,
@@ -92,14 +92,14 @@ public class TestStateAlignmentContextWithHA {
 
       // Create and set AlignmentContext in HAProxyFactory.
       // All proxies by factory will now have AlignmentContext assigned.
-      this.alignmentContext = (spy != null ? spy : new ClientGCIContext());
+      this.alignmentContext = (spy != null ? spy : new ClientGSIContext());
       ((ClientHAProxyFactory) factory).setAlignmentContext(alignmentContext);
 
       AC_LIST.add(alignmentContext);
     }
 
     @Override // AbstractNNFailoverProxyProvider
-    public synchronized ClientGCIContext getAlignmentContext() {
+    public synchronized ClientGSIContext getAlignmentContext() {
       return this.alignmentContext;
     }
   }
@@ -107,7 +107,7 @@ public class TestStateAlignmentContextWithHA {
   static class SpyConfiguredContextProxyProvider<T>
       extends ConfiguredFailoverProxyProvider<T> {
 
-    private ClientGCIContext alignmentContext;
+    private ClientGSIContext alignmentContext;
 
     public SpyConfiguredContextProxyProvider(
         Configuration conf, URI uri, Class<T> xface,
@@ -115,7 +115,7 @@ public class TestStateAlignmentContextWithHA {
       super(conf, uri, xface, factory);
 
       // Create but DON'T set in HAProxyFactory.
-      this.alignmentContext = (spy != null ? spy : new ClientGCIContext());
+      this.alignmentContext = (spy != null ? spy : new ClientGSIContext());
 
       AC_LIST.add(alignmentContext);
     }
@@ -183,7 +183,7 @@ public class TestStateAlignmentContextWithHA {
 
     try (DistributedFileSystem clearDfs =
              (DistributedFileSystem) FileSystem.get(confCopy)) {
-      ClientGCIContext clientState = getContext(1);
+      ClientGSIContext clientState = getContext(1);
       assertThat(clientState.getLastSeenStateId(), is(Long.MIN_VALUE));
       DFSTestUtil.writeFile(clearDfs, new Path("/testFileNoState"), "no_state");
       assertThat(clientState.getLastSeenStateId(), is(Long.MIN_VALUE));
@@ -234,7 +234,7 @@ public class TestStateAlignmentContextWithHA {
         cluster.getNamesystem(active).getLastWrittenTransactionId();
     try (DistributedFileSystem clearDfs =
              (DistributedFileSystem) FileSystem.get(CONF)) {
-      ClientGCIContext clientState = getContext(1);
+      ClientGSIContext clientState = getContext(1);
       assertThat(clientState.getLastSeenStateId(), is(Long.MIN_VALUE));
       DFSTestUtil.readFile(clearDfs, new Path("/testFile3"));
       assertThat(clientState.getLastSeenStateId(), is(lastWrittenId));
@@ -247,8 +247,8 @@ public class TestStateAlignmentContextWithHA {
    */
   @Test
   public void testClientSendsState() throws Exception {
-    ClientGCIContext alignmentContext = new ClientGCIContext();
-    ClientGCIContext spiedAlignContext = Mockito.spy(alignmentContext);
+    ClientGSIContext alignmentContext = new ClientGSIContext();
+    ClientGSIContext spiedAlignContext = Mockito.spy(alignmentContext);
     spy = spiedAlignContext;
 
     try (DistributedFileSystem clearDfs =
@@ -292,8 +292,8 @@ public class TestStateAlignmentContextWithHA {
    */
   @Test
   public void testClientSendsGreaterState() throws Exception {
-    ClientGCIContext alignmentContext = new ClientGCIContext();
-    ClientGCIContext spiedAlignContext = Mockito.spy(alignmentContext);
+    ClientGSIContext alignmentContext = new ClientGSIContext();
+    ClientGSIContext spiedAlignContext = Mockito.spy(alignmentContext);
     spy = spiedAlignContext;
 
     try (DistributedFileSystem clearDfs =
@@ -386,7 +386,7 @@ public class TestStateAlignmentContextWithHA {
     }
   }
 
-  private ClientGCIContext getContext(int clientCreationIndex) {
+  private ClientGSIContext getContext(int clientCreationIndex) {
     return AC_LIST.get(clientCreationIndex);
   }
 

@@ -26,12 +26,14 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 /**
+ * Global State Id context for the client.
+ * <p/>
  * This is the client side implementation responsible for receiving
  * state alignment info from server(s).
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-class ClientGCIContext implements AlignmentContext {
+class ClientGSIContext implements AlignmentContext {
 
   private final AtomicLong lastSeenStateId = new AtomicLong(Long.MIN_VALUE);
 
