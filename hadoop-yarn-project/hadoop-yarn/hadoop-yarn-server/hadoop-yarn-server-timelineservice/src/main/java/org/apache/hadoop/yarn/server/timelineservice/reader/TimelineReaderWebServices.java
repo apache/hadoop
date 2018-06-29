@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -188,6 +189,8 @@ public class TimelineReaderWebServices {
           "Filter Parsing failed." : e.getMessage());
     } else if (e instanceof BadRequestException) {
       throw (BadRequestException)e;
+    } else if (e instanceof ForbiddenException) {
+      throw (ForbiddenException) e;
     } else {
       LOG.error("Error while processing REST request", e);
       throw new WebApplicationException(e,
@@ -339,6 +342,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForGenericEntities(entities, callerUGI, entityType);
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -607,13 +611,15 @@ public class TimelineReaderWebServices {
           .createTimelineReaderContext(clusterId, userId, flowName, flowRunId,
               appId, entityType, null, null);
       entities = timelineReaderManager.getEntities(context,
-          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
-          limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
-              infofilters, conffilters, metricfilters, eventfilters,
-              fromId),
-          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
-          metricsTimeStart, metricsTimeEnd));
+          TimelineReaderWebServicesUtils
+              .createTimelineEntityFilters(limit, createdTimeStart,
+                  createdTimeEnd, relatesTo, isRelatedTo, infofilters,
+                  conffilters, metricfilters, eventfilters, fromId),
+          TimelineReaderWebServicesUtils
+              .createTimelineDataToRetrieve(confsToRetrieve, metricsToRetrieve,
+                  fields, metricsLimit, metricsTimeStart, metricsTimeEnd));
+
+      checkAccessForGenericEntities(entities, callerUGI, entityType);
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -704,6 +710,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForGenericEntity(entity, callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -893,6 +900,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForGenericEntity(entity, callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -956,6 +964,8 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
+      // TODO to be removed or modified once ACL story is played
+      checkAccess(timelineReaderManager, callerUGI, context.getUserId());
       context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
@@ -1063,12 +1073,16 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
     try {
-      entity = timelineReaderManager.getEntity(
-          TimelineReaderWebServicesUtils.createTimelineReaderContext(
-          clusterId, userId, flowName, flowRunId, null,
-              TimelineEntityType.YARN_FLOW_RUN.toString(), null, null),
-          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, null, null, null, null));
+      TimelineReaderContext context = TimelineReaderWebServicesUtils
+          .createTimelineReaderContext(clusterId, userId, flowName, flowRunId,
+              null, TimelineEntityType.YARN_FLOW_RUN.toString(), null, null);
+      // TODO to be removed or modified once ACL story is played
+      checkAccess(timelineReaderManager, callerUGI, context.getUserId());
+
+      entity = timelineReaderManager.getEntity(context,
+          TimelineReaderWebServicesUtils
+              .createTimelineDataToRetrieve(null, metricsToRetrieve, null, null,
+                  null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1156,6 +1170,8 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
+      // TODO to be removed or modified once ACL story is played
+      checkAccess(timelineReaderManager, callerUGI, context.getUserId());
       context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
       entities = timelineReaderManager.getEntities(context,
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
@@ -1304,15 +1320,21 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<TimelineEntity> entities = null;
     try {
-      entities = timelineReaderManager.getEntities(
-          TimelineReaderWebServicesUtils.createTimelineReaderContext(
-          clusterId, userId, flowName, null, null,
-              TimelineEntityType.YARN_FLOW_RUN.toString(), null, null),
-          TimelineReaderWebServicesUtils.createTimelineEntityFilters(
-          limit, createdTimeStart, createdTimeEnd, null, null, null,
-              null, null, null, fromId),
-          TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, fields, null, null, null));
+      TimelineReaderContext timelineReaderContext = TimelineReaderWebServicesUtils
+          .createTimelineReaderContext(clusterId, userId, flowName, null,
+              null, TimelineEntityType.YARN_FLOW_RUN.toString(), null,
+              null);
+      // TODO to be removed or modified once ACL story is played
+      checkAccess(timelineReaderManager, callerUGI,
+          timelineReaderContext.getUserId());
+
+      entities = timelineReaderManager.getEntities(timelineReaderContext,
+          TimelineReaderWebServicesUtils
+              .createTimelineEntityFilters(limit, createdTimeStart,
+                  createdTimeEnd, null, null, null, null, null, null, fromId),
+          TimelineReaderWebServicesUtils
+              .createTimelineDataToRetrieve(null, metricsToRetrieve, fields,
+                  null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or fromId");
@@ -1435,7 +1457,6 @@ public class TimelineReaderWebServices {
     long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
-    Configuration config = timelineReaderManager.getConfig();
     Set<TimelineEntity> entities = null;
     try {
       DateRange range = parseDateRange(dateRange);
@@ -1455,19 +1476,9 @@ public class TimelineReaderWebServices {
     long endTime = Time.monotonicNow();
     if (entities == null) {
       entities = Collections.emptySet();
-    } else if (isDisplayEntityPerUserFilterEnabled(config)) {
-      Set<TimelineEntity> userEntities = new LinkedHashSet<>();
-      userEntities.addAll(entities);
-      for (TimelineEntity entity : userEntities) {
-        if (entity.getInfo() != null) {
-          String userId =
-              (String) entity.getInfo().get(FlowActivityEntity.USER_INFO_KEY);
-          if (!validateAuthUserWithEntityUser(timelineReaderManager, callerUGI,
-              userId)) {
-            entities.remove(entity);
-          }
-        }
-      }
+    } else {
+      checkAccess(timelineReaderManager, callerUGI, entities,
+          FlowActivityEntity.USER_INFO_KEY, true);
     }
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
@@ -1552,6 +1563,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForAppEntity(entity, callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1722,6 +1734,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForAppEntity(entity, callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1852,6 +1865,8 @@ public class TimelineReaderWebServices {
       if (context == null) {
         throw new BadRequestException("Incorrect UID " +  uId);
       }
+      // TODO to be removed or modified once ACL story is played
+      checkAccess(timelineReaderManager, callerUGI, context.getUserId());
       context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
       entities = timelineReaderManager.getEntities(context,
           TimelineReaderWebServicesUtils.createTimelineEntityFilters(
@@ -3343,6 +3358,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
           confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
           metricsTimeStart, metricsTimeEnd));
+      checkAccessForSubAppEntities(entities,callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit");
@@ -3410,6 +3426,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
               confsToRetrieve, metricsToRetrieve, fields, metricsLimit,
               metricsTimeStart, metricsTimeEnd));
+      checkAccessForSubAppEntities(entities,callerUGI);
     } catch (Exception e) {
       handleException(e, url, startTime, "");
     }
@@ -3422,7 +3439,7 @@ public class TimelineReaderWebServices {
     return entities;
   }
 
-  private boolean isDisplayEntityPerUserFilterEnabled(Configuration config) {
+  static boolean isDisplayEntityPerUserFilterEnabled(Configuration config) {
     return !config
         .getBoolean(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_READ_AUTH_ENABLED)
@@ -3430,8 +3447,76 @@ public class TimelineReaderWebServices {
         .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
   }
 
+  // TODO to be removed or modified once ACL story is played
+  private void checkAccessForSubAppEntities(Set<TimelineEntity> entities,
+      UserGroupInformation callerUGI) throws Exception {
+    if (entities != null && entities.size() > 0
+        && isDisplayEntityPerUserFilterEnabled(
+        getTimelineReaderManager().getConfig())) {
+      TimelineReaderContext timelineReaderContext = null;
+      TimelineEntity entity = entities.iterator().next();
+      String fromId =
+          (String) entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+      timelineReaderContext =
+          TimelineFromIdConverter.SUB_APPLICATION_ENTITY_FROMID
+              .decodeUID(fromId);
+      checkAccess(getTimelineReaderManager(), callerUGI,
+          timelineReaderContext.getDoAsUser());
+    }
+  }
+
+  // TODO to be removed or modified once ACL story is played
+  private void checkAccessForAppEntity(TimelineEntity entity,
+      UserGroupInformation callerUGI) throws Exception {
+    if (entity != null && isDisplayEntityPerUserFilterEnabled(
+        getTimelineReaderManager().getConfig())) {
+      String fromId =
+          (String) entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+      TimelineReaderContext timelineReaderContext =
+          TimelineFromIdConverter.APPLICATION_FROMID.decodeUID(fromId);
+      checkAccess(getTimelineReaderManager(), callerUGI,
+          timelineReaderContext.getUserId());
+    }
+  }
+
+  // TODO to be removed or modified once ACL story is played
+  private void checkAccessForGenericEntity(TimelineEntity entity,
+      UserGroupInformation callerUGI) throws Exception {
+    if (entity != null && isDisplayEntityPerUserFilterEnabled(
+        getTimelineReaderManager().getConfig())) {
+      String fromId =
+          (String) entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+      TimelineReaderContext timelineReaderContext =
+          TimelineFromIdConverter.GENERIC_ENTITY_FROMID.decodeUID(fromId);
+      checkAccess(getTimelineReaderManager(), callerUGI,
+          timelineReaderContext.getUserId());
+    }
+  }
+
+  // TODO to be removed or modified once ACL story is played
+  private void checkAccessForGenericEntities(Set<TimelineEntity> entities,
+      UserGroupInformation callerUGI, String entityType) throws Exception {
+    if (entities != null && entities.size() > 0
+        && isDisplayEntityPerUserFilterEnabled(
+        getTimelineReaderManager().getConfig())) {
+      TimelineReaderContext timelineReaderContext = null;
+      TimelineEntity entity = entities.iterator().next();
+      String uid =
+          (String) entity.getInfo().get(TimelineReaderUtils.FROMID_KEY);
+      if (TimelineEntityType.YARN_APPLICATION.matches(entityType)) {
+        timelineReaderContext =
+            TimelineFromIdConverter.APPLICATION_FROMID.decodeUID(uid);
+      } else {
+        timelineReaderContext =
+            TimelineFromIdConverter.GENERIC_ENTITY_FROMID.decodeUID(uid);
+      }
+      checkAccess(getTimelineReaderManager(), callerUGI,
+          timelineReaderContext.getUserId());
+    }
+  }
+
   // TODO to be removed/modified once ACL story has played
-  private boolean validateAuthUserWithEntityUser(
+  static boolean validateAuthUserWithEntityUser(
       TimelineReaderManager readerManager, UserGroupInformation ugi,
       String entityUser) {
     String authUser = TimelineReaderWebServicesUtils.getUserName(ugi);
@@ -3441,5 +3526,42 @@ public class TimelineReaderWebServices {
           "Authenticated User: " + authUser + " Requested User:" + entityUser);
     }
     return (readerManager.checkAccess(ugi) || authUser.equals(requestedUser));
+  }
+
+  // TODO to be removed/modified once ACL story has played
+  static boolean checkAccess(TimelineReaderManager readerManager,
+      UserGroupInformation ugi, String entityUser) {
+    if (isDisplayEntityPerUserFilterEnabled(readerManager.getConfig())) {
+      if (!validateAuthUserWithEntityUser(readerManager, ugi, entityUser)) {
+        String userName = ugi.getShortUserName();
+        String msg = "User " + userName
+            + " is not allowed to read TimelineService V2 data.";
+        throw new ForbiddenException(msg);
+      }
+    }
+    return true;
+  }
+
+  // TODO to be removed or modified once ACL story is played
+  static void checkAccess(TimelineReaderManager readerManager,
+      UserGroupInformation callerUGI, Set<TimelineEntity> entities,
+      String entityUserKey, boolean verifyForAllEntity) {
+    if (entities.size() > 0 && isDisplayEntityPerUserFilterEnabled(
+        readerManager.getConfig())) {
+      Set<TimelineEntity> userEntities = new LinkedHashSet<>();
+      userEntities.addAll(entities);
+      for (TimelineEntity entity : userEntities) {
+        if (entity.getInfo() != null) {
+          String userId = (String) entity.getInfo().get(entityUserKey);
+          if (!validateAuthUserWithEntityUser(readerManager, callerUGI,
+              userId)) {
+            entities.remove(entity);
+            if (!verifyForAllEntity) {
+              break;
+            }
+          }
+        }
+      }
+    }
   }
 }
