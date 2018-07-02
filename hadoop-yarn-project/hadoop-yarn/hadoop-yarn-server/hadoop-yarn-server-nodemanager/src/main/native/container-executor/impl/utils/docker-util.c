@@ -1235,7 +1235,7 @@ static int check_privileges(const char *user) {
   if (ret != 1) {
     int child_pid = fork();
     if (child_pid == 0) {
-      execl("/bin/sudo", "sudo", "-U", user, "-n", "-l", "docker", NULL);
+      execl("/usr/bin/sudo", "sudo", "-U", user, "-n", "-l", "docker", NULL);
       exit(INITIALIZE_USER_FAILED);
     } else {
       while ((waitid = waitpid(child_pid, &statval, 0)) != child_pid) {
