@@ -1278,7 +1278,7 @@ public class DataNode extends ReconfigurableBase
       DFSUtilClient.CorruptedBlocks corruptedBlocks) throws IOException {
     Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap =
         corruptedBlocks.getCorruptionMap();
-    if (!corruptionMap.isEmpty()) {
+    if (corruptionMap != null) {
       for (Map.Entry<ExtendedBlock, Set<DatanodeInfo>> entry :
           corruptionMap.entrySet()) {
         for (DatanodeInfo dnInfo : entry.getValue()) {

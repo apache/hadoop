@@ -696,14 +696,14 @@ public class DFSUtilClient {
   public static class CorruptedBlocks {
     private Map<ExtendedBlock, Set<DatanodeInfo>> corruptionMap;
 
-    public CorruptedBlocks() {
-      this.corruptionMap = new HashMap<>();
-    }
-
     /**
      * Indicate a block replica on the specified datanode is corrupted
      */
     public void addCorruptedBlock(ExtendedBlock blk, DatanodeInfo node) {
+      if (corruptionMap == null) {
+        corruptionMap = new HashMap<>();
+      }
+
       Set<DatanodeInfo> dnSet = corruptionMap.get(blk);
       if (dnSet == null) {
         dnSet = new HashSet<>();
@@ -715,7 +715,8 @@ public class DFSUtilClient {
     }
 
     /**
-     * @return the map that contains all the corruption entries.
+     * @return the map that contains all the corruption entries, or null if
+     * there were no corrupted entries
      */
     public Map<ExtendedBlock, Set<DatanodeInfo>> getCorruptionMap() {
       return corruptionMap;
