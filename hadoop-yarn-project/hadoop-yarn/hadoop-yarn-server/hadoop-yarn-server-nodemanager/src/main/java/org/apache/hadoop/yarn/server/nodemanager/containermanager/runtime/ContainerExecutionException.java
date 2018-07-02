@@ -53,6 +53,12 @@ public class ContainerExecutionException extends YarnException {
     errorOutput = OUTPUT_UNSET;
   }
 
+  public ContainerExecutionException(String message, int exitCode) {
+    super(message);
+    this.exitCode = exitCode;
+    this.output = OUTPUT_UNSET;
+    this.errorOutput = OUTPUT_UNSET;
+  }
 
   public ContainerExecutionException(String message, int exitCode, String
       output, String errorOutput) {

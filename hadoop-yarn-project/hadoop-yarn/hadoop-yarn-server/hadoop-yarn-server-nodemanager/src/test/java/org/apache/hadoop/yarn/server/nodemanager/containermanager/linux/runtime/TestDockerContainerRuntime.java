@@ -1487,7 +1487,7 @@ public class TestDockerContainerRuntime {
     runtime.signalContainer(builder.build());
   }
 
-  @Test(expected = ContainerExecutionException.class)
+  @Test
   public void testContainerLivelinessNoFileException() throws Exception {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
@@ -1496,7 +1496,13 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(PID, signalPid)
         .setExecutionAttribute(SIGNAL, ContainerExecutor.Signal.NULL);
     runtime.initialize(enableMockContainerExecutor(conf), null);
-    runtime.signalContainer(builder.build());
+    try {
+      runtime.signalContainer(builder.build());
+    } catch (ContainerExecutionException e) {
+      Assert.assertEquals(
+          PrivilegedOperation.ResultCode.INVALID_CONTAINER_PID.getValue(),
+          e.getExitCode());
+    }
   }
 
   @Test

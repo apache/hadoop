@@ -1031,7 +1031,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         handleContainerKill(ctx, env, signal);
       }
     } catch (ContainerExecutionException e) {
-      LOG.warn("Signal docker container failed. Exception: ", e);
       throw new ContainerExecutionException("Signal docker container failed",
           e.getExitCode(), e.getOutput(), e.getErrorOutput());
     }
@@ -1205,7 +1204,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (!new File(procFs + File.separator + pid).exists()) {
       String msg = "Liveliness check failed for PID: " + pid
           + ". Container may have already completed.";
-      throw new ContainerExecutionException(msg);
+      throw new ContainerExecutionException(msg,
+          PrivilegedOperation.ResultCode.INVALID_CONTAINER_PID.getValue());
     }
   }
 
