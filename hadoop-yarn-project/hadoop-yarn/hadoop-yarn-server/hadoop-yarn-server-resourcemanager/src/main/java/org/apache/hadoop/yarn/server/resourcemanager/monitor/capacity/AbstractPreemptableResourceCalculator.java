@@ -42,6 +42,7 @@ public class AbstractPreemptableResourceCalculator {
   protected final ResourceCalculator rc;
   protected boolean isReservedPreemptionCandidatesSelector;
   private Resource stepFactor;
+  private boolean allowQueuesBalanceAfterAllQueuesSatisfied;
 
   static class TQComparator implements Comparator<TempQueuePerPartition> {
     private ResourceCalculator rc;
@@ -83,15 +84,28 @@ public class AbstractPreemptableResourceCalculator {
    *          this will be set by different implementation of candidate
    *          selectors, please refer to TempQueuePerPartition#offer for
    *          details.
+   * @param allowQueuesBalanceAfterAllQueuesSatisfied
+   *          Should resources be preempted from an over-served queue when the
+   *          requesting queues are all at or over their guarantees?
+   *          An example is, there're 10 queues under root, guaranteed resource
+   *          of them are all 10%.
+   *          Assume there're two queues are using resources, queueA uses 10%
+   *          queueB uses 90%. For all queues are guaranteed, but it's not fair
+   *          for queueA.
+   *          We wanna make this behavior can be configured. By default it is
+   *          not allowed.
+   *
    */
   public AbstractPreemptableResourceCalculator(
       CapacitySchedulerPreemptionContext preemptionContext,
-      boolean isReservedPreemptionCandidatesSelector) {
+      boolean isReservedPreemptionCandidatesSelector,
+      boolean allowQueuesBalanceAfterAllQueuesSatisfied) {
     context = preemptionContext;
     rc = preemptionContext.getResourceCalculator();
     this.isReservedPreemptionCandidatesSelector =
         isReservedPreemptionCandidatesSelector;
-
+    this.allowQueuesBalanceAfterAllQueuesSatisfied =
+        allowQueuesBalanceAfterAllQueuesSatisfied;
     stepFactor = Resource.newInstance(0, 0);
     for (ResourceInformation ri : stepFactor.getResources()) {
       ri.setValue(1);
@@ -193,7 +207,8 @@ public class AbstractPreemptableResourceCalculator {
         wQavail = Resources.componentwiseMin(wQavail, unassigned);
 
         Resource wQidle = sub.offer(wQavail, rc, totGuarant,
-            isReservedPreemptionCandidatesSelector);
+            isReservedPreemptionCandidatesSelector,
+            allowQueuesBalanceAfterAllQueuesSatisfied);
         Resource wQdone = Resources.subtract(wQavail, wQidle);
 
         if (Resources.greaterThan(rc, totGuarant, wQdone, Resources.none())) {

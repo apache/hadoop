@@ -37,6 +37,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+
 /**
  * A FailoverProxyProvider implementation which allows one to configure
  * multiple URIs to connect to during fail-over. A random configured address is
@@ -60,6 +62,11 @@ public class ConfiguredFailoverProxyProvider<T> extends
 
   public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory) {
+    this(conf, uri, xface, factory, DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
+      Class<T> xface, HAProxyFactory<T> factory, String addressKey) {
     this.xface = xface;
     this.conf = new Configuration(conf);
     int maxRetries = this.conf.getInt(
@@ -81,7 +88,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
       ugi = UserGroupInformation.getCurrentUser();
 
       Map<String, Map<String, InetSocketAddress>> map =
-          DFSUtilClient.getHaNnRpcAddresses(conf);
+          DFSUtilClient.getAddresses(conf, null, addressKey);
       Map<String, InetSocketAddress> addressesInNN = map.get(uri.getHost());
 
       if (addressesInNN == null || addressesInNN.size() == 0) {

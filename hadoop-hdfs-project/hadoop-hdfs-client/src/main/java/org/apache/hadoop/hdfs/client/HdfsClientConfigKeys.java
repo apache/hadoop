@@ -184,6 +184,9 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.snapshot.capture.openfiles";
   boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
 
+  String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS =
+      "dfs.provided.aliasmap.inmemory.dnrpc-address";
+
   /**
    * These are deprecated config keys to client code.
    */

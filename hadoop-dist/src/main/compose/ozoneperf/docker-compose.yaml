@@ -16,19 +16,6 @@
 
 version: "3"
 services:
-   namenode:
-      image: apache/hadoop-runner
-      hostname: namenode
-      volumes:
-         - ../../ozone:/opt/hadoop
-         - ./jmxpromo.jar:/opt/jmxpromo.jar
-      ports:
-         - 9870:9870
-      environment:
-          ENSURE_NAMENODE_DIR: /data/namenode
-      env_file:
-         - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","namenode"]
    datanode:
       image: apache/hadoop-runner
       volumes:

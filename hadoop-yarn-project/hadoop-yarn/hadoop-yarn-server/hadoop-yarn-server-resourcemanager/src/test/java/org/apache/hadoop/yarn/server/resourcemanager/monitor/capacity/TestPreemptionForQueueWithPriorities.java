@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -537,5 +538,62 @@ public class TestPreemptionForQueueWithPriorities
     verify(mDisp, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
+  }
+
+  @Test
+  public void testPriorityPreemptionForBalanceBetweenSatisfiedQueues()
+      throws IOException {
+    /**
+     * All queues are beyond guarantee, c has higher priority than b.
+     * c ask for more resource, and there is no idle left, c should preempt
+     * some resource from b but won’t let b under its guarantee.
+     *
+     * Queue structure is:
+     *
+     * <pre>
+     *        root
+     *       / |  \
+     *      a  b   c
+     * </pre>
+     *
+     * For priorities
+     * - a=1
+     * - b=1
+     * - c=2
+     *
+     */
+    String labelsConfig = "=100,true"; // default partition
+    String nodesConfig = "n1="; // only one node
+    String queuesConfig =
+        // guaranteed,max,used,pending
+        "root(=[100 100 100 100]);" + //root
+            "-a(=[30 100 0 0]){priority=1};" + // a
+            "-b(=[30 100 40 50]){priority=1};" + // b
+            "-c(=[40 100 60 25]){priority=2}";   // c
+    String appsConfig =
+        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        "b\t(1,1,n1,,40,false);" + // app1 in b
+            "c\t(1,1,n1,,60,false)"; // app2 in c
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    boolean isPreemptionToBalanceRequired = true;
+    newConf.setBoolean(
+        CapacitySchedulerConfiguration.PREEMPTION_TO_BALANCE_QUEUES_BEYOND_GUARANTEED,
+        isPreemptionToBalanceRequired);
+    when(cs.getConfiguration()).thenReturn(newConf);
+    policy.editSchedule();
+
+    // IdealAssigned b: 30 c: 70. initIdealAssigned: b: 30 c: 40, even though
+    // b and c has same relativeAssigned=1.0f(idealAssigned / guaranteed),
+    // since c has higher priority, c will be put in mostUnderServedQueue and
+    // get all remain 30 capacity.
+    verify(mDisp, times(10)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+    verify(mDisp, never()).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
   }
 }

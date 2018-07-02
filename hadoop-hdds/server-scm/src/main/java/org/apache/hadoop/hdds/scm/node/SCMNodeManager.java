@@ -25,6 +25,10 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.server.events.Event;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -42,11 +46,13 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +106,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  * as soon as you read it.
  */
 public class SCMNodeManager
-    implements NodeManager, StorageContainerNodeProtocol {
+    implements NodeManager, StorageContainerNodeProtocol,
+    EventHandler<CommandForDatanode> {
 
   @VisibleForTesting
   static final Logger LOG =
@@ -151,8 +158,10 @@ public class SCMNodeManager
   private ObjectName nmInfoBean;
 
   // Node pool manager.
-  private final SCMNodePoolManager nodePoolManager;
   private final StorageContainerManager scmManager;
+
+  public static final Event<CommandForDatanode> DATANODE_COMMAND =
+      new TypedEvent<>(CommandForDatanode.class, "DATANODE_COMMAND");
 
   /**
    * Constructs SCM machine Manager.
@@ -199,7 +208,6 @@ public class SCMNodeManager
 
     registerMXBean();
 
-    this.nodePoolManager = new SCMNodePoolManager(conf);
     this.scmManager = scmManager;
   }
 
@@ -671,7 +679,6 @@ public class SCMNodeManager
   @Override
   public void close() throws IOException {
     unregisterMXBean();
-    nodePoolManager.close();
     executorService.shutdown();
     try {
       if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -749,20 +756,6 @@ public class SCMNodeManager
       LOG.info("Leaving startup chill mode.");
     }
 
-    // TODO: define node pool policy for non-default node pool.
-    // For now, all nodes are added to the "DefaultNodePool" upon registration
-    // if it has not been added to any node pool yet.
-    try {
-      if (nodePoolManager.getNodePool(datanodeDetails) == null) {
-        nodePoolManager.addNode(SCMNodePoolManager.DEFAULT_NODEPOOL,
-            datanodeDetails);
-      }
-    } catch (IOException e) {
-      // TODO: make sure registration failure is handled correctly.
-      return RegisteredCommand.newBuilder()
-          .setErrorCode(ErrorCode.errorNodeNotPermitted)
-          .build();
-    }
     // Updating Node Report, as registration is successful
     updateNodeStat(datanodeDetails.getUuid(), nodeReport);
     LOG.info("Data node with ID: {} Registered.",
@@ -849,11 +842,6 @@ public class SCMNodeManager
   }
 
   @Override
-  public NodePoolManager getNodePoolManager() {
-    return nodePoolManager;
-  }
-
-  @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
     for(NodeState state : NodeState.values()) {
@@ -870,5 +858,12 @@ public class SCMNodeManager
   @VisibleForTesting
   public void setStaleNodeIntervalMs(long interval) {
     this.staleNodeIntervalMs = interval;
+  }
+
+  @Override
+  public void onMessage(CommandForDatanode commandForDatanode,
+      EventPublisher publisher) {
+    addDatanodeCommand(commandForDatanode.getDatanodeId(),
+        commandForDatanode.getCommand());
   }
 }

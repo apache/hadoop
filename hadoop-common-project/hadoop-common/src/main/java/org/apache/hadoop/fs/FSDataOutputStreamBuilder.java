@@ -116,6 +116,27 @@ public abstract class FSDataOutputStreamBuilder
   protected abstract B getThisBuilder();
 
   /**
+   * Construct from a {@link FileContext}.
+   *
+   * @param fc FileContext
+   * @param p path.
+   * @throws IOException
+   */
+  FSDataOutputStreamBuilder(@Nonnull FileContext fc,
+      @Nonnull Path p) throws IOException {
+    Preconditions.checkNotNull(fc);
+    Preconditions.checkNotNull(p);
+    this.fs = null;
+    this.path = p;
+
+    AbstractFileSystem afs = fc.getFSofPath(p);
+    FsServerDefaults defaults = afs.getServerDefaults(p);
+    bufferSize = defaults.getFileBufferSize();
+    replication = defaults.getReplication();
+    blockSize = defaults.getBlockSize();
+  }
+
+  /**
    * Constructor.
    */
   protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
@@ -131,6 +152,7 @@ public abstract class FSDataOutputStreamBuilder
   }
 
   protected FileSystem getFS() {
+    Preconditions.checkNotNull(fs);
     return fs;
   }
 

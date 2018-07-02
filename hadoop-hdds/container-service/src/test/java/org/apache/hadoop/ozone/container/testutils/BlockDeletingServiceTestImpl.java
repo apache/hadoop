@@ -44,8 +44,8 @@ public class BlockDeletingServiceTestImpl
 
   public BlockDeletingServiceTestImpl(ContainerManager containerManager,
       int serviceInterval, Configuration conf) {
-    super(containerManager, serviceInterval,
-        SERVICE_TIMEOUT_IN_MILLISECONDS, conf);
+    super(containerManager, serviceInterval, SERVICE_TIMEOUT_IN_MILLISECONDS,
+        TimeUnit.MILLISECONDS, conf);
   }
 
   @VisibleForTesting

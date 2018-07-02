@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;

@@ -21,7 +21,6 @@ import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.CommandQueue;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.node.NodePoolManager;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -201,10 +200,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
     return null;
   }
 
-  @Override
-  public NodePoolManager getNodePoolManager() {
-    return Mockito.mock(NodePoolManager.class);
-  }
 
   /**
    * Wait for the heartbeat is processed by NodeManager.

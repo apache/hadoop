@@ -123,6 +123,12 @@ public abstract class AbstractContractPathHandleTest
     HandleOpt.Data data = HandleOpt.getOpt(HandleOpt.Data.class, opts)
         .orElseThrow(IllegalArgumentException::new);
     FileStatus stat = testFile(B1);
+    try {
+      // Temporary workaround while RawLocalFS supports only second precision
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
     // modify the file by appending data
     appendFile(getFileSystem(), stat.getPath(), B2);
     byte[] b12 = Arrays.copyOf(B1, B1.length + B2.length);

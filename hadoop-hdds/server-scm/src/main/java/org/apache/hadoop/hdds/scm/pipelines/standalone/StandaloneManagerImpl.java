@@ -17,7 +17,7 @@
 package org.apache.hadoop.hdds.scm.pipelines.standalone;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -67,12 +67,12 @@ public class StandaloneManagerImpl extends PipelineManager {
 
 
   /**
-   * Allocates a new standalone PipelineChannel from the free nodes.
+   * Allocates a new standalone Pipeline from the free nodes.
    *
    * @param factor - One
-   * @return PipelineChannel.
+   * @return Pipeline.
    */
-  public PipelineChannel allocatePipelineChannel(ReplicationFactor factor) {
+  public Pipeline allocatePipeline(ReplicationFactor factor) {
     List<DatanodeDetails> newNodesList = new LinkedList<>();
     List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
     int count = getReplicationCount(factor);

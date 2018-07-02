@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +76,7 @@ class ExecutionSummarizer implements StatListener<JobStats> {
     startTime = System.currentTimeMillis();
     // flatten the args string and store it
     commandLineArgs = 
-      org.apache.commons.lang.StringUtils.join(args, ' '); 
+      org.apache.commons.lang3.StringUtils.join(args, ' ');
   }
   
   /**

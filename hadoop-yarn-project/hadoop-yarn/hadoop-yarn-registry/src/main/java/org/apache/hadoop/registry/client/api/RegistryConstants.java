@@ -95,7 +95,7 @@ public interface RegistryConstants {
   /**
    * Default DNS port number.
    */
-  int DEFAULT_DNS_PORT = 5353;
+  int DEFAULT_DNS_PORT = 5335;
 
   /**
    * DNSSEC Enabled?

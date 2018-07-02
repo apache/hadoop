@@ -220,13 +220,7 @@ public class AMRMClientRelayer extends AbstractService
         for (ResourceRequest r : ask) {
           // create a copy of ResourceRequest as we might change it while the
           // RPC layer is using it to send info across
-          askList.add(ResourceRequest.newBuilder().priority(r.getPriority())
-              .resourceName(r.getResourceName()).capability(r.getCapability())
-              .numContainers(r.getNumContainers())
-              .relaxLocality(r.getRelaxLocality())
-              .nodeLabelExpression(r.getNodeLabelExpression())
-              .executionTypeRequest(r.getExecutionTypeRequest())
-              .allocationRequestId(r.getAllocationRequestId()).build());
+          askList.add(ResourceRequest.clone(r));
         }
 
         allocateRequest = AllocateRequest.newBuilder()

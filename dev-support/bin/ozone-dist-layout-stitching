@@ -145,6 +145,8 @@ run copy "${ROOT}/hadoop-ozone/ozone-manager/target/hadoop-ozone-ozone-manager-$
 run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}" .
 run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${HDDS_VERSION}" .
 run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${HDDS_VERSION}" .
+mkdir -p "./share/hadoop/ozonefs"
+cp "${ROOT}/hadoop-ozone/ozonefs/target/hadoop-ozone-filesystem-${HDDS_VERSION}.jar" "./share/hadoop/ozonefs/hadoop-ozone-filesystem.jar"
 # Optional documentation, could be missing
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ksm/
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
@@ -153,5 +155,5 @@ cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdd
 mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn
 echo
-echo "Hadoop Ozone dist layout available at: ${BASEDIR}/ozone-${HDDS_VERSION}"
+echo "Hadoop Ozone dist layout available at: ${BASEDIR}/ozone"
 echo

@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.scm.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
-import com.google.protobuf.ByteString;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -60,13 +59,11 @@ import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_BUCKET_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_VOLUME_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
@@ -110,15 +107,6 @@ public class SQLCLI  extends Configured implements Tool {
           "VALUES (\"%s\", \"%s\", \"%s\", \"%d\")";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
-          "VALUES (\"%s\", \"%s\")";
-  // for nodepool.db
-  private static final String CREATE_NODE_POOL =
-      "CREATE TABLE nodePool (" +
-          "datanodeUUID TEXT NOT NULL," +
-          "poolName TEXT NOT NULL," +
-          "PRIMARY KEY(datanodeUUID, poolName))";
-  private static final String INSERT_NODE_POOL =
-      "INSERT INTO nodePool (datanodeUUID, poolName) " +
           "VALUES (\"%s\", \"%s\")";
   // and reuse CREATE_DATANODE_INFO and INSERT_DATANODE_INFO
   // for openContainer.db
@@ -285,9 +273,6 @@ public class SQLCLI  extends Configured implements Tool {
     if (dbName.toString().endsWith(CONTAINER_DB_SUFFIX)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
-    }  else if (dbName.toString().equals(NODEPOOL_DB)) {
-      LOG.info("Converting node pool DB");
-      convertNodePoolDB(dbPath, outPath);
     } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
       LOG.info("Converting open container DB");
       convertOpenContainerDB(dbPath, outPath);
@@ -519,11 +504,11 @@ public class SQLCLI  extends Configured implements Tool {
     LOG.info("Insert to sql container db, for container {}", containerID);
     String insertContainerInfo = String.format(
         INSERT_CONTAINER_INFO, containerID,
-        pipeline.getPipelineChannel().getLeaderID());
+        pipeline.getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
     for (HddsProtos.DatanodeDetailsProto dd :
-        pipeline.getPipelineChannel().getMembersList()) {
+        pipeline.getMembersList()) {
       String uuid = dd.getUuid();
       if (!uuidChecked.contains(uuid)) {
         // we may also not use this checked set, but catch exception instead
@@ -543,66 +528,7 @@ public class SQLCLI  extends Configured implements Tool {
     }
     LOG.info("Insertion completed.");
   }
-  /**
-   * Converts nodePool.db to sqlite. The schema of sql db:
-   * two tables, nodePool and datanodeInfo (the same datanode Info as for
-   * container.db).
-   *
-   * nodePool
-   * ---------------------------------------------------------
-   * datanodeUUID* | poolName*
-   * ---------------------------------------------------------
-   *
-   * datanodeInfo:
-   * ---------------------------------------------------------
-   * hostname | datanodeUUid* | xferPort | ipcPort
-   * ---------------------------------------------------------
-   *
-   * --------------------------------
-   * |containerPort
-   * --------------------------------
-   *
-   * @param dbPath path to container db.
-   * @param outPath path to output sqlite
-   * @throws IOException throws exception.
-   */
-  private void convertNodePoolDB(Path dbPath, Path outPath) throws Exception {
-    LOG.info("Create table for sql node pool db.");
-    File dbFile = dbPath.toFile();
-    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setConf(conf).setDbFile(dbFile).build();
-        Connection conn = connectDB(outPath.toString())) {
-      executeSQL(conn, CREATE_NODE_POOL);
-      executeSQL(conn, CREATE_DATANODE_INFO);
 
-      dbStore.iterate(null, (key, value) -> {
-        DatanodeDetails nodeId = DatanodeDetails
-            .getFromProtoBuf(HddsProtos.DatanodeDetailsProto
-                .PARSER.parseFrom(key));
-        String blockPool = DFSUtil.bytes2String(value);
-        try {
-          insertNodePoolDB(conn, blockPool, nodeId);
-          return true;
-        } catch (SQLException e) {
-          throw new IOException(e);
-        }
-      });
-    }
-  }
-
-  private void insertNodePoolDB(Connection conn, String blockPool,
-      DatanodeDetails datanodeDetails) throws SQLException {
-    String insertNodePool = String.format(INSERT_NODE_POOL,
-        datanodeDetails.getUuidString(), blockPool);
-    executeSQL(conn, insertNodePool);
-
-    String insertDatanodeDetails = String
-        .format(INSERT_DATANODE_INFO, datanodeDetails.getHostName(),
-            datanodeDetails.getUuidString(), datanodeDetails.getIpAddress(),
-            datanodeDetails.getPort(DatanodeDetails.Port.Name.STANDALONE)
-                .getValue());
-    executeSQL(conn, insertDatanodeDetails);
-  }
 
   /**
    * Convert openContainer.db to sqlite db file. This is rather simple db,

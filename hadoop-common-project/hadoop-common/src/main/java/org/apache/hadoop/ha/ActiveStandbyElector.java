@@ -329,9 +329,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    * This recursively creates the znode as well as all of its parents.
    */
   public synchronized void ensureParentZNode()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, KeeperException {
     Preconditions.checkState(!wantToBeInElection,
         "ensureParentZNode() may not be called while in the election");
+    if (zkClient == null) {
+      createConnection();
+    }
 
     String pathParts[] = znodeWorkingDir.split("/");
     Preconditions.checkArgument(pathParts.length >= 1 &&

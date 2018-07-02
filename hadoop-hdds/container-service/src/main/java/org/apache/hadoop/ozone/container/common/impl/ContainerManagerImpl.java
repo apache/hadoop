@@ -1111,5 +1111,10 @@ public class ContainerManagerImpl implements ContainerManager {
     return cData.getKeyCount();
   }
 
-
+  @Override
+  public void updateDeleteTransactionId(long containerId,
+      long deleteTransactionId) {
+    containerMap.get(containerId)
+        .updateDeleteTransactionId(deleteTransactionId);
+  }
 }

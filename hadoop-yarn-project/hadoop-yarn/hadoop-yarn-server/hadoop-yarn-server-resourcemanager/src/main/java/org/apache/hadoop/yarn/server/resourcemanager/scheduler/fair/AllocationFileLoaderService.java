@@ -114,7 +114,9 @@ public class AllocationFileLoaderService extends AbstractService {
       reloadThread = new Thread(() -> {
         while (running) {
           try {
-            reloadListener.onCheck();
+            synchronized (this) {
+              reloadListener.onCheck();
+            }
             long time = clock.getTime();
             long lastModified =
                 fs.getFileStatus(allocFile).getModificationTime();

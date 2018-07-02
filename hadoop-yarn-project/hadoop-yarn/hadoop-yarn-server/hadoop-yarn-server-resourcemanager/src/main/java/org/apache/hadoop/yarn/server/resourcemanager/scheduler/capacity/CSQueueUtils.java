@@ -184,7 +184,7 @@ public class CSQueueUtils {
     if (Resources.greaterThan(rc, totalPartitionResource,
         totalPartitionResource, Resources.none())) {
 
-      Resource queueGuranteedResource = childQueue
+      Resource queueGuaranteedResource = childQueue
           .getEffectiveCapacity(nodePartition);
 
       //TODO : Modify below code to support Absolute Resource configurations
@@ -204,14 +204,14 @@ public class CSQueueUtils {
         QueueCapacities leafQueueTemplateCapacities = parentQueue
             .getLeafQueueTemplate()
             .getQueueCapacities();
-        queueGuranteedResource = Resources.multiply(totalPartitionResource,
+        queueGuaranteedResource = Resources.multiply(totalPartitionResource,
             leafQueueTemplateCapacities.getAbsoluteCapacity
                 (nodePartition));
       }
 
       // make queueGuranteed >= minimum_allocation to avoid divided by 0.
-      queueGuranteedResource =
-          Resources.max(rc, totalPartitionResource, queueGuranteedResource,
+      queueGuaranteedResource =
+          Resources.max(rc, totalPartitionResource, queueGuaranteedResource,
               minimumAllocation);
 
       Resource usedResource = queueResourceUsage.getUsed(nodePartition);
@@ -220,12 +220,12 @@ public class CSQueueUtils {
               totalPartitionResource);
       usedCapacity =
           Resources.divide(rc, totalPartitionResource, usedResource,
-              queueGuranteedResource);
+              queueGuaranteedResource);
 
       Resource resResource = queueResourceUsage.getReserved(nodePartition);
       reservedCapacity =
           Resources.divide(rc, totalPartitionResource, resResource,
-              queueGuranteedResource);
+              queueGuaranteedResource);
       absoluteReservedCapacity =
           Resources.divide(rc, totalPartitionResource, resResource,
               totalPartitionResource);
@@ -258,16 +258,16 @@ public class CSQueueUtils {
     for (String partition : nodeLabels) {
       // Calculate guaranteed resource for a label in a queue by below logic.
       // (total label resource) * (absolute capacity of label in that queue)
-      Resource queueGuranteedResource = queue.getEffectiveCapacity(partition);
+      Resource queueGuaranteedResource = queue.getEffectiveCapacity(partition);
 
       // Available resource in queue for a specific label will be calculated as
       // {(guaranteed resource for a label in a queue) -
       // (resource usage of that label in the queue)}
       // Finally accumulate this available resource to get total.
       Resource available = (Resources.greaterThan(rc, cluster,
-          queueGuranteedResource,
+          queueGuaranteedResource,
           queue.getQueueResourceUsage().getUsed(partition))) ? Resources
-          .componentwiseMax(Resources.subtractFrom(queueGuranteedResource,
+          .componentwiseMax(Resources.subtractFrom(queueGuaranteedResource,
               queue.getQueueResourceUsage().getUsed(partition)), Resources
               .none()) : Resources.none();
       Resources.addTo(totalAvailableResource, available);

@@ -124,12 +124,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails);
 
   /**
-   * Returns the NodePoolManager associated with the NodeManager.
-   * @return NodePoolManager
-   */
-  NodePoolManager getNodePoolManager();
-
-  /**
    * Wait for the heartbeat is processed by NodeManager.
    * @return true if heartbeat has been processed.
    */

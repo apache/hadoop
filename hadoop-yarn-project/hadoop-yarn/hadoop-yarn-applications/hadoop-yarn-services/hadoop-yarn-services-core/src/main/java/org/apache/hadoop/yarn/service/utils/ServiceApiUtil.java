@@ -143,6 +143,11 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException(String.format(RestApiErrorMessages
             .ERROR_COMPONENT_NAME_INVALID, maxCompLength, comp.getName()));
       }
+      if (service.getName().equals(comp.getName())) {
+        throw new IllegalArgumentException(String.format(RestApiErrorMessages
+                .ERROR_COMPONENT_NAME_CONFLICTS_WITH_SERVICE_NAME,
+            comp.getName(), service.getName()));
+      }
       if (componentNames.contains(comp.getName())) {
         throw new IllegalArgumentException("Component name collision: " +
             comp.getName());

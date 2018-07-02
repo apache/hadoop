@@ -269,7 +269,7 @@ public abstract class ZKFailoverController {
   }
 
   private int formatZK(boolean force, boolean interactive)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, KeeperException {
     if (elector.parentZNodeExists()) {
       if (!force && (!interactive || !confirmFormat())) {
         return ERR_CODE_FORMAT_DENIED;

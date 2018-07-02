@@ -27,14 +27,14 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.List;
 
 /**
@@ -46,7 +46,7 @@ public class Pipeline {
 
   static {
     ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"data"};
+    String[] ignorableFieldNames = {"leaderID", "datanodes"};
     FilterProvider filters = new SimpleFilterProvider()
         .addFilter(PIPELINE_INFO, SimpleBeanPropertyFilter
             .serializeAllExcept(ignorableFieldNames));
@@ -57,38 +57,66 @@ public class Pipeline {
     WRITER = mapper.writer(filters);
   }
 
-  private PipelineChannel pipelineChannel;
-  /**
-   * Allows you to maintain private data on pipelines. This is not serialized
-   * via protobuf, just allows us to maintain some private data.
-   */
   @JsonIgnore
-  private byte[] data;
+  private String leaderID;
+  @JsonIgnore
+  private Map<String, DatanodeDetails> datanodes;
+  private HddsProtos.LifeCycleState lifeCycleState;
+  private HddsProtos.ReplicationType type;
+  private HddsProtos.ReplicationFactor factor;
+  private String name;
+  // TODO: change to long based id
+  //private long id;
+
   /**
    * Constructs a new pipeline data structure.
    *
-   * @param pipelineChannel - transport information for this container
+   * @param leaderID       -  Leader datanode id
+   * @param lifeCycleState  - Pipeline State
+   * @param replicationType - Replication protocol
+   * @param replicationFactor - replication count on datanodes
+   * @param name  - pipelineName
    */
-  public Pipeline(PipelineChannel pipelineChannel) {
-    this.pipelineChannel = pipelineChannel;
-    data = null;
+  public Pipeline(String leaderID, HddsProtos.LifeCycleState lifeCycleState,
+      HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor, String name) {
+    this.leaderID = leaderID;
+    this.lifeCycleState = lifeCycleState;
+    this.type = replicationType;
+    this.factor = replicationFactor;
+    this.name = name;
+    datanodes = new TreeMap<>();
   }
 
   /**
    * Gets pipeline object from protobuf.
    *
-   * @param pipeline - ProtoBuf definition for the pipeline.
+   * @param pipelineProto - ProtoBuf definition for the pipeline.
    * @return Pipeline Object
    */
-  public static Pipeline getFromProtoBuf(HddsProtos.Pipeline pipeline) {
-    Preconditions.checkNotNull(pipeline);
-    PipelineChannel pipelineChannel =
-        PipelineChannel.getFromProtoBuf(pipeline.getPipelineChannel());
-    return new Pipeline(pipelineChannel);
+  public static Pipeline getFromProtoBuf(
+      HddsProtos.Pipeline pipelineProto) {
+    Preconditions.checkNotNull(pipelineProto);
+    Pipeline pipeline =
+        new Pipeline(pipelineProto.getLeaderID(),
+            pipelineProto.getState(),
+            pipelineProto.getType(),
+            pipelineProto.getFactor(),
+            pipelineProto.getName());
+
+    for (HddsProtos.DatanodeDetailsProto dataID :
+        pipelineProto.getMembersList()) {
+      pipeline.addMember(DatanodeDetails.getFromProtoBuf(dataID));
+    }
+    return pipeline;
   }
 
+  /**
+   * returns the replication count.
+   * @return Replication Factor
+   */
   public HddsProtos.ReplicationFactor getFactor() {
-    return pipelineChannel.getFactor();
+    return factor;
   }
 
   /**
@@ -98,19 +126,34 @@ public class Pipeline {
    */
   @JsonIgnore
   public DatanodeDetails getLeader() {
-    return pipelineChannel.getDatanodes().get(pipelineChannel.getLeaderID());
+    return getDatanodes().get(leaderID);
   }
 
+  public void addMember(DatanodeDetails datanodeDetails) {
+    datanodes.put(datanodeDetails.getUuid().toString(),
+        datanodeDetails);
+  }
+
+  public Map<String, DatanodeDetails> getDatanodes() {
+    return datanodes;
+  }
   /**
    * Returns the leader host.
    *
    * @return First Machine.
    */
   public String getLeaderHost() {
-    return pipelineChannel.getDatanodes()
-        .get(pipelineChannel.getLeaderID()).getHostName();
+    return getDatanodes()
+        .get(leaderID).getHostName();
   }
 
+  /**
+   *
+   * @return lead
+   */
+  public String getLeaderID() {
+    return leaderID;
+  }
   /**
    * Returns all machines that make up this pipeline.
    *
@@ -118,7 +161,7 @@ public class Pipeline {
    */
   @JsonIgnore
   public List<DatanodeDetails> getMachines() {
-    return new ArrayList<>(pipelineChannel.getDatanodes().values());
+    return new ArrayList<>(getDatanodes().values());
   }
 
   /**
@@ -128,7 +171,7 @@ public class Pipeline {
    */
   public List<String> getDatanodeHosts() {
     List<String> dataHosts = new ArrayList<>();
-    for (DatanodeDetails id : pipelineChannel.getDatanodes().values()) {
+    for (DatanodeDetails id :getDatanodes().values()) {
       dataHosts.add(id.getHostName());
     }
     return dataHosts;
@@ -143,37 +186,22 @@ public class Pipeline {
   public HddsProtos.Pipeline getProtobufMessage() {
     HddsProtos.Pipeline.Builder builder =
         HddsProtos.Pipeline.newBuilder();
-    builder.setPipelineChannel(this.pipelineChannel.getProtobufMessage());
+    for (DatanodeDetails datanode : datanodes.values()) {
+      builder.addMembers(datanode.getProtoBufMessage());
+    }
+    builder.setLeaderID(leaderID);
+
+    if (this.getLifeCycleState() != null) {
+      builder.setState(this.getLifeCycleState());
+    }
+    if (this.getType() != null) {
+      builder.setType(this.getType());
+    }
+
+    if (this.getFactor() != null) {
+      builder.setFactor(this.getFactor());
+    }
     return builder.build();
-  }
-
-  /**
-   * Returns private data that is set on this pipeline.
-   *
-   * @return blob, the user can interpret it any way they like.
-   */
-  public byte[] getData() {
-    if (this.data != null) {
-      return Arrays.copyOf(this.data, this.data.length);
-    } else {
-      return null;
-    }
-  }
-
-  @VisibleForTesting
-  public PipelineChannel getPipelineChannel() {
-    return pipelineChannel;
-  }
-
-  /**
-   * Set private data on pipeline.
-   *
-   * @param data -- private data.
-   */
-  public void setData(byte[] data) {
-    if (data != null) {
-      this.data = Arrays.copyOf(data, data.length);
-    }
   }
 
   /**
@@ -182,7 +210,7 @@ public class Pipeline {
    * @return - LifeCycleStates.
    */
   public HddsProtos.LifeCycleState getLifeCycleState() {
-    return pipelineChannel.getLifeCycleState();
+    return lifeCycleState;
   }
 
   /**
@@ -191,7 +219,7 @@ public class Pipeline {
    * @return - Name of the pipeline
    */
   public String getPipelineName() {
-    return pipelineChannel.getName();
+    return name;
   }
 
   /**
@@ -200,16 +228,16 @@ public class Pipeline {
    * @return type - Standalone, Ratis, Chained.
    */
   public HddsProtos.ReplicationType getType() {
-    return pipelineChannel.getType();
+    return type;
   }
 
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
         .append("[");
-    pipelineChannel.getDatanodes().keySet().stream()
+    getDatanodes().keySet().stream()
         .forEach(id -> b.
-            append(id.endsWith(pipelineChannel.getLeaderID()) ? "*" + id : id));
+            append(id.endsWith(getLeaderID()) ? "*" + id : id));
     b.append(" name:").append(getPipelineName());
     if (getType() != null) {
       b.append(" type:").append(getType().toString());

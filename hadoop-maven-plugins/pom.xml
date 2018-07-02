@@ -26,7 +26,7 @@
   <packaging>maven-plugin</packaging>
   <name>Apache Hadoop Maven Plugins</name>
   <properties>
-    <maven.dependency.version>3.0</maven.dependency.version>
+    <maven.dependency.version>3.0.5</maven.dependency.version>
     <maven.plugin-tools.version>3.5.1</maven.plugin-tools.version>
   </properties>
   <dependencies>
@@ -45,6 +45,14 @@
       <artifactId>maven-plugin-annotations</artifactId>
       <version>${maven.plugin-tools.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <!-- excluding dependency that conflicts with other maven
+             dependencies -->
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-artifact</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -60,16 +68,28 @@
       <version>${maven-shade-plugin.version}</version>
       <scope>provided</scope>
       <exclusions>
-        <!-- shade conflicts with itself and our other maven internals
-             by including a combination of 3.x and 2.x
-          -->
+        <!-- shade conflicts with itself and other maven internals so we simply
+             exclude shade's (older) copies of the dependencies -->
         <exclusion>
-          <groupId>org.apache.maven.shared</groupId>
-          <artifactId>maven-dependency-tree</artifactId>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-artifact</artifactId>
         </exclusion>
-        <!-- again, shade conflicts with itself on the transitives of this
-             dependency
-          -->
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-compat</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-model</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.maven</groupId>
+          <artifactId>maven-plugin-api</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.vafer</groupId>
           <artifactId>jdependency</artifactId>

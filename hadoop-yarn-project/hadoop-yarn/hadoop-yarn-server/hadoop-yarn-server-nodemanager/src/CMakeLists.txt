@@ -188,5 +188,5 @@ add_executable(test-oom-listener
         main/native/oom-listener/impl/oom_listener.h
         main/native/oom-listener/test/oom_listener_test_main.cc
 )
-target_link_libraries(test-oom-listener gtest)
+target_link_libraries(test-oom-listener gtest rt)
 output_directory(test-oom-listener test)

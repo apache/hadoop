@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3native;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,7 +31,7 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.Objects;
 
-import static org.apache.commons.lang.StringUtils.equalsIgnoreCase;
+import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
 
 /**
  * Class to aid logging in to S3 endpoints.

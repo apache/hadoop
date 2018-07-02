@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -63,13 +64,16 @@ import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto
     .Type.deleteBlocksCommand;
 import static org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type
+    .replicateContainerCommand;
+import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto
     .Type.reregisterCommand;
 
 
 
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.server.report.SCMDatanodeHeartbeatDispatcher;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -77,6 +81,7 @@ import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
+import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB
@@ -117,13 +122,18 @@ public class SCMDatanodeProtocolServer implements
   private final SCMDatanodeHeartbeatDispatcher heartbeatDispatcher;
 
   public SCMDatanodeProtocolServer(final OzoneConfiguration conf,
-      StorageContainerManager scm)  throws IOException {
+      StorageContainerManager scm, EventPublisher eventPublisher)
+      throws IOException {
 
     Preconditions.checkNotNull(scm, "SCM cannot be null");
+    Preconditions.checkNotNull(eventPublisher, "EventPublisher cannot be null");
+
     this.scm = scm;
     final int handlerCount =
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
+
+    heartbeatDispatcher = new SCMDatanodeHeartbeatDispatcher(eventPublisher);
 
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -150,10 +160,6 @@ public class SCMDatanodeProtocolServer implements
             conf, OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr,
             datanodeRpcServer);
 
-    heartbeatDispatcher = SCMDatanodeHeartbeatDispatcher.newBuilder(conf, scm)
-        .addHandlerFor(NodeReportProto.class)
-        .addHandlerFor(ContainerReportsProto.class)
-        .build();
   }
 
   public void start() {
@@ -293,6 +299,12 @@ public class SCMDatanodeProtocolServer implements
           .setCloseContainerCommandProto(
               ((CloseContainerCommand) cmd).getProto())
           .build();
+    case replicateContainerCommand:
+      return builder
+          .setCommandType(replicateContainerCommand)
+          .setReplicateContainerCommandProto(
+              ((ReplicateContainerCommand)cmd).getProto())
+          .build();
     default:
       throw new IllegalArgumentException("Not implemented");
     }
@@ -308,7 +320,6 @@ public class SCMDatanodeProtocolServer implements
     try {
       LOG.info("Stopping the RPC server for DataNodes");
       datanodeRpcServer.stop();
-      heartbeatDispatcher.shutdown();
     } catch (Exception ex) {
       LOG.error(" datanodeRpcServer stop failed.", ex);
     }

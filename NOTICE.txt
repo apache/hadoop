@@ -196,6 +196,14 @@ by Google Inc, which can be obtained at:
   * HOMEPAGE:
     * http://code.google.com/p/snappy/
 
+This product contains a modified portion of UnsignedBytes LexicographicalComparator
+from Guava v21 project by Google Inc, which can be obtained at:
+
+  * LICENSE:
+    * license/COPYING (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/google/guava
+
 This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
 

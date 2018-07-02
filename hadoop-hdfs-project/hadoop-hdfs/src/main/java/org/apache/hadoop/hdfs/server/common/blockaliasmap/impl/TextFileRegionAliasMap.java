@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Collections;
@@ -359,7 +360,7 @@ public class TextFileRegionAliasMap
       }
       byte[] nonce = new byte[0];
       if (f.length == 6) {
-        nonce = f[5].getBytes(Charset.forName("UTF-8"));
+        nonce = Base64.getDecoder().decode(f[5]);
       }
       return new FileRegion(Long.parseLong(f[0]), new Path(f[1]),
           Long.parseLong(f[2]), Long.parseLong(f[3]), Long.parseLong(f[4]),
@@ -451,7 +452,7 @@ public class TextFileRegionAliasMap
       out.append(Long.toString(block.getGenerationStamp()));
       if (psl.getNonce().length > 0) {
         out.append(delim)
-            .append(new String(psl.getNonce(), Charset.forName("UTF-8")));
+            .append(Base64.getEncoder().encodeToString(psl.getNonce()));
       }
       out.append("\n");
     }

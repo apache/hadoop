@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.MemoryResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -697,55 +699,75 @@ public class ContainersMonitorImpl extends AbstractService implements
                             ProcessTreeInfo ptInfo,
                             long currentVmemUsage,
                             long currentPmemUsage) {
-      if (elasticMemoryEnforcement || strictMemoryEnforcement) {
-        // We enforce the overall memory usage instead of individual containers
-        return;
-      }
-      boolean isMemoryOverLimit = false;
-      long vmemLimit = ptInfo.getVmemLimit();
-      long pmemLimit = ptInfo.getPmemLimit();
-      // as processes begin with an age 1, we want to see if there
-      // are processes more than 1 iteration old.
-      long curMemUsageOfAgedProcesses = pTree.getVirtualMemorySize(1);
-      long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
+      Optional<Boolean> isMemoryOverLimit = Optional.empty();
       String msg = "";
       int containerExitStatus = ContainerExitStatus.INVALID;
-      if (isVmemCheckEnabled()
-              && isProcessTreeOverLimit(containerId.toString(),
-              currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
-        // The current usage (age=0) is always higher than the aged usage. We
-        // do not show the aged size in the message, base the delta on the
-        // current usage
-        long delta = currentVmemUsage - vmemLimit;
-        // Container (the root process) is still alive and overflowing
-        // memory.
-        // Dump the process-tree and then clean it up.
-        msg = formatErrorMessage("virtual",
-                formatUsageString(currentVmemUsage, vmemLimit,
-                  currentPmemUsage, pmemLimit),
-                pId, containerId, pTree, delta);
-        isMemoryOverLimit = true;
-        containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_VMEM;
-      } else if (isPmemCheckEnabled()
-              && isProcessTreeOverLimit(containerId.toString(),
-              currentPmemUsage, curRssMemUsageOfAgedProcesses,
-              pmemLimit)) {
-        // The current usage (age=0) is always higher than the aged usage. We
-        // do not show the aged size in the message, base the delta on the
-        // current usage
-        long delta = currentPmemUsage - pmemLimit;
-        // Container (the root process) is still alive and overflowing
-        // memory.
-        // Dump the process-tree and then clean it up.
-        msg = formatErrorMessage("physical",
-                formatUsageString(currentVmemUsage, vmemLimit,
-                  currentPmemUsage, pmemLimit),
-                pId, containerId, pTree, delta);
-        isMemoryOverLimit = true;
-        containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
+
+      if (strictMemoryEnforcement && elasticMemoryEnforcement) {
+        // Both elastic memory control and strict memory control are enabled
+        // through cgroups. A container will be frozen by the elastic memory
+        // control mechanism if it exceeds its request, so we check for this
+        // here and kill it. Otherwise, the container will not be killed if
+        // the node never exceeds its limit and the procfs-based
+        // memory accounting is different from the cgroup-based accounting.
+
+        MemoryResourceHandler handler =
+            ResourceHandlerModule.getMemoryResourceHandler();
+        if (handler != null) {
+          isMemoryOverLimit = handler.isUnderOOM(containerId);
+          containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
+          msg = containerId + " is under oom because it exceeded its" +
+              " physical memory limit";
+        }
+      } else if (strictMemoryEnforcement || elasticMemoryEnforcement) {
+        // if cgroup-based memory control is enabled
+        isMemoryOverLimit = Optional.of(false);
       }
 
-      if (isMemoryOverLimit) {
+      if (!isMemoryOverLimit.isPresent()) {
+        long vmemLimit = ptInfo.getVmemLimit();
+        long pmemLimit = ptInfo.getPmemLimit();
+        // as processes begin with an age 1, we want to see if there
+        // are processes more than 1 iteration old.
+        long curMemUsageOfAgedProcesses = pTree.getVirtualMemorySize(1);
+        long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
+        if (isVmemCheckEnabled()
+            && isProcessTreeOverLimit(containerId.toString(),
+            currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
+          // The current usage (age=0) is always higher than the aged usage. We
+          // do not show the aged size in the message, base the delta on the
+          // current usage
+          long delta = currentVmemUsage - vmemLimit;
+          // Container (the root process) is still alive and overflowing
+          // memory.
+          // Dump the process-tree and then clean it up.
+          msg = formatErrorMessage("virtual",
+              formatUsageString(currentVmemUsage, vmemLimit,
+                  currentPmemUsage, pmemLimit),
+              pId, containerId, pTree, delta);
+          isMemoryOverLimit = Optional.of(true);
+          containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_VMEM;
+        } else if (isPmemCheckEnabled()
+            && isProcessTreeOverLimit(containerId.toString(),
+            currentPmemUsage, curRssMemUsageOfAgedProcesses,
+            pmemLimit)) {
+          // The current usage (age=0) is always higher than the aged usage. We
+          // do not show the aged size in the message, base the delta on the
+          // current usage
+          long delta = currentPmemUsage - pmemLimit;
+          // Container (the root process) is still alive and overflowing
+          // memory.
+          // Dump the process-tree and then clean it up.
+          msg = formatErrorMessage("physical",
+              formatUsageString(currentVmemUsage, vmemLimit,
+                  currentPmemUsage, pmemLimit),
+              pId, containerId, pTree, delta);
+          isMemoryOverLimit = Optional.of(true);
+          containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
+        }
+      }
+
+      if (isMemoryOverLimit.isPresent() && isMemoryOverLimit.get()) {
         // Virtual or physical memory over limit. Fail the container and
         // remove
         // the corresponding process tree

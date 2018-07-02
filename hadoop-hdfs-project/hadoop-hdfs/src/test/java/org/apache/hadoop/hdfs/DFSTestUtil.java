@@ -81,7 +81,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.UnhandledException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -2278,7 +2277,8 @@ public class DFSTestUtil {
                        ", current value = " + currentValue);
           return currentValue == expectedValue;
         } catch (Exception e) {
-          throw new UnhandledException("Test failed due to unexpected exception", e);
+          throw new RuntimeException(
+              "Test failed due to unexpected exception", e);
         }
       }
     }, 1000, 60000);

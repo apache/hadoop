@@ -689,17 +689,18 @@ public class TestLocalFileSystem {
     // and permission
     FSDataOutputStreamBuilder builder =
         fileSys.createFile(path);
-    builder.build();
-    Assert.assertEquals("Should be default block size",
-        builder.getBlockSize(), fileSys.getDefaultBlockSize());
-    Assert.assertEquals("Should be default replication factor",
-        builder.getReplication(), fileSys.getDefaultReplication());
-    Assert.assertEquals("Should be default buffer size",
-        builder.getBufferSize(),
-        fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-            IO_FILE_BUFFER_SIZE_DEFAULT));
-    Assert.assertEquals("Should be default permission",
-        builder.getPermission(), FsPermission.getFileDefault());
+    try (FSDataOutputStream stream = builder.build()) {
+      Assert.assertEquals("Should be default block size",
+          builder.getBlockSize(), fileSys.getDefaultBlockSize());
+      Assert.assertEquals("Should be default replication factor",
+          builder.getReplication(), fileSys.getDefaultReplication());
+      Assert.assertEquals("Should be default buffer size",
+          builder.getBufferSize(),
+          fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT));
+      Assert.assertEquals("Should be default permission",
+          builder.getPermission(), FsPermission.getFileDefault());
+    }
 
     // Test set 0 to replication, block size and buffer size
     builder = fileSys.createFile(path);

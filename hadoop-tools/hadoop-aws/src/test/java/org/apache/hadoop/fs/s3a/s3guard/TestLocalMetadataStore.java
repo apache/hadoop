@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
  */
 public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
-  private static final String MAX_ENTRIES_STR = "16";
 
   private final static class LocalMSContract extends AbstractMSContract {
 
@@ -48,7 +47,6 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     }
 
     private LocalMSContract(Configuration config) throws IOException {
-      config.set(LocalMetadataStore.CONF_MAX_RECORDS, MAX_ENTRIES_STR);
       fs = FileSystem.getLocal(config);
     }
 
@@ -76,8 +74,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testClearByAncestor() {
-    Cache<Path, PathMetadata> cache = CacheBuilder.newBuilder().build();
+  public void testClearByAncestor() throws Exception {
+    Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder().build();
 
     // 1. Test paths without scheme/host
     assertClearResult(cache, "", "/", 0);
@@ -122,7 +120,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
     final long ttl = t1 + 50; // between t1 and t2
 
-    Cache<Path, PathMetadata> cache = CacheBuilder.newBuilder()
+    Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder()
         .expireAfterWrite(ttl,
             TimeUnit.NANOSECONDS /* nanos to avoid conversions */)
         .ticker(testTicker)
@@ -143,7 +141,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
     assertEquals("Cache should contain 3 records before eviction",
         3, cache.size());
-    PathMetadata pm1 = cache.getIfPresent(path1);
+    LocalMetadataEntry pm1 = cache.getIfPresent(path1);
     assertNotNull("PathMetadata should not be null before eviction", pm1);
 
     // set the ticker to a time when timed eviction should occur
@@ -159,7 +157,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     assertNull("PathMetadata should be null after eviction", pm1);
   }
 
-  private static void populateMap(Cache<Path, PathMetadata> cache,
+  private static void populateMap(Cache<Path, LocalMetadataEntry> cache,
       String prefix) {
     populateEntry(cache, new Path(prefix + "/dirA/dirB/"));
     populateEntry(cache, new Path(prefix + "/dirA/dirB/dirC"));
@@ -168,23 +166,20 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     populateEntry(cache, new Path(prefix + "/dirA/file1"));
   }
 
-  private static void populateEntry(Cache<Path, PathMetadata> cache,
+  private static void populateEntry(Cache<Path, LocalMetadataEntry> cache,
       Path path) {
-    cache.put(path, new PathMetadata(new FileStatus(0, true, 0, 0, 0, path)));
+    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
+    cache.put(path, new LocalMetadataEntry(new PathMetadata(fileStatus)));
   }
 
-  private static int sizeOfMap(Cache<Path, PathMetadata> cache) {
-    int count = 0;
-    for (PathMetadata meta : cache.asMap().values()) {
-      if (!meta.isDeleted()) {
-        count++;
-      }
-    }
-    return count;
+  private static long sizeOfMap(Cache<Path, LocalMetadataEntry> cache) {
+    return cache.asMap().values().stream()
+        .filter(entry -> !entry.getFileMeta().isDeleted())
+        .count();
   }
 
-  private static void assertClearResult(Cache<Path, PathMetadata> cache,
-      String prefixStr, String pathStr, int leftoverSize) {
+  private static void assertClearResult(Cache<Path, LocalMetadataEntry> cache,
+      String prefixStr, String pathStr, int leftoverSize) throws IOException {
     populateMap(cache, prefixStr);
     LocalMetadataStore.deleteEntryByAncestor(new Path(prefixStr + pathStr),
         cache, true);

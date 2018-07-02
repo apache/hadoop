@@ -409,7 +409,7 @@ public class FrameworkUploader implements Runnable {
             linkPath == null ? null : linkPath.getParent();
         java.nio.file.Path normalizedLinkPath =
             linkPathParent == null ? null : linkPathParent.normalize();
-        if (normalizedLinkPath != null && jarParent.equals(
+        if (normalizedLinkPath != null && jarParent.normalize().equals(
             normalizedLinkPath)) {
           LOG.info(String.format("Ignoring same directory link %s to %s",
               jarPath.toString(), link.toString()));

@@ -440,6 +440,19 @@ public class TestFrameworkUploader {
       }
       Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
 
+      // Create a symlink to the target with /./ in the path
+      symlinkToTarget = new File(parent.getAbsolutePath() +
+            "/./symlinkToTarget2.txt");
+      try {
+        Files.createSymbolicLink(
+            Paths.get(symlinkToTarget.getAbsolutePath()),
+            Paths.get(targetFile.getAbsolutePath()));
+      } catch (UnsupportedOperationException e) {
+        // Symlinks are not supported, so ignore the test
+        Assume.assumeTrue(false);
+      }
+      Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
+
       // Create a symlink outside the current directory
       File symlinkOutside = new File(parent, "symlinkToParent.txt");
       try {

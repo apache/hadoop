@@ -24,11 +24,17 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocolPB.InMemoryAliasMapProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -44,16 +50,27 @@ import java.util.Optional;
 public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     implements Configurable {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(InMemoryLevelDBAliasMapClient.class);
   private Configuration conf;
-  private InMemoryAliasMapProtocolClientSideTranslatorPB aliasMap;
-  private String blockPoolID;
+  private Collection<InMemoryAliasMapProtocol> aliasMaps;
 
   @Override
   public void close() {
-    aliasMap.stop();
+    if (aliasMaps != null) {
+      for (InMemoryAliasMapProtocol aliasMap : aliasMaps) {
+        RPC.stopProxy(aliasMap);
+      }
+    }
   }
 
   class LevelDbReader extends BlockAliasMap.Reader<FileRegion> {
+
+    private InMemoryAliasMapProtocol aliasMap;
+
+    LevelDbReader(InMemoryAliasMapProtocol aliasMap) {
+      this.aliasMap = aliasMap;
+    }
 
     @Override
     public Optional<FileRegion> resolve(Block block) throws IOException {
@@ -114,6 +131,13 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
   }
 
   class LevelDbWriter extends BlockAliasMap.Writer<FileRegion> {
+
+    private InMemoryAliasMapProtocol aliasMap;
+
+    LevelDbWriter(InMemoryAliasMapProtocol aliasMap) {
+      this.aliasMap = aliasMap;
+    }
+
     @Override
     public void store(FileRegion fileRegion) throws IOException {
       aliasMap.write(fileRegion.getBlock(),
@@ -130,40 +154,53 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
       throw new UnsupportedOperationException("Unable to start "
           + "InMemoryLevelDBAliasMapClient as security is enabled");
     }
+    aliasMaps = new ArrayList<>();
   }
 
+  private InMemoryAliasMapProtocol getAliasMap(String blockPoolID)
+      throws IOException {
+    if (blockPoolID == null) {
+      throw new IOException("Block pool id required to get aliasmap reader");
+    }
+    // if a block pool id has been supplied, and doesn't match the associated
+    // block pool ids, return null.
+    for (InMemoryAliasMapProtocol aliasMap : aliasMaps) {
+      try {
+        String aliasMapBlockPoolId = aliasMap.getBlockPoolId();
+        if (aliasMapBlockPoolId != null &&
+            aliasMapBlockPoolId.equals(blockPoolID)) {
+          return aliasMap;
+        }
+      } catch (IOException e) {
+        LOG.error("Exception in retrieving block pool id {}", e);
+      }
+    }
+    throw new IOException(
+        "Unable to retrive InMemoryAliasMap for block pool id " + blockPoolID);
+  }
 
   @Override
   public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
       throws IOException {
-    if (this.blockPoolID == null) {
-      this.blockPoolID = aliasMap.getBlockPoolId();
-    }
-    // if a block pool id has been supplied, and doesn't match the associated
-    // block pool id, return null.
-    if (blockPoolID != null && this.blockPoolID != null
-        && !this.blockPoolID.equals(blockPoolID)) {
-      return null;
-    }
-    return new LevelDbReader();
+    InMemoryAliasMapProtocol aliasMap = getAliasMap(blockPoolID);
+    LOG.info("Loading InMemoryAliasMapReader for block pool id {}",
+        blockPoolID);
+    return new LevelDbReader(aliasMap);
   }
 
   @Override
   public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolID)
       throws IOException {
-    if (this.blockPoolID == null) {
-      this.blockPoolID = aliasMap.getBlockPoolId();
-    }
-    if (blockPoolID != null && !this.blockPoolID.equals(blockPoolID)) {
-      return null;
-    }
-    return new LevelDbWriter();
+    InMemoryAliasMapProtocol aliasMap = getAliasMap(blockPoolID);
+    LOG.info("Loading InMemoryAliasMapWriter for block pool id {}",
+        blockPoolID);
+    return new LevelDbWriter(aliasMap);
   }
 
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    this.aliasMap = new InMemoryAliasMapProtocolClientSideTranslatorPB(conf);
+    aliasMaps = InMemoryAliasMapProtocolClientSideTranslatorPB.init(conf);
   }
 
   @Override
@@ -174,5 +211,4 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
   @Override
   public void refresh() throws IOException {
   }
-
 }

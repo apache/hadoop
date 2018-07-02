@@ -37,10 +37,8 @@ import com.google.common.collect.Maps;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.SubsetConfiguration;
-import org.apache.commons.configuration2.builder.fluent.Configurations;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
-import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.commons.configuration2.io.FileHandler;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsPlugin;
 import org.apache.hadoop.metrics2.filter.GlobFilter;
@@ -112,12 +110,11 @@ class MetricsConfig extends SubsetConfiguration {
   static MetricsConfig loadFirst(String prefix, String... fileNames) {
     for (String fname : fileNames) {
       try {
-        Configuration cf = new Configurations().propertiesBuilder(fname)
-            .configure(new Parameters().properties()
-                .setFileName(fname)
-                .setListDelimiterHandler(new DefaultListDelimiterHandler(',')))
-              .getConfiguration()
-              .interpolatedConfiguration();
+        PropertiesConfiguration pcf = new PropertiesConfiguration();
+        FileHandler fh = new FileHandler(pcf);
+        fh.setFileName(fname);
+        fh.load();
+        Configuration cf = pcf.interpolatedConfiguration();
         LOG.info("Loaded properties from {}", fname);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Properties: {}", toString(cf));

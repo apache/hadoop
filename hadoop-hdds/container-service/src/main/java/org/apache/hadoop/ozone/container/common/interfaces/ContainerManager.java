@@ -264,4 +264,6 @@ public interface ContainerManager extends RwLock {
    */
   long getNumKeys(long containerId);
 
+  void updateDeleteTransactionId(long containerId, long deleteTransactionId);
+
 }
