@@ -41,6 +41,7 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -51,7 +52,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -2944,171 +2944,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if(returnCachedProperties) {
         toAddTo = new Properties();
       }
-      DeprecationContext deprecations = deprecationContext.get();
 
-      StringBuilder token = new StringBuilder();
-      String confName = null;
-      String confValue = null;
-      String confInclude = null;
-      boolean confFinal = false;
-      boolean fallbackAllowed = false;
-      boolean fallbackEntered = false;
-      boolean parseToken = false;
-      LinkedList<String> confSource = new LinkedList<String>();
-
-      while (reader.hasNext()) {
-        switch (reader.next()) {
-        case XMLStreamConstants.START_ELEMENT:
-          switch (reader.getLocalName()) {
-          case "property":
-            confName = null;
-            confValue = null;
-            confFinal = false;
-            confSource.clear();
-
-            // First test for short format configuration
-            int attrCount = reader.getAttributeCount();
-            for (int i = 0; i < attrCount; i++) {
-              String propertyAttr = reader.getAttributeLocalName(i);
-              if ("name".equals(propertyAttr)) {
-                confName = StringInterner.weakIntern(
-                    reader.getAttributeValue(i));
-              } else if ("value".equals(propertyAttr)) {
-                confValue = StringInterner.weakIntern(
-                    reader.getAttributeValue(i));
-              } else if ("final".equals(propertyAttr)) {
-                confFinal = "true".equals(reader.getAttributeValue(i));
-              } else if ("source".equals(propertyAttr)) {
-                confSource.add(StringInterner.weakIntern(
-                    reader.getAttributeValue(i)));
-              }
-            }
-            break;
-          case "name":
-          case "value":
-          case "final":
-          case "source":
-            parseToken = true;
-            token.setLength(0);
-            break;
-          case "include":
-            // Determine href for xi:include
-            confInclude = null;
-            attrCount = reader.getAttributeCount();
-            for (int i = 0; i < attrCount; i++) {
-              String attrName = reader.getAttributeLocalName(i);
-              if ("href".equals(attrName)) {
-                confInclude = reader.getAttributeValue(i);
-              }
-            }
-            if (confInclude == null) {
-              break;
-            }
-            if (isRestricted) {
-              throw new RuntimeException("Error parsing resource " + wrapper
-                  + ": XInclude is not supported for restricted resources");
-            }
-            // Determine if the included resource is a classpath resource
-            // otherwise fallback to a file resource
-            // xi:include are treated as inline and retain current source
-            URL include = getResource(confInclude);
-            if (include != null) {
-              Resource classpathResource = new Resource(include, name,
-                  wrapper.isParserRestricted());
-              loadResource(properties, classpathResource, quiet);
-            } else {
-              URL url;
-              try {
-                url = new URL(confInclude);
-                url.openConnection().connect();
-              } catch (IOException ioe) {
-                File href = new File(confInclude);
-                if (!href.isAbsolute()) {
-                  // Included resources are relative to the current resource
-                  File baseFile = new File(name).getParentFile();
-                  href = new File(baseFile, href.getPath());
-                }
-                if (!href.exists()) {
-                  // Resource errors are non-fatal iff there is 1 xi:fallback
-                  fallbackAllowed = true;
-                  break;
-                }
-                url = href.toURI().toURL();
-              }
-              Resource uriResource = new Resource(url, name,
-                  wrapper.isParserRestricted());
-              loadResource(properties, uriResource, quiet);
-            }
-            break;
-          case "fallback":
-            fallbackEntered = true;
-            break;
-          case "configuration":
-            break;
-          default:
-            break;
-          }
-          break;
-
-        case XMLStreamConstants.CHARACTERS:
-          if (parseToken) {
-            char[] text = reader.getTextCharacters();
-            token.append(text, reader.getTextStart(), reader.getTextLength());
-          }
-          break;
-
-        case XMLStreamConstants.END_ELEMENT:
-          switch (reader.getLocalName()) {
-          case "name":
-            if (token.length() > 0) {
-              confName = StringInterner.weakIntern(token.toString().trim());
-            }
-            break;
-          case "value":
-            if (token.length() > 0) {
-              confValue = StringInterner.weakIntern(token.toString());
-            }
-            break;
-          case "final":
-            confFinal = "true".equals(token.toString());
-            break;
-          case "source":
-            confSource.add(StringInterner.weakIntern(token.toString()));
-            break;
-          case "include":
-            if (fallbackAllowed && !fallbackEntered) {
-              throw new IOException("Fetch fail on include for '"
-                  + confInclude + "' with no fallback while loading '"
-                  + name + "'");
-            }
-            fallbackAllowed = false;
-            fallbackEntered = false;
-            break;
-          case "property":
-            if (confName == null || (!fallbackAllowed && fallbackEntered)) {
-              break;
-            }
-            confSource.add(name);
-            DeprecatedKeyInfo keyInfo =
-                deprecations.getDeprecatedKeyMap().get(confName);
-            if (keyInfo != null) {
-              keyInfo.clearAccessed();
-              for (String key : keyInfo.newKeys) {
-                // update new keys with deprecated key's value
-                loadProperty(toAddTo, name, key, confValue, confFinal,
-                    confSource.toArray(new String[confSource.size()]));
-              }
-            } else {
-              loadProperty(toAddTo, name, confName, confValue, confFinal,
-                  confSource.toArray(new String[confSource.size()]));
-            }
-            break;
-          default:
-            break;
-          }
-        default:
-          break;
-        }
+      List<ParsedItem> items = new Parser(reader, wrapper, quiet).parse();
+      for (ParsedItem item : items) {
+        loadProperty(toAddTo, item.name, item.key, item.value,
+            item.isFinal, item.sources);
       }
       reader.close();
 
@@ -3123,6 +2963,259 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (XMLStreamException e) {
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private static class ParsedItem {
+    String name;
+    String key;
+    String value;
+    boolean isFinal;
+    String[] sources;
+
+    ParsedItem(String name, String key, String value,
+        boolean isFinal, String[] sources) {
+      this.name = name;
+      this.key = key;
+      this.value = value;
+      this.isFinal = isFinal;
+      this.sources = sources;
+    }
+  }
+
+  /**
+   * Parser to consume SAX stream of XML elements from a Configuration.
+   */
+  private class Parser {
+    private final XMLStreamReader2 reader;
+    private final Resource wrapper;
+    private final String name;
+    private final String[] nameSingletonArray;
+    private final boolean isRestricted;
+    private final boolean quiet;
+
+    DeprecationContext deprecations = deprecationContext.get();
+
+    private StringBuilder token = new StringBuilder();
+    private String confName = null;
+    private String confValue = null;
+    private String confInclude = null;
+    private boolean confFinal = false;
+    private boolean fallbackAllowed = false;
+    private boolean fallbackEntered = false;
+    private boolean parseToken = false;
+    private List<String> confSource = new ArrayList<>();
+    private List<ParsedItem> results = new ArrayList<>();
+
+    Parser(XMLStreamReader2 reader,
+           Resource wrapper,
+           boolean quiet) {
+      this.reader = reader;
+      this.wrapper = wrapper;
+      this.name = wrapper.getName();
+      this.nameSingletonArray = new String[]{ name };
+      this.isRestricted = wrapper.isParserRestricted();
+      this.quiet = quiet;
+
+    }
+
+    List<ParsedItem> parse() throws IOException, XMLStreamException {
+      while (reader.hasNext()) {
+        parseNext();
+      }
+      return results;
+    }
+
+    private void handleStartElement() throws MalformedURLException {
+      switch (reader.getLocalName()) {
+      case "property":
+        handleStartProperty();
+        break;
+
+      case "name":
+      case "value":
+      case "final":
+      case "source":
+        parseToken = true;
+        token.setLength(0);
+        break;
+      case "include":
+        handleInclude();
+        break;
+      case "fallback":
+        fallbackEntered = true;
+        break;
+      case "configuration":
+        break;
+      default:
+        break;
+      }
+    }
+
+    private void handleStartProperty() {
+      confName = null;
+      confValue = null;
+      confFinal = false;
+      confSource.clear();
+
+      // First test for short format configuration
+      int attrCount = reader.getAttributeCount();
+      for (int i = 0; i < attrCount; i++) {
+        String propertyAttr = reader.getAttributeLocalName(i);
+        if ("name".equals(propertyAttr)) {
+          confName = StringInterner.weakIntern(
+              reader.getAttributeValue(i));
+        } else if ("value".equals(propertyAttr)) {
+          confValue = StringInterner.weakIntern(
+              reader.getAttributeValue(i));
+        } else if ("final".equals(propertyAttr)) {
+          confFinal = "true".equals(reader.getAttributeValue(i));
+        } else if ("source".equals(propertyAttr)) {
+          confSource.add(StringInterner.weakIntern(
+              reader.getAttributeValue(i)));
+        }
+      }
+    }
+
+    private void handleInclude() throws MalformedURLException {
+      // Determine href for xi:include
+      confInclude = null;
+      int attrCount = reader.getAttributeCount();
+      for (int i = 0; i < attrCount; i++) {
+        String attrName = reader.getAttributeLocalName(i);
+        if ("href".equals(attrName)) {
+          confInclude = reader.getAttributeValue(i);
+        }
+      }
+      if (confInclude == null) {
+        return;
+      }
+      if (isRestricted) {
+        throw new RuntimeException("Error parsing resource " + wrapper
+            + ": XInclude is not supported for restricted resources");
+      }
+      // Determine if the included resource is a classpath resource
+      // otherwise fallback to a file resource
+      // xi:include are treated as inline and retain current source
+      URL include = getResource(confInclude);
+      if (include != null) {
+        Resource classpathResource = new Resource(include, name,
+            wrapper.isParserRestricted());
+        // This is only called recursively while the lock is already held
+        // by this thread, but synchronizing avoids a findbugs warning.
+        synchronized (Configuration.this) {
+          loadResource(properties, classpathResource, quiet);
+        }
+      } else {
+        URL url;
+        try {
+          url = new URL(confInclude);
+          url.openConnection().connect();
+        } catch (IOException ioe) {
+          File href = new File(confInclude);
+          if (!href.isAbsolute()) {
+            // Included resources are relative to the current resource
+            File baseFile = new File(name).getParentFile();
+            href = new File(baseFile, href.getPath());
+          }
+          if (!href.exists()) {
+            // Resource errors are non-fatal iff there is 1 xi:fallback
+            fallbackAllowed = true;
+            return;
+          }
+          url = href.toURI().toURL();
+        }
+        Resource uriResource = new Resource(url, name,
+            wrapper.isParserRestricted());
+        // This is only called recursively while the lock is already held
+        // by this thread, but synchronizing avoids a findbugs warning.
+        synchronized (Configuration.this) {
+          loadResource(properties, uriResource, quiet);
+        }
+      }
+    }
+
+    void handleEndElement() throws IOException {
+      String tokenStr = token.toString();
+      switch (reader.getLocalName()) {
+      case "name":
+        if (token.length() > 0) {
+          confName = StringInterner.weakIntern(tokenStr.trim());
+        }
+        break;
+      case "value":
+        if (token.length() > 0) {
+          confValue = StringInterner.weakIntern(tokenStr);
+        }
+        break;
+      case "final":
+        confFinal = "true".equals(tokenStr);
+        break;
+      case "source":
+        confSource.add(StringInterner.weakIntern(tokenStr));
+        break;
+      case "include":
+        if (fallbackAllowed && !fallbackEntered) {
+          throw new IOException("Fetch fail on include for '"
+              + confInclude + "' with no fallback while loading '"
+              + name + "'");
+        }
+        fallbackAllowed = false;
+        fallbackEntered = false;
+        break;
+      case "property":
+        handleEndProperty();
+        break;
+      default:
+        break;
+      }
+    }
+
+    void handleEndProperty() {
+      if (confName == null || (!fallbackAllowed && fallbackEntered)) {
+        return;
+      }
+      String[] confSourceArray;
+      if (confSource.isEmpty()) {
+        confSourceArray = nameSingletonArray;
+      } else {
+        confSource.add(name);
+        confSourceArray = confSource.toArray(new String[confSource.size()]);
+      }
+
+      DeprecatedKeyInfo keyInfo =
+          deprecations.getDeprecatedKeyMap().get(confName);
+
+      if (keyInfo != null) {
+        keyInfo.clearAccessed();
+        for (String key : keyInfo.newKeys) {
+          // update new keys with deprecated key's value
+          results.add(new ParsedItem(
+              name, key, confValue, confFinal, confSourceArray));
+        }
+      } else {
+        results.add(new ParsedItem(name, confName, confValue, confFinal,
+            confSourceArray));
+      }
+    }
+
+    void parseNext() throws IOException, XMLStreamException {
+      switch (reader.next()) {
+      case XMLStreamConstants.START_ELEMENT:
+        handleStartElement();
+        break;
+      case XMLStreamConstants.CHARACTERS:
+        if (parseToken) {
+          char[] text = reader.getTextCharacters();
+          token.append(text, reader.getTextStart(), reader.getTextLength());
+        }
+        break;
+      case XMLStreamConstants.END_ELEMENT:
+        handleEndElement();
+        break;
+      default:
+        break;
+      }
     }
   }
 
