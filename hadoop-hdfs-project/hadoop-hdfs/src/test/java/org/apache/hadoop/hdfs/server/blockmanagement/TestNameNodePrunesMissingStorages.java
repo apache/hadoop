@@ -289,8 +289,9 @@ public class TestNameNodePrunesMissingStorages {
       in = null;
       out.close();
       out = null;
-      newVersionFile.renameTo(versionFile);
-      success = true;
+      // Delete old version file
+      success = versionFile.delete();
+      success &= newVersionFile.renameTo(versionFile);
     } finally {
       if (in != null) {
         in.close();
