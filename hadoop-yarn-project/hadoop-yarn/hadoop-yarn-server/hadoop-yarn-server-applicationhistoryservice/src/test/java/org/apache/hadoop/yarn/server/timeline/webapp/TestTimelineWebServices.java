@@ -709,7 +709,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }

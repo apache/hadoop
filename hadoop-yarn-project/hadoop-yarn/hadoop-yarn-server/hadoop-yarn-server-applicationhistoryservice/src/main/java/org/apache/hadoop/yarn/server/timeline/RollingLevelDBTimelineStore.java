@@ -413,6 +413,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       EnumSet<Field> fields) throws IOException {
     Long revStartTime = getStartTimeLong(entityId, entityType);
     if (revStartTime == null) {
+      if ( LOG.isDebugEnabled()) {
+        LOG.debug("Could not find start time for {} {} ", entityType, entityId);
+      }
       return null;
     }
     byte[] prefix = KeyBuilder.newInstance().add(entityType)
@@ -421,6 +424,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
     DB db = entitydb.getDBForStartTime(revStartTime);
     if (db == null) {
+      if ( LOG.isDebugEnabled()) {
+        LOG.debug("Could not find db for {} {} ", entityType, entityId);
+      }
       return null;
     }
     try (DBIterator iterator = db.iterator()) {
