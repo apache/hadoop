@@ -75,7 +75,6 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.htrace.core.Tracer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,11 +189,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private Configuration configuration;
 
   /**
-   * The HTrace tracer to use.
-   */
-  private Tracer tracer;
-
-  /**
    * Information about the domain socket path we should use to connect to the
    * local peer-- or null if we haven't examined the local domain socket.
    */
@@ -295,11 +289,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   public BlockReaderFactory setConfiguration(
       Configuration configuration) {
     this.configuration = configuration;
-    return this;
-  }
-
-  public BlockReaderFactory setTracer(Tracer tracer) {
-    this.tracer = tracer;
     return this;
   }
 
@@ -447,7 +436,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     try {
       return BlockReaderLocalLegacy.newBlockReader(conf,
           userGroupInformation, configuration, fileName, block, token,
-          datanode, startOffset, length, storageType, tracer);
+          datanode, startOffset, length, storageType);
     } catch (RemoteException remoteException) {
       ioe = remoteException.unwrapRemoteException(
                 InvalidToken.class, AccessControlException.class);
@@ -505,7 +494,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         setVerifyChecksum(verifyChecksum).
         setCachingStrategy(cachingStrategy).
         setStorageType(storageType).
-        setTracer(tracer).
         build();
   }
 
@@ -856,7 +844,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     return BlockReaderRemote.newBlockReader(
         fileName, block, token, startOffset, length,
         verifyChecksum, clientName, peer, datanode,
-        clientContext.getPeerCache(), cachingStrategy, tracer,
+        clientContext.getPeerCache(), cachingStrategy,
         networkDistance);
   }
 
