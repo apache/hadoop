@@ -39,6 +39,13 @@ public interface ResourceUtilizationTracker {
   ResourceUtilization getCurrentUtilization();
 
   /**
+   * Get the total amount of resources allocated to running containers
+   * in terms of resource utilization.
+   * @return ResourceUtilization resource allocation
+   */
+  ResourceUtilization getTotalAllocation();
+
+  /**
    * Get the amount of resources currently available to launch containers.
    * @return Resource resources available to launch containers
    */

@@ -53,6 +53,11 @@ public class AllocationBasedResourceTracker
    */
   @Override
   public ResourceUtilization getCurrentUtilization() {
+    return getTotalAllocation();
+  }
+
+  @Override
+  public ResourceUtilization getTotalAllocation() {
     return this.containersAllocation;
   }
 

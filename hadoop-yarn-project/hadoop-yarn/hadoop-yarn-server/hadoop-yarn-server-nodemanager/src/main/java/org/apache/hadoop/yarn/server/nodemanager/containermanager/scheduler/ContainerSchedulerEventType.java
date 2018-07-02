@@ -30,5 +30,7 @@ public enum ContainerSchedulerEventType {
   CONTAINER_PAUSED,
   RECOVERY_COMPLETED,
   // Producer: Containers Monitor when over-allocation is on
-  SCHEDULE_CONTAINERS
+  SCHEDULE_CONTAINERS,
+  // Producer: Containers Monitor when over-allocation is on
+  PREEMPT_CONTAINERS
 }

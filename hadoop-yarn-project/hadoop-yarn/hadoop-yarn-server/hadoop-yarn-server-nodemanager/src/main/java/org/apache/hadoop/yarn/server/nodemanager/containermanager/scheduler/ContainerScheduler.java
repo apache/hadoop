@@ -222,10 +222,58 @@ public class ContainerScheduler extends AbstractService implements
       // node utilization is low.
       startOpportunisticContainers(utilizationTracker.getAvailableResources());
       break;
+    case PREEMPT_CONTAINERS:
+      if (event instanceof ContainerSchedulerOverallocationPreemptionEvent) {
+        preemptOpportunisticContainers(
+            (ContainerSchedulerOverallocationPreemptionEvent) event);
+      } else {
+        LOG.error(
+            "Unknown event type on Preempt containers:  {}", event.getType());
+      }
+      break;
     default:
-      LOG.error("Unknown event arrived at ContainerScheduler: "
-          + event.toString());
+      LOG.error("Unknown event arrived at ContainerScheduler: {}", event);
     }
+  }
+
+  private void preemptOpportunisticContainers(
+      ContainerSchedulerOverallocationPreemptionEvent event) {
+    ResourceUtilization resourcesToReclaim =
+        getResourcesToReclaim(event.getResourcesOverPreemptionThresholds());
+
+    List<Container> oppContainersToReclaim =
+        pickOpportunisticContainersToReclaimResources(
+            resourcesToReclaim);
+
+    killOpportunisticContainers(oppContainersToReclaim);
+  }
+
+  /**
+   * Get the amount of resources that need to be reclaimed by preempting
+   * OPPORTUNISTIC containers considering the amount of resources that
+   * are over the preemption thresholds and over the capacity of the node.
+   * When the node is not being over-allocated, its resource utilization
+   * can safely go to 100% without any OPPORTUNISTIC containers being killed.
+   */
+  private ResourceUtilization getResourcesToReclaim(
+      ResourceUtilization resourcesOverPreemptionThresholds) {
+    ResourceUtilization totalAllocation = ResourceUtilization.newInstance(
+        utilizationTracker.getTotalAllocation());
+    getContainersMonitor().subtractNodeResourcesFromResourceUtilization(
+        totalAllocation);
+    ResourceUtilization overAllocatedResources =
+        ResourceUtilization.newInstance(
+            Math.max(0, totalAllocation.getPhysicalMemory()),
+            Math.max(0, totalAllocation.getVirtualMemory()),
+            Math.max(0, totalAllocation.getCPU()));
+
+    return ResourceUtilization.newInstance(
+        Math.min(overAllocatedResources.getPhysicalMemory(),
+            resourcesOverPreemptionThresholds.getPhysicalMemory()),
+        Math.min(overAllocatedResources.getVirtualMemory(),
+            resourcesOverPreemptionThresholds.getVirtualMemory()),
+        Math.min(overAllocatedResources.getCPU(),
+            resourcesOverPreemptionThresholds.getCPU()));
   }
 
   /**
@@ -601,8 +649,9 @@ public class ContainerScheduler extends AbstractService implements
 
   @SuppressWarnings("unchecked")
   private void reclaimOpportunisticContainerResources() {
+    ResourceUtilization resourcesToFreeUp = resourcesToFreeUp();
     List<Container> extraOppContainersToReclaim =
-        pickOpportunisticContainersToReclaimResources();
+        pickOpportunisticContainersToReclaimResources(resourcesToFreeUp);
     killOpportunisticContainers(extraOppContainersToReclaim);
   }
 
@@ -642,12 +691,12 @@ public class ContainerScheduler extends AbstractService implements
     container.sendLaunchEvent();
   }
 
-  private List<Container> pickOpportunisticContainersToReclaimResources() {
+  private List<Container> pickOpportunisticContainersToReclaimResources(
+      ResourceUtilization resourcesToFreeUp) {
     // The opportunistic containers that need to be killed for the
     // given container to start.
     List<Container> extraOpportContainersToKill = new ArrayList<>();
     // Track resources that need to be freed.
-    ResourceUtilization resourcesToFreeUp = resourcesToFreeUp();
 
     // Go over the running opportunistic containers.
     // Use a descending iterator to kill more recently started containers.

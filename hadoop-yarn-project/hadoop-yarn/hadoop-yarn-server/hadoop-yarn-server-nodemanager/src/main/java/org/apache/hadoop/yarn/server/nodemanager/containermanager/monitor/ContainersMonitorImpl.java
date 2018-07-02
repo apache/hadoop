@@ -20,15 +20,20 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.MemoryResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerOverallocationPreemptionEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.NMAllocationPolicy;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.NMAllocationPreemptionPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.SnapshotBasedOverAllocationPolicy;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.SnapshotBasedOverAllocationPreemptionPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,6 +126,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private NMAllocationPolicy overAllocationPolicy;
   private ResourceThresholds overAllocationPreemptionThresholds;
   private int overAlloctionPreemptionCpuCount = -1;
+  private NMAllocationPreemptionPolicy overAllocationPreemptionPolicy;
 
   private volatile boolean stopped = false;
 
@@ -375,6 +381,9 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.overAllocationPolicy =
         createOverAllocationPolicy(resourceThresholds);
 
+    this.overAllocationPreemptionPolicy = createOverAllocationPreemptionPolicy(
+        overAllocationPreemptionThresholds, overAlloctionPreemptionCpuCount);
+
     LOG.info("NodeManager oversubscription enabled with overallocation " +
         "thresholds (memory:" + overAllocationMemoryUtilizationThreshold +
         ", CPU:" + overAllocationCpuUtilizationThreshold + ") and preemption" +
@@ -385,6 +394,12 @@ public class ContainersMonitorImpl extends AbstractService implements
   protected NMAllocationPolicy createOverAllocationPolicy(
       ResourceThresholds resourceThresholds) {
     return new SnapshotBasedOverAllocationPolicy(resourceThresholds, this);
+  }
+
+  private NMAllocationPreemptionPolicy createOverAllocationPreemptionPolicy(
+      ResourceThresholds resourceThresholds, int maxTimesCpuOverLimit) {
+    return new SnapshotBasedOverAllocationPreemptionPolicy(
+        resourceThresholds, maxTimesCpuOverLimit, this);
   }
 
   private boolean isResourceCalculatorAvailable() {
@@ -673,9 +688,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         setLatestContainersUtilization(trackedContainersUtilization);
 
         // check opportunity to start containers if over-allocation is on
-        if (context.isOverAllocationEnabled()) {
-          attemptToStartContainersUponLowUtilization();
-        }
+        checkUtilization();
 
         // Publish the container utilization metrics to node manager
         // metrics system.
@@ -1076,13 +1089,46 @@ public class ContainersMonitorImpl extends AbstractService implements
     return overAllocationPolicy;
   }
 
-  private void setLatestContainersUtilization(ResourceUtilization utilization) {
-    this.latestContainersUtilization = new ContainersResourceUtilization(
-        utilization, System.currentTimeMillis());
+  public NMAllocationPreemptionPolicy getOverAllocationPreemptionPolicy() {
+    return overAllocationPreemptionPolicy;
   }
 
+  private void setLatestContainersUtilization(ResourceUtilization utilization) {
+    this.latestContainersUtilization = new ContainersResourceUtilization(
+        utilization, Time.now());
+  }
+
+  /**
+   * Check the resource utilization of the node. If the utilization is below
+   * the over-allocation threshold, {@link ContainerScheduler} is notified to
+   * launch OPPORTUNISTIC containers that are being queued to bring the
+   * utilization up to the over-allocation threshold. If the utilization
+   * is above the preemption threshold, {@link ContainerScheduler} is notified
+   * to preempt running OPPORTUNISTIC containers in order to bring the node
+   * utilization down to the preemption threshold.
+   * @return true if the utilization is below the over-allocation threshold or
+   *              above the preemption threshold
+   *         false otherwise
+   */
   @VisibleForTesting
-  public void attemptToStartContainersUponLowUtilization() {
+  public boolean checkUtilization() {
+    if (context.isOverAllocationEnabled()) {
+      return checkLowUtilization() || checkHighUtilization();
+    }
+    return false;
+  }
+
+  /**
+   * Check if the node resource utilization is below the over-allocation
+   * threshold. If so, a {@link ContainerSchedulerEvent} is
+   * generated so that OPPORTUNISTIC containers that are being queued can
+   * be launched by {@link ContainerScheduler} with over-allocation and
+   * the node utilization can be brought up to the over-allocation threshold
+   * @return true if the node utilization is below the over-allocation threshold
+   *         false otherwise
+   */
+  private boolean checkLowUtilization() {
+    boolean opportunisticContainersToStart = false;
     if (getContainerOverAllocationPolicy() != null) {
       Resource available = getContainerOverAllocationPolicy()
           .getAvailableResources();
@@ -1091,8 +1137,37 @@ public class ContainersMonitorImpl extends AbstractService implements
         eventDispatcher.getEventHandler().handle(
             new ContainerSchedulerEvent(null,
                 ContainerSchedulerEventType.SCHEDULE_CONTAINERS));
+        opportunisticContainersToStart = true;
+        LOG.info("Node utilization is below its over-allocation threshold. " +
+            "Inform container scheduler to launch opportunistic containers.");
       }
     }
+    return opportunisticContainersToStart;
+  }
+
+  /**
+   * Check if the node resource utilization is over the preemption threshold.
+   * If so, a {@link ContainerSchedulerOverallocationPreemptionEvent} is
+   * generated so that OPPORTUNISTIC containers can be preempted by
+   * {@link ContainerScheduler} to reclaim resources in order to bring the
+   * node utilization down to the preemption threshold.
+   * @return true if the node utilization is over the preemption threshold
+   *         false otherwise
+   */
+  private boolean checkHighUtilization() {
+    ResourceUtilization overLimit = getOverAllocationPreemptionPolicy()
+        .getResourcesToReclaim();
+
+    boolean opportunisticContainersToPreempt = false;
+
+    if (overLimit.getPhysicalMemory() > 0 || overLimit.getCPU() > 0) {
+      opportunisticContainersToPreempt = true;
+      eventDispatcher.getEventHandler().handle(
+          new ContainerSchedulerOverallocationPreemptionEvent(overLimit));
+      LOG.info("Node utilization is over the preemption threshold. " +
+          "Inform container scheduler to reclaim {}", overLimit);
+    }
+    return opportunisticContainersToPreempt;
   }
 
   @Override

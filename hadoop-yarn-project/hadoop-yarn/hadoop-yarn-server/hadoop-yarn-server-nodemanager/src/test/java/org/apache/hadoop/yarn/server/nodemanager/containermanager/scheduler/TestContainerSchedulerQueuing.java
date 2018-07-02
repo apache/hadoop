@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
@@ -38,18 +37,15 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerStateTransitionListener;
@@ -65,8 +61,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
@@ -131,47 +125,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   @Override
   protected ContainerManagerImpl createContainerManager(
       DeletionService delSrvc) {
-    return new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, dirsHandler) {
-
-      @Override
-      protected UserGroupInformation getRemoteUgi() throws YarnException {
-        ApplicationId appId = ApplicationId.newInstance(0, 0);
-        ApplicationAttemptId appAttemptId =
-            ApplicationAttemptId.newInstance(appId, 1);
-        UserGroupInformation ugi =
-            UserGroupInformation.createRemoteUser(appAttemptId.toString());
-        ugi.addTokenIdentifier(new NMTokenIdentifier(appAttemptId, context
-            .getNodeId(), user, context.getNMTokenSecretManager().getCurrentKey()
-            .getKeyId()));
-        return ugi;
-      }
-
-      @Override
-      protected ContainersMonitor createContainersMonitor(
-          ContainerExecutor exec) {
-        return new ContainersMonitorImpl(exec, dispatcher, this.context) {
-          // Define resources available for containers to be executed.
-          @Override
-          public long getPmemAllocatedForContainers() {
-            return 2048 * 1024 * 1024L;
-          }
-
-          @Override
-          public long getVmemAllocatedForContainers() {
-            float pmemRatio = getConfig().getFloat(
-                YarnConfiguration.NM_VMEM_PMEM_RATIO,
-                YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
-            return (long) (pmemRatio * getPmemAllocatedForContainers());
-          }
-
-          @Override
-          public long getVCoresAllocatedForContainers() {
-            return 4;
-          }
-        };
-      }
-    };
+    return new ContainerManagerForTest(context, exec, delSrvc,
+        nodeStatusUpdater, metrics, dirsHandler, user);
   }
 
   @Override
@@ -393,6 +348,37 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         containerScheduler.getNumQueuedGuaranteedContainers());
     Assert.assertEquals(2,
         containerScheduler.getNumQueuedOpportunisticContainers());
+
+    // we have just one container that requested 2048 MB of memory and 1 vcore
+    // running, its resource utilization is zero.
+    // check the node resource utilization and the two OPPORTUNISTIC containers
+    // that are being queued should stay in the queue because over-allocation
+    // is turn off.
+    ((ContainerMonitorForTest) containerManager.getContainersMonitor())
+        .setContainerResourceUsage(
+            ResourceUtilization.newInstance(0, 0, 0.0f));
+    ((ContainerManagerForTest) containerManager)
+        .checkNodeResourceUtilization();
+
+    containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    ContainerId containerId0 = createContainerId(0);
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getContainerId().equals(containerId0)) {
+        Assert.assertEquals(ContainerSubState.RUNNING,
+            status.getContainerSubState());
+      } else {
+        Assert.assertEquals(ContainerSubState.SCHEDULED,
+            status.getContainerSubState());
+      }
+    }
+    containerScheduler = containerManager.getContainerScheduler();
+    // Ensure two containers are properly queued.
+    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+    Assert.assertEquals(0,
+        containerScheduler.getNumQueuedGuaranteedContainers());
+    Assert.assertEquals(2,
+        containerScheduler.getNumQueuedOpportunisticContainers());
   }
 
   /**
@@ -473,6 +459,91 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         containerScheduler.getNumQueuedGuaranteedContainers());
     Assert.assertEquals(maxOppQueueLength,
         containerScheduler.getNumQueuedOpportunisticContainers());
+  }
+
+  /**
+   * Start two OPPORTUNISTIC containers which together ask for all
+   * the allocations available on the node. When the node resource
+   * utilization goes over the preemption thresholds, neither of
+   * the containers should be preempted because there is no
+   * over-allocation at the moment and they can safely use up all
+   * the resources availabe on the node.
+   */
+  @Test
+  public void testNoOpportunisticContainerPreemptionUponHighUtilization()
+      throws Exception {
+    containerManager.start();
+
+    // start two OPPORTUNISTIC containers that together takes up
+    // all allocations of the node. They two can be launched immediately
+    // because there is enough free allocation. When they uses up
+    // all their resource allocations, that is, the node is fully
+    // utilized, none of the OPPORTUNISTIC containers shall be killed
+    // because the node is not being over-allocated
+    List<StartContainerRequest> list = new ArrayList<>();
+    list.add(StartContainerRequest.newInstance(
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
+        createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(1024, 2),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+    list.add(StartContainerRequest.newInstance(
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
+        createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
+            context.getNodeId(),
+            user, BuilderUtils.newResource(1024, 2),
+            context.getContainerTokenSecretManager(), null,
+            ExecutionType.OPPORTUNISTIC)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    // the two OPPORTUNISTIC containers shall be launched immediately
+    // because there is just enough allocation to launch them both.
+    BaseContainerManagerTest.waitForContainerState(containerManager,
+        createContainerId(0),
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING);
+    BaseContainerManagerTest.waitForContainerState(containerManager,
+        createContainerId(1),
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING);
+
+    // Ensure all containers are running.
+    List<ContainerId> statList = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest =
+        GetContainerStatusesRequest.newInstance(statList);
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      Assert.assertEquals(
+          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+          status.getState());
+    }
+
+    // we have two containers running, both of which are using all of
+    // their allocations. The node is being fully utilized in terms
+    // of both memory and CPU
+    ((ContainerMonitorForTest) containerManager.getContainersMonitor())
+        .setContainerResourceUsage(
+            ResourceUtilization.newInstance(2048, 0, 1.0f));
+    ((ContainerManagerForTest) containerManager)
+        .checkNodeResourceUtilization();
+
+    // the two running OPPORTUNISTIC containers shall continue to run
+    // because when the node is not be over-allocated, it is safe to
+    // let the containers use up all the resources, no OPPORTUNISTIC
+    // containers shall be preempted
+    containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      Assert.assertEquals(
+          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+          status.getState());
+    }
   }
 
   /**

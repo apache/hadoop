@@ -26,7 +26,12 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -558,5 +563,126 @@ public abstract class BaseContainerManagerTest {
     ContainerId containerId =
         ContainerId.newContainerId(appAttemptId, cId);
     return containerId;
+  }
+
+  /**
+   * A test implementation of {@link ContainersMonitor} that allows control of
+   * the current resource utilization.
+   */
+  protected static class ContainerMonitorForTest
+      extends ContainersMonitorImpl {
+    private static final int NM_CONTAINERS_VCORES = 4;
+    private static final int NM_CONTAINERS_MEMORY_MB = 2048;
+
+    private ResourceUtilization containerResourceUsage =
+        ResourceUtilization.newInstance(0, 0, 0.0f);
+
+    ContainerMonitorForTest(ContainerExecutor exec,
+        AsyncDispatcher dispatcher, Context context) {
+      super(exec, dispatcher, context);
+    }
+
+    @Override
+    public long getPmemAllocatedForContainers() {
+      return NM_CONTAINERS_MEMORY_MB * 1024 * 1024L;
+    }
+
+    @Override
+    public long getVmemAllocatedForContainers() {
+      float pmemRatio = getConfig().getFloat(
+          YarnConfiguration.NM_VMEM_PMEM_RATIO,
+          YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
+      return (long) (pmemRatio * getPmemAllocatedForContainers());
+    }
+
+    @Override
+    public long getVCoresAllocatedForContainers() {
+      return NM_CONTAINERS_VCORES;
+    }
+
+    @Override
+    public ContainersResourceUtilization getContainersUtilization(
+        boolean latest) {
+      return new ContainersMonitor.ContainersResourceUtilization(
+          containerResourceUsage, Time.now());
+    }
+
+    @Override
+    protected void checkOverAllocationPrerequisites() {
+      // do not check
+    }
+
+    public void setContainerResourceUsage(
+        ResourceUtilization containerResourceUsage) {
+      this.containerResourceUsage = containerResourceUsage;
+    }
+  }
+
+  /**
+   * A test implementation of {@link ContainerManager} that allows its
+   * internal event queue to be drained for synchronization purpose,
+   * and an out-of-band check of the node resource utilization so that
+   * the node utilization can stay between the over-allocation threshold
+   * and the preemption threshold.
+   */
+  protected static class ContainerManagerForTest
+      extends ContainerManagerImpl {
+
+    private final String user;
+
+    public ContainerManagerForTest(
+        Context context, ContainerExecutor exec,
+        DeletionService deletionContext,
+        NodeStatusUpdater nodeStatusUpdater,
+        NodeManagerMetrics metrics,
+        LocalDirsHandlerService dirsHandler, String user) {
+      super(context, exec, deletionContext,
+          nodeStatusUpdater, metrics, dirsHandler);
+      this.user = user;
+    }
+
+    @Override
+    protected UserGroupInformation getRemoteUgi() throws YarnException {
+      ApplicationId appId = ApplicationId.newInstance(0, 0);
+      ApplicationAttemptId appAttemptId =
+          ApplicationAttemptId.newInstance(appId, 1);
+      UserGroupInformation ugi =
+          UserGroupInformation.createRemoteUser(appAttemptId.toString());
+      ugi.addTokenIdentifier(new NMTokenIdentifier(appAttemptId, context
+          .getNodeId(), user, context.getNMTokenSecretManager().getCurrentKey()
+          .getKeyId()));
+      return ugi;
+    }
+
+    @Override
+    protected AsyncDispatcher createDispatcher() {
+      return new DrainDispatcher();
+    }
+
+    @Override
+    protected ContainersMonitor createContainersMonitor(
+        ContainerExecutor exec) {
+      return new ContainerMonitorForTest(exec, dispatcher, context);
+    }
+
+    /**
+     * Check the node resource utilization out-of-band. If the utilization is
+     * below the over-allocation threshold, queued OPPORTUNISTIC containers
+     * will be launched to bring the node utilization up to the over-allocation
+     * threshold. If the utilization is above the preemption threshold, running
+     * OPPORTUNISTIC containers will be killed to bring the utilization down to
+     * the preemption threshold.
+     */
+    public void checkNodeResourceUtilization() {
+      ((ContainerMonitorForTest) getContainersMonitor()).checkUtilization();
+      drainAsyncEvents();
+    }
+
+    /**
+     * Drain the internal event queue.
+     */
+    public void drainAsyncEvents() {
+      ((DrainDispatcher) dispatcher).await();
+    }
   }
 }
