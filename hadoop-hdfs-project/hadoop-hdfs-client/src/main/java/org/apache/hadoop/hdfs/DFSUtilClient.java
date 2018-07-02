@@ -396,7 +396,7 @@ public class DFSUtilClient {
    * @param keys Set of keys to look for in the order of preference
    * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
    */
-  static Map<String, Map<String, InetSocketAddress>> getAddresses(
+  public static Map<String, Map<String, InetSocketAddress>> getAddresses(
       Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
@@ -426,7 +426,7 @@ public class DFSUtilClient {
     return ret;
   }
 
-  static Map<String, InetSocketAddress> getAddressesForNameserviceId(
+  public static Map<String, InetSocketAddress> getAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue, String... keys) {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();

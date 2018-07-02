@@ -32,6 +32,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -340,5 +341,11 @@ public class TestInMemoryLevelDBAliasMapClient {
 
     assertThat(actualFileRegions).containsExactlyInAnyOrder(
         expectedFileRegions.toArray(new FileRegion[0]));
+  }
+
+  @Test
+  public void testServerBindHost() throws Exception {
+    conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY, "0.0.0.0");
+    writeRead();
   }
 }

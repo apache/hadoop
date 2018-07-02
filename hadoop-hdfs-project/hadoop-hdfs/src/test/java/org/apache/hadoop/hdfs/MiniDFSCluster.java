@@ -1187,7 +1187,7 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
 
-  private void initNameNodeConf(Configuration conf, String nameserviceId, int nsIndex, String nnId,
+  protected void initNameNodeConf(Configuration conf, String nameserviceId, int nsIndex, String nnId,
       boolean manageNameDfsDirs, boolean enableManagedDfsDirsRedundancy, int nnIndex)
       throws IOException {
     if (nameserviceId != null) {
@@ -1379,6 +1379,17 @@ public class MiniDFSCluster implements AutoCloseable {
     return null;
   }
 
+  public List<Integer> getNNIndexes(String nameserviceId) {
+    int count = 0;
+    List<Integer> nnIndexes = new ArrayList<>();
+    for (NameNodeInfo nn : namenodes.values()) {
+      if (nn.getNameserviceId().equals(nameserviceId)) {
+        nnIndexes.add(count);
+      }
+      count++;
+    }
+    return nnIndexes;
+  }
 
   /**
    * wait for the given namenode to get out of safemode.

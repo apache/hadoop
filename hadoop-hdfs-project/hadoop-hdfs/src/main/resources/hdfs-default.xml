@@ -4817,9 +4817,27 @@
 
   <property>
     <name>dfs.provided.aliasmap.inmemory.dnrpc-address</name>
-    <value>0.0.0.0:50200</value>
+    <value></value>
     <description>
-      The address where the aliasmap server will be running
+      The address where the aliasmap server will be running. In the case of
+      HA/Federation where multiple namenodes exist, and if the Namenode is
+      configured to run the aliasmap server
+      (dfs.provided.aliasmap.inmemory.enabled is set to true),
+      the name service id is added to the name, e.g.,
+      dfs.provided.aliasmap.inmemory.rpc.address.EXAMPLENAMESERVICE.
+      The value of this property will take the form of host:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.rpc.bind-host</name>
+    <value></value>
+    <description>
+      The actual address the in-memory aliasmap server will bind to.
+      If this optional address is set, it overrides the hostname portion of
+      dfs.provided.aliasmap.inmemory.rpc.address.
+      This is useful for making the name node listen on all interfaces by
+      setting it to 0.0.0.0.
     </description>
   </property>
 
