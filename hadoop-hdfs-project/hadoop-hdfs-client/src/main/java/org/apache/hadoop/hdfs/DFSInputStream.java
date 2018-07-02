@@ -85,8 +85,6 @@ import org.apache.hadoop.util.IdentityHashStore;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.SpanId;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -641,7 +639,6 @@ public class DFSInputStream extends FSInputStream
         setClientCacheContext(dfsClient.getClientContext()).
         setUserGroupInformation(dfsClient.ugi).
         setConfiguration(dfsClient.getConfiguration()).
-        setTracer(dfsClient.getTracer()).
         build();
   }
 
@@ -821,31 +818,14 @@ public class DFSInputStream extends FSInputStream
     }
     ReaderStrategy byteArrayReader =
         new ByteArrayStrategy(buf, off, len, readStatistics, dfsClient);
-    try (TraceScope scope =
-             dfsClient.newReaderTraceScope("DFSInputStream#byteArrayRead",
-                 src, getPos(), len)) {
-      int retLen = readWithStrategy(byteArrayReader);
-      if (retLen < len) {
-        dfsClient.addRetLenToReaderScope(scope, retLen);
-      }
-      return retLen;
-    }
+    return readWithStrategy(byteArrayReader);
   }
 
   @Override
   public synchronized int read(final ByteBuffer buf) throws IOException {
     ReaderStrategy byteBufferReader =
         new ByteBufferStrategy(buf, readStatistics, dfsClient);
-    int reqLen = buf.remaining();
-    try (TraceScope scope =
-             dfsClient.newReaderTraceScope("DFSInputStream#byteBufferRead",
-                 src, getPos(), reqLen)){
-      int retLen = readWithStrategy(byteBufferReader);
-      if (retLen < reqLen) {
-        dfsClient.addRetLenToReaderScope(scope, retLen);
-      }
-      return retLen;
-    }
+    return readWithStrategy(byteBufferReader);
   }
 
   private DNAddrPair chooseDataNode(LocatedBlock block,
@@ -1026,16 +1006,12 @@ public class DFSInputStream extends FSInputStream
       final ByteBuffer bb,
       final CorruptedBlocks corruptedBlocks,
       final int hedgedReadId) {
-    final SpanId parentSpanId = Tracer.getCurrentSpanId();
     return new Callable<ByteBuffer>() {
       @Override
       public ByteBuffer call() throws Exception {
         DFSClientFaultInjector.get().sleepBeforeHedgedGet();
-        try (TraceScope ignored = dfsClient.getTracer().
-            newScope("hedgedRead" + hedgedReadId, parentSpanId)) {
-          actualGetFromOneDataNode(datanode, start, end, bb, corruptedBlocks);
-          return bb;
-        }
+        actualGetFromOneDataNode(datanode, start, end, bb, corruptedBlocks);
+        return bb;
       }
     };
   }
@@ -1336,16 +1312,8 @@ public class DFSInputStream extends FSInputStream
     if (length == 0) {
       return 0;
     }
-    try (TraceScope scope = dfsClient.
-        newReaderTraceScope("DFSInputStream#byteArrayPread",
-            src, position, length)) {
-      ByteBuffer bb = ByteBuffer.wrap(buffer, offset, length);
-      int retLen = pread(position, bb);
-      if (retLen < length) {
-        dfsClient.addRetLenToReaderScope(scope, retLen);
-      }
-      return retLen;
-    }
+    ByteBuffer bb = ByteBuffer.wrap(buffer, offset, length);
+    return pread(position, bb);
   }
 
   private int pread(long position, ByteBuffer buffer)
