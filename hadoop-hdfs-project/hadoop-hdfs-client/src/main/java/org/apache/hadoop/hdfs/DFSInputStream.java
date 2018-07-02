@@ -1423,7 +1423,7 @@ public class DFSInputStream extends FSInputStream
 
     Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap =
         corruptedBlocks.getCorruptionMap();
-    if (corruptedBlockMap.isEmpty()) {
+    if (corruptedBlockMap == null) {
       return;
     }
     List<LocatedBlock> reportList = new ArrayList<>(corruptedBlockMap.size());
