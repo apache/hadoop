@@ -26,6 +26,8 @@ import com.google.common.base.Optional;
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_BIND_HOST_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
@@ -49,13 +51,9 @@ public final class KsmUtils {
     final Optional<String> host = getHostNameFromConfigKeys(conf,
         OZONE_KSM_ADDRESS_KEY);
 
-    // If no port number is specified then we'll just try the defaultBindPort.
-    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
-        OZONE_KSM_ADDRESS_KEY);
-
     return NetUtils.createSocketAddr(
         host.or(OZONE_KSM_BIND_HOST_DEFAULT) + ":" +
-            port.or(OZONE_KSM_PORT_DEFAULT));
+            getKsmRpcPort(conf));
   }
 
   /**
@@ -76,12 +74,22 @@ public final class KsmUtils {
               " details on configuring Ozone.");
     }
 
+    return NetUtils.createSocketAddr(
+        host.get() + ":" + getKsmRpcPort(conf));
+  }
+
+  public static int getKsmRpcPort(Configuration conf) {
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         OZONE_KSM_ADDRESS_KEY);
-
-    return NetUtils.createSocketAddr(
-        host.get() + ":" + port.or(OZONE_KSM_PORT_DEFAULT));
+    return port.or(OZONE_KSM_PORT_DEFAULT);
   }
 
+  public static int getKsmRestPort(Configuration conf) {
+    // If no port number is specified then we'll just try the default
+    // HTTP BindPort.
+    final Optional<Integer> port =
+        getPortNumberFromConfigKeys(conf, OZONE_KSM_HTTP_ADDRESS_KEY);
+    return port.or(OZONE_KSM_HTTP_BIND_PORT_DEFAULT);
+  }
 }

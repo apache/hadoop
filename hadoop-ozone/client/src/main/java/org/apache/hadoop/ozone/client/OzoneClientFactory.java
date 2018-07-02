@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.KsmUtils;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
@@ -37,10 +38,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_PROTOCOL;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_HTTP_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
-    .OZONE_KSM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
 
 /**
  * Factory class to create different types of OzoneClients.
@@ -108,8 +106,9 @@ public final class OzoneClientFactory {
    */
   public static OzoneClient getRpcClient(String ksmHost)
       throws IOException {
-    return getRpcClient(ksmHost, OZONE_KSM_PORT_DEFAULT,
-        new OzoneConfiguration());
+    Configuration config = new OzoneConfiguration();
+    int port = KsmUtils.getKsmRpcPort(config);
+    return getRpcClient(ksmHost, port, config);
   }
 
   /**
@@ -185,7 +184,9 @@ public final class OzoneClientFactory {
    */
   public static OzoneClient getRestClient(String ksmHost)
       throws IOException {
-    return getRestClient(ksmHost, OZONE_KSM_HTTP_BIND_PORT_DEFAULT);
+    Configuration config = new OzoneConfiguration();
+    int port = KsmUtils.getKsmRestPort(config);
+    return getRestClient(ksmHost, port, config);
   }
 
   /**
