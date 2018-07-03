@@ -607,6 +607,11 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               schedulerContainer.getRmContainer(),
               schedulerContainer.getRmContainer().getContainer(),
               reReservation);
+
+          LOG.info("Reserved container=" + rmContainer.getContainerId()
+              + ", on node=" + schedulerContainer.getSchedulerNode()
+              + " with resource=" + rmContainer
+              .getAllocatedOrReservedResource());
         }
       }
     } finally {

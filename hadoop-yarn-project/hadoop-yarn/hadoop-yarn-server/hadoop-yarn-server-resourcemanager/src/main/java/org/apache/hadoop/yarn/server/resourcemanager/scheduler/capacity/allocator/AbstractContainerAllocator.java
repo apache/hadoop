@@ -93,11 +93,14 @@ public abstract class AbstractContainerAllocator {
       assignment.setType(result.getContainerNodeType());
 
       if (result.getAllocationState() == AllocationState.RESERVED) {
-        // This is a reserved container
-        LOG.info("Reserved container " + " application="
-            + application.getApplicationId() + " resource=" + allocatedResource
-            + " queue=" + appInfo.getQueueName()
-            + " cluster=" + clusterResource);
+        if (LOG.isDebugEnabled()) {
+          // This is a reserved container
+          // Since re-reservation could happen again and again for already
+          // reserved containers. only do this in debug log.
+          LOG.debug("Reserved container " + " application=" + application
+              .getApplicationId() + " resource=" + allocatedResource + " queue="
+              + appInfo.getQueueName() + " cluster=" + clusterResource);
+        }
         assignment.getAssignmentInformation().addReservationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());
         assignment.getAssignmentInformation().incrReservations();
