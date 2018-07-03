@@ -35,16 +35,16 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
  */
 @InterfaceAudience.Private
 public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
-    implements FileCollector<Long> {
+    implements FileCollector {
   private int maxQueueLimitToScan;
-  private final SPSService <Long> service;
+  private final SPSService service;
 
   private int remainingCapacity = 0;
 
-  private List<ItemInfo<Long>> currentBatch;
+  private List<ItemInfo> currentBatch;
 
   public IntraSPSNameNodeFileIdCollector(FSDirectory dir,
-      SPSService<Long> service) {
+      SPSService service) {
     super(dir);
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
@@ -64,7 +64,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
       return false;
     }
     if (inode.isFile() && inode.asFile().numBlocks() != 0) {
-      currentBatch.add(new ItemInfo<Long>(
+      currentBatch.add(new ItemInfo(
           ((SPSTraverseInfo) traverseInfo).getStartId(), inode.getId()));
       remainingCapacity--;
     }
@@ -120,7 +120,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
   }
 
   @Override
-  public void scanAndCollectFiles(final Long startINodeId)
+  public void scanAndCollectFiles(final long startINodeId)
       throws IOException, InterruptedException {
     FSDirectory fsd = getFSDirectory();
     INode startInode = fsd.getInode(startINodeId);
@@ -131,7 +131,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
       }
       if (startInode.isFile()) {
         currentBatch
-            .add(new ItemInfo<Long>(startInode.getId(), startInode.getId()));
+            .add(new ItemInfo(startInode.getId(), startInode.getId()));
       } else {
         readLock();
         // NOTE: this lock will not be held for full directory scanning. It is

@@ -218,7 +218,7 @@ message GetNextSPSPathRequestProto {
 }
 
 message GetNextSPSPathResponseProto {
-  optional string spsPath = 1;
+  optional uint64 spsPath = 1;
 }
 
 /**

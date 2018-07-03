@@ -267,7 +267,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  public String getNextSPSPath() throws IOException {
+  public Long getNextSPSPath() throws IOException {
     GetNextSPSPathRequestProto req =
         GetNextSPSPathRequestProto.newBuilder().build();
     try {

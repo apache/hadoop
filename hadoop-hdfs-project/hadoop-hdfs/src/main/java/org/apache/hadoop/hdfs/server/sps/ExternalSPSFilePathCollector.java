@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -41,14 +42,14 @@ import org.slf4j.LoggerFactory;
  * representation.
  */
 @InterfaceAudience.Private
-public class ExternalSPSFilePathCollector implements FileCollector <String>{
+public class ExternalSPSFilePathCollector implements FileCollector {
   public static final Logger LOG =
       LoggerFactory.getLogger(ExternalSPSFilePathCollector.class);
   private DistributedFileSystem dfs;
-  private SPSService<String> service;
+  private SPSService service;
   private int maxQueueLimitToScan;
 
-  public ExternalSPSFilePathCollector(SPSService<String> service) {
+  public ExternalSPSFilePathCollector(SPSService service) {
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
@@ -72,13 +73,13 @@ public class ExternalSPSFilePathCollector implements FileCollector <String>{
    * Recursively scan the given path and add the file info to SPS service for
    * processing.
    */
-  private long processPath(String startID, String childPath) {
+  private long processPath(Long startID, String childPath) {
     long pendingWorkCount = 0; // to be satisfied file counter
     for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
       final DirectoryListing children;
       try {
-        children = dfs.getClient().listPaths(childPath, lastReturnedName,
-            false);
+        children = dfs.getClient().listPaths(childPath,
+            lastReturnedName, false);
       } catch (IOException e) {
         LOG.warn("Failed to list directory " + childPath
             + ". Ignore the directory and continue.", e);
@@ -93,18 +94,18 @@ public class ExternalSPSFilePathCollector implements FileCollector <String>{
       }
 
       for (HdfsFileStatus child : children.getPartialListing()) {
-        String childFullPath = child.getFullName(childPath);
         if (child.isFile()) {
-          service.addFileToProcess(
-              new ItemInfo<String>(startID, childFullPath), false);
+          service.addFileToProcess(new ItemInfo(startID, child.getFileId()),
+              false);
           checkProcessingQueuesFree();
           pendingWorkCount++; // increment to be satisfied file count
         } else {
+          String childFullPathName = child.getFullName(childPath);
           if (child.isDirectory()) {
-            if (!childFullPath.endsWith(Path.SEPARATOR)) {
-              childFullPath = childFullPath + Path.SEPARATOR;
+            if (!childFullPathName.endsWith(Path.SEPARATOR)) {
+              childFullPathName = childFullPathName + Path.SEPARATOR;
             }
-            pendingWorkCount += processPath(startID, childFullPath);
+            pendingWorkCount += processPath(startID, childFullPathName);
           }
         }
       }
@@ -150,11 +151,12 @@ public class ExternalSPSFilePathCollector implements FileCollector <String>{
   }
 
   @Override
-  public void scanAndCollectFiles(String path) throws IOException {
+  public void scanAndCollectFiles(long pathId) throws IOException {
     if (dfs == null) {
       dfs = getFS(service.getConf());
     }
-    long pendingSatisfyItemsCount = processPath(path, path);
+    Path filePath = DFSUtilClient.makePathFromFileId(pathId);
+    long pendingSatisfyItemsCount = processPath(pathId, filePath.toString());
     // Check whether the given path contains any item to be tracked
     // or the no to be satisfied paths. In case of empty list, add the given
     // inodeId to the 'pendingWorkForDirectory' with empty list so that later
@@ -162,10 +164,10 @@ public class ExternalSPSFilePathCollector implements FileCollector <String>{
     // this path is already satisfied the storage policy.
     if (pendingSatisfyItemsCount <= 0) {
       LOG.debug("There is no pending items to satisfy the given path "
-          + "inodeId:{}", path);
-      service.addAllFilesToProcess(path, new ArrayList<>(), true);
+          + "inodeId:{}", pathId);
+      service.addAllFilesToProcess(pathId, new ArrayList<>(), true);
     } else {
-      service.markScanCompletedForPath(path);
+      service.markScanCompletedForPath(pathId);
     }
   }
 

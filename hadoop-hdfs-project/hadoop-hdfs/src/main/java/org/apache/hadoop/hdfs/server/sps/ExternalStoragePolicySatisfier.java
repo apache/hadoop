@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -32,11 +31,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -68,8 +65,7 @@ public final class ExternalStoragePolicySatisfier {
       HdfsConfiguration spsConf = new HdfsConfiguration();
       // login with SPS keytab
       secureLogin(spsConf);
-      StoragePolicySatisfier<String> sps = new StoragePolicySatisfier<String>(
-          spsConf);
+      StoragePolicySatisfier sps = new StoragePolicySatisfier(spsConf);
       nnc = getNameNodeConnector(spsConf);
 
       boolean spsRunning;
@@ -82,12 +78,7 @@ public final class ExternalStoragePolicySatisfier {
       }
 
       ExternalSPSContext context = new ExternalSPSContext(sps, nnc);
-      ExternalBlockMovementListener blkMoveListener =
-          new ExternalBlockMovementListener();
-      ExternalSPSBlockMoveTaskHandler externalHandler =
-          new ExternalSPSBlockMoveTaskHandler(spsConf, nnc, sps);
-      sps.init(context, new ExternalSPSFilePathCollector(sps), externalHandler,
-          blkMoveListener);
+      sps.init(context);
       sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
       if (sps != null) {
         sps.join();
@@ -130,23 +121,6 @@ public final class ExternalStoragePolicySatisfier {
         LOG.warn("Failed to connect with namenode", e);
         Thread.sleep(3000); // retry the connection after few secs
       }
-    }
-  }
-
-  /**
-   * It is implementation of BlockMovementListener.
-   */
-  private static class ExternalBlockMovementListener
-      implements BlockMovementListener {
-
-    private List<Block> actualBlockMovements = new ArrayList<>();
-
-    @Override
-    public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
-      for (Block block : moveAttemptFinishedBlks) {
-        actualBlockMovements.add(block);
-      }
-      LOG.info("Movement attempted blocks:{}", actualBlockMovements);
     }
   }
 }

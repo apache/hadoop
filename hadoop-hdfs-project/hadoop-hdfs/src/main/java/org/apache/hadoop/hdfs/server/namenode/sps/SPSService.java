@@ -29,15 +29,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 
 /**
  * An interface for SPSService, which exposes life cycle and processing APIs.
- *
- * @param <T>
- *          is identifier of inode or full path name of inode. Internal sps will
- *          use the file inodeId for the block movement. External sps will use
- *          file string path representation for the block movement.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface SPSService<T> {
+public interface SPSService {
 
   /**
    * Initializes the helper services.
@@ -45,16 +40,8 @@ public interface SPSService<T> {
    * @param ctxt
    *          - context is an helper service to provide communication channel
    *          between NN and SPS
-   * @param fileCollector
-   *          - a helper service for scanning the files under a given directory
-   *          id
-   * @param handler
-   *          - a helper service for moving the blocks
-   * @param blkMovementListener
-   *          - listener to know about block movement attempt completion
    */
-  void init(Context<T> ctxt, FileCollector<T> fileCollector,
-      BlockMoveTaskHandler handler, BlockMovementListener blkMovementListener);
+  void init(Context ctxt);
 
   /**
    * Starts the SPS service. Make sure to initialize the helper services before
@@ -94,19 +81,19 @@ public interface SPSService<T> {
    * @param itemInfo
    *          file info object for which need to satisfy the policy
    */
-  void addFileToProcess(ItemInfo<T> itemInfo, boolean scanCompleted);
+  void addFileToProcess(ItemInfo itemInfo, boolean scanCompleted);
 
   /**
    * Adds all the Item information(file etc) to processing queue.
    *
-   * @param startPath
-   *          - directory/file, on which SPS was called.
+   * @param startPathId
+   *          - directoryId/fileId, on which SPS was called.
    * @param itemInfoList
    *          - list of item infos
    * @param scanCompleted
    *          - whether the scanning of directory fully done with itemInfoList
    */
-  void addAllFilesToProcess(T startPath, List<ItemInfo<T>> itemInfoList,
+  void addAllFilesToProcess(long startPathId, List<ItemInfo> itemInfoList,
       boolean scanCompleted);
 
   /**
@@ -117,7 +104,7 @@ public interface SPSService<T> {
   /**
    * Clear inodeId present in the processing queue.
    */
-  void clearQueue(T spsPath);
+  void clearQueue(long spsPath);
 
   /**
    * @return the configuration.
@@ -128,9 +115,9 @@ public interface SPSService<T> {
    * Marks the scanning of directory if finished.
    *
    * @param spsPath
-   *          - satisfier path
+   *          - satisfier path id
    */
-  void markScanCompletedForPath(T spsPath);
+  void markScanCompletedForPath(long spsPath);
 
   /**
    * Given node is reporting that it received a certain movement attempt

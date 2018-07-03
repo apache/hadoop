@@ -78,20 +78,19 @@ import com.google.common.base.Preconditions;
  * physical block movements.
  */
 @InterfaceAudience.Private
-public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
+public class StoragePolicySatisfier implements SPSService, Runnable {
   public static final Logger LOG =
       LoggerFactory.getLogger(StoragePolicySatisfier.class);
   private Daemon storagePolicySatisfierThread;
-  private BlockStorageMovementNeeded<T> storageMovementNeeded;
-  private BlockStorageMovementAttemptedItems<T> storageMovementsMonitor;
+  private BlockStorageMovementNeeded storageMovementNeeded;
+  private BlockStorageMovementAttemptedItems storageMovementsMonitor;
   private volatile boolean isRunning = false;
   private int spsWorkMultiplier;
   private long blockCount = 0L;
   private int blockMovementMaxRetry;
-  private Context<T> ctxt;
-  private BlockMoveTaskHandler blockMoveTaskHandler;
+  private Context ctxt;
   private final Configuration conf;
-  private DatanodeCacheManager<T> dnCacheMgr;
+  private DatanodeCacheManager dnCacheMgr;
 
   public StoragePolicySatisfier(Configuration conf) {
     this.conf = conf;
@@ -137,16 +136,11 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
     }
   }
 
-  public void init(final Context<T> context,
-      final FileCollector<T> fileIDCollector,
-      final BlockMoveTaskHandler blockMovementTaskHandler,
-      final BlockMovementListener blockMovementListener) {
+  public void init(final Context context) {
     this.ctxt = context;
-    this.storageMovementNeeded = new BlockStorageMovementNeeded<T>(context,
-        fileIDCollector);
-    this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems<T>(
-        this, storageMovementNeeded, blockMovementListener);
-    this.blockMoveTaskHandler = blockMovementTaskHandler;
+    this.storageMovementNeeded = new BlockStorageMovementNeeded(context);
+    this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems(
+        this, storageMovementNeeded, context);
     this.spsWorkMultiplier = getSPSWorkMultiplier(getConf());
     this.blockMovementMaxRetry = getConf().getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY,
@@ -191,7 +185,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
     storagePolicySatisfierThread.start();
     this.storageMovementsMonitor.start();
     this.storageMovementNeeded.activate();
-    dnCacheMgr = new DatanodeCacheManager<T>(conf);
+    dnCacheMgr = new DatanodeCacheManager(conf);
   }
 
   @Override
@@ -259,7 +253,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
         continue;
       }
       try {
-        ItemInfo<T> itemInfo = null;
+        ItemInfo itemInfo = null;
         boolean retryItem = false;
         if (!ctxt.isInSafeMode()) {
           itemInfo = storageMovementNeeded.get();
@@ -271,7 +265,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
               storageMovementNeeded.removeItemTrackInfo(itemInfo, false);
               continue;
             }
-            T trackId = itemInfo.getFile();
+            long trackId = itemInfo.getFile();
             BlocksMovingAnalysis status = null;
             BlockStoragePolicy existingStoragePolicy;
             // TODO: presently, context internally acquire the lock
@@ -353,7 +347,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
           blockCount = 0L;
         }
         if (retryItem) {
-          itemInfo.increRetryCount();
+          // itemInfo.increRetryCount();
           this.storageMovementNeeded.add(itemInfo);
         }
       } catch (IOException e) {
@@ -469,7 +463,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
       // Check for at least one block storage movement has been chosen
       try {
-        blockMoveTaskHandler.submitMoveTask(blkMovingInfo);
+        ctxt.submitMoveTask(blkMovingInfo);
         LOG.debug("BlockMovingInfo: {}", blkMovingInfo);
         StorageTypeNodePair nodeStorage = new StorageTypeNodePair(
             blkMovingInfo.getTargetStorageType(), blkMovingInfo.getTarget());
@@ -1092,7 +1086,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
   }
 
   @VisibleForTesting
-  public BlockStorageMovementAttemptedItems<T> getAttemptedItemsMonitor() {
+  public BlockStorageMovementAttemptedItems getAttemptedItemsMonitor() {
     return storageMovementsMonitor;
   }
 
@@ -1109,7 +1103,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
   /**
    * Clear queues for given track id.
    */
-  public void clearQueue(T trackId) {
+  public void clearQueue(long trackId) {
     storageMovementNeeded.clearQueue(trackId);
   }
 
@@ -1118,7 +1112,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
    * attempted or reported time stamp. This is used by
    * {@link BlockStorageMovementAttemptedItems#storageMovementAttemptedItems}.
    */
-  final static class AttemptedItemInfo<T> extends ItemInfo<T> {
+  final static class AttemptedItemInfo extends ItemInfo {
     private long lastAttemptedOrReportedTime;
     private final Set<Block> blocks;
 
@@ -1136,7 +1130,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
      * @param retryCount
      *          file retry count
      */
-    AttemptedItemInfo(T rootId, T trackId,
+    AttemptedItemInfo(long rootId, long trackId,
         long lastAttemptedOrReportedTime,
         Set<Block> blocks, int retryCount) {
       super(rootId, trackId, retryCount);
@@ -1179,7 +1173,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
   }
 
   @Override
-  public void addFileToProcess(ItemInfo<T> trackInfo, boolean scanCompleted) {
+  public void addFileToProcess(ItemInfo trackInfo, boolean scanCompleted) {
     storageMovementNeeded.add(trackInfo, scanCompleted);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Added track info for inode {} to block "
@@ -1188,7 +1182,7 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
   }
 
   @Override
-  public void addAllFilesToProcess(T startPath, List<ItemInfo<T>> itemInfoList,
+  public void addAllFilesToProcess(long startPath, List<ItemInfo> itemInfoList,
       boolean scanCompleted) {
     getStorageMovementQueue().addAll(startPath, itemInfoList, scanCompleted);
   }
@@ -1204,12 +1198,12 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
   }
 
   @VisibleForTesting
-  public BlockStorageMovementNeeded<T> getStorageMovementQueue() {
+  public BlockStorageMovementNeeded getStorageMovementQueue() {
     return storageMovementNeeded;
   }
 
   @Override
-  public void markScanCompletedForPath(T inodeId) {
+  public void markScanCompletedForPath(long inodeId) {
     getStorageMovementQueue().markScanCompletedForDir(inodeId);
   }
 
@@ -1277,16 +1271,5 @@ public class StoragePolicySatisfier<T> implements SPSService<T>, Runnable {
         " = '" + spsWorkMultiplier + "' is invalid. " +
         "It should be a positive, non-zero integer value.");
     return spsWorkMultiplier;
-  }
-
-  /**
-   * Sets external listener for testing.
-   *
-   * @param blkMovementListener
-   *          block movement listener callback object
-   */
-  @VisibleForTesting
-  void setBlockMovementListener(BlockMovementListener blkMovementListener) {
-    storageMovementsMonitor.setBlockMovementListener(blkMovementListener);
   }
 }

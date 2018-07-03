@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.sps;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,6 +28,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -34,10 +37,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.sps.BlockMoveTaskHandler;
+import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
+import org.apache.hadoop.hdfs.server.namenode.sps.FileCollector;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeWithStorage;
+import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
@@ -49,17 +56,24 @@ import org.slf4j.LoggerFactory;
  * SPS from Namenode state.
  */
 @InterfaceAudience.Private
-public class ExternalSPSContext implements Context<String> {
-  public static final Logger LOG =
-      LoggerFactory.getLogger(ExternalSPSContext.class);
-  private SPSService<String> service;
-  private NameNodeConnector nnc = null;
-  private BlockStoragePolicySuite createDefaultSuite =
+public class ExternalSPSContext implements Context {
+  public static final Logger LOG = LoggerFactory
+      .getLogger(ExternalSPSContext.class);
+  private final SPSService service;
+  private final NameNodeConnector nnc;
+  private final BlockStoragePolicySuite createDefaultSuite =
       BlockStoragePolicySuite.createDefaultSuite();
+  private final FileCollector fileCollector;
+  private final BlockMoveTaskHandler externalHandler;
+  private final BlockMovementListener blkMovementListener;
 
-  public ExternalSPSContext(SPSService<String> service, NameNodeConnector nnc) {
+  public ExternalSPSContext(SPSService service, NameNodeConnector nnc) {
     this.service = service;
     this.nnc = nnc;
+    this.fileCollector = new ExternalSPSFilePathCollector(service);
+    this.externalHandler = new ExternalSPSBlockMoveTaskHandler(
+        service.getConf(), nnc, service);
+    this.blkMovementListener = new ExternalBlockMovementListener();
   }
 
   @Override
@@ -119,9 +133,10 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public boolean isFileExist(String filePath) {
+  public boolean isFileExist(long path) {
+    Path filePath = DFSUtilClient.makePathFromFileId(path);
     try {
-      return nnc.getDistributedFileSystem().exists(new Path(filePath));
+      return nnc.getDistributedFileSystem().exists(filePath);
     } catch (IllegalArgumentException | IOException e) {
       LOG.warn("Exception while getting file is for the given path:{}",
           filePath, e);
@@ -140,8 +155,9 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public void removeSPSHint(String inodeId) throws IOException {
-    nnc.getDistributedFileSystem().removeXAttr(new Path(inodeId),
+  public void removeSPSHint(long inodeId) throws IOException {
+    Path filePath = DFSUtilClient.makePathFromFileId(inodeId);
+    nnc.getDistributedFileSystem().removeXAttr(filePath,
         HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
   }
 
@@ -157,11 +173,12 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public HdfsFileStatus getFileInfo(String path) throws IOException {
+  public HdfsFileStatus getFileInfo(long path) throws IOException {
     HdfsLocatedFileStatus fileInfo = null;
     try {
+      Path filePath = DFSUtilClient.makePathFromFileId(path);
       fileInfo = nnc.getDistributedFileSystem().getClient()
-          .getLocatedFileInfo(path, false);
+          .getLocatedFileInfo(filePath.toString(), false);
     } catch (FileNotFoundException e) {
       LOG.debug("Path:{} doesn't exists!", path, e);
     }
@@ -175,7 +192,7 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public String getNextSPSPath() {
+  public Long getNextSPSPath() {
     try {
       return nnc.getNNProtocolConnection().getNextSPSPath();
     } catch (IOException e) {
@@ -185,12 +202,48 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public void removeSPSPathId(String pathId) {
+  public void removeSPSPathId(long pathId) {
     // We need not specifically implement for external.
   }
 
   @Override
   public void removeAllSPSPathIds() {
     // We need not specifically implement for external.
+  }
+
+  @Override
+  public void scanAndCollectFiles(long path)
+      throws IOException, InterruptedException {
+    fileCollector.scanAndCollectFiles(path);
+  }
+
+  @Override
+  public void submitMoveTask(BlockMovingInfo blkMovingInfo) throws IOException {
+    externalHandler.submitMoveTask(blkMovingInfo);
+  }
+
+  @Override
+  public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
+    // External listener if it is plugged-in
+    if (blkMovementListener != null) {
+      blkMovementListener.notifyMovementTriedBlocks(moveAttemptFinishedBlks);
+    }
+  }
+
+  /**
+   * Its an implementation of BlockMovementListener.
+   */
+  private static class ExternalBlockMovementListener
+      implements BlockMovementListener {
+
+    private List<Block> actualBlockMovements = new ArrayList<>();
+
+    @Override
+    public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
+      for (Block block : moveAttemptFinishedBlks) {
+        actualBlockMovements.add(block);
+      }
+      LOG.info("Movement attempted blocks", actualBlockMovements);
+    }
   }
 }

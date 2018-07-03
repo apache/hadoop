@@ -26,23 +26,18 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * An interface for scanning the directory recursively and collect files
  * under the given directory.
- *
- * @param <T>
- *          is identifier of inode or full path name of inode. Internal sps will
- *          use the file inodeId for the block movement. External sps will use
- *          file string path representation for the block movement.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface FileCollector<T> {
+public interface FileCollector {
 
   /**
    * This method can be used to scan and collects the files under that
    * directory and adds to the given BlockStorageMovementNeeded.
    *
-   * @param filePath
-   *          - file path
+   * @param path
+   *          - file path id
    */
-  void scanAndCollectFiles(T filePath)
+  void scanAndCollectFiles(long path)
       throws IOException, InterruptedException;
 }

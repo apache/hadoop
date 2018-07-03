@@ -3202,17 +3202,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return stat;
   }
 
-  @Override
-  public String getFilePath(Long inodeId) {
-    readLock();
-    try {
-      INode inode = getFSDirectory().getInode(inodeId);
-      return inode == null ? null : inode.getFullPathName();
-    } finally {
-      readUnlock();
-    }
-  }
-
   /**
    * Returns true if the file is closed
    */

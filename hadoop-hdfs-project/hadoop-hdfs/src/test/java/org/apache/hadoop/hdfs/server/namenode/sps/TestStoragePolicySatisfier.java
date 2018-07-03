@@ -108,8 +108,6 @@ public class TestStoragePolicySatisfier {
   public static final long CAPACITY = 2 * 256 * 1024 * 1024;
   public static final String FILE = "/testMoveToSatisfyStoragePolicy";
   public static final int DEFAULT_BLOCK_SIZE = 1024;
-  private ExternalBlockMovementListener blkMoveListener =
-      new ExternalBlockMovementListener();
 
   /**
    * Sets hdfs cluster.
@@ -1282,8 +1280,8 @@ public class TestStoragePolicySatisfier {
 
     //Queue limit can control the traverse logic to wait for some free
     //entry in queue. After 10 files, traverse control will be on U.
-    StoragePolicySatisfier<Long> sps = new StoragePolicySatisfier<Long>(config);
-    Context<Long> ctxt = new IntraSPSNameNodeContext(
+    StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
+    Context ctxt = new IntraSPSNameNodeContext(
         hdfsCluster.getNamesystem(),
         hdfsCluster.getNamesystem().getBlockManager(), sps) {
       @Override
@@ -1297,8 +1295,7 @@ public class TestStoragePolicySatisfier {
       }
     };
 
-    FileCollector<Long> fileIDCollector = createFileIdCollector(sps, ctxt);
-    sps.init(ctxt, fileIDCollector, null, null);
+    sps.init(ctxt);
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");
@@ -1312,13 +1309,6 @@ public class TestStoragePolicySatisfier {
 
     assertTraversal(expectedTraverseOrder, fsDir, sps);
     dfs.delete(new Path("/root"), true);
-  }
-
-  public FileCollector<Long> createFileIdCollector(
-      StoragePolicySatisfier<Long> sps, Context<Long> ctxt) {
-    FileCollector<Long> fileIDCollector = new IntraSPSNameNodeFileIdCollector(
-        hdfsCluster.getNamesystem().getFSDirectory(), sps);
-    return fileIDCollector;
   }
 
   /**
@@ -1351,8 +1341,8 @@ public class TestStoragePolicySatisfier {
 
     // Queue limit can control the traverse logic to wait for some free
     // entry in queue. After 10 files, traverse control will be on U.
-    StoragePolicySatisfier<Long> sps = new StoragePolicySatisfier<Long>(config);
-    Context<Long> ctxt = new IntraSPSNameNodeContext(
+    StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
+    Context ctxt = new IntraSPSNameNodeContext(
         hdfsCluster.getNamesystem(),
         hdfsCluster.getNamesystem().getBlockManager(), sps) {
       @Override
@@ -1365,8 +1355,7 @@ public class TestStoragePolicySatisfier {
         return true;
       }
     };
-    FileCollector<Long> fileIDCollector = createFileIdCollector(sps, ctxt);
-    sps.init(ctxt, fileIDCollector, null, null);
+    sps.init(ctxt);
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");
@@ -1383,12 +1372,12 @@ public class TestStoragePolicySatisfier {
   }
 
   private void assertTraversal(List<String> expectedTraverseOrder,
-      FSDirectory fsDir, StoragePolicySatisfier<Long> sps)
+      FSDirectory fsDir, StoragePolicySatisfier sps)
           throws InterruptedException {
     // Remove 10 element and make queue free, So other traversing will start.
     for (int i = 0; i < 10; i++) {
       String path = expectedTraverseOrder.remove(0);
-      ItemInfo<Long> itemInfo = sps.getStorageMovementQueue().get();
+      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
       if (itemInfo == null) {
         continue;
       }
@@ -1403,7 +1392,7 @@ public class TestStoragePolicySatisfier {
     // Check other element traversed in order and E, M, U, R, S should not be
     // added in queue which we already removed from expected list
     for (String path : expectedTraverseOrder) {
-      ItemInfo<Long> itemInfo = sps.getStorageMovementQueue().get();
+      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
       if (itemInfo == null) {
         continue;
       }
@@ -1717,17 +1706,17 @@ public class TestStoragePolicySatisfier {
   public void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
       int timeout) throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier<Long> sps =
-        (StoragePolicySatisfier<Long>) blockManager.getSPSManager()
+    final StoragePolicySatisfier sps =
+        (StoragePolicySatisfier) blockManager.getSPSManager()
         .getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
             expectedBlkMovAttemptedCount,
-            ((BlockStorageMovementAttemptedItems<Long>) (sps
+            ((BlockStorageMovementAttemptedItems) (sps
                 .getAttemptedItemsMonitor())).getAttemptedItemsCount());
-        return ((BlockStorageMovementAttemptedItems<Long>) (sps
+        return ((BlockStorageMovementAttemptedItems) (sps
             .getAttemptedItemsMonitor()))
             .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
@@ -1737,15 +1726,17 @@ public class TestStoragePolicySatisfier {
   public void waitForBlocksMovementAttemptReport(
       long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
-    Assert.assertNotNull("Didn't set external block move listener",
-        blkMoveListener);
+    BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
+    final StoragePolicySatisfier sps =
+        (StoragePolicySatisfier) blockManager.getSPSManager()
+        .getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        int actualCount = blkMoveListener.getActualBlockMovements().size();
+        int actualCount = ((BlockStorageMovementAttemptedItems) (sps
+            .getAttemptedItemsMonitor())).getAttemptedItemsCount();
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
-            expectedMovementFinishedBlocksCount,
-            actualCount);
+            expectedMovementFinishedBlocksCount, actualCount);
         return actualCount
             >= expectedMovementFinishedBlocksCount;
       }
@@ -1798,29 +1789,12 @@ public class TestStoragePolicySatisfier {
         .numDataNodes(numberOfDatanodes).storagesPerDatanode(storagesPerDn)
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
-
-    // Sets external listener for assertion.
-    blkMoveListener.clear();
-    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier<Long> sps =
-        (StoragePolicySatisfier<Long>) blockManager
-        .getSPSManager().getInternalSPSService();
-    sps.setBlockMovementListener(blkMoveListener);
     return cluster;
   }
 
   public void restartNamenode() throws IOException {
     hdfsCluster.restartNameNodes();
     hdfsCluster.waitActive();
-    BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    StoragePolicySatisfyManager spsMgr = blockManager.getSPSManager();
-    if (spsMgr != null && spsMgr.isInternalSatisfierRunning()) {
-      // Sets external listener for assertion.
-      blkMoveListener.clear();
-      final StoragePolicySatisfier<Long> sps =
-          (StoragePolicySatisfier<Long>) spsMgr.getInternalSPSService();
-      sps.setBlockMovementListener(blkMoveListener);
-    }
   }
 
   /**

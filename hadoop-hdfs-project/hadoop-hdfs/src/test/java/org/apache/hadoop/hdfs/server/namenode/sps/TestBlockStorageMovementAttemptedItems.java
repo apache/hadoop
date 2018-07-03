@@ -45,22 +45,22 @@ import org.mockito.Mockito;
  */
 public class TestBlockStorageMovementAttemptedItems {
 
-  private BlockStorageMovementAttemptedItems<Long> bsmAttemptedItems;
-  private BlockStorageMovementNeeded<Long> unsatisfiedStorageMovementFiles;
+  private BlockStorageMovementAttemptedItems bsmAttemptedItems;
+  private BlockStorageMovementNeeded unsatisfiedStorageMovementFiles;
   private final int selfRetryTimeout = 500;
 
   @Before
   public void setup() throws Exception {
     Configuration config = new HdfsConfiguration();
-    Context<Long> ctxt = Mockito.mock(IntraSPSNameNodeContext.class);
-    SPSService<Long> sps = new StoragePolicySatisfier<Long>(config);
+    Context ctxt = Mockito.mock(IntraSPSNameNodeContext.class);
+    SPSService sps = new StoragePolicySatisfier(config);
     Mockito.when(ctxt.isRunning()).thenReturn(true);
     Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
     Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
     unsatisfiedStorageMovementFiles =
-        new BlockStorageMovementNeeded<Long>(ctxt, null);
-    bsmAttemptedItems = new BlockStorageMovementAttemptedItems<Long>(sps,
-        unsatisfiedStorageMovementFiles, null);
+        new BlockStorageMovementNeeded(ctxt);
+    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(sps,
+        unsatisfiedStorageMovementFiles, ctxt);
   }
 
   @After
@@ -76,7 +76,7 @@ public class TestBlockStorageMovementAttemptedItems {
     long stopTime = monotonicNow() + (retryTimeout * 2);
     boolean isItemFound = false;
     while (monotonicNow() < (stopTime)) {
-      ItemInfo<Long> ele = null;
+      ItemInfo ele = null;
       while ((ele = unsatisfiedStorageMovementFiles.get()) != null) {
         if (item == ele.getFile()) {
           isItemFound = true;

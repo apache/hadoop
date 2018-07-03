@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * interval.
  */
 @InterfaceAudience.Private
-public class DatanodeCacheManager<T> {
+public class DatanodeCacheManager {
   private static final Logger LOG = LoggerFactory
       .getLogger(DatanodeCacheManager.class);
 
@@ -78,7 +78,7 @@ public class DatanodeCacheManager<T> {
    * @throws IOException
    */
   public DatanodeMap getLiveDatanodeStorageReport(
-      Context<T> spsContext) throws IOException {
+      Context spsContext) throws IOException {
     long now = Time.monotonicNow();
     long elapsedTimeMs = now - lastAccessedTime;
     boolean refreshNeeded = elapsedTimeMs >= refreshIntervalMs;

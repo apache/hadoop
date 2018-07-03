@@ -2569,7 +2569,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public String getNextSPSPath() throws IOException {
+  public Long getNextSPSPath() throws IOException {
     checkNNStartup();
     String operationName = "getNextSPSPath";
     namesystem.checkSuperuserPrivilege(operationName);
@@ -2589,10 +2589,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("SPS service mode is " + spsMode + ", so "
           + "external SPS service is not allowed to fetch the path Ids");
     }
-    Long pathId = spsMgr.getNextPathId();
-    if (pathId == null) {
-      return null;
-    }
-    return namesystem.getFilePath(pathId);
+    return namesystem.getBlockManager().getSPSManager().getNextPathId();
   }
 }

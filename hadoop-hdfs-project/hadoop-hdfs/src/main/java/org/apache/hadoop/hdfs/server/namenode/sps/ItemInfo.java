@@ -21,28 +21,26 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * ItemInfo is a file info object for which need to satisfy the policy. For
- * internal satisfier service, it uses inode id which is Long datatype. For the
- * external satisfier service, it uses the full string representation of the
- * path.
+ * ItemInfo is a file info object for which need to satisfy the policy.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ItemInfo<T> {
-  private T startPath;
-  private T file;
+public class ItemInfo {
+  private long startPathId;
+  private long fileId;
   private int retryCount;
 
-  public ItemInfo(T startPath, T file) {
-    this.startPath = startPath;
-    this.file = file;
+  public ItemInfo(long startPathId, long fileId) {
+    this.startPathId = startPathId;
+    this.fileId = fileId;
     // set 0 when item is getting added first time in queue.
     this.retryCount = 0;
   }
 
-  public ItemInfo(final T startPath, final T file, final int retryCount) {
-    this.startPath = startPath;
-    this.file = file;
+  public ItemInfo(final long startPathId, final long fileId,
+      final int retryCount) {
+    this.startPathId = startPathId;
+    this.fileId = fileId;
     this.retryCount = retryCount;
   }
 
@@ -50,22 +48,22 @@ public class ItemInfo<T> {
    * Returns the start path of the current file. This indicates that SPS
    * was invoked on this path.
    */
-  public T getStartPath() {
-    return startPath;
+  public long getStartPath() {
+    return startPathId;
   }
 
   /**
    * Returns the file for which needs to satisfy the policy.
    */
-  public T getFile() {
-    return file;
+  public long getFile() {
+    return fileId;
   }
 
   /**
    * Returns true if the tracking path is a directory, false otherwise.
    */
   public boolean isDir() {
-    return !startPath.equals(file);
+    return !(startPathId == fileId);
   }
 
   /**

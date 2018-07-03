@@ -77,13 +77,4 @@ public interface Namesystem extends RwLock, SafeMode {
    */
   HdfsFileStatus getFileInfo(String filePath, boolean resolveLink,
       boolean needLocation) throws IOException;
-
-  /**
-   * Gets the file path corresponds to the given file id.
-   *
-   * @param inodeId
-   *          file id
-   * @return string file path
-   */
-  String getFilePath(Long inodeId);
 }

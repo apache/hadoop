@@ -52,13 +52,8 @@ import com.google.common.annotations.VisibleForTesting;
  * entries from tracking. If there is no DN reports about movement attempt
  * finished for a longer time period, then such items will retries automatically
  * after timeout. The default timeout would be 5 minutes.
- *
- * @param <T>
- *          is identifier of inode or full path name of inode. Internal sps will
- *          use the file inodeId for the block movement. External sps will use
- *          file string path representation for the block movement.
  */
-public class BlockStorageMovementAttemptedItems<T> {
+public class BlockStorageMovementAttemptedItems {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class);
 
@@ -66,14 +61,14 @@ public class BlockStorageMovementAttemptedItems<T> {
    * A map holds the items which are already taken for blocks movements
    * processing and sent to DNs.
    */
-  private final List<AttemptedItemInfo<T>> storageMovementAttemptedItems;
+  private final List<AttemptedItemInfo> storageMovementAttemptedItems;
   private Map<Block, Set<StorageTypeNodePair>> scheduledBlkLocs;
   // Maintains separate Queue to keep the movement finished blocks. This Q
   // is used to update the storageMovementAttemptedItems list asynchronously.
   private final BlockingQueue<Block> movementFinishedBlocks;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
-  private BlockMovementListener blkMovementListener;
+  private final Context context;
   //
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
@@ -85,12 +80,12 @@ public class BlockStorageMovementAttemptedItems<T> {
   // a request is timed out.
   //
   private long minCheckTimeout = 1 * 60 * 1000; // minimum value
-  private BlockStorageMovementNeeded<T> blockStorageMovementNeeded;
-  private final SPSService<T> service;
+  private BlockStorageMovementNeeded blockStorageMovementNeeded;
+  private final SPSService service;
 
-  public BlockStorageMovementAttemptedItems(SPSService<T> service,
-      BlockStorageMovementNeeded<T> unsatisfiedStorageMovementFiles,
-      BlockMovementListener blockMovementListener) {
+  public BlockStorageMovementAttemptedItems(SPSService service,
+      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles,
+      Context context) {
     this.service = service;
     long recheckTimeout = this.service.getConf().getLong(
         DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
@@ -106,19 +101,27 @@ public class BlockStorageMovementAttemptedItems<T> {
     storageMovementAttemptedItems = new ArrayList<>();
     scheduledBlkLocs = new HashMap<>();
     movementFinishedBlocks = new LinkedBlockingQueue<>();
-    this.blkMovementListener = blockMovementListener;
+    this.context = context;
   }
 
   /**
    * Add item to block storage movement attempted items map which holds the
    * tracking/blockCollection id versus time stamp.
    *
-   * @param itemInfo
-   *          - tracking info
+   * @param startPathId
+   *          - start satisfier path identifier
+   * @param fileId
+   *          - file identifier
+   * @param monotonicNow
+   *          - time now
+   * @param assignedBlocks
+   *          - assigned blocks for block movement
+   * @param retryCount
+   *          - retry count
    */
-  public void add(T startPath, T file, long monotonicNow,
+  public void add(long startPathId, long fileId, long monotonicNow,
       Map<Block, Set<StorageTypeNodePair>> assignedBlocks, int retryCount) {
-    AttemptedItemInfo<T> itemInfo = new AttemptedItemInfo<T>(startPath, file,
+    AttemptedItemInfo itemInfo = new AttemptedItemInfo(startPathId, fileId,
         monotonicNow, assignedBlocks.keySet(), retryCount);
     synchronized (storageMovementAttemptedItems) {
       storageMovementAttemptedItems.add(itemInfo);
@@ -161,11 +164,9 @@ public class BlockStorageMovementAttemptedItems<T> {
       boolean foundType = dn.getStorageType().equals(type);
       if (foundDn && foundType) {
         blkLocs.remove(dn);
-        // listener if it is plugged-in
-        if (blkMovementListener != null) {
-          blkMovementListener
-              .notifyMovementTriedBlocks(new Block[] {reportedBlock});
-        }
+        Block[] mFinishedBlocks = new Block[1];
+        mFinishedBlocks[0] = reportedBlock;
+        context.notifyMovementTriedBlocks(mFinishedBlocks);
         // All the block locations has reported.
         if (blkLocs.size() <= 0) {
           movementFinishedBlocks.add(reportedBlock);
@@ -244,15 +245,15 @@ public class BlockStorageMovementAttemptedItems<T> {
   @VisibleForTesting
   void blocksStorageMovementUnReportedItemsCheck() {
     synchronized (storageMovementAttemptedItems) {
-      Iterator<AttemptedItemInfo<T>> iter = storageMovementAttemptedItems
+      Iterator<AttemptedItemInfo> iter = storageMovementAttemptedItems
           .iterator();
       long now = monotonicNow();
       while (iter.hasNext()) {
-        AttemptedItemInfo<T> itemInfo = iter.next();
+        AttemptedItemInfo itemInfo = iter.next();
         if (now > itemInfo.getLastAttemptedOrReportedTime()
             + selfRetryTimeout) {
-          T file = itemInfo.getFile();
-          ItemInfo<T> candidate = new ItemInfo<T>(itemInfo.getStartPath(), file,
+          long file = itemInfo.getFile();
+          ItemInfo candidate = new ItemInfo(itemInfo.getStartPath(), file,
               itemInfo.getRetryCount() + 1);
           blockStorageMovementNeeded.add(candidate);
           iter.remove();
@@ -272,13 +273,13 @@ public class BlockStorageMovementAttemptedItems<T> {
     // Update attempted items list
     for (Block blk : finishedBlks) {
       synchronized (storageMovementAttemptedItems) {
-        Iterator<AttemptedItemInfo<T>> iterator = storageMovementAttemptedItems
+        Iterator<AttemptedItemInfo> iterator = storageMovementAttemptedItems
             .iterator();
         while (iterator.hasNext()) {
-          AttemptedItemInfo<T> attemptedItemInfo = iterator.next();
+          AttemptedItemInfo attemptedItemInfo = iterator.next();
           attemptedItemInfo.getBlocks().remove(blk);
           if (attemptedItemInfo.getBlocks().isEmpty()) {
-            blockStorageMovementNeeded.add(new ItemInfo<T>(
+            blockStorageMovementNeeded.add(new ItemInfo(
                 attemptedItemInfo.getStartPath(), attemptedItemInfo.getFile(),
                 attemptedItemInfo.getRetryCount() + 1));
             iterator.remove();
@@ -308,16 +309,5 @@ public class BlockStorageMovementAttemptedItems<T> {
     synchronized (scheduledBlkLocs) {
       scheduledBlkLocs.clear();
     }
-  }
-
-  /**
-   * Sets external listener for testing.
-   *
-   * @param blkMoveListener
-   *          block movement listener callback object
-   */
-  @VisibleForTesting
-  void setBlockMovementListener(BlockMovementListener blkMoveListener) {
-    this.blkMovementListener = blkMoveListener;
   }
 }

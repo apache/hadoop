@@ -20,11 +20,14 @@ package org.apache.hadoop.hdfs.server.namenode.sps;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
 import java.io.IOException;
+import java.util.Arrays;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.net.NetworkTopology;
@@ -45,20 +49,26 @@ import org.slf4j.LoggerFactory;
  * movements to satisfy the storage policy.
  */
 @InterfaceAudience.Private
-public class IntraSPSNameNodeContext implements Context<Long> {
+public class IntraSPSNameNodeContext implements Context {
   private static final Logger LOG = LoggerFactory
       .getLogger(IntraSPSNameNodeContext.class);
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
 
-  private SPSService<Long> service;
+  private SPSService service;
+  private final FileCollector fileCollector;
+  private final BlockMoveTaskHandler blockMoveTaskHandler;
 
   public IntraSPSNameNodeContext(Namesystem namesystem,
-      BlockManager blockManager, SPSService<Long> service) {
+      BlockManager blockManager, SPSService service) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
     this.service = service;
+    fileCollector = new IntraSPSNameNodeFileIdCollector(
+        namesystem.getFSDirectory(), service);
+    blockMoveTaskHandler = new IntraSPSNameNodeBlockMoveTaskHandler(
+        blockManager, namesystem);
   }
 
   @Override
@@ -67,17 +77,12 @@ public class IntraSPSNameNodeContext implements Context<Long> {
   }
 
   /**
-   * @return object containing information regarding the file or null if file
-   *         not found.
+   * @return object containing information regarding the file.
    */
   @Override
-  public HdfsFileStatus getFileInfo(Long inodeID) throws IOException {
-    String filePath = namesystem.getFilePath(inodeID);
-    if (StringUtils.isBlank(filePath)) {
-      LOG.debug("File with inodeID:{} doesn't exists!", inodeID);
-      return null;
-    }
-    return namesystem.getFileInfo(filePath, true, true);
+  public HdfsFileStatus getFileInfo(long inodeID) throws IOException {
+    Path filePath = DFSUtilClient.makePathFromFileId(inodeID);
+    return namesystem.getFileInfo(filePath.toString(), true, true);
   }
 
   @Override
@@ -93,12 +98,12 @@ public class IntraSPSNameNodeContext implements Context<Long> {
   }
 
   @Override
-  public boolean isFileExist(Long inodeId) {
+  public boolean isFileExist(long inodeId) {
     return namesystem.getFSDirectory().getInode(inodeId) != null;
   }
 
   @Override
-  public void removeSPSHint(Long inodeId) throws IOException {
+  public void removeSPSHint(long inodeId) throws IOException {
     this.namesystem.removeXattr(inodeId, XATTR_SATISFY_STORAGE_POLICY);
   }
 
@@ -156,12 +161,29 @@ public class IntraSPSNameNodeContext implements Context<Long> {
   }
 
   @Override
-  public void removeSPSPathId(Long trackId) {
+  public void removeSPSPathId(long trackId) {
     blockManager.getSPSManager().removePathId(trackId);
   }
 
   @Override
   public void removeAllSPSPathIds() {
     blockManager.getSPSManager().removeAllPathIds();
+  }
+
+  @Override
+  public void scanAndCollectFiles(long filePath)
+      throws IOException, InterruptedException {
+    fileCollector.scanAndCollectFiles(filePath);
+  }
+
+  @Override
+  public void submitMoveTask(BlockMovingInfo blkMovingInfo) throws IOException {
+    blockMoveTaskHandler.submitMoveTask(blkMovingInfo);
+  }
+
+  @Override
+  public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
+    LOG.info("Movement attempted blocks: {}",
+        Arrays.asList(moveAttemptFinishedBlks));
   }
 }

@@ -3897,7 +3897,7 @@ public class BlockManager implements BlockStatsMXBean {
   private void notifyStorageMovementAttemptFinishedBlk(
       DatanodeStorageInfo storageInfo, Block block) {
     if (getSPSManager() != null) {
-      SPSService<Long> sps = getSPSManager().getInternalSPSService();
+      SPSService sps = getSPSManager().getInternalSPSService();
       if (sps.isRunning()) {
         sps.notifyStorageMovementAttemptFinishedBlk(
             storageInfo.getDatanodeDescriptor(), storageInfo.getStorageType(),

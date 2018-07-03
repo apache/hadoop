@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory;
 public class StoragePolicySatisfyManager {
   private static final Logger LOG = LoggerFactory
       .getLogger(StoragePolicySatisfyManager.class);
-  private final StoragePolicySatisfier<Long> spsService;
+  private final StoragePolicySatisfier spsService;
   private final boolean storagePolicyEnabled;
   private volatile StoragePolicySatisfierMode mode;
   private final Queue<Long> pathsToBeTraveresed;
@@ -84,7 +84,7 @@ public class StoragePolicySatisfyManager {
     pathsToBeTraveresed = new LinkedList<Long>();
     // instantiate SPS service by just keeps config reference and not starting
     // any supporting threads.
-    spsService = new StoragePolicySatisfier<Long>(conf);
+    spsService = new StoragePolicySatisfier(conf);
     this.namesystem = namesystem;
     this.blkMgr = blkMgr;
   }
@@ -121,10 +121,7 @@ public class StoragePolicySatisfyManager {
       }
       // starts internal daemon service inside namenode
       spsService.init(
-          new IntraSPSNameNodeContext(namesystem, blkMgr, spsService),
-          new IntraSPSNameNodeFileIdCollector(namesystem.getFSDirectory(),
-              spsService),
-          new IntraSPSNameNodeBlockMoveTaskHandler(blkMgr, namesystem), null);
+          new IntraSPSNameNodeContext(namesystem, blkMgr, spsService));
       spsService.start(false, mode);
       break;
     case EXTERNAL:
@@ -221,13 +218,8 @@ public class StoragePolicySatisfyManager {
             mode);
         return;
       }
-      spsService.init(
-          new IntraSPSNameNodeContext(this.namesystem, this.blkMgr, spsService),
-          new IntraSPSNameNodeFileIdCollector(this.namesystem.getFSDirectory(),
-              spsService),
-          new IntraSPSNameNodeBlockMoveTaskHandler(this.blkMgr,
-              this.namesystem),
-          null);
+      spsService.init(new IntraSPSNameNodeContext(this.namesystem, this.blkMgr,
+          spsService));
       spsService.start(true, newMode);
       break;
     case EXTERNAL:
@@ -309,7 +301,7 @@ public class StoragePolicySatisfyManager {
   /**
    * @return internal SPS service instance.
    */
-  public SPSService<Long> getInternalSPSService() {
+  public SPSService getInternalSPSService() {
     return this.spsService;
   }
 

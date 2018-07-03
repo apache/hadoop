@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier.ExternalBlockMovementListener;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -71,8 +70,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private int cellSize;
   private int defaultStripeBlockSize;
   private Configuration conf;
-  private ExternalBlockMovementListener blkMoveListener =
-      new ExternalBlockMovementListener();
 
   private ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
@@ -94,6 +91,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     // Reduced refresh cycle to update latest datanodes.
     conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
         1000);
+    conf.setInt(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY, 30);
     initConfWithStripe(conf, defaultStripeBlockSize);
   }
 
@@ -134,14 +133,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
-      // Sets external listener for assertion.
-      blkMoveListener.clear();
-      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      final StoragePolicySatisfier<Long> sps =
-          (StoragePolicySatisfier<Long>) blockManager
-          .getSPSManager().getInternalSPSService();
-      sps.setBlockMovementListener(blkMoveListener);
 
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
@@ -252,14 +243,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
-      // Sets external listener for assertion.
-      blkMoveListener.clear();
-      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      final StoragePolicySatisfier<Long> sps =
-          (StoragePolicySatisfier<Long>) blockManager
-          .getSPSManager().getInternalSPSService();
-      sps.setBlockMovementListener(blkMoveListener);
 
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
@@ -400,10 +383,11 @@ public class TestStoragePolicySatisfierWithStripedFile {
       fs.satisfyStoragePolicy(fooFile);
       DFSTestUtil.waitExpectedStorageType(fooFile.toString(),
           StorageType.ARCHIVE, 5, 30000, cluster.getFileSystem());
-      //Start reaming datanodes
+      //Start remaining datanodes
       for (int i = numOfDatanodes - 1; i >= 5; i--) {
         cluster.restartDataNode(list.get(i), false);
       }
+      cluster.waitActive();
       // verify storage types and locations.
       waitExpectedStorageType(cluster, fooFile.toString(), fileLen,
           StorageType.ARCHIVE, 9, 9, 60000);
@@ -511,17 +495,17 @@ public class TestStoragePolicySatisfierWithStripedFile {
       long expectedBlkMovAttemptedCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier<Long> sps =
-        (StoragePolicySatisfier<Long>) blockManager
+    final StoragePolicySatisfier sps =
+        (StoragePolicySatisfier) blockManager
         .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
             expectedBlkMovAttemptedCount,
-            ((BlockStorageMovementAttemptedItems<Long>) sps
+            ((BlockStorageMovementAttemptedItems) sps
                 .getAttemptedItemsMonitor()).getAttemptedItemsCount());
-        return ((BlockStorageMovementAttemptedItems<Long>) sps
+        return ((BlockStorageMovementAttemptedItems) sps
             .getAttemptedItemsMonitor())
                 .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
@@ -583,12 +567,15 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private void waitForBlocksMovementAttemptReport(MiniDFSCluster cluster,
       long expectedMoveFinishedBlks, int timeout)
           throws TimeoutException, InterruptedException {
-    Assert.assertNotNull("Didn't set external block move listener",
-        blkMoveListener);
+    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+    final StoragePolicySatisfier sps =
+        (StoragePolicySatisfier) blockManager.getSPSManager()
+        .getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        int actualCount = blkMoveListener.getActualBlockMovements().size();
+        int actualCount = ((BlockStorageMovementAttemptedItems) (sps
+            .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount();
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
             expectedMoveFinishedBlks,
             actualCount);

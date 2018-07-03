@@ -24,24 +24,21 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
  * An interface for the communication between SPS and Namenode module.
- *
- * @param <T>
- *          is identifier of inode or full path name of inode. Internal sps will
- *          use the file inodeId for the block movement. External sps will use
- *          file string path representation for the block movement.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Context<T> {
+public interface Context {
 
   /**
    * Returns true if the SPS is running, false otherwise.
@@ -85,7 +82,7 @@ public interface Context<T> {
    *          - file info
    * @return true if the given file exists, false otherwise.
    */
-  boolean isFileExist(T filePath);
+  boolean isFileExist(long filePath);
 
   /**
    * Gets the storage policy details for the given policy ID.
@@ -108,7 +105,7 @@ public interface Context<T> {
    *          - user invoked satisfier path
    * @throws IOException
    */
-  void removeSPSHint(T spsPath) throws IOException;
+  void removeSPSHint(long spsPath) throws IOException;
 
   /**
    * Gets the number of live datanodes in the cluster.
@@ -124,7 +121,7 @@ public interface Context<T> {
    *          file path
    * @return file status metadata information
    */
-  HdfsFileStatus getFileInfo(T file) throws IOException;
+  HdfsFileStatus getFileInfo(long file) throws IOException;
 
   /**
    * Returns all the live datanodes and its storage details.
@@ -137,15 +134,41 @@ public interface Context<T> {
   /**
    * @return next SPS path info to process.
    */
-  T getNextSPSPath();
+  Long getNextSPSPath();
 
   /**
    * Removes the SPS path id.
    */
-  void removeSPSPathId(T pathId);
+  void removeSPSPathId(long pathId);
 
   /**
    * Removes all SPS path ids.
    */
   void removeAllSPSPathIds();
+
+  /**
+   * Do scan and collects the files under that directory and adds to the given
+   * BlockStorageMovementNeeded.
+   *
+   * @param filePath
+   *          file path
+   */
+  void scanAndCollectFiles(long filePath)
+      throws IOException, InterruptedException;
+
+  /**
+   * Handles the block move tasks. BlockMovingInfo must contain the required
+   * info to move the block, that source location, destination location and
+   * storage types.
+   */
+  void submitMoveTask(BlockMovingInfo blkMovingInfo) throws IOException;
+
+  /**
+   * This can be used to notify to the SPS about block movement attempt
+   * finished. Then SPS will re-check whether it needs retry or not.
+   *
+   * @param moveAttemptFinishedBlks
+   *          list of movement attempt finished blocks
+   */
+  void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks);
 }
