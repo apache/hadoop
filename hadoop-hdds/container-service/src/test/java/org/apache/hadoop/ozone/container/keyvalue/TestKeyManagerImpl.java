@@ -79,7 +79,7 @@ public class TestKeyManagerImpl {
     Mockito.when(volumeChoosingPolicy.chooseVolume(anyList(), anyLong()))
         .thenReturn(hddsVolume);
 
-    keyValueContainerData = new KeyValueContainerData(1L);
+    keyValueContainerData = new KeyValueContainerData(1L, 5);
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, config);
@@ -104,9 +104,11 @@ public class TestKeyManagerImpl {
 
   @Test
   public void testPutAndGetKey() throws Exception {
+    assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
     //Put Key
     keyManager.putKey(keyValueContainer, keyData);
 
+    assertEquals(1, keyValueContainer.getContainerData().getKeyCount());
     //Get Key
     KeyData fromGetKeyData = keyManager.getKey(keyValueContainer,
         keyData.getBlockID());
@@ -123,10 +125,13 @@ public class TestKeyManagerImpl {
   @Test
   public void testDeleteKey() throws Exception {
     try {
+      assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
       //Put Key
       keyManager.putKey(keyValueContainer, keyData);
+      assertEquals(1, keyValueContainer.getContainerData().getKeyCount());
       //Delete Key
       keyManager.deleteKey(keyValueContainer, blockID);
+      assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
       try {
         keyManager.getKey(keyValueContainer, blockID);
         fail("testDeleteKey");

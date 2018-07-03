@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.IOUtils;
@@ -84,7 +83,6 @@ public class KeyValueContainer implements Container {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private final KeyValueContainerData containerData;
-  private long containerMaxSize;
   private Configuration config;
 
   public KeyValueContainer(KeyValueContainerData containerData, Configuration
@@ -95,9 +93,6 @@ public class KeyValueContainer implements Container {
         "be null");
     this.config = ozoneConfig;
     this.containerData = containerData;
-    this.containerMaxSize = (long) ozoneConfig.getInt(ScmConfigKeys
-        .OZONE_SCM_CONTAINER_SIZE_GB, ScmConfigKeys
-        .OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024L * 1024L * 1024L;
   }
 
   @Override
@@ -111,9 +106,10 @@ public class KeyValueContainer implements Container {
     File containerMetaDataPath = null;
     //acquiring volumeset lock and container lock
     volumeSet.acquireLock();
+    long maxSize = (containerData.getMaxSizeGB() * 1024L * 1024L * 1024L);
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
-          .getVolumesList(), containerMaxSize);
+          .getVolumesList(), maxSize);
       String containerBasePath = containerVolume.getHddsRootDir().toString();
 
       long containerId = containerData.getContainerId();

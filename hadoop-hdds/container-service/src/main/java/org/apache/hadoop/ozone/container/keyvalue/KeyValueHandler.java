@@ -41,6 +41,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .PutSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Type;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -104,6 +105,7 @@ public class KeyValueHandler extends Handler {
   private final KeyManager keyManager;
   private final ChunkManager chunkManager;
   private VolumeChoosingPolicy volumeChoosingPolicy;
+  private final int maxContainerSizeGB;
 
   // TODO : Add metrics and populate it.
 
@@ -125,6 +127,8 @@ public class KeyValueHandler extends Handler {
     chunkManager = new ChunkManagerImpl();
     // TODO: Add supoort for different volumeChoosingPolicies.
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
+    maxContainerSizeGB = config.getInt(ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
   }
 
   @Override
@@ -207,7 +211,7 @@ public class KeyValueHandler extends Handler {
     }
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
-        containerID);
+        containerID, maxContainerSizeGB);
     // TODO: Add support to add metadataList to ContainerData. Add metadata
     // to container during creation.
     KeyValueContainer newContainer = new KeyValueContainer(
@@ -565,8 +569,8 @@ public class KeyValueHandler extends Handler {
     try {
       checkContainerOpen(kvContainer);
 
-      BlockID blockID = BlockID.getFromProtobuf(
-        putSmallFileReq.getKey().getKeyData().getBlockID());
+      BlockID blockID = BlockID.getFromProtobuf(putSmallFileReq.getKey()
+          .getKeyData().getBlockID());
       KeyData keyData = KeyData.getFromProtoBuf(
           putSmallFileReq.getKey().getKeyData());
       Preconditions.checkNotNull(keyData);
@@ -613,8 +617,8 @@ public class KeyValueHandler extends Handler {
     GetSmallFileRequestProto getSmallFileReq = request.getGetSmallFile();
 
     try {
-      BlockID blockID = BlockID.getFromProtobuf(
-        getSmallFileReq.getKey().getBlockID());
+      BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getKey()
+          .getBlockID());
       KeyData responseData = keyManager.getKey(kvContainer, blockID);
 
       ContainerProtos.ChunkInfo chunkInfo = null;

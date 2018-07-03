@@ -109,11 +109,9 @@ public class ContainerReader implements Runnable {
                     .getContainerFile(metadataPath, containerName);
                 File checksumFile = KeyValueContainerLocationUtil
                     .getContainerCheckSumFile(metadataPath, containerName);
-                File dbFile = KeyValueContainerLocationUtil
-                    .getContainerDBFile(metadataPath, containerName);
-                if (containerFile.exists() && checksumFile.exists() &&
-                    dbFile.exists()) {
-                  verifyContainerFile(containerFile, checksumFile, dbFile);
+                if (containerFile.exists() && checksumFile.exists()) {
+                  verifyContainerFile(containerName, containerFile,
+                      checksumFile);
                 } else {
                   LOG.error("Missing container metadata files for Container: " +
                       "{}", containerName);
@@ -129,8 +127,8 @@ public class ContainerReader implements Runnable {
     }
   }
 
-  private void verifyContainerFile(File containerFile, File checksumFile,
-                                   File dbFile) {
+  private void verifyContainerFile(String containerName, File containerFile,
+                                   File checksumFile) {
     try {
       ContainerData containerData =  ContainerDataYaml.readContainerFile(
           containerFile);
@@ -139,6 +137,15 @@ public class ContainerReader implements Runnable {
       case KeyValueContainer:
         KeyValueContainerData keyValueContainerData = (KeyValueContainerData)
             containerData;
+        File dbFile = KeyValueContainerLocationUtil
+            .getContainerDBFile(new File(containerFile.getParent()),
+                containerName);
+        if (!dbFile.exists()) {
+          LOG.error("Container DB file is missing for Container {}, skipping " +
+                  "this", containerName);
+          // Don't further process this container, as it is missing db file.
+          return;
+        }
         KeyValueContainerUtil.parseKeyValueContainerData(keyValueContainerData,
             containerFile, checksumFile, dbFile, config);
         KeyValueContainer keyValueContainer = new KeyValueContainer(

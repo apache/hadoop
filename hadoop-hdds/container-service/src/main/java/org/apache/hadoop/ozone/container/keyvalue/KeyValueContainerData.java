@@ -39,9 +39,9 @@ public class KeyValueContainerData extends ContainerData {
   public static final Tag YAML_TAG = new Tag("KeyValueContainerData");
 
   // Fields need to be stored in .container file.
-  public static final List<String> YAML_FIELDS = Lists.newArrayList(
+  private static final List<String> YAML_FIELDS = Lists.newArrayList(
       "containerType", "containerId", "layOutVersion", "state", "metadata",
-      "metadataPath", "chunksPath", "containerDBType");
+      "metadataPath", "chunksPath", "containerDBType", "maxSizeGB");
 
   // Path to Container metadata Level DB/RocksDB Store and .container file.
   private String metadataPath;
@@ -60,9 +60,10 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
+   * @param size - maximum size of the container
    */
-  public KeyValueContainerData(long id) {
-    super(ContainerProtos.ContainerType.KeyValueContainer, id);
+  public KeyValueContainerData(long id, int size) {
+    super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
     this.numPendingDeletionBlocks = 0;
   }
 
@@ -70,10 +71,11 @@ public class KeyValueContainerData extends ContainerData {
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
    * @param layOutVersion
+   * @param size - maximum size of the container
    */
-  public KeyValueContainerData(long id,
-                               int layOutVersion) {
-    super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion);
+  public KeyValueContainerData(long id, int layOutVersion, int size) {
+    super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
+        size);
     this.numPendingDeletionBlocks = 0;
   }
 
@@ -204,5 +206,9 @@ public class KeyValueContainerData extends ContainerData {
     }
 
     return builder.build();
+  }
+
+  public static List<String> getYamlFields() {
+    return YAML_FIELDS;
   }
 }

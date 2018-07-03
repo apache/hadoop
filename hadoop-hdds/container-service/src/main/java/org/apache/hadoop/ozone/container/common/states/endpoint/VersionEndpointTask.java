@@ -18,7 +18,6 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -30,7 +29,6 @@ import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -67,7 +65,6 @@ public class VersionEndpointTask implements
       rpcEndPoint.setVersion(response);
       VolumeSet volumeSet = ozoneContainer.getVolumeSet();
       Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
-      List<HddsProtos.KeyValue> keyValues =  versionResponse.getKeysList();
 
       String scmId = response.getValue(OzoneConsts.SCM_ID);
       String clusterId = response.getValue(OzoneConsts.CLUSTER_ID);

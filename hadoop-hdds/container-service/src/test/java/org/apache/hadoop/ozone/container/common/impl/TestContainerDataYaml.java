@@ -37,6 +37,7 @@ import static org.junit.Assert.fail;
  */
 public class TestContainerDataYaml {
 
+  private static final int MAXSIZE = 5;
   @Test
   public void testCreateContainerFile() throws IOException {
     String path = new FileSystemTestHelper().getTestRootDir();
@@ -45,7 +46,8 @@ public class TestContainerDataYaml {
     File filePath = new File(new FileSystemTestHelper().getTestRootDir());
     filePath.mkdirs();
 
-    KeyValueContainerData keyValueContainerData = new KeyValueContainerData(Long.MAX_VALUE);
+    KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
+        Long.MAX_VALUE, MAXSIZE);
     keyValueContainerData.setContainerDBType("RocksDB");
     keyValueContainerData.setMetadataPath(path);
     keyValueContainerData.setChunksPath(path);
@@ -72,6 +74,7 @@ public class TestContainerDataYaml {
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
     assertEquals(0, kvData.getMetadata().size());
+    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
 
     // Update ContainerData.
     kvData.addMetadata("VOLUME", "hdfs");
@@ -101,6 +104,7 @@ public class TestContainerDataYaml {
     assertEquals(2, kvData.getMetadata().size());
     assertEquals("hdfs", kvData.getMetadata().get("VOLUME"));
     assertEquals("ozone", kvData.getMetadata().get("OWNER"));
+    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
 
     FileUtil.fullyDelete(filePath);
 

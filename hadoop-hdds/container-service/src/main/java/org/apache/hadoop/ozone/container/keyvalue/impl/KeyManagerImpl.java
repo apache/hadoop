@@ -84,6 +84,9 @@ public class KeyManagerImpl implements KeyManager {
     Preconditions.checkNotNull(db, "DB cannot be null here");
     db.put(Longs.toByteArray(data.getLocalID()), data.getProtoBufMessage()
         .toByteArray());
+
+    // Increment keycount here
+    container.getContainerData().incrKeyCount();
   }
 
   /**
@@ -148,6 +151,9 @@ public class KeyManagerImpl implements KeyManager {
           NO_SUCH_KEY);
     }
     db.delete(kKey);
+
+    // Decrement keycount here
+    container.getContainerData().decrKeyCount();
   }
 
   /**

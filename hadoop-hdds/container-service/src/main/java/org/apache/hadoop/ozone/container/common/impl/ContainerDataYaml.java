@@ -32,6 +32,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.Map;
@@ -47,7 +48,6 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 
-import static org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData.YAML_FIELDS;
 import static org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData.YAML_TAG;
 
 /**
@@ -150,10 +150,11 @@ public final class ContainerDataYaml {
       // When a new Container type is added, we need to add what fields need
       // to be filtered here
       if (type.equals(KeyValueContainerData.class)) {
+        List<String> yamlFields = KeyValueContainerData.getYamlFields();
         // filter properties
         for (Property prop : set) {
           String name = prop.getName();
-          if (YAML_FIELDS.contains(name)) {
+          if (yamlFields.contains(name)) {
             filtered.add(prop);
           }
         }
@@ -183,9 +184,12 @@ public final class ContainerDataYaml {
         long layOutVersion = (long) nodes.get("layOutVersion");
         int lv = (int) layOutVersion;
 
+        long size = (long) nodes.get("maxSizeGB");
+        int maxSize = (int) size;
+
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData((long) nodes
-            .get("containerId"), lv);
+            .get("containerId"), lv, maxSize);
         kvData.setContainerDBType((String)nodes.get("containerDBType"));
         kvData.setMetadataPath((String) nodes.get(
             "metadataPath"));

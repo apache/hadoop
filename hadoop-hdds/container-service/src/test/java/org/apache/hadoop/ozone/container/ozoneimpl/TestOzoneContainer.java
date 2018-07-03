@@ -66,7 +66,7 @@ public class TestOzoneContainer {
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
 
     for (int i=0; i<10; i++) {
-      keyValueContainerData = new KeyValueContainerData(i);
+      keyValueContainerData = new KeyValueContainerData(i, 1);
       keyValueContainer = new KeyValueContainer(
           keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);

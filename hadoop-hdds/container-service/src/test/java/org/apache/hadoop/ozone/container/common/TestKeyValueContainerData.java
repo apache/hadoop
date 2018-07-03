@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestKeyValueContainerData {
 
+  private static final int MAXSIZE = 5;
   @Test
   public void testKeyValueData() {
     long containerId = 1L;
@@ -42,7 +43,8 @@ public class TestKeyValueContainerData {
         .ContainerLifeCycleState.CLOSED;
     AtomicLong val = new AtomicLong(0);
 
-    KeyValueContainerData kvData = new KeyValueContainerData(containerId);
+    KeyValueContainerData kvData = new KeyValueContainerData(containerId,
+        MAXSIZE);
 
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerId());
@@ -54,6 +56,8 @@ public class TestKeyValueContainerData {
     assertEquals(val.get(), kvData.getWriteBytes());
     assertEquals(val.get(), kvData.getReadCount());
     assertEquals(val.get(), kvData.getWriteCount());
+    assertEquals(val.get(), kvData.getKeyCount());
+    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
 
     kvData.setState(state);
     kvData.setContainerDBType(containerDBType);
@@ -63,6 +67,7 @@ public class TestKeyValueContainerData {
     kvData.incrWriteBytes(10);
     kvData.incrReadCount();
     kvData.incrWriteCount();
+    kvData.incrKeyCount();
 
     assertEquals(state, kvData.getState());
     assertEquals(containerDBType, kvData.getContainerDBType());
@@ -73,6 +78,7 @@ public class TestKeyValueContainerData {
     assertEquals(10, kvData.getWriteBytes());
     assertEquals(1, kvData.getReadCount());
     assertEquals(1, kvData.getWriteCount());
+    assertEquals(1, kvData.getKeyCount());
 
   }
 

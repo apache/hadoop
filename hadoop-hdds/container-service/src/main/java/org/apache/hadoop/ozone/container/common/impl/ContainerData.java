@@ -53,12 +53,15 @@ public class ContainerData {
   // State of the Container
   private ContainerLifeCycleState state;
 
+  private final int maxSizeGB;
+
   /** parameters for read/write statistics on the container. **/
   private final AtomicLong readBytes;
   private final AtomicLong writeBytes;
   private final AtomicLong readCount;
   private final AtomicLong writeCount;
   private final AtomicLong bytesUsed;
+  private final AtomicLong keyCount;
 
   private HddsVolume volume;
 
@@ -67,8 +70,9 @@ public class ContainerData {
    * Creates a ContainerData Object, which holds metadata of the container.
    * @param type - ContainerType
    * @param containerId - ContainerId
+   * @param size - container maximum size
    */
-  public ContainerData(ContainerType type, long containerId) {
+  public ContainerData(ContainerType type, long containerId, int size) {
     this.containerType = type;
     this.containerId = containerId;
     this.layOutVersion = ChunkLayOutVersion.getLatestVersion().getVersion();
@@ -79,6 +83,8 @@ public class ContainerData {
     this.writeCount =  new AtomicLong(0L);
     this.writeBytes =  new AtomicLong(0L);
     this.bytesUsed = new AtomicLong(0L);
+    this.keyCount = new AtomicLong(0L);
+    this.maxSizeGB = size;
   }
 
   /**
@@ -86,9 +92,10 @@ public class ContainerData {
    * @param type - ContainerType
    * @param containerId - ContainerId
    * @param layOutVersion - Container layOutVersion
+   * @param size - Container maximum size
    */
   public ContainerData(ContainerType type, long containerId, int
-      layOutVersion) {
+      layOutVersion, int size) {
     this.containerType = type;
     this.containerId = containerId;
     this.layOutVersion = layOutVersion;
@@ -99,6 +106,8 @@ public class ContainerData {
     this.writeCount =  new AtomicLong(0L);
     this.writeBytes =  new AtomicLong(0L);
     this.bytesUsed = new AtomicLong(0L);
+    this.keyCount = new AtomicLong(0L);
+    this.maxSizeGB = size;
   }
 
   /**
@@ -131,6 +140,14 @@ public class ContainerData {
    */
   public synchronized void setState(ContainerLifeCycleState state) {
     this.state = state;
+  }
+
+  /**
+   * Return's maximum size of the container in GB.
+   * @return maxSizeGB
+   */
+  public int getMaxSizeGB() {
+    return maxSizeGB;
   }
 
   /**
@@ -309,5 +326,34 @@ public class ContainerData {
     return volume;
   }
 
+  /**
+   * Increments the number of keys in the container.
+   */
+  public void incrKeyCount() {
+    this.keyCount.incrementAndGet();
+  }
+
+  /**
+   * Decrements number of keys in the container.
+   */
+  public void decrKeyCount() {
+    this.keyCount.decrementAndGet();
+  }
+
+  /**
+   * Returns number of keys in the container.
+   * @return key count
+   */
+  public long getKeyCount() {
+    return this.keyCount.get();
+  }
+
+  /**
+   * Set's number of keys in the container.
+   * @param count
+   */
+  public void setKeyCount(long count) {
+    this.keyCount.set(count);
+  }
 
 }

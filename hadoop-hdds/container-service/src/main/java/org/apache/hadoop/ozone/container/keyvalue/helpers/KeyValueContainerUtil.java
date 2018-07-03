@@ -302,6 +302,7 @@ public final class KeyValueContainerUtil {
       }
     }).sum();
     containerData.setBytesUsed(bytesUsed);
+    containerData.setKeyCount(liveKeys.size());
   }
 
 }
