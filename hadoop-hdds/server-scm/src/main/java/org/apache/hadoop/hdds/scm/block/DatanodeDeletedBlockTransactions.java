@@ -18,7 +18,6 @@ package org.apache.hadoop.hdds.scm.block;
 
 import com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hdds.scm.container.Mapping;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
@@ -29,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 /**
  * A wrapper class to hold info about datanode and all deleted block
@@ -54,21 +54,22 @@ public class DatanodeDeletedBlockTransactions {
   }
 
   public void addTransaction(DeletedBlocksTransaction tx) throws IOException {
-    ContainerInfo info = null;
+    Pipeline pipeline = null;
     try {
-      info = mappingService.getContainer(tx.getContainerID());
+      pipeline = mappingService.getContainerWithPipeline(tx.getContainerID())
+          .getPipeline();
     } catch (IOException e) {
       SCMBlockDeletingService.LOG.warn("Got container info error.", e);
     }
 
-    if (info == null) {
+    if (pipeline == null) {
       SCMBlockDeletingService.LOG.warn(
           "Container {} not found, continue to process next",
           tx.getContainerID());
       return;
     }
 
-    for (DatanodeDetails dd : info.getPipeline().getMachines()) {
+    for (DatanodeDetails dd : pipeline.getMachines()) {
       UUID dnID = dd.getUuid();
       if (transactions.containsKey(dnID)) {
         List<DeletedBlocksTransaction> txs = transactions.get(dnID);

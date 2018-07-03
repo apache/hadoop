@@ -22,6 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -90,8 +92,10 @@ public class ContainerCloser {
    * lives.
    *
    * @param info - ContainerInfo.
+   * @param pipeline
    */
-  public void close(HddsProtos.SCMContainerInfo info) {
+  public void close(SCMContainerInfo info,
+      Pipeline pipeline) {
 
     if (commandIssued.containsKey(info.getContainerID())) {
       // We check if we issued a close command in last 3 * reportInterval secs.
@@ -126,13 +130,10 @@ public class ContainerCloser {
     // this queue can be emptied by a datanode after a close report is send
     // to SCM. In that case also, data node will ignore this command.
 
-    HddsProtos.Pipeline pipeline = info.getPipeline();
-    for (HddsProtos.DatanodeDetailsProto datanodeDetails :
-        pipeline.getMembersList()) {
-      nodeManager.addDatanodeCommand(
-          DatanodeDetails.getFromProtoBuf(datanodeDetails).getUuid(),
+    for (DatanodeDetails datanodeDetails : pipeline.getMachines()) {
+      nodeManager.addDatanodeCommand(datanodeDetails.getUuid(),
           new CloseContainerCommand(info.getContainerID(),
-              pipeline.getType()));
+              info.getReplicationType()));
     }
     if (!commandIssued.containsKey(info.getContainerID())) {
       commandIssued.put(info.getContainerID(),

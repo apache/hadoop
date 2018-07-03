@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.container;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
@@ -279,10 +280,10 @@ public class ContainerStateManager implements Closeable {
    * @param selector -- Pipeline selector class.
    * @param type -- Replication type.
    * @param replicationFactor - Replication replicationFactor.
-   * @return Container Info.
+   * @return ContainerWithPipeline
    * @throws IOException  on Failure.
    */
-  public ContainerInfo allocateContainer(PipelineSelector selector, HddsProtos
+  public ContainerWithPipeline allocateContainer(PipelineSelector selector, HddsProtos
       .ReplicationType type, HddsProtos.ReplicationFactor replicationFactor,
       String owner) throws IOException {
 
@@ -295,7 +296,7 @@ public class ContainerStateManager implements Closeable {
 
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(HddsProtos.LifeCycleState.ALLOCATED)
-        .setPipeline(pipeline)
+        .setPipelineName(pipeline.getPipelineName())
         // This is bytes allocated for blocks inside container, not the
         // container size
         .setAllocatedBytes(0)
@@ -305,11 +306,13 @@ public class ContainerStateManager implements Closeable {
         .setOwner(owner)
         .setContainerID(containerCount.incrementAndGet())
         .setDeleteTransactionId(0)
+        .setReplicationFactor(replicationFactor)
+        .setReplicationType(pipeline.getType())
         .build();
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
     LOG.trace("New container allocated: {}", containerInfo);
-    return containerInfo;
+    return new ContainerWithPipeline(containerInfo, pipeline);
   }
 
   /**
@@ -432,8 +435,8 @@ public class ContainerStateManager implements Closeable {
         containerInfo.updateLastUsedTime();
 
         ContainerState key = new ContainerState(owner,
-            containerInfo.getPipeline().getType(),
-            containerInfo.getPipeline().getFactor());
+            containerInfo.getReplicationType(),
+            containerInfo.getReplicationFactor());
         lastUsedMap.put(key, containerInfo.containerID());
         return containerInfo;
       }
@@ -458,6 +461,20 @@ public class ContainerStateManager implements Closeable {
   }
 
   /**
+   * Returns the containerInfo with pipeline for the given container id.
+   * @param selector -- Pipeline selector class.
+   * @param containerID id of the container
+   * @return ContainerInfo containerInfo
+   * @throws IOException
+   */
+  public ContainerWithPipeline getContainer(PipelineSelector selector,
+      ContainerID containerID) throws IOException {
+    ContainerInfo info = containers.getContainerInfo(containerID.getId());
+    Pipeline pipeline = selector.getPipeline(info.getPipelineName(), info.getReplicationType());
+    return new ContainerWithPipeline(info, pipeline);
+  }
+
+  /**
    * Returns the containerInfo for the given container id.
    * @param containerID id of the container
    * @return ContainerInfo containerInfo
@@ -466,6 +483,7 @@ public class ContainerStateManager implements Closeable {
   public ContainerInfo getContainer(ContainerID containerID) {
     return containers.getContainerInfo(containerID.getId());
   }
+
   @Override
   public void close() throws IOException {
   }

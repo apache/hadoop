@@ -23,8 +23,6 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -35,7 +33,6 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
@@ -112,9 +109,9 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -167,9 +164,9 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -220,9 +217,9 @@ public class TestCloseContainerByPipeline {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 3);
 
     GenericTestUtils.LogCapturer logCapturer =

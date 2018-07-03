@@ -52,7 +52,7 @@ message ContainerResponseProto {
     errorContainerMissing = 3;
   }
   required Error errorCode = 1;
-  required SCMContainerInfo containerInfo = 2;
+  required ContainerWithPipeline containerWithPipeline = 2;
   optional string errorMessage = 3;
 }
 
@@ -62,6 +62,14 @@ message GetContainerRequestProto {
 
 message GetContainerResponseProto {
   required SCMContainerInfo containerInfo = 1;
+}
+
+message GetContainerWithPipelineRequestProto {
+  required int64 containerID = 1;
+}
+
+message GetContainerWithPipelineResponseProto {
+  required ContainerWithPipeline containerWithPipeline = 1;
 }
 
 message SCMListContainerRequestProto {
@@ -170,6 +178,11 @@ service StorageContainerLocationProtocolService {
    * Returns the pipeline for a given container.
    */
   rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
+
+  /**
+   * Returns the pipeline for a given container.
+   */
+  rpc getContainerWithPipeline(GetContainerWithPipelineRequestProto) returns (GetContainerWithPipelineResponseProto);
 
   rpc listContainer(SCMListContainerRequestProto) returns (SCMListContainerResponseProto);
 

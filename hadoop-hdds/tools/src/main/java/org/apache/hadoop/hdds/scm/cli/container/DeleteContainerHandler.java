@@ -25,9 +25,9 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 
 import java.io.IOException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
 import static org.apache.hadoop.hdds.scm.cli.SCMCLI.CMD_WIDTH;
 import static org.apache.hadoop.hdds.scm.cli.SCMCLI.HELP_OP;
@@ -60,7 +60,7 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
 
     String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
 
-    ContainerInfo container = getScmClient().getContainer(
+    ContainerWithPipeline container = getScmClient().getContainerWithPipeline(
         Long.parseLong(containerID));
     if (container == null) {
       throw new IOException("Cannot delete an non-exist container "
@@ -68,8 +68,9 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
     }
 
     logOut("Deleting container : %s.", containerID);
-    getScmClient().deleteContainer(container.getContainerID(),
-        container.getPipeline(), cmd.hasOption(OPT_FORCE));
+    getScmClient()
+        .deleteContainer(container.getContainerInfo().getContainerID(),
+            container.getPipeline(), cmd.hasOption(OPT_FORCE));
     logOut("Container %s deleted.", containerID);
   }
 

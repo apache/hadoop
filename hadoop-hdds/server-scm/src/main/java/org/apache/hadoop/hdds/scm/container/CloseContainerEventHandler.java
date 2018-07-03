@@ -16,9 +16,11 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -54,22 +56,32 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
 
     LOG.info("Close container Event triggered for container : {}",
         containerID.getId());
-    ContainerStateManager stateManager = containerManager.getStateManager();
-    ContainerInfo info = stateManager.getContainer(containerID);
-    if (info == null) {
-      LOG.info("Container with id : {} does not exist", containerID.getId());
+    ContainerWithPipeline containerWithPipeline = null;
+    ContainerInfo info;
+    try {
+      containerWithPipeline = containerManager.getContainerWithPipeline(containerID.getId());
+      info = containerWithPipeline.getContainerInfo();
+      if (info == null) {
+        LOG.info("Failed to update the container state. Container with id : {} "
+            + "does not exist", containerID.getId());
+        return;
+      }
+    } catch (IOException e) {
+      LOG.info("Failed to update the container state. Container with id : {} "
+          + "does not exist", containerID.getId());
       return;
     }
+
     if (info.getState() == HddsProtos.LifeCycleState.OPEN) {
-      for (DatanodeDetails datanode : info.getPipeline().getMachines()) {
+      for (DatanodeDetails datanode : containerWithPipeline.getPipeline().getMachines()) {
         containerManager.getNodeManager().addDatanodeCommand(datanode.getUuid(),
             new CloseContainerCommand(containerID.getId(),
-                info.getPipeline().getType()));
+                info.getReplicationType()));
       }
       try {
         // Finalize event will make sure the state of the container transitions
         // from OPEN to CLOSING in containerStateManager.
-        stateManager
+        containerManager.getStateManager()
             .updateContainerState(info, HddsProtos.LifeCycleEvent.FINALIZE);
       } catch (SCMException ex) {
         LOG.error("Failed to update the container state for container : {}"

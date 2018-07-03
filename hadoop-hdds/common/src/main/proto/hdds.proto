@@ -132,7 +132,7 @@ enum LifeCycleEvent {
 message SCMContainerInfo {
     required int64 containerID = 1;
     required LifeCycleState state = 2;
-    required Pipeline pipeline = 3;
+    optional string pipelineName = 3;
     // This is not total size of container, but space allocated by SCM for
     // clients to write blocks
     required uint64 allocatedBytes = 4;
@@ -141,6 +141,13 @@ message SCMContainerInfo {
     optional int64 stateEnterTime = 7;
     required string owner = 8;
     optional int64 deleteTransactionId = 9;
+    required ReplicationFactor replicationFactor  = 10;
+    required ReplicationType replicationType  = 11;
+}
+
+message ContainerWithPipeline {
+  required SCMContainerInfo containerInfo = 1;
+  required Pipeline pipeline = 2;
 }
 
 message GetScmInfoRequestProto {

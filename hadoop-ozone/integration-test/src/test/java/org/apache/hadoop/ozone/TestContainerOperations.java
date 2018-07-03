@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.junit.AfterClass;
@@ -78,12 +77,12 @@ public class TestContainerOperations {
    */
   @Test
   public void testCreate() throws Exception {
-    ContainerInfo container = storageClient.createContainer(HddsProtos
+    ContainerWithPipeline container = storageClient.createContainer(HddsProtos
         .ReplicationType.STAND_ALONE, HddsProtos.ReplicationFactor
         .ONE, "OZONE");
-    assertEquals(container.getContainerID(),
-        storageClient.getContainer(container.getContainerID()).
-            getContainerID());
+    assertEquals(container.getContainerInfo().getContainerID(), storageClient
+        .getContainer(container.getContainerInfo().getContainerID())
+        .getContainerID());
   }
 
 }

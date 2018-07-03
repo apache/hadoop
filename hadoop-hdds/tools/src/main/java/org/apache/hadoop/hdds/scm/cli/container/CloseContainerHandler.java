@@ -24,9 +24,9 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 
 import java.io.IOException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
 /**
  * The handler of close container command.
@@ -51,15 +51,15 @@ public class CloseContainerHandler extends OzoneCommandHandler {
     }
     String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
 
-    ContainerInfo container = getScmClient().
-        getContainer(Long.parseLong(containerID));
+    ContainerWithPipeline container = getScmClient().
+        getContainerWithPipeline(Long.parseLong(containerID));
     if (container == null) {
       throw new IOException("Cannot close an non-exist container "
           + containerID);
     }
     logOut("Closing container : %s.", containerID);
-    getScmClient().closeContainer(container.getContainerID(),
-        container.getPipeline());
+    getScmClient()
+        .closeContainer(container.getContainerInfo().getContainerID());
     logOut("Container closed.");
   }
 

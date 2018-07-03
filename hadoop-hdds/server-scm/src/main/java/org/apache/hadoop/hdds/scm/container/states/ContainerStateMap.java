@@ -116,7 +116,8 @@ public class ContainerStateMap {
   public void addContainer(ContainerInfo info)
       throws SCMException {
     Preconditions.checkNotNull(info, "Container Info cannot be null");
-    Preconditions.checkNotNull(info.getPipeline(), "Pipeline cannot be null");
+    Preconditions.checkArgument(info.getReplicationFactor().getNumber() > 0,
+        "ExpectedReplicaCount should be greater than 0");
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
       ContainerID id = ContainerID.valueof(info.getContainerID());
@@ -129,8 +130,8 @@ public class ContainerStateMap {
 
       lifeCycleStateMap.insert(info.getState(), id);
       ownerMap.insert(info.getOwner(), id);
-      factorMap.insert(info.getPipeline().getFactor(), id);
-      typeMap.insert(info.getPipeline().getType(), id);
+      factorMap.insert(info.getReplicationFactor(), id);
+      typeMap.insert(info.getReplicationType(), id);
       LOG.trace("Created container with {} successfully.", id);
     }
   }

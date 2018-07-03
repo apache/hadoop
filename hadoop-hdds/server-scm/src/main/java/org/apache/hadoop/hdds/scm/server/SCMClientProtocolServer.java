@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
@@ -145,11 +146,12 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
-  public ContainerInfo allocateContainer(HddsProtos.ReplicationType
+  public ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType
       replicationType, HddsProtos.ReplicationFactor factor,
       String owner) throws IOException {
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
+
     return scm.getScmContainerManager()
         .allocateContainer(replicationType, factor, owner);
   }
@@ -160,6 +162,14 @@ public class SCMClientProtocolServer implements
     getScm().checkAdminAccess(remoteUser);
     return scm.getScmContainerManager()
         .getContainer(containerID);
+  }
+
+  @Override
+  public ContainerWithPipeline getContainerWithPipeline(long containerID) throws IOException {
+    String remoteUser = getRpcRemoteUsername();
+    getScm().checkAdminAccess(remoteUser);
+    return scm.getScmContainerManager()
+        .getContainerWithPipeline(containerID);
   }
 
   @Override
@@ -248,7 +258,7 @@ public class SCMClientProtocolServer implements
       throws IOException {
     // TODO: will be addressed in future patch.
     // This is needed only for debugging purposes to make sure cluster is
-    // working correctly. 
+    // working correctly.
     return null;
   }
 

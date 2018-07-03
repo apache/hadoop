@@ -21,8 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -271,17 +271,17 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       KsmKeyLocationInfo ksmKeyLocationInfo = keyLocationInfos.get(i);
       BlockID blockID = ksmKeyLocationInfo.getBlockID();
       long containerID = blockID.getContainerID();
-      ContainerInfo container =
-          storageContainerLocationClient.getContainer(containerID);
-      XceiverClientSpi xceiverClient =
-          xceiverClientManager.acquireClient(container.getPipeline(), containerID);
+      ContainerWithPipeline containerWithPipeline =
+          storageContainerLocationClient.getContainerWithPipeline(containerID);
+      XceiverClientSpi xceiverClient = xceiverClientManager
+          .acquireClient(containerWithPipeline.getPipeline(), containerID);
       boolean success = false;
       containerKey = ksmKeyLocationInfo.getLocalID();
       try {
         LOG.debug("get key accessing {} {}",
             containerID, containerKey);
         groupInputStream.streamOffset[i] = length;
-          ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
+        ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
             .containerKeyDataForRead(blockID);
         ContainerProtos.GetKeyResponseProto response = ContainerProtocolCalls
             .getKey(xceiverClient, containerKeyData, requestId);
@@ -292,7 +292,8 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
         }
         success = true;
         ChunkInputStream inputStream = new ChunkInputStream(
-            ksmKeyLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
+            ksmKeyLocationInfo.getBlockID(), xceiverClientManager,
+            xceiverClient,
             chunks, requestId);
         groupInputStream.addStream(inputStream,
             ksmKeyLocationInfo.getLength());

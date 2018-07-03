@@ -20,7 +20,10 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
@@ -95,7 +98,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
+  public ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, String owner) throws IOException {
 
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
@@ -114,7 +117,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       throw new IOException(response.hasErrorMessage() ?
           response.getErrorMessage() : "Allocate container failed.");
     }
-    return ContainerInfo.fromProtobuf(response.getContainerInfo());
+    return ContainerWithPipeline.fromProtobuf(response.getContainerWithPipeline());
   }
 
   public ContainerInfo getContainer(long containerID) throws IOException {
@@ -128,6 +131,25 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       GetContainerResponseProto response =
           rpcProxy.getContainer(NULL_RPC_CONTROLLER, request);
       return ContainerInfo.fromProtobuf(response.getContainerInfo());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public ContainerWithPipeline getContainerWithPipeline(long containerID) throws IOException {
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative");
+    GetContainerWithPipelineRequestProto request = GetContainerWithPipelineRequestProto
+        .newBuilder()
+        .setContainerID(containerID)
+        .build();
+    try {
+      GetContainerWithPipelineResponseProto response =
+          rpcProxy.getContainerWithPipeline(NULL_RPC_CONTROLLER, request);
+      return ContainerWithPipeline.fromProtobuf(response.getContainerWithPipeline());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -97,7 +97,7 @@ public class TestCloseContainerEventHandler {
         new ContainerID(id));
     eventQueue.processAll(1000);
     Assert.assertTrue(logCapturer.getOutput()
-        .contains("Container with id : " + id + " does not exist"));
+        .contains("Failed to update the container state"));
   }
 
   @Test
@@ -105,11 +105,12 @@ public class TestCloseContainerEventHandler {
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(CloseContainerEventHandler.LOG);
-    ContainerInfo info = mapping
+    ContainerWithPipeline containerWithPipeline = mapping
         .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
             HddsProtos.ReplicationFactor.ONE, "ozone");
-    ContainerID id = new ContainerID(info.getContainerID());
-    DatanodeDetails datanode = info.getPipeline().getLeader();
+    ContainerID id = new ContainerID(
+        containerWithPipeline.getContainerInfo().getContainerID());
+    DatanodeDetails datanode = containerWithPipeline.getPipeline().getLeader();
     int closeCount = nodeManager.getCommandCount(datanode);
     eventQueue.fireEvent(CloseContainerEventHandler.CLOSE_CONTAINER_EVENT, id);
     eventQueue.processAll(1000);
@@ -125,7 +126,8 @@ public class TestCloseContainerEventHandler {
     mapping.updateContainerState(id.getId(), CREATE);
     mapping.updateContainerState(id.getId(), CREATED);
     eventQueue.fireEvent(CloseContainerEventHandler.CLOSE_CONTAINER_EVENT,
-        new ContainerID(info.getContainerID()));
+        new ContainerID(
+            containerWithPipeline.getContainerInfo().getContainerID()));
     eventQueue.processAll(1000);
     Assert.assertEquals(closeCount + 1, nodeManager.getCommandCount(datanode));
     Assert.assertEquals(HddsProtos.LifeCycleState.CLOSING,
@@ -137,20 +139,23 @@ public class TestCloseContainerEventHandler {
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(CloseContainerEventHandler.LOG);
-    ContainerInfo info = mapping
+    ContainerWithPipeline containerWithPipeline = mapping
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, "ozone");
-    ContainerID id = new ContainerID(info.getContainerID());
+    ContainerID id = new ContainerID(
+        containerWithPipeline.getContainerInfo().getContainerID());
     int[] closeCount = new int[3];
     eventQueue.fireEvent(CloseContainerEventHandler.CLOSE_CONTAINER_EVENT, id);
     eventQueue.processAll(1000);
     int i = 0;
-    for (DatanodeDetails details : info.getPipeline().getMachines()) {
+    for (DatanodeDetails details : containerWithPipeline.getPipeline()
+        .getMachines()) {
       closeCount[i] = nodeManager.getCommandCount(details);
       i++;
     }
     i = 0;
-    for (DatanodeDetails details : info.getPipeline().getMachines()) {
+    for (DatanodeDetails details : containerWithPipeline.getPipeline()
+        .getMachines()) {
       Assert.assertEquals(closeCount[i], nodeManager.getCommandCount(details));
       i++;
     }
@@ -161,12 +166,12 @@ public class TestCloseContainerEventHandler {
     //Execute these state transitions so that we can close the container.
     mapping.updateContainerState(id.getId(), CREATE);
     mapping.updateContainerState(id.getId(), CREATED);
-    eventQueue.fireEvent(CloseContainerEventHandler.CLOSE_CONTAINER_EVENT,
-        new ContainerID(info.getContainerID()));
+    eventQueue.fireEvent(CloseContainerEventHandler.CLOSE_CONTAINER_EVENT, id);
     eventQueue.processAll(1000);
     i = 0;
     // Make sure close is queued for each datanode on the pipeline
-    for (DatanodeDetails details : info.getPipeline().getMachines()) {
+    for (DatanodeDetails details : containerWithPipeline.getPipeline()
+        .getMachines()) {
       Assert.assertEquals(closeCount[i] + 1,
           nodeManager.getCommandCount(details));
       Assert.assertEquals(HddsProtos.LifeCycleState.CLOSING,

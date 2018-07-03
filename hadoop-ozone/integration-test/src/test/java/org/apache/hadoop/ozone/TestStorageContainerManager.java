@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -131,7 +131,7 @@ public class TestStorageContainerManager {
       }
 
       try {
-        ContainerInfo container2 = mockClientServer
+        ContainerWithPipeline container2 = mockClientServer
             .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE,  "OZONE");
         if (expectPermissionDenied) {
@@ -144,7 +144,7 @@ public class TestStorageContainerManager {
       }
 
       try {
-        ContainerInfo container3 = mockClientServer
+        ContainerWithPipeline container3 = mockClientServer
             .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, "OZONE");
         if (expectPermissionDenied) {

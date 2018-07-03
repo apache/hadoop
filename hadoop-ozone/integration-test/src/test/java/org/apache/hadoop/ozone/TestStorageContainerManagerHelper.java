@@ -23,7 +23,7 @@ import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -158,9 +158,11 @@ public class TestStorageContainerManagerHelper {
 
   private MetadataStore getContainerMetadata(Long containerID)
       throws IOException {
-    ContainerInfo container = cluster.getStorageContainerManager()
-        .getClientProtocolServer().getContainer(containerID);
-    DatanodeDetails leadDN = container.getPipeline().getLeader();
+    ContainerWithPipeline containerWithPipeline = cluster
+        .getStorageContainerManager().getClientProtocolServer()
+        .getContainerWithPipeline(containerID);
+
+    DatanodeDetails leadDN = containerWithPipeline.getPipeline().getLeader();
     OzoneContainer containerServer =
         getContainerServerByDatanodeUuid(leadDN.getUuidString());
     ContainerData containerData = containerServer.getContainerManager()

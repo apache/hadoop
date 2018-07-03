@@ -390,8 +390,8 @@ public class TestOzoneRpcClient {
         keyInfo.getLatestVersionLocations().getLocationList()) {
       ContainerInfo container =
           storageContainerLocationClient.getContainer(info.getContainerID());
-      if ((container.getPipeline().getFactor() != replicationFactor) ||
-          (container.getPipeline().getType() != replicationType)) {
+      if (!container.getReplicationFactor().equals(replicationFactor) || (
+          container.getReplicationType() != replicationType)) {
         return false;
       }
     }

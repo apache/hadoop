@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.client;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -87,16 +88,17 @@ public class ContainerOperationClient implements ScmClient {
    * @inheritDoc
    */
   @Override
-  public ContainerInfo createContainer(String owner)
+  public ContainerWithPipeline createContainer(String owner)
       throws IOException {
     XceiverClientSpi client = null;
     try {
-      ContainerInfo container =
+      ContainerWithPipeline containerWithPipeline =
           storageContainerLocationClient.allocateContainer(
               xceiverClientManager.getType(),
               xceiverClientManager.getFactor(), owner);
-      Pipeline pipeline = container.getPipeline();
-      client = xceiverClientManager.acquireClient(pipeline, container.getContainerID());
+      Pipeline pipeline = containerWithPipeline.getPipeline();
+      client = xceiverClientManager.acquireClient(pipeline,
+          containerWithPipeline.getContainerInfo().getContainerID());
 
       // Allocated State means that SCM has allocated this pipeline in its
       // namespace. The client needs to create the pipeline on the machines
@@ -106,8 +108,9 @@ public class ContainerOperationClient implements ScmClient {
       if (pipeline.getLifeCycleState() == ALLOCATED) {
         createPipeline(client, pipeline);
       }
-      createContainer(client, container.getContainerID());
-      return container;
+      createContainer(client,
+          containerWithPipeline.getContainerInfo().getContainerID());
+      return containerWithPipeline;
     } finally {
       if (client != null) {
         xceiverClientManager.releaseClient(client);
@@ -197,17 +200,17 @@ public class ContainerOperationClient implements ScmClient {
    * @inheritDoc
    */
   @Override
-  public ContainerInfo createContainer(HddsProtos.ReplicationType type,
+  public ContainerWithPipeline createContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, String owner) throws IOException {
     XceiverClientSpi client = null;
     try {
       // allocate container on SCM.
-      ContainerInfo container =
+      ContainerWithPipeline containerWithPipeline =
           storageContainerLocationClient.allocateContainer(type, factor,
               owner);
-      Pipeline pipeline = container.getPipeline();
+      Pipeline pipeline = containerWithPipeline.getPipeline();
       client = xceiverClientManager.acquireClient(pipeline,
-          container.getContainerID());
+          containerWithPipeline.getContainerInfo().getContainerID());
 
       // Allocated State means that SCM has allocated this pipeline in its
       // namespace. The client needs to create the pipeline on the machines
@@ -217,9 +220,10 @@ public class ContainerOperationClient implements ScmClient {
       }
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline,
-          container.getContainerID());
-      createContainer(client, container.getContainerID());
-      return container;
+          containerWithPipeline.getContainerInfo().getContainerID());
+      createContainer(client,
+          containerWithPipeline.getContainerInfo().getContainerID());
+      return containerWithPipeline;
     } finally {
       if (client != null) {
         xceiverClientManager.releaseClient(client);
@@ -256,24 +260,27 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
-   * Delete the container, this will release any resource it uses.
-   * @param pipeline - Pipeline that represents the container.
-   * @param force - True to forcibly delete the container.
+   * Deletes an existing container.
+   *
+   * @param containerId - ID of the container.
+   * @param pipeline    - Pipeline that represents the container.
+   * @param force       - true to forcibly delete the container.
    * @throws IOException
    */
   @Override
-  public void deleteContainer(long containerID, Pipeline pipeline, boolean force)
-      throws IOException {
+  public void deleteContainer(long containerId, Pipeline pipeline,
+      boolean force) throws IOException {
     XceiverClientSpi client = null;
     try {
-      client = xceiverClientManager.acquireClient(pipeline, containerID);
+      client = xceiverClientManager.acquireClient(pipeline, containerId);
       String traceID = UUID.randomUUID().toString();
-      ContainerProtocolCalls.deleteContainer(client, containerID, force, traceID);
+      ContainerProtocolCalls
+          .deleteContainer(client, containerId, force, traceID);
       storageContainerLocationClient
-          .deleteContainer(containerID);
+          .deleteContainer(containerId);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleted container {}, leader: {}, machines: {} ",
-            containerID,
+            containerId,
             pipeline.getLeader(),
             pipeline.getMachines());
       }
@@ -282,6 +289,19 @@ public class ContainerOperationClient implements ScmClient {
         xceiverClientManager.releaseClient(client);
       }
     }
+  }
+
+  /**
+   * Delete the container, this will release any resource it uses.
+   * @param containerID - containerID.
+   * @param force - True to forcibly delete the container.
+   * @throws IOException
+   */
+  @Override
+  public void deleteContainer(long containerID, boolean force)
+      throws IOException {
+    ContainerWithPipeline info = getContainerWithPipeline(containerID);
+    deleteContainer(containerID, info.getPipeline(), force);
   }
 
   /**
@@ -297,9 +317,9 @@ public class ContainerOperationClient implements ScmClient {
   /**
    * Get meta data from an existing container.
    *
-   * @param pipeline - pipeline that represents the container.
-   * @return ContainerInfo - a message of protobuf which has basic info
-   * of a container.
+   * @param containerID - ID of the container.
+   * @param pipeline    - Pipeline where the container is located.
+   * @return ContainerInfo
    * @throws IOException
    */
   @Override
@@ -326,6 +346,19 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   /**
+   * Get meta data from an existing container.
+   * @param containerID - ID of the container.
+   * @return ContainerInfo - a message of protobuf which has basic info
+   * of a container.
+   * @throws IOException
+   */
+  @Override
+  public ContainerData readContainer(long containerID) throws IOException {
+    ContainerWithPipeline info = getContainerWithPipeline(containerID);
+    return readContainer(containerID, info.getPipeline());
+  }
+
+  /**
    * Given an id, return the pipeline associated with the container.
    * @param containerId - String Container ID
    * @return Pipeline of the existing container, corresponding to the given id.
@@ -335,6 +368,19 @@ public class ContainerOperationClient implements ScmClient {
   public ContainerInfo getContainer(long containerId) throws
       IOException {
     return storageContainerLocationClient.getContainer(containerId);
+  }
+
+  /**
+   * Gets a container by Name -- Throws if the container does not exist.
+   *
+   * @param containerId - Container ID
+   * @return ContainerWithPipeline
+   * @throws IOException
+   */
+  @Override
+  public ContainerWithPipeline getContainerWithPipeline(long containerId)
+      throws IOException {
+    return storageContainerLocationClient.getContainerWithPipeline(containerId);
   }
 
   /**
@@ -389,6 +435,19 @@ public class ContainerOperationClient implements ScmClient {
         xceiverClientManager.releaseClient(client);
       }
     }
+  }
+
+  /**
+   * Close a container.
+   *
+   * @throws IOException
+   */
+  @Override
+  public void closeContainer(long containerId)
+      throws IOException {
+    ContainerWithPipeline info = getContainerWithPipeline(containerId);
+    Pipeline pipeline = info.getPipeline();
+    closeContainer(containerId, pipeline);
   }
 
   /**

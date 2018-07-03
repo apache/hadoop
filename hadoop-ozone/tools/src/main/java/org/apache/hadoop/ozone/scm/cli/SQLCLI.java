@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import com.google.protobuf.ByteString;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -37,7 +38,6 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyI
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -86,12 +86,12 @@ public class SQLCLI  extends Configured implements Tool {
   private static final String CREATE_CONTAINER_INFO =
       "CREATE TABLE containerInfo (" +
           "containerID LONG PRIMARY KEY NOT NULL, " +
-          "leaderUUID TEXT NOT NULL)";
-  private static final String CREATE_CONTAINER_MEMBERS =
-      "CREATE TABLE containerMembers (" +
-          "containerName TEXT NOT NULL, " +
-          "datanodeUUID TEXT NOT NULL," +
-          "PRIMARY KEY(containerName, datanodeUUID));";
+          "replicationType TEXT NOT NULL," +
+          "replicationFactor TEXT NOT NULL," +
+          "usedBytes LONG NOT NULL," +
+          "allocatedBytes LONG NOT NULL," +
+          "owner TEXT," +
+          "numberOfKeys LONG)";
   private static final String CREATE_DATANODE_INFO =
       "CREATE TABLE datanodeInfo (" +
           "hostName TEXT NOT NULL, " +
@@ -99,8 +99,10 @@ public class SQLCLI  extends Configured implements Tool {
           "ipAddress TEXT, " +
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
-      "INSERT INTO containerInfo (containerID, leaderUUID) " +
-          "VALUES (\"%d\", \"%s\")";
+      "INSERT INTO containerInfo (containerID, replicationType, "
+          + "replicationFactor, usedBytes, allocatedBytes, owner, "
+          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", \"%d\", "
+          + "\"%s\", \"%d\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
           "containerPort) " +
@@ -469,10 +471,7 @@ public class SQLCLI  extends Configured implements Tool {
         .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_CONTAINER_INFO);
-      executeSQL(conn, CREATE_CONTAINER_MEMBERS);
-      executeSQL(conn, CREATE_DATANODE_INFO);
 
-      HashSet<String> uuidChecked = new HashSet<>();
       dbStore.iterate(null, (key, value) -> {
         long containerID = Longs.fromByteArray(key);
         ContainerInfo containerInfo = null;
@@ -481,8 +480,7 @@ public class SQLCLI  extends Configured implements Tool {
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema
-          insertContainerDB(conn, containerID,
-              containerInfo.getPipeline().getProtobufMessage(), uuidChecked);
+          insertContainerDB(conn, containerInfo, containerID);
           return true;
         } catch (SQLException e) {
           throw new IOException(e);
@@ -494,38 +492,23 @@ public class SQLCLI  extends Configured implements Tool {
   /**
    * Insert into the sqlite DB of container.db.
    * @param conn the connection to the sqlite DB.
-   * @param containerID the id of the container.
-   * @param pipeline the actual container pipeline object.
-   * @param uuidChecked the uuid that has been already inserted.
+   * @param containerInfo
+   * @param containerID
    * @throws SQLException throws exception.
    */
-  private void insertContainerDB(Connection conn, long containerID,
-      Pipeline pipeline, Set<String> uuidChecked) throws SQLException {
+  private void insertContainerDB(Connection conn, ContainerInfo containerInfo,
+      long containerID) throws SQLException {
     LOG.info("Insert to sql container db, for container {}", containerID);
     String insertContainerInfo = String.format(
         INSERT_CONTAINER_INFO, containerID,
-        pipeline.getLeaderID());
-    executeSQL(conn, insertContainerInfo);
+        containerInfo.getReplicationType(),
+        containerInfo.getReplicationFactor(),
+        containerInfo.getUsedBytes(),
+        containerInfo.getAllocatedBytes(),
+        containerInfo.getOwner(),
+        containerInfo.getNumberOfKeys());
 
-    for (HddsProtos.DatanodeDetailsProto dd :
-        pipeline.getMembersList()) {
-      String uuid = dd.getUuid();
-      if (!uuidChecked.contains(uuid)) {
-        // we may also not use this checked set, but catch exception instead
-        // but this seems a bit cleaner.
-        String ipAddr = dd.getIpAddress();
-        String hostName = dd.getHostName();
-        int containerPort = DatanodeDetails.getFromProtoBuf(dd)
-            .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
-        String insertMachineInfo = String.format(
-            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, containerPort);
-        executeSQL(conn, insertMachineInfo);
-        uuidChecked.add(uuid);
-      }
-      String insertContainerMembers = String.format(
-          INSERT_CONTAINER_MEMBERS, containerID, uuid);
-      executeSQL(conn, insertContainerMembers);
-    }
+    executeSQL(conn, insertContainerInfo);
     LOG.info("Insertion completed.");
   }
 

@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -163,10 +164,12 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private void checkKeyLocationInfo(KsmKeyLocationInfo subKeyInfo)
       throws IOException {
-    ContainerInfo container = scmClient.getContainer(
-        subKeyInfo.getContainerID());
+    ContainerWithPipeline containerWithPipeline = scmClient
+        .getContainerWithPipeline(subKeyInfo.getContainerID());
+    ContainerInfo container = containerWithPipeline.getContainerInfo();
+
     XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(container.getPipeline(),
+        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline(),
             container.getContainerID());
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
