@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
@@ -284,6 +285,23 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     Path testPath = path("testPruneCommandConf");
     testPruneCommand(getConfiguration(), testPath,
         "prune", testPath.toString());
+  }
+
+  @Test
+  public void testSetCapacityFailFast() throws Exception{
+    Configuration conf = getConfiguration();
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, getFileSystem().getBucket());
+
+    S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
+    String[] argsR = new String[]{cmdR.getName(), "-read", "0", "s3a://bucket"};
+    intercept(IllegalArgumentException.class,
+        S3GuardTool.SetCapacity.READ_CAP_INVALID, () -> cmdR.run(argsR));
+
+    S3GuardTool.SetCapacity cmdW = new S3GuardTool.SetCapacity(conf);
+    String[] argsW = new String[]{cmdW.getName(), "-write", "0",
+        "s3a://bucket"};
+    intercept(IllegalArgumentException.class,
+        S3GuardTool.SetCapacity.WRITE_CAP_INVALID, () -> cmdW.run(argsW));
   }
 
   @Test
