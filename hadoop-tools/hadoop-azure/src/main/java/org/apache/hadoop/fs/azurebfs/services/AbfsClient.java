@@ -28,7 +28,6 @@ import java.util.Locale;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
@@ -45,17 +44,17 @@ public class AbfsClient {
   private final String xMsVersion = "2018-03-28";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
-  private final ConfigurationService configurationService;
+  private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-                    final ConfigurationService configurationService,
+                    final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(AbfsHttpConstants.FORWARD_SLASH) + 1);
-    this.configurationService = configurationService;
+    this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = exponentialRetryPolicy;
     this.userAgent = initializeUserAgent();
   }

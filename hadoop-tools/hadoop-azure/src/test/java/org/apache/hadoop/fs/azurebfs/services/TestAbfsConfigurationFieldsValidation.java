@@ -47,8 +47,8 @@ import org.junit.Test;
 /**
  * Test ConfigurationServiceFieldsValidation.
  */
-public class TestConfigurationServiceFieldsValidation  {
-  private ConfigurationServiceImpl configService;
+public class TestAbfsConfigurationFieldsValidation {
+  private AbfsConfiguration abfsConfiguration;
 
   private static final String INT_KEY= "intKey";
   private static final String LONG_KEY= "longKey";
@@ -88,7 +88,7 @@ public class TestConfigurationServiceFieldsValidation  {
   DefaultValue = false)
   private boolean boolField;
 
-  public TestConfigurationServiceFieldsValidation() throws Exception {
+  public TestAbfsConfigurationFieldsValidation() throws Exception {
     super();
     Base64 base64 = new Base64();
     this.encodedString = new String(base64.encode("base64Value".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
@@ -101,7 +101,7 @@ public class TestConfigurationServiceFieldsValidation  {
     configuration.set(BASE64_KEY, encodedString);
     configuration.set(BOOLEAN_KEY, "true");
     configuration.set(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "testaccount1.blob.core.windows.net", this.encodedAccountKey);
-    configService = new ConfigurationServiceImpl(configuration);
+    abfsConfiguration = new AbfsConfiguration(configuration);
   }
 
   @Test
@@ -110,15 +110,15 @@ public class TestConfigurationServiceFieldsValidation  {
     for (Field field : fields) {
       field.setAccessible(true);
       if (field.isAnnotationPresent(IntegerConfigurationValidatorAnnotation.class)) {
-        assertEquals(TEST_INT, configService.validateInt(field));
+        assertEquals(TEST_INT, abfsConfiguration.validateInt(field));
       } else if (field.isAnnotationPresent(LongConfigurationValidatorAnnotation.class)) {
-        assertEquals(DEFAULT_LONG, configService.validateLong(field));
+        assertEquals(DEFAULT_LONG, abfsConfiguration.validateLong(field));
       } else if (field.isAnnotationPresent(StringConfigurationValidatorAnnotation.class)) {
-        assertEquals("stringValue", configService.validateString(field));
+        assertEquals("stringValue", abfsConfiguration.validateString(field));
       } else if (field.isAnnotationPresent(Base64StringConfigurationValidatorAnnotation.class)) {
-        assertEquals(this.encodedString, configService.validateBase64String(field));
+        assertEquals(this.encodedString, abfsConfiguration.validateBase64String(field));
       } else if (field.isAnnotationPresent(BooleanConfigurationValidatorAnnotation.class)) {
-        assertEquals(true, configService.validateBoolean(field));
+        assertEquals(true, abfsConfiguration.validateBoolean(field));
       }
     }
   }
@@ -126,24 +126,24 @@ public class TestConfigurationServiceFieldsValidation  {
   @Test
   public void testConfigServiceImplAnnotatedFieldsInitialized() throws Exception {
     // test that all the ConfigurationServiceImpl annotated fields have been initialized in the constructor
-    assertEquals(DEFAULT_WRITE_BUFFER_SIZE, configService.getWriteBufferSize());
-    assertEquals(DEFAULT_READ_BUFFER_SIZE, configService.getReadBufferSize());
-    assertEquals(DEFAULT_MIN_BACKOFF_INTERVAL, configService.getMinBackoffIntervalMilliseconds());
-    assertEquals(DEFAULT_MAX_BACKOFF_INTERVAL, configService.getMaxBackoffIntervalMilliseconds());
-    assertEquals(DEFAULT_BACKOFF_INTERVAL, configService.getBackoffIntervalMilliseconds());
-    assertEquals(DEFAULT_MAX_RETRY_ATTEMPTS, configService.getMaxIoRetries());
-    assertEquals(MAX_AZURE_BLOCK_SIZE, configService.getAzureBlockSize());
-    assertEquals(AZURE_BLOCK_LOCATION_HOST_DEFAULT, configService.getAzureBlockLocationHost());
+    assertEquals(DEFAULT_WRITE_BUFFER_SIZE, abfsConfiguration.getWriteBufferSize());
+    assertEquals(DEFAULT_READ_BUFFER_SIZE, abfsConfiguration.getReadBufferSize());
+    assertEquals(DEFAULT_MIN_BACKOFF_INTERVAL, abfsConfiguration.getMinBackoffIntervalMilliseconds());
+    assertEquals(DEFAULT_MAX_BACKOFF_INTERVAL, abfsConfiguration.getMaxBackoffIntervalMilliseconds());
+    assertEquals(DEFAULT_BACKOFF_INTERVAL, abfsConfiguration.getBackoffIntervalMilliseconds());
+    assertEquals(DEFAULT_MAX_RETRY_ATTEMPTS, abfsConfiguration.getMaxIoRetries());
+    assertEquals(MAX_AZURE_BLOCK_SIZE, abfsConfiguration.getAzureBlockSize());
+    assertEquals(AZURE_BLOCK_LOCATION_HOST_DEFAULT, abfsConfiguration.getAzureBlockLocationHost());
   }
 
   @Test
   public void testGetAccountKey() throws Exception {
-    String accountKey = configService.getStorageAccountKey("testaccount1.blob.core.windows.net");
+    String accountKey = abfsConfiguration.getStorageAccountKey("testaccount1.blob.core.windows.net");
     assertEquals(this.encodedAccountKey, accountKey);
   }
 
   @Test (expected = ConfigurationPropertyNotFoundException.class)
   public void testGetAccountKeyWithNonExistingAccountName() throws Exception {
-    configService.getStorageAccountKey("bogusAccountName");
+    abfsConfiguration.getStorageAccountKey("bogusAccountName");
   }
 }

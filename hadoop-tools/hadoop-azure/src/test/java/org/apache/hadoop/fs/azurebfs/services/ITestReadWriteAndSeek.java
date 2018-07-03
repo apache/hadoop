@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.DependencyInjectedTest;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
 
 import org.junit.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
@@ -52,12 +51,11 @@ public class ITestReadWriteAndSeek extends DependencyInjectedTest {
 
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    final ConfigurationServiceImpl configurationservice = (ConfigurationServiceImpl) AbfsServiceProviderImpl.instance().get(ConfigurationService.class);
+    final AbfsConfiguration abfsConfiguration = new AbfsConfiguration(this.getConfiguration());
 
     fs.create(TEST_PATH);
-
-    configurationservice.setWriteBufferSize(bufferSize);
-    configurationservice.setReadBufferSize(bufferSize);
+    abfsConfiguration.setWriteBufferSize(bufferSize);
+    abfsConfiguration.setReadBufferSize(bufferSize);
 
     final FSDataOutputStream stream = fs.create(TEST_PATH);
 

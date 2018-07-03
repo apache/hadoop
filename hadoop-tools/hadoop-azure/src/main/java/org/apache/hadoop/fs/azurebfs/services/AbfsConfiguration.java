@@ -22,8 +22,6 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,17 +35,18 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
 import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 
-@Singleton
+/**
+ * Configuration for Azure Blob FileSystem.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class ConfigurationServiceImpl implements ConfigurationService {
+public class AbfsConfiguration{
   private final Configuration configuration;
   private final boolean isSecure;
 
@@ -118,8 +117,7 @@ class ConfigurationServiceImpl implements ConfigurationService {
 
   private Map<String, String> storageAccountKeys;
 
-  @Inject
-  ConfigurationServiceImpl(final Configuration configuration) throws IllegalAccessException, InvalidConfigurationValueException {
+  public AbfsConfiguration(final Configuration configuration) throws IllegalAccessException, InvalidConfigurationValueException {
     this.configuration = configuration;
     this.isSecure = this.configuration.getBoolean(ConfigurationKeys.FS_AZURE_SECURE_MODE, false);
 
@@ -141,17 +139,14 @@ class ConfigurationServiceImpl implements ConfigurationService {
     }
   }
 
-  @Override
   public boolean isEmulator() {
     return this.getConfiguration().getBoolean(ConfigurationKeys.FS_AZURE_EMULATOR_ENABLED, false);
   }
 
-  @Override
   public boolean isSecureMode() {
     return this.isSecure;
   }
 
-  @Override
   public String getStorageAccountKey(final String accountName) throws ConfigurationPropertyNotFoundException {
     String accountKey = this.storageAccountKeys.get(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + accountName);
     if (accountKey == null) {
@@ -161,77 +156,62 @@ class ConfigurationServiceImpl implements ConfigurationService {
     return accountKey;
   }
 
-  @Override
   public Configuration getConfiguration() {
     return this.configuration;
   }
 
-  @Override
   public int getWriteBufferSize() {
     return this.writeBufferSize;
   }
 
-  @Override
   public int getReadBufferSize() {
     return this.readBufferSize;
   }
 
-  @Override
   public int getMinBackoffIntervalMilliseconds() {
     return this.minBackoffInterval;
   }
 
-  @Override
   public int getMaxBackoffIntervalMilliseconds() {
     return this.maxBackoffInterval;
   }
 
-  @Override
   public int getBackoffIntervalMilliseconds() {
     return this.backoffInterval;
   }
 
-  @Override
   public int getMaxIoRetries() {
     return this.maxIoRetries;
   }
 
-  @Override
   public long getAzureBlockSize() {
     return this.azureBlockSize;
   }
 
-  @Override
   public String getAzureBlockLocationHost() {
     return this.azureBlockLocationHost;
   }
 
-  @Override
   public int getMaxConcurrentWriteThreads() {
     return this.maxConcurrentWriteThreads;
   }
 
-  @Override
   public int getMaxConcurrentReadThreads() {
     return this.maxConcurrentReadThreads;
   }
 
-  @Override
   public boolean getTolerateOobAppends() {
     return this.tolerateOobAppends;
   }
 
-  @Override
   public String getAzureAtomicRenameDirs() {
     return this.azureAtomicDirs;
   }
 
-  @Override
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     return this.createRemoteFileSystemDuringInitialization;
   }
 
-  @Override
   public int getReadAheadQueueDepth() {
     return this.readAheadQueueDepth;
   }

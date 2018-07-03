@@ -39,10 +39,8 @@ import com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threadly.util.ExceptionUtils;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsServiceProviderImpl;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,10 +56,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
-import org.apache.hadoop.fs.azurebfs.contracts.services.TracingService;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsHttpService;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsServiceProvider;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
@@ -70,7 +64,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.apache.htrace.core.TraceScope;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -85,10 +78,7 @@ public class AzureBlobFileSystem extends FileSystem {
   private UserGroupInformation userGroupInformation;
   private String user;
   private String primaryUserGroup;
-  private AbfsServiceProvider abfsServiceProvider;
-  private TracingService tracingService;
-  private AbfsHttpService abfsHttpService;
-  private ConfigurationService configurationService;
+  private AzureBlobFileSystemStore abfsStore;
   private boolean isClosed;
 
   @Override
@@ -96,17 +86,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     uri = ensureAuthority(uri, configuration);
     super.initialize(uri, configuration);
-
     setConf(configuration);
-
-    try {
-      this.abfsServiceProvider = AbfsServiceProviderImpl.create(configuration);
-      this.tracingService = abfsServiceProvider.get(TracingService.class);
-      this.abfsHttpService = abfsServiceProvider.get(AbfsHttpService.class);
-      this.configurationService = abfsServiceProvider.get(ConfigurationService.class);
-    } catch (AzureBlobFileSystemException exception) {
-      throw new IOException(exception);
-    }
 
     this.LOG.debug(
         "Initializing AzureBlobFileSystem for {}", uri);
@@ -115,13 +95,14 @@ public class AzureBlobFileSystem extends FileSystem {
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.user = userGroupInformation.getUserName();
     this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecure(), configuration, userGroupInformation);
 
     this.LOG.debug(
         "Initializing NativeAzureFileSystem for {}", uri);
 
     this.setWorkingDirectory(this.getHomeDirectory());
 
-    if (this.configurationService.getCreateRemoteFileSystemDuringInitialization()) {
+    if (abfsStore.getAbfsConfiguration().getCreateRemoteFileSystemDuringInitialization()) {
       this.createFileSystem();
     }
 
@@ -143,7 +124,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.open path: {} bufferSize: {}", path.toString(), bufferSize);
 
     try {
-      InputStream inputStream = abfsHttpService.openFileForRead(this, makeQualified(path), statistics);
+      InputStream inputStream = abfsStore.openFileForRead(makeQualified(path), statistics);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
@@ -162,7 +143,7 @@ public class AzureBlobFileSystem extends FileSystem {
         blockSize);
 
     try {
-      OutputStream outputStream = abfsHttpService.createFile(this, makeQualified(f), overwrite);
+      OutputStream outputStream = abfsStore.createFile(makeQualified(f), overwrite);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -221,7 +202,7 @@ public class AzureBlobFileSystem extends FileSystem {
         bufferSize);
 
     try {
-      OutputStream outputStream = abfsHttpService.openFileForWrite(this, makeQualified(f), false);
+      OutputStream outputStream = abfsStore.openFileForWrite(makeQualified(f), false);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -251,7 +232,7 @@ public class AzureBlobFileSystem extends FileSystem {
         adjustedDst = new Path(dst, sourceFileName);
       }
 
-      abfsHttpService.rename(this, makeQualified(src), makeQualified(adjustedDst));
+      abfsStore.rename(makeQualified(src), makeQualified(adjustedDst));
       return true;
     } catch(AzureBlobFileSystemException ex) {
       checkException(
@@ -281,7 +262,7 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     try {
-      abfsHttpService.delete(this, makeQualified(f), recursive);
+      abfsStore.delete(makeQualified(f), recursive);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_NOT_FOUND);
@@ -296,7 +277,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
 
     try {
-      FileStatus[] result = abfsHttpService.listStatus(this, makeQualified(f));
+      FileStatus[] result = abfsStore.listStatus(makeQualified(f));
       return result;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -316,7 +297,7 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     try {
-      abfsHttpService.createDirectory(this, makeQualified(f));
+      abfsStore.createDirectory(makeQualified(f));
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS);
@@ -332,13 +313,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     super.close();
     this.LOG.debug("AzureBlobFileSystem.close");
-
-    try {
-      abfsHttpService.closeFileSystem(this);
-    } catch (AzureBlobFileSystemException ex) {
-      checkException(null, ex);
-      this.isClosed = true;
-    }
+    this.isClosed = true;
   }
 
   @Override
@@ -346,7 +321,7 @@ public class AzureBlobFileSystem extends FileSystem {
     this.LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f.toString());
 
     try {
-      return abfsHttpService.getFileStatus(this, makeQualified(f));
+      return abfsStore.getFileStatus(makeQualified(f));
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
@@ -397,7 +372,7 @@ public class AzureBlobFileSystem extends FileSystem {
     if (file.getLen() < start) {
       return new BlockLocation[0];
     }
-    final String blobLocationHost = this.configurationService.getAzureBlockLocationHost();
+    final String blobLocationHost = this.abfsStore.getAbfsConfiguration().getAzureBlockLocationHost();
 
     final String[] name = { blobLocationHost };
     final String[] host = { blobLocationHost };
@@ -477,12 +452,10 @@ public class AzureBlobFileSystem extends FileSystem {
     this.LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
     try {
-      abfsHttpService.createFilesystem(this);
+      this.abfsStore.createFilesystem();
     } catch (AzureBlobFileSystemException ex) {
       checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
     }
-
-
   }
 
   private URI ensureAuthority(URI uri, final Configuration conf) {
@@ -540,25 +513,19 @@ public class AzureBlobFileSystem extends FileSystem {
       final Callable<T> callableFileOperation,
       T defaultResultValue) throws IOException {
 
-    final TraceScope traceScope = tracingService.traceBegin(scopeDescription);
     try {
       final T executionResult = callableFileOperation.call();
       return new FileSystemOperation(executionResult, null);
     } catch (AbfsRestOperationException abfsRestOperationException) {
       return new FileSystemOperation(defaultResultValue, abfsRestOperationException);
     } catch (AzureBlobFileSystemException azureBlobFileSystemException) {
-      tracingService.traceException(traceScope, azureBlobFileSystemException);
       throw new IOException(azureBlobFileSystemException);
     } catch (Exception exception) {
       if (exception instanceof ExecutionException) {
-        exception = (Exception) ExceptionUtils.getRootCause(exception);
+        exception = (Exception) getRootCause(exception);
       }
-
       final FileSystemOperationUnhandledException fileSystemOperationUnhandledException = new FileSystemOperationUnhandledException(exception);
-      tracingService.traceException(traceScope, fileSystemOperationUnhandledException);
       throw new IOException(fileSystemOperationUnhandledException);
-    } finally {
-      tracingService.traceEnd(traceScope);
     }
   }
 
@@ -590,6 +557,26 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Gets the root cause of a provided {@link Throwable}.  If there is no cause for the
+   * {@link Throwable} provided into this function, the original {@link Throwable} is returned.
+   *
+   * @param throwable starting {@link Throwable}
+   * @return root cause {@link Throwable}
+   */
+  private Throwable getRootCause(Throwable throwable) {
+    if (throwable == null) {
+      throw new IllegalArgumentException("throwable can not be null");
+    }
+
+    Throwable result = throwable;
+    while (result.getCause() != null) {
+      result = result.getCause();
+    }
+
+    return result;
+  }
+
   @VisibleForTesting
   FileSystem.Statistics getFsStatistics() {
     return this.statistics;
@@ -608,5 +595,10 @@ public class AzureBlobFileSystem extends FileSystem {
     public boolean failed() {
       return this.exception != null;
     }
+  }
+
+  @VisibleForTesting
+  AzureBlobFileSystemStore getAbfsStore() {
+    return this.abfsStore;
   }
 }

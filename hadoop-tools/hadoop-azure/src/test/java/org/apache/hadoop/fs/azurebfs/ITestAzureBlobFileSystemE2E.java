@@ -22,15 +22,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-
-import org.apache.hadoop.fs.azurebfs.services.AbfsServiceProviderImpl;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
@@ -52,8 +49,6 @@ public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
     super();
     Configuration configuration = this.getConfiguration();
     configuration.set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
-    this.getMockServiceInjector().replaceInstance(Configuration.class, configuration);
-
   }
 
   @Test
@@ -82,7 +77,7 @@ public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
   @Test (expected = IOException.class)
   public void testOOBWrites() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    int readBufferSize = AbfsServiceProviderImpl.instance().get(ConfigurationService.class).getReadBufferSize();
+    int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
 
     fs.create(TEST_FILE);
     FSDataOutputStream writeStream = fs.create(TEST_FILE);

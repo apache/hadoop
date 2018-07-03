@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
@@ -28,19 +28,16 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.DependencyInjectedTest;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsHttpService;
 
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test AbfsHttpServiceImpl.
+ * Test FileSystemProperties.
  */
-public class ITestAbfsHttpServiceImpl extends DependencyInjectedTest {
+public class ITestFileSystemProperties extends DependencyInjectedTest {
   private static final int TEST_DATA = 100;
   private static final Path TEST_PATH = new Path("/testfile");
-  public ITestAbfsHttpServiceImpl() {
+  public ITestFileSystemProperties() {
     super();
   }
 
@@ -71,11 +68,11 @@ public class ITestAbfsHttpServiceImpl extends DependencyInjectedTest {
   @Ignore("JDK7 doesn't support PATCH, so PUT is used. Fix is applied in latest test tenant")
   public void testBase64FileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value }");
-    AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).setFilesystemProperties(
-        fs, properties);
-    Hashtable<String, String> fetchedProperties = AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).getFilesystemProperties(fs);
+    fs.getAbfsStore().setFilesystemProperties(properties);
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getFilesystemProperties();
 
     Assert.assertEquals(properties, fetchedProperties);
   }
@@ -86,10 +83,9 @@ public class ITestAbfsHttpServiceImpl extends DependencyInjectedTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest }");
     fs.create(TEST_PATH);
-    AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).setPathProperties(
-        fs, TEST_PATH, properties);
+    fs.getAbfsStore().setPathProperties(TEST_PATH, properties);
     Hashtable<String, String> fetchedProperties =
-        AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).getPathProperties(fs, TEST_PATH);
+            fs.getAbfsStore().getPathProperties(TEST_PATH);
 
     Assert.assertEquals(properties, fetchedProperties);
   }
@@ -99,9 +95,8 @@ public class ITestAbfsHttpServiceImpl extends DependencyInjectedTest {
     final AzureBlobFileSystem fs = this.getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value歲 }");
-    AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).setFilesystemProperties(
-        fs, properties);
-    Hashtable<String, String> fetchedProperties = AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).getFilesystemProperties(fs);
+    fs.getAbfsStore().setFilesystemProperties(properties);
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getFilesystemProperties();
 
     Assert.assertEquals(properties, fetchedProperties);
   }
@@ -112,10 +107,19 @@ public class ITestAbfsHttpServiceImpl extends DependencyInjectedTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest兩 }");
     fs.create(TEST_PATH);
-    AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).setPathProperties(
-        fs, TEST_PATH, properties);
-    Hashtable<String, String> fetchedProperties =
-        AbfsServiceProviderImpl.instance().get(AbfsHttpService.class).getPathProperties(fs, TEST_PATH);
+    fs.getAbfsStore().setPathProperties(TEST_PATH, properties);
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getPathProperties(TEST_PATH);
+
+    Assert.assertEquals(properties, fetchedProperties);
+  }
+
+  @Test
+  public void testSetFileSystemProperties() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    final Hashtable<String, String> properties = new Hashtable<>();
+    properties.put("containerForDevTest", "true");
+    fs.getAbfsStore().setFilesystemProperties(properties);
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getFilesystemProperties();
 
     Assert.assertEquals(properties, fetchedProperties);
   }

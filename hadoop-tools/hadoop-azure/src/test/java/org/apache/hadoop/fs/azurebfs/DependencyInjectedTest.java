@@ -23,11 +23,9 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsServiceProviderImpl;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.mockito.internal.util.MockUtil;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -38,12 +36,6 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsHttpClientFactory;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsHttpService;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ConfigurationService;
-import org.apache.hadoop.fs.azurebfs.services.MockAbfsHttpClientFactoryImpl;
-import org.apache.hadoop.fs.azurebfs.services.MockAbfsServiceInjectorImpl;
-import org.apache.hadoop.fs.azurebfs.services.MockServiceProviderImpl;
 
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -54,7 +46,6 @@ import static org.junit.Assume.assumeNotNull;
  * Provide dependencies for AzureBlobFileSystem tests.
  */
 public abstract class DependencyInjectedTest {
-  private final MockAbfsServiceInjectorImpl mockServiceInjector;
   private final boolean isEmulator;
   private NativeAzureFileSystem wasb;
   private String abfsScheme;
@@ -64,12 +55,10 @@ public abstract class DependencyInjectedTest {
   private String accountName;
   private String testUrl;
 
+  public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
+
   public DependencyInjectedTest(final boolean secure) {
     this(secure ? FileSystemUriSchemes.ABFS_SECURE_SCHEME : FileSystemUriSchemes.ABFS_SCHEME);
-  }
-
-  public MockAbfsServiceInjectorImpl getMockServiceInjector() {
-    return this.mockServiceInjector;
   }
 
   protected DependencyInjectedTest() {
@@ -78,7 +67,7 @@ public abstract class DependencyInjectedTest {
 
   private DependencyInjectedTest(final String scheme) {
     abfsScheme = scheme;
-    fileSystemName = UUID.randomUUID().toString();
+    fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     configuration = new Configuration();
     configuration.addResource("azure-bfs-test.xml");
 
@@ -98,18 +87,14 @@ public abstract class DependencyInjectedTest {
     this.testUrl = defaultUri.toString();
     configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     configuration.setBoolean(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    this.mockServiceInjector = new MockAbfsServiceInjectorImpl(configuration);
     this.isEmulator = this.configuration.getBoolean(ConfigurationKeys.FS_AZURE_EMULATOR_ENABLED, false);
     this.accountName = this.configuration.get(TestConfigurationKeys.FS_AZURE_TEST_ACCOUNT_NAME);
   }
 
   @Before
   public void initialize() throws Exception {
-    if (this.isEmulator) {
-      this.mockServiceInjector.replaceProvider(AbfsHttpClientFactory.class, MockAbfsHttpClientFactoryImpl.class);
-    }
-
-    MockServiceProviderImpl.create(this.mockServiceInjector);
+    //Create filesystem first to make sure getWasbFileSystem() can return an existed filesystem.
+    this.getFileSystem();
 
     if (!this.isEmulator) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(this.getTestUrl()));
@@ -133,28 +118,24 @@ public abstract class DependencyInjectedTest {
     FileSystem.closeAll();
 
     final AzureBlobFileSystem fs = this.getFileSystem();
-    final AbfsHttpService abfsHttpService = AbfsServiceProviderImpl.instance().get(AbfsHttpService.class);
-    abfsHttpService.deleteFilesystem(fs);
+    final AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    abfsStore.deleteFilesystem();
 
-    if (!(new MockUtil().isMock(abfsHttpService))) {
-      AbfsRestOperationException ex = intercept(
-          AbfsRestOperationException.class,
-          new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-              abfsHttpService.getFilesystemProperties(fs);
-              return null;
-            }
-          });
+    AbfsRestOperationException ex = intercept(
+            AbfsRestOperationException.class,
+            new Callable<Void>() {
+              @Override
+              public Void call() throws Exception {
+                fs.getAbfsStore().getFilesystemProperties();
+                return null;
+              }
+            });
 
-      assertEquals(FILE_SYSTEM_NOT_FOUND.getStatusCode(), ex.getStatusCode());
-    }
+    assertEquals(FILE_SYSTEM_NOT_FOUND.getStatusCode(), ex.getStatusCode());
   }
 
   public AzureBlobFileSystem getFileSystem() throws Exception {
-    final Configuration configuration = AbfsServiceProviderImpl.instance().get(ConfigurationService.class).getConfiguration();
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
-    return fs;
+    return (AzureBlobFileSystem) FileSystem.get(this.configuration);
   }
 
   protected NativeAzureFileSystem getWasbFileSystem() {
