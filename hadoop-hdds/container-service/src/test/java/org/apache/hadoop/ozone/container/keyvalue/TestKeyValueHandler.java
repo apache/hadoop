@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -34,10 +35,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
+
+import org.mockito.Mockito;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import org.mockito.Mockito;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.times;
+
 
 import java.util.UUID;
 
@@ -93,10 +97,13 @@ public class TestKeyValueHandler {
     Mockito.when(dispatcher.getContainer(anyLong())).thenReturn(
         Mockito.mock(KeyValueContainer.class));
     Mockito.when(handler.handle(any(), any())).thenCallRealMethod();
+    doCallRealMethod().when(dispatcher).setMetricsForTesting(any());
+    dispatcher.setMetricsForTesting(Mockito.mock(ContainerMetrics.class));
 
     // Test Create Container Request handling
     ContainerCommandRequestProto createContainerRequest =
         getDummyCommandRequestProto(ContainerProtos.Type.CreateContainer);
+
     dispatcher.dispatch(createContainerRequest);
     Mockito.verify(handler, times(1)).handleCreateContainer(
         any(ContainerCommandRequestProto.class), any());
@@ -207,8 +214,8 @@ public class TestKeyValueHandler {
         any(ContainerCommandRequestProto.class), any());
   }
 
-  private ContainerCommandRequestProto getDummyCommandRequestProto
-      (ContainerProtos.Type cmdType) {
+  private ContainerCommandRequestProto getDummyCommandRequestProto(
+      ContainerProtos.Type cmdType) {
     ContainerCommandRequestProto request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder()
             .setCmdType(cmdType)

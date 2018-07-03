@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-import com.sun.jersey.spi.resource.Singleton;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
@@ -42,19 +42,22 @@ public class Handler {
   protected final ContainerSet containerSet;
   protected final VolumeSet volumeSet;
   protected String scmID;
+  protected final ContainerMetrics metrics;
 
   protected Handler(Configuration config, ContainerSet contSet,
-      VolumeSet volumeSet) {
+      VolumeSet volumeSet, ContainerMetrics containerMetrics) {
     conf = config;
     containerSet = contSet;
     this.volumeSet = volumeSet;
+    this.metrics = containerMetrics;
   }
 
   public static Handler getHandlerForContainerType(ContainerType containerType,
-      Configuration config, ContainerSet contSet, VolumeSet volumeSet) {
+      Configuration config, ContainerSet contSet, VolumeSet volumeSet,
+                                                   ContainerMetrics metrics) {
     switch (containerType) {
     case KeyValueContainer:
-      return KeyValueHandler.getInstance(config, contSet, volumeSet);
+      return KeyValueHandler.getInstance(config, contSet, volumeSet, metrics);
     default:
       throw new IllegalArgumentException("Handler for ContainerType: " +
         containerType + "doesn't exist.");
@@ -69,4 +72,5 @@ public class Handler {
   public void setScmID(String scmId) {
     this.scmID = scmId;
   }
+
 }

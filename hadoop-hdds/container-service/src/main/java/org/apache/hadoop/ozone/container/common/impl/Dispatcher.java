@@ -111,7 +111,7 @@ public class Dispatcher implements ContainerDispatcher {
     try {
       Preconditions.checkNotNull(msg);
       Type cmdType = msg.getCmdType();
-      metrics.incContainerOpcMetrics(cmdType);
+      metrics.incContainerOpsMetrics(cmdType);
       if ((cmdType == Type.CreateContainer) ||
           (cmdType == Type.DeleteContainer) ||
           (cmdType == Type.ReadContainer) ||

@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
@@ -53,6 +54,7 @@ public class HddsDispatcher implements ContainerDispatcher {
   private final ContainerSet containerSet;
   private final VolumeSet volumeSet;
   private String scmID;
+  private ContainerMetrics metrics;
 
   /**
    * Constructs an OzoneContainer that receives calls from
@@ -60,16 +62,17 @@ public class HddsDispatcher implements ContainerDispatcher {
    */
   public HddsDispatcher(Configuration config, ContainerSet contSet,
       VolumeSet volumes) {
-    //TODO: initialize metrics
     this.conf = config;
     this.containerSet = contSet;
     this.volumeSet = volumes;
     this.handlers = Maps.newHashMap();
+    this.metrics = ContainerMetrics.create(conf);
     for (ContainerType containerType : ContainerType.values()) {
       handlers.put(containerType,
           Handler.getHandlerForContainerType(
-              containerType, conf, containerSet, volumeSet));
+              containerType, conf, containerSet, volumeSet, metrics));
     }
+
   }
 
   @Override
@@ -89,10 +92,14 @@ public class HddsDispatcher implements ContainerDispatcher {
 
     Container container = null;
     ContainerType containerType = null;
+    ContainerCommandResponseProto responseProto = null;
+    long startTime = System.nanoTime();
+    ContainerProtos.Type cmdType = msg.getCmdType();
     try {
       long containerID = getContainerID(msg);
 
-      if (msg.getCmdType() != ContainerProtos.Type.CreateContainer) {
+      metrics.incContainerOpsMetrics(cmdType);
+      if (cmdType != ContainerProtos.Type.CreateContainer) {
         container = getContainer(containerID);
         containerType = getContainerType(container);
       } else {
@@ -109,7 +116,11 @@ public class HddsDispatcher implements ContainerDispatcher {
           ContainerProtos.Result.CONTAINER_INTERNAL_ERROR);
       return ContainerUtils.logAndReturnError(LOG, ex, msg);
     }
-    return handler.handle(msg, container);
+    responseProto = handler.handle(msg, container);
+    if (responseProto != null) {
+      metrics.incContainerOpsLatencies(cmdType, System.nanoTime() - startTime);
+    }
+    return responseProto;
   }
 
   @Override
@@ -186,5 +197,10 @@ public class HddsDispatcher implements ContainerDispatcher {
 
   private ContainerType getContainerType(Container container) {
     return container.getContainerType();
+  }
+
+  @VisibleForTesting
+  public void setMetricsForTesting(ContainerMetrics containerMetrics) {
+    this.metrics = containerMetrics;
   }
 }
