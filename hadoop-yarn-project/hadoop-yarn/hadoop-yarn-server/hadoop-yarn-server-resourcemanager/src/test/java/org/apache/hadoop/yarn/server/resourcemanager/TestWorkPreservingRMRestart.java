@@ -760,6 +760,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       MockMemoryRMStateStore memStore, RMState state) throws Exception {
     // Restart RM with fail-fast as false. App should be killed.
     csConf.setBoolean(YarnConfiguration.RM_FAIL_FAST, false);
+    csConf.setBoolean(CapacitySchedulerConfiguration.APP_FAIL_FAST, false);
     rm2 = new MockRM(csConf, memStore);
     rm2.start();
 
@@ -794,6 +795,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     // Now restart RM with fail-fast as true. QueueException should be thrown.
     csConf.setBoolean(YarnConfiguration.RM_FAIL_FAST, true);
+    csConf.setBoolean(CapacitySchedulerConfiguration.APP_FAIL_FAST, true);
     MockRM rm = new MockRM(csConf, memStore2);
     try {
       rm.start();
