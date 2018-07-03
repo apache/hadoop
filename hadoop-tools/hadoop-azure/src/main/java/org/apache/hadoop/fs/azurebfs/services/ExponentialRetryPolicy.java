@@ -21,7 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Random;
 import java.net.HttpURLConnection;
 
-class ExponentialRetryPolicy {
+/**
+ * Retry policy used by AbfsClient.
+ * */
+public class ExponentialRetryPolicy {
   /**
    * Represents the default number of retry attempts.
    */
@@ -83,7 +86,7 @@ class ExponentialRetryPolicy {
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    */
-  ExponentialRetryPolicy() {
+  public ExponentialRetryPolicy() {
     this(DEFAULT_CLIENT_RETRY_COUNT, DEFAULT_MIN_BACKOFF, DEFAULT_MAX_BACKOFF, DEFAULT_CLIENT_BACKOFF);
   }
 
@@ -96,7 +99,7 @@ class ExponentialRetryPolicy {
    * @param deltaBackoff The value that will be used to calculate a random delta in the exponential delay
    *                     between retries.
    */
-  ExponentialRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
+  public ExponentialRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
     this.retryCount = retryCount;
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;

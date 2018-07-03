@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -37,7 +38,7 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
   private final DependencyInjectedContractTest dependencyInjectedContractTest;
 
   public ITestAzureBlobFileSystemBasics() throws Exception {
-    // If contract tests are running in parallel, some root level tests in this file will fail
+    // If all contract tests are running in parallel, some root level tests in FileSystemContractBaseTest will fail
     // due to the race condition. Hence for this contract test it should be tested in different container
     dependencyInjectedContractTest = new DependencyInjectedContractTest(false, false);
   }
@@ -46,6 +47,14 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
   public void setUp() throws Exception {
     this.dependencyInjectedContractTest.initialize();
     fs = this.dependencyInjectedContractTest.getFileSystem();
+  }
+
+  @After
+  public void testCleanup() throws Exception {
+    // This contract test is not using existing container for test,
+    // instead it creates its own temp container for test, hence we need to destroy
+    // it after the test.
+    this.dependencyInjectedContractTest.testCleanup();
   }
 
   @Test

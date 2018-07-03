@@ -535,17 +535,16 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       character = (character == 'z') ? 'a' : (char) ((int) character + 1);
     }
 
-    System.out.println(("Creating test file {} of size: {} " + TEST_FILE_PATH
-            + TEST_FILE_SIZE));
+    System.out.println(String.format("Creating test file %s of size: %d ", TEST_FILE_PATH, TEST_FILE_SIZE));
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
-    try(FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH)) {
+    try (FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH)) {
       int bytesWritten = 0;
       while (bytesWritten < TEST_FILE_SIZE) {
         outputStream.write(buffer);
         bytesWritten += buffer.length;
       }
-      System.out.println("Closing stream {}" +  outputStream);
+      System.out.println(String.format("Closing stream %s", outputStream));
       ContractTestUtils.NanoTimer closeTimer
               = new ContractTestUtils.NanoTimer();
       outputStream.close();
