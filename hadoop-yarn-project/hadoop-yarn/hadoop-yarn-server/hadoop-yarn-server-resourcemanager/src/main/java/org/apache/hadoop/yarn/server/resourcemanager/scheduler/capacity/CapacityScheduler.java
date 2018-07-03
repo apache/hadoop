@@ -1197,8 +1197,10 @@ public class CapacityScheduler extends
       updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
     }
 
-    LOG.info("Allocation for application " + applicationAttemptId + " : " +
-        allocation + " with cluster resource : " + getClusterResource());
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Allocation for application " + applicationAttemptId + " : "
+          + allocation + " with cluster resource : " + getClusterResource());
+    }
     return allocation;
   }
 
@@ -1442,10 +1444,17 @@ public class CapacityScheduler extends
   private CSAssignment allocateContainerOnSingleNode(
       CandidateNodeSet<FiCaSchedulerNode> candidates, FiCaSchedulerNode node,
       boolean withNodeHeartbeat) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Trying to schedule on node: " + node.getNodeName() + ", available: "
+              + node.getUnallocatedResource());
+    }
+
     // Backward compatible way to make sure previous behavior which allocation
     // driven by node heartbeat works.
     if (getNode(node.getNodeID()) != node) {
-      LOG.error("Trying to schedule on a removed node, please double check.");
+      LOG.error("Trying to schedule on a removed node, please double check, "
+          + "nodeId=" + node.getNodeID());
       return null;
     }
 
@@ -1459,14 +1468,19 @@ public class CapacityScheduler extends
       FiCaSchedulerApp reservedApplication = getCurrentAttemptForContainer(
           reservedContainer.getContainerId());
       if (reservedApplication == null) {
-        LOG.error("Trying to schedule for a finished app, please double check.");
+        LOG.error(
+            "Trying to schedule for a finished app, please double check. nodeId="
+                + node.getNodeID() + " container=" + reservedContainer
+                .getContainerId());
         return null;
       }
 
       // Try to fulfill the reservation
-      LOG.info(
-          "Trying to fulfill reservation for application " + reservedApplication
-              .getApplicationId() + " on node: " + node.getNodeID());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to fulfill reservation for application "
+            + reservedApplication.getApplicationId() + " on node: " + node
+            .getNodeID());
+      }
 
       LeafQueue queue = ((LeafQueue) reservedApplication.getQueue());
       assignment = queue.assignContainers(getClusterResource(), candidates,
@@ -1528,12 +1542,6 @@ public class CapacityScheduler extends
             + "killable resource");
       }
       return null;
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Trying to schedule on node: " + node.getNodeName() + ", available: "
-              + node.getUnallocatedResource());
     }
 
     return allocateOrReserveNewContainers(candidates, withNodeHeartbeat);
@@ -2849,6 +2857,11 @@ public class CapacityScheduler extends
           CapacitySchedulerMetrics.getMetrics()
               .addCommitFailure(commitFailed);
           LOG.info("Failed to accept allocation proposal");
+        }
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Allocation proposal accepted=" + isSuccess + ", proposal="
+              + request);
         }
 
         // Update unconfirmed allocated resource.
