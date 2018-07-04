@@ -199,7 +199,7 @@ public class Quota {
     if (manager != null) {
       Set<String> childrenPaths = manager.getPaths(path);
       for (String childPath : childrenPaths) {
-        locations.addAll(rpcServer.getLocationsForPath(childPath, true));
+        locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
       }
     }
 
