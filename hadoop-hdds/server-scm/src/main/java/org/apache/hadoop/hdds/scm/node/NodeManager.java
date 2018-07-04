@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
@@ -54,14 +53,14 @@ import java.util.UUID;
  * list, by calling removeNode. We will throw away this nodes info soon.
  */
 public interface NodeManager extends StorageContainerNodeProtocol,
-    NodeManagerMXBean, Closeable, Runnable {
+    NodeManagerMXBean, Closeable {
   /**
    * Removes a data node from the management of this Node Manager.
    *
    * @param node - DataNode.
-   * @throws UnregisteredNodeException
+   * @throws NodeNotFoundException
    */
-  void removeNode(DatanodeDetails node) throws UnregisteredNodeException;
+  void removeNode(DatanodeDetails node) throws NodeNotFoundException;
 
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
@@ -122,13 +121,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails);
-
-  /**
-   * Wait for the heartbeat is processed by NodeManager.
-   * @return true if heartbeat has been processed.
-   */
-  @VisibleForTesting
-  boolean waitForHeartbeatProcessed();
 
   /**
    * Returns the node state of a specific node.

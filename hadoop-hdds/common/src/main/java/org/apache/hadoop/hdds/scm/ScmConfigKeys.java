@@ -165,10 +165,6 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
       "10m";
 
-  public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
-      "ozone.scm.max.hb.count.to.process";
-  public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
-
   public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL =
       "ozone.scm.heartbeat.thread.interval";
   public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_DEFAULT =

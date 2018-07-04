@@ -303,8 +303,8 @@ public class TestStorageContainerManager {
     GenericTestUtils.waitFor(() -> {
       NodeManager nodeManager = cluster.getStorageContainerManager()
           .getScmNodeManager();
-      List<SCMCommand> commands = nodeManager.sendHeartbeat(
-          nodeManager.getNodes(NodeState.HEALTHY).get(0), null);
+      List<SCMCommand> commands = nodeManager.processHeartbeat(
+          nodeManager.getNodes(NodeState.HEALTHY).get(0));
 
       if (commands != null) {
         for (SCMCommand cmd : commands) {

@@ -57,7 +57,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -171,13 +170,12 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
       throws ServiceException {
     try {
-      EnumSet<HddsProtos.NodeState> nodeStateEnumSet = EnumSet.copyOf(request
-          .getQueryList());
-      HddsProtos.NodePool datanodes = impl.queryNode(nodeStateEnumSet,
+      HddsProtos.NodeState nodeState = request.getState();
+      List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
           request.getScope(), request.getPoolName());
       return StorageContainerLocationProtocolProtos
           .NodeQueryResponseProto.newBuilder()
-          .setDatanodes(datanodes)
+          .addAllDatanodes(datanodes)
           .build();
     } catch (Exception e) {
       throw new ServiceException(e);

@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -150,13 +149,13 @@ public interface ScmClient {
 
   /**
    * Returns a set of Nodes that meet a query criteria.
-   * @param nodeStatuses - A set of criteria that we want the node to have.
+   * @param nodeStatuses - Criteria that we want the node to have.
    * @param queryScope - Query scope - Cluster or pool.
    * @param poolName - if it is pool, a pool name is required.
    * @return A set of nodes that meet the requested criteria.
    * @throws IOException
    */
-  HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState> nodeStatuses,
+  List<HddsProtos.Node> queryNode(HddsProtos.NodeState nodeStatuses,
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**

@@ -61,7 +61,7 @@ public final class SCMDatanodeHeartbeatDispatcher {
   public void dispatch(SCMHeartbeatRequestProto heartbeat) {
     DatanodeDetails datanodeDetails =
         DatanodeDetails.getFromProtoBuf(heartbeat.getDatanodeDetails());
-
+    // should we dispatch heartbeat through eventPublisher?
     if (heartbeat.hasNodeReport()) {
       eventPublisher.fireEvent(NODE_REPORT,
           new NodeReportFromDatanode(datanodeDetails,

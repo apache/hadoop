@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -94,10 +93,10 @@ public interface StorageContainerLocationProtocol {
 
   /**
    *  Queries a list of Node Statuses.
-   * @param nodeStatuses
+   * @param state
    * @return List of Datanodes.
    */
-  HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState> nodeStatuses,
+  List<HddsProtos.Node> queryNode(HddsProtos.NodeState state,
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**

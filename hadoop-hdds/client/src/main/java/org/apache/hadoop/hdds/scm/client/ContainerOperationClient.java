@@ -37,7 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -234,14 +233,14 @@ public class ContainerOperationClient implements ScmClient {
   /**
    * Returns a set of Nodes that meet a query criteria.
    *
-   * @param nodeStatuses - A set of criteria that we want the node to have.
+   * @param nodeStatuses - Criteria that we want the node to have.
    * @param queryScope - Query scope - Cluster or pool.
    * @param poolName - if it is pool, a pool name is required.
    * @return A set of nodes that meet the requested criteria.
    * @throws IOException
    */
   @Override
-  public HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState>
+  public List<HddsProtos.Node> queryNode(HddsProtos.NodeState
       nodeStatuses, HddsProtos.QueryScope queryScope, String poolName)
       throws IOException {
     return storageContainerLocationClient.queryNode(nodeStatuses, queryScope,
@@ -458,7 +457,8 @@ public class ContainerOperationClient implements ScmClient {
    */
   @Override
   public long getContainerSize(long containerID) throws IOException {
-    // TODO : Fix this, it currently returns the capacity but not the current usage.
+    // TODO : Fix this, it currently returns the capacity
+    // but not the current usage.
     long size = getContainerSizeB();
     if (size == -1) {
       throw new IOException("Container size unknown!");

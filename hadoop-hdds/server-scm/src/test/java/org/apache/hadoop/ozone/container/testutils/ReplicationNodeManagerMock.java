@@ -21,7 +21,7 @@ import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.CommandQueue;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
@@ -31,7 +31,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.List;
@@ -90,11 +89,11 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Removes a data node from the management of this Node Manager.
    *
    * @param node - DataNode.
-   * @throws UnregisteredNodeException
+   * @throws NodeNotFoundException
    */
   @Override
   public void removeNode(DatanodeDetails node)
-      throws UnregisteredNodeException {
+      throws NodeNotFoundException {
     nodeStateMap.remove(node);
 
   }
@@ -202,16 +201,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
 
 
   /**
-   * Wait for the heartbeat is processed by NodeManager.
-   *
-   * @return true if heartbeat has been processed.
-   */
-  @Override
-  public boolean waitForHeartbeatProcessed() {
-    return false;
-  }
-
-  /**
    * Returns the node state of a specific node.
    *
    * @param dd - DatanodeDetails
@@ -237,22 +226,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   @Override
   public void close() throws IOException {
-
-  }
-
-  /**
-   * When an object implementing interface <code>Runnable</code> is used
-   * to create a thread, starting the thread causes the object's
-   * <code>run</code> method to be called in that separately executing
-   * thread.
-   * <p>
-   * The general contract of the method <code>run</code> is that it may
-   * take any action whatsoever.
-   *
-   * @see Thread#run()
-   */
-  @Override
-  public void run() {
 
   }
 
@@ -285,12 +258,10 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
    * @param dd - Datanode Details.
-   * @param nodeReport - node report.
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeDetails dd,
-      NodeReportProto nodeReport) {
+  public List<SCMCommand> processHeartbeat(DatanodeDetails dd) {
     return null;
   }
 

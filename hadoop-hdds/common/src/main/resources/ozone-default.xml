@@ -774,17 +774,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.max.hb.count.to.process</name>
-    <value>5000</value>
-    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
-    <description>
-      The maximum number of heartbeat to process per loop of the
-      heartbeat process thread. Please see
-      ozone.scm.heartbeat.thread.interval
-      for more info.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE</tag>

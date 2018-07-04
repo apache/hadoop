@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.EnumSet;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -188,27 +188,21 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
-  public HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState>
-      nodeStatuses, HddsProtos.QueryScope queryScope, String poolName) throws
+  public List<HddsProtos.Node> queryNode(HddsProtos.NodeState state,
+      HddsProtos.QueryScope queryScope, String poolName) throws
       IOException {
 
     if (queryScope == HddsProtos.QueryScope.POOL) {
       throw new IllegalArgumentException("Not Supported yet");
     }
 
-    List<DatanodeDetails> datanodes = queryNode(nodeStatuses);
-    HddsProtos.NodePool.Builder poolBuilder = HddsProtos.NodePool.newBuilder();
+    List<HddsProtos.Node> result = new ArrayList<>();
+    queryNode(state).forEach(node -> result.add(HddsProtos.Node.newBuilder()
+        .setNodeID(node.getProtoBufMessage())
+        .addNodeStates(state)
+        .build()));
 
-    for (DatanodeDetails datanode : datanodes) {
-      HddsProtos.Node node =
-          HddsProtos.Node.newBuilder()
-              .setNodeID(datanode.getProtoBufMessage())
-              .addAllNodeStates(nodeStatuses)
-              .build();
-      poolBuilder.addNodes(node);
-    }
-
-    return poolBuilder.build();
+    return result;
 
   }
 
@@ -282,35 +276,12 @@ public class SCMClientProtocolServer implements
    * operation between the
    * operators.
    *
-   * @param nodeStatuses - A set of NodeStates.
+   * @param state - NodeStates.
    * @return List of Datanodes.
    */
-  public List<DatanodeDetails> queryNode(EnumSet<HddsProtos.NodeState>
-      nodeStatuses) {
-    Preconditions.checkNotNull(nodeStatuses, "Node Query set cannot be null");
-    Preconditions.checkState(nodeStatuses.size() > 0, "No valid arguments " +
-        "in the query set");
-    List<DatanodeDetails> resultList = new LinkedList<>();
-    Set<DatanodeDetails> currentSet = new TreeSet<>();
-
-    for (HddsProtos.NodeState nodeState : nodeStatuses) {
-      Set<DatanodeDetails> nextSet = queryNodeState(nodeState);
-      if ((nextSet == null) || (nextSet.size() == 0)) {
-        // Right now we only support AND operation. So intersect with
-        // any empty set is null.
-        return resultList;
-      }
-      // First time we have to add all the elements, next time we have to
-      // do an intersection operation on the set.
-      if (currentSet.size() == 0) {
-        currentSet.addAll(nextSet);
-      } else {
-        currentSet.retainAll(nextSet);
-      }
-    }
-
-    resultList.addAll(currentSet);
-    return resultList;
+  public List<DatanodeDetails> queryNode(HddsProtos.NodeState state) {
+    Preconditions.checkNotNull(state, "Node Query set cannot be null");
+    return new LinkedList<>(queryNodeState(state));
   }
 
   @VisibleForTesting
@@ -325,11 +296,6 @@ public class SCMClientProtocolServer implements
    * @return Set of Datanodes that match the NodeState.
    */
   private Set<DatanodeDetails> queryNodeState(HddsProtos.NodeState nodeState) {
-    if (nodeState == HddsProtos.NodeState.RAFT_MEMBER || nodeState ==
-        HddsProtos.NodeState
-        .FREE_NODE) {
-      throw new IllegalStateException("Not implemented yet");
-    }
     Set<DatanodeDetails> returnSet = new TreeSet<>();
     List<DatanodeDetails> tmp = scm.getScmNodeManager().getNodes(nodeState);
     if ((tmp != null) && (tmp.size() > 0)) {

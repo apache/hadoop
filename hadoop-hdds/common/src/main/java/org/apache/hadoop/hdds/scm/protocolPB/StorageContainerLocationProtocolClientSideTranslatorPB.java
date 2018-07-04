@@ -59,7 +59,6 @@ import org.apache.hadoop.ipc.RPC;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -215,20 +214,19 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * @return List of Datanodes.
    */
   @Override
-  public HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState>
+  public List<HddsProtos.Node> queryNode(HddsProtos.NodeState
       nodeStatuses, HddsProtos.QueryScope queryScope, String poolName)
       throws IOException {
     // TODO : We support only cluster wide query right now. So ignoring checking
     // queryScope and poolName
     Preconditions.checkNotNull(nodeStatuses);
-    Preconditions.checkState(nodeStatuses.size() > 0);
     NodeQueryRequestProto request = NodeQueryRequestProto.newBuilder()
-        .addAllQuery(nodeStatuses)
+        .setState(nodeStatuses)
         .setScope(queryScope).setPoolName(poolName).build();
     try {
       NodeQueryResponseProto response =
           rpcProxy.queryNode(NULL_RPC_CONTROLLER, request);
-      return response.getDatanodes();
+      return response.getDatanodesList();
     } catch (ServiceException e) {
       throw  ProtobufHelper.getRemoteException(e);
     }

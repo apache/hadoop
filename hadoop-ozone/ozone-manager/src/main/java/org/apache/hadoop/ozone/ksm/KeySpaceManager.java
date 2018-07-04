@@ -78,7 +78,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -884,9 +883,8 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
             .setValue(scmAddr.getPort()).build());
     services.add(scmServiceInfoBuilder.build());
 
-    List<HddsProtos.Node> nodes = scmContainerClient.queryNode(
-        EnumSet.of(HEALTHY), HddsProtos.QueryScope.CLUSTER, "")
-        .getNodesList();
+    List<HddsProtos.Node> nodes = scmContainerClient.queryNode(HEALTHY,
+        HddsProtos.QueryScope.CLUSTER, "");
 
     for (HddsProtos.Node node : nodes) {
       HddsProtos.DatanodeDetailsProto datanode = node.getNodeID();

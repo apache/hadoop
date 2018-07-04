@@ -259,17 +259,6 @@ public final class HddsServerUtil {
   }
 
   /**
-   * Returns the maximum number of heartbeat to process per loop of the process
-   * thread.
-   * @param conf Configuration
-   * @return - int -- Number of HBs to process
-   */
-  public static int getMaxHBToProcessPerLoop(Configuration conf) {
-    return conf.getInt(ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS,
-        ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT);
-  }
-
-  /**
    * Timeout value for the RPC from Datanode to SCM, primarily used for
    * Heartbeats and container reports.
    *

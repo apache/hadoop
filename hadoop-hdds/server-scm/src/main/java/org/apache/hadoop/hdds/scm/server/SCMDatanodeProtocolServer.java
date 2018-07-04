@@ -223,7 +223,7 @@ public class SCMDatanodeProtocolServer implements
         .getFromProtoBuf(heartbeat.getDatanodeDetails());
     NodeReportProto nodeReport = heartbeat.getNodeReport();
     List<SCMCommand> commands =
-        scm.getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport);
+        scm.getScmNodeManager().processHeartbeat(datanodeDetails);
     List<SCMCommandProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
       cmdResponses.add(getCommandResponse(cmd));

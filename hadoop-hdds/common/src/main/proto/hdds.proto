@@ -69,14 +69,11 @@ enum NodeType {
  * and getNodeCount.
  */
 enum NodeState {
-    HEALTHY             = 1;
-    STALE               = 2;
-    DEAD                = 3;
-    DECOMMISSIONING     = 4;
-    DECOMMISSIONED      = 5;
-    RAFT_MEMBER         = 6;
-    FREE_NODE           = 7; // Not a member in raft.
-    INVALID             = 8;
+    HEALTHY = 1;
+    STALE = 2;
+    DEAD = 3;
+    DECOMMISSIONING = 4;
+    DECOMMISSIONED = 5;
 }
 
 enum QueryScope {

@@ -35,7 +35,7 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class DatanodeDetails implements Comparable<DatanodeDetails> {
+public class DatanodeDetails implements Comparable<DatanodeDetails> {
 
   /**
    * DataNode's unique identifier in the cluster.
@@ -61,6 +61,13 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     this.ipAddress = ipAddress;
     this.hostName = hostName;
     this.ports = ports;
+  }
+
+  protected DatanodeDetails(DatanodeDetails datanodeDetails) {
+    this.uuid = datanodeDetails.uuid;
+    this.ipAddress = datanodeDetails.ipAddress;
+    this.hostName = datanodeDetails.hostName;
+    this.ports = datanodeDetails.ports;
   }
 
   /**
@@ -238,7 +245,7 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
   /**
    * Builder class for building DatanodeDetails.
    */
-  public static class Builder {
+  public static final class Builder {
     private String id;
     private String ipAddress;
     private String hostName;
@@ -324,7 +331,7 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
   /**
    * Container to hold DataNode Port details.
    */
-  public static class Port {
+  public static final class Port {
 
     /**
      * Ports that are supported in DataNode.
