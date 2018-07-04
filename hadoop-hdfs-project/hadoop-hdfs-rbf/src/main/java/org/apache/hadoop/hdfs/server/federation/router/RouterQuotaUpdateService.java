@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
@@ -83,13 +84,40 @@ public class RouterQuotaUpdateService extends PeriodicService {
         RouterQuotaUsage oldQuota = entry.getQuota();
         long nsQuota = oldQuota.getQuota();
         long ssQuota = oldQuota.getSpaceQuota();
-        // Call RouterRpcServer#getQuotaUsage for getting current quota usage.
-        QuotaUsage currentQuotaUsage = this.rpcServer.getQuotaModule()
-            .getQuotaUsage(src);
+
+        QuotaUsage currentQuotaUsage = null;
+
+        // Check whether destination path exists in filesystem. If destination
+        // is not present, reset the usage. For other mount entry get current
+        // quota usage
+        HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
+        if (ret == null) {
+          currentQuotaUsage = new RouterQuotaUsage.Builder()
+              .fileAndDirectoryCount(0)
+              .quota(nsQuota)
+              .spaceConsumed(0)
+              .spaceQuota(ssQuota).build();
+        } else {
+          // Call RouterRpcServer#getQuotaUsage for getting current quota usage.
+          // If any exception occurs catch it and proceed with other entries.
+          try {
+            currentQuotaUsage = this.rpcServer.getQuotaModule()
+                .getQuotaUsage(src);
+          } catch (IOException ioe) {
+            LOG.error("Unable to get quota usage for " + src, ioe);
+            continue;
+          }
+        }
+
         // If quota is not set in some subclusters under federation path,
         // set quota for this path.
         if (currentQuotaUsage.getQuota() == HdfsConstants.QUOTA_DONT_SET) {
-          this.rpcServer.setQuota(src, nsQuota, ssQuota, null);
+          try {
+            this.rpcServer.setQuota(src, nsQuota, ssQuota, null);
+          } catch (IOException ioe) {
+            LOG.error("Unable to set quota at remote location for "
+                + src, ioe);
+          }
         }
 
         RouterQuotaUsage newQuota = generateNewQuota(oldQuota,
@@ -221,7 +249,12 @@ public class RouterQuotaUpdateService extends PeriodicService {
     for (MountTable entry : updateMountTables) {
       UpdateMountTableEntryRequest updateRequest = UpdateMountTableEntryRequest
           .newInstance(entry);
-      getMountTableStore().updateMountTableEntry(updateRequest);
+      try {
+        getMountTableStore().updateMountTableEntry(updateRequest);
+      } catch (IOException e) {
+        LOG.error("Quota update error for mount entry "
+            + entry.getSourcePath(), e);
+      }
     }
   }
 }
