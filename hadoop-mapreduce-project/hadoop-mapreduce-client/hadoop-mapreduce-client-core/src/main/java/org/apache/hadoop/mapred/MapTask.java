@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.common.Abortable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
@@ -461,6 +462,7 @@ public class MapTask extends Task {
     MapRunnable<INKEY,INVALUE,OUTKEY,OUTVALUE> runner =
       ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
 
+    boolean successful = false;
     try {
       runner.run(in, new OldOutputCollector(collector, conf), reporter);
       mapPhase.complete();
@@ -469,6 +471,7 @@ public class MapTask extends Task {
         setPhase(TaskStatus.Phase.SORT);
       }
       statusUpdate(umbilical);
+      successful = true;
       collector.flush();
       
       in.close();
@@ -477,6 +480,13 @@ public class MapTask extends Task {
       collector.close();
       collector = null;
     } finally {
+      try {
+        if (!successful && collector instanceof Abortable) {
+          ((Abortable) collector).abort();
+        }
+      } catch (Exception ex) {
+        LOG.error(ex.getMessage());
+      }
       closeQuietly(in);
       closeQuietly(collector);
     }
@@ -811,7 +821,7 @@ public class MapTask extends Task {
   }
 
   class DirectMapOutputCollector<K, V>
-    implements MapOutputCollector<K, V> {
+    implements MapOutputCollector<K, V>, Abortable {
  
     private RecordWriter<K, V> out = null;
 
@@ -880,6 +890,15 @@ public class MapTask extends Task {
         bytesWritten = bytesWritten + stat.getBytesWritten();
       }
       return bytesWritten;
+    }
+
+    @Override
+    public void abort() throws IOException {
+      if (out instanceof Abortable) {
+        ((Abortable) out).abort();
+      } else {
+        out.close(reporter);
+      }
     }
   }
 

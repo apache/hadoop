@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
+import org.apache.hadoop.fs.common.Abortable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -42,7 +43,7 @@ import org.apache.hadoop.util.*;
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
 
   protected static class LineRecordWriter<K, V>
-    implements RecordWriter<K, V> {
+    implements RecordWriter<K, V>, Abortable {
     private static final byte[] NEWLINE =
       "\n".getBytes(StandardCharsets.UTF_8);
 
@@ -96,6 +97,15 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
 
     public synchronized void close(Reporter reporter) throws IOException {
       out.close();
+    }
+
+    @Override
+    public void abort() throws IOException {
+      if (out instanceof Abortable) {
+        ((Abortable) out).abort();
+      } else {
+        out.close();
+      }
     }
   }
 

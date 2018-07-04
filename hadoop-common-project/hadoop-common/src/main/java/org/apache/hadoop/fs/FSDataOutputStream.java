@@ -24,13 +24,14 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.common.Abortable;
 
 /** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream
-    implements Syncable, CanSetDropBehind, StreamCapabilities {
+    implements Syncable, CanSetDropBehind, Abortable, StreamCapabilities {
   private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
@@ -99,6 +100,15 @@ public class FSDataOutputStream extends DataOutputStream
   @Override
   public void close() throws IOException {
     out.close(); // This invokes PositionCache.close()
+  }
+
+  @Override
+  public void abort() throws IOException {
+    if (wrappedStream instanceof Abortable) {
+      ((Abortable) wrappedStream).abort();
+    } else {
+      wrappedStream.close();
+    }
   }
 
   @Override

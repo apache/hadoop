@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.common.Abortable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -456,6 +457,13 @@ public class ReduceTask extends Task {
       
       out.close(reporter);
       out = null;
+    } catch (IOException ioe) {
+      if (out instanceof Abortable) {
+        try {
+          ((Abortable) out).abort();
+        } catch (IOException ignored){}
+      }
+      throw ioe;
     } finally {
       IOUtils.cleanupWithLogger(LOG, reducer);
       closeQuietly(out, reporter);

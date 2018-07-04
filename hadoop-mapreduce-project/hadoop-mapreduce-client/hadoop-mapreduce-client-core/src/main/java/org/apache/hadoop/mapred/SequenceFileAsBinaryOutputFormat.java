@@ -135,7 +135,7 @@ public class SequenceFileAsBinaryOutputFormat
                     codec,
                     progress);
 
-    return new RecordWriter<BytesWritable, BytesWritable>() {
+    return new AbortableRecordWriter<BytesWritable, BytesWritable>() {
         
         private WritableValueBytes wvaluebytes = new WritableValueBytes();
 
@@ -151,7 +151,11 @@ public class SequenceFileAsBinaryOutputFormat
           out.close();
         }
 
-      };
+        @Override
+        public void abort() throws IOException {
+          out.abort();
+        }
+    };
 
   }
 

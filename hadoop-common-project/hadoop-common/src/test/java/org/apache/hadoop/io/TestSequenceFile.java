@@ -37,6 +37,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -485,6 +489,19 @@ public class TestSequenceFile {
     final WritableComparator comparator = WritableComparator.get(RandomDatum.class);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, comparator, RandomDatum.class, RandomDatum.class, conf, metadata);
     sorter.sort(new Path[] { unsortedFile }, sortedFile, false);
+  }
+
+  @Test
+  public void testAbort() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path path1 = new Path(System.getProperty("test.build.data",".")+"/test2.seq");
+    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, path1,
+        Text.class, NullWritable.class, CompressionType.BLOCK);
+    writer.out = mock(FSDataOutputStream.class);
+    writer.append(new Text("file1-1"), NullWritable.get());
+    writer.abort();
+    verify(writer.out, times(1)).abort();
   }
 
   @SuppressWarnings("deprecation")
