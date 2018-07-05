@@ -57,24 +57,25 @@ public final class KeyUtils {
    * add into cache. This function is called with containerManager
    * ReadLock held.
    *
-   * @param container container.
+   * @param containerData containerData.
    * @param conf configuration.
    * @return MetadataStore handle.
    * @throws StorageContainerException
    */
-  public static MetadataStore getDB(KeyValueContainerData container,
+  public static MetadataStore getDB(KeyValueContainerData containerData,
                                     Configuration conf) throws
       StorageContainerException {
-    Preconditions.checkNotNull(container);
+    Preconditions.checkNotNull(containerData);
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
-    Preconditions.checkNotNull(container.getDbFile());
+    Preconditions.checkNotNull(containerData.getDbFile());
     try {
-      return cache.getDB(container.getContainerId(), container
-          .getContainerDBType(), container.getDbFile().getAbsolutePath());
+      return cache.getDB(containerData.getContainerID(), containerData
+          .getContainerDBType(), containerData.getDbFile().getAbsolutePath());
     } catch (IOException ex) {
-      String message = String.format("Unable to open DB Path: " +
-          "%s. ex: %s", container.getDbFile(), ex.getMessage());
+      String message = String.format("Error opening DB. Container:%s " +
+          "ContainerPath:%s", containerData.getContainerID(), containerData
+          .getDbFile().getPath());
       throw new StorageContainerException(message, UNABLE_TO_READ_METADATA_DB);
     }
   }
@@ -89,7 +90,7 @@ public final class KeyUtils {
     Preconditions.checkNotNull(container);
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
-    cache.removeDB(container.getContainerId());
+    cache.removeDB(container.getContainerID());
   }
 
   /**

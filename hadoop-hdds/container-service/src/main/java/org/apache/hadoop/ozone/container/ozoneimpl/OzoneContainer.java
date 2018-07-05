@@ -73,7 +73,7 @@ public class OzoneContainer {
       conf) throws IOException {
     this.dnDetails = datanodeDetails;
     this.config = conf;
-    this.volumeSet = new VolumeSet(datanodeDetails, conf);
+    this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
     boolean useGrpc = this.config.getBoolean(
         ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,

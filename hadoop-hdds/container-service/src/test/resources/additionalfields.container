@@ -1,7 +1,7 @@
 !<KeyValueContainerData>
 containerDBType: RocksDB
 chunksPath: /hdds/current/aed-fg4-hji-jkl/containerdir0/1
-containerId: 9223372036854775807
+containerID: 9223372036854775807
 containerType: KeyValueContainer
 metadataPath: /hdds/current/aed-fg4-hji-jkl/containerdir0/1
 layOutVersion: 1

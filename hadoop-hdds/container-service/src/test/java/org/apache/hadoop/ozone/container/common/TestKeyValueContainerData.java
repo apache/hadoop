@@ -47,7 +47,7 @@ public class TestKeyValueContainerData {
         MAXSIZE);
 
     assertEquals(containerType, kvData.getContainerType());
-    assertEquals(containerId, kvData.getContainerId());
+    assertEquals(containerId, kvData.getContainerID());
     assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
         .getState());
     assertEquals(0, kvData.getMetadata().size());

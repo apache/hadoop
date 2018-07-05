@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -63,7 +64,7 @@ public class ContainerSet {
       StorageContainerException {
     Preconditions.checkNotNull(container, "container cannot be null");
 
-    long containerId = container.getContainerData().getContainerId();
+    long containerId = container.getContainerData().getContainerID();
     if(containerMap.putIfAbsent(containerId, container) == null) {
       LOG.debug("Container with container Id {} is added to containerMap",
           containerId);
@@ -133,6 +134,13 @@ public class ContainerSet {
     return containerMap.entrySet().iterator();
   }
 
+  /**
+   * Return a copy of the containerMap
+   * @return containerMap
+   */
+  public Map<Long, Container> getContainerMap() {
+    return ImmutableMap.copyOf(containerMap);
+  }
 
   /**
    * A simple interface for container Iterations.
@@ -196,7 +204,7 @@ public class ContainerSet {
 
 
     for (Container container: containers) {
-      long containerId = container.getContainerData().getContainerId();
+      long containerId = container.getContainerData().getContainerID();
       ContainerInfo.Builder ciBuilder = ContainerInfo.newBuilder();
       ContainerData containerData = container.getContainerData();
       ciBuilder.setContainerID(containerId)
@@ -234,9 +242,14 @@ public class ContainerSet {
       break;
     default:
       throw new StorageContainerException("Invalid Container state found: " +
-          containerData.getContainerId(), INVALID_CONTAINER_STATE);
+          containerData.getContainerID(), INVALID_CONTAINER_STATE);
     }
     return state;
   }
 
+  // TODO: Implement BlockDeletingService
+  public List<ContainerData> chooseContainerForBlockDeletion(
+      int count) throws StorageContainerException {
+    return null;
+  }
 }

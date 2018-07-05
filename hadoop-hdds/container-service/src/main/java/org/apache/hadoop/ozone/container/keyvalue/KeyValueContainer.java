@@ -31,6 +31,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
@@ -112,7 +114,7 @@ public class KeyValueContainer implements Container {
           .getVolumesList(), maxSize);
       String containerBasePath = containerVolume.getHddsRootDir().toString();
 
-      long containerId = containerData.getContainerId();
+      long containerId = containerData.getContainerID();
       String containerName = Long.toString(containerId);
 
       containerMetaDataPath = KeyValueContainerLocationUtil
@@ -127,7 +129,7 @@ public class KeyValueContainer implements Container {
           containerMetaDataPath, containerName);
 
       // Check if it is new Container.
-      KeyValueContainerUtil.verifyIsNewContainer(containerMetaDataPath);
+      ContainerUtils.verifyIsNewContainer(containerMetaDataPath);
 
       //Create Metadata path chunks path and metadata db
       KeyValueContainerUtil.createContainerMetaData(containerMetaDataPath,
@@ -184,7 +186,7 @@ public class KeyValueContainer implements Container {
     File tempCheckSumFile = null;
     FileOutputStream containerCheckSumStream = null;
     Writer writer = null;
-    long containerId = containerData.getContainerId();
+    long containerId = containerData.getContainerID();
     try {
       tempContainerFile = createTempFile(containerFile);
       tempCheckSumFile = createTempFile(containerCheckSumFile);
@@ -238,7 +240,7 @@ public class KeyValueContainer implements Container {
 
     File containerBkpFile = null;
     File checkSumBkpFile = null;
-    long containerId = containerData.getContainerId();
+    long containerId = containerData.getContainerID();
 
     try {
       if (containerFile.exists() && containerCheckSumFile.exists()) {
@@ -251,8 +253,8 @@ public class KeyValueContainer implements Container {
       } else {
         containerData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
         throw new StorageContainerException("Container is an Inconsistent " +
-            "state, missing required files(.container, .chksm)",
-            INVALID_CONTAINER_STATE);
+            "state, missing required files(.container, .chksm). ContainerID: " +
+            containerId, INVALID_CONTAINER_STATE);
       }
     } catch (StorageContainerException ex) {
       throw ex;
@@ -303,7 +305,7 @@ public class KeyValueContainer implements Container {
   @Override
   public void delete(boolean forceDelete)
       throws StorageContainerException {
-    long containerId = containerData.getContainerId();
+    long containerId = containerData.getContainerID();
     try {
       KeyValueContainerUtil.removeContainer(containerData, config, forceDelete);
     } catch (StorageContainerException ex) {
@@ -326,11 +328,11 @@ public class KeyValueContainer implements Container {
     // complete this action
     try {
       writeLock();
-      long containerId = containerData.getContainerId();
+      long containerId = containerData.getContainerID();
       if(!containerData.isValid()) {
         LOG.debug("Invalid container data. Container Id: {}", containerId);
-        throw new StorageContainerException("Invalid container data. Name : " +
-            containerId, INVALID_CONTAINER_STATE);
+        throw new StorageContainerException("Invalid container data. " +
+            "ContainerID: " + containerId, INVALID_CONTAINER_STATE);
       }
       containerData.closeContainer();
       File containerFile = getContainerFile();
@@ -380,16 +382,16 @@ public class KeyValueContainer implements Container {
     // TODO: Now, when writing the updated data to .container file, we are
     // holding lock and writing data to disk. We can have async implementation
     // to flush the update container data to disk.
-    long containerId = containerData.getContainerId();
+    long containerId = containerData.getContainerID();
     if(!containerData.isValid()) {
-      LOG.debug("Invalid container data. ID: {}", containerId);
+      LOG.debug("Invalid container data. ContainerID: {}", containerId);
       throw new StorageContainerException("Invalid container data. " +
-          "Container Name : " + containerId, INVALID_CONTAINER_STATE);
+          "ContainerID: " + containerId, INVALID_CONTAINER_STATE);
     }
     if (!forceUpdate && !containerData.isOpen()) {
       throw new StorageContainerException(
-          "Updating a closed container is not allowed. ID: " + containerId,
-          UNSUPPORTED_REQUEST);
+          "Updating a closed container without force option is not allowed. " +
+              "ContainerID: " + containerId, UNSUPPORTED_REQUEST);
     }
     try {
       for (Map.Entry<String, String> entry : metadata.entrySet()) {
@@ -482,7 +484,7 @@ public class KeyValueContainer implements Container {
    */
   private File getContainerFile() {
     return new File(containerData.getMetadataPath(), containerData
-        .getContainerId() + OzoneConsts.CONTAINER_EXTENSION);
+        .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
   }
 
   /**
@@ -491,7 +493,7 @@ public class KeyValueContainer implements Container {
    */
   private File getContainerCheckSumFile() {
     return new File(containerData.getMetadataPath(), containerData
-        .getContainerId() + OzoneConsts.CONTAINER_FILE_CHECKSUM_EXTENSION);
+        .getContainerID() + OzoneConsts.CONTAINER_FILE_CHECKSUM_EXTENSION);
   }
 
   /**

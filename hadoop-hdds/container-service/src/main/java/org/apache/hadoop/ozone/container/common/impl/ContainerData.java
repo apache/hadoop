@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.container.common.impl;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerType;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -41,7 +43,10 @@ public class ContainerData {
   private final ContainerType containerType;
 
   // Unique identifier for the container
-  private final long containerId;
+  private final long containerID;
+
+  // Path to container root dir.
+  private String containerPath;
 
   // Layout version of the container data
   private final int layOutVersion;
@@ -65,6 +70,10 @@ public class ContainerData {
 
   private HddsVolume volume;
 
+  /**
+   * Number of pending deletion blocks in container.
+   */
+  private final AtomicInteger numPendingDeletionBlocks;
 
   /**
    * Creates a ContainerData Object, which holds metadata of the container.
@@ -73,18 +82,8 @@ public class ContainerData {
    * @param size - container maximum size
    */
   public ContainerData(ContainerType type, long containerId, int size) {
-    this.containerType = type;
-    this.containerId = containerId;
-    this.layOutVersion = ChunkLayOutVersion.getLatestVersion().getVersion();
-    this.metadata = new TreeMap<>();
-    this.state = ContainerLifeCycleState.OPEN;
-    this.readCount = new AtomicLong(0L);
-    this.readBytes =  new AtomicLong(0L);
-    this.writeCount =  new AtomicLong(0L);
-    this.writeBytes =  new AtomicLong(0L);
-    this.bytesUsed = new AtomicLong(0L);
-    this.keyCount = new AtomicLong(0L);
-    this.maxSizeGB = size;
+    this(type, containerId,
+        ChunkLayOutVersion.getLatestVersion().getVersion(), size);
   }
 
   /**
@@ -94,10 +93,12 @@ public class ContainerData {
    * @param layOutVersion - Container layOutVersion
    * @param size - Container maximum size
    */
-  public ContainerData(ContainerType type, long containerId, int
-      layOutVersion, int size) {
+  public ContainerData(ContainerType type, long containerId,
+    int layOutVersion, int size) {
+    Preconditions.checkNotNull(type);
+
     this.containerType = type;
-    this.containerId = containerId;
+    this.containerID = containerId;
     this.layOutVersion = layOutVersion;
     this.metadata = new TreeMap<>();
     this.state = ContainerLifeCycleState.OPEN;
@@ -108,13 +109,30 @@ public class ContainerData {
     this.bytesUsed = new AtomicLong(0L);
     this.keyCount = new AtomicLong(0L);
     this.maxSizeGB = size;
+    this.numPendingDeletionBlocks = new AtomicInteger(0);
   }
 
   /**
-   * Returns the containerId.
+   * Returns the containerID.
    */
-  public long getContainerId() {
-    return containerId;
+  public long getContainerID() {
+    return containerID;
+  }
+
+  /**
+   * Returns the path to base dir of the container.
+   * @return Path to base dir.
+   */
+  public String getContainerPath() {
+    return containerPath;
+  }
+
+  /**
+   * Set the base dir path of the container.
+   * @param baseDir path to base dir
+   */
+  public void setContainerPath(String baseDir) {
+    this.containerPath = baseDir;
   }
 
   /**
@@ -163,9 +181,6 @@ public class ContainerData {
    */
   public void addMetadata(String key, String value) throws IOException {
     synchronized (this.metadata) {
-      if (this.metadata.containsKey(key)) {
-        throw new IOException("This key already exists. Key " + key);
-      }
       metadata.put(key, value);
     }
   }
@@ -299,7 +314,6 @@ public class ContainerData {
     return this.bytesUsed.addAndGet(used);
   }
 
-
   /**
    * Decrease the number of bytes used by the container.
    * @param reclaimed the number of bytes reclaimed from the container.
@@ -356,4 +370,75 @@ public class ContainerData {
     this.keyCount.set(count);
   }
 
+  /**
+   * Returns container metadata path.
+   */
+  public String getMetadataPath() {
+    return null;
+  }
+
+  /**
+   * Returns container data path.
+   */
+  public String getDataPath() {
+    return null;
+  }
+
+  /**
+   * Increase the count of pending deletion blocks.
+   *
+   * @param numBlocks increment number
+   */
+  public void incrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(numBlocks);
+  }
+
+  /**
+   * Decrease the count of pending deletion blocks.
+   *
+   * @param numBlocks decrement number
+   */
+  public void decrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(-1 * numBlocks);
+  }
+
+  /**
+   * Get the number of pending deletion blocks.
+   */
+  public int getNumPendingDeletionBlocks() {
+    return this.numPendingDeletionBlocks.get();
+  }
+
+  /**
+   * Returns a ProtoBuf Message from ContainerData.
+   *
+   * @return Protocol Buffer Message
+   */
+  public ContainerProtos.ContainerData getProtoBufMessage() {
+    ContainerProtos.ContainerData.Builder builder =
+        ContainerProtos.ContainerData.newBuilder();
+
+    builder.setContainerID(this.getContainerID());
+
+    if (this.containerPath != null) {
+      builder.setContainerPath(this.containerPath);
+    }
+
+    builder.setState(this.getState());
+
+    for (Map.Entry<String, String> entry : metadata.entrySet()) {
+      ContainerProtos.KeyValue.Builder keyValBuilder =
+          ContainerProtos.KeyValue.newBuilder();
+      builder.addMetadata(keyValBuilder.setKey(entry.getKey())
+          .setValue(entry.getValue()).build());
+    }
+
+    if (this.getBytesUsed() >= 0) {
+      builder.setBytesUsed(this.getBytesUsed());
+    }
+
+    builder.setContainerType(containerType);
+
+    return builder.build();
+  }
 }

@@ -54,11 +54,7 @@ public class TestRoundRobinVolumeChoosingPolicy {
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirKey);
     policy = ReflectionUtils.newInstance(
         RoundRobinVolumeChoosingPolicy.class, null);
-    DatanodeDetails datanodeDetails = DatanodeDetails.newBuilder()
-        .setUuid(UUID.randomUUID().toString())
-        .setIpAddress(DUMMY_IP_ADDR)
-        .build();
-    VolumeSet volumeSet = new VolumeSet(datanodeDetails, conf);
+    VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
     volumes = volumeSet.getVolumesList();
   }
 

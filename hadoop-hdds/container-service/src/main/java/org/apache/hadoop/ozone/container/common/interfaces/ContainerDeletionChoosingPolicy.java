@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +28,7 @@ import java.util.Map;
  * This interface is used for choosing desired containers for
  * block deletion.
  */
+// TODO: Fix ContainerDeletionChoosingPolicy to work with new StorageLayer
 public interface ContainerDeletionChoosingPolicy {
 
   /**

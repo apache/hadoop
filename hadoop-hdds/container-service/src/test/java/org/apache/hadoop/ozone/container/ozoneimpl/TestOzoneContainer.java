@@ -62,7 +62,7 @@ public class TestOzoneContainer {
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, folder.getRoot()
         .getAbsolutePath() + "," + folder.newFolder().getAbsolutePath());
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, folder.newFolder().getAbsolutePath());
-    volumeSet = new VolumeSet(datanodeDetails, conf);
+    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
 
     for (int i=0; i<10; i++) {

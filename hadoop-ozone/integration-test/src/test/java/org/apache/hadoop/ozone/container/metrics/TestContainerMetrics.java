@@ -74,7 +74,8 @@ public class TestContainerMetrics {
 
       DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, path);
-      VolumeSet volumeSet = new VolumeSet(datanodeDetails, conf);
+      VolumeSet volumeSet = new VolumeSet(
+          datanodeDetails.getUuidString(), conf);
       ContainerSet containerSet = new ContainerSet();
       HddsDispatcher dispatcher = new HddsDispatcher(conf, containerSet,
           volumeSet);

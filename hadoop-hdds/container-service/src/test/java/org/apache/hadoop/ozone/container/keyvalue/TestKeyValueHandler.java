@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -30,6 +31,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,12 +73,7 @@ public class TestKeyValueHandler {
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, volume);
 
     this.containerSet = new ContainerSet();
-    DatanodeDetails datanodeDetails = DatanodeDetails.newBuilder()
-        .setUuid(DATANODE_UUID)
-        .setHostName("localhost")
-        .setIpAddress("127.0.0.1")
-        .build();
-    this.volumeSet = new VolumeSet(datanodeDetails, conf);
+    this.volumeSet = new VolumeSet(DATANODE_UUID, conf);
 
     this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
     this.handler = (KeyValueHandler) dispatcher.getHandler(
@@ -246,7 +243,7 @@ public class TestKeyValueHandler {
 
     // Verify that new container is added to containerSet.
     Container container = containerSet.getContainer(contId);
-    Assert.assertEquals(contId, container.getContainerData().getContainerId());
+    Assert.assertEquals(contId, container.getContainerData().getContainerID());
     Assert.assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
         container.getContainerState());
   }

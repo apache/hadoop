@@ -86,20 +86,17 @@ public class VolumeSet {
    */
   private final AutoCloseableLock volumeSetLock;
 
-  private final DatanodeDetails dnDetails;
-  private String datanodeUuid;
+  private final String datanodeUuid;
   private String clusterID;
 
-  public VolumeSet(DatanodeDetails datanodeDetails, Configuration conf)
+  public VolumeSet(String dnUuid, Configuration conf)
       throws DiskOutOfSpaceException {
-    this(datanodeDetails, null, conf);
+    this(dnUuid, null, conf);
   }
 
-  public VolumeSet(DatanodeDetails datanodeDetails, String clusterID,
-      Configuration conf)
+  public VolumeSet(String dnUuid, String clusterID, Configuration conf)
       throws DiskOutOfSpaceException {
-    this.dnDetails = datanodeDetails;
-    this.datanodeUuid = datanodeDetails.getUuidString();
+    this.datanodeUuid = dnUuid;
     this.clusterID = clusterID;
     this.conf = conf;
     this.volumeSetLock = new AutoCloseableLock(

@@ -64,7 +64,7 @@ public class TestContainerDataYaml {
     // Read from .container file, and verify data.
     KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
-    assertEquals(Long.MAX_VALUE, kvData.getContainerId());
+    assertEquals(Long.MAX_VALUE, kvData.getContainerID());
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
@@ -92,7 +92,7 @@ public class TestContainerDataYaml {
         containerFile);
 
     // verify data.
-    assertEquals(Long.MAX_VALUE, kvData.getContainerId());
+    assertEquals(Long.MAX_VALUE, kvData.getContainerID());
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
@@ -150,7 +150,7 @@ public class TestContainerDataYaml {
       assertEquals("RocksDB", kvData.getContainerDBType());
       assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
           .getContainerType());
-      assertEquals(9223372036854775807L, kvData.getContainerId());
+      assertEquals(9223372036854775807L, kvData.getContainerID());
       assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData
           .getChunksPath());
       assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData

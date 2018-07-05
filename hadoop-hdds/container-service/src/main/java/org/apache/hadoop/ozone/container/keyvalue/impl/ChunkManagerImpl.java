@@ -76,7 +76,10 @@ public class ChunkManagerImpl implements ChunkManager {
       HddsVolume volume = containerData.getVolume();
       VolumeIOStats volumeIOStats = volume.getVolumeIOStats();
 
-      File chunkFile = ChunkUtils.validateChunk(containerData, info);
+      File chunkFile = ChunkUtils.getChunkFile(containerData, info);
+
+      boolean isOverwrite = ChunkUtils.validateChunkForOverwrite(
+          chunkFile, info);
       File tmpChunkFile = getTmpChunkFile(chunkFile, info);
 
       LOG.debug("writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file",
@@ -101,8 +104,9 @@ public class ChunkManagerImpl implements ChunkManager {
       case COMBINED:
         // directly write to the chunk file
         ChunkUtils.writeData(chunkFile, info, data, volumeIOStats);
-        // Increment container stats here, as we directly write to chunk file.
-        containerData.incrBytesUsed(info.getLen());
+        if (!isOverwrite) {
+          containerData.incrBytesUsed(info.getLen());
+        }
         containerData.incrWriteCount();
         containerData.incrWriteBytes(info.getLen());
         break;

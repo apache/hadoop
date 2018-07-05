@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone.container.testutils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
-import org.apache.hadoop.ozone.container.common.statemachine.background
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
     .BlockDeletingService;
 
 import java.util.concurrent.CountDownLatch;
@@ -42,10 +42,9 @@ public class BlockDeletingServiceTestImpl
   private Thread testingThread;
   private AtomicInteger numOfProcessed = new AtomicInteger(0);
 
-  public BlockDeletingServiceTestImpl(ContainerManager containerManager,
+  public BlockDeletingServiceTestImpl(ContainerSet containerSet,
       int serviceInterval, Configuration conf) {
-    super(containerManager, serviceInterval, SERVICE_TIMEOUT_IN_MILLISECONDS,
-        TimeUnit.MILLISECONDS, conf);
+    super(containerSet, serviceInterval, SERVICE_TIMEOUT_IN_MILLISECONDS, conf);
   }
 
   @VisibleForTesting

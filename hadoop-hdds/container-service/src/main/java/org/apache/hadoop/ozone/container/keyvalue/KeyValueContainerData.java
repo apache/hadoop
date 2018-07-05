@@ -18,15 +18,28 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.yaml.snakeyaml.nodes.Tag;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.hadoop.ozone.OzoneConsts.CHUNKS_PATH;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ID;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
+import static org.apache.hadoop.ozone.OzoneConsts.LAYOUTVERSION;
+import static org.apache.hadoop.ozone.OzoneConsts.MAX_SIZE_GB;
+import static org.apache.hadoop.ozone.OzoneConsts.METADATA;
+import static org.apache.hadoop.ozone.OzoneConsts.METADATA_PATH;
+import static org.apache.hadoop.ozone.OzoneConsts.STATE;
 
 /**
  * This class represents the KeyValueContainer metadata, which is the
@@ -36,12 +49,20 @@ import java.util.Map;
 public class KeyValueContainerData extends ContainerData {
 
   // Yaml Tag used for KeyValueContainerData.
-  public static final Tag YAML_TAG = new Tag("KeyValueContainerData");
+  public static final Tag KEYVALUE_YAML_TAG = new Tag("KeyValueContainerData");
 
   // Fields need to be stored in .container file.
-  private static final List<String> YAML_FIELDS = Lists.newArrayList(
-      "containerType", "containerId", "layOutVersion", "state", "metadata",
-      "metadataPath", "chunksPath", "containerDBType", "maxSizeGB");
+  private static final List<String> YAML_FIELDS =
+      Lists.newArrayList(
+          CONTAINER_TYPE,
+          CONTAINER_ID,
+          LAYOUTVERSION,
+          STATE,
+          METADATA,
+          METADATA_PATH,
+          CHUNKS_PATH,
+          CONTAINER_DB_TYPE,
+          MAX_SIZE_GB);
 
   // Path to Container metadata Level DB/RocksDB Store and .container file.
   private String metadataPath;
@@ -96,11 +117,11 @@ public class KeyValueContainerData extends ContainerData {
   public File getDbFile() {
     return dbFile;
   }
+
   /**
    * Returns container metadata path.
-   *
-   * @return - path
    */
+  @Override
   public String getMetadataPath() {
     return metadataPath;
   }
@@ -119,6 +140,14 @@ public class KeyValueContainerData extends ContainerData {
    * @return - Physical path where container file and checksum is stored.
    */
   public String getChunksPath() {
+    return chunksPath;
+  }
+
+  /**
+   * Returns container chunks path.
+   */
+  @Override
+  public String getDataPath() {
     return chunksPath;
   }
 
@@ -181,7 +210,7 @@ public class KeyValueContainerData extends ContainerData {
   public ContainerProtos.ContainerData getProtoBufMessage() {
     ContainerProtos.ContainerData.Builder builder = ContainerProtos
         .ContainerData.newBuilder();
-    builder.setContainerID(this.getContainerId());
+    builder.setContainerID(this.getContainerID());
     builder.setDbPath(this.getDbFile().getPath());
     builder.setContainerPath(this.getMetadataPath());
     builder.setState(this.getState());
@@ -210,5 +239,42 @@ public class KeyValueContainerData extends ContainerData {
 
   public static List<String> getYamlFields() {
     return YAML_FIELDS;
+  }
+
+  /**
+   * Constructs a KeyValueContainerData object from ProtoBuf classes.
+   *
+   * @param protoData - ProtoBuf Message
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public static KeyValueContainerData getFromProtoBuf(
+      ContainerProtos.ContainerData protoData) throws IOException {
+    // TODO: Add containerMaxSize to ContainerProtos.ContainerData
+    KeyValueContainerData data = new KeyValueContainerData(
+        protoData.getContainerID(),
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    for (int x = 0; x < protoData.getMetadataCount(); x++) {
+      data.addMetadata(protoData.getMetadata(x).getKey(),
+          protoData.getMetadata(x).getValue());
+    }
+
+    if (protoData.hasContainerPath()) {
+      data.setContainerPath(protoData.getContainerPath());
+    }
+
+    if (protoData.hasState()) {
+      data.setState(protoData.getState());
+    }
+
+    if (protoData.hasBytesUsed()) {
+      data.setBytesUsed(protoData.getBytesUsed());
+    }
+
+    if(protoData.hasContainerDBType()) {
+      data.setContainerDBType(protoData.getContainerDBType());
+    }
+
+    return data;
   }
 }

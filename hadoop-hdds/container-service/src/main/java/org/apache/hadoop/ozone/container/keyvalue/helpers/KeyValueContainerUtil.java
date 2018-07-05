@@ -34,6 +34,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
@@ -67,19 +68,6 @@ public final class KeyValueContainerUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       KeyValueContainerUtil.class);
-
-
-  public static void verifyIsNewContainer(File containerFile) throws
-      FileAlreadyExistsException {
-    Preconditions.checkNotNull(containerFile, "containerFile Should not be " +
-        "null");
-    if (containerFile.getParentFile().exists()) {
-      LOG.error("container already exists on disk. File: {}", containerFile
-          .toPath());
-      throw new FileAlreadyExistsException("container already exists on " +
-            "disk.");
-    }
-  }
 
   /**
    * creates metadata path, chunks path and  metadata DB for the specified
@@ -271,7 +259,7 @@ public final class KeyValueContainerUtil {
     Preconditions.checkNotNull(dbFile, "dbFile cannot be null");
     Preconditions.checkNotNull(config, "ozone config cannot be null");
 
-    long containerId = containerData.getContainerId();
+    long containerId = containerData.getContainerID();
     String containerName = String.valueOf(containerId);
     File metadataPath = new File(containerData.getMetadataPath());
 
@@ -282,7 +270,7 @@ public final class KeyValueContainerUtil {
 
     // Verify Checksum
     String checksum = KeyValueContainerUtil.computeCheckSum(
-        containerData.getContainerId(), containerFile);
+        containerData.getContainerID(), containerFile);
     KeyValueContainerUtil.verifyCheckSum(containerId, checksumFile, checksum);
 
     containerData.setDbFile(dbFile);
@@ -305,4 +293,34 @@ public final class KeyValueContainerUtil {
     containerData.setKeyCount(liveKeys.size());
   }
 
+  /**
+   * Returns the path where data or chunks live for a given container.
+   *
+   * @param kvContainerData - KeyValueContainerData
+   * @return - Path to the chunks directory
+   */
+  public static Path getDataDirectory(KeyValueContainerData kvContainerData) {
+
+    String chunksPath = kvContainerData.getChunksPath();
+    Preconditions.checkNotNull(chunksPath);
+
+    return Paths.get(chunksPath);
+  }
+
+  /**
+   * Container metadata directory -- here is where the level DB and
+   * .container file lives.
+   *
+   * @param kvContainerData - KeyValueContainerData
+   * @return Path to the metadata directory
+   */
+  public static Path getMetadataDirectory(
+      KeyValueContainerData kvContainerData) {
+
+    String metadataPath = kvContainerData.getMetadataPath();
+    Preconditions.checkNotNull(metadataPath);
+
+    return Paths.get(metadataPath);
+
+  }
 }

@@ -18,6 +18,9 @@
 package org.apache.hadoop.ozone.genesis;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -27,11 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
-import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
-import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
-import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 
 import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -65,8 +63,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .PutKeyRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetKeyRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerData;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -77,8 +73,8 @@ public class BenchMarkDatanodeDispatcher {
 
   private String baseDir;
   private String datanodeUuid;
-  private Dispatcher dispatcher;
   private Pipeline pipeline;
+  private HddsDispatcher dispatcher;
   private ByteString data;
   private Random random;
   private AtomicInteger containerCount;
@@ -104,7 +100,6 @@ public class BenchMarkDatanodeDispatcher {
     data = ByteString.copyFromUtf8(RandomStringUtils.randomAscii(1048576));
     random  = new Random();
     Configuration conf = new OzoneConfiguration();
-    ContainerManager manager = new ContainerManagerImpl();
     baseDir = System.getProperty("java.io.tmpdir") + File.separator +
         datanodeUuid;
 
@@ -113,15 +108,12 @@ public class BenchMarkDatanodeDispatcher {
 
     // metadata directory
     StorageLocation metadataDir = StorageLocation.parse(
-        baseDir+ File.separator + CONTAINER_ROOT_PREFIX);
-    List<StorageLocation> locations = Arrays.asList(metadataDir);
+        baseDir + File.separator + CONTAINER_ROOT_PREFIX);
 
-    manager
-        .init(conf, locations, GenesisUtil.createDatanodeDetails(datanodeUuid));
-    manager.setChunkManager(new ChunkManagerImpl(manager));
-    manager.setKeyManager(new KeyManagerImpl(manager, conf));
+    ContainerSet containerSet = new ContainerSet();
+    VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);
 
-    dispatcher = new Dispatcher(manager, conf);
+    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
     dispatcher.init();
 
     containerCount = new AtomicInteger();

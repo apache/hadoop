@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.yaml.snakeyaml.Yaml;
 
@@ -48,7 +50,8 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
 
-import static org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData.YAML_TAG;
+import static org.apache.hadoop.ozone.container.keyvalue
+    .KeyValueContainerData.KEYVALUE_YAML_TAG;
 
 /**
  * Class for creating and reading .container files.
@@ -84,7 +87,7 @@ public final class ContainerDataYaml {
       Representer representer = new ContainerDataRepresenter();
       representer.setPropertyUtils(propertyUtils);
       representer.addClassTag(KeyValueContainerData.class,
-          KeyValueContainerData.YAML_TAG);
+          KeyValueContainerData.KEYVALUE_YAML_TAG);
 
       Constructor keyValueDataConstructor = new ContainerDataConstructor();
 
@@ -171,7 +174,8 @@ public final class ContainerDataYaml {
       //Adding our own specific constructors for tags.
       // When a new Container type is added, we need to add yamlConstructor
       // for that
-      this.yamlConstructors.put(YAML_TAG, new ConstructKeyValueContainerData());
+      this.yamlConstructors.put(
+          KEYVALUE_YAML_TAG, new ConstructKeyValueContainerData());
       this.yamlConstructors.put(Tag.INT, new ConstructLong());
     }
 
@@ -181,20 +185,21 @@ public final class ContainerDataYaml {
         Map<Object, Object> nodes = constructMapping(mnode);
 
         //Needed this, as TAG.INT type is by default converted to Long.
-        long layOutVersion = (long) nodes.get("layOutVersion");
+        long layOutVersion = (long) nodes.get(OzoneConsts.LAYOUTVERSION);
         int lv = (int) layOutVersion;
 
-        long size = (long) nodes.get("maxSizeGB");
+        long size = (long) nodes.get(OzoneConsts.MAX_SIZE_GB);
         int maxSize = (int) size;
 
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData((long) nodes
-            .get("containerId"), lv, maxSize);
-        kvData.setContainerDBType((String)nodes.get("containerDBType"));
+            .get(OzoneConsts.CONTAINER_ID), lv, maxSize);
+        kvData.setContainerDBType((String)nodes.get(
+            OzoneConsts.CONTAINER_DB_TYPE));
         kvData.setMetadataPath((String) nodes.get(
-            "metadataPath"));
-        kvData.setChunksPath((String) nodes.get("chunksPath"));
-        Map<String, String> meta = (Map) nodes.get("metadata");
+            OzoneConsts.METADATA_PATH));
+        kvData.setChunksPath((String) nodes.get(OzoneConsts.CHUNKS_PATH));
+        Map<String, String> meta = (Map) nodes.get(OzoneConsts.METADATA);
         meta.forEach((key, val) -> {
           try {
             kvData.addMetadata(key, val);
@@ -204,7 +209,7 @@ public final class ContainerDataYaml {
                 "for containerId " + (long) nodes.get("containerId"));
           }
         });
-        String state = (String) nodes.get("state");
+        String state = (String) nodes.get(OzoneConsts.STATE);
         switch (state) {
         case "OPEN":
           kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
@@ -218,7 +223,7 @@ public final class ContainerDataYaml {
         default:
           throw new IllegalStateException("Unexpected " +
               "ContainerLifeCycleState " + state + " for the containerId " +
-              (long) nodes.get("containerId"));
+              (long) nodes.get(OzoneConsts.CONTAINER_ID));
         }
         return kvData;
       }

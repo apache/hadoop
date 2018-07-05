@@ -245,24 +245,6 @@ public class TestKeyValueContainer {
   }
 
   @Test
-  public void testUpdateContainerInvalidMetadata() throws IOException {
-    try {
-      keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
-      Map<String, String> metadata = new HashMap<>();
-      metadata.put("VOLUME", "ozone");
-      keyValueContainer.update(metadata, true);
-      //Trying to update again with same metadata
-      keyValueContainer.update(metadata, true);
-      fail("testUpdateContainerInvalidMetadata failed");
-    } catch (StorageContainerException ex) {
-      GenericTestUtils.assertExceptionContains("Container Metadata update " +
-          "error", ex);
-      assertEquals(ContainerProtos.Result.CONTAINER_METADATA_ERROR, ex
-          .getResult());
-    }
-  }
-
-  @Test
   public void testUpdateContainerUnsupportedRequest() throws Exception {
     try {
       keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
@@ -275,7 +257,7 @@ public class TestKeyValueContainer {
       fail("testUpdateContainerUnsupportedRequest failed");
     } catch (StorageContainerException ex) {
       GenericTestUtils.assertExceptionContains("Updating a closed container " +
-          "is not allowed", ex);
+          "without force option is not allowed", ex);
       assertEquals(ContainerProtos.Result.UNSUPPORTED_REQUEST, ex
           .getResult());
     }

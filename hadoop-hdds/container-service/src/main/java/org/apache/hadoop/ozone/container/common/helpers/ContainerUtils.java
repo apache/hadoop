@@ -19,8 +19,6 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -34,10 +32,8 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
-import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
-import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,14 +45,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CLOSED_CONTAINER_IO;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.INVALID_CONTAINER_STATE;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.SUCCESS;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.UNABLE_TO_FIND_DATA_DIR;
 
 /**
  * A set of helper functions to create proper responses.
@@ -203,81 +191,21 @@ public final class ContainerUtils {
    * @param containerFile - Container File to verify
    * @throws IOException
    */
-  public static void verifyIsNewContainer(File containerFile)
-      throws IOException {
-    Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
-    if (containerFile.exists()) {
-      log.error("container already exists on disk. File: {}",
-          containerFile.toPath());
+  public static void verifyIsNewContainer(File containerFile) throws
+      FileAlreadyExistsException {
+    Logger log = LoggerFactory.getLogger(ContainerSet.class);
+    Preconditions.checkNotNull(containerFile, "containerFile Should not be " +
+        "null");
+    if (containerFile.getParentFile().exists()) {
+      log.error("Container already exists on disk. File: {}", containerFile
+          .toPath());
       throw new FileAlreadyExistsException("container already exists on " +
           "disk.");
     }
-
-    File parentPath = new File(containerFile.getParent());
-
-    if (!parentPath.exists() && !parentPath.mkdirs()) {
-      log.error("Unable to create parent path. Path: {}",
-          parentPath.toString());
-      throw new IOException("Unable to create container directory.");
-    }
-
-    if (!containerFile.createNewFile()) {
-      log.error("creation of a new container file failed. File: {}",
-          containerFile.toPath());
-      throw new IOException("creation of a new container file failed.");
-    }
-
   }
 
   public static String getContainerDbFileName(String containerName) {
     return containerName + OzoneConsts.DN_CONTAINER_DB;
-  }
-
-  /**
-   * creates a Metadata DB for the specified container.
-   *
-   * @param containerPath - Container Path.
-   * @throws IOException
-   */
-  public static Path createMetadata(Path containerPath, String containerName,
-      Configuration conf)
-      throws IOException {
-    Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
-    Preconditions.checkNotNull(containerPath);
-    Path metadataPath = containerPath.resolve(OzoneConsts.CONTAINER_META_PATH);
-    if (!metadataPath.toFile().mkdirs()) {
-      log.error("Unable to create directory for metadata storage. Path: {}",
-          metadataPath);
-      throw new IOException("Unable to create directory for metadata storage." +
-          " Path: " + metadataPath);
-    }
-    MetadataStore store = MetadataStoreBuilder.newBuilder()
-        .setConf(conf)
-        .setCreateIfMissing(true)
-        .setDbFile(metadataPath
-            .resolve(getContainerDbFileName(containerName)).toFile())
-        .build();
-
-    // we close since the SCM pre-creates containers.
-    // we will open and put Db handle into a cache when keys are being created
-    // in a container.
-
-    store.close();
-
-    Path dataPath = containerPath.resolve(OzoneConsts.CONTAINER_DATA_PATH);
-    if (!dataPath.toFile().mkdirs()) {
-
-      // If we failed to create data directory, we cleanup the
-      // metadata directory completely. That is, we will delete the
-      // whole directory including LevelDB file.
-      log.error("Unable to create directory for data storage. cleaning up the" +
-              " container path: {} dataPath: {}",
-          containerPath, dataPath);
-      FileUtils.deleteDirectory(containerPath.toFile());
-      throw new IOException("Unable to create directory for data storage." +
-          " Path: " + dataPath);
-    }
-    return metadataPath;
   }
 
   /**
@@ -292,93 +220,6 @@ public final class ContainerUtils {
     return location.resolve(Long.toString(containerData
         .getContainerID()).concat(CONTAINER_EXTENSION))
         .toFile();
-  }
-
-  /**
-   * Container metadata directory -- here is where the level DB lives.
-   *
-   * @param cData - cData.
-   * @return Path to the parent directory where the DB lives.
-   */
-  public static Path getMetadataDirectory(ContainerData cData) {
-    Path dbPath = Paths.get(cData.getDBPath());
-    Preconditions.checkNotNull(dbPath);
-    Preconditions.checkState(dbPath.toString().length() > 0);
-    return dbPath.getParent();
-  }
-
-  /**
-   * Returns the path where data or chunks live for a given container.
-   *
-   * @param cData - cData container
-   * @return - Path
-   * @throws StorageContainerException
-   */
-  public static Path getDataDirectory(ContainerData cData)
-      throws StorageContainerException {
-    Path path = getMetadataDirectory(cData);
-    Preconditions.checkNotNull(path);
-    Path parentPath = path.getParent();
-    if (parentPath == null) {
-      throw new StorageContainerException("Unable to get Data directory."
-          + path, UNABLE_TO_FIND_DATA_DIR);
-    }
-    return parentPath.resolve(OzoneConsts.CONTAINER_DATA_PATH);
-  }
-
-  /**
-   * remove Container if it is empty.
-   * <p/>
-   * There are three things we need to delete.
-   * <p/>
-   * 1. Container file and metadata file. 2. The Level DB file 3. The path that
-   * we created on the data location.
-   *
-   * @param containerData - Data of the container to remove.
-   * @param conf - configuration of the cluster.
-   * @param forceDelete - whether this container should be deleted forcibly.
-   * @throws IOException
-   */
-  public static void removeContainer(ContainerData containerData,
-      Configuration conf, boolean forceDelete) throws IOException {
-    Preconditions.checkNotNull(containerData);
-    Path dbPath = Paths.get(containerData.getDBPath());
-
-    MetadataStore db = KeyUtils.getDB(containerData, conf);
-    // If the container is not empty and cannot be deleted forcibly,
-    // then throw a SCE to stop deleting.
-    if(!forceDelete && !db.isEmpty()) {
-      throw new StorageContainerException(
-          "Container cannot be deleted because it is not empty.",
-          Result.ERROR_CONTAINER_NOT_EMPTY);
-    }
-    // Close the DB connection and remove the DB handler from cache
-    KeyUtils.removeDB(containerData, conf);
-
-    // Delete the DB File.
-    FileUtils.forceDelete(dbPath.toFile());
-    dbPath = dbPath.getParent();
-
-    // Delete all Metadata in the Data directories for this containers.
-    if (dbPath != null) {
-      FileUtils.deleteDirectory(dbPath.toFile());
-      dbPath = dbPath.getParent();
-    }
-
-    // now delete the container directory, this means that all key data dirs
-    // will be removed too.
-    if (dbPath != null) {
-      FileUtils.deleteDirectory(dbPath.toFile());
-    }
-
-    // Delete the container metadata from the metadata locations.
-    String rootPath = getContainerNameFromFile(new File(containerData
-        .getContainerPath()));
-    Path containerPath = Paths.get(rootPath.concat(CONTAINER_EXTENSION));
-
-
-    FileUtils.forceDelete(containerPath.toFile());
-
   }
 
   /**

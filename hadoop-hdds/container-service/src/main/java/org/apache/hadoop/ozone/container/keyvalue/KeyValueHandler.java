@@ -288,7 +288,7 @@ public class KeyValueHandler extends Handler {
             DELETE_ON_OPEN_CONTAINER);
       } else {
         containerSet.removeContainer(
-            kvContainer.getContainerData().getContainerId());
+            kvContainer.getContainerData().getContainerID());
         // Release the lock first.
         // Avoid holding write locks for disk operations
         kvContainer.writeUnlock();

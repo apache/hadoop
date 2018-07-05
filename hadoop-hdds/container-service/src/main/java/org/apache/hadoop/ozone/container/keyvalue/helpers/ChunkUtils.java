@@ -33,8 +33,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
@@ -229,17 +229,16 @@ public final class ChunkUtils {
    * Validates chunk data and returns a file object to Chunk File that we are
    * expected to write data to.
    *
-   * @param data - container data.
+   * @param chunkFile - chunkFile to write data into.
    * @param info - chunk info.
-   * @return File
+   * @return boolean isOverwrite
    * @throws StorageContainerException
    */
-  public static File validateChunk(KeyValueContainerData data, ChunkInfo info)
-      throws StorageContainerException {
+  public static boolean validateChunkForOverwrite(File chunkFile,
+      ChunkInfo info) throws StorageContainerException {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
-    File chunkFile = getChunkFile(data, info);
     if (isOverWriteRequested(chunkFile, info)) {
       if (!isOverWritePermitted(info)) {
         log.error("Rejecting write chunk request. Chunk overwrite " +
@@ -248,8 +247,9 @@ public final class ChunkUtils {
             "OverWrite flag required." + info.toString(),
             OVERWRITE_FLAG_REQUIRED);
       }
+      return true;
     }
-    return chunkFile;
+    return false;
   }
 
   /**
@@ -340,8 +340,8 @@ public final class ChunkUtils {
   public static ContainerCommandResponseProto getReadChunkResponse(
       ContainerCommandRequestProto msg, byte[] data, ChunkInfo info) {
     Preconditions.checkNotNull(msg);
-    Preconditions.checkNotNull("Chunk data is null", data);
-    Preconditions.checkNotNull("Chunk Info is null", info);
+    Preconditions.checkNotNull(data, "Chunk data is null");
+    Preconditions.checkNotNull(info, "Chunk Info is null");
 
     ReadChunkResponseProto.Builder response =
         ReadChunkResponseProto.newBuilder();

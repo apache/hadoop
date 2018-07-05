@@ -74,7 +74,7 @@ public class TestContainerSet {
         .getContainer(containerId);
     KeyValueContainerData keyValueContainerData = (KeyValueContainerData)
         container.getContainerData();
-    assertEquals(containerId, keyValueContainerData.getContainerId());
+    assertEquals(containerId, keyValueContainerData.getContainerID());
     assertEquals(state, keyValueContainerData.getState());
     assertNull(containerSet.getContainer(1000L));
 
@@ -97,7 +97,7 @@ public class TestContainerSet {
     while(containerIterator.hasNext()) {
       Container kv = containerIterator.next();
       ContainerData containerData = kv.getContainerData();
-      long containerId = containerData.getContainerId();
+      long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
         assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
             containerData.getState());
@@ -117,7 +117,7 @@ public class TestContainerSet {
     while (containerMapIterator.hasNext()) {
       Container kv = containerMapIterator.next().getValue();
       ContainerData containerData = kv.getContainerData();
-      long containerId = containerData.getContainerId();
+      long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
         assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
             containerData.getState());
@@ -155,8 +155,8 @@ public class TestContainerSet {
     assertEquals(5, result.size());
 
     for(ContainerData containerData : result) {
-      assertTrue(containerData.getContainerId() >=2 && containerData
-          .getContainerId()<=6);
+      assertTrue(containerData.getContainerID() >=2 && containerData
+          .getContainerID()<=6);
     }
   }
 

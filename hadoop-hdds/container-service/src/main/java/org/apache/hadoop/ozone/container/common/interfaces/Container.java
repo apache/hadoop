@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;

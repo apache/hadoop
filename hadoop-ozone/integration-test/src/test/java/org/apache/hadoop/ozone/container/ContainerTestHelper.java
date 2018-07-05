@@ -58,6 +58,8 @@ public final class ContainerTestHelper {
       ContainerTestHelper.class);
   private static Random r = new Random();
 
+  public static final int CONTAINER_MAX_SIZE_GB = 1;
+
   /**
    * Never constructed.
    */

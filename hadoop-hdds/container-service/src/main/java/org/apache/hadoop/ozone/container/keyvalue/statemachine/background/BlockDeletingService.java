@@ -16,9 +16,13 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.container.common.statemachine.background;
+package org.apache.hadoop.ozone.container.keyvalue.statemachine.background;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
 import org.apache.ratis.shaded.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.commons.io.FileUtils;
@@ -28,10 +32,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.BackgroundTask;
@@ -62,12 +62,13 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
  * A per-datanode container block deleting service takes in charge
  * of deleting staled ozone blocks.
  */
+// TODO: Fix BlockDeletingService to work with new StorageLayer
 public class BlockDeletingService extends BackgroundService{
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockDeletingService.class);
 
-  private final ContainerManager containerManager;
+  ContainerSet containerSet;
   private final Configuration conf;
 
   // Throttle number of blocks to delete per task,
@@ -82,12 +83,12 @@ public class BlockDeletingService extends BackgroundService{
   // Core pool size for container tasks
   private final static int BLOCK_DELETING_SERVICE_CORE_POOL_SIZE = 10;
 
-  public BlockDeletingService(ContainerManager containerManager,
-      long serviceInterval, long serviceTimeout, TimeUnit unit,
-      Configuration conf) {
-    super("BlockDeletingService", serviceInterval, unit,
-        BLOCK_DELETING_SERVICE_CORE_POOL_SIZE, serviceTimeout);
-    this.containerManager = containerManager;
+  public BlockDeletingService(ContainerSet containerSet,
+      long serviceInterval, long serviceTimeout, Configuration conf) {
+    super("BlockDeletingService", serviceInterval,
+        TimeUnit.MILLISECONDS, BLOCK_DELETING_SERVICE_CORE_POOL_SIZE,
+        serviceTimeout);
+    this.containerSet = containerSet;
     this.conf = conf;
     this.blockLimitPerTask = conf.getInt(
         OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER,
@@ -108,7 +109,7 @@ public class BlockDeletingService extends BackgroundService{
       // We must ensure there is no empty container in this result.
       // The chosen result depends on what container deletion policy is
       // configured.
-      containers = containerManager.chooseContainerForBlockDeletion(
+      containers = containerSet.chooseContainerForBlockDeletion(
           containerLimitPerInterval);
       LOG.info("Plan to choose {} containers for block deletion, "
           + "actually returns {} valid containers.",
@@ -174,7 +175,8 @@ public class BlockDeletingService extends BackgroundService{
       ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
       long startTime = Time.monotonicNow();
       // Scan container's db and get list of under deletion blocks
-      MetadataStore meta = KeyUtils.getDB(containerData, conf);
+      MetadataStore meta = KeyUtils.getDB(
+          (KeyValueContainerData) containerData, conf);
       // # of blocks to delete is throttled
       KeyPrefixFilter filter =
           new KeyPrefixFilter().addFilter(OzoneConsts.DELETING_KEY_PREFIX);
@@ -188,7 +190,7 @@ public class BlockDeletingService extends BackgroundService{
       List<String> succeedBlocks = new LinkedList<>();
       LOG.debug("Container : {}, To-Delete blocks : {}",
           containerData.getContainerID(), toDeleteBlocks.size());
-      File dataDir = ContainerUtils.getDataDirectory(containerData).toFile();
+      File dataDir = new File(containerData.getDataPath());
       if (!dataDir.exists() || !dataDir.isDirectory()) {
         LOG.error("Invalid container data dir {} : "
             + "not exist or not a directory", dataDir.getAbsolutePath());
@@ -227,8 +229,7 @@ public class BlockDeletingService extends BackgroundService{
       });
       meta.writeBatch(batch);
       // update count of pending deletion blocks in in-memory container status
-      containerManager.decrPendingDeletionBlocks(succeedBlocks.size(),
-          containerData.getContainerID());
+      containerData.decrPendingDeletionBlocks(succeedBlocks.size());
 
       if (!succeedBlocks.isEmpty()) {
         LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",

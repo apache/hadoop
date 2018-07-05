@@ -53,11 +53,7 @@ public class TestVolumeSet {
   private static final String DUMMY_IP_ADDR = "0.0.0.0";
 
   private void initializeVolumeSet() throws Exception {
-    DatanodeDetails datanodeDetails = DatanodeDetails.newBuilder()
-        .setUuid(UUID.randomUUID().toString())
-        .setIpAddress(DUMMY_IP_ADDR)
-        .build();
-    volumeSet = new VolumeSet(datanodeDetails, conf);
+    volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
   }
 
   @Rule
