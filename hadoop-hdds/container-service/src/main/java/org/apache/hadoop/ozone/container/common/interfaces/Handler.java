@@ -57,7 +57,7 @@ public class Handler {
                                                    ContainerMetrics metrics) {
     switch (containerType) {
     case KeyValueContainer:
-      return KeyValueHandler.getInstance(config, contSet, volumeSet, metrics);
+      return new KeyValueHandler(config, contSet, volumeSet, metrics);
     default:
       throw new IllegalArgumentException("Handler for ContainerType: " +
         containerType + "doesn't exist.");

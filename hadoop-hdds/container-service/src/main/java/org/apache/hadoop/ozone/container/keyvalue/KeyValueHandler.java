@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.container.keyvalue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
-import com.sun.jersey.spi.resource.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -93,13 +92,10 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 /**
  * Handler for KeyValue Container type.
  */
-@Singleton
 public class KeyValueHandler extends Handler {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       KeyValueHandler.class);
-
-  private static volatile KeyValueHandler INSTANCE = null; // Singleton class
 
   private final ContainerType containerType;
   private final KeyManager keyManager;
@@ -107,19 +103,8 @@ public class KeyValueHandler extends Handler {
   private VolumeChoosingPolicy volumeChoosingPolicy;
   private final int maxContainerSizeGB;
 
-  // TODO : Add metrics and populate it.
 
-  public static KeyValueHandler getInstance(Configuration config,
-                                            ContainerSet contSet,
-                                            VolumeSet volSet,
-                                            ContainerMetrics metrics) {
-    if (INSTANCE == null) {
-      INSTANCE = new KeyValueHandler(config, contSet, volSet, metrics);
-    }
-    return INSTANCE;
-  }
-
-  private KeyValueHandler(Configuration config, ContainerSet contSet,
+  public KeyValueHandler(Configuration config, ContainerSet contSet,
       VolumeSet volSet, ContainerMetrics metrics) {
     super(config, contSet, volSet, metrics);
     containerType = ContainerType.KeyValueContainer;
@@ -127,8 +112,9 @@ public class KeyValueHandler extends Handler {
     chunkManager = new ChunkManagerImpl();
     // TODO: Add supoort for different volumeChoosingPolicies.
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
-    maxContainerSizeGB = config.getInt(ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    maxContainerSizeGB = config.getInt(ScmConfigKeys
+            .OZONE_SCM_CONTAINER_SIZE_GB, ScmConfigKeys
+        .OZONE_SCM_CONTAINER_SIZE_DEFAULT);
   }
 
   @Override
