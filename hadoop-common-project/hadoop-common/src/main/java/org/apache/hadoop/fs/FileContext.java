@@ -219,10 +219,12 @@ public class FileContext {
    * The FileContext is defined by.
    *  1) defaultFS (slash)
    *  2) wd
-   *  3) umask (Obtained by FsPermission.getUMask(conf))
+   *  3) umask (explicitly set via setUMask(),
+   *      falling back to FsPermission.getUMask(conf))
    */   
   private final AbstractFileSystem defaultFS; //default FS for this FileContext.
   private Path workingDir;          // Fully qualified
+  private FsPermission umask;
   private final Configuration conf;
   private final UserGroupInformation ugi;
   final boolean resolveSymlinks;
@@ -575,7 +577,7 @@ public class FileContext {
    * @return the umask of this FileContext
    */
   public FsPermission getUMask() {
-    return FsPermission.getUMask(conf);
+    return (umask != null ? umask : FsPermission.getUMask(conf));
   }
   
   /**
@@ -583,9 +585,8 @@ public class FileContext {
    * @param newUmask  the new umask
    */
   public void setUMask(final FsPermission newUmask) {
-    FsPermission.setUMask(conf, newUmask);
+    this.umask = newUmask;
   }
-  
   
   /**
    * Resolve the path following any symlinks or mount points

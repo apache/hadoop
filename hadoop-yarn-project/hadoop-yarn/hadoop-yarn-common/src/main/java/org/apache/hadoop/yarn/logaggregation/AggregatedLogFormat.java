@@ -96,9 +96,6 @@ public class AggregatedLogFormat {
    */
   private static final FsPermission APP_LOG_FILE_UMASK = FsPermission
       .createImmutable((short) (0640 ^ 0777));
-  /** Default permission for the log file. */
-  private static final FsPermission APP_LOG_FILE_PERM =
-      FsPermission.getFileDefault().applyUMask(APP_LOG_FILE_UMASK);
 
   static {
     RESERVED_KEYS = new HashMap<String, AggregatedLogFormat.LogKey>();
@@ -477,10 +474,11 @@ public class AggregatedLogFormat {
               @Override
               public FSDataOutputStream run() throws Exception {
                 fc = FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
+                fc.setUMask(APP_LOG_FILE_UMASK);
                 return fc.create(
                     remoteAppLogFile,
                     EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-                    Options.CreateOpts.perms(APP_LOG_FILE_PERM));
+                    new Options.CreateOpts[] {});
               }
             });
       } catch (InterruptedException e) {
