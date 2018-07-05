@@ -79,7 +79,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestRMWebServicesApps extends JerseyTestBase {
 
   private static MockRM rm;
-  
+
   private static final int CONTAINER_MB = 1024;
 
   private static class WebServletModule extends ServletModule {
@@ -324,7 +324,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("incorrect number of elements", 1, apps.length());
     array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 2, array.length());
-    assertTrue("both app states of ACCEPTED and KILLED are not present", 
+    assertTrue("both app states of ACCEPTED and KILLED are not present",
         (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
         array.getJSONObject(1).getString("state").equals("KILLED")) ||
         (array.getJSONObject(0).getString("state").equals("KILLED") &&
@@ -375,12 +375,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("incorrect number of elements", 1, apps.length());
     array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 2, array.length());
-    assertTrue("both app states of ACCEPTED and KILLED are not present", 
+    assertTrue("both app states of ACCEPTED and KILLED are not present",
         (array.getJSONObject(0).getString("state").equals("ACCEPTED") &&
         array.getJSONObject(1).getString("state").equals("KILLED")) ||
         (array.getJSONObject(0).getString("state").equals("KILLED") &&
         array.getJSONObject(1).getString("state").equals("ACCEPTED")));
-    
+
     rm.stop();
   }
 
@@ -511,7 +511,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     WebResource r = resource();
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("apps").queryParam("finalStatus", FinalApplicationStatus.UNDEFINED.toString())
+        .path("apps").queryParam("finalStatus",
+                    FinalApplicationStatus.UNDEFINED.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
@@ -1804,7 +1805,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     int numAttempt = 1;
     while (true) {
       // fail the AM by sending CONTAINER_FINISHED event without registering.
-      amNodeManager.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+      amNodeManager.nodeHeartbeat(am.getApplicationAttemptId(), 1,
+              ContainerState.COMPLETE);
       rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FAILED);
       if (numAttempt == maxAppAttempts) {
         rm.waitForState(app1.getApplicationId(), RMAppState.FAILED);

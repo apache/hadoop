@@ -457,7 +457,7 @@ public class TestRMWebServicesSchedulerActivities
       if (object.getClass() == JSONObject.class) {
         assertEquals("Number of allocations is wrong", 1, realValue);
       } else if (object.getClass() == JSONArray.class) {
-        assertEquals("Number of allocations is wrong",
+        assertEquals("Number of allocations is wrong in: " + object,
             ((JSONArray) object).length(), realValue);
       }
     }

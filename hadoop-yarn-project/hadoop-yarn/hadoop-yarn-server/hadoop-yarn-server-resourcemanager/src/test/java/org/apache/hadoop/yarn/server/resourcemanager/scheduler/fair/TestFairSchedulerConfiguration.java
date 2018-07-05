@@ -48,6 +48,9 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Tests fair scheduler configuration.
+ */
 public class TestFairSchedulerConfiguration {
 
   private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
@@ -242,12 +245,12 @@ public class TestFairSchedulerConfiguration {
         parseResourceConfigValue(" vcores = 75 % , memory-mb = 40 % , "
             + "test1 = 50 % ").getResource(clusterResource));
   }
-  
+
   @Test(expected = AllocationConfigurationException.class)
   public void testNoUnits() throws Exception {
     parseResourceConfigValue("1024");
   }
-  
+
   @Test(expected = AllocationConfigurationException.class)
   public void testOnlyMemory() throws Exception {
     parseResourceConfigValue("1024mb");
@@ -257,7 +260,7 @@ public class TestFairSchedulerConfiguration {
   public void testOnlyCPU() throws Exception {
     parseResourceConfigValue("1024vcores");
   }
-  
+
   @Test(expected = AllocationConfigurationException.class)
   public void testGibberish() throws Exception {
     parseResourceConfigValue("1o24vc0res");

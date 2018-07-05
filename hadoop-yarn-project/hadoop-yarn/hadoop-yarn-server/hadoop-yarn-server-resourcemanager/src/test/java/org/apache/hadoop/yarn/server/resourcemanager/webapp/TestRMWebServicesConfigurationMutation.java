@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
@@ -59,6 +61,8 @@ import static org.junit.Assert.assertNull;
  * Test scheduler configuration mutation via REST API.
  */
 public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
+  private static final Logger LOG = LoggerFactory
+          .getLogger(TestRMWebServicesConfigurationMutation.class);
 
   private static final File CONF_FILE = new File(new File("target",
       "test-classes"), YarnConfiguration.CS_CONFIGURATION_FILE);
@@ -396,6 +400,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
+    LOG.debug("Response headers: " + response.getHeaders());
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf = cs.getConfiguration();
     assertEquals(0.2f, newCSConf
