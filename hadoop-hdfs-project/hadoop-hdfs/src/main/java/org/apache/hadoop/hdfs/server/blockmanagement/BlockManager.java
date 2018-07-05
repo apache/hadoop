@@ -5078,7 +5078,7 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
         DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT);
     String modeVal = spsMode;
-    if (org.apache.commons.lang.StringUtils.isBlank(modeVal)) {
+    if (org.apache.commons.lang3.StringUtils.isBlank(modeVal)) {
       modeVal = conf.get(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
     }

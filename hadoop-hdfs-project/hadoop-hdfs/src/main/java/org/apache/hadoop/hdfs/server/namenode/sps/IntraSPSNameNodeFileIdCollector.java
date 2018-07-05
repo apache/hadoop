@@ -45,7 +45,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
 
   public IntraSPSNameNodeFileIdCollector(FSDirectory dir,
       SPSService service) {
-    super(dir);
+    super(dir, service.getConf());
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
@@ -72,7 +72,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
   }
 
   @Override
-  protected boolean canSubmitCurrentBatch() {
+  protected boolean shouldSubmitCurrentBatch() {
     return remainingCapacity <= 0;
   }
 
