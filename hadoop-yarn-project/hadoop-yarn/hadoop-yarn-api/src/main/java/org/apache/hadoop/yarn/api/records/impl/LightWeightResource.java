@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -58,12 +57,28 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.*;
  *
  * @see Resource
  */
-@InterfaceAudience.Private
+@Private
 @Unstable
 public class LightWeightResource extends Resource {
 
   private ResourceInformation memoryResInfo;
   private ResourceInformation vcoresResInfo;
+
+  /**
+   * Create a new {@link LightWeightResource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   */
+  public LightWeightResource(long value) {
+    ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
+    initResourceInformations(value, value, types.length);
+
+    for (int i = 2; i < types.length; i++) {
+      resources[i] = new ResourceInformation();
+      ResourceInformation.copy(types[i], resources[i]);
+      resources[i].setValue(value);
+    }
+  }
 
   public LightWeightResource(long memory, int vcores) {
     int numberOfKnownResourceTypes = ResourceUtils
@@ -91,7 +106,7 @@ public class LightWeightResource extends Resource {
     }
   }
 
-  private void initResourceInformations(long memory, int vcores,
+  private void initResourceInformations(long memory, long vcores,
       int numberOfKnownResourceTypes) {
     this.memoryResInfo = newDefaultInformation(MEMORY_URI, MEMORY_MB.getUnits(),
         memory);
