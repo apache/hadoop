@@ -41,9 +41,8 @@ public class SchedulerInfo {
   protected EnumSet<SchedulerResourceTypes> schedulingResourceTypes;
   protected int maximumClusterPriority;
 
-  // JAXB needs this
   public SchedulerInfo() {
-  }
+  } // JAXB needs this
 
   public SchedulerInfo(final ResourceManager rm) {
     ResourceScheduler rs = rm.getResourceScheduler();
@@ -75,10 +74,7 @@ public class SchedulerInfo {
   }
 
   public String getSchedulerResourceTypes() {
-    if (minAllocResource != null) {
-      return Arrays.toString(minAllocResource.getResource().getResources());
-    }
-    return null;
+    return Arrays.toString(minAllocResource.getResource().getResources());
   }
 
   public int getMaxClusterLevelAppPriority() {
