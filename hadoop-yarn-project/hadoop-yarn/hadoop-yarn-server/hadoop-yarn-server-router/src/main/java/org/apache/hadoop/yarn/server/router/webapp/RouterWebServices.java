@@ -173,10 +173,11 @@ public class RouterWebServices implements RMWebServiceProtocol {
     } catch (IOException e) {
       LOG.error("Cannot get user: {}", e.getMessage());
     }
-    if (!userPipelineMap.containsKey(user)) {
-      initializePipeline(user);
+    RequestInterceptorChainWrapper chain = userPipelineMap.get(user);
+    if (chain != null && chain.getRootInterceptor() != null) {
+      return chain;
     }
-    return userPipelineMap.get(user);
+    return initializePipeline(user);
   }
 
   /**
@@ -242,35 +243,32 @@ public class RouterWebServices implements RMWebServiceProtocol {
    *
    * @param user
    */
-  private void initializePipeline(String user) {
-    RequestInterceptorChainWrapper chainWrapper = null;
+  private RequestInterceptorChainWrapper initializePipeline(String user) {
     synchronized (this.userPipelineMap) {
       if (this.userPipelineMap.containsKey(user)) {
         LOG.info("Request to start an already existing user: {}"
             + " was received, so ignoring.", user);
-        return;
+        return userPipelineMap.get(user);
       }
 
-      chainWrapper = new RequestInterceptorChainWrapper();
+      RequestInterceptorChainWrapper chainWrapper =
+          new RequestInterceptorChainWrapper();
+      try {
+        // We should init the pipeline instance after it is created and then
+        // add to the map, to ensure thread safe.
+        LOG.info("Initializing request processing pipeline for user: {}", user);
+
+        RESTRequestInterceptor interceptorChain =
+            this.createRequestInterceptorChain();
+        interceptorChain.init(user);
+        chainWrapper.init(interceptorChain);
+      } catch (Exception e) {
+        LOG.error("Init RESTRequestInterceptor error for user: " + user, e);
+        throw e;
+      }
+
       this.userPipelineMap.put(user, chainWrapper);
-    }
-
-    // We register the pipeline instance in the map first and then initialize it
-    // later because chain initialization can be expensive and we would like to
-    // release the lock as soon as possible to prevent other applications from
-    // blocking when one application's chain is initializing
-    LOG.info("Initializing request processing pipeline for the user: {}", user);
-
-    try {
-      RESTRequestInterceptor interceptorChain =
-          this.createRequestInterceptorChain();
-      interceptorChain.init(user);
-      chainWrapper.init(interceptorChain);
-    } catch (Exception e) {
-      synchronized (this.userPipelineMap) {
-        this.userPipelineMap.remove(user);
-      }
-      throw e;
+      return chainWrapper;
     }
   }
 
