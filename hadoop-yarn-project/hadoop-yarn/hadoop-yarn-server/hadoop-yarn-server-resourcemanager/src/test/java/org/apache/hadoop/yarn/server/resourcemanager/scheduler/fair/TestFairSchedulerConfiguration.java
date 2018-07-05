@@ -102,60 +102,145 @@ public class TestFairSchedulerConfiguration {
 
   @Test
   public void testParseResourceConfigValue() throws Exception {
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("2 vcores, 1024 mb").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024 mb, 2 vcores").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("2vcores,1024mb").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024mb,2vcores").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024   mb, 2    vcores").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024 Mb, 2 vCores").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("  1024 mb, 2 vcores  ").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("  1024.3 mb, 2.35 vcores  ").getResource());
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("  1024. mb, 2. vcores  ").getResource());
+    Resource expected = BuilderUtils.newResource(5 * 1024, 2);
+    Resource clusterResource = BuilderUtils.newResource(10 * 1024, 4);
 
-    Resource clusterResource = BuilderUtils.newResource(2048, 4);
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
+        parseResourceConfigValue("2 vcores, 5120 mb").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("5120 mb, 2 vcores").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("2vcores,5120mb").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("5120mb,2vcores").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("5120mb   mb, 2    vcores").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("5120 Mb, 2 vCores").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("  5120 mb, 2 vcores  ").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("  5120.3 mb, 2.35 vcores  ").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("  5120. mb, 2. vcores  ").getResource());
+
+    assertEquals(expected,
         parseResourceConfigValue("50% memory, 50% cpu").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
         parseResourceConfigValue("50% Memory, 50% CpU").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("50%").getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 4),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 4),
         parseResourceConfigValue("50% memory, 100% cpu").
         getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 4),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 4),
         parseResourceConfigValue(" 100% cpu, 50% memory").
         getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 0),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 0),
         parseResourceConfigValue("50% memory, 0% cpu").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
         parseResourceConfigValue("50 % memory, 50 % cpu").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
         parseResourceConfigValue("50%memory,50%cpu").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
         parseResourceConfigValue("  50  %  memory,  50  %  cpu  ").
             getResource(clusterResource));
-    assertEquals(BuilderUtils.newResource(1024, 2),
+    assertEquals(expected,
         parseResourceConfigValue("50.% memory, 50.% cpu").
             getResource(clusterResource));
-
-    clusterResource =  BuilderUtils.newResource(1024 * 10, 4);
     assertEquals(BuilderUtils.newResource((int)(1024 * 10 * 0.109), 2),
         parseResourceConfigValue("10.9% memory, 50.6% cpu").
             getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("50%").getResource(clusterResource));
+
+    Configuration conf = new Configuration();
+
+    conf.set(YarnConfiguration.RESOURCE_TYPES, "test1");
+    ResourceUtils.resetResourceTypes(conf);
+
+    clusterResource = BuilderUtils.newResource(10 * 1024, 4);
+    expected = BuilderUtils.newResource(5 * 1024, 2);
+    expected.setResourceValue("test1", Long.MAX_VALUE);
+
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2, memory-mb=5120").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("memory-mb=5120, vcores=2").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2,memory-mb=5120").getResource());
+    assertEquals(expected, parseResourceConfigValue(" vcores = 2 , "
+            + "memory-mb = 5120 ").getResource());
+
+    expected.setResourceValue("test1", 0L);
+
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2, memory-mb=5120", 0L).getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("memory-mb=5120, vcores=2", 0L).getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2,memory-mb=5120", 0L).getResource());
+    assertEquals(expected,
+        parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 ",
+            0L).getResource());
+
+    clusterResource.setResourceValue("test1", 8L);
+    expected.setResourceValue("test1", 4L);
+
+    assertEquals(expected,
+        parseResourceConfigValue("50%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2, memory-mb=5120, "
+            + "test1=4").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("test1=4, vcores=2, "
+            + "memory-mb=5120").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("memory-mb=5120, test1=4, "
+            + "vcores=2").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=2,memory-mb=5120,"
+            + "test1=4").getResource());
+    assertEquals(expected,
+        parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , "
+            + "test1 = 4 ").getResource());
+
+    expected = BuilderUtils.newResource(4 * 1024, 3);
+    expected.setResourceValue("test1", 8L);
+
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=75%, "
+            + "memory-mb=40%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("memory-mb=40%, "
+            + "vcores=75%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=75%,"
+            + "memory-mb=40%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue(" vcores = 75 % , "
+            + "memory-mb = 40 % ").getResource(clusterResource));
+
+    expected.setResourceValue("test1", 4L);
+
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=75%, memory-mb=40%, "
+            + "test1=50%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("test1=50%, vcores=75%, "
+            + "memory-mb=40%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("memory-mb=40%, test1=50%, "
+            + "vcores=75%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue("vcores=75%,memory-mb=40%,"
+            + "test1=50%").getResource(clusterResource));
+    assertEquals(expected,
+        parseResourceConfigValue(" vcores = 75 % , memory-mb = 40 % , "
+            + "test1 = 50 % ").getResource(clusterResource));
   }
   
   @Test(expected = AllocationConfigurationException.class)

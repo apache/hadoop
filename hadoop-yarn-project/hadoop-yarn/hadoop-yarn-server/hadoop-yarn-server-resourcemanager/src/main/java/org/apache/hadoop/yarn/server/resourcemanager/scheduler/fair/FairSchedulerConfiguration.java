@@ -33,6 +33,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -212,6 +213,9 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String RESERVABLE_NODES =
           CONF_PREFIX + "reservable-nodes";
   public static final float RESERVABLE_NODES_DEFAULT = 0.05f;
+
+  private static final String INVALID_RESOURCE_DEFINITION_PREFIX =
+          "Error reading resource config--invalid resource definition: ";
 
   public FairSchedulerConfiguration() {
     super();
@@ -407,32 +411,143 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   /**
-   * Parses a resource config value of a form like "1024", "1024 mb",
-   * or "1024 mb, 3 vcores". If no units are given, megabytes are assumed.
-   * 
-   * @throws AllocationConfigurationException
+   * Parses a resource config value in one of three forms:
+   * <ol>
+   * <li>Percentage: &quot;50%&quot; or &quot;40% memory, 60% cpu&quot;</li>
+   * <li>New style resources: &quot;vcores=10, memory-mb=1024&quot;
+   * or &quot;vcores=60%, memory-mb=40%&quot;</li>
+   * <li>Old style resources: &quot;1024 mb, 10 vcores&quot;</li>
+   * </ol>
+   * In new style resources, any resource that is not specified will be
+   * set to {@link Long#MAX_VALUE} or 100%, as appropriate. Also, in the new
+   * style resources, units are not allowed. Units are assumed from the resource
+   * manager's settings for the resources when the value isn't a percentage.
+   *
+   * @param value the resource definition to parse
+   * @return a {@link ConfigurableResource} that represents the parsed value
+   * @throws AllocationConfigurationException if the raw value is not a valid
+   * resource definition
    */
-  public static ConfigurableResource parseResourceConfigValue(String val)
+  public static ConfigurableResource parseResourceConfigValue(String value)
       throws AllocationConfigurationException {
+    return parseResourceConfigValue(value, Long.MAX_VALUE);
+  }
+
+  /**
+   * Parses a resource config value in one of three forms:
+   * <ol>
+   * <li>Percentage: &quot;50%&quot; or &quot;40% memory, 60% cpu&quot;</li>
+   * <li>New style resources: &quot;vcores=10, memory-mb=1024&quot;
+   * or &quot;vcores=60%, memory-mb=40%&quot;</li>
+   * <li>Old style resources: &quot;1024 mb, 10 vcores&quot;</li>
+   * </ol>
+   * In new style resources, any resource that is not specified will be
+   * set to {@code missing} or 0%, as appropriate. Also, in the new style
+   * resources, units are not allowed. Units are assumed from the resource
+   * manager's settings for the resources when the value isn't a percentage.
+   *
+   * The {@code missing} parameter is only used in the case of new style
+   * resources without percentages. With new style resources with percentages,
+   * any missing resources will be assumed to be 100% because percentages are
+   * only used with maximum resource limits.
+   *
+   * @param value the resource definition to parse
+   * @param missing the value to use for any unspecified resources
+   * @return a {@link ConfigurableResource} that represents the parsed value
+   * @throws AllocationConfigurationException if the raw value is not a valid
+   * resource definition
+   */
+  public static ConfigurableResource parseResourceConfigValue(String value,
+      long missing) throws AllocationConfigurationException {
     ConfigurableResource configurableResource;
+
+    if (value.trim().isEmpty()) {
+      throw new AllocationConfigurationException("Error reading resource "
+          + "config--the resource string is empty.");
+    }
+
     try {
-      val = StringUtils.toLowerCase(val);
-      if (val.contains("%")) {
-        configurableResource = new ConfigurableResource(
-            getResourcePercentage(val));
+      if (value.contains("=")) {
+        configurableResource = parseNewStyleResource(value, missing);
+      } else if (value.contains("%")) {
+        configurableResource = parseOldStyleResourceAsPercentage(value);
       } else {
-        int memory = findResource(val, "mb");
-        int vcores = findResource(val, "vcores");
-        configurableResource = new ConfigurableResource(
-            BuilderUtils.newResource(memory, vcores));
+        configurableResource = parseOldStyleResource(value);
       }
-    } catch (AllocationConfigurationException ex) {
-      throw ex;
-    } catch (Exception ex) {
+    } catch (RuntimeException ex) {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
     }
+
     return configurableResource;
+  }
+
+  private static ConfigurableResource parseNewStyleResource(String value,
+          long missing) throws AllocationConfigurationException {
+
+    final ConfigurableResource configurableResource;
+    boolean asPercent = value.contains("%");
+    if (asPercent) {
+      configurableResource = new ConfigurableResource();
+    } else {
+      configurableResource = new ConfigurableResource(missing);
+    }
+
+    String[] resources = value.split(",");
+    for (String resource : resources) {
+      String[] parts = resource.split("=");
+
+      if (parts.length != 2) {
+        throw createConfigException(value,
+                        "Every resource must be of the form: name=value.");
+      }
+
+      String resourceName = parts[0].trim();
+      String resourceValue = parts[1].trim();
+      try {
+        if (asPercent) {
+          configurableResource.setPercentage(resourceName,
+              findPercentage(resourceValue, ""));
+        } else {
+          configurableResource.setValue(resourceName,
+              Long.parseLong(resourceValue));
+        }
+      } catch (ResourceNotFoundException ex) {
+        throw createConfigException(value, "The "
+            + "resource name, \"" + resourceName + "\" was not "
+            + "recognized. Please check the value of "
+            + YarnConfiguration.RESOURCE_TYPES + " in the Resource "
+            + "Manager's configuration files.", ex);
+      } catch (NumberFormatException ex) {
+        // This only comes from Long.parseLong()
+        throw createConfigException(value, "The "
+            + "resource values must all be integers. \"" + resourceValue
+            + "\" is not an integer.", ex);
+      } catch (AllocationConfigurationException ex) {
+        // This only comes from findPercentage()
+        throw createConfigException(value, "The "
+            + "resource values must all be percentages. \""
+            + resourceValue + "\" is either not a number or does not "
+            + "include the '%' symbol.", ex);
+      }
+    }
+    return configurableResource;
+  }
+
+  private static ConfigurableResource parseOldStyleResourceAsPercentage(
+          String value) throws AllocationConfigurationException {
+    return new ConfigurableResource(
+            getResourcePercentage(StringUtils.toLowerCase(value)));
+  }
+
+  private static ConfigurableResource parseOldStyleResource(String value)
+          throws AllocationConfigurationException {
+    final String lCaseValue = StringUtils.toLowerCase(value);
+    int memory = findResource(lCaseValue, "mb");
+    int vcores = findResource(lCaseValue, "vcores");
+
+    return new ConfigurableResource(
+            BuilderUtils.newResource(memory, vcores));
   }
 
   private static double[] getResourcePercentage(
@@ -441,20 +556,22 @@ public class FairSchedulerConfiguration extends Configuration {
         .getNumberOfKnownResourceTypes();
     double[] resourcePercentage = new double[numberOfKnownResourceTypes];
     String[] strings = val.split(",");
+
     if (strings.length == 1) {
       double percentage = findPercentage(strings[0], "");
       for (int i = 0; i < numberOfKnownResourceTypes; i++) {
-        resourcePercentage[i] = percentage/100;
+        resourcePercentage[i] = percentage;
       }
     } else {
-      resourcePercentage[0] = findPercentage(val, "memory")/100;
-      resourcePercentage[1] = findPercentage(val, "cpu")/100;
+      resourcePercentage[0] = findPercentage(val, "memory");
+      resourcePercentage[1] = findPercentage(val, "cpu");
     }
+
     return resourcePercentage;
   }
 
   private static double findPercentage(String val, String units)
-    throws AllocationConfigurationException {
+      throws AllocationConfigurationException {
     final Pattern pattern =
         Pattern.compile("((\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
     Matcher matcher = pattern.matcher(val);
@@ -467,7 +584,22 @@ public class FairSchedulerConfiguration extends Configuration {
             units);
       }
     }
-    return Double.parseDouble(matcher.group(1));
+    return Double.parseDouble(matcher.group(1)) / 100.0;
+  }
+
+  private static AllocationConfigurationException createConfigException(
+          String value, String message) {
+    return createConfigException(value, message, null);
+  }
+
+  private static AllocationConfigurationException createConfigException(
+      String value, String message, Throwable t) {
+    String msg = INVALID_RESOURCE_DEFINITION_PREFIX + value + ". " + message;
+    if (t != null) {
+      return new AllocationConfigurationException(msg, t);
+    } else {
+      return new AllocationConfigurationException(msg);
+    }
   }
 
   public long getUpdateInterval() {
