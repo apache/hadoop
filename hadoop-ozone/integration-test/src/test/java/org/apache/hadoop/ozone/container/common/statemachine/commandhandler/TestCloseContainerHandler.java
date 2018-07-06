@@ -28,8 +28,8 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
@@ -69,17 +69,17 @@ public class TestCloseContainerHandler {
     key.close();
 
     //get the name of a valid container
-    KsmKeyArgs keyArgs =
-        new KsmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
+    OmKeyArgs keyArgs =
+        new OmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
             .setType(HddsProtos.ReplicationType.STAND_ALONE)
             .setFactor(HddsProtos.ReplicationFactor.ONE).setDataSize(1024)
             .setKeyName("test").build();
 
-    KsmKeyLocationInfo ksmKeyLocationInfo =
-        cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
+    OmKeyLocationInfo omKeyLocationInfo =
+        cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    long containerID = ksmKeyLocationInfo.getContainerID();
+    long containerID = omKeyLocationInfo.getContainerID();
 
     Assert.assertFalse(isContainerClosed(cluster, containerID));
 

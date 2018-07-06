@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,7 +30,7 @@ import org.junit.rules.Timeout;
 import java.net.InetSocketAddress;
 
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
-import static org.apache.hadoop.ozone.KsmUtils.getKsmAddress;
+import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
@@ -79,27 +79,27 @@ public class TestHddsClientUtils {
   }
 
   @Test
-  public void testGetKSMAddress() {
+  public void testGetOmAddress() {
     final Configuration conf = new OzoneConfiguration();
 
     // First try a client address with just a host name. Verify it falls
     // back to the default port.
-    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "1.2.3.4");
-    InetSocketAddress addr = getKsmAddress(conf);
+    conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4");
+    InetSocketAddress addr = getOmAddress(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
-    assertThat(addr.getPort(), is(KSMConfigKeys.OZONE_KSM_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(OMConfigKeys.OZONE_OM_PORT_DEFAULT));
 
     // Next try a client address with just a host name and port. Verify the port
-    // is ignored and the default KSM port is used.
-    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "1.2.3.4:100");
-    addr = getKsmAddress(conf);
+    // is ignored and the default OM port is used.
+    conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "1.2.3.4:100");
+    addr = getOmAddress(conf);
     assertThat(addr.getHostString(), is("1.2.3.4"));
     assertThat(addr.getPort(), is(100));
 
     // Assert the we are able to use default configs if no value is specified.
-    conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "");
-    addr = getKsmAddress(conf);
+    conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "");
+    addr = getOmAddress(conf);
     assertThat(addr.getHostString(), is("0.0.0.0"));
-    assertThat(addr.getPort(), is(KSMConfigKeys.OZONE_KSM_PORT_DEFAULT));
+    assertThat(addr.getPort(), is(OMConfigKeys.OZONE_OM_PORT_DEFAULT));
   }
 }

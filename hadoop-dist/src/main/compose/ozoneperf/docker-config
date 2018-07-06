@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.ksm.address=ksm
+OZONE-SITE.XML_ozone.om.address=ozoneManager
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id

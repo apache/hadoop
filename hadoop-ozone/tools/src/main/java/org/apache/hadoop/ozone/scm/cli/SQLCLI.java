@@ -32,11 +32,11 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
@@ -60,10 +60,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_BUCKET_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_VOLUME_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_BUCKET_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
@@ -120,7 +120,7 @@ public class SQLCLI  extends Configured implements Tool {
       "INSERT INTO openContainer (containerName, containerUsed) " +
           "VALUES (\"%s\", \"%s\")";
 
-  // for ksm.db
+  // for om.db
   private static final String CREATE_VOLUME_LIST =
       "CREATE TABLE volumeList (" +
           "userName TEXT NOT NULL," +
@@ -278,9 +278,9 @@ public class SQLCLI  extends Configured implements Tool {
     } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
       LOG.info("Converting open container DB");
       convertOpenContainerDB(dbPath, outPath);
-    } else if (dbName.toString().equals(KSM_DB_NAME)) {
-      LOG.info("Converting ksm DB");
-      convertKSMDB(dbPath, outPath);
+    } else if (dbName.toString().equals(OM_DB_NAME)) {
+      LOG.info("Converting om DB");
+      convertOMDB(dbPath, outPath);
     } else {
       LOG.error("Unrecognized db name {}", dbName);
     }
@@ -301,7 +301,7 @@ public class SQLCLI  extends Configured implements Tool {
   }
 
   /**
-   * Convert ksm.db to sqlite db file. With following schema.
+   * Convert om.db to sqlite db file. With following schema.
    * (* for primary key)
    *
    * 1. for key type USER, it contains a username and a list volumes
@@ -341,8 +341,8 @@ public class SQLCLI  extends Configured implements Tool {
    * @param outPath
    * @throws Exception
    */
-  private void convertKSMDB(Path dbPath, Path outPath) throws Exception {
-    LOG.info("Create tables for sql ksm db.");
+  private void convertOMDB(Path dbPath, Path outPath) throws Exception {
+    LOG.info("Create tables for sql om db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
         .setConf(conf).setDbFile(dbFile).build();
@@ -357,7 +357,7 @@ public class SQLCLI  extends Configured implements Tool {
         String keyString = DFSUtilClient.bytes2String(key);
         KeyType type = getKeyType(keyString);
         try {
-          insertKSMDB(conn, type, keyString, value);
+          insertOMDB(conn, type, keyString, value);
         } catch (IOException | SQLException ex) {
           LOG.error("Exception inserting key {} type {}", keyString, type, ex);
         }
@@ -366,8 +366,8 @@ public class SQLCLI  extends Configured implements Tool {
     }
   }
 
-  private void insertKSMDB(Connection conn, KeyType type, String keyName,
-      byte[] value) throws IOException, SQLException {
+  private void insertOMDB(Connection conn, KeyType type, String keyName,
+                          byte[] value) throws IOException, SQLException {
     switch (type) {
     case USER:
       VolumeList volumeList = VolumeList.parseFrom(value);
@@ -412,16 +412,16 @@ public class SQLCLI  extends Configured implements Tool {
       executeSQL(conn, insertKeyInfo);
       break;
     default:
-      throw new IOException("Unknown key from ksm.db");
+      throw new IOException("Unknown key from om.db");
     }
   }
 
   private KeyType getKeyType(String key) {
-    if (key.startsWith(KSM_USER_PREFIX)) {
+    if (key.startsWith(OM_USER_PREFIX)) {
       return KeyType.USER;
-    } else if (key.startsWith(KSM_VOLUME_PREFIX)) {
-      return key.replaceFirst(KSM_VOLUME_PREFIX, "")
-          .contains(KSM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
+    } else if (key.startsWith(OM_VOLUME_PREFIX)) {
+      return key.replaceFirst(OM_VOLUME_PREFIX, "")
+          .contains(OM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
     }else {
       return KeyType.KEY;
     }

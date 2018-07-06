@@ -94,7 +94,7 @@ public final class ScmConfigKeys {
       "ozone.scm.datanode.port";
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
-  // OZONE_KSM_PORT_DEFAULT = 9862
+  // OZONE_OM_PORT_DEFAULT = 9862
   public static final String OZONE_SCM_BLOCK_CLIENT_PORT_KEY =
       "ozone.scm.block.client.port";
   public static final int OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT = 9863;

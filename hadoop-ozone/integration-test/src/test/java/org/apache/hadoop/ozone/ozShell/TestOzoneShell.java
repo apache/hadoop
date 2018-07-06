@@ -59,7 +59,7 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -167,23 +167,23 @@ public class TestOzoneShell {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
     if(clientProtocol.equals(RestClient.class)) {
-      String hostName = cluster.getKeySpaceManager().getHttpServer()
+      String hostName = cluster.getOzoneManager().getHttpServer()
           .getHttpAddress().getHostName();
       int port = cluster
-          .getKeySpaceManager().getHttpServer().getHttpAddress().getPort();
+          .getOzoneManager().getHttpServer().getHttpAddress().getPort();
       url = String.format("http://" + hostName + ":" + port);
     } else {
       List<ServiceInfo> services = null;
       try {
-        services = cluster.getKeySpaceManager().getServiceList();
+        services = cluster.getOzoneManager().getServiceList();
       } catch (IOException e) {
-        LOG.error("Could not get service list from KSM");
+        LOG.error("Could not get service list from OM");
       }
       String hostName = services.stream().filter(
-          a -> a.getNodeType().equals(HddsProtos.NodeType.KSM))
+          a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
           .collect(Collectors.toList()).get(0).getHostname();
 
-      String port = cluster.getKeySpaceManager().getRpcPort();
+      String port = cluster.getOzoneManager().getRpcPort();
       url = String.format("o3://" + hostName + ":" + port);
     }
   }

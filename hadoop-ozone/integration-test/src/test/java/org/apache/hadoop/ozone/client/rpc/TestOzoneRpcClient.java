@@ -39,10 +39,10 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.ksm.KeySpaceManager;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -73,7 +73,7 @@ public class TestOzoneRpcClient {
   private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
-  private static KeySpaceManager keySpaceManager;
+  private static OzoneManager ozoneManager;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
@@ -97,7 +97,7 @@ public class TestOzoneRpcClient {
     store = ozClient.getObjectStore();
     storageContainerLocationClient =
         cluster.getStorageContainerLocationClient();
-    keySpaceManager = cluster.getKeySpaceManager();
+    ozoneManager = cluster.getOzoneManager();
   }
 
   @Test
@@ -376,7 +376,7 @@ public class TestOzoneRpcClient {
   private boolean verifyRatisReplication(String volumeName, String bucketName,
       String keyName, ReplicationType type, ReplicationFactor factor)
       throws IOException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -385,8 +385,8 @@ public class TestOzoneRpcClient {
         HddsProtos.ReplicationType.valueOf(type.toString());
     HddsProtos.ReplicationFactor replicationFactor =
         HddsProtos.ReplicationFactor.valueOf(factor.getValue());
-    KsmKeyInfo keyInfo = keySpaceManager.lookupKey(keyArgs);
-    for (KsmKeyLocationInfo info:
+    OmKeyInfo keyInfo = ozoneManager.lookupKey(keyArgs);
+    for (OmKeyLocationInfo info:
         keyInfo.getLatestVersionLocations().getLocationList()) {
       ContainerInfo container =
           storageContainerLocationClient.getContainer(info.getContainerID());

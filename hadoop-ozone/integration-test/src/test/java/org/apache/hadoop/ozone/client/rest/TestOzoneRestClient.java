@@ -77,10 +77,10 @@ public class TestOzoneRestClient {
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
-    InetSocketAddress ksmHttpAddress = cluster.getKeySpaceManager()
+    InetSocketAddress omHttpAddress = cluster.getOzoneManager()
         .getHttpServer().getHttpAddress();
-    ozClient = OzoneClientFactory.getRestClient(ksmHttpAddress.getHostName(),
-        ksmHttpAddress.getPort(), conf);
+    ozClient = OzoneClientFactory.getRestClient(omHttpAddress.getHostName(),
+        omHttpAddress.getPort(), conf);
     store = ozClient.getObjectStore();
   }
 

@@ -58,9 +58,9 @@ message KeyValue {
  * Type of the node.
  */
 enum NodeType {
-    KSM = 1;
-    SCM = 2;
-    DATANODE = 3;
+    OM = 1;         // Ozone Manager
+    SCM = 2;        // Storage Container Manager
+    DATANODE = 3;   // DataNode
 }
 
 // Should we rename NodeState to DatanodeState?

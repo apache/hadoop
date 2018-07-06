@@ -46,7 +46,7 @@ message AllocateScmBlockRequestProto {
 }
 
 /**
- * A delete key request sent by KSM to SCM, it contains
+ * A delete key request sent by OM to SCM, it contains
  * multiple number of keys (and their blocks).
  */
 message DeleteScmKeyBlocksRequestProto {
@@ -56,9 +56,9 @@ message DeleteScmKeyBlocksRequestProto {
 /**
  * A object key and all its associated blocks.
  * We need to encapsulate object key name plus the blocks in this potocol
- * because SCM needs to response KSM with the keys it has deleted.
+ * because SCM needs to response OM with the keys it has deleted.
  * If the response only contains blocks, it will be very expensive for
- * KSM to figure out what keys have been deleted.
+ * OM to figure out what keys have been deleted.
  */
 message KeyBlocks {
   required string key = 1;
@@ -66,7 +66,7 @@ message KeyBlocks {
 }
 
 /**
- * A delete key response from SCM to KSM, it contains multiple child-results.
+ * A delete key response from SCM to OM, it contains multiple child-results.
  * Each child-result represents a key deletion result, only if all blocks of
  * a key are successfully deleted, this key result is considered as succeed.
  */
@@ -111,7 +111,7 @@ message AllocateScmBlockResponseProto {
 }
 
 /**
- * Protocol used from KeySpaceManager to StorageContainerManager.
+ * Protocol used from OzoneManager to StorageContainerManager.
  * See request and response messages for details of the RPC calls.
  */
 service ScmBlockLocationProtocolService {

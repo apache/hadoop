@@ -45,10 +45,9 @@ import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
-import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -152,8 +151,8 @@ public class RestClient implements ClientProtocol {
                   .build())
           .build();
       this.ugi = UserGroupInformation.getCurrentUser();
-      this.userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
-          KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
+      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
 
       // TODO: Add new configuration parameter to configure RestServerSelector.
       RestServerSelector defaultSelector = new DefaultRestServerSelector();
@@ -171,11 +170,11 @@ public class RestClient implements ClientProtocol {
 
   private InetSocketAddress getOzoneRestServerAddress(
       RestServerSelector selector) throws IOException {
-    String httpAddress = conf.get(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY);
+    String httpAddress = conf.get(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY);
 
     if (httpAddress == null) {
       throw new IllegalArgumentException(
-          KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY + " must be defined. See" +
+          OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY + " must be defined. See" +
               " https://wiki.apache.org/hadoop/Ozone#Configuration for" +
               " details on configuring Ozone.");
     }

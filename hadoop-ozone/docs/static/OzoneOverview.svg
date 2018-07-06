@@ -166,7 +166,7 @@
             <path d="M307.5,148.5 L433.5,148.5" id="Line" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
             <path id="Line-decoration-1" d="M433.5,148.5 L422.7,145.5 L422.7,151.5 L433.5,148.5 Z" stroke="#000000" fill="#000000" stroke-linecap="square"></path>
             <path d="M4,232 L699,232" id="Line" stroke="#000000" stroke-width="2" stroke-linecap="square" stroke-dasharray="5,2,5"></path>
-            <g id="KSM" transform="translate(432.000000, 132.000000)">
+            <g id="OM" transform="translate(432.000000, 132.000000)">
                 <g id="Rectangle-3">
                     <use fill="#C6D4F9" fill-rule="evenodd" xlink:href="#path-19"></use>
                     <rect stroke="#000000" stroke-width="1" x="0.5" y="0.5" width="225" height="35" rx="8"></rect>

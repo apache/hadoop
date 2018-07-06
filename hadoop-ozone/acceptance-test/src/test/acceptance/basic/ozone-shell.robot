@@ -28,22 +28,22 @@ ${PROJECTDIR}           ${CURDIR}/../../../../../..
 
 *** Test Cases ***
 RestClient without http port
-   Test ozone shell       http://          ksm              restwoport        True
+   Test ozone shell       http://          ozoneManager          restwoport        True
 
 RestClient with http port
-   Test ozone shell       http://          ksm:9874         restwport         True
+   Test ozone shell       http://          ozoneManager:9874     restwport         True
 
 RestClient without host name
-   Test ozone shell       http://          ${EMPTY}         restwohost        True
+   Test ozone shell       http://          ${EMPTY}              restwohost        True
 
 RpcClient with port
-   Test ozone shell       o3://            ksm:9862         rpcwoport         False
+   Test ozone shell       o3://            ozoneManager:9862     rpcwoport         False
 
 RpcClient without host
-   Test ozone shell       o3://            ${EMPTY}         rpcwport          False
+   Test ozone shell       o3://            ${EMPTY}              rpcwport          False
 
 RpcClient without scheme
-   Test ozone shell       ${EMPTY}         ${EMPTY}         rpcwoscheme       False
+   Test ozone shell       ${EMPTY}         ${EMPTY}              rpcwoscheme       False
 
 
 *** Keywords ***
@@ -52,7 +52,7 @@ Test ozone shell
     ${result} =     Execute on          datanode        ozone oz -createVolume ${protocol}${server}/${volume} -user bilbo -quota 100TB -root
                     Should not contain  ${result}       Failed
                     Should contain      ${result}       Creating Volume: ${volume}
-    ${result} =     Execute on          datanode        ozone oz -listVolume o3://ksm -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="${volume}")'
+    ${result} =     Execute on          datanode        ozone oz -listVolume o3://ozoneManager -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="${volume}")'
                     Should contain      ${result}       createdOn
                     Execute on          datanode        ozone oz -updateVolume ${protocol}${server}/${volume} -user bill -quota 10TB
     ${result} =     Execute on          datanode        ozone oz -infoVolume ${protocol}${server}/${volume} | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="${volume}") | .owner | .name'
@@ -66,7 +66,7 @@ Test ozone shell
                     Should Be Equal     ${result}       GROUP
     ${result} =     Execute on          datanode        ozone oz -updateBucket ${protocol}${server}/${volume}/bb1 -removeAcl group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="frodo") | .type'
                     Should Be Equal     ${result}       USER
-    ${result} =     Execute on          datanode        ozone oz -listBucket o3://ksm/${volume}/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
+    ${result} =     Execute on          datanode        ozone oz -listBucket o3://ozoneManager/${volume}/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
                     Should Be Equal     ${result}       ${volume}
                     Run Keyword and Return If           ${withkeytest}        Test key handling       ${protocol}       ${server}       ${volume}
                     Execute on          datanode        ozone oz -deleteBucket ${protocol}${server}/${volume}/bb1
@@ -80,6 +80,6 @@ Test key handling
                     Execute on          datanode        ls -l NOTICE.txt.1
     ${result} =     Execute on          datanode        ozone oz -infoKey ${protocol}${server}/${volume}/bb1/key1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.keyName=="key1")'
                     Should contain      ${result}       createdOn
-    ${result} =     Execute on          datanode        ozone oz -listKey o3://ksm/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
+    ${result} =     Execute on          datanode        ozone oz -listKey o3://ozoneManager/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
                     Should Be Equal     ${result}       key1
                     Execute on          datanode        ozone oz -deleteKey ${protocol}${server}/${volume}/bb1/key1 -v

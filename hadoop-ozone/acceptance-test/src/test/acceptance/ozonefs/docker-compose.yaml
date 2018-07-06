@@ -25,18 +25,18 @@ services:
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
         - ./docker-config
-   ksm:
+   ozoneManager:
       image: apache/hadoop-runner
-      hostname: ksm
+      hostname: ozoneManager
       volumes:
          - ${OZONEDIR}:/opt/hadoop
       ports:
          - 9874
       environment:
-         ENSURE_KSM_INITIALIZED: /data/metadata/ksm/current/VERSION
+         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/ozone","ksm"]
+      command: ["/opt/hadoop/bin/ozone","om"]
    scm:
       image: apache/hadoop-runner
       volumes:

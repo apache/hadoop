@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.KsmUtils;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -53,8 +53,8 @@ public class OzoneGetConf extends Configured implements Tool {
     EXCLUDE_FILE("-excludeFile",
         "gets the exclude file path that defines the datanodes " +
             "that need to decommissioned."),
-    KEYSPACEMANAGER("-keyspacemanagers",
-        "gets list of ozone key space manager nodes in the cluster"),
+    OZONEMANAGER("-ozonemanagers",
+        "gets list of Ozone Manager nodes in the cluster"),
     STORAGECONTAINERMANAGER("-storagecontainermanagers",
         "gets list of ozone storage container manager nodes in the cluster"),
     CONFKEY("-confKey [key]", "gets a specific key from the configuration");
@@ -63,8 +63,8 @@ public class OzoneGetConf extends Configured implements Tool {
 
     static {
       HANDLERS = new HashMap<String, OzoneGetConf.CommandHandler>();
-      HANDLERS.put(StringUtils.toLowerCase(KEYSPACEMANAGER.getName()),
-          new KeySpaceManagersCommandHandler());
+      HANDLERS.put(StringUtils.toLowerCase(OZONEMANAGER.getName()),
+          new OzoneManagersCommandHandler());
       HANDLERS.put(StringUtils.toLowerCase(STORAGECONTAINERMANAGER.getName()),
           new StorageContainerManagersCommandHandler());
       HANDLERS.put(StringUtils.toLowerCase(CONFKEY.getName()),
@@ -245,13 +245,13 @@ public class OzoneGetConf extends Configured implements Tool {
   }
 
   /**
-   * Handler for {@link Command#KEYSPACEMANAGER}.
+   * Handler for {@link Command#OZONEMANAGER}.
    */
-  static class KeySpaceManagersCommandHandler extends CommandHandler {
+  static class OzoneManagersCommandHandler extends CommandHandler {
     @Override
     public int doWorkInternal(OzoneGetConf tool, String[] args)
         throws IOException {
-      tool.printOut(KsmUtils.getKsmAddress(tool.getConf()).getHostName());
+      tool.printOut(OmUtils.getOmAddress(tool.getConf()).getHostName());
       return 0;
     }
   }

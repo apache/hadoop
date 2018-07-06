@@ -90,7 +90,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumes() throws IOException {
     super.testCreateVolumes(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
 
@@ -102,7 +102,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithQuota() throws IOException {
     super.testCreateVolumesWithQuota(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
 
@@ -114,7 +114,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithInvalidQuota() throws IOException {
     super.testCreateVolumesWithInvalidQuota(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
 
@@ -128,7 +128,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithInvalidUser() throws IOException {
     super.testCreateVolumesWithInvalidUser(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
 
@@ -143,7 +143,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithOutAdminRights() throws IOException {
     super.testCreateVolumesWithOutAdminRights(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
 
@@ -155,7 +155,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesInLoop() throws IOException {
     super.testCreateVolumesInLoop(port);
-    Assert.assertEquals(0, cluster.getKeySpaceManager()
+    Assert.assertEquals(0, cluster.getOzoneManager()
         .getMetrics().getNumVolumeCreateFails());
   }
   /**

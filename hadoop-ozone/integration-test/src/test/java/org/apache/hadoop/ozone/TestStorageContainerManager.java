@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -60,8 +61,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
 import org.junit.rules.Timeout;
@@ -211,7 +211,7 @@ public class TestStorageContainerManager {
       // Create {numKeys} random names keys.
       TestStorageContainerManagerHelper helper =
           new TestStorageContainerManagerHelper(cluster, conf);
-      Map<String, KsmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
+      Map<String, OmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
 
       Map<Long, List<Long>> containerBlocks = createDeleteTXLog(delLog,
           keyLocations, helper);
@@ -293,7 +293,7 @@ public class TestStorageContainerManager {
     // Create {numKeys} random names keys.
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
-    Map<String, KsmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
+    Map<String, OmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
 
     createDeleteTXLog(delLog, keyLocations, helper);
     // Verify a few TX gets created in the TX log.
@@ -320,13 +320,13 @@ public class TestStorageContainerManager {
   }
 
   private Map<Long, List<Long>> createDeleteTXLog(DeletedBlockLog delLog,
-      Map<String, KsmKeyInfo> keyLocations,
+      Map<String, OmKeyInfo> keyLocations,
       TestStorageContainerManagerHelper helper) throws IOException {
     // These keys will be written into a bunch of containers,
     // gets a set of container names, verify container containerBlocks
     // on datanodes.
     Set<Long> containerNames = new HashSet<>();
-    for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
+    for (Map.Entry<String, OmKeyInfo> entry : keyLocations.entrySet()) {
       entry.getValue().getLatestVersionLocations().getLocationList()
           .forEach(loc -> containerNames.add(loc.getContainerID()));
     }
@@ -334,7 +334,7 @@ public class TestStorageContainerManager {
     // Total number of containerBlocks of these containers should be equal to
     // total number of containerBlocks via creation call.
     int totalCreatedBlocks = 0;
-    for (KsmKeyInfo info : keyLocations.values()) {
+    for (OmKeyInfo info : keyLocations.values()) {
       totalCreatedBlocks += info.getKeyLocationVersions().size();
     }
     Assert.assertTrue(totalCreatedBlocks > 0);
@@ -343,8 +343,8 @@ public class TestStorageContainerManager {
 
     // Create a deletion TX for each key.
     Map<Long, List<Long>> containerBlocks = Maps.newHashMap();
-    for (KsmKeyInfo info : keyLocations.values()) {
-      List<KsmKeyLocationInfo> list =
+    for (OmKeyInfo info : keyLocations.values()) {
+      List<OmKeyLocationInfo> list =
           info.getLatestVersionLocations().getLocationList();
       list.forEach(location -> {
         if (containerBlocks.containsKey(location.getContainerID())) {

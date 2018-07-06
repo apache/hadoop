@@ -53,9 +53,9 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
  * client to able to write to it.
  * <p>
  * 2. Owners - Each instance of Name service, for example, Namenode of HDFS or
- * Key Space Manager (KSM) of Ozone or CBlockServer --  is an owner. It is
- * possible to have many KSMs for a Ozone cluster and only one SCM. But SCM
- * keeps the data from each KSM in separate bucket, never mixing them. To
+ * Ozone Manager (OM) of Ozone or CBlockServer --  is an owner. It is
+ * possible to have many OMs for a Ozone cluster and only one SCM. But SCM
+ * keeps the data from each OM in separate bucket, never mixing them. To
  * write data, often we have to find all open containers for a specific owner.
  * <p>
  * 3. ReplicationType - The clients are allowed to specify what kind of

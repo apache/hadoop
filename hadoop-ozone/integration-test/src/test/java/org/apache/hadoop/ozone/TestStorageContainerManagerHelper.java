@@ -30,8 +30,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -67,9 +67,9 @@ public class TestStorageContainerManagerHelper {
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 
-  public Map<String, KsmKeyInfo> createKeys(int numOfKeys, int keySize)
+  public Map<String, OmKeyInfo> createKeys(int numOfKeys, int keySize)
       throws Exception {
-    Map<String, KsmKeyInfo> keyLocationMap = Maps.newHashMap();
+    Map<String, OmKeyInfo> keyLocationMap = Maps.newHashMap();
     String volume = "volume" + RandomStringUtils.randomNumeric(5);
     String bucket = "bucket" + RandomStringUtils.randomNumeric(5);
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -104,12 +104,12 @@ public class TestStorageContainerManagerHelper {
     }
 
     for (String key : keyNames) {
-      KsmKeyArgs arg = new KsmKeyArgs.Builder()
+      OmKeyArgs arg = new OmKeyArgs.Builder()
           .setVolumeName(volume)
           .setBucketName(bucket)
           .setKeyName(key)
           .build();
-      KsmKeyInfo location = cluster.getKeySpaceManager()
+      OmKeyInfo location = cluster.getOzoneManager()
           .lookupKey(arg);
       keyLocationMap.put(key, location);
     }

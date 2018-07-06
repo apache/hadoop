@@ -404,13 +404,13 @@ esac
 # export HDFS_DFSROUTER_OPTS=""
 
 ###
-# HDFS Key Space Manager specific parameters
+# Ozone Manager specific parameters
 ###
-# Specify the JVM options to be used when starting the HDFS Key Space Manager.
+# Specify the JVM options to be used when starting the Ozone Manager.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
-# export HDFS_KSM_OPTS=""
+# export HDFS_OM_OPTS=""
 
 ###
 # HDFS StorageContainerManager specific parameters

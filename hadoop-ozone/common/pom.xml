@@ -69,7 +69,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>KeySpaceManagerProtocol.proto</include>
+                  <include>OzoneManagerProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

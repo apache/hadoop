@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.web.handlers;
 import org.apache.commons.codec.binary.Base64;
 
 import org.apache.hadoop.ozone.OzoneRestUtils;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
@@ -102,7 +102,7 @@ public abstract class KeyProcessTemplate {
       LOG.error("IOException:", fsExp);
       // Map KEY_NOT_FOUND to INVALID_KEY
       if (fsExp.getMessage().endsWith(
-          KeySpaceManagerProtocolProtos.Status.KEY_NOT_FOUND.name())) {
+          OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND.name())) {
         throw ErrorTable.newError(ErrorTable.INVALID_KEY, userArgs, fsExp);
       }
 

@@ -22,14 +22,13 @@ import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
-import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.ksm.protocolPB
-    .KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -37,9 +36,9 @@ import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -77,8 +76,8 @@ public final class DistributedStorageHandler implements StorageHandler {
 
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
-  private final KeySpaceManagerProtocolClientSideTranslatorPB
-      keySpaceManagerClient;
+  private final OzoneManagerProtocolClientSideTranslatorPB
+      ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
@@ -92,14 +91,14 @@ public final class DistributedStorageHandler implements StorageHandler {
    *
    * @param conf configuration
    * @param storageContainerLocation StorageContainerLocationProtocol proxy
-   * @param keySpaceManagerClient KeySpaceManager proxy
+   * @param ozoneManagerClient OzoneManager proxy
    */
   public DistributedStorageHandler(OzoneConfiguration conf,
       StorageContainerLocationProtocolClientSideTranslatorPB
           storageContainerLocation,
-      KeySpaceManagerProtocolClientSideTranslatorPB
-          keySpaceManagerClient) {
-    this.keySpaceManagerClient = keySpaceManagerClient;
+      OzoneManagerProtocolClientSideTranslatorPB
+                                       ozoneManagerClient) {
+    this.ozoneManagerClient = ozoneManagerClient;
     this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
     this.useRatis = conf.getBoolean(
@@ -116,10 +115,10 @@ public final class DistributedStorageHandler implements StorageHandler {
 
     chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
         ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT);
-    userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
-        KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
-    groupRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS,
-        KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
+    userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+        OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
+    groupRights = conf.getEnum(OMConfigKeys.OZONE_OM_GROUP_RIGHTS,
+        OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
     if(chunkSize > ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
               + " the maximum size ({}),"
@@ -136,26 +135,26 @@ public final class DistributedStorageHandler implements StorageHandler {
     OzoneAcl userAcl =
         new OzoneAcl(OzoneAcl.OzoneACLType.USER,
             args.getUserName(), userRights);
-    KsmVolumeArgs.Builder builder = KsmVolumeArgs.newBuilder();
+    OmVolumeArgs.Builder builder = OmVolumeArgs.newBuilder();
     builder.setAdminName(args.getAdminName())
         .setOwnerName(args.getUserName())
         .setVolume(args.getVolumeName())
         .setQuotaInBytes(quota)
-        .addOzoneAcls(KSMPBHelper.convertOzoneAcl(userAcl));
+        .addOzoneAcls(OMPBHelper.convertOzoneAcl(userAcl));
     if (args.getGroups() != null) {
       for (String group : args.getGroups()) {
         OzoneAcl groupAcl =
             new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, group, groupRights);
-        builder.addOzoneAcls(KSMPBHelper.convertOzoneAcl(groupAcl));
+        builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(groupAcl));
       }
     }
-    keySpaceManagerClient.createVolume(builder.build());
+    ozoneManagerClient.createVolume(builder.build());
   }
 
   @Override
   public void setVolumeOwner(VolumeArgs args) throws
       IOException, OzoneException {
-    keySpaceManagerClient.setOwner(args.getVolumeName(), args.getUserName());
+    ozoneManagerClient.setOwner(args.getVolumeName(), args.getUserName());
   }
 
   @Override
@@ -163,14 +162,14 @@ public final class DistributedStorageHandler implements StorageHandler {
       throws IOException, OzoneException {
     long quota = remove ? OzoneConsts.MAX_QUOTA_IN_BYTES :
         args.getQuota().sizeInBytes();
-    keySpaceManagerClient.setQuota(args.getVolumeName(), quota);
+    ozoneManagerClient.setQuota(args.getVolumeName(), quota);
   }
 
   @Override
   public boolean checkVolumeAccess(String volume, OzoneAcl acl)
       throws IOException, OzoneException {
-    return keySpaceManagerClient
-        .checkVolumeAccess(volume, KSMPBHelper.convertOzoneAcl(acl));
+    return ozoneManagerClient
+        .checkVolumeAccess(volume, OMPBHelper.convertOzoneAcl(acl));
   }
 
   @Override
@@ -185,9 +184,9 @@ public final class DistributedStorageHandler implements StorageHandler {
               OzoneConsts.MAX_LISTVOLUMES_SIZE, maxNumOfKeys));
     }
 
-    List<KsmVolumeArgs> listResult;
+    List<OmVolumeArgs> listResult;
     if (args.isRootScan()) {
-      listResult = keySpaceManagerClient.listAllVolumes(args.getPrefix(),
+      listResult = ozoneManagerClient.listAllVolumes(args.getPrefix(),
           args.getPrevKey(), args.getMaxKeys());
     } else {
       UserArgs userArgs = args.getArgs();
@@ -195,16 +194,16 @@ public final class DistributedStorageHandler implements StorageHandler {
         throw new IllegalArgumentException("Illegal argument,"
             + " missing user argument.");
       }
-      listResult = keySpaceManagerClient.listVolumeByUser(
+      listResult = ozoneManagerClient.listVolumeByUser(
           args.getArgs().getUserName(), args.getPrefix(), args.getPrevKey(),
           args.getMaxKeys());
     }
 
     // TODO Add missing fields createdBy, bucketCount and bytesUsed
     ListVolumes result = new ListVolumes();
-    for (KsmVolumeArgs volumeArgs : listResult) {
+    for (OmVolumeArgs volumeArgs : listResult) {
       VolumeInfo info = new VolumeInfo();
-      KeySpaceManagerProtocolProtos.VolumeInfo
+      OzoneManagerProtocolProtos.VolumeInfo
           infoProto = volumeArgs.getProtobuf();
       info.setOwner(new VolumeOwner(infoProto.getOwnerName()));
       info.setQuota(OzoneQuota.getOzoneQuota(infoProto.getQuotaInBytes()));
@@ -220,14 +219,14 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void deleteVolume(VolumeArgs args)
       throws IOException, OzoneException {
-    keySpaceManagerClient.deleteVolume(args.getVolumeName());
+    ozoneManagerClient.deleteVolume(args.getVolumeName());
   }
 
   @Override
   public VolumeInfo getVolumeInfo(VolumeArgs args)
       throws IOException, OzoneException {
-    KsmVolumeArgs volumeArgs =
-        keySpaceManagerClient.getVolumeInfo(args.getVolumeName());
+    OmVolumeArgs volumeArgs =
+        ozoneManagerClient.getVolumeInfo(args.getVolumeName());
     //TODO: add support for createdOn and other fields in getVolumeInfo
     VolumeInfo volInfo =
         new VolumeInfo(volumeArgs.getVolume(), null,
@@ -242,7 +241,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void createBucket(final BucketArgs args)
       throws IOException, OzoneException {
-    KsmBucketInfo.Builder builder = KsmBucketInfo.newBuilder();
+    OmBucketInfo.Builder builder = OmBucketInfo.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName());
     if(args.getAddAcls() != null) {
@@ -255,7 +254,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       builder.setIsVersionEnabled(getBucketVersioningProtobuf(
           args.getVersioning()));
     }
-    keySpaceManagerClient.createBucket(builder.build());
+    ozoneManagerClient.createBucket(builder.build());
   }
 
   /**
@@ -285,7 +284,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     List<OzoneAcl> removeAcls = args.getRemoveAcls();
     List<OzoneAcl> addAcls = args.getAddAcls();
     if(removeAcls != null || addAcls != null) {
-      KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+      OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
       builder.setVolumeName(args.getVolumeName())
           .setBucketName(args.getBucketName());
       if(removeAcls != null && !removeAcls.isEmpty()) {
@@ -294,35 +293,35 @@ public final class DistributedStorageHandler implements StorageHandler {
       if(addAcls != null && !addAcls.isEmpty()) {
         builder.setAddAcls(args.getAddAcls());
       }
-      keySpaceManagerClient.setBucketProperty(builder.build());
+      ozoneManagerClient.setBucketProperty(builder.build());
     }
   }
 
   @Override
   public void setBucketVersioning(BucketArgs args)
       throws IOException, OzoneException {
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setIsVersionEnabled(getBucketVersioningProtobuf(
             args.getVersioning()));
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void setBucketStorageClass(BucketArgs args)
       throws IOException, OzoneException {
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setStorageType(args.getStorageType());
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void deleteBucket(BucketArgs args)
       throws IOException, OzoneException {
-    keySpaceManagerClient.deleteBucket(args.getVolumeName(),
+    ozoneManagerClient.deleteBucket(args.getVolumeName(),
         args.getBucketName());
   }
 
@@ -354,12 +353,12 @@ public final class DistributedStorageHandler implements StorageHandler {
                 OzoneConsts.MAX_LISTBUCKETS_SIZE, maxNumOfKeys));
       }
 
-      List<KsmBucketInfo> buckets =
-          keySpaceManagerClient.listBuckets(va.getVolumeName(),
+      List<OmBucketInfo> buckets =
+          ozoneManagerClient.listBuckets(va.getVolumeName(),
               args.getPrevKey(), args.getPrefix(), args.getMaxKeys());
 
       // Convert the result for the web layer.
-      for (KsmBucketInfo bucketInfo : buckets) {
+      for (OmBucketInfo bucketInfo : buckets) {
         BucketInfo bk = new BucketInfo();
         bk.setVolumeName(bucketInfo.getVolumeName());
         bk.setBucketName(bucketInfo.getBucketName());
@@ -382,26 +381,26 @@ public final class DistributedStorageHandler implements StorageHandler {
       throws IOException {
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
-    KsmBucketInfo ksmBucketInfo = keySpaceManagerClient.getBucketInfo(
+    OmBucketInfo omBucketInfo = ozoneManagerClient.getBucketInfo(
         volumeName, bucketName);
-    BucketInfo bucketInfo = new BucketInfo(ksmBucketInfo.getVolumeName(),
-        ksmBucketInfo.getBucketName());
-    if(ksmBucketInfo.getIsVersionEnabled()) {
+    BucketInfo bucketInfo = new BucketInfo(omBucketInfo.getVolumeName(),
+        omBucketInfo.getBucketName());
+    if(omBucketInfo.getIsVersionEnabled()) {
       bucketInfo.setVersioning(Versioning.ENABLED);
     } else {
       bucketInfo.setVersioning(Versioning.DISABLED);
     }
-    bucketInfo.setStorageType(ksmBucketInfo.getStorageType());
-    bucketInfo.setAcls(ksmBucketInfo.getAcls());
+    bucketInfo.setStorageType(omBucketInfo.getStorageType());
+    bucketInfo.setAcls(omBucketInfo.getAcls());
     bucketInfo.setCreatedOn(
-        HddsClientUtils.formatDateTime(ksmBucketInfo.getCreationTime()));
+        HddsClientUtils.formatDateTime(omBucketInfo.getCreationTime()));
     return bucketInfo;
   }
 
   @Override
   public OutputStream newKeyWriter(KeyArgs args) throws IOException,
       OzoneException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
@@ -409,14 +408,14 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setType(xceiverClientManager.getType())
         .setFactor(xceiverClientManager.getFactor())
         .build();
-    // contact KSM to allocate a block for key.
-    OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);
+    // contact OM to allocate a block for key.
+    OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
     ChunkGroupOutputStream groupOutputStream =
         new ChunkGroupOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
             .setScmClient(storageContainerLocationClient)
-            .setKsmClient(keySpaceManagerClient)
+            .setOmClient(ozoneManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(args.getRequestID())
             .setType(xceiverClientManager.getType())
@@ -437,56 +436,56 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public LengthInputStream newKeyReader(KeyArgs args) throws IOException,
       OzoneException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .setDataSize(args.getSize())
         .build();
-    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
-    return ChunkGroupInputStream.getFromKsmKeyInfo(
+    OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
+    return ChunkGroupInputStream.getFromOmKeyInfo(
         keyInfo, xceiverClientManager, storageContainerLocationClient,
         args.getRequestID());
   }
 
   @Override
   public void deleteKey(KeyArgs args) throws IOException, OzoneException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .build();
-    keySpaceManagerClient.deleteKey(keyArgs);
+    ozoneManagerClient.deleteKey(keyArgs);
   }
 
   @Override
   public void renameKey(KeyArgs args, String toKeyName)
       throws IOException, OzoneException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .build();
-    keySpaceManagerClient.renameKey(keyArgs, toKeyName);
+    ozoneManagerClient.renameKey(keyArgs, toKeyName);
   }
 
   @Override
   public KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException {
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .build();
 
-    KsmKeyInfo ksmKeyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
     KeyInfo keyInfo = new KeyInfo();
     keyInfo.setVersion(0);
-    keyInfo.setKeyName(ksmKeyInfo.getKeyName());
-    keyInfo.setSize(ksmKeyInfo.getDataSize());
+    keyInfo.setKeyName(omKeyInfo.getKeyName());
+    keyInfo.setSize(omKeyInfo.getDataSize());
     keyInfo.setCreatedOn(
-        HddsClientUtils.formatDateTime(ksmKeyInfo.getCreationTime()));
+        HddsClientUtils.formatDateTime(omKeyInfo.getCreationTime()));
     keyInfo.setModifiedOn(
-        HddsClientUtils.formatDateTime(ksmKeyInfo.getModificationTime()));
+        HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
     return keyInfo;
   }
 
@@ -515,13 +514,13 @@ public final class DistributedStorageHandler implements StorageHandler {
                 OzoneConsts.MAX_LISTKEYS_SIZE, maxNumOfKeys));
       }
 
-      List<KsmKeyInfo> keys=
-          keySpaceManagerClient.listKeys(bucketArgs.getVolumeName(),
+      List<OmKeyInfo> keys=
+          ozoneManagerClient.listKeys(bucketArgs.getVolumeName(),
               bucketArgs.getBucketName(),
               args.getPrevKey(), args.getPrefix(), args.getMaxKeys());
 
       // Convert the result for the web layer.
-      for (KsmKeyInfo info : keys) {
+      for (OmKeyInfo info : keys) {
         KeyInfo tempInfo = new KeyInfo();
         tempInfo.setVersion(0);
         tempInfo.setKeyName(info.getKeyName());
@@ -547,7 +546,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public void close() {
     IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
-    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
+    IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
   }
 }
