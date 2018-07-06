@@ -119,8 +119,10 @@ public class HddsDispatcher implements ContainerDispatcher {
     responseProto = handler.handle(msg, container);
     if (responseProto != null) {
       metrics.incContainerOpsLatencies(cmdType, System.nanoTime() - startTime);
+      return responseProto;
+    } else {
+      return ContainerUtils.unsupportedRequest(msg);
     }
-    return responseProto;
   }
 
   @Override

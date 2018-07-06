@@ -28,7 +28,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
 import org.apache.hadoop.util.Time;
@@ -42,13 +41,11 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -105,10 +102,6 @@ public class BenchMarkDatanodeDispatcher {
 
     // data directory
     conf.set("dfs.datanode.data.dir", baseDir + File.separator + "data");
-
-    // metadata directory
-    StorageLocation metadataDir = StorageLocation.parse(
-        baseDir + File.separator + CONTAINER_ROOT_PREFIX);
 
     ContainerSet containerSet = new ContainerSet();
     VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);

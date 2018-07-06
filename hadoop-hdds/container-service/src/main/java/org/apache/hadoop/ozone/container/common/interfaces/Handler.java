@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
  * Dispatcher sends ContainerCommandRequests to Handler. Each Container Type
  * should have an implementation for Handler.
  */
-public class Handler {
+public abstract class Handler {
 
   protected final Configuration conf;
   protected final ContainerSet containerSet;
@@ -64,10 +64,8 @@ public class Handler {
     }
   }
 
-  public ContainerCommandResponseProto handle(
-      ContainerCommandRequestProto msg, Container container) {
-    return null;
-  }
+  public abstract ContainerCommandResponseProto handle(
+      ContainerCommandRequestProto msg, Container container);
 
   public void setScmID(String scmId) {
     this.scmID = scmId;
