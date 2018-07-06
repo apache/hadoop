@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
@@ -44,13 +45,16 @@ public class ContainerReader implements Runnable {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ContainerReader.class);
-  private File hddsVolumeDir;
+  private HddsVolume hddsVolume;
   private final ContainerSet containerSet;
   private final OzoneConfiguration config;
+  private final File hddsVolumeDir;
 
-  ContainerReader(File volumeRoot, ContainerSet cset, OzoneConfiguration conf) {
-    Preconditions.checkNotNull(volumeRoot);
-    this.hddsVolumeDir = volumeRoot;
+  ContainerReader(HddsVolume volume, ContainerSet cset, OzoneConfiguration
+      conf) {
+    Preconditions.checkNotNull(volume);
+    this.hddsVolume = volume;
+    this.hddsVolumeDir = hddsVolume.getHddsRootDir();
     this.containerSet = cset;
     this.config = conf;
   }
@@ -92,6 +96,11 @@ public class ContainerReader implements Runnable {
       }
     });
 
+    if (scmDir == null) {
+      LOG.error("Volume {} is empty with out metadata and chunks",
+          hddsVolumeRootDir);
+      return;
+    }
     for (File scmLoc : scmDir) {
       File currentDir = null;
       currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
@@ -137,6 +146,7 @@ public class ContainerReader implements Runnable {
       case KeyValueContainer:
         KeyValueContainerData keyValueContainerData = (KeyValueContainerData)
             containerData;
+        containerData.setVolume(hddsVolume);
         File dbFile = KeyValueContainerLocationUtil
             .getContainerDBFile(new File(containerFile.getParent()),
                 containerName);

@@ -143,7 +143,7 @@ public class TestContainerSmallFile {
 
 
     thrown.expect(StorageContainerException.class);
-    thrown.expectMessage("Unable to find the container");
+    thrown.expectMessage("ContainerID 8888 does not exist");
 
     // Try to read a invalid key
     ContainerProtos.GetSmallFileResponseProto response =

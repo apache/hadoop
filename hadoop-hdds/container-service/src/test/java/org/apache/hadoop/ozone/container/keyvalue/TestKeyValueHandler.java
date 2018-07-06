@@ -18,21 +18,13 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
-import com.google.common.base.Supplier;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
-import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -55,31 +47,14 @@ public class TestKeyValueHandler {
   @Rule
   public TestRule timeout = new Timeout(300000);
 
-  private Configuration conf;
   private HddsDispatcher dispatcher;
-  private ContainerSet containerSet;
-  private VolumeSet volumeSet;
   private KeyValueHandler handler;
 
-  private final static String SCM_ID = UUID.randomUUID().toString();
   private final static String DATANODE_UUID = UUID.randomUUID().toString();
-  private int containerID;
 
   private final String baseDir = MiniDFSCluster.getBaseDirectory();
   private final String volume = baseDir + "disk1";
 
-  private void setup() throws Exception {
-    this.conf = new Configuration();
-    conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, volume);
-
-    this.containerSet = new ContainerSet();
-    this.volumeSet = new VolumeSet(DATANODE_UUID, conf);
-
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
-    this.handler = (KeyValueHandler) dispatcher.getHandler(
-        ContainerProtos.ContainerType.KeyValueContainer);
-    dispatcher.setScmId(UUID.randomUUID().toString());
-  }
 
   @Test
   /**
@@ -222,29 +197,5 @@ public class TestKeyValueHandler {
     return request;
   }
 
-  @Test
-  public void testCreateContainer() throws Exception {
-    setup();
 
-    long contId = ++containerID;
-    ContainerProtos.CreateContainerRequestProto createReq =
-        ContainerProtos.CreateContainerRequestProto.newBuilder()
-            .setContainerID(contId)
-            .build();
-
-    ContainerCommandRequestProto request =
-        ContainerProtos.ContainerCommandRequestProto.newBuilder()
-            .setCmdType(ContainerProtos.Type.CreateContainer)
-            .setDatanodeUuid(DATANODE_UUID)
-            .setCreateContainer(createReq)
-            .build();
-
-    dispatcher.dispatch(request);
-
-    // Verify that new container is added to containerSet.
-    Container container = containerSet.getContainer(contId);
-    Assert.assertEquals(contId, container.getContainerData().getContainerID());
-    Assert.assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
-        container.getContainerState());
-  }
 }

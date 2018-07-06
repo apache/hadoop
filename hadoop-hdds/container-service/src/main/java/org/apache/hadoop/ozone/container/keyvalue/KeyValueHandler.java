@@ -286,6 +286,14 @@ public class KeyValueHandler extends Handler {
         throw new StorageContainerException(
             "Deletion of Open Container is not allowed.",
             DELETE_ON_OPEN_CONTAINER);
+      } else if (!forceDelete && kvContainer.getContainerData().getKeyCount()
+          > 0) {
+        // If the container is not empty and cannot be deleted forcibly,
+        // then throw a SCE to stop deleting.
+        kvContainer.writeUnlock();
+        throw new StorageContainerException(
+            "Container cannot be deleted because it is not empty.",
+            ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
       } else {
         containerSet.removeContainer(
             kvContainer.getContainerData().getContainerID());

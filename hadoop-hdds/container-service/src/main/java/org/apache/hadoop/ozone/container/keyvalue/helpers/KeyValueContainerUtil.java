@@ -130,16 +130,6 @@ public final class KeyValueContainerUtil {
         .getMetadataPath());
     File chunksPath = new File(containerData.getChunksPath());
 
-    MetadataStore db = KeyUtils.getDB(containerData, conf);
-
-    // If the container is not empty and cannot be deleted forcibly,
-    // then throw a SCE to stop deleting.
-    if(!forceDelete && !db.isEmpty()) {
-      throw new StorageContainerException(
-          "Container cannot be deleted because it is not empty.",
-          ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
-    }
-
     // Close the DB connection and remove the DB handler from cache
     KeyUtils.removeDB(containerData, conf);
 

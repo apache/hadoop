@@ -107,7 +107,9 @@ public class TestGenerateOzoneRequiredConfigurations {
    */
   @Test
   public void generateConfigurationsFailure() throws Exception {
-    String[] args = new String[]{"-output", "/"};
+    File tempPath = getRandomTempDir();
+    tempPath.setReadOnly();
+    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
     GenerateOzoneRequiredConfigurations.main(args);
 
     Assert.assertEquals("Path is valid",
@@ -118,6 +120,7 @@ public class TestGenerateOzoneRequiredConfigurations {
 
     Assert.assertEquals("Config file not generated",
         1, GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
+    tempPath.setWritable(true);
   }
 
   private File getRandomTempDir() throws IOException {
