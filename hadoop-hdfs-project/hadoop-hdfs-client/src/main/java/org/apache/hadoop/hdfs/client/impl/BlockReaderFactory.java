@@ -598,6 +598,11 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       sock.recvFileInputStreams(fis, buf, 0, buf.length);
       ShortCircuitReplica replica = null;
       try {
+        if (fis[0] == null || fis[1] == null) {
+          throw new IOException("the datanode " + datanode + " failed to " +
+              "pass a file descriptor (might have reached open file limit).");
+        }
+
         ExtendedBlockId key =
             new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
         if (buf[0] == USE_RECEIPT_VERIFICATION.getNumber()) {
