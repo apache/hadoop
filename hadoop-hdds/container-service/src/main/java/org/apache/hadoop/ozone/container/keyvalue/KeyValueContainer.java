@@ -415,6 +415,11 @@ public class KeyValueContainer implements Container {
     }
   }
 
+  @Override
+  public void updateDeleteTransactionId(long deleteTransactionId) {
+    containerData.updateDeleteTransactionId(deleteTransactionId);
+  }
+
   /**
    * Acquire read lock.
    */

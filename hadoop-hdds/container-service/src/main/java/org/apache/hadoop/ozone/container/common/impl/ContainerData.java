@@ -32,6 +32,8 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static java.lang.Math.max;
+
 /**
  * ContainerData is the in-memory representation of container metadata and is
  * represented on disk by the .container file.
@@ -69,6 +71,8 @@ public class ContainerData {
   private final AtomicLong keyCount;
 
   private HddsVolume volume;
+
+  private long deleteTransactionId;
 
   /**
    * Number of pending deletion blocks in container.
@@ -110,6 +114,7 @@ public class ContainerData {
     this.keyCount = new AtomicLong(0L);
     this.maxSizeGB = size;
     this.numPendingDeletionBlocks = new AtomicInteger(0);
+    this.deleteTransactionId = 0;
   }
 
   /**
@@ -440,5 +445,21 @@ public class ContainerData {
     builder.setContainerType(containerType);
 
     return builder.build();
+  }
+
+  /**
+   * Sets deleteTransactionId to latest delete transactionId for the container.
+   *
+   * @param transactionId latest transactionId of the container.
+   */
+  public void updateDeleteTransactionId(long transactionId) {
+    deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
+  /**
+   * Return the latest deleteTransactionId of the container.
+   */
+  public long getDeleteTransactionId() {
+    return deleteTransactionId;
   }
 }

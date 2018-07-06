@@ -91,4 +91,10 @@ public interface Container extends RwLock {
    */
   ContainerProtos.ContainerType getContainerType();
 
+  /**
+   * updates the DeleteTransactionId.
+   * @param deleteTransactionId
+   */
+  void updateDeleteTransactionId(long deleteTransactionId);
+
 }
