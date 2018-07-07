@@ -47,7 +47,7 @@ public class TestJobControl {
    *      Job 1: copy data from indir to outdir_1
    *      Job 2: copy data from indir to outdir_2
    *      Job 3: copy data from outdir_1 and outdir_2 to outdir_3
-   *      Job 4: copy data from outdir to outdir_4
+   *      Job 4: copy data from outdir_3 to outdir_4
    * The jobs 1 and 2 have no dependency. The job 3 depends on jobs 1 and 2.
    * The job 4 depends on job 3.
    * 
