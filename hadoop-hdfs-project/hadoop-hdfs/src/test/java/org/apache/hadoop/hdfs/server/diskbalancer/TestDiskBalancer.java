@@ -109,6 +109,11 @@ public class TestDiskBalancer {
           .getFsVolumeReferences()) {
         assertEquals(ref.size(), dbDnNode.getVolumeCount());
       }
+
+      // Shutdown the DN first, to verify that calling diskbalancer APIs on
+      // uninitialized DN doesn't NPE
+      dnNode.shutdown();
+      assertEquals("", dnNode.getDiskBalancerStatus());
     } finally {
       cluster.shutdown();
     }
