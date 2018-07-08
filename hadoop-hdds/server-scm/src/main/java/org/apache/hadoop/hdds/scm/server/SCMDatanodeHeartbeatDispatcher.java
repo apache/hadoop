@@ -25,11 +25,13 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 import com.google.protobuf.GeneratedMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
 
 /**
  * This class is responsible for dispatching heartbeat from datanode to
@@ -42,11 +44,6 @@ public final class SCMDatanodeHeartbeatDispatcher {
 
   private EventPublisher eventPublisher;
 
-  public static final TypedEvent<NodeReportFromDatanode> NODE_REPORT =
-      new TypedEvent<>(NodeReportFromDatanode.class);
-
-  public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
-      new TypedEvent<ContainerReportFromDatanode>(ContainerReportFromDatanode.class);
 
   public SCMDatanodeHeartbeatDispatcher(EventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
@@ -63,12 +60,14 @@ public final class SCMDatanodeHeartbeatDispatcher {
         DatanodeDetails.getFromProtoBuf(heartbeat.getDatanodeDetails());
     // should we dispatch heartbeat through eventPublisher?
     if (heartbeat.hasNodeReport()) {
+      LOG.debug("Dispatching Node Report.");
       eventPublisher.fireEvent(NODE_REPORT,
           new NodeReportFromDatanode(datanodeDetails,
               heartbeat.getNodeReport()));
     }
 
     if (heartbeat.hasContainerReport()) {
+      LOG.debug("Dispatching Container Report.");
       eventPublisher.fireEvent(CONTAINER_REPORT,
           new ContainerReportFromDatanode(datanodeDetails,
               heartbeat.getContainerReport()));

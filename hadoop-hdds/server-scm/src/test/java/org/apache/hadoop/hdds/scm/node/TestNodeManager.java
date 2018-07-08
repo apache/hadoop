@@ -68,6 +68,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -1068,11 +1069,6 @@ public class TestNodeManager {
       foundRemaining = nodeManager.getStats().getRemaining().get();
       assertEquals(0, foundRemaining);
 
-      // Send a new report to bring the dead node back to healthy
-      String storagePath = testDir.getAbsolutePath() + "/" + dnId;
-      List<StorageReportProto> reports = TestUtils
-          .createStorageReport(capacity, expectedScmUsed, expectedRemaining,
-              storagePath, null, dnId, 1);
       nodeManager.processHeartbeat(datanodeDetails);
 
       // Wait up to 5 seconds so that the dead node becomes healthy
@@ -1111,11 +1107,11 @@ public class TestNodeManager {
 
     EventQueue eq = new EventQueue();
     try (SCMNodeManager nodemanager = createNodeManager(conf)) {
-      eq.addHandler(SCMNodeManager.DATANODE_COMMAND, nodemanager);
+      eq.addHandler(DATANODE_COMMAND, nodemanager);
 
       nodemanager
           .register(datanodeDetails, TestUtils.createNodeReport(reports));
-      eq.fireEvent(SCMNodeManager.DATANODE_COMMAND,
+      eq.fireEvent(DATANODE_COMMAND,
           new CommandForDatanode(datanodeDetails.getUuid(),
               new CloseContainerCommand(1L, ReplicationType.STAND_ALONE)));
 

@@ -25,10 +25,8 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -118,8 +116,7 @@ public class SCMNodeManager
   // Node pool manager.
   private final StorageContainerManager scmManager;
 
-  public static final Event<CommandForDatanode> DATANODE_COMMAND =
-      new TypedEvent<>(CommandForDatanode.class, "DATANODE_COMMAND");
+
 
   /**
    * Constructs SCM machine Manager.
