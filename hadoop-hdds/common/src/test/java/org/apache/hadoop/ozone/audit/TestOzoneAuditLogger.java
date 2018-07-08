@@ -100,7 +100,7 @@ public class TestOzoneAuditLogger {
     AUDIT.logReadFailure(DummyAction.READ_VOLUME, auditableObj.toAuditMap(), Level.ERROR);
     AUDIT.logReadFailure(DummyAction.READ_VOLUME, auditableObj.toAuditMap(), Level.ERROR,
         new Exception("test"));
-    verifyLog(null);
+    verifyNoLog();
   }
 
   /**
@@ -110,22 +110,38 @@ public class TestOzoneAuditLogger {
   public void notLogDebugEvents() throws IOException {
     AUDIT.logWriteSuccess(DummyAction.CREATE_VOLUME, auditableObj.toAuditMap(), Level.DEBUG);
     AUDIT.logReadSuccess(DummyAction.READ_VOLUME, auditableObj.toAuditMap(), Level.DEBUG);
-    verifyLog(null);
+    verifyNoLog();
   }
 
-  public void verifyLog(String expected) throws IOException {
-      File file = new File("audit.log");
-      List<String> lines = FileUtils.readLines(file, (String)null);
-      if(expected == null){
-        // When no log entry is expected, the log file must be empty
-        assertTrue(lines.size() == 0);
-      } else {
-        // When log entry is expected, the log file will contain one line and
-        // that must be equal to the expected string
-        assertTrue(expected.equalsIgnoreCase(lines.get(0)));
-        //empty the file
-        lines.remove(0);
-        FileUtils.writeLines(file, lines, false);
+  private void verifyLog(String expected) throws IOException {
+    File file = new File("audit.log");
+    List<String> lines = FileUtils.readLines(file, (String)null);
+      final int retry = 5;
+      int i = 0;
+      while (lines.isEmpty() && i < retry) {
+        lines = FileUtils.readLines(file, (String)null);
+        try {
+          Thread.sleep( 500 * (i + 1));
+        } catch(InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+        i++;
       }
+
+      // When log entry is expected, the log file will contain one line and
+      // that must be equal to the expected string
+      assertTrue(lines.size() != 0);
+      assertTrue(expected.equalsIgnoreCase(lines.get(0)));
+      //empty the file
+      lines.remove(0);
+      FileUtils.writeLines(file, lines, false);
+  }
+
+  private void verifyNoLog() throws IOException {
+    File file = new File("audit.log");
+    List<String> lines = FileUtils.readLines(file, (String)null);
+    // When no log entry is expected, the log file must be empty
+    assertTrue(lines.size() == 0);
   }
 }
