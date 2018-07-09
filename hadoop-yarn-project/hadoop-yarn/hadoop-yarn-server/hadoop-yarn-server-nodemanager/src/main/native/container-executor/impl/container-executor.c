@@ -2162,6 +2162,28 @@ void chown_dir_contents(const char *dir_path, uid_t uid, gid_t gid) {
   free(path_tmp);
 }
 
+int is_empty(char *target_dir) {
+  DIR *dir = NULL;
+  struct dirent *entry = NULL;
+  dir = opendir(target_dir);
+  if (!dir) {
+    fprintf(LOGFILE, "Could not open directory %s - %s\n", target_dir,
+            strerror(errno));
+    return 0;
+  }
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0) {
+      continue;
+    }
+    if (strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+    fprintf(LOGFILE, "Directory is not empty %s\n", target_dir);
+    return 0;
+  }
+  return 1;
+}
+
 /**
  * Mount a cgroup controller at the requested mount point and create
  * a hierarchy for the Hadoop NodeManager to manage.
@@ -2196,7 +2218,13 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
     result = -1;
   } else {
     if (strstr(mount_path, "..") != NULL) {
-      fprintf(LOGFILE, "Unsupported cgroup mount path detected.\n");
+      fprintf(LOGFILE, "Unsupported cgroup mount path detected. %s\n",
+          mount_path);
+      result = INVALID_COMMAND_PROVIDED;
+      goto cleanup;
+    }
+    if (!is_empty(mount_path)) {
+      fprintf(LOGFILE, "cgroup mount path is not empty. %s\n", mount_path);
       result = INVALID_COMMAND_PROVIDED;
       goto cleanup;
     }
