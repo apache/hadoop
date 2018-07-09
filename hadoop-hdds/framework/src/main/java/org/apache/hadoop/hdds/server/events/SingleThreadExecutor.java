@@ -23,18 +23,13 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.metrics2.annotation.Metric;
-import org.apache.hadoop.metrics2.annotation.Metrics;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Simple EventExecutor to call all the event handler one-by-one.
  *
  * @param <T>
  */
-@Metrics(context = "EventQueue")
 public class SingleThreadExecutor<T> implements EventExecutor<T> {
 
   public static final String THREAD_NAME_PREFIX = "EventQueue";
@@ -46,24 +41,14 @@ public class SingleThreadExecutor<T> implements EventExecutor<T> {
 
   private final ThreadPoolExecutor executor;
 
-  @Metric
-  private MutableCounterLong queued;
+  private final AtomicLong queuedCount = new AtomicLong(0);
 
-  @Metric
-  private MutableCounterLong done;
+  private final AtomicLong successfulCount = new AtomicLong(0);
 
-  @Metric
-  private MutableCounterLong failed;
+  private final AtomicLong failedCount = new AtomicLong(0);
 
-  /**
-   * Create SingleThreadExecutor.
-   *
-   * @param name Unique name used in monitoring and metrics.
-   */
   public SingleThreadExecutor(String name) {
     this.name = name;
-    DefaultMetricsSystem.instance()
-        .register("EventQueue" + name, "Event Executor metrics ", this);
 
     LinkedBlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     executor =
@@ -79,31 +64,31 @@ public class SingleThreadExecutor<T> implements EventExecutor<T> {
   @Override
   public void onMessage(EventHandler<T> handler, T message, EventPublisher
       publisher) {
-    queued.incr();
+    queuedCount.incrementAndGet();
     executor.execute(() -> {
       try {
         handler.onMessage(message, publisher);
-        done.incr();
+        successfulCount.incrementAndGet();
       } catch (Exception ex) {
         LOG.error("Error on execution message {}", message, ex);
-        failed.incr();
+        failedCount.incrementAndGet();
       }
     });
   }
 
   @Override
   public long failedEvents() {
-    return failed.value();
+    return failedCount.get();
   }
 
   @Override
   public long successfulEvents() {
-    return done.value();
+    return successfulCount.get();
   }
 
   @Override
   public long queuedEvents() {
-    return queued.value();
+    return queuedCount.get();
   }
 
   @Override

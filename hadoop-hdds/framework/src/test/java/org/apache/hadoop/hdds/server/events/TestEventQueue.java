@@ -25,8 +25,6 @@ import org.junit.Test;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-
 /**
  * Testing the basic functionality of the event queue.
  */
@@ -46,13 +44,11 @@ public class TestEventQueue {
 
   @Before
   public void startEventQueue() {
-    DefaultMetricsSystem.initialize(getClass().getSimpleName());
     queue = new EventQueue();
   }
 
   @After
   public void stopEventQueue() {
-    DefaultMetricsSystem.shutdown();
     queue.close();
   }
 
@@ -80,6 +76,37 @@ public class TestEventQueue {
     queue.processAll(1000);
     Assert.assertEquals(23, result[0]);
     Assert.assertEquals(23, result[1]);
+
+  }
+
+  @Test
+  public void handlerGroup() {
+    final long[] result = new long[2];
+    queue.addHandlerGroup(
+        "group",
+        new EventQueue.HandlerForEvent<>(EVENT3, (payload, publisher) ->
+            result[0] = payload),
+        new EventQueue.HandlerForEvent<>(EVENT4, (payload, publisher) ->
+            result[1] = payload)
+    );
+
+    queue.fireEvent(EVENT3, 23L);
+    queue.fireEvent(EVENT4, 42L);
+
+    queue.processAll(1000);
+
+    Assert.assertEquals(23, result[0]);
+    Assert.assertEquals(42, result[1]);
+
+    Set<String> eventQueueThreadNames =
+        Thread.getAllStackTraces().keySet()
+            .stream()
+            .filter(t -> t.getName().startsWith(SingleThreadExecutor
+                .THREAD_NAME_PREFIX))
+            .map(Thread::getName)
+            .collect(Collectors.toSet());
+    System.out.println(eventQueueThreadNames);
+    Assert.assertEquals(1, eventQueueThreadNames.size());
 
   }
 
