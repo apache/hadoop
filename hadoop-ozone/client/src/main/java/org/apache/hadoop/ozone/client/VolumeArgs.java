@@ -77,7 +77,7 @@ public final class VolumeArgs {
     return acls;
   }
   /**
-   * Returns new builder class that builds a KsmVolumeArgs.
+   * Returns new builder class that builds a OmVolumeArgs.
    *
    * @return Builder
    */
@@ -86,7 +86,7 @@ public final class VolumeArgs {
   }
 
   /**
-   * Builder for KsmVolumeArgs.
+   * Builder for OmVolumeArgs.
    */
   public static class Builder {
     private String adminName;

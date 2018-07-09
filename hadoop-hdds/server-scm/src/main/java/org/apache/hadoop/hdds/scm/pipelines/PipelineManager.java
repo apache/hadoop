@@ -16,6 +16,9 @@
  */
 package org.apache.hadoop.hdds.scm.pipelines;
 
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.WeakHashMap;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
@@ -25,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,11 +38,13 @@ public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
   private final List<Pipeline> activePipelines;
+  private final Map<String, Pipeline> activePipelineMap;
   private final AtomicInteger pipelineIndex;
 
   public PipelineManager() {
     activePipelines = new LinkedList<>();
     pipelineIndex = new AtomicInteger(0);
+    activePipelineMap = new WeakHashMap<>();
   }
 
   /**
@@ -76,6 +80,7 @@ public abstract class PipelineManager {
               "replicationType:{} replicationFactor:{}",
           pipeline.getPipelineName(), replicationType, replicationFactor);
       activePipelines.add(pipeline);
+      activePipelineMap.put(pipeline.getPipelineName(), pipeline);
     } else {
       pipeline =
           findOpenPipeline(replicationType, replicationFactor);
@@ -92,6 +97,26 @@ public abstract class PipelineManager {
     } else {
       return pipeline;
     }
+  }
+
+  /**
+   * This function to get pipeline with given pipeline name.
+   *
+   * @param pipelineName
+   * @return a Pipeline.
+   */
+  public synchronized final Pipeline getPipeline(String pipelineName) {
+    Pipeline pipeline = null;
+
+    // 1. Check if pipeline channel already exists
+    if (activePipelineMap.containsKey(pipelineName)) {
+      pipeline = activePipelineMap.get(pipelineName);
+      LOG.debug("Returning pipeline for pipelineName:{}", pipelineName);
+      return pipeline;
+    } else {
+      LOG.debug("Unable to find pipeline for pipelineName:{}", pipelineName);
+    }
+    return pipeline;
   }
 
   protected int getReplicationCount(ReplicationFactor factor) {

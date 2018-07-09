@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
@@ -33,14 +34,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_CLIENT_PROTOCOL;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
-    .OZONE_KSM_HTTP_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
-    .OZONE_KSM_HTTP_BIND_PORT_DEFAULT;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CLIENT_PROTOCOL;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY;
 
 /**
  * Factory class to create different types of OzoneClients.
@@ -99,45 +95,46 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
    * @return OzoneClient
    *
    * @throws IOException
    */
-  public static OzoneClient getRpcClient(String ksmHost)
+  public static OzoneClient getRpcClient(String omHost)
       throws IOException {
-    return getRpcClient(ksmHost, OZONE_KSM_PORT_DEFAULT,
-        new OzoneConfiguration());
+    Configuration config = new OzoneConfiguration();
+    int port = OmUtils.getOmRpcPort(config);
+    return getRpcClient(omHost, port, config);
   }
 
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
-   * @param ksmRpcPort
-   *        RPC port of KeySpaceManager.
+   * @param omRpcPort
+   *        RPC port of OzoneManager.
    *
    * @return OzoneClient
    *
    * @throws IOException
    */
-  public static OzoneClient getRpcClient(String ksmHost, Integer ksmRpcPort)
+  public static OzoneClient getRpcClient(String omHost, Integer omRpcPort)
       throws IOException {
-    return getRpcClient(ksmHost, ksmRpcPort, new OzoneConfiguration());
+    return getRpcClient(omHost, omRpcPort, new OzoneConfiguration());
   }
 
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
-   * @param ksmRpcPort
-   *        RPC port of KeySpaceManager.
+   * @param omRpcPort
+   *        RPC port of OzoneManager.
    *
    * @param config
    *        Configuration to be used for OzoneClient creation
@@ -146,13 +143,13 @@ public final class OzoneClientFactory {
    *
    * @throws IOException
    */
-  public static OzoneClient getRpcClient(String ksmHost, Integer ksmRpcPort,
+  public static OzoneClient getRpcClient(String omHost, Integer omRpcPort,
                                          Configuration config)
       throws IOException {
-    Preconditions.checkNotNull(ksmHost);
-    Preconditions.checkNotNull(ksmRpcPort);
+    Preconditions.checkNotNull(omHost);
+    Preconditions.checkNotNull(omRpcPort);
     Preconditions.checkNotNull(config);
-    config.set(OZONE_KSM_ADDRESS_KEY, ksmHost + ":" + ksmRpcPort);
+    config.set(OZONE_OM_ADDRESS_KEY, omHost + ":" + omRpcPort);
     return getRpcClient(config);
   }
 
@@ -176,44 +173,46 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use REST protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
    * @return OzoneClient
    *
    * @throws IOException
    */
-  public static OzoneClient getRestClient(String ksmHost)
+  public static OzoneClient getRestClient(String omHost)
       throws IOException {
-    return getRestClient(ksmHost, OZONE_KSM_HTTP_BIND_PORT_DEFAULT);
+    Configuration config = new OzoneConfiguration();
+    int port = OmUtils.getOmRestPort(config);
+    return getRestClient(omHost, port, config);
   }
 
   /**
    * Returns an OzoneClient which will use REST protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
-   * @param ksmHttpPort
-   *        HTTP port of KeySpaceManager.
+   * @param omHttpPort
+   *        HTTP port of OzoneManager.
    *
    * @return OzoneClient
    *
    * @throws IOException
    */
-  public static OzoneClient getRestClient(String ksmHost, Integer ksmHttpPort)
+  public static OzoneClient getRestClient(String omHost, Integer omHttpPort)
       throws IOException {
-    return getRestClient(ksmHost, ksmHttpPort, new OzoneConfiguration());
+    return getRestClient(omHost, omHttpPort, new OzoneConfiguration());
   }
 
   /**
    * Returns an OzoneClient which will use REST protocol.
    *
-   * @param ksmHost
-   *        hostname of KeySpaceManager to connect.
+   * @param omHost
+   *        hostname of OzoneManager to connect.
    *
-   * @param ksmHttpPort
-   *        HTTP port of KeySpaceManager.
+   * @param omHttpPort
+   *        HTTP port of OzoneManager.
    *
    * @param config
    *        Configuration to be used for OzoneClient creation
@@ -222,13 +221,13 @@ public final class OzoneClientFactory {
    *
    * @throws IOException
    */
-  public static OzoneClient getRestClient(String ksmHost, Integer ksmHttpPort,
+  public static OzoneClient getRestClient(String omHost, Integer omHttpPort,
                                           Configuration config)
       throws IOException {
-    Preconditions.checkNotNull(ksmHost);
-    Preconditions.checkNotNull(ksmHttpPort);
+    Preconditions.checkNotNull(omHost);
+    Preconditions.checkNotNull(omHttpPort);
     Preconditions.checkNotNull(config);
-    config.set(OZONE_KSM_HTTP_ADDRESS_KEY, ksmHost + ":" +  ksmHttpPort);
+    config.set(OZONE_OM_HTTP_ADDRESS_KEY, omHost + ":" + omHttpPort);
     return getRestClient(config);
   }
 

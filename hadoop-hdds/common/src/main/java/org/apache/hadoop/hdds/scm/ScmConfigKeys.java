@@ -94,7 +94,7 @@ public final class ScmConfigKeys {
       "ozone.scm.datanode.port";
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
-  // OZONE_KSM_PORT_DEFAULT = 9862
+  // OZONE_OM_PORT_DEFAULT = 9862
   public static final String OZONE_SCM_BLOCK_CLIENT_PORT_KEY =
       "ozone.scm.block.client.port";
   public static final int OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT = 9863;
@@ -165,10 +165,6 @@ public final class ScmConfigKeys {
       "ozone.scm.dead.node.interval";
   public static final String OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
       "10m";
-
-  public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
-      "ozone.scm.max.hb.count.to.process";
-  public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
 
   public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL =
       "ozone.scm.heartbeat.thread.interval";

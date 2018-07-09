@@ -1,0 +1,80 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package org.apache.hadoop.hdds.scm.events;
+
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
+
+import org.apache.hadoop.hdds.server.events.Event;
+import org.apache.hadoop.hdds.server.events.TypedEvent;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
+
+/**
+ * Class that acts as the namespace for all SCM Events.
+ */
+public final class SCMEvents {
+
+  /**
+   * NodeReports are  sent out by Datanodes. This report is
+   * received by SCMDatanodeHeartbeatDispatcher and NodeReport Event is
+   * generated.
+   */
+  public static final TypedEvent<NodeReportFromDatanode> NODE_REPORT =
+      new TypedEvent<>(NodeReportFromDatanode.class, "Node_Report");
+  /**
+   * ContainerReports are send out by Datanodes. This report
+   * is received by SCMDatanodeHeartbeatDispatcher and Container_Report Event
+   * i generated.
+   */
+  public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
+      new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
+
+  /**
+   * When ever a command for the Datanode needs to be issued by any component
+   * inside SCM, a Datanode_Command event is generated. NodeManager listens
+   * to these events and dispatches them to Datanode for further processing.
+   */
+  public static final Event<CommandForDatanode> DATANODE_COMMAND =
+      new TypedEvent<>(CommandForDatanode.class, "Datanode_Command");
+
+  /**
+   * A Close Container Event can be triggered under many condition.
+   * Some of them are:
+   *    1. A Container is full, then we stop writing further information to
+   *    that container. DN's let SCM know that current state and sends a
+   *    informational message that allows SCM to close the container.
+   *
+   *    2. If a pipeline is open; for example Ratis; if a single node fails,
+   *    we will proactively close these containers.
+   *
+   *  Once a command is dispatched to DN, we will also listen to updates from
+   *  the datanode which lets us know that this command completed or timed out.
+   */
+  public static final TypedEvent<ContainerID> CLOSE_CONTAINER =
+      new TypedEvent<>(ContainerID.class, "Close_Container");
+
+  /**
+   * Private Ctor. Never Constructed.
+   */
+  private SCMEvents() {
+  }
+
+}

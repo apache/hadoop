@@ -18,5 +18,5 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 /**
- * KSM protocol buffer translators.
+ * OM protocol buffer translators.
  */

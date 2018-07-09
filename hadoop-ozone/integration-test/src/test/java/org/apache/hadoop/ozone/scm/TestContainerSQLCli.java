@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacem
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.scm.cli.SQLCLI;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -113,7 +112,7 @@ public class TestContainerSQLCli {
     cluster.waitForClusterToBeReady();
     datanodeIpAddress = cluster.getHddsDatanodes().get(0)
         .getDatanodeDetails().getIpAddress();
-    cluster.getKeySpaceManager().stop();
+    cluster.getOzoneManager().stop();
     cluster.getStorageContainerManager().stop();
 
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();

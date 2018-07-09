@@ -479,7 +479,7 @@ public class AppInfo {
   public int getNumNonAMContainersPreempted() {
     return numNonAMContainerPreempted;
   }
-  
+
   public int getNumAMContainersPreempted() {
     return numAMContainerPreempted;
   }

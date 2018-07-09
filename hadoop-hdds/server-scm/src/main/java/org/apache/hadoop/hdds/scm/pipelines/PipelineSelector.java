@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.pipelines;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
@@ -176,6 +177,21 @@ public class PipelineSelector {
         getPipeline(replicationFactor, replicationType);
   }
 
+  /**
+   * This function to return pipeline for given pipeline name and replication
+   * type.
+   */
+  public Pipeline getPipeline(String pipelineName,
+      ReplicationType replicationType) throws IOException {
+    if (pipelineName == null) {
+      return null;
+    }
+    PipelineManager manager = getPipelineManager(replicationType);
+    Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
+    LOG.debug("Getting replication pipeline forReplicationType {} :" +
+        " pipelineName:{}", replicationType, pipelineName);
+    return manager.getPipeline(pipelineName);
+  }
   /**
    * Creates a pipeline from a specified set of Nodes.
    */

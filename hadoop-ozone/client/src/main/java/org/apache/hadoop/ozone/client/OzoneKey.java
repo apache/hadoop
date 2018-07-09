@@ -49,7 +49,7 @@ public class OzoneKey {
   private long modificationTime;
 
   /**
-   * Constructs OzoneKey from KsmKeyInfo.
+   * Constructs OzoneKey from OmKeyInfo.
    *
    */
   public OzoneKey(String volumeName, String bucketName,

@@ -52,7 +52,7 @@ message ContainerResponseProto {
     errorContainerMissing = 3;
   }
   required Error errorCode = 1;
-  required SCMContainerInfo containerInfo = 2;
+  required ContainerWithPipeline containerWithPipeline = 2;
   optional string errorMessage = 3;
 }
 
@@ -62,6 +62,14 @@ message GetContainerRequestProto {
 
 message GetContainerResponseProto {
   required SCMContainerInfo containerInfo = 1;
+}
+
+message GetContainerWithPipelineRequestProto {
+  required int64 containerID = 1;
+}
+
+message GetContainerWithPipelineResponseProto {
+  required ContainerWithPipeline containerWithPipeline = 1;
 }
 
 message SCMListContainerRequestProto {
@@ -110,26 +118,13 @@ message ObjectStageChangeResponseProto {
  match the NodeState that we are requesting.
 */
 message NodeQueryRequestProto {
-
-
-  // Repeated, So we can specify more than one status type.
-  // These NodeState types are additive for now, in the sense that
-  // if you specify HEALTHY and FREE_NODE members --
-  // Then you get all healthy node which are not raft members.
-  //
-  // if you specify all healthy and dead nodes, you will get nothing
-  // back. Server is not going to dictate what combinations make sense,
-  // it is entirely up to the caller.
-  // TODO: Support operators like OR and NOT. Currently it is always an
-  // implied AND.
-
-  repeated NodeState query = 1;
+  required NodeState state = 1;
   required QueryScope scope = 2;
   optional string poolName = 3; // if scope is pool, then pool name is needed.
 }
 
 message NodeQueryResponseProto {
-  required NodePool datanodes = 1;
+  repeated Node datanodes = 1;
 }
 
 /**
@@ -171,6 +166,11 @@ service StorageContainerLocationProtocolService {
    */
   rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
 
+  /**
+   * Returns the pipeline for a given container.
+   */
+  rpc getContainerWithPipeline(GetContainerWithPipelineRequestProto) returns (GetContainerWithPipelineResponseProto);
+
   rpc listContainer(SCMListContainerRequestProto) returns (SCMListContainerResponseProto);
 
   /**
@@ -181,7 +181,7 @@ service StorageContainerLocationProtocolService {
   /**
   * Returns a set of Nodes that meet a criteria.
   */
-  rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
+  rpc queryNode(NodeQueryRequestProto) returns (NodeQueryResponseProto);
 
   /**
   * Notify from client when begin or finish container or pipeline operations on datanodes.

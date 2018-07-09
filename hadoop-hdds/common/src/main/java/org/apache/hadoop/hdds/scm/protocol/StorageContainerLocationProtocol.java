@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.protocol;
 
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -25,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -38,7 +38,7 @@ public interface StorageContainerLocationProtocol {
    * set of datanodes that should be used creating this container.
    *
    */
-  ContainerInfo allocateContainer(HddsProtos.ReplicationType replicationType,
+  ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType replicationType,
       HddsProtos.ReplicationFactor factor, String owner)
       throws IOException;
 
@@ -52,6 +52,16 @@ public interface StorageContainerLocationProtocol {
    * @throws IOException
    */
   ContainerInfo getContainer(long containerID) throws IOException;
+
+  /**
+   * Ask SCM the location of the container. SCM responds with a group of
+   * nodes where this container and its replicas are located.
+   *
+   * @param containerID - ID of the container.
+   * @return ContainerWithPipeline - the container info with the pipeline.
+   * @throws IOException
+   */
+  ContainerWithPipeline getContainerWithPipeline(long containerID) throws IOException;
 
   /**
    * Ask SCM a list of containers with a range of container names
@@ -83,10 +93,10 @@ public interface StorageContainerLocationProtocol {
 
   /**
    *  Queries a list of Node Statuses.
-   * @param nodeStatuses
+   * @param state
    * @return List of Datanodes.
    */
-  HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState> nodeStatuses,
+  List<HddsProtos.Node> queryNode(HddsProtos.NodeState state,
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**

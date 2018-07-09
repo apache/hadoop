@@ -32,7 +32,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -79,14 +79,16 @@ public class TestXceiverClientMetrics {
     OzoneConfiguration conf = new OzoneConfiguration();
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
-    ContainerInfo container = storageContainerLocationClient
+    ContainerWithPipeline container = storageContainerLocationClient
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
             containerOwner);
-    XceiverClientSpi client = clientManager.acquireClient(
-        container.getPipeline(), container.getContainerID());
+    XceiverClientSpi client = clientManager
+        .acquireClient(container.getPipeline(),
+            container.getContainerInfo().getContainerID());
 
     ContainerCommandRequestProto request = ContainerTestHelper
-        .getCreateContainerRequest(container.getContainerID(),
+        .getCreateContainerRequest(
+            container.getContainerInfo().getContainerID(),
             container.getPipeline());
     client.sendCommand(request);
 
@@ -112,7 +114,7 @@ public class TestXceiverClientMetrics {
           // use async interface for testing pending metrics
           for (int i = 0; i < numRequest; i++) {
             BlockID blockID = ContainerTestHelper.
-                getTestBlockID(container.getContainerID());
+                getTestBlockID(container.getContainerInfo().getContainerID());
             ContainerProtos.ContainerCommandRequestProto smallFileRequest;
 
             smallFileRequest = ContainerTestHelper.getWriteSmallFileRequest(

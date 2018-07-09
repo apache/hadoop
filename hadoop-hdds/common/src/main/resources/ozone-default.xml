@@ -21,7 +21,7 @@
 <!-- there.  If ozone-site.xml does not already exist, create it.      -->
 
 <!--Tags supported are OZONE, CBLOCK, MANAGEMENT, SECURITY, PERFORMANCE,   -->
-<!--DEBUG, CLIENT, SERVER, KSM, SCM, CRITICAL, RATIS, CONTAINER, REQUIRED, -->
+<!--DEBUG, CLIENT, SERVER, OM, SCM, CRITICAL, RATIS, CONTAINER, REQUIRED, -->
 <!--REST, STORAGE, PIPELINE, STANDALONE                                    -->
 
 <configuration>
@@ -266,122 +266,122 @@
     <description>
       Tells ozone which storage handler to use. The possible values are:
       distributed - The Ozone distributed storage handler, which speaks to
-      KSM/SCM on the backend and provides REST services to clients.
+      OM/SCM on the backend and provides REST services to clients.
       local - Local Storage handler strictly for testing - To be removed.
     </description>
   </property>
   <property>
     <name>ozone.key.deleting.limit.per.task</name>
     <value>1000</value>
-    <tag>KSM, PERFORMANCE</tag>
+    <tag>OM, PERFORMANCE</tag>
     <description>
       A maximum number of keys to be scanned by key deleting service
-      per time interval in KSM. Those keys are sent to delete metadata and
+      per time interval in OM. Those keys are sent to delete metadata and
       generate transactions in SCM for next async deletion between SCM
       and DataNode.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.address</name>
+    <name>ozone.om.address</name>
     <value/>
-    <tag>KSM, REQUIRED</tag>
+    <tag>OM, REQUIRED</tag>
     <description>
-      The address of the Ozone KSM service. This allows clients to discover
-      the KSMs address.
+      The address of the Ozone OM service. This allows clients to discover
+      the address of the OM.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.group.rights</name>
+    <name>ozone.om.group.rights</name>
     <value>READ_WRITE</value>
-    <tag>KSM, SECURITY</tag>
+    <tag>OM, SECURITY</tag>
     <description>
-      Default group permissions in Ozone KSM.
+      Default group permissions in Ozone OM.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.handler.count.key</name>
+    <name>ozone.om.handler.count.key</name>
     <value>20</value>
-    <tag>KSM, PERFORMANCE</tag>
+    <tag>OM, PERFORMANCE</tag>
     <description>
-      The number of RPC handler threads for KSM service endpoints.
+      The number of RPC handler threads for OM service endpoints.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.http-address</name>
+    <name>ozone.om.http-address</name>
     <value>0.0.0.0:9874</value>
-    <tag>KSM, MANAGEMENT</tag>
+    <tag>OM, MANAGEMENT</tag>
     <description>
-      The address and the base port where the KSM web UI will listen on.
+      The address and the base port where the OM web UI will listen on.
 
       If the port is 0, then the server will start on a free port. However, it
       is best to specify a well-known port, so it is easy to connect and see
-      the KSM management UI.
+      the OM management UI.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.http-bind-host</name>
+    <name>ozone.om.http-bind-host</name>
     <value>0.0.0.0</value>
-    <tag>KSM, MANAGEMENT</tag>
+    <tag>OM, MANAGEMENT</tag>
     <description>
-      The actual address the KSM web server will bind to. If this optional
+      The actual address the OM web server will bind to. If this optional
       the address is set, it overrides only the hostname portion of
-      ozone.ksm.http-address.
+      ozone.om.http-address.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.http.enabled</name>
+    <name>ozone.om.http.enabled</name>
     <value>true</value>
-    <tag>KSM, MANAGEMENT</tag>
+    <tag>OM, MANAGEMENT</tag>
     <description>
-      Property to enable or disable KSM web user interface.
+      Property to enable or disable OM web user interface.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.https-address</name>
+    <name>ozone.om.https-address</name>
     <value>0.0.0.0:9875</value>
-    <tag>KSM, MANAGEMENT, SECURITY</tag>
+    <tag>OM, MANAGEMENT, SECURITY</tag>
     <description>
-      The address and the base port where the KSM web UI will listen
+      The address and the base port where the OM web UI will listen
       on using HTTPS.
       If the port is 0 then the server will start on a free port.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.https-bind-host</name>
+    <name>ozone.om.https-bind-host</name>
     <value>0.0.0.0</value>
-    <tag>KSM, MANAGEMENT, SECURITY</tag>
+    <tag>OM, MANAGEMENT, SECURITY</tag>
     <description>
-      The actual address the KSM web server will bind to using HTTPS.
+      The actual address the OM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.ksm.http-address.
+      ozone.om.http-address.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.keytab.file</name>
+    <name>ozone.om.keytab.file</name>
     <value/>
-    <tag>KSM, SECURITY</tag>
+    <tag>OM, SECURITY</tag>
     <description>
-      The keytab file for Kerberos authentication in KSM.
+      The keytab file for Kerberos authentication in OM.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.db.cache.size.mb</name>
+    <name>ozone.om.db.cache.size.mb</name>
     <value>128</value>
-    <tag>KSM, PERFORMANCE</tag>
+    <tag>OM, PERFORMANCE</tag>
     <description>
-      The size of KSM DB cache in MB that used for caching files.
+      The size of OM DB cache in MB that used for caching files.
       This value is set to an abnormally low value in the default configuration.
       That is to make unit testing easy. Generally, this value should be set to
       something like 16GB or more, if you intend to use Ozone at scale.
 
-      A large value for this key allows a proportionally larger amount of KSM
-      metadata to be cached in memory. This makes KSM operations faster.
+      A large value for this key allows a proportionally larger amount of OM
+      metadata to be cached in memory. This makes OM operations faster.
     </description>
   </property>
   <property>
-    <name>ozone.ksm.user.max.volume</name>
+    <name>ozone.om.user.max.volume</name>
     <value>1024</value>
-    <tag>KSM, MANAGEMENT</tag>
+    <tag>OM, MANAGEMENT</tag>
     <description>
       The maximum number of volumes a user can have on a cluster.Increasing or
       decreasing this number has no real impact on ozone cluster. This is
@@ -391,11 +391,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.ksm.user.rights</name>
+    <name>ozone.om.user.rights</name>
     <value>READ_WRITE</value>
-    <tag>KSM, SECURITY</tag>
+    <tag>OM, SECURITY</tag>
     <description>
-      Default user permissions used in KSM.
+      Default user permissions used in OM.
     </description>
   </property>
   <property>
@@ -405,20 +405,20 @@
     <description>
       This is used only for testing purposes. This value is used by the local
       storage handler to simulate a REST backend. This is useful only when
-      debugging the REST front end independent of KSM and SCM. To be removed.
+      debugging the REST front end independent of OM and SCM. To be removed.
     </description>
   </property>
   <property>
     <name>ozone.metadata.dirs</name>
     <value/>
-    <tag>OZONE, KSM, SCM, CONTAINER, REQUIRED, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, REQUIRED, STORAGE</tag>
     <description>
-      Ozone metadata is shared among KSM, which acts as the namespace
+      Ozone metadata is shared among OM, which acts as the namespace
       manager for ozone, SCM which acts as the block manager and data nodes
       which maintain the name of the key(Key Name and BlockIDs). This
       replicated and distributed metadata store is maintained under the
       directory pointed by this key. Since metadata can be I/O intensive, at
-      least on KSM and SCM we recommend having SSDs. If you have the luxury
+      least on OM and SCM we recommend having SSDs. If you have the luxury
       of mapping this path to SSDs on all machines in the cluster, that will
       be excellent.
 
@@ -429,10 +429,10 @@
   <property>
     <name>ozone.metastore.impl</name>
     <value>RocksDB</value>
-    <tag>OZONE, KSM, SCM, CONTAINER, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, STORAGE</tag>
     <description>
       Ozone metadata store implementation. Ozone metadata are well
-      distributed to multiple services such as ksm, scm. They are stored in
+      distributed to multiple services such as ozoneManager, scm. They are stored in
       some local key-value databases. This property determines which database
       library to use. Supported value is either LevelDB or RocksDB.
     </description>
@@ -441,7 +441,7 @@
   <property>
     <name>ozone.metastore.rocksdb.statistics</name>
     <value>ALL</value>
-    <tag>OZONE, KSM, SCM, STORAGE, PERFORMANCE</tag>
+    <tag>OZONE, OM, SCM, STORAGE, PERFORMANCE</tag>
     <description>
       The statistics level of the rocksdb store. If you use any value from
       org.rocksdb.StatsLevel (eg. ALL or EXCEPT_DETAILED_TIMERS), the rocksdb
@@ -684,7 +684,7 @@
       The heartbeat interval from a data node to SCM. Yes,
       it is not three but 30, since most data nodes will heart beating via Ratis
       heartbeats. If a client is not able to talk to a data node, it will notify
-      KSM/SCM eventually. So a 30 second HB seems to work. This assumes that
+      OM/SCM eventually. So a 30 second HB seems to work. This assumes that
       replication strategy used is Ratis if not, this value should be set to
       something smaller like 3 seconds.
     </description>
@@ -786,17 +786,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.max.hb.count.to.process</name>
-    <value>5000</value>
-    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
-    <description>
-      The maximum number of heartbeat to process per loop of the
-      heartbeat process thread. Please see
-      ozone.scm.heartbeat.thread.interval
-      for more info.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE</tag>
@@ -831,7 +820,7 @@
     <value/>
     <tag>OZONE, SECURITY</tag>
     <description>
-      The server principal used by the SCM and KSM for web UI SPNEGO
+      The server principal used by the SCM and OM for web UI SPNEGO
       authentication when Kerberos security is enabled. This is typically set to
       HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
       HTTP/ by convention.
@@ -890,9 +879,9 @@
   <property>
     <name>ozone.key.preallocation.maxsize</name>
     <value>134217728</value>
-    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <tag>OZONE, OM, PERFORMANCE</tag>
     <description>
-      When a new key write request is sent to KSM, if a size is requested, at most
+      When a new key write request is sent to OM, if a size is requested, at most
       128MB of size is allocated at request time. If client needs more space for the
       write, separate block allocation requests will be made.
     </description>
@@ -961,7 +950,7 @@
   <property>
     <name>ozone.open.key.cleanup.service.interval.seconds</name>
     <value>86400</value>
-    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <tag>OZONE, OM, PERFORMANCE</tag>
     <description>
       A background job periodically checks open key entries and delete the expired ones. This entry controls the
       interval of this cleanup check.
@@ -971,7 +960,7 @@
   <property>
     <name>ozone.open.key.expire.threshold</name>
     <value>86400</value>
-    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <tag>OZONE, OM, PERFORMANCE</tag>
     <description>
       Controls how long an open key operation is considered active. Specifically, if a key
       has been open longer than the value of this config entry, that open key is considered as
@@ -981,12 +970,12 @@
 
   <property>
     <name>hadoop.tags.custom</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
   </property>
 
   <property>
     <name>ozone.tags.system</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
   </property>
 
 

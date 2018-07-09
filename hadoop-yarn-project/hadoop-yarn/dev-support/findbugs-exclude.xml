@@ -67,11 +67,6 @@
   </Match>
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
-    <Method name="getLocalityStatistics" />
-    <Bug pattern="EI_EXPOSE_REP" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
     <Method name="incNumAllocatedContainers"/>
     <Bug pattern="VO_VOLATILE_INCREMENT" />
   </Match>
@@ -116,6 +111,18 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher" />
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <!-- Ignore exposed internal representations -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
+    <Method name="getResources" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics" />
+    <Method name="getLocalityStatistics" />
+    <Bug pattern="EI_EXPOSE_REP" />
   </Match>
 
   <!-- Object cast is based on the event type -->

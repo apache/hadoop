@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm.pipelines.standalone;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;

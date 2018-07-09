@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 /**
  * A {@code ConfigurableResource} object represents an entity that is used to
@@ -33,14 +37,30 @@ public class ConfigurableResource {
   private final Resource resource;
   private final double[] percentages;
 
-  public ConfigurableResource(double[] percentages) {
+  ConfigurableResource() {
+    this(getOneHundredPercentArray());
+  }
+
+  ConfigurableResource(double[] percentages) {
     this.percentages = percentages.clone();
     this.resource = null;
+  }
+
+  ConfigurableResource(long value) {
+    this(Resource.newInstance(value));
   }
 
   public ConfigurableResource(Resource resource) {
     this.percentages = null;
     this.resource = resource;
+  }
+
+  private static double[] getOneHundredPercentArray() {
+    double[] resourcePercentages =
+        new double[ResourceUtils.getNumberOfKnownResourceTypes()];
+    Arrays.fill(resourcePercentages, 1.0);
+
+    return resourcePercentages;
   }
 
   /**
@@ -49,13 +69,21 @@ public class ConfigurableResource {
    * {@code percentages} or {@code clusterResource} is null.
    *
    * @param clusterResource the cluster resource
-   * @return resource
+   * @return resource the resulting resource
    */
   public Resource getResource(Resource clusterResource) {
     if (percentages != null && clusterResource != null) {
       long memory = (long) (clusterResource.getMemorySize() * percentages[0]);
       int vcore = (int) (clusterResource.getVirtualCores() * percentages[1]);
-      return Resource.newInstance(memory, vcore);
+      Resource res = Resource.newInstance(memory, vcore);
+      ResourceInformation[] clusterInfo = clusterResource.getResources();
+
+      for (int i = 2; i < clusterInfo.length; i++) {
+        res.setResourceValue(i,
+            (long)(clusterInfo[i].getValue() * percentages[i]));
+      }
+
+      return res;
     } else {
       return resource;
     }
@@ -68,5 +96,40 @@ public class ConfigurableResource {
    */
   public Resource getResource() {
     return resource;
+  }
+
+  /**
+   * Set the value of the wrapped resource if this object isn't setup to use
+   * percentages. If this object is set to use percentages, this method has
+   * no effect.
+   *
+   * @param name the name of the resource
+   * @param value the value
+   */
+  void setValue(String name, long value) {
+    if (resource != null) {
+      resource.setResourceValue(name, value);
+    }
+  }
+
+  /**
+   * Set the percentage of the resource if this object is setup to use
+   * percentages. If this object is set to use percentages, this method has
+   * no effect.
+   *
+   * @param name the name of the resource
+   * @param value the percentage
+   */
+  void setPercentage(String name, double value) {
+    if (percentages != null) {
+      Integer index = ResourceUtils.getResourceTypeIndex().get(name);
+
+      if (index != null) {
+        percentages[index] = value;
+      } else {
+        throw new ResourceNotFoundException("The requested resource, \""
+            + name + "\", could not be found.");
+      }
+    }
   }
 }

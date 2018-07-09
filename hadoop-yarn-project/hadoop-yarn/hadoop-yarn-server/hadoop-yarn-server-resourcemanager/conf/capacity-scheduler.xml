@@ -207,4 +207,14 @@
     </description>
   </property>
 
+
+  <property>
+    <name>yarn.scheduler.capacity.application.fail-fast</name>
+    <value>false</value>
+    <description>
+      Whether RM should fail during recovery if previous applications'
+      queue is no longer valid.
+    </description>
+  </property>
+
 </configuration>

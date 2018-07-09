@@ -15,8 +15,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.hadoop.hdds.scm.container.common.helpers;
+
+import static java.lang.Math.max;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -24,25 +25,29 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.util.Time;
-
+import java.io.Externalizable;
 import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Arrays;
 import java.util.Comparator;
-
-import static java.lang.Math.max;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.util.Time;
 
 /**
  * Class wraps ozone container info.
  */
-public class ContainerInfo
-    implements Comparator<ContainerInfo>, Comparable<ContainerInfo> {
+public class ContainerInfo implements Comparator<ContainerInfo>,
+    Comparable<ContainerInfo>, Externalizable {
 
   private static final ObjectWriter WRITER;
+  private static final String SERIALIZATION_ERROR_MSG = "Java serialization not"
+      + " supported. Use protobuf instead.";
 
   static {
     ObjectMapper mapper = new ObjectMapper();
@@ -53,7 +58,9 @@ public class ContainerInfo
   }
 
   private HddsProtos.LifeCycleState state;
-  private Pipeline pipeline;
+  private String pipelineName;
+  private ReplicationFactor replicationFactor;
+  private ReplicationType replicationType;
   // Bytes allocated by SCM for clients.
   private long allocatedBytes;
   // Actual container usage, updated through heartbeat.
@@ -75,15 +82,17 @@ public class ContainerInfo
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,
-      Pipeline pipeline,
+      String pipelineName,
       long allocatedBytes,
       long usedBytes,
       long numberOfKeys,
       long stateEnterTime,
       String owner,
-      long deleteTransactionId) {
+      long deleteTransactionId,
+      ReplicationFactor replicationFactor,
+      ReplicationType repType) {
     this.containerID = containerID;
-    this.pipeline = pipeline;
+    this.pipelineName = pipelineName;
     this.allocatedBytes = allocatedBytes;
     this.usedBytes = usedBytes;
     this.numberOfKeys = numberOfKeys;
@@ -92,6 +101,8 @@ public class ContainerInfo
     this.stateEnterTime = stateEnterTime;
     this.owner = owner;
     this.deleteTransactionId = deleteTransactionId;
+    this.replicationFactor = replicationFactor;
+    this.replicationType = repType;
   }
 
   /**
@@ -102,16 +113,18 @@ public class ContainerInfo
 
   public static ContainerInfo fromProtobuf(HddsProtos.SCMContainerInfo info) {
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
-    builder.setPipeline(Pipeline.getFromProtoBuf(info.getPipeline()));
-    builder.setAllocatedBytes(info.getAllocatedBytes());
-    builder.setUsedBytes(info.getUsedBytes());
-    builder.setNumberOfKeys(info.getNumberOfKeys());
-    builder.setState(info.getState());
-    builder.setStateEnterTime(info.getStateEnterTime());
-    builder.setOwner(info.getOwner());
-    builder.setContainerID(info.getContainerID());
-    builder.setDeleteTransactionId(info.getDeleteTransactionId());
-    return builder.build();
+    return builder.setPipelineName(info.getPipelineName())
+        .setAllocatedBytes(info.getAllocatedBytes())
+        .setUsedBytes(info.getUsedBytes())
+        .setNumberOfKeys(info.getNumberOfKeys())
+        .setState(info.getState())
+        .setStateEnterTime(info.getStateEnterTime())
+        .setOwner(info.getOwner())
+        .setContainerID(info.getContainerID())
+        .setDeleteTransactionId(info.getDeleteTransactionId())
+        .setReplicationFactor(info.getReplicationFactor())
+        .setReplicationType(info.getReplicationType())
+        .build();
   }
 
   public long getContainerID() {
@@ -130,8 +143,12 @@ public class ContainerInfo
     return stateEnterTime;
   }
 
-  public Pipeline getPipeline() {
-    return pipeline;
+  public ReplicationFactor getReplicationFactor() {
+    return replicationFactor;
+  }
+
+  public String getPipelineName() {
+    return pipelineName;
   }
 
   public long getAllocatedBytes() {
@@ -177,6 +194,10 @@ public class ContainerInfo
     return lastUsed;
   }
 
+  public ReplicationType getReplicationType() {
+    return replicationType;
+  }
+
   public void updateLastUsedTime() {
     lastUsed = Time.monotonicNow();
   }
@@ -190,19 +211,17 @@ public class ContainerInfo
   public HddsProtos.SCMContainerInfo getProtobuf() {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
-    builder.setPipeline(getPipeline().getProtobufMessage());
-    builder.setAllocatedBytes(getAllocatedBytes());
-    builder.setUsedBytes(getUsedBytes());
-    builder.setNumberOfKeys(getNumberOfKeys());
-    builder.setState(state);
-    builder.setStateEnterTime(stateEnterTime);
-    builder.setContainerID(getContainerID());
-    builder.setDeleteTransactionId(deleteTransactionId);
-
-    if (getOwner() != null) {
-      builder.setOwner(getOwner());
-    }
-    return builder.build();
+    return builder.setAllocatedBytes(getAllocatedBytes())
+        .setContainerID(getContainerID())
+        .setUsedBytes(getUsedBytes())
+        .setNumberOfKeys(getNumberOfKeys()).setState(getState())
+        .setStateEnterTime(getStateEnterTime()).setContainerID(getContainerID())
+        .setDeleteTransactionId(getDeleteTransactionId())
+        .setPipelineName(getPipelineName())
+        .setReplicationFactor(getReplicationFactor())
+        .setReplicationType(getReplicationType())
+        .setOwner(getOwner())
+        .build();
   }
 
   public String getOwner() {
@@ -217,7 +236,7 @@ public class ContainerInfo
   public String toString() {
     return "ContainerInfo{"
         + "state=" + state
-        + ", pipeline=" + pipeline
+        + ", pipelineName=" + pipelineName
         + ", stateEnterTime=" + stateEnterTime
         + ", owner=" + owner
         + '}';
@@ -252,9 +271,7 @@ public class ContainerInfo
   public int hashCode() {
     return new HashCodeBuilder(11, 811)
         .append(getContainerID())
-        .append(pipeline.getFactor())
-        .append(pipeline.getType())
-        .append(owner)
+        .append(getOwner())
         .toHashCode();
   }
 
@@ -327,12 +344,44 @@ public class ContainerInfo
       this.data = Arrays.copyOf(data, data.length);
     }
   }
+
+  /**
+   * Throws IOException as default java serialization is not supported. Use
+   * serialization via protobuf instead.
+   *
+   * @param out the stream to write the object to
+   * @throws IOException Includes any I/O exceptions that may occur
+   * @serialData Overriding methods should use this tag to describe
+   * the data layout of this Externalizable object.
+   * List the sequence of element types and, if possible,
+   * relate the element to a public/protected field and/or
+   * method of this Externalizable class.
+   */
+  @Override
+  public void writeExternal(ObjectOutput out) throws IOException {
+    throw new IOException(SERIALIZATION_ERROR_MSG);
+  }
+
+  /**
+   * Throws IOException as default java serialization is not supported. Use
+   * serialization via protobuf instead.
+   *
+   * @param in the stream to read data from in order to restore the object
+   * @throws IOException            if I/O errors occur
+   * @throws ClassNotFoundException If the class for an object being
+   *                                restored cannot be found.
+   */
+  @Override
+  public void readExternal(ObjectInput in)
+      throws IOException, ClassNotFoundException {
+    throw new IOException(SERIALIZATION_ERROR_MSG);
+  }
+
   /**
    * Builder class for ContainerInfo.
    */
   public static class Builder {
     private HddsProtos.LifeCycleState state;
-    private Pipeline pipeline;
     private long allocated;
     private long used;
     private long keys;
@@ -340,6 +389,25 @@ public class ContainerInfo
     private String owner;
     private long containerID;
     private long deleteTransactionId;
+    private String pipelineName;
+    private ReplicationFactor replicationFactor;
+    private ReplicationType replicationType;
+
+    public Builder setReplicationType(
+        ReplicationType replicationType) {
+      this.replicationType = replicationType;
+      return this;
+    }
+
+    public Builder setPipelineName(String pipelineName) {
+      this.pipelineName = pipelineName;
+      return this;
+    }
+
+    public Builder setReplicationFactor(ReplicationFactor repFactor) {
+      this.replicationFactor = repFactor;
+      return this;
+    }
 
     public Builder setContainerID(long id) {
       Preconditions.checkState(id >= 0);
@@ -349,11 +417,6 @@ public class ContainerInfo
 
     public Builder setState(HddsProtos.LifeCycleState lifeCycleState) {
       this.state = lifeCycleState;
-      return this;
-    }
-
-    public Builder setPipeline(Pipeline containerPipeline) {
-      this.pipeline = containerPipeline;
       return this;
     }
 
@@ -388,9 +451,9 @@ public class ContainerInfo
     }
 
     public ContainerInfo build() {
-      return new
-          ContainerInfo(containerID, state, pipeline, allocated,
-              used, keys, stateEnterTime, owner, deleteTransactionId);
+      return new ContainerInfo(containerID, state, pipelineName, allocated,
+              used, keys, stateEnterTime, owner, deleteTransactionId,
+          replicationFactor, replicationType);
     }
   }
 }

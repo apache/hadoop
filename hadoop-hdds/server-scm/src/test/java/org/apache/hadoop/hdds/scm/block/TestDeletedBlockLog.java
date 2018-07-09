@@ -22,6 +22,7 @@ import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -362,10 +363,16 @@ public class TestDeletedBlockLog {
     pipeline.addMember(dd);
 
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
-    builder.setPipeline(pipeline);
+    builder.setPipelineName(pipeline.getPipelineName())
+        .setReplicationType(pipeline.getType())
+        .setReplicationFactor(pipeline.getFactor());
 
-    ContainerInfo conatinerInfo = builder.build();
-    Mockito.doReturn(conatinerInfo).when(mappingService)
+    ContainerInfo containerInfo = builder.build();
+    ContainerWithPipeline containerWithPipeline = new ContainerWithPipeline(
+        containerInfo, pipeline);
+    Mockito.doReturn(containerInfo).when(mappingService)
         .getContainer(containerID);
+    Mockito.doReturn(containerWithPipeline).when(mappingService)
+        .getContainerWithPipeline(containerID);
   }
 }

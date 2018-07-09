@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.TestContainerMapping;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -91,9 +92,10 @@ public class TestContainerCloser {
 
   @Test
   public void testClose() throws IOException {
-    ContainerInfo info = mapping.allocateContainer(
+    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
         HddsProtos.ReplicationType.STAND_ALONE,
         HddsProtos.ReplicationFactor.ONE, "ozone");
+    ContainerInfo info = containerWithPipeline.getContainerInfo();
 
     //Execute these state transitions so that we can close the container.
     mapping.updateContainerState(info.getContainerID(), CREATE);
@@ -101,7 +103,7 @@ public class TestContainerCloser {
     long currentCount = mapping.getCloser().getCloseCount();
     long runCount = mapping.getCloser().getThreadRunCount();
 
-    DatanodeDetails datanode = info.getPipeline().getLeader();
+    DatanodeDetails datanode = containerWithPipeline.getPipeline().getLeader();
     // Send a container report with used set to 1 GB. This should not close.
     sendContainerReport(info, 1 * GIGABYTE);
 
@@ -138,9 +140,10 @@ public class TestContainerCloser {
     configuration.setTimeDuration(OZONE_CONTAINER_REPORT_INTERVAL, 1,
         TimeUnit.SECONDS);
 
-    ContainerInfo info = mapping.allocateContainer(
+    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
         HddsProtos.ReplicationType.STAND_ALONE,
         HddsProtos.ReplicationFactor.ONE, "ozone");
+    ContainerInfo info = containerWithPipeline.getContainerInfo();
 
     //Execute these state transitions so that we can close the container.
     mapping.updateContainerState(info.getContainerID(), CREATE);
@@ -148,10 +151,10 @@ public class TestContainerCloser {
     long currentCount = mapping.getCloser().getCloseCount();
     long runCount = mapping.getCloser().getThreadRunCount();
 
+    DatanodeDetails datanodeDetails = containerWithPipeline.getPipeline()
+        .getLeader();
 
-    DatanodeDetails datanodeDetails = info.getPipeline().getLeader();
-
-    // Send this command twice and assert we have only one command in the queue.
+    // Send this command twice and assert we have only one command in queue.
     sendContainerReport(info, 5 * GIGABYTE);
     sendContainerReport(info, 5 * GIGABYTE);
 
@@ -183,9 +186,10 @@ public class TestContainerCloser {
     long runCount = mapping.getCloser().getThreadRunCount();
 
     for (int x = 0; x < ContainerCloser.getCleanupWaterMark() + 10; x++) {
-      ContainerInfo info = mapping.allocateContainer(
+      ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
           HddsProtos.ReplicationType.STAND_ALONE,
           HddsProtos.ReplicationFactor.ONE, "ozone");
+      ContainerInfo info = containerWithPipeline.getContainerInfo();
       mapping.updateContainerState(info.getContainerID(), CREATE);
       mapping.updateContainerState(info.getContainerID(), CREATED);
       sendContainerReport(info, 5 * GIGABYTE);

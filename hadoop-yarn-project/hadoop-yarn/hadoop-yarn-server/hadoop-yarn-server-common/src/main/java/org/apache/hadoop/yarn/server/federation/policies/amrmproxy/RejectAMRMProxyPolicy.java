@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -37,8 +35,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * rejects all requests. Useful to prevent apps from accessing any sub-cluster.
  */
 public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
-
-  private Set<SubClusterId> knownClusterIds = new HashSet<>();
 
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)

@@ -53,9 +53,9 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
  * client to able to write to it.
  * <p>
  * 2. Owners - Each instance of Name service, for example, Namenode of HDFS or
- * Key Space Manager (KSM) of Ozone or CBlockServer --  is an owner. It is
- * possible to have many KSMs for a Ozone cluster and only one SCM. But SCM
- * keeps the data from each KSM in separate bucket, never mixing them. To
+ * Ozone Manager (OM) of Ozone or CBlockServer --  is an owner. It is
+ * possible to have many OMs for a Ozone cluster and only one SCM. But SCM
+ * keeps the data from each OM in separate bucket, never mixing them. To
  * write data, often we have to find all open containers for a specific owner.
  * <p>
  * 3. ReplicationType - The clients are allowed to specify what kind of
@@ -116,7 +116,8 @@ public class ContainerStateMap {
   public void addContainer(ContainerInfo info)
       throws SCMException {
     Preconditions.checkNotNull(info, "Container Info cannot be null");
-    Preconditions.checkNotNull(info.getPipeline(), "Pipeline cannot be null");
+    Preconditions.checkArgument(info.getReplicationFactor().getNumber() > 0,
+        "ExpectedReplicaCount should be greater than 0");
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
       ContainerID id = ContainerID.valueof(info.getContainerID());
@@ -129,8 +130,8 @@ public class ContainerStateMap {
 
       lifeCycleStateMap.insert(info.getState(), id);
       ownerMap.insert(info.getOwner(), id);
-      factorMap.insert(info.getPipeline().getFactor(), id);
-      typeMap.insert(info.getPipeline().getType(), id);
+      factorMap.insert(info.getReplicationFactor(), id);
+      typeMap.insert(info.getReplicationType(), id);
       LOG.trace("Created container with {} successfully.", id);
     }
   }

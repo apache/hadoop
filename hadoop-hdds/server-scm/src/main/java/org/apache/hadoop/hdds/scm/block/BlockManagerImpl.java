@@ -16,10 +16,12 @@
  */
 package org.apache.hadoop.hdds.scm.block;
 
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -156,13 +158,13 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     lock.lock();
     try {
       for (int i = 0; i < count; i++) {
-        ContainerInfo containerInfo = null;
+        ContainerWithPipeline containerWithPipeline = null;
         try {
           // TODO: Fix this later when Ratis is made the Default.
-          containerInfo = containerManager.allocateContainer(type, factor,
+          containerWithPipeline = containerManager.allocateContainer(type, factor,
               owner);
 
-          if (containerInfo == null) {
+          if (containerWithPipeline == null) {
             LOG.warn("Unable to allocate container.");
             continue;
           }
@@ -231,30 +233,27 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                can use different kind of policies.
       */
 
-      ContainerInfo containerInfo;
+      ContainerWithPipeline containerWithPipeline;
 
       // Look for ALLOCATED container that matches all other parameters.
-      containerInfo =
-          containerManager
-              .getStateManager()
-              .getMatchingContainer(
-                  size, owner, type, factor, HddsProtos.LifeCycleState
-                      .ALLOCATED);
-      if (containerInfo != null) {
-        containerManager.updateContainerState(containerInfo.getContainerID(),
+      containerWithPipeline = containerManager
+          .getMatchingContainerWithPipeline(size, owner, type, factor,
+              HddsProtos.LifeCycleState.ALLOCATED);
+      if (containerWithPipeline != null) {
+        containerManager.updateContainerState(
+            containerWithPipeline.getContainerInfo().getContainerID(),
             HddsProtos.LifeCycleEvent.CREATE);
-        return newBlock(containerInfo, HddsProtos.LifeCycleState.ALLOCATED);
+        return newBlock(containerWithPipeline,
+            HddsProtos.LifeCycleState.ALLOCATED);
       }
 
       // Since we found no allocated containers that match our criteria, let us
       // look for OPEN containers that match the criteria.
-      containerInfo =
-          containerManager
-              .getStateManager()
-              .getMatchingContainer(size, owner, type, factor, HddsProtos
-                  .LifeCycleState.OPEN);
-      if (containerInfo != null) {
-        return newBlock(containerInfo, HddsProtos.LifeCycleState.OPEN);
+      containerWithPipeline = containerManager
+          .getMatchingContainerWithPipeline(size, owner, type, factor,
+              HddsProtos.LifeCycleState.OPEN);
+      if (containerWithPipeline != null) {
+        return newBlock(containerWithPipeline, HddsProtos.LifeCycleState.OPEN);
       }
 
       // We found neither ALLOCATED or OPEN Containers. This generally means
@@ -264,16 +263,15 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       preAllocateContainers(containerProvisionBatchSize, type, factor, owner);
 
       // Since we just allocated a set of containers this should work
-      containerInfo =
-          containerManager
-              .getStateManager()
-              .getMatchingContainer(
-                  size, owner, type, factor, HddsProtos.LifeCycleState
-                      .ALLOCATED);
-      if (containerInfo != null) {
-        containerManager.updateContainerState(containerInfo.getContainerID(),
+      containerWithPipeline = containerManager
+          .getMatchingContainerWithPipeline(size, owner, type, factor,
+              HddsProtos.LifeCycleState.ALLOCATED);
+      if (containerWithPipeline != null) {
+        containerManager.updateContainerState(
+            containerWithPipeline.getContainerInfo().getContainerID(),
             HddsProtos.LifeCycleEvent.CREATE);
-        return newBlock(containerInfo, HddsProtos.LifeCycleState.ALLOCATED);
+        return newBlock(containerWithPipeline,
+            HddsProtos.LifeCycleState.ALLOCATED);
       }
 
       // we have tried all strategies we know and but somehow we are not able
@@ -290,18 +288,28 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     }
   }
 
+  private String getChannelName(ReplicationType type) {
+    switch (type) {
+      case RATIS:
+        return "RA" + UUID.randomUUID().toString().substring(3);
+      case STAND_ALONE:
+        return "SA" + UUID.randomUUID().toString().substring(3);
+      default:
+        return "RA" + UUID.randomUUID().toString().substring(3);
+    }
+  }
+
   /**
    * newBlock - returns a new block assigned to a container.
    *
-   * @param containerInfo - Container Info.
+   * @param containerWithPipeline - Container Info.
    * @param state - Current state of the container.
    * @return AllocatedBlock
    */
-  private AllocatedBlock newBlock(
-      ContainerInfo containerInfo, HddsProtos.LifeCycleState state)
-      throws IOException {
-
-    if (containerInfo.getPipeline().getMachines().size() == 0) {
+  private AllocatedBlock newBlock(ContainerWithPipeline containerWithPipeline,
+      HddsProtos.LifeCycleState state) throws IOException {
+    ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
+    if (containerWithPipeline.getPipeline().getDatanodes().size() == 0) {
       LOG.error("Pipeline Machine count is zero.");
       return null;
     }
@@ -317,7 +325,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     AllocatedBlock.Builder abb =
         new AllocatedBlock.Builder()
             .setBlockID(new BlockID(containerID, localID))
-            .setPipeline(containerInfo.getPipeline())
+            .setPipeline(containerWithPipeline.getPipeline())
             .setShouldCreateContainer(createContainer);
     LOG.trace("New block allocated : {} Container ID: {}", localID,
         containerID);

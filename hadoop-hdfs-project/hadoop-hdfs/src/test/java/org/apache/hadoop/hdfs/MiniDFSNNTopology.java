@@ -227,7 +227,7 @@ public class MiniDFSNNTopology {
       this.nnId = nnId;
     }
 
-    String getNnId() {
+    public String getNnId() {
       return nnId;
     }
 

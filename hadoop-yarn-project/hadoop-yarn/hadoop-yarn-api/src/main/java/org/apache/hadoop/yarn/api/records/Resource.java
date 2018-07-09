@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
@@ -74,6 +75,18 @@ public abstract class Resource implements Comparable<Resource> {
   public static final int MEMORY_INDEX = 0;
   @Private
   public static final int VCORES_INDEX = 1;
+
+  /**
+   * Return a new {@link Resource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   * @return a new {@link Resource} instance
+   */
+  @Private
+  @Unstable
+  public static Resource newInstance(long value) {
+    return new LightWeightResource(value);
+  }
 
   @Public
   @Stable

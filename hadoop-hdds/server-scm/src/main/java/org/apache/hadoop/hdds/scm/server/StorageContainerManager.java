@@ -70,6 +70,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
+
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
@@ -164,9 +166,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
     EventQueue eventQueue = new EventQueue();
 
-    SCMNodeManager nm = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
+    SCMNodeManager nm =
+        new SCMNodeManager(conf, scmStorage.getClusterID(), this);
     scmNodeManager = nm;
-    eventQueue.addHandler(SCMNodeManager.DATANODE_COMMAND, nm);
+    eventQueue.addHandler(DATANODE_COMMAND, nm);
 
     scmContainerManager = new ContainerMapping(conf, getScmNodeManager(),
         cacheSize);

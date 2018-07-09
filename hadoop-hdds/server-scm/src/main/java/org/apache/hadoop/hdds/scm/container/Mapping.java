@@ -17,6 +17,10 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -43,6 +47,16 @@ public interface Mapping extends Closeable {
   ContainerInfo getContainer(long containerID) throws IOException;
 
   /**
+   * Returns the ContainerInfo from the container ID.
+   *
+   * @param containerID - ID of container.
+   * @return - ContainerWithPipeline such as creation state and the pipeline.
+   * @throws IOException
+   */
+  ContainerWithPipeline getContainerWithPipeline(long containerID)
+      throws IOException;
+
+  /**
    * Returns containers under certain conditions.
    * Search container IDs from start ID(exclusive),
    * The max size of the searching range cannot exceed the
@@ -65,10 +79,10 @@ public interface Mapping extends Closeable {
    *
    * @param replicationFactor - replication factor of the container.
    * @param owner
-   * @return - Container Info.
+   * @return - ContainerWithPipeline.
    * @throws IOException
    */
-  ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
+  ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor replicationFactor, String owner)
       throws IOException;
 
@@ -120,4 +134,12 @@ public interface Mapping extends Closeable {
    * @return NodeManager
    */
   NodeManager getNodeManager();
+
+  /**
+   * Returns the ContainerWithPipeline.
+   * @return NodeManager
+   */
+  public ContainerWithPipeline getMatchingContainerWithPipeline(final long size,
+      String owner, ReplicationType type, ReplicationFactor factor,
+      LifeCycleState state) throws IOException;
 }

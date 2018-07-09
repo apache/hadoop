@@ -205,5 +205,13 @@ export default {
 
 const skipTrailingSlash = function(path) {
   path = path.replace('ui2/', '');
-  return path.replace(/\/$/, '');
+  path = path.replace(/\/$/, '');
+  console.log('base url:' + path)
+  if(path.includes("redirect")) {
+    var to = path.lastIndexOf('/');
+    to = to == -1 ? path.length : to + 1;
+    path = path.substring(0, to);
+    console.log('base url after redirect:' + path)
+  }
+  return path;
 };

@@ -98,7 +98,7 @@ public final class OzoneConsts {
   public static final String BLOCK_DB = "block.db";
   public static final String OPEN_CONTAINERS_DB = "openContainers.db";
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
-  public static final String KSM_DB_NAME = "ksm.db";
+  public static final String OM_DB_NAME = "om.db";
 
   public static final String STORAGE_DIR_CHUNKS = "chunks";
   public static final String CONTAINER_FILE_CHECKSUM_EXTENSION = ".chksm";
@@ -127,13 +127,13 @@ public final class OzoneConsts {
   public static final String OPEN_KEY_ID_DELIMINATOR = "#";
 
   /**
-   * KSM LevelDB prefixes.
+   * OM LevelDB prefixes.
    *
-   * KSM DB stores metadata as KV pairs with certain prefixes,
+   * OM DB stores metadata as KV pairs with certain prefixes,
    * prefix is used to improve the performance to get related
    * metadata.
    *
-   * KSM DB Schema:
+   * OM DB Schema:
    *  ----------------------------------------------------------
    *  |  KEY                                     |     VALUE   |
    *  ----------------------------------------------------------
@@ -148,13 +148,13 @@ public final class OzoneConsts {
    *  | #deleting#/volumeName/bucketName/keyName |  KeyInfo    |
    *  ----------------------------------------------------------
    */
-  public static final String KSM_VOLUME_PREFIX = "/#";
-  public static final String KSM_BUCKET_PREFIX = "/#";
-  public static final String KSM_KEY_PREFIX = "/";
-  public static final String KSM_USER_PREFIX = "$";
+  public static final String OM_VOLUME_PREFIX = "/#";
+  public static final String OM_BUCKET_PREFIX = "/#";
+  public static final String OM_KEY_PREFIX = "/";
+  public static final String OM_USER_PREFIX = "$";
 
   /**
-   * Max KSM Quota size of 1024 PB.
+   * Max OM Quota size of 1024 PB.
    */
   public static final long MAX_QUOTA_IN_BYTES = 1024L * 1024 * TB;
 
@@ -176,9 +176,9 @@ public final class OzoneConsts {
   public static final int INVALID_PORT = -1;
 
 
-  // The ServiceListJSONServlet context attribute where KeySpaceManager
+  // The ServiceListJSONServlet context attribute where OzoneManager
   // instance gets stored.
-  public static final String KSM_CONTEXT_ATTRIBUTE = "ozone.ksm";
+  public static final String OM_CONTEXT_ATTRIBUTE = "ozone.om";
 
   private OzoneConsts() {
     // Never Constructed

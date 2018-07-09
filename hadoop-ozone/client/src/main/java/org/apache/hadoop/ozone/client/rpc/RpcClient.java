@@ -27,7 +27,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.KsmUtils;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -43,24 +43,22 @@ import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.ksm.protocolPB
-    .KeySpaceManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ozone.ksm.protocolPB
-    .KeySpaceManagerProtocolPB;
+import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto
-    .KeySpaceManagerProtocolProtos.ServicePort;
+    .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
+import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -80,7 +78,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Ozone RPC Client Implementation, it connects to KSM, SCM and DataNode
+ * Ozone RPC Client Implementation, it connects to OM, SCM and DataNode
  * to execute client calls. This uses RPC protocol for communication
  * with the servers.
  */
@@ -92,8 +90,8 @@ public class RpcClient implements ClientProtocol {
   private final OzoneConfiguration conf;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
-  private final KeySpaceManagerProtocolClientSideTranslatorPB
-      keySpaceManagerClient;
+  private final OzoneManagerProtocolClientSideTranslatorPB
+      ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
   private final UserGroupInformation ugi;
@@ -109,20 +107,20 @@ public class RpcClient implements ClientProtocol {
     Preconditions.checkNotNull(conf);
     this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-    this.userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
-        KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
-    this.groupRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS,
-        KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
-    long ksmVersion =
-        RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
-    InetSocketAddress ksmAddress = KsmUtils
-        .getKsmAddressForClients(conf);
-    RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
+    this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+        OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
+    this.groupRights = conf.getEnum(OMConfigKeys.OZONE_OM_GROUP_RIGHTS,
+        OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
+    long omVersion =
+        RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
+    InetSocketAddress omAddress = OmUtils
+        .getOmAddressForClients(conf);
+    RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
-    this.keySpaceManagerClient =
-        new KeySpaceManagerProtocolClientSideTranslatorPB(
-            RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
-                ksmAddress, UserGroupInformation.getCurrentUser(), conf,
+    this.ozoneManagerClient =
+        new OzoneManagerProtocolClientSideTranslatorPB(
+            RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+                omAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
 
@@ -155,7 +153,7 @@ public class RpcClient implements ClientProtocol {
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
-    List<ServiceInfo> services = keySpaceManagerClient.getServiceList();
+    List<ServiceInfo> services = ozoneManagerClient.getServiceList();
     ServiceInfo scmInfo = services.stream().filter(
         a -> a.getNodeType().equals(HddsProtos.NodeType.SCM))
         .collect(Collectors.toList()).get(0);
@@ -195,7 +193,7 @@ public class RpcClient implements ClientProtocol {
       listOfAcls.addAll(volArgs.getAcls());
     }
 
-    KsmVolumeArgs.Builder builder = KsmVolumeArgs.newBuilder();
+    OmVolumeArgs.Builder builder = OmVolumeArgs.newBuilder();
     builder.setVolume(volumeName);
     builder.setAdminName(admin);
     builder.setOwnerName(owner);
@@ -204,12 +202,12 @@ public class RpcClient implements ClientProtocol {
     //Remove duplicates and add ACLs
     for (OzoneAcl ozoneAcl :
         listOfAcls.stream().distinct().collect(Collectors.toList())) {
-      builder.addOzoneAcls(KSMPBHelper.convertOzoneAcl(ozoneAcl));
+      builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(ozoneAcl));
     }
 
     LOG.info("Creating Volume: {}, with {} as owner and quota set to {} bytes.",
         volumeName, owner, quota);
-    keySpaceManagerClient.createVolume(builder.build());
+    ozoneManagerClient.createVolume(builder.build());
   }
 
   @Override
@@ -217,7 +215,7 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName);
     Preconditions.checkNotNull(owner);
-    keySpaceManagerClient.setOwner(volumeName, owner);
+    ozoneManagerClient.setOwner(volumeName, owner);
   }
 
   @Override
@@ -226,14 +224,14 @@ public class RpcClient implements ClientProtocol {
     HddsClientUtils.verifyResourceName(volumeName);
     Preconditions.checkNotNull(quota);
     long quotaInBytes = quota.sizeInBytes();
-    keySpaceManagerClient.setQuota(volumeName, quotaInBytes);
+    ozoneManagerClient.setQuota(volumeName, quotaInBytes);
   }
 
   @Override
   public OzoneVolume getVolumeDetails(String volumeName)
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName);
-    KsmVolumeArgs volume = keySpaceManagerClient.getVolumeInfo(volumeName);
+    OmVolumeArgs volume = ozoneManagerClient.getVolumeInfo(volumeName);
     return new OzoneVolume(
         conf,
         this,
@@ -243,7 +241,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
   }
 
   @Override
@@ -255,14 +253,14 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void deleteVolume(String volumeName) throws IOException {
     HddsClientUtils.verifyResourceName(volumeName);
-    keySpaceManagerClient.deleteVolume(volumeName);
+    ozoneManagerClient.deleteVolume(volumeName);
   }
 
   @Override
   public List<OzoneVolume> listVolumes(String volumePrefix, String prevVolume,
                                        int maxListResult)
       throws IOException {
-    List<KsmVolumeArgs> volumes = keySpaceManagerClient.listAllVolumes(
+    List<OmVolumeArgs> volumes = ozoneManagerClient.listAllVolumes(
         volumePrefix, prevVolume, maxListResult);
 
     return volumes.stream().map(volume -> new OzoneVolume(
@@ -274,7 +272,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
+            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
         .collect(Collectors.toList());
   }
 
@@ -282,7 +280,7 @@ public class RpcClient implements ClientProtocol {
   public List<OzoneVolume> listVolumes(String user, String volumePrefix,
                                        String prevVolume, int maxListResult)
       throws IOException {
-    List<KsmVolumeArgs> volumes = keySpaceManagerClient.listVolumeByUser(
+    List<OmVolumeArgs> volumes = ozoneManagerClient.listVolumeByUser(
         user, volumePrefix, prevVolume, maxListResult);
 
     return volumes.stream().map(volume -> new OzoneVolume(
@@ -294,7 +292,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
+            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
         .collect(Collectors.toList());
   }
 
@@ -329,7 +327,7 @@ public class RpcClient implements ClientProtocol {
       listOfAcls.addAll(bucketArgs.getAcls());
     }
 
-    KsmBucketInfo.Builder builder = KsmBucketInfo.newBuilder();
+    OmBucketInfo.Builder builder = OmBucketInfo.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setIsVersionEnabled(isVersionEnabled)
@@ -339,7 +337,7 @@ public class RpcClient implements ClientProtocol {
     LOG.info("Creating Bucket: {}/{}, with Versioning {} and " +
             "Storage Type set to {}", volumeName, bucketName, isVersionEnabled,
             storageType);
-    keySpaceManagerClient.createBucket(builder.build());
+    ozoneManagerClient.createBucket(builder.build());
   }
 
   @Override
@@ -348,11 +346,11 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(addAcls);
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setAddAcls(addAcls);
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
@@ -361,11 +359,11 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(removeAcls);
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setRemoveAcls(removeAcls);
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
@@ -374,11 +372,11 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(versioning);
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setIsVersionEnabled(versioning);
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
@@ -387,18 +385,18 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(storageType);
-    KsmBucketArgs.Builder builder = KsmBucketArgs.newBuilder();
+    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
     builder.setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setStorageType(storageType);
-    keySpaceManagerClient.setBucketProperty(builder.build());
+    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   @Override
   public void deleteBucket(
       String volumeName, String bucketName) throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    keySpaceManagerClient.deleteBucket(volumeName, bucketName);
+    ozoneManagerClient.deleteBucket(volumeName, bucketName);
   }
 
   @Override
@@ -411,8 +409,8 @@ public class RpcClient implements ClientProtocol {
   public OzoneBucket getBucketDetails(
       String volumeName, String bucketName) throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    KsmBucketInfo bucketArgs =
-        keySpaceManagerClient.getBucketInfo(volumeName, bucketName);
+    OmBucketInfo bucketArgs =
+        ozoneManagerClient.getBucketInfo(volumeName, bucketName);
     return new OzoneBucket(
         conf,
         this,
@@ -428,7 +426,7 @@ public class RpcClient implements ClientProtocol {
   public List<OzoneBucket> listBuckets(String volumeName, String bucketPrefix,
                                        String prevBucket, int maxListResult)
       throws IOException {
-    List<KsmBucketInfo> buckets = keySpaceManagerClient.listBuckets(
+    List<OmBucketInfo> buckets = ozoneManagerClient.listBuckets(
         volumeName, prevBucket, bucketPrefix, maxListResult);
 
     return buckets.stream().map(bucket -> new OzoneBucket(
@@ -451,7 +449,7 @@ public class RpcClient implements ClientProtocol {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     HddsClientUtils.checkNotNull(keyName, type, factor);
     String requestId = UUID.randomUUID().toString();
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
@@ -460,13 +458,13 @@ public class RpcClient implements ClientProtocol {
         .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
         .build();
 
-    OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);
+    OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
     ChunkGroupOutputStream groupOutputStream =
         new ChunkGroupOutputStream.Builder()
             .setHandler(openKey)
             .setXceiverClientManager(xceiverClientManager)
             .setScmClient(storageContainerLocationClient)
-            .setKsmClient(keySpaceManagerClient)
+            .setOmClient(ozoneManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(requestId)
             .setType(HddsProtos.ReplicationType.valueOf(type.toString()))
@@ -485,14 +483,14 @@ public class RpcClient implements ClientProtocol {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(keyName);
     String requestId = UUID.randomUUID().toString();
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .build();
-    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     LengthInputStream lengthInputStream =
-        ChunkGroupInputStream.getFromKsmKeyInfo(
+        ChunkGroupInputStream.getFromOmKeyInfo(
             keyInfo, xceiverClientManager, storageContainerLocationClient,
             requestId);
     return new OzoneInputStream(
@@ -505,12 +503,12 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(keyName);
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .build();
-    keySpaceManagerClient.deleteKey(keyArgs);
+    ozoneManagerClient.deleteKey(keyArgs);
   }
 
   @Override
@@ -518,12 +516,12 @@ public class RpcClient implements ClientProtocol {
       String fromKeyName, String toKeyName) throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     HddsClientUtils.checkNotNull(fromKeyName, toKeyName);
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(fromKeyName)
         .build();
-    keySpaceManagerClient.renameKey(keyArgs, toKeyName);
+    ozoneManagerClient.renameKey(keyArgs, toKeyName);
   }
 
   @Override
@@ -531,7 +529,7 @@ public class RpcClient implements ClientProtocol {
                                  String keyPrefix, String prevKey,
                                  int maxListResult)
       throws IOException {
-    List<KsmKeyInfo> keys = keySpaceManagerClient.listKeys(
+    List<OmKeyInfo> keys = ozoneManagerClient.listKeys(
         volumeName, bucketName, prevKey, keyPrefix, maxListResult);
 
     return keys.stream().map(key -> new OzoneKey(
@@ -551,12 +549,12 @@ public class RpcClient implements ClientProtocol {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(bucketName);
     Preconditions.checkNotNull(keyName);
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .build();
-    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return new OzoneKey(keyInfo.getVolumeName(),
                         keyInfo.getBucketName(),
                         keyInfo.getKeyName(),
@@ -568,7 +566,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void close() throws IOException {
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
-    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
+    IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
     IOUtils.cleanupWithLogger(LOG, xceiverClientManager);
   }
 }

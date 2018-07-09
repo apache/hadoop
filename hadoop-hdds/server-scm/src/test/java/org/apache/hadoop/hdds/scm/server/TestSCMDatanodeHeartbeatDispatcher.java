@@ -20,8 +20,6 @@ package org.apache.hadoop.hdds.scm.server;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
@@ -40,6 +38,9 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
+
 /**
  * This class tests the behavior of SCMDatanodeHeartbeatDispatcher.
  */
@@ -48,8 +49,6 @@ public class TestSCMDatanodeHeartbeatDispatcher {
 
   @Test
   public void testNodeReportDispatcher() throws IOException {
-
-    Configuration conf = new OzoneConfiguration();
 
     AtomicInteger eventReceived = new AtomicInteger();
 
@@ -60,10 +59,10 @@ public class TestSCMDatanodeHeartbeatDispatcher {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
               EVENT_TYPE event, PAYLOAD payload) {
-            Assert.assertEquals(event,
-                SCMDatanodeHeartbeatDispatcher.NODE_REPORT);
+            Assert.assertEquals(event, NODE_REPORT);
             eventReceived.incrementAndGet();
-            Assert.assertEquals(nodeReport, ((NodeReportFromDatanode)payload).getReport());
+            Assert.assertEquals(nodeReport,
+                ((NodeReportFromDatanode)payload).getReport());
 
           }
         });
@@ -84,7 +83,6 @@ public class TestSCMDatanodeHeartbeatDispatcher {
   @Test
   public void testContainerReportDispatcher() throws IOException {
 
-    Configuration conf = new OzoneConfiguration();
 
     AtomicInteger eventReceived = new AtomicInteger();
 
@@ -96,9 +94,9 @@ public class TestSCMDatanodeHeartbeatDispatcher {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
               EVENT_TYPE event, PAYLOAD payload) {
-            Assert.assertEquals(event,
-                SCMDatanodeHeartbeatDispatcher.CONTAINER_REPORT);
-            Assert.assertEquals(containerReport, ((ContainerReportFromDatanode)payload).getReport());
+            Assert.assertEquals(event, CONTAINER_REPORT);
+            Assert.assertEquals(containerReport,
+                ((ContainerReportFromDatanode)payload).getReport());
             eventReceived.incrementAndGet();
           }
         });

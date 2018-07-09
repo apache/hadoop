@@ -73,19 +73,19 @@ else
 fi
 
 #---------------------------------------------------------
-# Ozone keyspacemanager nodes
-KSM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -keyspacemanagers 2>/dev/null)
-echo "Stopping key space manager nodes [${KSM_NODES}]"
-if [[ "${KSM_NODES}" == "0.0.0.0" ]]; then
-  KSM_NODES=$(hostname)
+# Ozone Manager nodes
+OM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -ozonemanagers 2>/dev/null)
+echo "Stopping Ozone Manager nodes [${OM_NODES}]"
+if [[ "${OM_NODES}" == "0.0.0.0" ]]; then
+  OM_NODES=$(hostname)
 fi
 
-hadoop_uservar_su hdfs ksm "${HADOOP_HDFS_HOME}/bin/ozone" \
+hadoop_uservar_su hdfs om "${HADOOP_HDFS_HOME}/bin/ozone" \
   --workers \
   --config "${HADOOP_CONF_DIR}" \
-  --hostnames "${KSM_NODES}" \
+  --hostnames "${OM_NODES}" \
   --daemon stop \
-  ksm
+  om
 
 #---------------------------------------------------------
 # Ozone storagecontainermanager nodes

@@ -270,7 +270,7 @@
       $http.get("conf?cmd=getOzoneTags")
         .then(function(response) {
           ctrl.tags = response.data;
-          var excludedTags = ['CBLOCK', 'KSM', 'SCM'];
+          var excludedTags = ['CBLOCK', 'OM', 'SCM'];
           for (var i = 0; i < excludedTags.length; i++) {
             var idx = ctrl.tags.indexOf(excludedTags[i]);
             // Remove CBLOCK related properties
@@ -302,7 +302,7 @@
       }
 
       ctrl.loadAll = function() {
-        $http.get("conf?cmd=getPropertyByTag&tags=KSM,SCM," + ctrl.tags)
+        $http.get("conf?cmd=getPropertyByTag&tags=OM,SCM," + ctrl.tags)
           .then(function(response) {
 
             ctrl.convertToArray(response.data);
