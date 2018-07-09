@@ -67,6 +67,9 @@ public class Quota {
   public void setQuota(String path, long namespaceQuota,
       long storagespaceQuota, StorageType type) throws IOException {
     rpcServer.checkOperation(OperationCategory.WRITE);
+    if (!router.isQuotaEnabled()) {
+      throw new IOException("The quota system is disabled in Router.");
+    }
 
     // Set quota for current path and its children mount table path.
     final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
@@ -91,6 +94,11 @@ public class Quota {
    * @throws IOException
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
+    rpcServer.checkOperation(OperationCategory.READ);
+    if (!router.isQuotaEnabled()) {
+      throw new IOException("The quota system is disabled in Router.");
+    }
+
     final List<RemoteLocation> quotaLocs = getValidQuotaLocations(path);
     RemoteMethod method = new RemoteMethod("getQuotaUsage",
         new Class<?>[] {String.class}, new RemoteParam());
