@@ -1928,7 +1928,6 @@ public class RouterRpcServer extends AbstractService
 
   @Override // ClientProtocol
   public QuotaUsage getQuotaUsage(String path) throws IOException {
-    checkOperation(OperationCategory.READ);
     return this.quotaCall.getQuotaUsage(path);
   }
 
