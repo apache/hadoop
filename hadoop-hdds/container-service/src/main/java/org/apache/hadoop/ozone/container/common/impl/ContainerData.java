@@ -182,12 +182,14 @@ public class ContainerData {
   }
 
   /**
-   * Adds metadata.
+   * Add/Update metadata.
+   * We should hold the container lock before updating the metadata as this
+   * will be persisted on disk. Unless, we are reconstructing ContainerData
+   * from protoBuf or from on disk .container file in which case lock is not
+   * required.
    */
-  public void addMetadata(String key, String value) throws IOException {
-    synchronized (this.metadata) {
-      metadata.put(key, value);
-    }
+  public void addMetadata(String key, String value) {
+    metadata.put(key, value);
   }
 
   /**
@@ -195,9 +197,19 @@ public class ContainerData {
    * @return metadata
    */
   public Map<String, String> getMetadata() {
-    synchronized (this.metadata) {
-      return Collections.unmodifiableMap(this.metadata);
-    }
+    return Collections.unmodifiableMap(this.metadata);
+  }
+
+  /**
+   * Set metadata.
+   * We should hold the container lock before updating the metadata as this
+   * will be persisted on disk. Unless, we are reconstructing ContainerData
+   * from protoBuf or from on disk .container file in which case lock is not
+   * required.
+   */
+  public void setMetadata(Map<String, String> metadataMap) {
+    metadata.clear();
+    metadata.putAll(metadataMap);
   }
 
   /**

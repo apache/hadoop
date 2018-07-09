@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.base.Preconditions;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
@@ -32,7 +34,6 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
@@ -58,8 +59,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_ALREADY_EXISTS;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CONTAINER_METADATA_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -146,7 +145,7 @@ public class KeyValueContainer implements Container {
       containerData.setVolume(containerVolume);
 
       // Create .container file and .chksm file
-      createContainerFile(containerFile, containerCheckSumFile);
+      writeToContainerFile(containerFile, containerCheckSumFile, true);
 
 
     } catch (StorageContainerException ex) {
@@ -177,36 +176,50 @@ public class KeyValueContainer implements Container {
    * Creates .container file and checksum file.
    *
    * @param containerFile
-   * @param containerCheckSumFile
+   * @param checksumFile
+   * @param isCreate true if we are creating a new container file and false if
+   *                we are updating an existing container file.
    * @throws StorageContainerException
    */
-  private void createContainerFile(File containerFile, File
-      containerCheckSumFile) throws StorageContainerException {
+  private void writeToContainerFile(File containerFile, File
+      checksumFile, boolean isCreate)
+      throws StorageContainerException {
     File tempContainerFile = null;
-    File tempCheckSumFile = null;
+    File tempChecksumFile = null;
     FileOutputStream containerCheckSumStream = null;
     Writer writer = null;
     long containerId = containerData.getContainerID();
     try {
       tempContainerFile = createTempFile(containerFile);
-      tempCheckSumFile = createTempFile(containerCheckSumFile);
+      tempChecksumFile = createTempFile(checksumFile);
       ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
               .KeyValueContainer, tempContainerFile, containerData);
 
       //Compute Checksum for container file
       String checksum = KeyValueContainerUtil.computeCheckSum(containerId,
           tempContainerFile);
-      containerCheckSumStream = new FileOutputStream(tempCheckSumFile);
+      containerCheckSumStream = new FileOutputStream(tempChecksumFile);
       writer = new OutputStreamWriter(containerCheckSumStream, "UTF-8");
       writer.write(checksum);
       writer.flush();
 
-      NativeIO.renameTo(tempContainerFile, containerFile);
-      NativeIO.renameTo(tempCheckSumFile, containerCheckSumFile);
+      if (isCreate) {
+        // When creating a new container, .container file should not exist
+        // already.
+        NativeIO.renameTo(tempContainerFile, containerFile);
+        NativeIO.renameTo(tempChecksumFile, checksumFile);
+      } else {
+        // When updating a container, the .container file should exist. If
+        // not, the container is in an inconsistent state.
+        Files.move(tempContainerFile.toPath(), containerFile.toPath(),
+            StandardCopyOption.REPLACE_EXISTING);
+        Files.move(tempChecksumFile.toPath(), checksumFile.toPath(),
+            StandardCopyOption.REPLACE_EXISTING);
+      }
 
     } catch (IOException ex) {
       throw new StorageContainerException("Error during creation of " +
-          "required files(.container, .chksm) for container. Container Name: "
+          "required files(.container, .chksm) for container. ContainerID: "
           + containerId, ex, CONTAINER_FILES_CREATE_ERROR);
     } finally {
       IOUtils.closeStream(containerCheckSumStream);
@@ -216,8 +229,8 @@ public class KeyValueContainer implements Container {
               tempContainerFile.getAbsolutePath());
         }
       }
-      if (tempCheckSumFile != null && tempCheckSumFile.exists()) {
-        if (!tempCheckSumFile.delete()) {
+      if (tempChecksumFile != null && tempChecksumFile.exists()) {
+        if (!tempChecksumFile.delete()) {
           LOG.warn("Unable to delete container temporary checksum file: {}.",
               tempContainerFile.getAbsolutePath());
         }
@@ -236,68 +249,24 @@ public class KeyValueContainer implements Container {
 
 
   private void updateContainerFile(File containerFile, File
-      containerCheckSumFile) throws StorageContainerException {
+      checksumFile) throws StorageContainerException {
 
-    File containerBkpFile = null;
-    File checkSumBkpFile = null;
     long containerId = containerData.getContainerID();
 
-    try {
-      if (containerFile.exists() && containerCheckSumFile.exists()) {
-        //Take backup of original files (.container and .chksm files)
-        containerBkpFile = new File(containerFile + ".bkp");
-        checkSumBkpFile = new File(containerCheckSumFile + ".bkp");
-        NativeIO.renameTo(containerFile, containerBkpFile);
-        NativeIO.renameTo(containerCheckSumFile, checkSumBkpFile);
-        createContainerFile(containerFile, containerCheckSumFile);
-      } else {
-        containerData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
-        throw new StorageContainerException("Container is an Inconsistent " +
-            "state, missing required files(.container, .chksm). ContainerID: " +
-            containerId, INVALID_CONTAINER_STATE);
-      }
-    } catch (StorageContainerException ex) {
-      throw ex;
-    } catch (IOException ex) {
-      // Restore from back up files.
+    if (containerFile.exists() && checksumFile.exists()) {
       try {
-        if (containerBkpFile != null && containerBkpFile
-            .exists() && containerFile.delete()) {
-          LOG.info("update failed for container Name: {}, restoring container" +
-              " file", containerId);
-          NativeIO.renameTo(containerBkpFile, containerFile);
-        }
-        if (checkSumBkpFile != null && checkSumBkpFile.exists() &&
-            containerCheckSumFile.delete()) {
-          LOG.info("update failed for container Name: {}, restoring checksum" +
-              " file", containerId);
-          NativeIO.renameTo(checkSumBkpFile, containerCheckSumFile);
-        }
-        throw new StorageContainerException("Error during updating of " +
-            "required files(.container, .chksm) for container. Container Name: "
-            + containerId, ex, CONTAINER_FILES_CREATE_ERROR);
+        writeToContainerFile(containerFile, checksumFile, false);
       } catch (IOException e) {
-        containerData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
-        LOG.error("During restore failed for container Name: " +
-            containerId);
-        throw new StorageContainerException(
-            "Failed to restore container data from the backup. ID: "
-                + containerId, CONTAINER_FILES_CREATE_ERROR);
+        //TODO : Container update failure is not handled currently. Might
+        // lead to loss of .container file. When Update container feature
+        // support is added, this failure should also be handled.
+        throw new StorageContainerException("Container update failed. " +
+            "ContainerID: " + containerId, CONTAINER_FILES_CREATE_ERROR);
       }
-    } finally {
-      if (containerBkpFile != null && containerBkpFile
-          .exists()) {
-        if(!containerBkpFile.delete()) {
-          LOG.warn("Unable to delete container backup file: {}",
-              containerBkpFile);
-        }
-      }
-      if (checkSumBkpFile != null && checkSumBkpFile.exists()) {
-        if(!checkSumBkpFile.delete()) {
-          LOG.warn("Unable to delete container checksum backup file: {}",
-              checkSumBkpFile);
-        }
-      }
+    } else {
+      throw new StorageContainerException("Container is an Inconsistent " +
+          "state, missing required files(.container, .chksm). ContainerID: " +
+          containerId, INVALID_CONTAINER_STATE);
     }
   }
 
@@ -393,22 +362,21 @@ public class KeyValueContainer implements Container {
           "Updating a closed container without force option is not allowed. " +
               "ContainerID: " + containerId, UNSUPPORTED_REQUEST);
     }
+
+    Map<String, String> oldMetadata = containerData.getMetadata();
     try {
+      writeLock();
       for (Map.Entry<String, String> entry : metadata.entrySet()) {
         containerData.addMetadata(entry.getKey(), entry.getValue());
       }
-    } catch (IOException ex) {
-      throw new StorageContainerException("Container Metadata update error" +
-          ". Container Name:" + containerId, ex, CONTAINER_METADATA_ERROR);
-    }
-    try {
-      writeLock();
-      String containerName = String.valueOf(containerId);
       File containerFile = getContainerFile();
       File containerCheckSumFile = getContainerCheckSumFile();
       // update the new container data to .container File
       updateContainerFile(containerFile, containerCheckSumFile);
     } catch (StorageContainerException  ex) {
+      // TODO:
+      // On error, reset the metadata.
+      containerData.setMetadata(oldMetadata);
       throw ex;
     } finally {
       writeUnlock();

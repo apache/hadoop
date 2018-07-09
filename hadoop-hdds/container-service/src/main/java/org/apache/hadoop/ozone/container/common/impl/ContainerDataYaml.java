@@ -200,15 +200,7 @@ public final class ContainerDataYaml {
             OzoneConsts.METADATA_PATH));
         kvData.setChunksPath((String) nodes.get(OzoneConsts.CHUNKS_PATH));
         Map<String, String> meta = (Map) nodes.get(OzoneConsts.METADATA);
-        meta.forEach((key, val) -> {
-          try {
-            kvData.addMetadata(key, val);
-          } catch (IOException e) {
-            throw new IllegalStateException("Unexpected " +
-                "Key Value Pair " + "(" + key + "," + val +")in the metadata " +
-                "for containerId " + (long) nodes.get("containerId"));
-          }
-        });
+        kvData.setMetadata(meta);
         String state = (String) nodes.get(OzoneConsts.STATE);
         switch (state) {
         case "OPEN":

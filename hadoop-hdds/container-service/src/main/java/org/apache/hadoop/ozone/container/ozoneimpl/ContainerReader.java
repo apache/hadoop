@@ -109,25 +109,28 @@ public class ContainerReader implements Runnable {
         for (File containerTopDir : containerTopDirs) {
           if (containerTopDir.isDirectory()) {
             File[] containerDirs = containerTopDir.listFiles();
-            for (File containerDir : containerDirs) {
-              File metadataPath = new File(containerDir + File.separator +
-                  OzoneConsts.CONTAINER_META_PATH);
-              String containerName = containerDir.getName();
-              if (metadataPath.exists()) {
-                File containerFile = KeyValueContainerLocationUtil
-                    .getContainerFile(metadataPath, containerName);
-                File checksumFile = KeyValueContainerLocationUtil
-                    .getContainerCheckSumFile(metadataPath, containerName);
-                if (containerFile.exists() && checksumFile.exists()) {
-                  verifyContainerFile(containerName, containerFile,
-                      checksumFile);
+            if (containerDirs != null) {
+              for (File containerDir : containerDirs) {
+                File metadataPath = new File(containerDir + File.separator +
+                    OzoneConsts.CONTAINER_META_PATH);
+                String containerName = containerDir.getName();
+                if (metadataPath.exists()) {
+                  File containerFile = KeyValueContainerLocationUtil
+                      .getContainerFile(metadataPath, containerName);
+                  File checksumFile = KeyValueContainerLocationUtil
+                      .getContainerCheckSumFile(metadataPath, containerName);
+                  if (containerFile.exists() && checksumFile.exists()) {
+                    verifyContainerFile(containerName, containerFile,
+                        checksumFile);
+                  } else {
+                    LOG.error(
+                        "Missing container metadata files for Container: " +
+                            "{}", containerName);
+                  }
                 } else {
-                  LOG.error("Missing container metadata files for Container: " +
-                      "{}", containerName);
+                  LOG.error("Missing container metadata directory for " +
+                      "Container: {}", containerName);
                 }
-              } else {
-                LOG.error("Missing container metadata directory for " +
-                    "Container: {}", containerName);
               }
             }
           }
