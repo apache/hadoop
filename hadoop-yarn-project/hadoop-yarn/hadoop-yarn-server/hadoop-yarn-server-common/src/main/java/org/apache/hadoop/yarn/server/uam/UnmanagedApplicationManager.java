@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.apache.hadoop.yarn.util.AsyncCallback;
@@ -90,7 +91,7 @@ public class UnmanagedApplicationManager {
 
   private BlockingQueue<AsyncAllocateRequestInfo> requestQueue;
   private AMRequestHandlerThread handlerThread;
-  private ApplicationMasterProtocol rmProxy;
+  private AMRMClientRelayer rmProxyRelayer;
   private ApplicationId applicationId;
   private String submitter;
   private String appNameSuffix;
@@ -138,7 +139,7 @@ public class UnmanagedApplicationManager {
     this.appNameSuffix = appNameSuffix;
     this.handlerThread = new AMRequestHandlerThread();
     this.requestQueue = new LinkedBlockingQueue<>();
-    this.rmProxy = null;
+    this.rmProxyRelayer = null;
     this.connectionInitiated = false;
     this.registerRequest = null;
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
@@ -190,8 +191,9 @@ public class UnmanagedApplicationManager {
       throws IOException {
     this.userUgi = UserGroupInformation.createProxyUser(
         this.applicationId.toString(), UserGroupInformation.getCurrentUser());
-    this.rmProxy = createRMProxy(ApplicationMasterProtocol.class, this.conf,
-        this.userUgi, amrmToken);
+    this.rmProxyRelayer =
+        new AMRMClientRelayer(createRMProxy(ApplicationMasterProtocol.class,
+            this.conf, this.userUgi, amrmToken));
   }
 
   /**
@@ -209,19 +211,18 @@ public class UnmanagedApplicationManager {
     // Save the register request for re-register later
     this.registerRequest = request;
 
-    // Since we have setKeepContainersAcrossApplicationAttempts = true for UAM.
-    // We do not expect application already registered exception here
     LOG.info("Registering the Unmanaged application master {}",
         this.applicationId);
     RegisterApplicationMasterResponse response =
-        this.rmProxy.registerApplicationMaster(this.registerRequest);
+        this.rmProxyRelayer.registerApplicationMaster(this.registerRequest);
+    this.lastResponseId = 0;
 
     for (Container container : response.getContainersFromPreviousAttempts()) {
-      LOG.info("RegisterUAM returned existing running container "
+      LOG.debug("RegisterUAM returned existing running container "
           + container.getId());
     }
     for (NMToken nmToken : response.getNMTokensFromPreviousAttempts()) {
-      LOG.info("RegisterUAM returned existing NM token for node "
+      LOG.debug("RegisterUAM returned existing NM token for node "
           + nmToken.getNodeId());
     }
 
@@ -249,7 +250,7 @@ public class UnmanagedApplicationManager {
 
     this.handlerThread.shutdown();
 
-    if (this.rmProxy == null) {
+    if (this.rmProxyRelayer == null) {
       if (this.connectionInitiated) {
         // This is possible if the async launchUAM is still
         // blocked and retrying. Return a dummy response in this case.
@@ -261,8 +262,7 @@ public class UnmanagedApplicationManager {
             + "be called before createAndRegister");
       }
     }
-    return AMRMClientUtils.finishAMWithReRegister(request, this.rmProxy,
-        this.registerRequest, this.applicationId);
+    return this.rmProxyRelayer.finishApplicationMaster(request);
   }
 
   /**
@@ -308,7 +308,7 @@ public class UnmanagedApplicationManager {
     //
     // In case 2, we have already save the allocate request above, so if the
     // registration succeed later, no request is lost.
-    if (this.rmProxy == null) {
+    if (this.rmProxyRelayer == null) {
       if (this.connectionInitiated) {
         LOG.info("Unmanaged AM still not successfully launched/registered yet."
             + " Saving the allocate request and send later.");
@@ -326,6 +326,15 @@ public class UnmanagedApplicationManager {
    */
   public ApplicationId getAppId() {
     return this.applicationId;
+  }
+
+  /**
+   * Returns the rmProxy relayer of this UAM.
+   *
+   * @return rmProxy relayer of the UAM
+   */
+  public AMRMClientRelayer getAMRMClientRelayer() {
+    return this.rmProxyRelayer;
   }
 
   /**
@@ -592,10 +601,7 @@ public class UnmanagedApplicationManager {
           }
 
           request.setResponseId(lastResponseId);
-
-          AllocateResponse response = AMRMClientUtils.allocateWithReRegister(
-              request, rmProxy, registerRequest, applicationId);
-
+          AllocateResponse response = rmProxyRelayer.allocate(request);
           if (response == null) {
             throw new YarnException("Null allocateResponse from allocate");
           }

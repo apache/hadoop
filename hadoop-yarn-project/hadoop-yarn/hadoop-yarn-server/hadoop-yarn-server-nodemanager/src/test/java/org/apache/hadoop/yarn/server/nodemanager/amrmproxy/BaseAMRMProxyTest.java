@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -533,6 +534,7 @@ public abstract class BaseAMRMProxyTest {
     capability.setMemorySize(memory);
     capability.setVirtualCores(vCores);
     req.setCapability(capability);
+    req.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
     if (labelExpression != null) {
       req.setNodeLabelExpression(labelExpression);
     }

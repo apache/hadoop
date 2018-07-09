@@ -141,6 +141,11 @@ public class AMRMClientRelayer extends AbstractService
     super.serviceStop();
   }
 
+  public void setAMRegistrationRequest(
+      RegisterApplicationMasterRequest registerRequest) {
+    this.amRegistrationRequest = registerRequest;
+  }
+
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request)
@@ -239,8 +244,10 @@ public class AMRMClientRelayer extends AbstractService
           this.change.putAll(this.remotePendingChange);
         }
 
-        // re register with RM, then retry allocate recursively
+        // re-register with RM, then retry allocate recursively
         registerApplicationMaster(this.amRegistrationRequest);
+        // Reset responseId after re-register
+        allocateRequest.setResponseId(0);
         return allocate(allocateRequest);
       }
 
