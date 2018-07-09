@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
@@ -516,6 +517,22 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         interceptor.recover(recoveredDataMap);
 
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        Assert.assertEquals(Integer.MAX_VALUE,
+            interceptor.getLastHomeResponseId());
+
+        // The first allocate call expects a fail-over exception and re-register
+        int responseId = 10;
+        AllocateRequest allocateRequest =
+            Records.newRecord(AllocateRequest.class);
+        allocateRequest.setResponseId(responseId);
+        try {
+          interceptor.allocate(allocateRequest);
+          Assert.fail("Expecting an ApplicationMasterNotRegisteredException  "
+              + " after FederationInterceptor restarts and recovers");
+        } catch (ApplicationMasterNotRegisteredException e) {
+        }
+        interceptor.registerApplicationMaster(registerReq);
+        Assert.assertEquals(responseId, interceptor.getLastHomeResponseId());
 
         // Release all containers
         releaseContainersAndAssert(containers);
