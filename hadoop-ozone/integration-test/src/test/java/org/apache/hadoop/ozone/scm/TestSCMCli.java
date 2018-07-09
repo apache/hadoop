@@ -338,8 +338,8 @@ public class TestSCMCli {
 
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
     expected = String
-        .format(formatStr, container.getContainerID(), openStatus,
-            data.getDbFile().getPath(), data.getContainerPath(), "",
+        .format(formatStr, container.getContainerInfo().getContainerID(),
+            openStatus, data.getDbFile().getPath(), data.getContainerPath(), "",
             datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
   }
