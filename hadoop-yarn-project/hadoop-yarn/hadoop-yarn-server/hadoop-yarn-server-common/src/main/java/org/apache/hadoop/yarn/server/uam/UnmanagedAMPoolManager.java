@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -383,6 +384,21 @@ public class UnmanagedAMPoolManager extends AbstractService {
    */
   public boolean hasUAMId(String uamId) {
     return this.unmanagedAppMasterMap.containsKey(uamId);
+  }
+
+  /**
+   * Return the rmProxy relayer of an UAM.
+   *
+   * @param uamId uam Id
+   * @return the rmProxy relayer
+   * @throws YarnException if fails
+   */
+  public AMRMClientRelayer getAMRMClientRelayer(String uamId)
+      throws YarnException {
+    if (!this.unmanagedAppMasterMap.containsKey(uamId)) {
+      throw new YarnException("UAM " + uamId + " does not exist");
+    }
+    return this.unmanagedAppMasterMap.get(uamId).getAMRMClientRelayer();
   }
 
 }

@@ -21,8 +21,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lease.LeaseManager;
+import org.apache.hadoop.test.MetricsAsserts;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +51,7 @@ public class TestEventWatcher {
 
   @Before
   public void startLeaseManager() {
+    DefaultMetricsSystem.instance();
     leaseManager = new LeaseManager<>(2000l);
     leaseManager.start();
   }
@@ -53,12 +59,12 @@ public class TestEventWatcher {
   @After
   public void stopLeaseManager() {
     leaseManager.shutdown();
+    DefaultMetricsSystem.shutdown();
   }
 
 
   @Test
   public void testEventHandling() throws InterruptedException {
-
     EventQueue queue = new EventQueue();
 
     EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent>
@@ -139,25 +145,100 @@ public class TestEventWatcher {
     Assert.assertEquals(0, c1todo.size());
     Assert.assertFalse(replicationWatcher.contains(event1));
 
+  }
 
+  @Test
+  public void testMetrics() throws InterruptedException {
+
+    DefaultMetricsSystem.initialize("test");
+
+    EventQueue queue = new EventQueue();
+
+    EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent>
+        replicationWatcher = createEventWatcher();
+
+    EventHandlerStub<UnderreplicatedEvent> underReplicatedEvents =
+        new EventHandlerStub<>();
+
+    queue.addHandler(UNDER_REPLICATED, underReplicatedEvents);
+
+    replicationWatcher.start(queue);
+
+    //send 3 event to track 3 in-progress activity
+    UnderreplicatedEvent event1 =
+        new UnderreplicatedEvent(UUID.randomUUID(), "C1");
+
+    UnderreplicatedEvent event2 =
+        new UnderreplicatedEvent(UUID.randomUUID(), "C2");
+
+    UnderreplicatedEvent event3 =
+        new UnderreplicatedEvent(UUID.randomUUID(), "C1");
+
+    queue.fireEvent(WATCH_UNDER_REPLICATED, event1);
+
+    queue.fireEvent(WATCH_UNDER_REPLICATED, event2);
+
+    queue.fireEvent(WATCH_UNDER_REPLICATED, event3);
+
+    //1st event is completed, don't need to track any more
+    ReplicationCompletedEvent event1Completed =
+        new ReplicationCompletedEvent(event1.UUID, "C1", "D1");
+
+    queue.fireEvent(REPLICATION_COMPLETED, event1Completed);
+
+
+    Thread.sleep(2200l);
+
+    //until now: 3 in-progress activities are tracked with three
+    // UnderreplicatedEvents. The first one is completed, the remaining two
+    // are timed out (as the timeout -- defined in the leasmanager -- is 2000ms.
+
+    EventWatcherMetrics metrics = replicationWatcher.getMetrics();
+
+    //3 events are received
+    Assert.assertEquals(3, metrics.getTrackedEvents().value());
+
+    //one is finished. doesn't need to be resent
+    Assert.assertEquals(1, metrics.getCompletedEvents().value());
+
+    //Other two are timed out and resent
+    Assert.assertEquals(2, metrics.getTimedOutEvents().value());
+
+    DefaultMetricsSystem.shutdown();
   }
 
   private EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent>
   createEventWatcher() {
-    return new EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent>(
-        WATCH_UNDER_REPLICATED, REPLICATION_COMPLETED, leaseManager) {
-
-      @Override
-      void onTimeout(EventPublisher publisher, UnderreplicatedEvent payload) {
-        publisher.fireEvent(UNDER_REPLICATED, payload);
-      }
-
-      @Override
-      void onFinished(EventPublisher publisher, UnderreplicatedEvent payload) {
-        //Good job. We did it.
-      }
-    };
+    return new CommandWatcherExample(WATCH_UNDER_REPLICATED,
+        REPLICATION_COMPLETED, leaseManager);
   }
+
+  private class CommandWatcherExample
+      extends EventWatcher<UnderreplicatedEvent, ReplicationCompletedEvent> {
+
+    public CommandWatcherExample(Event<UnderreplicatedEvent> startEvent,
+        Event<ReplicationCompletedEvent> completionEvent,
+        LeaseManager<UUID> leaseManager) {
+      super("TestCommandWatcher", startEvent, completionEvent, leaseManager);
+    }
+
+    @Override
+    void onTimeout(EventPublisher publisher, UnderreplicatedEvent payload) {
+      publisher.fireEvent(UNDER_REPLICATED, payload);
+    }
+
+    @Override
+    void onFinished(EventPublisher publisher, UnderreplicatedEvent payload) {
+      //Good job. We did it.
+    }
+
+    @Override
+    public EventWatcherMetrics getMetrics() {
+      return super.getMetrics();
+    }
+  }
+
+  ;
 
   private static class ReplicationCompletedEvent
       implements IdentifiableEventPayload {
