@@ -26,12 +26,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseAlreadyExistException;
 import org.apache.hadoop.ozone.lease.LeaseExpiredException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.lease.LeaseNotFoundException;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.commons.collections.map.HashedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,18 +63,39 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   private final LeaseManager<UUID> leaseManager;
 
+  private final EventWatcherMetrics metrics;
+
+  private final String name;
+
   protected final Map<UUID, TIMEOUT_PAYLOAD> trackedEventsByUUID =
       new ConcurrentHashMap<>();
 
   protected final Set<TIMEOUT_PAYLOAD> trackedEvents = new HashSet<>();
 
-  public EventWatcher(Event<TIMEOUT_PAYLOAD> startEvent,
+  private final Map<UUID, Long> startTrackingTimes = new HashedMap();
+
+  public EventWatcher(String name, Event<TIMEOUT_PAYLOAD> startEvent,
       Event<COMPLETION_PAYLOAD> completionEvent,
       LeaseManager<UUID> leaseManager) {
     this.startEvent = startEvent;
     this.completionEvent = completionEvent;
     this.leaseManager = leaseManager;
+    this.metrics = new EventWatcherMetrics();
+    Preconditions.checkNotNull(name);
+    if (name.equals("")) {
+      name = getClass().getSimpleName();
+    }
+    if (name.equals("")) {
+      //for anonymous inner classes
+      name = getClass().getName();
+    }
+    this.name = name;
+  }
 
+  public EventWatcher(Event<TIMEOUT_PAYLOAD> startEvent,
+      Event<COMPLETION_PAYLOAD> completionEvent,
+      LeaseManager<UUID> leaseManager) {
+    this("", startEvent, completionEvent, leaseManager);
   }
 
   public void start(EventQueue queue) {
@@ -87,11 +113,16 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
       }
     });
 
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.register(name, "EventWatcher metrics", metrics);
   }
 
   private synchronized void handleStartEvent(TIMEOUT_PAYLOAD payload,
       EventPublisher publisher) {
+    metrics.incrementTrackedEvents();
     UUID identifier = payload.getUUID();
+    startTrackingTimes.put(identifier, System.currentTimeMillis());
+
     trackedEventsByUUID.put(identifier, payload);
     trackedEvents.add(payload);
     try {
@@ -112,16 +143,21 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   private synchronized void handleCompletion(UUID uuid,
       EventPublisher publisher) throws LeaseNotFoundException {
+    metrics.incrementCompletedEvents();
     leaseManager.release(uuid);
     TIMEOUT_PAYLOAD payload = trackedEventsByUUID.remove(uuid);
     trackedEvents.remove(payload);
+    long originalTime = startTrackingTimes.remove(uuid);
+    metrics.updateFinishingTime(System.currentTimeMillis() - originalTime);
     onFinished(publisher, payload);
   }
 
   private synchronized void handleTimeout(EventPublisher publisher,
       UUID identifier) {
+    metrics.incrementTimedOutEvents();
     TIMEOUT_PAYLOAD payload = trackedEventsByUUID.remove(identifier);
     trackedEvents.remove(payload);
+    startTrackingTimes.remove(payload.getUUID());
     onTimeout(publisher, payload);
   }
 
@@ -153,5 +189,10 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
       Predicate<? super TIMEOUT_PAYLOAD> predicate) {
     return trackedEventsByUUID.values().stream().filter(predicate)
         .collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  protected EventWatcherMetrics getMetrics() {
+    return metrics;
   }
 }
