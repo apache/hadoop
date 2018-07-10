@@ -38,6 +38,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -203,13 +204,32 @@ public class TestOzoneShell {
   public void testCreateVolume() throws Exception {
     LOG.info("Running testCreateVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    testCreateVolume(volumeName, "");
+    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    testCreateVolume("/////" + volumeName, "");
+    testCreateVolume("/////", "Volume name is required to create a volume");
+    testCreateVolume("/////vol/123",
+        "Illegal argument: Bucket or Volume name has an unsupported character : /");
+  }
+
+  private void testCreateVolume(String volumeName, String errorMsg) throws Exception {
+    err.reset();
     String userName = "bilbo";
     String[] args = new String[] {"-createVolume", url + "/" + volumeName,
         "-user", userName, "-root"};
 
-    assertEquals(0, ToolRunner.run(shell, args));
-    OzoneVolume volumeInfo = client.getVolumeDetails(volumeName);
-    assertEquals(volumeName, volumeInfo.getName());
+    if (Strings.isNullOrEmpty(errorMsg)) {
+      assertEquals(0, ToolRunner.run(shell, args));
+    } else {
+      assertEquals(1, ToolRunner.run(shell, args));
+      assertTrue(err.toString().contains(errorMsg));
+      return;
+    }
+
+    String truncatedVolumeName =
+        volumeName.substring(volumeName.lastIndexOf('/') + 1);
+    OzoneVolume volumeInfo = client.getVolumeDetails(truncatedVolumeName);
+    assertEquals(truncatedVolumeName, volumeInfo.getName());
     assertEquals(userName, volumeInfo.getOwner());
   }
 
