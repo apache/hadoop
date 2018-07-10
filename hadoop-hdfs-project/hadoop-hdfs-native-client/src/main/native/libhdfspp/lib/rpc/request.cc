@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-
+#include <functional>
 #include "request.h"
 #include "rpc_engine.h"
 #include "sasl_protocol.h"
