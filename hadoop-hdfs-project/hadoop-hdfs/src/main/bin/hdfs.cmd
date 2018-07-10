@@ -78,11 +78,17 @@ goto :eof
 :namenode
   set CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_NAMENODE_OPTS%
+  if defined HDFS_NAMENODE_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%HDFS_NAMENODE_HEAPSIZE%m
+  )
   goto :eof
 
 :journalnode
   set CLASS=org.apache.hadoop.hdfs.qjournal.server.JournalNode
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_JOURNALNODE_OPTS%
+  if defined HDFS_JOURNALNODE_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%HDFS_JOURNALNODE_HEAPSIZE%m
+  )
   goto :eof
 
 :zkfc
@@ -93,11 +99,20 @@ goto :eof
 :secondarynamenode
   set CLASS=org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_SECONDARYNAMENODE_OPTS%
+  if defined HDFS_NAMENODE_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%HDFS_NAMENODE_HEAPSIZE%m
+  )
+  if defined HDFS_SECONDARYNAMENODE_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%HDFS_SECONDARYNAMENODE_HEAPSIZE%m
+  )
   goto :eof
 
 :datanode
   set CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
   set HADOOP_OPTS=%HADOOP_OPTS% -server %HADOOP_DATANODE_OPTS%
+  if defined HDFS_DATANODE_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%HDFS_DATANODE_HEAPSIZE%m
+  )
   goto :eof
 
 :dfs

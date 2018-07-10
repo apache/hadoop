@@ -302,6 +302,9 @@ esac
 # this is the default:
 # export HDFS_NAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
 
+# Use NameNode specific heap size
+# export HDFS_NAMENODE_HEAPSIZE=
+
 ###
 # SecondaryNameNode specific parameters
 ###
@@ -311,6 +314,9 @@ esac
 #
 # This is the default:
 # export HDFS_SECONDARYNAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
+
+# Use secondary NameNode specific heap size
+# export HDFS_SECONDARYNAMENODE_HEAPSIZE=
 
 ###
 # DataNode specific parameters
@@ -334,6 +340,9 @@ esac
 # By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HDFS_DATANODE_SECURE_EXTRA_OPTS="-jvm server"
+
+# Use DataNode specific heap size
+# export HDFS_DATANODE_HEAPSIZE=
 
 ###
 # NFS3 Gateway specific parameters
@@ -376,6 +385,9 @@ esac
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # export HDFS_JOURNALNODE_OPTS=""
+
+# Use JournalNode specific heap size
+# export HDFS_JOURNALNODE_HEAPSIZE=
 
 ###
 # HDFS Balancer specific parameters
