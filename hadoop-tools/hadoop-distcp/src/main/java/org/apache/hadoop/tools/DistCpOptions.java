@@ -387,7 +387,10 @@ public final class DistCpOptions {
       DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.TRACK_MISSING,
           String.valueOf(trackPath));
     }
-
+    if (numListstatusThreads > 0) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.NUM_LISTSTATUS_THREADS,
+          Integer.toString(numListstatusThreads));
+    }
   }
 
   /**

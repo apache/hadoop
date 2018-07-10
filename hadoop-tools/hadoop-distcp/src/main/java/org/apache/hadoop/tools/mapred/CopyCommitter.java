@@ -392,6 +392,9 @@ public class CopyCommitter extends FileOutputCommitter {
     Path sourceListing = new Path(conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
     FileSystem clusterFS = sourceListing.getFileSystem(conf);
     Path sortedSourceListing = DistCpUtils.sortListing(conf, sourceListing);
+    long sourceListingCompleted = System.currentTimeMillis();
+    LOG.info("Source listing completed in {}",
+        formatDuration(sourceListingCompleted - listingStart));
 
     // Similarly, create the listing of target-files. Sort alphabetically.
     Path targetListing = new Path(sourceListing.getParent(), "targetListing.seq");
@@ -409,8 +412,8 @@ public class CopyCommitter extends FileOutputCommitter {
     // Walk both source and target file listings.
     // Delete all from target that doesn't also exist on source.
     long deletionStart = System.currentTimeMillis();
-    LOG.info("Listing completed in {}",
-        formatDuration(deletionStart - listingStart));
+    LOG.info("Destination listing completed in {}",
+        formatDuration(deletionStart - sourceListingCompleted));
 
     long deletedEntries = 0;
     long filesDeleted = 0;
@@ -545,9 +548,15 @@ public class CopyCommitter extends FileOutputCommitter {
     // Set up options to be the same from the CopyListing.buildListing's
     // perspective, so to collect similar listings as when doing the copy
     //
+    // thread count is picked up from the job
+    int threads = conf.getInt(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
+        DistCpConstants.DEFAULT_LISTSTATUS_THREADS);
+    LOG.info("Scanning destination directory {} with thread count: {}",
+        targetFinalPath, threads);
     DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
+        .withNumListstatusThreads(threads)
         .build();
     DistCpContext distCpContext = new DistCpContext(options);
     distCpContext.setTargetPathExists(targetPathExists);
