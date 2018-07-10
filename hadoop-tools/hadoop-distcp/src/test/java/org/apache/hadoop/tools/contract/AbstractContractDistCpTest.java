@@ -572,7 +572,7 @@ public abstract class AbstractContractDistCpTest
   private DistCpOptions buildWithStandardOptions(
       DistCpOptions.Builder builder) {
     return builder
-        .withNumListstatusThreads(8)
+        .withNumListstatusThreads(DistCpOptions.MAX_NUM_LISTSTATUS_THREADS)
         .build();
   }
 
