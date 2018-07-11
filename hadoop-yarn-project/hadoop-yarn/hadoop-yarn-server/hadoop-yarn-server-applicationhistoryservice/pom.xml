@@ -258,10 +258,15 @@
                   <pattern>com.fasterxml.jackson</pattern>
                   <shadedPattern>org.apache.hadoop.shaded.$0</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.nustaq</pattern>
+                  <shadedPattern>org.apache.hadoop.shaded.$0</shadedPattern>
+                </relocation>
               </relocations>
               <artifactSet>
                 <includes>
                   <include>com.fasterxml.jackson.core:*</include>
+                  <include>de.ruedigermoeller:fst</include>
                 </includes>
               </artifactSet>
               <transformers>
