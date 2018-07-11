@@ -420,7 +420,7 @@ Runs a HDFS dfsadmin client.
 
 Usage: `hdfs dfsrouter`
 
-Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more info.
+Runs the DFS router. See [Router](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Router) for more info.
 
 ### `dfsrouteradmin`
 
@@ -449,7 +449,7 @@ Usage:
 | `-nameservice` `disable` `enable` *nameservice* | Disable/enable  a name service from the federation. If disabled, requests will not go to that name service. |
 | `-getDisabledNameservices` | Get the name services that are disabled in the federation. |
 
-The commands for managing Router-based federation. See [Mount table management](./HDFSRouterFederation.html#Mount_table_management) for more info.
+The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 
 ### `diskbalancer`
 
