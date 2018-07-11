@@ -90,7 +90,7 @@ public class TestStateAlignmentContextWithHA {
       // Create and set AlignmentContext in HAProxyFactory.
       // All proxies by factory will now have AlignmentContext assigned.
       this.alignmentContext = (spy != null ? spy : new ClientGSIContext());
-      ((ClientHAProxyFactory) factory).setAlignmentContext(alignmentContext);
+      ((ClientHAProxyFactory<T>) factory).setAlignmentContext(alignmentContext);
 
       AC_LIST.add(alignmentContext);
     }
