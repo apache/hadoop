@@ -121,12 +121,16 @@ public class TestServiceCLI {
     basedir = new File("target", "apps");
     basedirProp = YARN_SERVICE_BASE_PATH + "=" + basedir.getAbsolutePath();
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
+    fs = new SliderFileSystem(conf);
     dependencyTarGzBaseDir = tmpFolder.getRoot();
+    fs.getFileSystem()
+        .setPermission(new Path(dependencyTarGzBaseDir.getAbsolutePath()),
+            new FsPermission("755"));
     dependencyTarGz = getDependencyTarGz(dependencyTarGzBaseDir);
     dependencyTarGzProp = DEPENDENCY_TARBALL_PATH + "=" + dependencyTarGz
         .toString();
     conf.set(DEPENDENCY_TARBALL_PATH, dependencyTarGz.toString());
-    fs = new SliderFileSystem(conf);
+
     if (basedir.exists()) {
       FileUtils.deleteDirectory(basedir);
     } else {
