@@ -330,8 +330,8 @@ public class ApplicationImpl implements Application {
         // these get queued up and sent out in AppInitDoneTransition
         break;
       default:
-        LOG.warn("Killing {} because {} is in state {}",
-            container.getContainerId(), app, appState);
+        LOG.warn("Killing " + container.getContainerId() + " because " + app
+            + " is in state " + appState);
         app.dispatcher.getEventHandler().handle(new ContainerKillEvent(
             container.getContainerId(),
             ContainerExitStatus.KILLED_AFTER_APP_COMPLETION,
