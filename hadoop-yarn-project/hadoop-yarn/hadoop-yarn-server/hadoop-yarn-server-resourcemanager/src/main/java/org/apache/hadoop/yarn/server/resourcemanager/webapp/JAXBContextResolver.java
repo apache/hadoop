@@ -28,6 +28,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.yarn.app.SimpleAppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
@@ -55,7 +56,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
             UsersInfo.class, UserInfo.class, ApplicationStatisticsInfo.class,
             StatisticsItemInfo.class, CapacitySchedulerHealthInfo.class,
             FairSchedulerQueueInfoList.class, AppTimeoutsInfo.class,
-            AppTimeoutInfo.class, ResourceInformationsInfo.class };
+            AppTimeoutInfo.class, ResourceInformationsInfo.class, SimpleAppInfo.class};
     // these dao classes need root unwrapping
     final Class[] rootUnwrappedTypes =
         { NewApplication.class, ApplicationSubmissionContextInfo.class,

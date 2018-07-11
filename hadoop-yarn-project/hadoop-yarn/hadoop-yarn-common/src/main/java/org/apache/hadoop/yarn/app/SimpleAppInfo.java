@@ -9,15 +9,14 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by tasklicable law or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
-import java.util.ArrayList;
+package org.apache.hadoop.yarn.app;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -25,30 +24,50 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.codehaus.jackson.map.annotate.JsonRootName;
 
-@JsonRootName(value = "tasks")
-@XmlRootElement(name = "tasks")
+@JsonRootName(value = "SimpleAppInfo")
+@XmlRootElement(name = "SimpleAppInfo")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class TasksInfo {
+public class SimpleAppInfo {
 
-  protected ArrayList<TaskInfo> task = new ArrayList<TaskInfo>();
+  protected int id;
 
-  public TasksInfo() {
-  } // JAXB needs this
+  protected AppState state;
 
-  public void add(TaskInfo taskInfo) {
-    task.add(taskInfo);
+  protected String trackingUrl;
+
+  public SimpleAppInfo() {
   }
 
-  public ArrayList<TaskInfo> getTasks() {
-    return task;
+  public int getId() {
+    return id;
   }
 
-  public ArrayList<TaskInfo> getTask() {
-    return task;
+  public void setId(int id) {
+    this.id = id;
   }
 
-  public void setTask(ArrayList<TaskInfo> task) {
-    this.task = task;
+  public AppState getState() {
+    return state;
   }
 
+  public void setState(AppState state) {
+    this.state = state;
+  }
+
+  public String getTrackingUrl() {
+    return trackingUrl;
+  }
+
+  public void setTrackingUrl(String trackingUrl) {
+    this.trackingUrl = trackingUrl;
+  }
+
+  @Override
+  public String toString() {
+    return "SimpleAppInfo{" +
+        "id=" + id +
+        ", state=" + state +
+        ", trackingUrl='" + trackingUrl + '\'' +
+        '}';
+  }
 }
