@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.LongAccumulator;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-class ClientGSIContext implements AlignmentContext {
+public class ClientGSIContext implements AlignmentContext {
 
   private final LongAccumulator lastSeenStateId =
       new LongAccumulator(Math::max, Long.MIN_VALUE);
