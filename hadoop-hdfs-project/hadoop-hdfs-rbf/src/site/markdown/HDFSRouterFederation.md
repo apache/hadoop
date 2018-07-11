@@ -170,7 +170,7 @@ Deployment
 
 By default, the Router is ready to take requests and monitor the NameNode in the local machine.
 It needs to know the State Store endpoint by setting `dfs.federation.router.store.driver.class`.
-The rest of the options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
+The rest of the options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 
 Once the Router is configured, it can be started:
 
@@ -270,7 +270,7 @@ Router configuration
 --------------------
 
 One can add the configurations for Router-based federation to **hdfs-site.xml**.
-The main options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
+The main options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 The configuration values are described in this section.
 
 ### RPC server
