@@ -45,6 +45,8 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -93,6 +95,8 @@ public class TestRefreshUserMappings {
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster.Builder(config).build();
     cluster.waitActive();
+
+    GenericTestUtils.setLogLevel(Groups.LOG, Level.DEBUG);
   }
 
   @After
@@ -114,21 +118,24 @@ public class TestRefreshUserMappings {
     String [] args =  new String[]{"-refreshUserToGroupsMappings"};
     Groups groups = Groups.getUserToGroupsMappingService(config);
     String user = UserGroupInformation.getCurrentUser().getUserName();
-    System.out.println("first attempt:");
+
+    System.out.println("First attempt:");
     List<String> g1 = groups.getGroups(user);
     String [] str_groups = new String [g1.size()];
     g1.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
     
-    System.out.println("second attempt, should be same:");
+    System.out.println("Second attempt, should be the same:");
     List<String> g2 = groups.getGroups(user);
     g2.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
     for(int i=0; i<g2.size(); i++) {
       assertEquals("Should be same group ", g1.get(i), g2.get(i));
     }
+
+    // Test refresh command
     admin.run(args);
-    System.out.println("third attempt(after refresh command), should be different:");
+    System.out.println("Third attempt(after refresh command), should be different:");
     List<String> g3 = groups.getGroups(user);
     g3.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
@@ -137,9 +144,9 @@ public class TestRefreshUserMappings {
           g1.get(i).equals(g3.get(i)));
     }
     
-    // test time out
-    Thread.sleep(groupRefreshTimeoutSec*1100);
-    System.out.println("fourth attempt(after timeout), should be different:");
+    // Test timeout
+    Thread.sleep(groupRefreshTimeoutSec * 1500);
+    System.out.println("Fourth attempt(after timeout), should be different:");
     List<String> g4 = groups.getGroups(user);
     g4.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
