@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -37,6 +38,7 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
@@ -55,7 +57,8 @@ public class TestSCMDatanodeHeartbeatDispatcher {
     NodeReportProto nodeReport = NodeReportProto.getDefaultInstance();
 
     SCMDatanodeHeartbeatDispatcher dispatcher =
-        new SCMDatanodeHeartbeatDispatcher(new EventPublisher() {
+        new SCMDatanodeHeartbeatDispatcher(Mockito.mock(NodeManager.class),
+            new EventPublisher() {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
               EVENT_TYPE event, PAYLOAD payload) {
@@ -90,7 +93,8 @@ public class TestSCMDatanodeHeartbeatDispatcher {
         ContainerReportsProto.getDefaultInstance();
 
     SCMDatanodeHeartbeatDispatcher dispatcher =
-        new SCMDatanodeHeartbeatDispatcher(new EventPublisher() {
+        new SCMDatanodeHeartbeatDispatcher(Mockito.mock(NodeManager.class),
+            new EventPublisher() {
           @Override
           public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
               EVENT_TYPE event, PAYLOAD payload) {

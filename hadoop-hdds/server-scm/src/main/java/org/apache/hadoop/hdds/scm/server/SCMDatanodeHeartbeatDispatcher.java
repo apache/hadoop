@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.server;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
@@ -24,11 +25,15 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import com.google.protobuf.GeneratedMessage;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
@@ -42,10 +47,15 @@ public final class SCMDatanodeHeartbeatDispatcher {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMDatanodeHeartbeatDispatcher.class);
 
-  private EventPublisher eventPublisher;
+  private final NodeManager nodeManager;
+  private final EventPublisher eventPublisher;
 
 
-  public SCMDatanodeHeartbeatDispatcher(EventPublisher eventPublisher) {
+  public SCMDatanodeHeartbeatDispatcher(NodeManager nodeManager,
+                                        EventPublisher eventPublisher) {
+    Preconditions.checkNotNull(nodeManager);
+    Preconditions.checkNotNull(eventPublisher);
+    this.nodeManager = nodeManager;
     this.eventPublisher = eventPublisher;
   }
 
@@ -54,11 +64,14 @@ public final class SCMDatanodeHeartbeatDispatcher {
    * Dispatches heartbeat to registered event handlers.
    *
    * @param heartbeat heartbeat to be dispatched.
+   *
+   * @return list of SCMCommand
    */
-  public void dispatch(SCMHeartbeatRequestProto heartbeat) {
+  public List<SCMCommand> dispatch(SCMHeartbeatRequestProto heartbeat) {
     DatanodeDetails datanodeDetails =
         DatanodeDetails.getFromProtoBuf(heartbeat.getDatanodeDetails());
     // should we dispatch heartbeat through eventPublisher?
+    List<SCMCommand> commands = nodeManager.processHeartbeat(datanodeDetails);
     if (heartbeat.hasNodeReport()) {
       LOG.debug("Dispatching Node Report.");
       eventPublisher.fireEvent(NODE_REPORT,
@@ -73,6 +86,7 @@ public final class SCMDatanodeHeartbeatDispatcher {
               heartbeat.getContainerReport()));
 
     }
+    return commands;
   }
 
   /**

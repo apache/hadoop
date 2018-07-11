@@ -41,6 +41,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent.CR
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CLOSE_CONTAINER;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
 
 /**
  * Tests the closeContainerEventHandler class.
@@ -69,6 +70,7 @@ public class TestCloseContainerEventHandler {
     eventQueue = new EventQueue();
     eventQueue.addHandler(CLOSE_CONTAINER,
         new CloseContainerEventHandler(mapping));
+    eventQueue.addHandler(DATANODE_COMMAND, nodeManager);
   }
 
   @AfterClass

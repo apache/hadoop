@@ -26,8 +26,10 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.assertj.core.util.Preconditions;
@@ -397,6 +399,13 @@ public class MockNodeManager implements NodeManager {
       aggregateStat.add(stat);
       nodeMetricMap.put(datanodeDetails.getUuid(), stat);
     }
+  }
+
+  @Override
+  public void onMessage(CommandForDatanode commandForDatanode,
+                        EventPublisher publisher) {
+    addDatanodeCommand(commandForDatanode.getDatanodeId(),
+        commandForDatanode.getCommand());
   }
 
   /**

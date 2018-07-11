@@ -28,7 +28,9 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
@@ -287,4 +289,9 @@ public class ReplicationNodeManagerMock implements NodeManager {
     this.commandQueue.addCommand(dnId, command);
   }
 
+  @Override
+  public void onMessage(CommandForDatanode commandForDatanode,
+                        EventPublisher publisher) {
+    // do nothing.
+  }
 }

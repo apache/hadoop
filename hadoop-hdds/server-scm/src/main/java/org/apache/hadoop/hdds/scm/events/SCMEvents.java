@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdds.scm.events;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
@@ -70,6 +71,27 @@ public final class SCMEvents {
    */
   public static final TypedEvent<ContainerID> CLOSE_CONTAINER =
       new TypedEvent<>(ContainerID.class, "Close_Container");
+
+  /**
+   * This event will be triggered whenever a new datanode is
+   * registered with SCM.
+   */
+  public static final TypedEvent<DatanodeDetails> NEW_NODE =
+      new TypedEvent<>(DatanodeDetails.class, "New_Node");
+
+  /**
+   * This event will be triggered whenever a datanode is moved from healthy to
+   * stale state.
+   */
+  public static final TypedEvent<DatanodeDetails> STALE_NODE =
+      new TypedEvent<>(DatanodeDetails.class, "Stale_Node");
+
+  /**
+   * This event will be triggered whenever a datanode is moved from stale to
+   * dead state.
+   */
+  public static final TypedEvent<DatanodeDetails> DEAD_NODE =
+      new TypedEvent<>(DatanodeDetails.class, "Dead_Node");
 
   /**
    * Private Ctor. Never Constructed.

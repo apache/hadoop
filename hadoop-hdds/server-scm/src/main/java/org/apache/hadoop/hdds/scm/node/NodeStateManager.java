@@ -24,9 +24,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.node.states.NodeStateMap;
+import org.apache.hadoop.hdds.server.events.Event;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.common.statemachine
     .InvalidStateTransitionException;
 import org.apache.hadoop.ozone.common.statemachine.StateMachine;
@@ -36,9 +39,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
@@ -87,6 +92,14 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   private final NodeStateMap nodeStateMap;
   /**
+   * Used for publishing node state change events.
+   */
+  private final EventPublisher eventPublisher;
+  /**
+   * Maps the event to be triggered when a node state us updated.
+   */
+  private final Map<NodeState, Event<DatanodeDetails>> state2EventMap;
+  /**
    * ExecutorService used for scheduling heartbeat processing thread.
    */
   private final ScheduledExecutorService executorService;
@@ -108,8 +121,11 @@ public class NodeStateManager implements Runnable, Closeable {
    *
    * @param conf Configuration
    */
-  public NodeStateManager(Configuration conf) {
-    nodeStateMap = new NodeStateMap();
+  public NodeStateManager(Configuration conf, EventPublisher eventPublisher) {
+    this.nodeStateMap = new NodeStateMap();
+    this.eventPublisher = eventPublisher;
+    this.state2EventMap = new HashMap<>();
+    initialiseState2EventMap();
     Set<NodeState> finalStates = new HashSet<>();
     finalStates.add(NodeState.DECOMMISSIONED);
     this.stateMachine = new StateMachine<>(NodeState.HEALTHY, finalStates);
@@ -128,6 +144,14 @@ public class NodeStateManager implements Runnable, Closeable {
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
     executorService.schedule(this, heartbeatCheckerIntervalMs,
         TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Populates state2event map.
+   */
+  private void initialiseState2EventMap() {
+    state2EventMap.put(NodeState.STALE, SCMEvents.STALE_NODE);
+    state2EventMap.put(NodeState.DEAD, SCMEvents.DEAD_NODE);
   }
 
   /*
@@ -220,6 +244,7 @@ public class NodeStateManager implements Runnable, Closeable {
   public void addNode(DatanodeDetails datanodeDetails)
       throws NodeAlreadyExistsException {
     nodeStateMap.addNode(datanodeDetails, stateMachine.getInitialState());
+    eventPublisher.fireEvent(SCMEvents.NEW_NODE, datanodeDetails);
   }
 
   /**
@@ -548,6 +573,9 @@ public class NodeStateManager implements Runnable, Closeable {
       if (condition.test(node.getLastHeartbeatTime())) {
         NodeState newState = stateMachine.getNextState(state, lifeCycleEvent);
         nodeStateMap.updateNodeState(node.getUuid(), state, newState);
+        if (state2EventMap.containsKey(newState)) {
+          eventPublisher.fireEvent(state2EventMap.get(newState), node);
+        }
       }
     } catch (InvalidStateTransitionException e) {
       LOG.warn("Invalid state transition of node {}." +

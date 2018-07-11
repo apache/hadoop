@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -78,8 +77,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * as soon as you read it.
  */
 public class SCMNodeManager
-    implements NodeManager, StorageContainerNodeProtocol,
-    EventHandler<CommandForDatanode> {
+    implements NodeManager, StorageContainerNodeProtocol {
 
   @VisibleForTesting
   static final Logger LOG =
@@ -117,14 +115,13 @@ public class SCMNodeManager
   // Node pool manager.
   private final StorageContainerManager scmManager;
 
-
-
   /**
    * Constructs SCM machine Manager.
    */
   public SCMNodeManager(OzoneConfiguration conf, String clusterID,
-      StorageContainerManager scmManager) throws IOException {
-    this.nodeStateManager = new NodeStateManager(conf);
+      StorageContainerManager scmManager, EventPublisher eventPublisher)
+      throws IOException {
+    this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
     this.nodeStats = new ConcurrentHashMap<>();
     this.scmStat = new SCMNodeStat();
     this.clusterID = clusterID;
@@ -462,14 +459,25 @@ public class SCMNodeManager
     return nodeCountMap;
   }
 
+  // TODO:
+  // Since datanode commands are added through event queue, onMessage method
+  // should take care of adding commands to command queue.
+  // Refactor and remove all the usage of this method and delete this method.
   @Override
   public void addDatanodeCommand(UUID dnId, SCMCommand command) {
     this.commandQueue.addCommand(dnId, command);
   }
 
+  /**
+   * This method is called by EventQueue whenever someone adds a new
+   * DATANODE_COMMAND to the Queue.
+   *
+   * @param commandForDatanode DatanodeCommand
+   * @param ignored publisher
+   */
   @Override
   public void onMessage(CommandForDatanode commandForDatanode,
-      EventPublisher publisher) {
+      EventPublisher ignored) {
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
   }

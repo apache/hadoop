@@ -25,8 +25,11 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
 
 /**
  * In case of a node failure, volume failure, volume out of spapce, node
@@ -73,9 +76,11 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     if (info.getState() == HddsProtos.LifeCycleState.OPEN) {
       for (DatanodeDetails datanode :
           containerWithPipeline.getPipeline().getMachines()) {
-        containerManager.getNodeManager().addDatanodeCommand(datanode.getUuid(),
+        CommandForDatanode closeContainerCommand = new CommandForDatanode<>(
+            datanode.getUuid(),
             new CloseContainerCommand(containerID.getId(),
                 info.getReplicationType()));
+        publisher.fireEvent(DATANODE_COMMAND, closeContainerCommand);
       }
       try {
         // Finalize event will make sure the state of the container transitions

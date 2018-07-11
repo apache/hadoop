@@ -709,11 +709,6 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-  @Override
-  public NodeManager getNodeManager() {
-    return nodeManager;
-  }
-
   @VisibleForTesting
   public MetadataStore getContainerStore() {
     return containerStore;

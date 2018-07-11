@@ -133,7 +133,8 @@ public class SCMDatanodeProtocolServer implements
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
 
-    heartbeatDispatcher = new SCMDatanodeHeartbeatDispatcher(eventPublisher);
+    heartbeatDispatcher = new SCMDatanodeHeartbeatDispatcher(
+        scm.getScmNodeManager(), eventPublisher);
 
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -214,22 +215,13 @@ public class SCMDatanodeProtocolServer implements
 
   @Override
   public SCMHeartbeatResponseProto sendHeartbeat(
-      SCMHeartbeatRequestProto heartbeat)
-      throws IOException {
-    heartbeatDispatcher.dispatch(heartbeat);
-
-    // TODO: Remove the below code after SCM refactoring.
-    DatanodeDetails datanodeDetails = DatanodeDetails
-        .getFromProtoBuf(heartbeat.getDatanodeDetails());
-    NodeReportProto nodeReport = heartbeat.getNodeReport();
-    List<SCMCommand> commands =
-        scm.getScmNodeManager().processHeartbeat(datanodeDetails);
+      SCMHeartbeatRequestProto heartbeat) throws IOException {
     List<SCMCommandProto> cmdResponses = new LinkedList<>();
-    for (SCMCommand cmd : commands) {
+    for (SCMCommand cmd : heartbeatDispatcher.dispatch(heartbeat)) {
       cmdResponses.add(getCommandResponse(cmd));
     }
     return SCMHeartbeatResponseProto.newBuilder()
-        .setDatanodeUUID(datanodeDetails.getUuidString())
+        .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
         .addAllCommands(cmdResponses).build();
   }
 
