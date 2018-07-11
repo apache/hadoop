@@ -159,6 +159,18 @@ public abstract class HATestUtil {
     return (DistributedFileSystem)fs;
   }
   
+  public static DistributedFileSystem configureObserverReadFs(
+      MiniDFSCluster cluster, Configuration conf,
+      int nsIndex) throws IOException, URISyntaxException {
+    conf = new Configuration(conf);
+    String logicalName = getLogicalHostname(cluster);
+    setFailoverConfigurations(cluster, conf, logicalName, nsIndex);
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." +
+        logicalName, ObserverReadProxyProvider.class.getName());
+    FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
+    return (DistributedFileSystem) fs;
+  }
+
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf) {
     setFailoverConfigurations(cluster, conf, getLogicalHostname(cluster));
