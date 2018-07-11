@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +68,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The state machine for the representation of an Application
@@ -687,5 +688,9 @@ public class ApplicationImpl implements Application {
   @Override
   public long getFlowRunId() {
     return flowContext == null ? 0L : flowContext.getFlowRunId();
+  }
+
+  public void setFlowContext(FlowContext fc) {
+    this.flowContext = fc;
   }
 }
