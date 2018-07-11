@@ -33,7 +33,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-class ClientGSIContext implements AlignmentContext {
+public class ClientGSIContext implements AlignmentContext {
 
   private final AtomicLong lastSeenStateId = new AtomicLong(Long.MIN_VALUE);
 
