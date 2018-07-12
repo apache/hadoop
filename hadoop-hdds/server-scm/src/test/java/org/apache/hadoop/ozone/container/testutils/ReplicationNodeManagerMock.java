@@ -289,6 +289,16 @@ public class ReplicationNodeManagerMock implements NodeManager {
     this.commandQueue.addCommand(dnId, command);
   }
 
+  /**
+   * Empty implementation for processNodeReport.
+   * @param dnUuid
+   * @param nodeReport
+   */
+  @Override
+  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
+    // do nothing.
+  }
+
   @Override
   public void onMessage(CommandForDatanode commandForDatanode,
                         EventPublisher publisher) {

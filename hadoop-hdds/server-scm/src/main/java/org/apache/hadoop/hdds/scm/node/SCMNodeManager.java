@@ -423,6 +423,17 @@ public class SCMNodeManager
   }
 
   /**
+   * Process node report.
+   *
+   * @param dnUuid
+   * @param nodeReport
+   */
+  @Override
+  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
+      this.updateNodeStat(dnUuid, nodeReport);
+  }
+
+  /**
    * Returns the aggregated node stats.
    * @return the aggregated node stats.
    */

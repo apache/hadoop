@@ -295,6 +295,17 @@ public class MockNodeManager implements NodeManager {
     }
   }
 
+  /**
+   * Empty implementation for processNodeReport.
+   *
+   * @param dnUuid
+   * @param nodeReport
+   */
+  @Override
+  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
+    // do nothing
+  }
+
   // Returns the number of commands that is queued to this node manager.
   public int getCommandCount(DatanodeDetails dd) {
     List<SCMCommand> list = commandMap.get(dd.getUuid());

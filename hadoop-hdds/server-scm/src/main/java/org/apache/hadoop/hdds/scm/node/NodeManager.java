@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
@@ -138,4 +139,12 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param command
    */
   void addDatanodeCommand(UUID dnId, SCMCommand command);
+
+  /**
+   * Process node report.
+   *
+   * @param dnUuid
+   * @param nodeReport
+   */
+  void processNodeReport(UUID dnUuid, NodeReportProto nodeReport);
 }

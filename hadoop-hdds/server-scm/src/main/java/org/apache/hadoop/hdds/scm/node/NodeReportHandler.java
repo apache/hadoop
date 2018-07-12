@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,25 +18,38 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles Node Reports from datanode.
  */
 public class NodeReportHandler implements EventHandler<NodeReportFromDatanode> {
 
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(NodeReportHandler.class);
   private final NodeManager nodeManager;
 
   public NodeReportHandler(NodeManager nodeManager) {
+    Preconditions.checkNotNull(nodeManager);
     this.nodeManager = nodeManager;
   }
 
   @Override
   public void onMessage(NodeReportFromDatanode nodeReportFromDatanode,
-                        EventPublisher publisher) {
-    //TODO: process node report.
+      EventPublisher publisher) {
+    Preconditions.checkNotNull(nodeReportFromDatanode);
+    DatanodeDetails dn = nodeReportFromDatanode.getDatanodeDetails();
+    Preconditions.checkNotNull(dn, "NodeReport is "
+        + "missing DatanodeDetails.");
+    LOGGER.trace("Processing node report for dn: {}", dn);
+    nodeManager
+        .processNodeReport(dn.getUuid(), nodeReportFromDatanode.getReport());
   }
 }
