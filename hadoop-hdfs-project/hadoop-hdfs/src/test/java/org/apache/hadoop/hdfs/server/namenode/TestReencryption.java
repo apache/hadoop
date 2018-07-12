@@ -67,6 +67,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -207,8 +208,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertNotEquals(fei0.getEzKeyVersionName(), zs.getEzKeyVersionName());
     assertEquals(fei1.getEzKeyVersionName(), zs.getEzKeyVersionName());
     assertEquals(10, zs.getFilesReencrypted());
@@ -600,12 +600,25 @@ public class TestReencryption {
     final ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     if (fei != null) {
       assertNotEquals(fei.getEzKeyVersionName(), zs.getEzKeyVersionName());
     }
     assertEquals(expectedFiles, zs.getFilesReencrypted());
+  }
+
+  /**
+   * Verify the zone status' completion time is larger than 0, and is no less
+   * than submission time.
+   */
+  private void verifyZoneCompletionTime(final ZoneReencryptionStatus zs) {
+    assertNotNull(zs);
+    assertTrue("Completion time should be positive. " + zs.getCompletionTime(),
+        zs.getCompletionTime() > 0);
+    assertTrue("Completion time " + zs.getCompletionTime()
+            + " should be no less than submission time "
+            + zs.getSubmissionTime(),
+        zs.getCompletionTime() >= zs.getSubmissionTime());
   }
 
   @Test
@@ -1476,7 +1489,7 @@ public class TestReencryption {
       }
 
       @Override
-      public void reencryptEncryptedKeys() throws IOException {
+      public synchronized void reencryptEncryptedKeys() throws IOException {
         if (exceptionCount > 0) {
           exceptionCount--;
           try {
@@ -1537,8 +1550,7 @@ public class TestReencryption {
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
     assertTrue(zs.isCanceled());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(0, zs.getFilesReencrypted());
 
     assertTrue(getUpdater().isRunning());
@@ -1560,8 +1572,7 @@ public class TestReencryption {
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
     assertFalse(zs.isCanceled());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(10, zs.getFilesReencrypted());
   }
 
@@ -1579,8 +1590,7 @@ public class TestReencryption {
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
     assertTrue(zs.isCanceled());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(0, zs.getFilesReencrypted());
 
     // verify re-encryption works after restart.
@@ -1592,8 +1602,7 @@ public class TestReencryption {
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
     assertFalse(zs.isCanceled());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(10, zs.getFilesReencrypted());
   }
 
@@ -1679,8 +1688,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(10, zs.getFilesReencrypted());
   }
 
@@ -1736,7 +1744,7 @@ public class TestReencryption {
       }
 
       @Override
-      public void reencryptEncryptedKeys() throws IOException {
+      public synchronized void reencryptEncryptedKeys() throws IOException {
         if (exceptionCount > 0) {
           --exceptionCount;
           throw new IOException("Injected KMS failure");
@@ -1772,8 +1780,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(5, zs.getFilesReencrypted());
     assertEquals(5, zs.getNumReencryptionFailures());
   }
@@ -1788,7 +1795,8 @@ public class TestReencryption {
       }
 
       @Override
-      public void reencryptUpdaterProcessOneTask() throws IOException {
+      public synchronized void reencryptUpdaterProcessOneTask()
+          throws IOException {
         if (exceptionCount > 0) {
           --exceptionCount;
           throw new IOException("Injected process task failure");
@@ -1824,8 +1832,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(5, zs.getFilesReencrypted());
     assertEquals(1, zs.getNumReencryptionFailures());
   }
@@ -1841,7 +1848,8 @@ public class TestReencryption {
       }
 
       @Override
-      public void reencryptUpdaterProcessCheckpoint() throws IOException {
+      public synchronized void reencryptUpdaterProcessCheckpoint()
+          throws IOException {
         if (exceptionCount > 0) {
           --exceptionCount;
           throw new IOException("Injected process checkpoint failure");
@@ -1877,8 +1885,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(10, zs.getFilesReencrypted());
     assertEquals(1, zs.getNumReencryptionFailures());
   }
@@ -1893,7 +1900,8 @@ public class TestReencryption {
       }
 
       @Override
-      public void reencryptUpdaterProcessOneTask() throws IOException {
+      public synchronized void reencryptUpdaterProcessOneTask()
+          throws IOException {
         if (exceptionCount > 0) {
           --exceptionCount;
           throw new RetriableException("Injected process task failure");
@@ -1930,8 +1938,7 @@ public class TestReencryption {
     ZoneReencryptionStatus zs = it.next();
     assertEquals(zone.toString(), zs.getZoneName());
     assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
-    assertTrue(zs.getCompletionTime() > 0);
-    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    verifyZoneCompletionTime(zs);
     assertEquals(10, zs.getFilesReencrypted());
     assertEquals(0, zs.getNumReencryptionFailures());
   }
