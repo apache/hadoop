@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.hdds.scm.container.states;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import java.util.HashSet;
+import java.util.Set;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +88,8 @@ public class ContainerStateMap {
   private final ContainerAttribute<ReplicationType> typeMap;
 
   private final Map<ContainerID, ContainerInfo> containerMap;
+  // Map to hold replicas of given container.
+  private final Map<ContainerID, Set<DatanodeDetails>> contReplicaMap;
   private final static NavigableSet<ContainerID> EMPTY_SET  =
       Collections.unmodifiableNavigableSet(new TreeSet<>());
 
@@ -101,6 +108,7 @@ public class ContainerStateMap {
     typeMap = new ContainerAttribute<>();
     containerMap = new HashMap<>();
     autoLock = new AutoCloseableLock();
+    contReplicaMap = new HashMap<>();
 //        new InstrumentedLock(getClass().getName(), LOG,
 //            new ReentrantLock(),
 //            1000,
@@ -155,6 +163,84 @@ public class ContainerStateMap {
   public ContainerInfo getContainerInfo(long containerID) {
     ContainerID id = new ContainerID(containerID);
     return containerMap.get(id);
+  }
+
+  /**
+   * Returns the latest list of DataNodes where replica for given containerId
+   * exist. Throws an SCMException if no entry is found for given containerId.
+   *
+   * @param containerID
+   * @return Set<DatanodeDetails>
+   */
+  public Set<DatanodeDetails> getContainerReplicas(ContainerID containerID)
+      throws SCMException {
+    Preconditions.checkNotNull(containerID);
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      if (contReplicaMap.containsKey(containerID)) {
+        return Collections
+            .unmodifiableSet(contReplicaMap.get(containerID));
+      }
+    }
+    throw new SCMException(
+        "No entry exist for containerId: " + containerID + " in replica map.",
+        ResultCodes.FAILED_TO_FIND_CONTAINER);
+  }
+
+  /**
+   * Adds given datanodes as nodes where replica for given containerId exist.
+   * Logs a debug entry if a datanode is already added as replica for given
+   * ContainerId.
+   *
+   * @param containerID
+   * @param dnList
+   */
+  public void addContainerReplica(ContainerID containerID,
+      DatanodeDetails... dnList) {
+    Preconditions.checkNotNull(containerID);
+    // Take lock to avoid race condition around insertion.
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      for (DatanodeDetails dn : dnList) {
+        Preconditions.checkNotNull(dn);
+        if (contReplicaMap.containsKey(containerID)) {
+          if(!contReplicaMap.get(containerID).add(dn)) {
+            LOG.debug("ReplicaMap already contains entry for container Id: "
+                + "{},DataNode: {}", containerID, dn);
+          }
+        } else {
+          Set<DatanodeDetails> dnSet = new HashSet<>();
+          dnSet.add(dn);
+          contReplicaMap.put(containerID, dnSet);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove a container Replica for given DataNode.
+   *
+   * @param containerID
+   * @param dn
+   * @return True of dataNode is removed successfully else false.
+   */
+  public boolean removeContainerReplica(ContainerID containerID,
+      DatanodeDetails dn) throws SCMException {
+    Preconditions.checkNotNull(containerID);
+    Preconditions.checkNotNull(dn);
+
+    // Take lock to avoid race condition.
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      if (contReplicaMap.containsKey(containerID)) {
+        return contReplicaMap.get(containerID).remove(dn);
+      }
+    }
+    throw new SCMException(
+        "No entry exist for containerId: " + containerID + " in replica map.",
+        ResultCodes.FAILED_TO_FIND_CONTAINER);
+  }
+
+  @VisibleForTesting
+  public static Logger getLOG() {
+    return LOG;
   }
 
   /**

@@ -17,14 +17,22 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.primitives.Longs;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Random;
+import org.slf4j.event.Level;
 
 /**
  * Tests for ContainerStateManager.
@@ -333,4 +342,74 @@ public class TestContainerStateManager {
       Assert.assertEquals(allocatedSize, currentInfo.getAllocatedBytes());
     }
   }
+
+  @Test
+  public void testReplicaMap() throws Exception {
+    GenericTestUtils.setLogLevel(ContainerStateMap.getLOG(), Level.DEBUG);
+    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+        .captureLogs(ContainerStateMap.getLOG());
+    DatanodeDetails dn1 = DatanodeDetails.newBuilder().setHostName("host1")
+        .setIpAddress("1.1.1.1")
+        .setUuid(UUID.randomUUID().toString()).build();
+    DatanodeDetails dn2 = DatanodeDetails.newBuilder().setHostName("host2")
+        .setIpAddress("2.2.2.2")
+        .setUuid(UUID.randomUUID().toString()).build();
+
+    // Test 1: no replica's exist
+    ContainerID containerID = ContainerID.valueof(RandomUtils.nextLong());
+    Set<DatanodeDetails> replicaSet;
+    LambdaTestUtils.intercept(SCMException.class, "", () -> {
+      containerStateManager.getContainerReplicas(containerID);
+    });
+
+    // Test 2: Add replica nodes and then test
+    containerStateManager.addContainerReplica(containerID, dn1);
+    containerStateManager.addContainerReplica(containerID, dn2);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(2, replicaSet.size());
+    Assert.assertTrue(replicaSet.contains(dn1));
+    Assert.assertTrue(replicaSet.contains(dn2));
+
+    // Test 3: Remove one replica node and then test
+    containerStateManager.removeContainerReplica(containerID, dn1);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(1, replicaSet.size());
+    Assert.assertFalse(replicaSet.contains(dn1));
+    Assert.assertTrue(replicaSet.contains(dn2));
+
+    // Test 3: Remove second replica node and then test
+    containerStateManager.removeContainerReplica(containerID, dn2);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(0, replicaSet.size());
+    Assert.assertFalse(replicaSet.contains(dn1));
+    Assert.assertFalse(replicaSet.contains(dn2));
+
+    // Test 4: Re-insert dn1
+    containerStateManager.addContainerReplica(containerID, dn1);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(1, replicaSet.size());
+    Assert.assertTrue(replicaSet.contains(dn1));
+    Assert.assertFalse(replicaSet.contains(dn2));
+
+    // Re-insert dn2
+    containerStateManager.addContainerReplica(containerID, dn2);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(2, replicaSet.size());
+    Assert.assertTrue(replicaSet.contains(dn1));
+    Assert.assertTrue(replicaSet.contains(dn2));
+
+    Assert.assertFalse(logCapturer.getOutput().contains(
+        "ReplicaMap already contains entry for container Id: " + containerID
+            .toString() + ",DataNode: " + dn1.toString()));
+    // Re-insert dn1
+    containerStateManager.addContainerReplica(containerID, dn1);
+    replicaSet = containerStateManager.getContainerReplicas(containerID);
+    Assert.assertEquals(2, replicaSet.size());
+    Assert.assertTrue(replicaSet.contains(dn1));
+    Assert.assertTrue(replicaSet.contains(dn2));
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "ReplicaMap already contains entry for container Id: " + containerID
+            .toString() + ",DataNode: " + dn1.toString()));
+  }
+
 }
