@@ -1197,19 +1197,23 @@ void test_trim_function() {
   free(trimmed);
 }
 
+int is_empty(char *name);
+
 void test_is_empty() {
   printf("\nTesting is_empty function\n");
   if (is_empty("/")) {
     printf("FAIL: / should not be empty\n");
     exit(1);
   }
-  if (is_empty("/tmp/2938rf2983hcqnw8ud/noexist")) {
-    printf("FAIL: /tmp/2938rf2983hcqnw8ud/noexist should not exist\n");
+  char *noexist = TEST_ROOT "/noexist";
+  if (is_empty(noexist)) {
+    printf("%s should not exist\n", noexist);
     exit(1);
   }
-  mkdir("/tmp/2938rf2983hcqnw8ud/emptydir", S_IRWXU);
-  if (!is_empty("/tmp/2938rf2983hcqnw8ud/emptydir")) {
-    printf("FAIL: /tmp/2938rf2983hcqnw8ud/emptydir be empty\n");
+  char *emptydir = TEST_ROOT "/emptydir";
+  mkdir(emptydir, S_IRWXU);
+  if (!is_empty(emptydir)) {
+    printf("FAIL: %s should be empty\n", emptydir);
     exit(1);
   }
 }
