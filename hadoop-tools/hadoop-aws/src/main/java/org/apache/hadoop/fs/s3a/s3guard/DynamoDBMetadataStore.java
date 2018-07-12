@@ -655,7 +655,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
           retryCount, 0, true);
       if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
         throw new IOException(
-            String.format("Max retries exceeded (%d) for DynamoDB",
+            String.format("Max retries exceeded (%d) for DynamoDB. This may be"
+                    + " because write threshold of DynamoDB is set too low.",
                 retryCount));
       } else {
         LOG.debug("Sleeping {} msec before next retry", action.delayMillis);
