@@ -49,6 +49,16 @@ public class ReregisterCommand extends
     return getProto().toByteArray();
   }
 
+  /**
+   * Not implemented for ReregisterCommand.
+   *
+   * @return cmdId.
+   */
+  @Override
+  public long getCmdId() {
+    return 0;
+  }
+
   public ReregisterCommandProto getProto() {
     return ReregisterCommandProto
         .newBuilder()

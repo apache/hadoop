@@ -21,8 +21,12 @@ package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .CommandStatusReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .ContainerReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .NodeReportFromDatanode;
 
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
@@ -34,47 +38,54 @@ import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 public final class SCMEvents {
 
   /**
-   * NodeReports are  sent out by Datanodes. This report is
-   * received by SCMDatanodeHeartbeatDispatcher and NodeReport Event is
-   * generated.
+   * NodeReports are  sent out by Datanodes. This report is received by
+   * SCMDatanodeHeartbeatDispatcher and NodeReport Event is generated.
    */
   public static final TypedEvent<NodeReportFromDatanode> NODE_REPORT =
       new TypedEvent<>(NodeReportFromDatanode.class, "Node_Report");
   /**
-   * ContainerReports are send out by Datanodes. This report
-   * is received by SCMDatanodeHeartbeatDispatcher and Container_Report Event
-   * i generated.
+   * ContainerReports are send out by Datanodes. This report is received by
+   * SCMDatanodeHeartbeatDispatcher and Container_Report Event
+   * isTestSCMDatanodeHeartbeatDispatcher generated.
    */
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
 
   /**
+   * A Command status report will be sent by datanodes. This repoort is received
+   * by SCMDatanodeHeartbeatDispatcher and CommandReport event is generated.
+   */
+  public static final TypedEvent<CommandStatusReportFromDatanode>
+      CMD_STATUS_REPORT =
+      new TypedEvent<>(CommandStatusReportFromDatanode.class,
+          "Cmd_Status_Report");
+
+  /**
    * When ever a command for the Datanode needs to be issued by any component
-   * inside SCM, a Datanode_Command event is generated. NodeManager listens
-   * to these events and dispatches them to Datanode for further processing.
+   * inside SCM, a Datanode_Command event is generated. NodeManager listens to
+   * these events and dispatches them to Datanode for further processing.
    */
   public static final Event<CommandForDatanode> DATANODE_COMMAND =
       new TypedEvent<>(CommandForDatanode.class, "Datanode_Command");
 
   /**
-   * A Close Container Event can be triggered under many condition.
-   * Some of them are:
-   *    1. A Container is full, then we stop writing further information to
-   *    that container. DN's let SCM know that current state and sends a
-   *    informational message that allows SCM to close the container.
-   *
-   *    2. If a pipeline is open; for example Ratis; if a single node fails,
-   *    we will proactively close these containers.
-   *
-   *  Once a command is dispatched to DN, we will also listen to updates from
-   *  the datanode which lets us know that this command completed or timed out.
+   * A Close Container Event can be triggered under many condition. Some of them
+   * are: 1. A Container is full, then we stop writing further information to
+   * that container. DN's let SCM know that current state and sends a
+   * informational message that allows SCM to close the container.
+   * <p>
+   * 2. If a pipeline is open; for example Ratis; if a single node fails, we
+   * will proactively close these containers.
+   * <p>
+   * Once a command is dispatched to DN, we will also listen to updates from the
+   * datanode which lets us know that this command completed or timed out.
    */
   public static final TypedEvent<ContainerID> CLOSE_CONTAINER =
       new TypedEvent<>(ContainerID.class, "Close_Container");
 
   /**
-   * This event will be triggered whenever a new datanode is
-   * registered with SCM.
+   * This event will be triggered whenever a new datanode is registered with
+   * SCM.
    */
   public static final TypedEvent<DatanodeDetails> NEW_NODE =
       new TypedEvent<>(DatanodeDetails.class, "New_Node");

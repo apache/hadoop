@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.
+    StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -37,7 +39,7 @@ import java.util.List;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
-
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.CMD_STATUS_REPORT;
 /**
  * This class is responsible for dispatching heartbeat from datanode to
  * appropriate EventHandler at SCM.
@@ -86,6 +88,13 @@ public final class SCMDatanodeHeartbeatDispatcher {
               heartbeat.getContainerReport()));
 
     }
+
+    if (heartbeat.hasCommandStatusReport()) {
+      eventPublisher.fireEvent(CMD_STATUS_REPORT,
+          new CommandStatusReportFromDatanode(datanodeDetails,
+              heartbeat.getCommandStatusReport()));
+    }
+
     return commands;
   }
 
@@ -132,6 +141,18 @@ public final class SCMDatanodeHeartbeatDispatcher {
 
     public ContainerReportFromDatanode(DatanodeDetails datanodeDetails,
         ContainerReportsProto report) {
+      super(datanodeDetails, report);
+    }
+  }
+
+  /**
+   * Container report event payload with origin.
+   */
+  public static class CommandStatusReportFromDatanode
+      extends ReportFromDatanode<CommandStatusReportsProto> {
+
+    public CommandStatusReportFromDatanode(DatanodeDetails datanodeDetails,
+        CommandStatusReportsProto report) {
       super(datanodeDetails, report);
     }
   }

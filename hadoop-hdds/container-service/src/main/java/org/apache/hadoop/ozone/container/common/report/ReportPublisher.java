@@ -93,4 +93,13 @@ public abstract class ReportPublisher<T extends GeneratedMessage>
    */
   protected abstract T getReport();
 
+  /**
+   * Returns {@link StateContext}.
+   *
+   * @return stateContext report
+   */
+  protected StateContext getContext() {
+    return context;
+  }
+
 }

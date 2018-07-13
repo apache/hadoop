@@ -30,7 +30,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
 
 import com.google.common.base.Preconditions;
 
@@ -41,11 +40,19 @@ public class ReplicateContainerCommand
     extends SCMCommand<ReplicateContainerCommandProto> {
 
   private final long containerID;
-
   private final List<DatanodeDetails> sourceDatanodes;
 
   public ReplicateContainerCommand(long containerID,
       List<DatanodeDetails> sourceDatanodes) {
+    super();
+    this.containerID = containerID;
+    this.sourceDatanodes = sourceDatanodes;
+  }
+
+  // Should be called only for protobuf conversion
+  public ReplicateContainerCommand(long containerID,
+      List<DatanodeDetails> sourceDatanodes, long cmdId) {
+    super(cmdId);
     this.containerID = containerID;
     this.sourceDatanodes = sourceDatanodes;
   }
@@ -62,6 +69,7 @@ public class ReplicateContainerCommand
 
   public ReplicateContainerCommandProto getProto() {
     Builder builder = ReplicateContainerCommandProto.newBuilder()
+        .setCmdId(getCmdId())
         .setContainerID(containerID);
     for (DatanodeDetails dd : sourceDatanodes) {
       builder.addSources(dd.getProtoBufMessage());
@@ -75,12 +83,12 @@ public class ReplicateContainerCommand
 
     List<DatanodeDetails> datanodeDetails =
         protoMessage.getSourcesList()
-        .stream()
-        .map(DatanodeDetails::getFromProtoBuf)
-        .collect(Collectors.toList());
+            .stream()
+            .map(DatanodeDetails::getFromProtoBuf)
+            .collect(Collectors.toList());
 
     return new ReplicateContainerCommand(protoMessage.getContainerID(),
-        datanodeDetails);
+        datanodeDetails, protoMessage.getCmdId());
 
   }
 

@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.slf4j.Logger;
 
 /**
  * Generic interface for handlers.
@@ -58,4 +59,14 @@ public interface CommandHandler {
    */
   long getAverageRunTime();
 
+  /**
+   * Default implementation for updating command status.
+   */
+  default void updateCommandStatus(StateContext context, SCMCommand command,
+      boolean cmdExecuted, Logger log) {
+    if (!context.updateCommandStatus(command.getCmdId(), cmdExecuted)) {
+      log.debug("{} with cmdId:{} not found.", command.getType(),
+          command.getCmdId());
+    }
+  }
 }

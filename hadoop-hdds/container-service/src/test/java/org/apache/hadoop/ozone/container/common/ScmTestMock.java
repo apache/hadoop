@@ -18,6 +18,8 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto.
+    StorageContainerDatanodeProtocolProtos.CommandStatus;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
@@ -59,6 +61,9 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
       new HashMap();
   private Map<DatanodeDetails, NodeReportProto> nodeReports = new HashMap<>();
+  private AtomicInteger commandStatusReport = new AtomicInteger(0);
+  private List<CommandStatus> cmdStatusList = new LinkedList<>();
+  private List<SCMCommandProto> scmCommandRequests = new LinkedList<>();
   /**
    * Returns the number of heartbeats made to this class.
    *
@@ -180,10 +185,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       sendHeartbeat(SCMHeartbeatRequestProto heartbeat) throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
+    if(heartbeat.hasCommandStatusReport()){
+      cmdStatusList.addAll(heartbeat.getCommandStatusReport().getCmdStatusList());
+      commandStatusReport.incrementAndGet();
+    }
     sleepIfNeeded();
-    List<SCMCommandProto>
-        cmdResponses = new LinkedList<>();
-    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(scmCommandRequests)
         .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
         .build();
   }
@@ -301,5 +308,25 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     containerReportsCount.set(0);
     nodeContainers.clear();
 
+  }
+
+  public int getCommandStatusReportCount() {
+    return commandStatusReport.get();
+  }
+
+  public List<CommandStatus> getCmdStatusList() {
+    return cmdStatusList;
+  }
+
+  public List<SCMCommandProto> getScmCommandRequests() {
+    return scmCommandRequests;
+  }
+
+  public void clearScmCommandRequests() {
+    scmCommandRequests.clear();
+  }
+
+  public void addScmCommandRequest(SCMCommandProto scmCmd) {
+    scmCommandRequests.add(scmCmd);
   }
 }

@@ -39,12 +39,17 @@ public class ReplicateContainerCommandHandler implements CommandHandler {
   private int invocationCount;
 
   private long totalTime;
+  private boolean cmdExecuted;
 
   @Override
   public void handle(SCMCommand command, OzoneContainer container,
       StateContext context, SCMConnectionManager connectionManager) {
     LOG.warn("Replicate command is not yet handled");
-
+    try {
+      cmdExecuted = true;
+    } finally {
+      updateCommandStatus(context, command, cmdExecuted, LOG);
+    }
   }
 
   @Override

@@ -17,15 +17,37 @@
  */
 package org.apache.hadoop.hdds;
 
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
- * Config class for HDDS.
+ * HDDS Id generator.
  */
-public final class HddsConfigKeys {
-  private HddsConfigKeys() {
+public final class HddsIdFactory {
+  private HddsIdFactory() {
   }
-  public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL =
-      "hdds.command.status.report.interval";
-  public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT =
-      ScmConfigKeys.OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT;
+
+  private static final AtomicLong LONG_COUNTER = new AtomicLong(
+      System.currentTimeMillis());
+
+  /**
+   * Returns an incrementing long. This class doesn't
+   * persist initial value for long Id's, so incremental id's after restart
+   * may collide with previously generated Id's.
+   *
+   * @return long
+   */
+  public static long getLongId() {
+    return LONG_COUNTER.incrementAndGet();
+  }
+
+  /**
+   * Returns a uuid.
+   *
+   * @return UUID.
+   */
+  public static UUID getUUId() {
+    return UUID.randomUUID();
+  }
+
 }
