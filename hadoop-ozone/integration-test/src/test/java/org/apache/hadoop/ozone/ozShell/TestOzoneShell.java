@@ -705,6 +705,18 @@ public class TestOzoneShell {
       randFile.read(dataBytes);
     }
     assertEquals(dataStr, DFSUtil.bytes2String(dataBytes));
+
+    tmpPath = baseDir.getAbsolutePath() + File.separatorChar + keyName;
+    args = new String[] {"-getKey",
+        url + "/" + volumeName + "/" + bucketName + "/" + keyName, "-file",
+        baseDir.getAbsolutePath()};
+    assertEquals(0, ToolRunner.run(shell, args));
+
+    dataBytes = new byte[dataStr.length()];
+    try (FileInputStream randFile = new FileInputStream(new File(tmpPath))) {
+      randFile.read(dataBytes);
+    }
+    assertEquals(dataStr, DFSUtil.bytes2String(dataBytes));
   }
 
   @Test

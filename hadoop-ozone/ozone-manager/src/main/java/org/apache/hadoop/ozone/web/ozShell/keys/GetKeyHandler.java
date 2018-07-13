@@ -98,11 +98,14 @@ public class GetKeyHandler extends Handler {
     Path dataFilePath = Paths.get(fileName);
     File dataFile = new File(fileName);
 
+    if (dataFile.exists() && dataFile.isDirectory()) {
+      dataFile = new File(fileName, keyName);
+    }
 
     if (dataFile.exists()) {
-      throw new OzoneClientException(fileName +
-                                         "exists. Download will overwrite an " +
-                                         "existing file. Aborting.");
+      throw new OzoneClientException(
+          fileName + "exists. Download will overwrite an "
+              + "existing file. Aborting.");
     }
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
