@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/stat.h>
 
 #define CONF_FILENAME "container-executor.cfg"
@@ -120,6 +121,11 @@ static void open_log_files() {
   if (ERRORFILE == NULL) {
     ERRORFILE = stderr;
   }
+
+  // There may be a process reading from stdout/stderr, and if it
+  // exits, we will crash on a SIGPIPE when we try to write to them.
+  // By ignoring SIGPIPE, we can handle the EPIPE instead of crashing.
+  signal(SIGPIPE, SIG_IGN);
 }
 
 /* Flushes and closes log files */
