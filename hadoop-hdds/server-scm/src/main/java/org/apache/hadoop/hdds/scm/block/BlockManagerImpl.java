@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -87,10 +88,12 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @param conf - configuration.
    * @param nodeManager - node manager.
    * @param containerManager - container manager.
+   * @param eventPublisher - event publisher.
    * @throws IOException
    */
   public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final Mapping containerManager)
+      final NodeManager nodeManager, final Mapping containerManager,
+      EventPublisher eventPublisher)
       throws IOException {
     this.nodeManager = nodeManager;
     this.containerManager = containerManager;
@@ -120,9 +123,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
             OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
             TimeUnit.MILLISECONDS);
     blockDeletingService =
-        new SCMBlockDeletingService(
-            deletedBlockLog, containerManager, nodeManager, svcInterval,
-            serviceTimeout, conf);
+        new SCMBlockDeletingService(deletedBlockLog, containerManager,
+            nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
   }
 
   /**
