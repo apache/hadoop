@@ -477,7 +477,7 @@ public class ContainerMapping implements Mapping {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
 
-     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
       byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
       lock.lock();
@@ -498,7 +498,9 @@ public class ContainerMapping implements Mapping {
           containerStore.put(dbKey, newState.toByteArray());
 
           // If the container is closed, then state is already written to SCM
-          Pipeline pipeline = pipelineSelector.getPipeline(newState.getPipelineName(), newState.getReplicationType());
+          Pipeline pipeline =
+              pipelineSelector.getPipeline(newState.getPipelineName(),
+                  newState.getReplicationType());
           if(pipeline == null) {
             pipeline = pipelineSelector
                 .getReplicationPipeline(newState.getReplicationType(),
@@ -712,5 +714,10 @@ public class ContainerMapping implements Mapping {
   @VisibleForTesting
   public MetadataStore getContainerStore() {
     return containerStore;
+  }
+
+  @VisibleForTesting
+  public PipelineSelector getPipelineSelector() {
+    return pipelineSelector;
   }
 }

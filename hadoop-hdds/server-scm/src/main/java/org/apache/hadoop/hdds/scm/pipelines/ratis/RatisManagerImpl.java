@@ -19,11 +19,11 @@ package org.apache.hadoop.hdds.scm.pipelines.ratis;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipelines.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -60,8 +60,9 @@ public class RatisManagerImpl extends PipelineManager {
    * @param nodeManager
    */
   public RatisManagerImpl(NodeManager nodeManager,
-      ContainerPlacementPolicy placementPolicy, long size, Configuration conf) {
-    super();
+      ContainerPlacementPolicy placementPolicy, long size, Configuration conf,
+      Node2PipelineMap map) {
+    super(map);
     this.conf = conf;
     this.nodeManager = nodeManager;
     ratisMembers = new HashSet<>();
@@ -89,11 +90,11 @@ public class RatisManagerImpl extends PipelineManager {
           ratisMembers.addAll(newNodesList);
           LOG.info("Allocating a new ratis pipeline of size: {}", count);
           // Start all channel names with "Ratis", easy to grep the logs.
-          String conduitName = PREFIX +
+          String pipelineName = PREFIX +
               UUID.randomUUID().toString().substring(PREFIX.length());
           Pipeline pipeline=
               PipelineSelector.newPipelineFromNodes(newNodesList,
-              LifeCycleState.OPEN, ReplicationType.RATIS, factor, conduitName);
+              LifeCycleState.OPEN, ReplicationType.RATIS, factor, pipelineName);
           try (XceiverClientRatis client =
               XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
             client.createPipeline(pipeline.getPipelineName(), newNodesList);

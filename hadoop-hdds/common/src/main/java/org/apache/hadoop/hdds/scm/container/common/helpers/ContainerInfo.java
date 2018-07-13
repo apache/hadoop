@@ -456,4 +456,15 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
           replicationFactor, replicationType);
     }
   }
+
+  /**
+   * Check if a container is in open state, this will check if the
+   * container is either open or allocated or creating. Any containers in
+   * these states is managed as an open container by SCM.
+   */
+  public boolean isContainerOpen() {
+    return state == HddsProtos.LifeCycleState.ALLOCATED ||
+        state == HddsProtos.LifeCycleState.CREATING ||
+        state == HddsProtos.LifeCycleState.OPEN;
+  }
 }

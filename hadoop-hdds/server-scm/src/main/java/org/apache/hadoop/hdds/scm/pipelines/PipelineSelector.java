@@ -19,7 +19,6 @@ package org.apache.hadoop.hdds.scm.pipelines;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
@@ -41,6 +40,8 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -55,7 +56,7 @@ public class PipelineSelector {
   private final RatisManagerImpl ratisManager;
   private final StandaloneManagerImpl standaloneManager;
   private final long containerSize;
-
+  private final Node2PipelineMap node2PipelineMap;
   /**
    * Constructs a pipeline Selector.
    *
@@ -69,12 +70,13 @@ public class PipelineSelector {
     this.containerSize = OzoneConsts.GB * this.conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    node2PipelineMap = new Node2PipelineMap();
     this.standaloneManager =
         new StandaloneManagerImpl(this.nodeManager, placementPolicy,
-            containerSize);
+            containerSize, node2PipelineMap);
     this.ratisManager =
         new RatisManagerImpl(this.nodeManager, placementPolicy, containerSize,
-            conf);
+            conf, node2PipelineMap);
   }
 
   /**
@@ -242,5 +244,19 @@ public class PipelineSelector {
         newDatanodes.stream().map(DatanodeDetails::toString)
             .collect(Collectors.joining(",")));
     manager.updatePipeline(pipelineID, newDatanodes);
+  }
+
+  public Node2PipelineMap getNode2PipelineMap() {
+    return node2PipelineMap;
+  }
+
+  public void removePipeline(UUID dnId) {
+    Set<Pipeline> pipelineChannelSet =
+        node2PipelineMap.getPipelines(dnId);
+    for (Pipeline pipelineChannel : pipelineChannelSet) {
+      getPipelineManager(pipelineChannel.getType())
+          .removePipeline(pipelineChannel);
+    }
+    node2PipelineMap.removeDatanode(dnId);
   }
 }

@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdds.scm.container;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -521,5 +522,10 @@ public class ContainerStateManager implements Closeable {
   public boolean removeContainerReplica(ContainerID containerID,
       DatanodeDetails dn) throws SCMException {
     return containers.removeContainerReplica(containerID, dn);
+  }
+  
+  @VisibleForTesting
+  public ContainerStateMap getContainerStateMap() {
+    return containers;
   }
 }

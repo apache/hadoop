@@ -40,11 +40,13 @@ public abstract class PipelineManager {
   private final List<Pipeline> activePipelines;
   private final Map<String, Pipeline> activePipelineMap;
   private final AtomicInteger pipelineIndex;
+  private final Node2PipelineMap node2PipelineMap;
 
-  public PipelineManager() {
+  public PipelineManager(Node2PipelineMap map) {
     activePipelines = new LinkedList<>();
     pipelineIndex = new AtomicInteger(0);
     activePipelineMap = new WeakHashMap<>();
+    node2PipelineMap = map;
   }
 
   /**
@@ -66,24 +68,23 @@ public abstract class PipelineManager {
      *
      * 2. This allows all nodes to part of a pipeline quickly.
      *
-     * 3. if there are not enough free nodes, return conduits in a
+     * 3. if there are not enough free nodes, return pipeline in a
      * round-robin fashion.
      *
      * TODO: Might have to come up with a better algorithm than this.
-     * Create a new placement policy that returns conduits in round robin
+     * Create a new placement policy that returns pipelines in round robin
      * fashion.
      */
-    Pipeline pipeline =
-        allocatePipeline(replicationFactor);
+    Pipeline pipeline = allocatePipeline(replicationFactor);
     if (pipeline != null) {
       LOG.debug("created new pipeline:{} for container with " +
               "replicationType:{} replicationFactor:{}",
           pipeline.getPipelineName(), replicationType, replicationFactor);
       activePipelines.add(pipeline);
       activePipelineMap.put(pipeline.getPipelineName(), pipeline);
+      node2PipelineMap.addPipeline(pipeline);
     } else {
-      pipeline =
-          findOpenPipeline(replicationType, replicationFactor);
+      pipeline = findOpenPipeline(replicationType, replicationFactor);
       if (pipeline != null) {
         LOG.debug("re-used pipeline:{} for container with " +
                 "replicationType:{} replicationFactor:{}",
@@ -133,6 +134,11 @@ public abstract class PipelineManager {
   public abstract Pipeline allocatePipeline(
       ReplicationFactor replicationFactor) throws IOException;
 
+  public void removePipeline(Pipeline pipeline) {
+    activePipelines.remove(pipeline);
+    activePipelineMap.remove(pipeline.getPipelineName());
+  }
+
   /**
    * Find a Pipeline that is operational.
    *
@@ -143,7 +149,7 @@ public abstract class PipelineManager {
     Pipeline pipeline = null;
     final int sentinal = -1;
     if (activePipelines.size() == 0) {
-      LOG.error("No Operational conduits found. Returning null.");
+      LOG.error("No Operational pipelines found. Returning null.");
       return null;
     }
     int startIndex = getNextIndex();
