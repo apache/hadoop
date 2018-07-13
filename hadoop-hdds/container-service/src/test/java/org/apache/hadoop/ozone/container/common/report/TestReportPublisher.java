@@ -111,7 +111,7 @@ public class TestReportPublisher {
     publisher.init(dummyContext, executorService);
     Thread.sleep(150);
     Assert.assertEquals(1, ((DummyReportPublisher) publisher).getReportCount);
-    Thread.sleep(150);
+    Thread.sleep(100);
     Assert.assertEquals(2, ((DummyReportPublisher) publisher).getReportCount);
     executorService.shutdown();
   }
