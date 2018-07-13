@@ -275,7 +275,9 @@ public class BlockRecoveryWorker {
         }
         // recover() guarantees syncList will have at least one replica with RWR
         // or better state.
-        assert minLength != Long.MAX_VALUE : "wrong minLength";
+        if (minLength == Long.MAX_VALUE) {
+          throw new IOException("Incorrect block size");
+        }
         newBlock.setNumBytes(minLength);
         break;
       case RUR:
