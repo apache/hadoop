@@ -23,7 +23,7 @@ import com.google.common.base.Throwables;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.StrBuilder;
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -89,7 +89,7 @@ public class PlanCommand extends Command {
    */
   @Override
   public void execute(CommandLine cmd) throws Exception {
-    StrBuilder result = new StrBuilder();
+    TextStringBuilder result = new TextStringBuilder();
     String outputLine = "";
     LOG.debug("Processing Plan Command.");
     Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.PLAN));

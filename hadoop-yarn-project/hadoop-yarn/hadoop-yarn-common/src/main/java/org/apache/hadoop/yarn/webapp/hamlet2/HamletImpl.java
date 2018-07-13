@@ -28,7 +28,7 @@ import java.util.EnumSet;
 import static java.util.EnumSet.*;
 import java.util.Iterator;
 
-import static org.apache.commons.lang3.StringEscapeUtils.*;
+import static org.apache.commons.text.StringEscapeUtils.*;
 import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.EOpt.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;

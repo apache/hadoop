@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeEcmaScript;
+import static org.apache.commons.text.StringEscapeUtils.escapeEcmaScript;
 import static org.apache.hadoop.yarn.util.StringHelper.djoin;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.split;

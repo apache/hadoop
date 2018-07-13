@@ -27,7 +27,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 import java.util.EnumSet;
 import java.util.Collection;
 
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
