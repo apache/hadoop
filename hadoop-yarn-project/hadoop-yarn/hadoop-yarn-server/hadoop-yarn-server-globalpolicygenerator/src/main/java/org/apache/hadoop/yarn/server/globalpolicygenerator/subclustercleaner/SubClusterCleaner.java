@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner;
 import java.util.Date;
 import java.util.Map;
 
-import org.apache.commons.lang.time.DurationFormatUtils;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
