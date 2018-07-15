@@ -392,7 +392,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
     private void configureSCMheartbeat() {
       if (hbInterval.isPresent()) {
-        conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
+        conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
             hbInterval.get(), TimeUnit.MILLISECONDS);
 
       } else {
