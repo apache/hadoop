@@ -68,7 +68,7 @@ public interface Container extends RwLock {
    * @return ContainerData - Container Data.
    * @throws StorageContainerException
    */
-  ContainerData getContainerData() throws StorageContainerException;
+  ContainerData getContainerData();
 
   /**
    * Get the Container Lifecycle state.

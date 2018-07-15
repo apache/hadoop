@@ -62,6 +62,8 @@ import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.KeyManager;
+import org.apache.hadoop.ozone.container.keyvalue.statemachine
+    .background.BlockDeletingService;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +73,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -90,6 +93,14 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Stage;
+import static org.apache.hadoop.ozone
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /**
  * Handler for KeyValue Container type.
@@ -102,6 +113,7 @@ public class KeyValueHandler extends Handler {
   private final ContainerType containerType;
   private final KeyManager keyManager;
   private final ChunkManager chunkManager;
+  private final BlockDeletingService blockDeletingService;
   private VolumeChoosingPolicy volumeChoosingPolicy;
   private final int maxContainerSizeGB;
   private final AutoCloseableLock handlerLock;
@@ -113,6 +125,18 @@ public class KeyValueHandler extends Handler {
     containerType = ContainerType.KeyValueContainer;
     keyManager = new KeyManagerImpl(config);
     chunkManager = new ChunkManagerImpl();
+    long svcInterval = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    long serviceTimeout = config
+        .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+            OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS);
+    this.blockDeletingService =
+        new BlockDeletingService(containerSet, svcInterval, serviceTimeout,
+            config);
+    blockDeletingService.start();
     // TODO: Add supoort for different volumeChoosingPolicies.
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
     maxContainerSizeGB = config.getInt(ScmConfigKeys

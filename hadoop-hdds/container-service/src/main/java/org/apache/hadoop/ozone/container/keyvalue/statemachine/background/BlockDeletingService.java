@@ -19,10 +19,14 @@
 package org.apache.hadoop.ozone.container.keyvalue.statemachine.background;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.ratis.shaded.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.commons.io.FileUtils;
@@ -69,6 +73,7 @@ public class BlockDeletingService extends BackgroundService{
       LoggerFactory.getLogger(BlockDeletingService.class);
 
   ContainerSet containerSet;
+  private ContainerDeletionChoosingPolicy containerDeletionPolicy;
   private final Configuration conf;
 
   // Throttle number of blocks to delete per task,
@@ -89,6 +94,10 @@ public class BlockDeletingService extends BackgroundService{
         TimeUnit.MILLISECONDS, BLOCK_DELETING_SERVICE_CORE_POOL_SIZE,
         serviceTimeout);
     this.containerSet = containerSet;
+    containerDeletionPolicy = ReflectionUtils.newInstance(conf.getClass(
+        ScmConfigKeys.OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY,
+        TopNOrderedContainerDeletionChoosingPolicy.class,
+        ContainerDeletionChoosingPolicy.class), conf);
     this.conf = conf;
     this.blockLimitPerTask = conf.getInt(
         OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER,
@@ -110,7 +119,7 @@ public class BlockDeletingService extends BackgroundService{
       // The chosen result depends on what container deletion policy is
       // configured.
       containers = containerSet.chooseContainerForBlockDeletion(
-          containerLimitPerInterval);
+          containerLimitPerInterval, containerDeletionPolicy);
       LOG.info("Plan to choose {} containers for block deletion, "
           + "actually returns {} valid containers.",
           containerLimitPerInterval, containers.size());

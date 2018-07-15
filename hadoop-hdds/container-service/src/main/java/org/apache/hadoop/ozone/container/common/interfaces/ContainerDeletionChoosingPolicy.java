@@ -28,7 +28,6 @@ import java.util.Map;
  * This interface is used for choosing desired containers for
  * block deletion.
  */
-// TODO: Fix ContainerDeletionChoosingPolicy to work with new StorageLayer
 public interface ContainerDeletionChoosingPolicy {
 
   /**

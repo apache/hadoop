@@ -30,6 +30,8 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common
+    .interfaces.ContainerDeletionChoosingPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -247,9 +249,15 @@ public class ContainerSet {
     return state;
   }
 
-  // TODO: Implement BlockDeletingService
-  public List<ContainerData> chooseContainerForBlockDeletion(
-      int count) throws StorageContainerException {
-    return null;
+  public List<ContainerData> chooseContainerForBlockDeletion(int count,
+      ContainerDeletionChoosingPolicy deletionPolicy)
+      throws StorageContainerException {
+    Map<Long, ContainerData> containerDataMap = containerMap.entrySet().stream()
+        .filter(e -> e.getValue().getContainerType()
+            == ContainerProtos.ContainerType.KeyValueContainer)
+        .collect(Collectors.toMap(Map.Entry::getKey,
+            e -> e.getValue().getContainerData()));
+    return deletionPolicy
+        .chooseContainerForBlockDeletion(count, containerDataMap);
   }
 }

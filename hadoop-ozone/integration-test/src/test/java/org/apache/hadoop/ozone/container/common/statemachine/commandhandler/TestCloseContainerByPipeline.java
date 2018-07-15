@@ -252,17 +252,13 @@ public class TestCloseContainerByPipeline {
   private Boolean isContainerClosed(MiniOzoneCluster cluster, long containerID,
       DatanodeDetails datanode) {
     ContainerData containerData;
-    try {
-      for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes())
-        if (datanode.equals(datanodeService.getDatanodeDetails())) {
-          containerData =
-              datanodeService.getDatanodeStateMachine().getContainer()
-                  .getContainerSet().getContainer(containerID).getContainerData();
-          return !containerData.isOpen();
-        }
-    } catch (StorageContainerException e) {
-      throw new AssertionError(e);
-    }
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes())
+      if (datanode.equals(datanodeService.getDatanodeDetails())) {
+        containerData =
+            datanodeService.getDatanodeStateMachine().getContainer()
+                .getContainerSet().getContainer(containerID).getContainerData();
+        return !containerData.isOpen();
+      }
     return false;
   }
 }

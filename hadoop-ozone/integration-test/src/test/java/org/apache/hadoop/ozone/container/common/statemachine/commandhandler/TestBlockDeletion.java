@@ -47,7 +47,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -58,11 +57,10 @@ import java.util.function.Consumer;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 
-@Ignore("Need to be fixed according to ContainerIO")
 public class TestBlockDeletion {
   private static OzoneConfiguration conf = null;
   private static ObjectStore store;
-  private static ContainerSet dnContainerManager = null;
+  private static ContainerSet dnContainerSet = null;
   private static StorageContainerManager scm = null;
   private static OzoneManager om = null;
   private static Set<Long> containerIdsWithDeletedBlocks;
@@ -88,7 +86,7 @@ public class TestBlockDeletion {
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
     store = OzoneClientFactory.getRpcClient(conf).getObjectStore();
-    dnContainerManager = cluster.getHddsDatanodes().get(0)
+    dnContainerSet = cluster.getHddsDatanodes().get(0)
         .getDatanodeStateMachine().getContainer().getContainerSet();
     om = cluster.getOzoneManager();
     scm = cluster.getStorageContainerManager();
@@ -140,7 +138,7 @@ public class TestBlockDeletion {
 
   private void matchContainerTransactionIds() throws IOException {
     List<ContainerData> containerDataList = new ArrayList<>();
-    dnContainerManager.listContainer(0, 10000, containerDataList);
+    dnContainerSet.listContainer(0, 10000, containerDataList);
     for (ContainerData containerData : containerDataList) {
       long containerId = containerData.getContainerID();
       if (containerIdsWithDeletedBlocks.contains(containerId)) {
@@ -150,7 +148,7 @@ public class TestBlockDeletion {
         Assert.assertEquals(
             scm.getContainerInfo(containerId).getDeleteTransactionId(), 0);
       }
-      Assert.assertEquals(dnContainerManager.getContainer(containerId)
+      Assert.assertEquals(dnContainerSet.getContainer(containerId)
               .getContainerData().getDeleteTransactionId(),
           scm.getContainerInfo(containerId).getDeleteTransactionId());
     }
@@ -162,7 +160,7 @@ public class TestBlockDeletion {
     return performOperationOnKeyContainers((blockID) -> {
       try {
         MetadataStore db = KeyUtils.getDB((KeyValueContainerData)
-                dnContainerManager.getContainer(blockID.getContainerID())
+                dnContainerSet.getContainer(blockID.getContainerID())
                     .getContainerData(), conf);
         Assert.assertNotNull(db.get(Longs.toByteArray(blockID.getLocalID())));
       } catch (IOException e) {
@@ -177,7 +175,7 @@ public class TestBlockDeletion {
     return performOperationOnKeyContainers((blockID) -> {
       try {
         MetadataStore db = KeyUtils.getDB((KeyValueContainerData)
-            dnContainerManager.getContainer(blockID.getContainerID())
+            dnContainerSet.getContainer(blockID.getContainerID())
                 .getContainerData(), conf);
         Assert.assertNull(db.get(Longs.toByteArray(blockID.getLocalID())));
         Assert.assertNull(db.get(DFSUtil.string2Bytes(

@@ -231,8 +231,9 @@ public final class ScmConfigKeys {
       "ozone.scm.container.provision_batch_size";
   public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 20;
 
-  public static final String OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY =
-      "ozone.scm.container.deletion-choosing.policy";
+  public static final String
+      OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY =
+      "ozone.scm.keyvalue.container.deletion-choosing.policy";
 
   public static final String OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT =
       "ozone.scm.container.creation.lease.timeout";

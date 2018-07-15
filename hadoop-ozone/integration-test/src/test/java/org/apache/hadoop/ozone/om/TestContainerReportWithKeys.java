@@ -131,13 +131,10 @@ public class TestContainerReportWithKeys {
 
   private static ContainerData getContainerData(long containerID) {
     ContainerData containerData;
-    try {
-      ContainerSet containerManager = cluster.getHddsDatanodes().get(0)
-          .getDatanodeStateMachine().getContainer().getContainerSet();
-      containerData = containerManager.getContainer(containerID).getContainerData();
-    } catch (StorageContainerException e) {
-      throw new AssertionError(e);
-    }
+    ContainerSet containerManager = cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine().getContainer().getContainerSet();
+    containerData =
+        containerManager.getContainer(containerID).getContainerData();
     return containerData;
   }
 }

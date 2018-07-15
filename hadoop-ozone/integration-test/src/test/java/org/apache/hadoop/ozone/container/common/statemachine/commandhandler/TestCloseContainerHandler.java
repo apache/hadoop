@@ -102,14 +102,10 @@ public class TestCloseContainerHandler {
   private Boolean isContainerClosed(MiniOzoneCluster cluster,
       long containerID) {
     ContainerData containerData;
-    try {
-      containerData = cluster.getHddsDatanodes().get(0)
-          .getDatanodeStateMachine().getContainer().getContainerSet()
-          .getContainer(containerID).getContainerData();
-      return !containerData.isOpen();
-    } catch (StorageContainerException e) {
-      throw new AssertionError(e);
-    }
+    containerData = cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine().getContainer().getContainerSet()
+        .getContainer(containerID).getContainerData();
+    return !containerData.isOpen();
   }
 
 }
