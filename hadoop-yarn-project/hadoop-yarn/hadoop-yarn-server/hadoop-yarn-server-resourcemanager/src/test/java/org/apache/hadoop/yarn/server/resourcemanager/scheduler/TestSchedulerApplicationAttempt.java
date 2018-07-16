@@ -58,6 +58,50 @@ public class TestSchedulerApplicationAttempt {
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.shutdown();
   }
+
+  @Test
+  public void testActiveUsersWhenMove() {
+    final String user = "user1";
+    Queue parentQueue = createQueue("parent", null);
+    Queue queue1 = createQueue("queue1", parentQueue);
+    Queue queue2 = createQueue("queue2", parentQueue);
+    Queue queue3 = createQueue("queue3", parentQueue);
+
+    ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(3L);
+    SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
+        user, queue1, queue1.getAbstractUsersManager(), rmContext);
+
+    // Resource request
+    Resource requestedResource = Resource.newInstance(1536, 2);
+    Priority requestedPriority = Priority.newInstance(2);
+    ResourceRequest request = ResourceRequest.newInstance(requestedPriority,
+        ResourceRequest.ANY, requestedResource, 1);
+    app.updateResourceRequests(Arrays.asList(request));
+
+    assertEquals(1, queue1.getAbstractUsersManager().getNumActiveUsers());
+    // move app from queue1 to queue2
+    app.move(queue2);
+    // Active user count has to decrease from queue1
+    assertEquals(0, queue1.getAbstractUsersManager().getNumActiveUsers());
+    // Increase the active user count in queue2 if the moved app has pending requests
+    assertEquals(1, queue2.getAbstractUsersManager().getNumActiveUsers());
+
+    // Allocated container
+    RMContainer container1 = createRMContainer(appAttId, 1, requestedResource);
+    app.liveContainers.put(container1.getContainerId(), container1);
+    SchedulerNode node = createNode();
+    app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node,
+        toSchedulerKey(requestedPriority), container1.getContainer());
+
+    // Active user count has to decrease from queue2 due to app has NO pending requests
+    assertEquals(0, queue2.getAbstractUsersManager().getNumActiveUsers());
+    // move app from queue2 to queue3
+    app.move(queue3);
+    // Active user count in queue3 stays same if the moved app has NO pending requests
+    assertEquals(0, queue3.getAbstractUsersManager().getNumActiveUsers());
+  }
   
   @Test
   public void testMove() {
