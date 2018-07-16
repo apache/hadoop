@@ -76,17 +76,6 @@ public abstract class Resource implements Comparable<Resource> {
   @Private
   public static final int VCORES_INDEX = 1;
 
-  /**
-   * Return a new {@link Resource} instance with all resource values
-   * initialized to {@code value}.
-   * @param value the value to use for all resources
-   * @return a new {@link Resource} instance
-   */
-  @Private
-  @Unstable
-  public static Resource newInstance(long value) {
-    return new LightWeightResource(value);
-  }
 
   @Public
   @Stable

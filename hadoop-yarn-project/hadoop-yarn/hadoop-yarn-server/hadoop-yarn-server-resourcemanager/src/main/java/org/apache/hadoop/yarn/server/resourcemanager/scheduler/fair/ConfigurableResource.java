@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * A {@code ConfigurableResource} object represents an entity that is used to
@@ -46,8 +47,13 @@ public class ConfigurableResource {
     this.resource = null;
   }
 
+  /**
+   * Creates a  {@link ConfigurableResource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   */
   ConfigurableResource(long value) {
-    this(Resource.newInstance(value));
+    this(Resources.createResourceWithSameValue(value));
   }
 
   public ConfigurableResource(Resource resource) {

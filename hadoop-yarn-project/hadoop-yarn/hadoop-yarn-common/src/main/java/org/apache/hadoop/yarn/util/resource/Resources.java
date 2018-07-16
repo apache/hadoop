@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.util.resource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
@@ -39,10 +41,29 @@ public class Resources {
       LogFactory.getLog(Resources.class);
 
   /**
+   * Return a new {@link Resource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   * @return a new {@link Resource} instance
+   */
+  @Private
+  @Unstable
+  public static Resource createResourceWithSameValue(long value) {
+    LightWeightResource res = new LightWeightResource(value,
+            Long.valueOf(value).intValue());
+    int numberOfResources = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 2; i < numberOfResources; i++) {
+      res.setResourceValue(i, value);
+    }
+
+    return res;
+  }
+
+  /**
    * Helper class to create a resource with a fixed value for all resource
    * types. For example, a NONE resource which returns 0 for any resource type.
    */
-  @InterfaceAudience.Private
+  @Private
   @Unstable
   static class FixedValueResource extends Resource {
 
