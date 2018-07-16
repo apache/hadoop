@@ -42,6 +42,23 @@ public class RouterSafemodeService extends PeriodicService {
   /** Router to manage safe mode. */
   private final Router router;
 
+  /**
+   * If we are in safe mode, fail requests as if a standby NN.
+   * Router can enter safe mode in two different ways:
+   *   1. upon start up: router enters this mode after service start, and will
+   *      exit after certain time threshold;
+   *   2. via admin command: router enters this mode via admin command:
+   *        dfsrouteradmin -safemode enter
+   *      and exit after admin command:
+   *        dfsrouteradmin -safemode leave
+   */
+
+  /** Whether Router is in safe mode */
+  private volatile boolean safeMode;
+
+  /** Whether the Router safe mode is set manually (i.e., via Router admin) */
+  private volatile boolean isSafeModeSetManually;
+
   /** Interval in ms to wait post startup before allowing RPC requests. */
   private long startupInterval;
   /** Interval in ms after which the State Store cache is too stale. */
@@ -64,13 +81,28 @@ public class RouterSafemodeService extends PeriodicService {
   }
 
   /**
+   * Return whether the current Router is in safe mode.
+   */
+  boolean isInSafeMode() {
+    return this.safeMode;
+  }
+
+  /**
+   * Set the flag to indicate that the safe mode for this Router is set manually
+   * via the Router admin command.
+   */
+  void setManualSafeMode(boolean mode) {
+    this.safeMode = mode;
+    this.isSafeModeSetManually = mode;
+  }
+
+  /**
    * Enter safe mode.
    */
   private void enter() {
     LOG.info("Entering safe mode");
     enterSafeModeTime = now();
-    RouterRpcServer rpcServer = router.getRpcServer();
-    rpcServer.setSafeMode(true);
+    safeMode = true;
     router.updateRouterState(RouterServiceState.SAFEMODE);
   }
 
@@ -87,8 +119,7 @@ public class RouterSafemodeService extends PeriodicService {
     } else {
       routerMetrics.setSafeModeTime(timeInSafemode);
     }
-    RouterRpcServer rpcServer = router.getRpcServer();
-    rpcServer.setSafeMode(false);
+    safeMode = false;
     router.updateRouterState(RouterServiceState.RUNNING);
   }
 
@@ -131,17 +162,16 @@ public class RouterSafemodeService extends PeriodicService {
           this.startupInterval - delta);
       return;
     }
-    RouterRpcServer rpcServer = router.getRpcServer();
     StateStoreService stateStore = router.getStateStore();
     long cacheUpdateTime = stateStore.getCacheUpdateTime();
     boolean isCacheStale = (now - cacheUpdateTime) > this.staleInterval;
 
     // Always update to indicate our cache was updated
     if (isCacheStale) {
-      if (!rpcServer.isInSafeMode()) {
+      if (!safeMode) {
         enter();
       }
-    } else if (rpcServer.isInSafeMode()) {
+    } else if (safeMode && !isSafeModeSetManually) {
       // Cache recently updated, leave safe mode
       leave();
     }
