@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
@@ -33,13 +34,7 @@ import org.junit.Test;
 import java.util.Arrays;
 
 public class TestAppNameMappingPlacementRule {
-
-  private static final long CLUSTER_TIMESTAMP = System.currentTimeMillis();
-  public static final String APPIDSTRPREFIX = "application";
-  private static final String APPLICATION_ID_PREFIX = APPIDSTRPREFIX + '_';
-  private static final String APPLICATION_ID_SUFFIX = '_' + "0001";
-  private static final String CLUSTER_APP_ID = APPLICATION_ID_PREFIX +
-      CLUSTER_TIMESTAMP + APPLICATION_ID_SUFFIX;
+  private static final String APP_NAME = "DistributedShell";
 
   private YarnConfiguration conf = new YarnConfiguration();
 
@@ -50,24 +45,29 @@ public class TestAppNameMappingPlacementRule {
   }
 
   private void verifyQueueMapping(QueueMappingEntity queueMapping,
-      String inputAppId, String expectedQueue) throws YarnException {
-    verifyQueueMapping(queueMapping, inputAppId,
-        YarnConfiguration.DEFAULT_QUEUE_NAME, expectedQueue, false);
+      String user, String expectedQueue) throws YarnException {
+    verifyQueueMapping(queueMapping, user,
+        queueMapping.getQueue(), expectedQueue, false);
   }
 
   private void verifyQueueMapping(QueueMappingEntity queueMapping,
-      String inputAppId, String inputQueue, String expectedQueue,
+      String user, String inputQueue, String expectedQueue,
       boolean overwrite) throws YarnException {
     AppNameMappingPlacementRule rule = new AppNameMappingPlacementRule(
         overwrite, Arrays.asList(queueMapping));
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
+    if (inputQueue.equals("%application")) {
+      inputQueue = APP_NAME;
+    }
     asc.setQueue(inputQueue);
-    ApplicationId appId = ApplicationId.newInstance(CLUSTER_TIMESTAMP,
-        Integer.parseInt(inputAppId));
-    asc.setApplicationId(appId);
+    String appName = queueMapping.getSource();
+    if (appName.equals("%application")) {
+      appName = APP_NAME;
+    }
+    asc.setApplicationName(appName);
     ApplicationPlacementContext ctx = rule.getPlacementForApp(asc,
-        queueMapping.getSource());
+        user);
     Assert.assertEquals(expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
   }
@@ -75,19 +75,20 @@ public class TestAppNameMappingPlacementRule {
   @Test
   public void testMapping() throws YarnException {
     // simple base case for mapping user to queue
-    verifyQueueMapping(new QueueMappingEntity(CLUSTER_APP_ID,
-        "q1"), "1", "q1");
-    verifyQueueMapping(new QueueMappingEntity("%application", "q2"), "1", "q2");
+    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+        "q1"), "user_1", "q1");
+    verifyQueueMapping(new QueueMappingEntity("%application", "q2"), "user_1",
+        "q2");
     verifyQueueMapping(new QueueMappingEntity("%application", "%application"),
-        "1", CLUSTER_APP_ID);
+        "user_1", APP_NAME);
 
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
-    verifyQueueMapping(new QueueMappingEntity(CLUSTER_APP_ID,
+    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
         "q1"), "1", "q2", "q1", true);
 
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMappingEntity(CLUSTER_APP_ID,
+    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
             "q1"), "1", "q2", "q2", false);
   }
 }
