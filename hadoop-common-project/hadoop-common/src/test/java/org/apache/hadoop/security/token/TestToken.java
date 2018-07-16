@@ -21,6 +21,7 @@ package org.apache.hadoop.security.token;
 import java.io.*;
 import java.util.Arrays;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
@@ -97,6 +98,23 @@ public class TestToken {
       copy.decodeFromUrlString(encode);
       assertEquals(orig, copy);
       checkUrlSafe(encode);
+    }
+  }
+
+  /*
+   * Test decodeWritable() with null newValue string argument,
+   * should throw HadoopIllegalArgumentException.
+   */
+  @Test
+  public void testDecodeWritableArgSanityCheck() throws Exception {
+    Token<AbstractDelegationTokenIdentifier> token =
+            new Token<AbstractDelegationTokenIdentifier>();
+    try {
+      token.decodeFromUrlString(null);
+      fail("Should have thrown HadoopIllegalArgumentException");
+    }
+    catch (HadoopIllegalArgumentException e) {
+      Token.LOG.info("Test decodeWritable() sanity check success.");
     }
   }
 

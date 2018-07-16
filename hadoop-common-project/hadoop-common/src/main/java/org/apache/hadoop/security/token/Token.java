@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import com.google.common.primitives.Bytes;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -358,6 +359,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    */
   private static void decodeWritable(Writable obj,
                                      String newValue) throws IOException {
+    if (newValue == null) {
+      throw new HadoopIllegalArgumentException(
+              "Invalid argument, newValue is null");
+    }
     Base64 decoder = new Base64(0, null, true);
     DataInputBuffer buf = new DataInputBuffer();
     byte[] decoded = decoder.decode(newValue);
