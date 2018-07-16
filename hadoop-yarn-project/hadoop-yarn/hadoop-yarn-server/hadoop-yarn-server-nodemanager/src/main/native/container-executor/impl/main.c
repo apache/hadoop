@@ -128,11 +128,13 @@ static void flush_and_close_log_files() {
     LOGFILE = NULL;
   }
 
-if (ERRORFILE != NULL) {
+  if (ERRORFILE != NULL) {
     fflush(ERRORFILE);
     fclose(ERRORFILE);
     ERRORFILE = NULL;
   }
+
+  free_executor_configurations();
 }
 
 /** Validates the current container-executor setup. Causes program exit
