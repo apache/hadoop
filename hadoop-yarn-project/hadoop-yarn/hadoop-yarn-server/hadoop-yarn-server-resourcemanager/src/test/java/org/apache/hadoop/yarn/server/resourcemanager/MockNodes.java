@@ -286,6 +286,11 @@ public class MockNodes {
     }
 
     @Override
+    public RMContext getRMContext() {
+      return null;
+    }
+
+    @Override
     public Resource getPhysicalResource() {
       return this.physicalResource;
     }

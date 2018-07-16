@@ -1541,4 +1541,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     return context.getAllocationTagsManager()
         .getAllocationTagsWithCount(getNodeID());
   }
+
+  @Override
+  public RMContext getRMContext() {
+    return this.context;
+  }
 }

@@ -60,10 +60,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -401,6 +405,7 @@ public class TestRMContainerImpl {
 
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         "host:3465", resource, priority, null);
+    container.setAllocationTags(ImmutableSet.of("mapper"));
     ConcurrentMap<ApplicationId, RMApp> rmApps =
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
@@ -423,11 +428,14 @@ public class TestRMContainerImpl {
         true);
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
 
+    RMNode rmNode = new RMNodeImpl(nodeId, rmContext,
+        "localhost", 0, 0, null, Resource.newInstance(10240, 10), null);
+    SchedulerNode schedulerNode = new FiCaSchedulerNode(rmNode, false);
+
     /* First container: ALLOCATED -> KILLED */
     RMContainerImpl rmContainer = new RMContainerImpl(container,
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
-    rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -437,6 +445,7 @@ public class TestRMContainerImpl {
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
+    schedulerNode.allocateContainer(rmContainer);
 
     Assert.assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -446,6 +455,7 @@ public class TestRMContainerImpl {
     rmContainer.handle(new RMContainerFinishedEvent(containerId, ContainerStatus
         .newInstance(containerId, ContainerState.COMPLETE, "", 0),
         RMContainerEventType.KILL));
+    schedulerNode.releaseContainer(container.getId(), true);
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -465,6 +475,7 @@ public class TestRMContainerImpl {
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
+    schedulerNode.allocateContainer(rmContainer);
 
     Assert.assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -477,6 +488,7 @@ public class TestRMContainerImpl {
     rmContainer.handle(new RMContainerFinishedEvent(containerId, ContainerStatus
         .newInstance(containerId, ContainerState.COMPLETE, "", 0),
         RMContainerEventType.FINISHED));
+    schedulerNode.releaseContainer(container.getId(), true);
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -496,6 +508,7 @@ public class TestRMContainerImpl {
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
+    schedulerNode.allocateContainer(rmContainer);
 
     Assert.assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId,
@@ -511,6 +524,7 @@ public class TestRMContainerImpl {
     rmContainer.handle(new RMContainerFinishedEvent(containerId, ContainerStatus
         .newInstance(containerId, ContainerState.COMPLETE, "", 0),
         RMContainerEventType.FINISHED));
+    schedulerNode.releaseContainer(container.getId(), true);
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId,
