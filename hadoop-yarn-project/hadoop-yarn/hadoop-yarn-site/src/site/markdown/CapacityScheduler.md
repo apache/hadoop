@@ -162,7 +162,7 @@ Configuration
 | Property | Description |
 |:---- |:---- |
 | `yarn.scheduler.capacity.queue-mappings` | This configuration specifies the mapping of user or group to a specific queue. You can map a single user or a list of users to queues. Syntax: `[u or g]:[name]:[queue_name][,next_mapping]*`. Here, *u or g* indicates whether the mapping is for a user or group. The value is *u* for user and *g* for group. *name* indicates the user name or group name. To specify the user who has submitted the application, %user can be used. *queue_name* indicates the queue name for which the application has to be mapped. To specify queue name same as user name, *%user* can be used. To specify queue name same as the name of the primary group for which the user belongs to, *%primary_group* can be used.|
-| `yarn.scheduler.queue-placement-rules.app-name` | This configuration specifies the mapping of application_id to a specific queue. You can map a single application or a list of applications to queues. Syntax: `[app_id]:[queue_name][,next_mapping]*`. Here, *app_id* indicates the application id you want to do the mapping. To specify the current application's id as the app_id, %application can be used. *queue_name* indicates the queue name for which the application has to be mapped. To specify queue name same as application id, *%application* can be used.|
+| `yarn.scheduler.queue-placement-rules.app-name` | This configuration specifies the mapping of application_name to a specific queue. You can map a single application or a list of applications to queues. Syntax: `[app_name]:[queue_name][,next_mapping]*`. Here, *app_name* indicates the application name you want to do the mapping. *queue_name* indicates the queue name for which the application has to be mapped. To specify the current application's name as the app_name, %application can be used.|
 | `yarn.scheduler.capacity.queue-mappings-override.enable` | This function is used to specify whether the user specified queues can be overridden. This is a Boolean value and the default value is *false*. |
 
 Example:
@@ -181,9 +181,9 @@ Example:
 
   <property>
     <name>yarn.scheduler.queue-placement-rules.app-name</name>
-    <value>appId1:queue1,%application:%application</value>
+    <value>appName1:queue1,%application:%application</value>
     <description>
-      Here, <appId1> is mapped to <queue1>, maps applications to queues with
+      Here, <appName1> is mapped to <queue1>, maps applications to queues with
       the same name as application respectively. The mappings will be
       evaluated from left to right, and the first valid mapping will be used.
     </description>
