@@ -767,7 +767,9 @@ public class AppSchedulingInfo {
     newMetrics.moveAppTo(this);
     activeUsersManager.deactivateApplication(user, applicationId);
     activeUsersManager = newQueue.getActiveUsersManager();
-    activeUsersManager.activateApplication(user, applicationId);
+    if (!priorities.isEmpty()) {
+      activeUsersManager.activateApplication(user, applicationId);
+    }
     this.queue = newQueue;
   }
 
