@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.RestartServiceRequestProto;
@@ -66,6 +68,7 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.ServiceMaster;
 import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
@@ -100,6 +103,7 @@ import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.*;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
@@ -316,6 +320,49 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     } else {
       return EXIT_FALSE;
     }
+  }
+
+  @Override
+  public String getInstances(String appName,
+      List<String> components, String version, List<String> containerStates)
+      throws IOException, YarnException {
+    GetCompInstancesResponseProto result = filterContainers(appName, components,
+        version, containerStates);
+    return result.getCompInstances();
+  }
+
+  public Container[] getContainers(String appName, List<String> components,
+      String version, List<ContainerState> containerStates)
+      throws IOException, YarnException {
+    GetCompInstancesResponseProto result = filterContainers(appName, components,
+        version, containerStates != null ? containerStates.stream()
+            .map(Enum::toString).collect(Collectors.toList()) : null);
+
+    return ServiceApiUtil.CONTAINER_JSON_SERDE.fromJson(
+        result.getCompInstances());
+  }
+
+  private GetCompInstancesResponseProto filterContainers(String appName,
+      List<String> components, String version,
+      List<String> containerStates) throws IOException, YarnException {
+    ApplicationReport appReport = yarnClient.getApplicationReport(getAppId(
+        appName));
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      throw new YarnException(appName + " AM hostname is empty.");
+    }
+    ClientAMProtocol proxy = createAMProxy(appName, appReport);
+    GetCompInstancesRequestProto.Builder req = GetCompInstancesRequestProto
+        .newBuilder();
+    if (components != null && !components.isEmpty()) {
+      req.addAllComponentNames(components);
+    }
+    if (version != null) {
+      req.setVersion(version);
+    }
+    if (containerStates != null && !containerStates.isEmpty()){
+      req.addAllContainerStates(containerStates);
+    }
+    return proxy.getCompInstances(req.build());
   }
 
   public int actionUpgrade(Service service, List<Container> compInstances)

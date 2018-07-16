@@ -72,6 +72,15 @@ public class ServiceApiUtil {
   public static JsonSerDeser<Service> jsonSerDeser =
       new JsonSerDeser<>(Service.class,
           PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
+  public static final JsonSerDeser<Container[]> CONTAINER_JSON_SERDE =
+      new JsonSerDeser<>(Container[].class,
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
+  public static final JsonSerDeser<Component[]> COMP_JSON_SERDE =
+      new JsonSerDeser<>(Component[].class,
+          PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
 
