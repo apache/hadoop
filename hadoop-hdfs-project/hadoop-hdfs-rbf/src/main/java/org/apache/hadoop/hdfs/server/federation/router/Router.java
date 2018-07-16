@@ -665,4 +665,11 @@ public class Router extends CompositeService {
   Collection<NamenodeHeartbeatService> getNamenodeHearbeatServices() {
     return this.namenodeHeartbeatServices;
   }
+
+  /**
+   * Get the Router safe mode service
+   */
+  RouterSafemodeService getSafemodeService() {
+    return this.safemodeService;
+  }
 }

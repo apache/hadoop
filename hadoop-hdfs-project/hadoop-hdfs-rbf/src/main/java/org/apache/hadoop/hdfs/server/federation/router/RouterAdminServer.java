@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -272,23 +273,37 @@ public class RouterAdminServer extends AbstractService
   @Override
   public EnterSafeModeResponse enterSafeMode(EnterSafeModeRequest request)
       throws IOException {
-    this.router.updateRouterState(RouterServiceState.SAFEMODE);
-    this.router.getRpcServer().setSafeMode(true);
-    return EnterSafeModeResponse.newInstance(verifySafeMode(true));
+    boolean success = false;
+    RouterSafemodeService safeModeService = this.router.getSafemodeService();
+    if (safeModeService != null) {
+      this.router.updateRouterState(RouterServiceState.SAFEMODE);
+      safeModeService.setManualSafeMode(true);
+      success = verifySafeMode(true);
+    }
+    return EnterSafeModeResponse.newInstance(success);
   }
 
   @Override
   public LeaveSafeModeResponse leaveSafeMode(LeaveSafeModeRequest request)
       throws IOException {
-    this.router.updateRouterState(RouterServiceState.RUNNING);
-    this.router.getRpcServer().setSafeMode(false);
-    return LeaveSafeModeResponse.newInstance(verifySafeMode(false));
+    boolean success = false;
+    RouterSafemodeService safeModeService = this.router.getSafemodeService();
+    if (safeModeService != null) {
+      this.router.updateRouterState(RouterServiceState.RUNNING);
+      safeModeService.setManualSafeMode(false);
+      success = verifySafeMode(false);
+    }
+    return LeaveSafeModeResponse.newInstance(success);
   }
 
   @Override
   public GetSafeModeResponse getSafeMode(GetSafeModeRequest request)
       throws IOException {
-    boolean isInSafeMode = this.router.getRpcServer().isInSafeMode();
+    boolean isInSafeMode = false;
+    RouterSafemodeService safeModeService = this.router.getSafemodeService();
+    if (safeModeService != null) {
+      isInSafeMode = safeModeService.isInSafeMode();
+    }
     return GetSafeModeResponse.newInstance(isInSafeMode);
   }
 
@@ -298,7 +313,8 @@ public class RouterAdminServer extends AbstractService
    * @return
    */
   private boolean verifySafeMode(boolean isInSafeMode) {
-    boolean serverInSafeMode = this.router.getRpcServer().isInSafeMode();
+    Preconditions.checkNotNull(this.router.getSafemodeService());
+    boolean serverInSafeMode = this.router.getSafemodeService().isInSafeMode();
     RouterServiceState currentState = this.router.getRouterState();
 
     return (isInSafeMode && currentState == RouterServiceState.SAFEMODE
