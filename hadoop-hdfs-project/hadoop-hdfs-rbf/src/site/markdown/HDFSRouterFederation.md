@@ -310,6 +310,18 @@ The administration server to manage the Mount Table.
 | dfs.federation.router.admin-bind-host | 0.0.0.0 | The actual address the RPC admin server will bind to. |
 | dfs.federation.router.admin.handler.count | 1 | The number of server threads for the router to handle RPC requests from admin. |
 
+### HTTP Server
+
+The HTTP Server to provide Web UI and the HDFS REST interface ([WebHDFS](../hadoop-hdfs/WebHDFS.html)) for the clients. The default URL is "`http://router_host:50071`".
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.http.enable | `true` | If `true`, the HTTP service to handle client requests in the router is enabled. |
+| dfs.federation.router.http-address | 0.0.0.0:50071 | HTTP address that handles the web requests to the Router. |
+| dfs.federation.router.http-bind-host | 0.0.0.0 | The actual address the HTTP server will bind to. |
+| dfs.federation.router.https-address | 0.0.0.0:50072 | HTTPS address that handles the web requests to the Router. |
+| dfs.federation.router.https-bind-host | 0.0.0.0 | The actual address the HTTPS server will bind to. |
+
 ### State Store
 
 The connection to the State Store and the internal caching at the Router.
