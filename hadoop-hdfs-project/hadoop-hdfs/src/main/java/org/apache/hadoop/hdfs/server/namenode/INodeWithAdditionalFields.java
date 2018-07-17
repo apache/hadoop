@@ -35,8 +35,8 @@ public abstract class INodeWithAdditionalFields extends INode
     implements LinkedElement {
   static enum PermissionStatusFormat {
     MODE(null, 16),
-    GROUP(MODE.BITS, 25),
-    USER(GROUP.BITS, 23);
+    GROUP(MODE.BITS, 24),
+    USER(GROUP.BITS, 24);
 
     final LongBitFormat BITS;
 
