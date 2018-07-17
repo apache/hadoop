@@ -38,7 +38,8 @@ import com.google.common.collect.ImmutableList;
  * [1:3) -- the type of the entry (AclEntryType) <br>
  * [3:6) -- the permission of the entry (FsAction) <br>
  * [6:7) -- A flag to indicate whether Named entry or not <br>
- * [7:32) -- the name of the entry, which is an ID that points to a <br>
+ * [7:8) -- Reserved <br>
+ * [8:32) -- the name of the entry, which is an ID that points to a <br>
  * string in the StringTableSection. <br>
  */
 public enum AclEntryStatusFormat {
@@ -47,7 +48,8 @@ public enum AclEntryStatusFormat {
   TYPE(SCOPE.BITS, 2),
   PERMISSION(TYPE.BITS, 3),
   NAMED_ENTRY_CHECK(PERMISSION.BITS, 1),
-  NAME(NAMED_ENTRY_CHECK.BITS, 25);
+  RESERVED(NAMED_ENTRY_CHECK.BITS, 1),
+  NAME(RESERVED.BITS, 24);
 
   private final LongBitFormat BITS;
 
