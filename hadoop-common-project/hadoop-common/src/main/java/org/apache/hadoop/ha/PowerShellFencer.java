@@ -27,8 +27,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Fencer method that uses PowerShell to remotely connect to a machine and kill
@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PowerShellFencer extends Configured implements FenceMethod {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PowerShellFencer
+  private static final Log LOG = LogFactory.getLog(PowerShellFencer
       .class);
 
 
