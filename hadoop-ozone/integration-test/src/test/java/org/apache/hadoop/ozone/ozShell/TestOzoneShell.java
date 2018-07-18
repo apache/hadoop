@@ -71,6 +71,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -332,7 +333,7 @@ public class TestOzoneShell {
   public void testListVolume() throws Exception {
     LOG.info("Running testListVolume");
     String protocol = clientProtocol.getName().toLowerCase();
-    String commandOutput;
+    String commandOutput, commandError;
     List<VolumeInfo> volumes;
     final int volCount = 20;
     final String user1 = "test-user-a-" + protocol;
@@ -361,8 +362,15 @@ public class TestOzoneShell {
       assertNotNull(vol);
     }
 
+    String[] args = new String[] {"-listVolume", url + "/abcde", "-user",
+        user1, "-length", "100"};
+    assertEquals(1, ToolRunner.run(shell, args));
+    commandError = err.toString();
+    Assert.assertTrue(commandError.contains("Invalid URI:"));
+
+    err.reset();
     // test -length option
-    String[] args = new String[] {"-listVolume", url + "/", "-user",
+    args = new String[] {"-listVolume", url + "/", "-user",
         user1, "-length", "100"};
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();

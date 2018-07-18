@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
+import com.google.common.base.Strings;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
@@ -30,6 +31,7 @@ import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -77,7 +79,16 @@ public class ListVolumeHandler extends Handler {
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_VOLUME);
-    verifyURI(ozoneURIString);
+    if (Strings.isNullOrEmpty(ozoneURIString)) {
+      ozoneURIString = "/";
+    }
+    URI ozoneURI = verifyURI(ozoneURIString);
+    if (!Strings.isNullOrEmpty(ozoneURI.getPath()) && !ozoneURI.getPath()
+        .equals("/")) {
+      throw new OzoneClientException(
+          "Invalid URI: " + ozoneURI + " . Specified path not used." + ozoneURI
+              .getPath());
+    }
 
     if (cmd.hasOption(Shell.USER)) {
       userName = cmd.getOptionValue(Shell.USER);

@@ -207,6 +207,7 @@ public class Shell extends Configured implements Tool {
             "For example : ozone oz -listVolume <ozoneURI>" +
             "-user <username> -root or ozone oz " +
             "-listVolume");
+    listVolume.setOptionalArg(true);
     options.addOption(listVolume);
 
     Option updateVolume =
