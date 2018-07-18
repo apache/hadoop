@@ -42,6 +42,18 @@ import java.util.Properties;
  * HddsVolume represents volume in a datanode. {@link VolumeSet} maitains a
  * list of HddsVolumes, one for each volume in the Datanode.
  * {@link VolumeInfo} in encompassed by this class.
+ *
+ * The disk layout per volume is as follows:
+ * ../hdds/VERSION
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/metadata
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>>/<<dataDir>>
+ *
+ * Each hdds volume has its own VERSION file. The hdds volume will have one
+ * scmUuid directory for each SCM it is a part of (currently only one SCM is
+ * supported).
+ *
+ * During DN startup, if the VERSION file exists, we verify that the
+ * clusterID in the version file matches the clusterID from SCM.
  */
 public final class HddsVolume {
 
@@ -108,11 +120,6 @@ public final class HddsVolume {
   }
 
   private HddsVolume(Builder b) throws IOException {
-    Preconditions.checkNotNull(b.volumeRootStr,
-        "Volume root dir cannot be null");
-    Preconditions.checkNotNull(b.datanodeUuid, "DatanodeUUID cannot be null");
-    Preconditions.checkNotNull(b.conf, "Configuration cannot be null");
-
     StorageLocation location = StorageLocation.parse(b.volumeRootStr);
     hddsRootDir = new File(location.getUri().getPath(), HDDS_VOLUME_DIR);
     this.state = VolumeState.NOT_INITIALIZED;
@@ -162,6 +169,10 @@ public final class HddsVolume {
       readVersionFile();
       setState(VolumeState.NORMAL);
       break;
+    case INCONSISTENT:
+      // Volume Root is in an inconsistent state. Skip loading this volume.
+      throw new IOException("Volume is in an " + VolumeState.INCONSISTENT +
+          " state. Skipped loading volume: " + hddsRootDir.getPath());
     default:
       throw new IOException("Unrecognized initial state : " +
           intialVolumeState + "of volume : " + hddsRootDir);
@@ -170,11 +181,23 @@ public final class HddsVolume {
 
   private VolumeState analyzeVolumeState() {
     if (!hddsRootDir.exists()) {
+      // Volume Root does not exist.
       return VolumeState.NON_EXISTENT;
     }
-    if (!getVersionFile().exists()) {
+    if (!hddsRootDir.isDirectory()) {
+      // Volume Root exists but is not a directory.
+      return VolumeState.INCONSISTENT;
+    }
+    File[] files = hddsRootDir.listFiles();
+    if (files == null || files.length == 0) {
+      // Volume Root exists and is empty.
       return VolumeState.NOT_FORMATTED;
     }
+    if (!getVersionFile().exists()) {
+      // Volume Root is non empty but VERSION file does not exist.
+      return VolumeState.INCONSISTENT;
+    }
+    // Volume Root and VERSION file exist.
     return VolumeState.NOT_INITIALIZED;
   }
 
@@ -321,11 +344,21 @@ public final class HddsVolume {
 
   /**
    * VolumeState represents the different states a HddsVolume can be in.
+   * NORMAL          => Volume can be used for storage
+   * FAILED          => Volume has failed due and can no longer be used for
+   *                    storing containers.
+   * NON_EXISTENT    => Volume Root dir does not exist
+   * INCONSISTENT    => Volume Root dir is not empty but VERSION file is
+   *                    missing or Volume Root dir is not a directory
+   * NOT_FORMATTED   => Volume Root exists but not formatted (no VERSION file)
+   * NOT_INITIALIZED => VERSION file exists but has not been verified for
+   *                    correctness.
    */
   public enum VolumeState {
     NORMAL,
     FAILED,
     NON_EXISTENT,
+    INCONSISTENT,
     NOT_FORMATTED,
     NOT_INITIALIZED
   }

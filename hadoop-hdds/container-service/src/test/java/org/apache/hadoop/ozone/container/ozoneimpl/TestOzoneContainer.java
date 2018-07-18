@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
@@ -60,21 +61,30 @@ public class TestOzoneContainer {
   public void setUp() throws Exception {
     conf = new OzoneConfiguration();
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, folder.getRoot()
-        .getAbsolutePath() + "," + folder.newFolder().getAbsolutePath());
+        .getAbsolutePath());
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, folder.newFolder().getAbsolutePath());
+  }
+
+  @Test
+  public void testBuildContainerMap() throws Exception {
     volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
 
+    // Format the volumes
+    for (HddsVolume volume : volumeSet.getVolumesList()) {
+      volume.format(UUID.randomUUID().toString());
+    }
+
+    // Add containers to disk
     for (int i=0; i<10; i++) {
       keyValueContainerData = new KeyValueContainerData(i, 1);
       keyValueContainer = new KeyValueContainer(
           keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
     }
-  }
 
-  @Test
-  public void testBuildContainerMap() throws Exception {
+    // When OzoneContainer is started, the containers from disk should be
+    // loaded into the containerSet.
     OzoneContainer ozoneContainer = new
         OzoneContainer(datanodeDetails, conf);
     ContainerSet containerset = ozoneContainer.getContainerSet();

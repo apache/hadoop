@@ -202,18 +202,19 @@ public class VolumeSet {
 
 
   // Add a volume to VolumeSet
-  public void addVolume(String dataDir) throws IOException {
-    addVolume(dataDir, StorageType.DEFAULT);
+  public boolean addVolume(String dataDir) {
+    return addVolume(dataDir, StorageType.DEFAULT);
   }
 
   // Add a volume to VolumeSet
-  public void addVolume(String volumeRoot, StorageType storageType)
-      throws IOException {
+  public boolean addVolume(String volumeRoot, StorageType storageType) {
     String hddsRoot = HddsVolumeUtil.getHddsRoot(volumeRoot);
+    boolean success;
 
     try (AutoCloseableLock lock = volumeSetLock.acquire()) {
       if (volumeMap.containsKey(hddsRoot)) {
         LOG.warn("Volume : {} already exists in VolumeMap", hddsRoot);
+        success = false;
       } else {
         if (failedVolumeMap.containsKey(hddsRoot)) {
           failedVolumeMap.remove(hddsRoot);
@@ -225,8 +226,13 @@ public class VolumeSet {
 
         LOG.info("Added Volume : {} to VolumeSet",
             hddsVolume.getHddsRootDir().getPath());
+        success = true;
       }
+    } catch (IOException ex) {
+      LOG.error("Failed to add volume " + volumeRoot + " to VolumeSet", ex);
+      success = false;
     }
+    return success;
   }
 
   // Mark a volume as failed
