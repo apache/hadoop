@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 2.7.7 - 2018-07-06
+Release 2.7.7 - 2018-07-18
 
   INCOMPATIBLE CHANGES
 
