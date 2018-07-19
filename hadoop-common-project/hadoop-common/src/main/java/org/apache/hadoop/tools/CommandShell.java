@@ -76,7 +76,7 @@ public abstract class CommandShell extends Configured implements Tool {
       }
     } catch (Exception e) {
       printShellUsage();
-      e.printStackTrace(err);
+      printException(e);
       return 1;
     }
     return exitCode;
@@ -96,6 +96,10 @@ public abstract class CommandShell extends Configured implements Tool {
       out.println(getCommandUsage());
     }
     out.flush();
+  }
+
+  protected void printException(Exception ex){
+    ex.printStackTrace(err);
   }
 
   /**
