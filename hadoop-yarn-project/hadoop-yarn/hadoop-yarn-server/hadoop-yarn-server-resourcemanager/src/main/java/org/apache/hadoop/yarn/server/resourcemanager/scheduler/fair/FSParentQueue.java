@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -188,25 +188,19 @@ public class FSParentQueue extends FSQueue {
       return assigned;
     }
 
-    // Hold the write lock when sorting childQueues
-    writeLock.lock();
-    try {
-      Collections.sort(childQueues, policy.getComparator());
-    } finally {
-      writeLock.unlock();
-    }
-
-    /*
-     * We are releasing the lock between the sort and iteration of the
-     * "sorted" list. There could be changes to the list here:
-     * 1. Add a child queue to the end of the list, this doesn't affect
-     * container assignment.
-     * 2. Remove a child queue, this is probably good to take care of so we
-     * don't assign to a queue that is going to be removed shortly.
-     */
+    // Sort the queues while holding a read lock on this parent only.
+    // The individual entries are not locked and can change which means that
+    // the collection of childQueues can not be sorted by calling Sort().
+    // Locking each childqueue to prevent changes would have a large
+    // performance impact.
+    // We do not have to handle the queue removal case as a queue must be
+    // empty before removal. Assigning an application to a queue and removal of
+    // that queue both need the scheduler lock.
+    TreeSet<FSQueue> sortedChildQueues = new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
-      for (FSQueue child : childQueues) {
+      sortedChildQueues.addAll(childQueues);
+      for (FSQueue child : sortedChildQueues) {
         assigned = child.assignContainer(node);
         if (!Resources.equals(assigned, Resources.none())) {
           break;

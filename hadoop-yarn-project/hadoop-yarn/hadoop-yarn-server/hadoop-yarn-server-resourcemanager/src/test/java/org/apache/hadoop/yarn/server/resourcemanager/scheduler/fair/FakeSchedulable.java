@@ -143,4 +143,8 @@ public class FakeSchedulable implements Schedulable {
   public boolean isPreemptable() {
     return true;
   }
+
+  public void setResourceUsage(Resource usage) {
+    this.usage = usage;
+  }
 }
