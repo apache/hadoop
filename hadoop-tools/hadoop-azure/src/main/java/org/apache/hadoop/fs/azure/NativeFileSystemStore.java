@@ -58,19 +58,20 @@ interface NativeFileSystemStore {
 
   boolean isAtomicRenameKey(String key);
 
+  /**
+   * Returns the file block size.  This is a fake value used for integration
+   * of the Azure store with Hadoop.
+   * @return The file block size.
+   */
+  long getHadoopBlockSize();
+
   void storeEmptyLinkFile(String key, String tempBlobKey,
       PermissionStatus permissionStatus) throws AzureException;
 
   String getLinkInFileMetadata(String key) throws AzureException;
 
-  PartialListing list(String prefix, final int maxListingCount,
+  FileMetadata[] list(String prefix, final int maxListingCount,
       final int maxListingDepth) throws IOException;
-
-  PartialListing list(String prefix, final int maxListingCount,
-      final int maxListingDepth, String priorLastKey) throws IOException;
-
-  PartialListing listAll(String prefix, final int maxListingCount,
-      final int maxListingDepth, String priorLastKey) throws IOException;
 
   void changePermissionStatus(String key, PermissionStatus newPermission)
       throws AzureException;
