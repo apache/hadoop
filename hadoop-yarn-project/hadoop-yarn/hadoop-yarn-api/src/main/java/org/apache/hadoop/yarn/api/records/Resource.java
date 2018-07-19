@@ -257,18 +257,15 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource name of the resource
    * @return the ResourceInformation object for the resource
-   * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
   @InterfaceStability.Unstable
-  public ResourceInformation getResourceInformation(String resource)
-      throws ResourceNotFoundException {
+  public ResourceInformation getResourceInformation(String resource) {
     Integer index = ResourceUtils.getResourceTypeIndex().get(resource);
     if (index != null) {
       return resources[index];
     }
-    throw new ResourceNotFoundException("Unknown resource '" + resource
-        + "'. Known resources are " + Arrays.toString(resources));
+    throw new ResourceNotFoundException(this, resource);
   }
 
   /**
@@ -299,12 +296,10 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource name of the resource
    * @return the value for the resource
-   * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
   @InterfaceStability.Unstable
-  public long getResourceValue(String resource)
-      throws ResourceNotFoundException {
+  public long getResourceValue(String resource) {
     return getResourceInformation(resource).getValue();
   }
 
@@ -313,13 +308,11 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource the resource for which the ResourceInformation is provided
    * @param resourceInformation ResourceInformation object
-   * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
   @InterfaceStability.Unstable
   public void setResourceInformation(String resource,
-      ResourceInformation resourceInformation)
-      throws ResourceNotFoundException {
+      ResourceInformation resourceInformation) {
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(resourceInformation.getValue());
       return;
@@ -348,8 +341,7 @@ public abstract class Resource implements Comparable<Resource> {
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
     if (index < 0 || index >= resources.length) {
-      throw new ResourceNotFoundException("Unknown resource at index '" + index
-          + "'. Valid resources are " + Arrays.toString(resources));
+      throwExceptionWhenArrayOutOfBound(index);
     }
     ResourceInformation.copy(resourceInformation, resources[index]);
   }
@@ -360,12 +352,10 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource the resource for which the value is provided.
    * @param value    the value to set
-   * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
   @InterfaceStability.Unstable
-  public void setResourceValue(String resource, long value)
-      throws ResourceNotFoundException {
+  public void setResourceValue(String resource, long value) {
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(value);
       return;

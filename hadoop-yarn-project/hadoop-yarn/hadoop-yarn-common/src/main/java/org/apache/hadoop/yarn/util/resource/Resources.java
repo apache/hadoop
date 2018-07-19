@@ -128,14 +128,12 @@ public class Resources {
 
     @Override
     public void setResourceInformation(String resource,
-        ResourceInformation resourceInformation)
-        throws ResourceNotFoundException {
+        ResourceInformation resourceInformation) {
       throw new RuntimeException(name + " cannot be modified!");
     }
 
     @Override
-    public void setResourceValue(String resource, long value)
-        throws ResourceNotFoundException {
+    public void setResourceValue(String resource, long value) {
       throw new RuntimeException(name + " cannot be modified!");
     }
 
