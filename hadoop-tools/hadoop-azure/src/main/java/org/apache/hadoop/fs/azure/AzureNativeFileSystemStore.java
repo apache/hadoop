@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
@@ -128,6 +127,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   // computed as min(2*cpu,8)
   private static final String KEY_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";
 
+  private static final String HADOOP_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   private static final String KEY_STREAM_MIN_READ_SIZE = "fs.azure.read.request.size";
   private static final String KEY_STORAGE_CONNECTION_TIMEOUT = "fs.azure.storage.timeout";
   private static final String KEY_WRITE_BLOCK_SIZE = "fs.azure.write.request.size";
@@ -252,6 +252,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   // Default block sizes
   public static final int DEFAULT_DOWNLOAD_BLOCK_SIZE = 4 * 1024 * 1024;
   public static final int DEFAULT_UPLOAD_BLOCK_SIZE = 4 * 1024 * 1024;
+  public static final long DEFAULT_HADOOP_BLOCK_SIZE = 512 * 1024 * 1024L;
 
   private static final int DEFAULT_INPUT_STREAM_VERSION = 2;
 
@@ -313,6 +314,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private boolean tolerateOobAppends = DEFAULT_READ_TOLERATE_CONCURRENT_APPEND;
 
+  private long hadoopBlockSize = DEFAULT_HADOOP_BLOCK_SIZE;
   private int downloadBlockSizeBytes = DEFAULT_DOWNLOAD_BLOCK_SIZE;
   private int uploadBlockSizeBytes = DEFAULT_UPLOAD_BLOCK_SIZE;
   private int inputStreamVersion = DEFAULT_INPUT_STREAM_VERSION;
@@ -740,6 +742,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         KEY_STREAM_MIN_READ_SIZE, DEFAULT_DOWNLOAD_BLOCK_SIZE);
     this.uploadBlockSizeBytes = sessionConfiguration.getInt(
         KEY_WRITE_BLOCK_SIZE, DEFAULT_UPLOAD_BLOCK_SIZE);
+    this.hadoopBlockSize = sessionConfiguration.getLong(
+        HADOOP_BLOCK_SIZE_PROPERTY_NAME, DEFAULT_HADOOP_BLOCK_SIZE);
 
     this.inputStreamVersion = sessionConfiguration.getInt(
         KEY_INPUT_STREAM_VERSION, DEFAULT_INPUT_STREAM_VERSION);
@@ -1234,7 +1238,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     return false;
   }
 
-
+  /**
+   * Returns the file block size.  This is a fake value used for integration
+   * of the Azure store with Hadoop.
+   */
+  @Override
+  public long getHadoopBlockSize() {
+    return hadoopBlockSize;
+  }
 
   /**
    * This should be called from any method that does any modifications to the
@@ -2066,7 +2077,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         // The key refers to root directory of container.
         // Set the modification time for root to zero.
         return new FileMetadata(key, 0, defaultPermissionNoBlobMetadata(),
-            BlobMaterialization.Implicit);
+            BlobMaterialization.Implicit, hadoopBlockSize);
       }
 
       CloudBlobWrapper blob = getBlobReference(key);
@@ -2086,7 +2097,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           if (retrieveFolderAttribute(blob)) {
             LOG.debug("{} is a folder blob.", key);
             return new FileMetadata(key, properties.getLastModified().getTime(),
-                getPermissionStatus(blob), BlobMaterialization.Explicit);
+                getPermissionStatus(blob), BlobMaterialization.Explicit, hadoopBlockSize);
           } else {
 
             LOG.debug("{} is a normal blob.", key);
@@ -2095,7 +2106,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
                 key, // Always return denormalized key with metadata.
                 getDataLength(blob, properties),
                 properties.getLastModified().getTime(),
-                getPermissionStatus(blob));
+                getPermissionStatus(blob), hadoopBlockSize);
           }
         } catch(StorageException e){
           if (!NativeAzureFileSystemHelper.isFileNotFoundException(e)) {
@@ -2129,7 +2140,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           BlobProperties properties = blob.getProperties();
 
           return new FileMetadata(key, properties.getLastModified().getTime(),
-              getPermissionStatus(blob), BlobMaterialization.Implicit);
+              getPermissionStatus(blob), BlobMaterialization.Implicit, hadoopBlockSize);
         }
       }
 
@@ -2178,46 +2189,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   @Override
-  public PartialListing list(String prefix, final int maxListingCount,
+  public FileMetadata[] list(String prefix, final int maxListingCount,
       final int maxListingDepth) throws IOException {
-    return list(prefix, maxListingCount, maxListingDepth, null);
+    return listInternal(prefix, maxListingCount, maxListingDepth);
   }
 
-  @Override
-  public PartialListing list(String prefix, final int maxListingCount,
-      final int maxListingDepth, String priorLastKey) throws IOException {
-    return list(prefix, PATH_DELIMITER, maxListingCount, maxListingDepth,
-        priorLastKey);
-  }
-
-  @Override
-  public PartialListing listAll(String prefix, final int maxListingCount,
-      final int maxListingDepth, String priorLastKey) throws IOException {
-    return list(prefix, null, maxListingCount, maxListingDepth, priorLastKey);
-  }
-
-  /**
-   * Searches the given list of {@link FileMetadata} objects for a directory
-   * with the given key.
-   *
-   * @param list
-   *          The list to search.
-   * @param key
-   *          The key to search for.
-   * @return The wanted directory, or null if not found.
-   */
-  private static FileMetadata getFileMetadataInList(
-      final Iterable<FileMetadata> list, String key) {
-    for (FileMetadata current : list) {
-      if (current.getKey().equals(key)) {
-        return current;
-      }
-    }
-    return null;
-  }
-
-  private PartialListing list(String prefix, String delimiter,
-      final int maxListingCount, final int maxListingDepth, String priorLastKey)
+  private FileMetadata[] listInternal(String prefix, final int maxListingCount,
+      final int maxListingDepth)
       throws IOException {
     try {
       checkContainer(ContainerAccessType.PureRead);
@@ -2241,7 +2219,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         objects = listRootBlobs(prefix, true, enableFlatListing);
       }
 
-      ArrayList<FileMetadata> fileMetadata = new ArrayList<FileMetadata>();
+      HashMap<String, FileMetadata> fileMetadata = new HashMap<>(256);
+
       for (ListBlobItem blobItem : objects) {
         // Check that the maximum listing count is not exhausted.
         //
@@ -2261,25 +2240,37 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
           FileMetadata metadata;
           if (retrieveFolderAttribute(blob)) {
-            metadata = new FileMetadata(blobKey,
-                properties.getLastModified().getTime(),
-                getPermissionStatus(blob),
-                BlobMaterialization.Explicit);
+              metadata = new FileMetadata(blobKey,
+                  properties.getLastModified().getTime(),
+                  getPermissionStatus(blob),
+                  BlobMaterialization.Explicit,
+                  hadoopBlockSize);
           } else {
-            metadata = new FileMetadata(
-                blobKey,
-                getDataLength(blob, properties),
-                properties.getLastModified().getTime(),
-                getPermissionStatus(blob));
+              metadata = new FileMetadata(
+                  blobKey,
+                  getDataLength(blob, properties),
+                  properties.getLastModified().getTime(),
+                  getPermissionStatus(blob),
+                  hadoopBlockSize);
           }
+          // Add the metadata but remove duplicates.  Note that the azure
+          // storage java SDK returns two types of entries: CloudBlobWrappter
+          // and CloudDirectoryWrapper.  In the case where WASB generated the
+          // data, there will be an empty blob for each "directory", and we will
+          // receive a CloudBlobWrapper.  If there are also files within this
+          // "directory", we will also receive a CloudDirectoryWrapper.  To
+          // complicate matters, the data may not be generated by WASB, in
+          // which case we may not have an empty blob for each "directory".
+          // So, sometimes we receive both a CloudBlobWrapper and a
+          // CloudDirectoryWrapper for each directory, and sometimes we receive
+          // one or the other but not both.  We remove duplicates, but
+          // prefer CloudBlobWrapper over CloudDirectoryWrapper.
+          // Furthermore, it is very unfortunate that the list results are not
+          // ordered, and it is a partial list which uses continuation.  So
+          // the HashMap is the best structure to remove the duplicates, despite
+          // its potential large size.
+          fileMetadata.put(blobKey, metadata);
 
-          // Add the metadata to the list, but remove any existing duplicate
-          // entries first that we may have added by finding nested files.
-          FileMetadata existing = getFileMetadataInList(fileMetadata, blobKey);
-          if (existing != null) {
-            fileMetadata.remove(existing);
-          }
-          fileMetadata.add(metadata);
         } else if (blobItem instanceof CloudBlobDirectoryWrapper) {
           CloudBlobDirectoryWrapper directory = (CloudBlobDirectoryWrapper) blobItem;
           // Determine format of directory name depending on whether an absolute
@@ -2298,12 +2289,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           // inherit the permissions of the first non-directory blob.
           // Also, getting a proper value for last-modified is tricky.
           FileMetadata directoryMetadata = new FileMetadata(dirKey, 0,
-              defaultPermissionNoBlobMetadata(), BlobMaterialization.Implicit);
+              defaultPermissionNoBlobMetadata(), BlobMaterialization.Implicit,
+              hadoopBlockSize);
 
           // Add the directory metadata to the list only if it's not already
-          // there.
-          if (getFileMetadataInList(fileMetadata, dirKey) == null) {
-            fileMetadata.add(directoryMetadata);
+          // there.  See earlier note, we prefer CloudBlobWrapper over
+          // CloudDirectoryWrapper because it may have additional metadata (
+          // properties and ACLs).
+          if (!fileMetadata.containsKey(dirKey)) {
+            fileMetadata.put(dirKey, directoryMetadata);
           }
 
           if (!enableFlatListing) {
@@ -2314,13 +2308,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           }
         }
       }
-      // Note: Original code indicated that this may be a hack.
-      priorLastKey = null;
-      PartialListing listing = new PartialListing(priorLastKey,
-          fileMetadata.toArray(new FileMetadata[] {}),
-          0 == fileMetadata.size() ? new String[] {}
-      : new String[] { prefix });
-      return listing;
+      return fileMetadata.values().toArray(new FileMetadata[fileMetadata.size()]);
     } catch (Exception e) {
       // Re-throw as an Azure storage exception.
       //
@@ -2334,13 +2322,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * the sorted order of the blob names.
    *
    * @param aCloudBlobDirectory Azure blob directory
-   * @param aFileMetadataList a list of file metadata objects for each
+   * @param metadataHashMap a map of file metadata objects for each
    *                          non-directory blob.
    * @param maxListingCount maximum length of the built up list.
    */
   private void buildUpList(CloudBlobDirectoryWrapper aCloudBlobDirectory,
-      ArrayList<FileMetadata> aFileMetadataList, final int maxListingCount,
-      final int maxListingDepth) throws Exception {
+                           HashMap<String, FileMetadata> metadataHashMap, final int maxListingCount,
+                           final int maxListingDepth) throws Exception {
 
     // Push the blob directory onto the stack.
     //
@@ -2371,12 +2359,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     // (2) maxListingCount > 0 implies that the number of items in the
     // metadata list is less than the max listing count.
     while (null != blobItemIterator
-        && (maxListingCount <= 0 || aFileMetadataList.size() < maxListingCount)) {
+        && (maxListingCount <= 0 || metadataHashMap.size() < maxListingCount)) {
       while (blobItemIterator.hasNext()) {
         // Check if the count of items on the list exhausts the maximum
         // listing count.
         //
-        if (0 < maxListingCount && aFileMetadataList.size() >= maxListingCount) {
+        if (0 < maxListingCount && metadataHashMap.size() >= maxListingCount) {
           break;
         }
 
@@ -2399,22 +2387,34 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             metadata = new FileMetadata(blobKey,
                 properties.getLastModified().getTime(),
                 getPermissionStatus(blob),
-                BlobMaterialization.Explicit);
+                BlobMaterialization.Explicit,
+                hadoopBlockSize);
           } else {
             metadata = new FileMetadata(
                 blobKey,
                 getDataLength(blob, properties),
                 properties.getLastModified().getTime(),
-                getPermissionStatus(blob));
+                getPermissionStatus(blob),
+                hadoopBlockSize);
           }
 
-          // Add the directory metadata to the list only if it's not already
-          // there.
-          FileMetadata existing = getFileMetadataInList(aFileMetadataList, blobKey);
-          if (existing != null) {
-            aFileMetadataList.remove(existing);
-          }
-          aFileMetadataList.add(metadata);
+          // Add the metadata but remove duplicates.  Note that the azure
+          // storage java SDK returns two types of entries: CloudBlobWrappter
+          // and CloudDirectoryWrapper.  In the case where WASB generated the
+          // data, there will be an empty blob for each "directory", and we will
+          // receive a CloudBlobWrapper.  If there are also files within this
+          // "directory", we will also receive a CloudDirectoryWrapper.  To
+          // complicate matters, the data may not be generated by WASB, in
+          // which case we may not have an empty blob for each "directory".
+          // So, sometimes we receive both a CloudBlobWrapper and a
+          // CloudDirectoryWrapper for each directory, and sometimes we receive
+          // one or the other but not both.  We remove duplicates, but
+          // prefer CloudBlobWrapper over CloudDirectoryWrapper.
+          // Furthermore, it is very unfortunate that the list results are not
+          // ordered, and it is a partial list which uses continuation.  So
+          // the HashMap is the best structure to remove the duplicates, despite
+          // its potential large size.
+          metadataHashMap.put(blobKey, metadata);
         } else if (blobItem instanceof CloudBlobDirectoryWrapper) {
           CloudBlobDirectoryWrapper directory = (CloudBlobDirectoryWrapper) blobItem;
 
@@ -2439,7 +2439,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             // absolute path is being used or not.
             String dirKey = normalizeKey(directory);
 
-            if (getFileMetadataInList(aFileMetadataList, dirKey) == null) {
+            // Add the directory metadata to the list only if it's not already
+            // there.  See earlier note, we prefer CloudBlobWrapper over
+            // CloudDirectoryWrapper because it may have additional metadata (
+            // properties and ACLs).
+            if (!metadataHashMap.containsKey(dirKey)) {
+
               // Reached the targeted listing depth. Return metadata for the
               // directory using default permissions.
               //
@@ -2450,10 +2455,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
               FileMetadata directoryMetadata = new FileMetadata(dirKey,
                   0,
                   defaultPermissionNoBlobMetadata(),
-                  BlobMaterialization.Implicit);
+                  BlobMaterialization.Implicit,
+                  hadoopBlockSize);
 
               // Add the directory metadata to the list.
-              aFileMetadataList.add(directoryMetadata);
+              metadataHashMap.put(dirKey, directoryMetadata);
             }
           }
         }
