@@ -392,7 +392,7 @@ public class WebServices {
     response.setContentType(null);
   }
 
-  protected static Set<String>
+  public static Set<String>
       parseQueries(Set<String> queries, boolean isState) {
     Set<String> params = new HashSet<String>();
     if (!queries.isEmpty()) {

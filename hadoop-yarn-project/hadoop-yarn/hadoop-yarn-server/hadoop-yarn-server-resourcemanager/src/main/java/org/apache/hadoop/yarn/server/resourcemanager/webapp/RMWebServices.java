@@ -482,7 +482,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.FINAL_STATUS) String finalStatusQuery,
       @QueryParam(RMWSConsts.USER) String userQuery,
       @QueryParam(RMWSConsts.QUEUE) String queueQuery,
-      @QueryParam(RMWSConsts.LIMIT) String count,
+      @QueryParam(RMWSConsts.LIMIT) String limit,
       @QueryParam(RMWSConsts.STARTED_TIME_BEGIN) String startedBegin,
       @QueryParam(RMWSConsts.STARTED_TIME_END) String startedEnd,
       @QueryParam(RMWSConsts.FINISHED_TIME_BEGIN) String finishBegin,
@@ -493,135 +493,22 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     initForReadableEndpoints();
 
-    boolean checkCount = false;
-    boolean checkStart = false;
-    boolean checkEnd = false;
-    boolean checkAppTypes = false;
-    boolean checkAppStates = false;
-    boolean checkAppTags = false;
-    long countNum = 0;
+    GetApplicationsRequest request =
+            ApplicationsRequestBuilder.create()
+                    .withStateQuery(stateQuery)
+                    .withStatesQuery(statesQuery)
+                    .withUserQuery(userQuery)
+                    .withQueueQuery(rm, queueQuery)
+                    .withLimit(limit)
+                    .withStartedTimeBegin(startedBegin)
+                    .withStartedTimeEnd(startedEnd)
+                    .withFinishTimeBegin(finishBegin)
+                    .withFinishTimeEnd(finishEnd)
+                    .withApplicationTypes(applicationTypes)
+                    .withApplicationTags(applicationTags)
+            .build();
 
-    // set values suitable in case both of begin/end not specified
-    long sBegin = 0;
-    long sEnd = Long.MAX_VALUE;
-    long fBegin = 0;
-    long fEnd = Long.MAX_VALUE;
-
-    if (count != null && !count.isEmpty()) {
-      checkCount = true;
-      countNum = Long.parseLong(count);
-      if (countNum <= 0) {
-        throw new BadRequestException("limit value must be greater then 0");
-      }
-    }
-
-    if (startedBegin != null && !startedBegin.isEmpty()) {
-      checkStart = true;
-      sBegin = Long.parseLong(startedBegin);
-      if (sBegin < 0) {
-        throw new BadRequestException(
-            "startedTimeBegin must be greater than 0");
-      }
-    }
-    if (startedEnd != null && !startedEnd.isEmpty()) {
-      checkStart = true;
-      sEnd = Long.parseLong(startedEnd);
-      if (sEnd < 0) {
-        throw new BadRequestException("startedTimeEnd must be greater than 0");
-      }
-    }
-    if (sBegin > sEnd) {
-      throw new BadRequestException(
-          "startedTimeEnd must be greater than startTimeBegin");
-    }
-
-    if (finishBegin != null && !finishBegin.isEmpty()) {
-      checkEnd = true;
-      fBegin = Long.parseLong(finishBegin);
-      if (fBegin < 0) {
-        throw new BadRequestException("finishTimeBegin must be greater than 0");
-      }
-    }
-    if (finishEnd != null && !finishEnd.isEmpty()) {
-      checkEnd = true;
-      fEnd = Long.parseLong(finishEnd);
-      if (fEnd < 0) {
-        throw new BadRequestException("finishTimeEnd must be greater than 0");
-      }
-    }
-    if (fBegin > fEnd) {
-      throw new BadRequestException(
-          "finishTimeEnd must be greater than finishTimeBegin");
-    }
-
-    Set<String> appTypes = parseQueries(applicationTypes, false);
-    if (!appTypes.isEmpty()) {
-      checkAppTypes = true;
-    }
-
-    Set<String> appTags = parseQueries(applicationTags, false);
-    if (!appTags.isEmpty()) {
-      checkAppTags = true;
-    }
-
-    // stateQuery is deprecated.
-    if (stateQuery != null && !stateQuery.isEmpty()) {
-      statesQuery.add(stateQuery);
-    }
-    Set<String> appStates = parseQueries(statesQuery, true);
-    if (!appStates.isEmpty()) {
-      checkAppStates = true;
-    }
-
-    GetApplicationsRequest request = GetApplicationsRequest.newInstance();
-
-    if (checkStart) {
-      request.setStartRange(sBegin, sEnd);
-    }
-
-    if (checkEnd) {
-      request.setFinishRange(fBegin, fEnd);
-    }
-
-    if (checkCount) {
-      request.setLimit(countNum);
-    }
-
-    if (checkAppTypes) {
-      request.setApplicationTypes(appTypes);
-    }
-
-    if (checkAppTags) {
-      request.setApplicationTags(appTags);
-    }
-
-    if (checkAppStates) {
-      request.setApplicationStates(appStates);
-    }
-
-    if (queueQuery != null && !queueQuery.isEmpty()) {
-      ResourceScheduler rs = rm.getResourceScheduler();
-      if (rs instanceof CapacityScheduler) {
-        CapacityScheduler cs = (CapacityScheduler) rs;
-        // validate queue exists
-        try {
-          cs.getQueueInfo(queueQuery, false, false);
-        } catch (IOException e) {
-          throw new BadRequestException(e.getMessage());
-        }
-      }
-      Set<String> queues = new HashSet<String>(1);
-      queues.add(queueQuery);
-      request.setQueues(queues);
-    }
-
-    if (userQuery != null && !userQuery.isEmpty()) {
-      Set<String> users = new HashSet<String>(1);
-      users.add(userQuery);
-      request.setUsers(users);
-    }
-
-    List<ApplicationReport> appReports = null;
+    List<ApplicationReport> appReports;
     try {
       appReports = rm.getClientRMService().getApplications(request)
           .getApplicationList();
