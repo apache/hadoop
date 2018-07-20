@@ -249,6 +249,8 @@ public class TestOzoneShell {
     String[] args = new String[] {"-deleteVolume", url + "/" + volumeName,
         "-root"};
     assertEquals(0, ToolRunner.run(shell, args));
+    String output = out.toString();
+    assertTrue(output.contains("Volume " + volumeName + " is deleted"));
 
     // verify if volume has been deleted
     try {
