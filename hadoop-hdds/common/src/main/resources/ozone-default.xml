@@ -1085,5 +1085,17 @@
       executed since last report. Unit could be defined with
       postfix (ns,ms,s,m,h,d)</description>
   </property>
+  <property>
+    <name>ozone.scm.pipeline.creation.lease.timeout</name>
+    <value>60s</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>
+      Pipeline creation timeout in milliseconds to be used by SCM. When
+      BEGIN_CREATE event happens the pipeline is moved from ALLOCATED to
+      CREATING state, SCM will now wait for the configured amount of time
+      to get COMPLETE_CREATE event if it doesn't receive it will move the
+      pipeline to DELETING.
+    </description>
+  </property>
 
 </configuration>

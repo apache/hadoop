@@ -20,14 +20,18 @@ import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .InitDatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
-import org.apache.hadoop.ozone.protocol.commands.CommandStatus.CommandStatusBuilder;
+import org.apache.hadoop.ozone.protocol.commands.CommandStatus
+    .CommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
@@ -59,6 +64,7 @@ public class StateContext {
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
   private final Queue<GeneratedMessage> reports;
+  private final Queue<ContainerAction> containerActions;
   private DatanodeStateMachine.DatanodeStates state;
 
   /**
@@ -76,6 +82,7 @@ public class StateContext {
     commandQueue = new LinkedList<>();
     cmdStatusMap = new ConcurrentHashMap<>();
     reports = new LinkedList<>();
+    containerActions = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
   }
@@ -193,6 +200,47 @@ public class StateContext {
       while(results.size() < maxLimit && report != null) {
         results.add(report);
         report = reports.poll();
+      }
+    }
+    return results;
+  }
+
+
+  /**
+   * Adds the ContainerAction to ContainerAction queue.
+   *
+   * @param containerAction ContainerAction to be added
+   */
+  public void addContainerAction(ContainerAction containerAction) {
+    synchronized (containerActions) {
+      containerActions.add(containerAction);
+    }
+  }
+
+  /**
+   * Returns all the pending ContainerActions from the ContainerAction queue,
+   * or empty list if the queue is empty.
+   *
+   * @return List<ContainerAction>
+   */
+  public List<ContainerAction> getAllPendingContainerActions() {
+    return getPendingContainerAction(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Returns pending ContainerActions from the ContainerAction queue with a
+   * max limit on list size, or empty list if the queue is empty.
+   *
+   * @return List<ContainerAction>
+   */
+  public List<ContainerAction> getPendingContainerAction(int maxLimit) {
+    List<ContainerAction> results = new ArrayList<>();
+    synchronized (containerActions) {
+      containerActions.parallelStream().limit(maxLimit).collect(Collectors.toList());
+      ContainerAction action = containerActions.poll();
+      while(results.size() < maxLimit && action != null) {
+        results.add(action);
+        action = containerActions.poll();
       }
     }
     return results;
