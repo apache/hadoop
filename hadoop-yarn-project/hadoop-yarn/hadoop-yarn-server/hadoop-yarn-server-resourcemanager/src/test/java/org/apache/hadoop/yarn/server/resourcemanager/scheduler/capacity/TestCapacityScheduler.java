@@ -134,6 +134,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AllocationState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -4929,5 +4931,51 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         Collections.<ContainerId>emptyList(), null, null, NULL_UPDATE_REQUESTS);
     spyCs.handle(new NodeUpdateSchedulerEvent(
         spyCs.getNode(nm.getNodeId()).getRMNode()));
+  }
+
+  // Testcase for YARN-8528
+  // This is to test whether ContainerAllocation constants are holding correct
+  // values during scheduling.
+  @Test
+  public void testContainerAllocationLocalitySkipped() throws Exception {
+    Assert.assertEquals(AllocationState.APP_SKIPPED,
+        ContainerAllocation.APP_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.LOCALITY_SKIPPED,
+        ContainerAllocation.LOCALITY_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.PRIORITY_SKIPPED,
+        ContainerAllocation.PRIORITY_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.QUEUE_SKIPPED,
+        ContainerAllocation.QUEUE_SKIPPED.getAllocationState());
+
+    // init RM & NMs & Nodes
+    final MockRM rm = new MockRM(new CapacitySchedulerConfiguration());
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    rm.start();
+    final MockNM nm1 = rm.registerNode("h1:1234", 4 * GB);
+    final MockNM nm2 = rm.registerNode("h2:1234", 6 * GB); // maximum-allocation-mb = 6GB
+
+    // submit app and request resource
+    // container2 is larger than nm1 total resource, will trigger locality skip
+    final RMApp app = rm.submitApp(1 * GB, "app", "user");
+    final MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
+    am.addRequests(new String[] {"*"}, 5 * GB, 1, 1, 2);
+    am.schedule();
+
+    // container1 (am) should be acquired, container2 should not
+    RMNode node1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    cs.handle(new NodeUpdateSchedulerEvent(node1));
+    ContainerId cid = ContainerId.newContainerId(am.getApplicationAttemptId(), 1l);
+    Assert.assertEquals(cs.getRMContainer(cid).getState(), RMContainerState.ACQUIRED);
+    cid = ContainerId.newContainerId(am.getApplicationAttemptId(), 2l);
+    Assert.assertNull(cs.getRMContainer(cid));
+
+    Assert.assertEquals(AllocationState.APP_SKIPPED,
+        ContainerAllocation.APP_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.LOCALITY_SKIPPED,
+        ContainerAllocation.LOCALITY_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.PRIORITY_SKIPPED,
+        ContainerAllocation.PRIORITY_SKIPPED.getAllocationState());
+    Assert.assertEquals(AllocationState.QUEUE_SKIPPED,
+        ContainerAllocation.QUEUE_SKIPPED.getAllocationState());
   }
 }
