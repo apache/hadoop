@@ -41,7 +41,7 @@ function hadoop_usage
   hadoop_add_subcommand "getozoneconf" client "get ozone config values from configuration"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
   hadoop_add_subcommand "om" daemon "Ozone Manager"
-  hadoop_add_subcommand "o3" client "command line interface for ozone"
+  hadoop_add_subcommand "oz" client "command line interface for ozone"
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
