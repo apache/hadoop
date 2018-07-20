@@ -658,10 +658,6 @@ public class ContainerMapping implements Mapping {
     if (containerStore != null) {
       containerStore.close();
     }
-
-    if (pipelineSelector != null) {
-      pipelineSelector.shutdown();
-    }
   }
 
   /**

@@ -26,8 +26,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.AfterClass;
@@ -53,7 +51,6 @@ public class TestNode2PipelineMap {
   private static ContainerWithPipeline ratisContainer;
   private static ContainerStateMap stateMap;
   private static ContainerMapping mapping;
-  private static PipelineSelector pipelineSelector;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -69,7 +66,6 @@ public class TestNode2PipelineMap {
     mapping = (ContainerMapping)scm.getScmContainerManager();
     stateMap = mapping.getStateManager().getContainerStateMap();
     ratisContainer = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    pipelineSelector = mapping.getPipelineSelector();
   }
 
   /**
@@ -117,15 +113,5 @@ public class TestNode2PipelineMap {
     NavigableSet<ContainerID> set2 = stateMap.getOpenContainerIDsByPipeline(
         ratisContainer.getPipeline().getPipelineName());
     Assert.assertEquals(0, set2.size());
-
-    try {
-      pipelineSelector.updatePipelineState(ratisContainer.getPipeline(),
-          HddsProtos.LifeCycleEvent.CLOSE);
-      Assert.fail("closing of pipeline without finalize should fail");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SCMException);
-      Assert.assertEquals(((SCMException)e).getResult(),
-          SCMException.ResultCodes.FAILED_TO_CHANGE_PIPELINE_STATE);
-    }
   }
 }

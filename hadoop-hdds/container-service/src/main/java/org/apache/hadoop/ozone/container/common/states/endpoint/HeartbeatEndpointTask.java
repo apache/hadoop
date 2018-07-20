@@ -25,10 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerActionsProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerAction;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
@@ -50,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -112,7 +107,7 @@ public class HeartbeatEndpointTask
           SCMHeartbeatRequestProto.newBuilder()
               .setDatanodeDetails(datanodeDetailsProto);
       addReports(requestBuilder);
-      addContainerActions(requestBuilder);
+
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
           .sendHeartbeat(requestBuilder.build());
       processResponse(reponse, datanodeDetailsProto);
@@ -143,23 +138,6 @@ public class HeartbeatEndpointTask
       }
     }
   }
-
-  /**
-   * Adds all the pending ContainerActions to the heartbeat.
-   *
-   * @param requestBuilder builder to which the report has to be added.
-   */
-  private void addContainerActions(
-      SCMHeartbeatRequestProto.Builder requestBuilder) {
-    List<ContainerAction> actions = context.getAllPendingContainerActions();
-    if (!actions.isEmpty()) {
-      ContainerActionsProto cap = ContainerActionsProto.newBuilder()
-          .addAllContainerActions(actions)
-          .build();
-      requestBuilder.setContainerActions(cap);
-    }
-  }
-
 
   /**
    * Returns a builder class for HeartbeatEndpointTask task.

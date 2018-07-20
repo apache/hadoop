@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.pipelines.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -71,7 +72,7 @@ public class RatisManagerImpl extends PipelineManager {
    * Allocates a new ratis Pipeline from the free nodes.
    *
    * @param factor - One or Three
-   * @return Pipeline.
+   * @return PipelineChannel.
    */
   public Pipeline allocatePipeline(ReplicationFactor factor) {
     List<DatanodeDetails> newNodesList = new LinkedList<>();
@@ -88,23 +89,35 @@ public class RatisManagerImpl extends PipelineManager {
           // further allocations
           ratisMembers.addAll(newNodesList);
           LOG.info("Allocating a new ratis pipeline of size: {}", count);
-          // Start all pipeline names with "Ratis", easy to grep the logs.
+          // Start all channel names with "Ratis", easy to grep the logs.
           String pipelineName = PREFIX +
               UUID.randomUUID().toString().substring(PREFIX.length());
-          return PipelineSelector.newPipelineFromNodes(newNodesList,
-              ReplicationType.RATIS, factor, pipelineName);
+          Pipeline pipeline=
+              PipelineSelector.newPipelineFromNodes(newNodesList,
+              LifeCycleState.OPEN, ReplicationType.RATIS, factor, pipelineName);
+          try (XceiverClientRatis client =
+              XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
+            client.createPipeline(pipeline.getPipelineName(), newNodesList);
+          } catch (IOException e) {
+            return null;
+          }
+          return pipeline;
         }
       }
     }
     return null;
   }
 
-  public void initializePipeline(Pipeline pipeline) throws IOException {
-    //TODO:move the initialization from SCM to client
-    try (XceiverClientRatis client =
-        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.createPipeline(pipeline.getPipelineName(), pipeline.getMachines());
-    }
+  /**
+   * Creates a pipeline from a specified set of Nodes.
+   *
+   * @param pipelineID - Name of the pipeline
+   * @param datanodes - The list of datanodes that make this pipeline.
+   */
+  @Override
+  public void createPipeline(String pipelineID,
+                             List<DatanodeDetails> datanodes) {
+
   }
 
   /**

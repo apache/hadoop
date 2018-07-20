@@ -79,8 +79,8 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  optional CommandStatusReportsProto commandStatusReport = 4;
-  optional ContainerActionsProto containerActions = 5;
+  optional ContainerActionsProto containerActions = 4;
+  optional CommandStatusReportsProto commandStatusReport = 5;
 }
 
 /*
