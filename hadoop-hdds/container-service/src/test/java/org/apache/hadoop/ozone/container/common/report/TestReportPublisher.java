@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.container.common.report;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,14 +27,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -178,22 +171,6 @@ public class TestReportPublisher {
     executorService.shutdown();
   }
 
-  @Test
-  public void testAddingReportToHeartbeat() {
-    GeneratedMessage nodeReport = NodeReportProto.getDefaultInstance();
-    GeneratedMessage containerReport = ContainerReportsProto
-        .getDefaultInstance();
-    SCMHeartbeatRequestProto.Builder heartbeatBuilder =
-        SCMHeartbeatRequestProto.newBuilder();
-    heartbeatBuilder.setDatanodeDetails(
-        getDatanodeDetails().getProtoBufMessage());
-    addReport(heartbeatBuilder, nodeReport);
-    addReport(heartbeatBuilder, containerReport);
-    SCMHeartbeatRequestProto heartbeat = heartbeatBuilder.build();
-    Assert.assertTrue(heartbeat.hasNodeReport());
-    Assert.assertTrue(heartbeat.hasContainerReport());
-  }
-
   /**
    * Get a datanode details.
    *
@@ -220,24 +197,6 @@ public class TestReportPublisher {
         .addPort(ratisPort)
         .addPort(restPort);
     return builder.build();
-  }
-
-  /**
-   * Adds the report to heartbeat.
-   *
-   * @param requestBuilder builder to which the report has to be added.
-   * @param report         the report to be added.
-   */
-  private static void addReport(SCMHeartbeatRequestProto.Builder
-      requestBuilder, GeneratedMessage report) {
-    String reportName = report.getDescriptorForType().getFullName();
-    for (Descriptors.FieldDescriptor descriptor :
-        SCMHeartbeatRequestProto.getDescriptor().getFields()) {
-      String heartbeatFieldName = descriptor.getMessageType().getFullName();
-      if (heartbeatFieldName.equals(reportName)) {
-        requestBuilder.setField(descriptor, report);
-      }
-    }
   }
 
 }

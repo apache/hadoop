@@ -25,6 +25,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerActionsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
@@ -46,7 +50,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.concurrent.Callable;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_CONTAINER_ACTION_MAX_LIMIT;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT;
 
 /**
  * Heartbeat class for SCMs.
@@ -59,6 +69,7 @@ public class HeartbeatEndpointTask
   private final Configuration conf;
   private DatanodeDetailsProto datanodeDetailsProto;
   private StateContext context;
+  private int maxContainerActionsPerHB;
 
   /**
    * Constructs a SCM heart beat.
@@ -70,6 +81,8 @@ public class HeartbeatEndpointTask
     this.rpcEndpoint = rpcEndpoint;
     this.conf = conf;
     this.context = context;
+    this.maxContainerActionsPerHB = conf.getInt(HDDS_CONTAINER_ACTION_MAX_LIMIT,
+        HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT);
   }
 
   /**
@@ -107,7 +120,7 @@ public class HeartbeatEndpointTask
           SCMHeartbeatRequestProto.newBuilder()
               .setDatanodeDetails(datanodeDetailsProto);
       addReports(requestBuilder);
-
+      addContainerActions(requestBuilder);
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
           .sendHeartbeat(requestBuilder.build());
       processResponse(reponse, datanodeDetailsProto);
@@ -138,6 +151,24 @@ public class HeartbeatEndpointTask
       }
     }
   }
+
+  /**
+   * Adds all the pending ContainerActions to the heartbeat.
+   *
+   * @param requestBuilder builder to which the report has to be added.
+   */
+  private void addContainerActions(
+      SCMHeartbeatRequestProto.Builder requestBuilder) {
+    List<ContainerAction> actions = context.getPendingContainerAction(
+        maxContainerActionsPerHB);
+    if (!actions.isEmpty()) {
+      ContainerActionsProto cap = ContainerActionsProto.newBuilder()
+          .addAllContainerActions(actions)
+          .build();
+      requestBuilder.setContainerActions(cap);
+    }
+  }
+
 
   /**
    * Returns a builder class for HeartbeatEndpointTask task.

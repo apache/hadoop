@@ -1098,4 +1098,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.container.action.max.limit</name>
+    <value>20</value>
+    <tag>DATANODE</tag>
+    <description>
+      Maximum number of Container Actions sent by the datanode to SCM in a
+      single heartbeat.
+    </description>
+  </property>
+
 </configuration>
