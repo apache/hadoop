@@ -67,7 +67,7 @@ http://localhost:9090/graph
 Example queries:
 
 ```
-Hadoop_KeySpaceManager_NumKeyCommits
-rate(Hadoop_KeySpaceManager_NumKeyCommits[10m])
+Hadoop_OzoneManager_NumKeyCommits
+rate(Hadoop_OzoneManager_NumKeyCommits[10m])
 rate(Hadoop_Ozone_BYTES_WRITTEN[10m])
 ```

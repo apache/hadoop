@@ -134,7 +134,7 @@ public class AllocationFileQueueParser {
       if (MIN_RESOURCES.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         ConfigurableResource val =
-            FairSchedulerConfiguration.parseResourceConfigValue(text);
+            FairSchedulerConfiguration.parseResourceConfigValue(text, 0L);
         builder.minQueueResources(queueName, val.getResource());
       } else if (MAX_RESOURCES.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);

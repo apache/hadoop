@@ -60,14 +60,14 @@ public class CreateVolumeHandler extends Handler {
 
     String ozoneURIString = cmd.getOptionValue(Shell.CREATE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
-    if (ozoneURI.getPath().isEmpty()) {
+
+    // we need to skip the slash in the URI path
+    // getPath returns /volumeName needs to remove the initial slash.
+    volumeName = ozoneURI.getPath().replaceAll("^/+", "");
+    if (volumeName.isEmpty()) {
       throw new OzoneClientException(
           "Volume name is required to create a volume");
     }
-
-    // we need to skip the slash in the URI path
-    // getPath returns /volumeName needs to remove the first slash.
-    volumeName = ozoneURI.getPath().substring(1);
 
     if (cmd.hasOption(Shell.VERBOSE)) {
       System.out.printf("Volume name : %s%n", volumeName);

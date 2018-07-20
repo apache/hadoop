@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.ozone.scm;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -68,7 +66,7 @@ public class TestAllocateContainer {
 
   @Test
   public void testAllocate() throws Exception {
-    ContainerInfo container = storageContainerLocationClient.allocateContainer(
+    ContainerWithPipeline container = storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);

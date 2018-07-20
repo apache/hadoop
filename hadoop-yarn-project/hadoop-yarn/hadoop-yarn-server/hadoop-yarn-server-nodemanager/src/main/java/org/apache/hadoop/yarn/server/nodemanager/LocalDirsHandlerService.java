@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,13 +158,23 @@ public class LocalDirsHandlerService extends AbstractService {
       String local = conf.get(YarnConfiguration.NM_LOCAL_DIRS);
       conf.set(NM_GOOD_LOCAL_DIRS,
           (local != null) ? local : "");
-      localDirsAllocator = new LocalDirAllocator(
-          NM_GOOD_LOCAL_DIRS);
-      String log = conf.get(YarnConfiguration.NM_LOG_DIRS);
-      conf.set(NM_GOOD_LOG_DIRS,
-          (log != null) ? log : "");
-      logDirsAllocator = new LocalDirAllocator(
-          NM_GOOD_LOG_DIRS);
+      String diskValidatorName = conf.get(YarnConfiguration.DISK_VALIDATOR,
+              YarnConfiguration.DEFAULT_DISK_VALIDATOR);
+      try {
+        DiskValidator diskValidator =
+            DiskValidatorFactory.getInstance(diskValidatorName);
+        localDirsAllocator = new LocalDirAllocator(
+                NM_GOOD_LOCAL_DIRS, diskValidator);
+        String log = conf.get(YarnConfiguration.NM_LOG_DIRS);
+        conf.set(NM_GOOD_LOG_DIRS,
+                (log != null) ? log : "");
+        logDirsAllocator = new LocalDirAllocator(
+                NM_GOOD_LOG_DIRS, diskValidator);
+      } catch (DiskErrorException e) {
+        throw new YarnRuntimeException(
+            "Failed to create DiskValidator of type " + diskValidatorName + "!",
+            e);
+      }
     }
 
     @Override

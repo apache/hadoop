@@ -59,10 +59,8 @@ public interface StorageContainerNodeProtocol {
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    * @param datanodeDetails - Datanode ID.
-   * @param nodeReport - node report.
    * @return SCMheartbeat response list
    */
-  List<SCMCommand> sendHeartbeat(DatanodeDetails datanodeDetails,
-      NodeReportProto nodeReport);
+  List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails);
 
 }

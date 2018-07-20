@@ -21,6 +21,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -167,6 +171,44 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Returns the ContainerInfo from the container ID.
+   *
+   * @param containerID - ID of container.
+   * @return - ContainerWithPipeline such as creation state and the pipeline.
+   * @throws IOException
+   */
+  @Override
+  public ContainerWithPipeline getContainerWithPipeline(long containerID)
+      throws IOException {
+    ContainerInfo contInfo;
+    lock.lock();
+    try {
+      byte[] containerBytes = containerStore.get(
+          Longs.toByteArray(containerID));
+      if (containerBytes == null) {
+        throw new SCMException(
+            "Specified key does not exist. key : " + containerID,
+            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+      }
+      HddsProtos.SCMContainerInfo temp = HddsProtos.SCMContainerInfo.PARSER
+          .parseFrom(containerBytes);
+      contInfo = ContainerInfo.fromProtobuf(temp);
+      Pipeline pipeline = pipelineSelector
+          .getPipeline(contInfo.getPipelineName(),
+              contInfo.getReplicationType());
+
+      if(pipeline == null) {
+        pipeline = pipelineSelector
+            .getReplicationPipeline(contInfo.getReplicationType(),
+                contInfo.getReplicationFactor());
+      }
+      return new ContainerWithPipeline(contInfo, pipeline);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -208,13 +250,15 @@ public class ContainerMapping implements Mapping {
    * @throws IOException - Exception
    */
   @Override
-  public ContainerInfo allocateContainer(
+  public ContainerWithPipeline allocateContainer(
       ReplicationType type,
       ReplicationFactor replicationFactor,
       String owner)
       throws IOException {
 
     ContainerInfo containerInfo;
+    ContainerWithPipeline containerWithPipeline;
+
     if (!nodeManager.isOutOfChillMode()) {
       throw new SCMException(
           "Unable to create container while in chill mode",
@@ -223,9 +267,9 @@ public class ContainerMapping implements Mapping {
 
     lock.lock();
     try {
-      containerInfo =
-          containerStateManager.allocateContainer(
+      containerWithPipeline = containerStateManager.allocateContainer(
               pipelineSelector, type, replicationFactor, owner);
+      containerInfo = containerWithPipeline.getContainerInfo();
 
       byte[] containerIDBytes = Longs.toByteArray(
           containerInfo.getContainerID());
@@ -234,7 +278,7 @@ public class ContainerMapping implements Mapping {
     } finally {
       lock.unlock();
     }
-    return containerInfo;
+    return containerWithPipeline;
   }
 
   /**
@@ -381,6 +425,35 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Return a container matching the attributes specified.
+   *
+   * @param size - Space needed in the Container.
+   * @param owner - Owner of the container - A specific nameservice.
+   * @param type - Replication Type {StandAlone, Ratis}
+   * @param factor - Replication Factor {ONE, THREE}
+   * @param state - State of the Container-- {Open, Allocated etc.}
+   * @return ContainerInfo, null if there is no match found.
+   */
+  public ContainerWithPipeline getMatchingContainerWithPipeline(final long size,
+      String owner, ReplicationType type, ReplicationFactor factor,
+      LifeCycleState state) throws IOException {
+    ContainerInfo containerInfo = getStateManager()
+        .getMatchingContainer(size, owner, type, factor, state);
+    if (containerInfo == null) {
+      return null;
+    }
+    Pipeline pipeline = pipelineSelector
+        .getPipeline(containerInfo.getPipelineName(),
+            containerInfo.getReplicationType());
+    if (pipeline == null) {
+      pipelineSelector
+          .getReplicationPipeline(containerInfo.getReplicationType(),
+              containerInfo.getReplicationFactor());
+    }
+    return new ContainerWithPipeline(containerInfo, pipeline);
+  }
+
+  /**
    * Process container report from Datanode.
    * <p>
    * Processing follows a very simple logic for time being.
@@ -404,7 +477,7 @@ public class ContainerMapping implements Mapping {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
 
-     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
       byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
       lock.lock();
@@ -415,7 +488,7 @@ public class ContainerMapping implements Mapping {
               HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
 
           HddsProtos.SCMContainerInfo newState =
-              reconcileState(datanodeState, knownState);
+              reconcileState(datanodeState, knownState, datanodeDetails);
 
           // FIX ME: This can be optimized, we write twice to memory, where a
           // single write would work well.
@@ -425,8 +498,16 @@ public class ContainerMapping implements Mapping {
           containerStore.put(dbKey, newState.toByteArray());
 
           // If the container is closed, then state is already written to SCM
+          Pipeline pipeline =
+              pipelineSelector.getPipeline(newState.getPipelineName(),
+                  newState.getReplicationType());
+          if(pipeline == null) {
+            pipeline = pipelineSelector
+                .getReplicationPipeline(newState.getReplicationType(),
+                    newState.getReplicationFactor());
+          }
           // DB.TODO: So can we can write only once to DB.
-          if (closeContainerIfNeeded(newState)) {
+          if (closeContainerIfNeeded(newState, pipeline)) {
             LOG.info("Closing the Container: {}", newState.getContainerID());
           }
         } else {
@@ -447,15 +528,22 @@ public class ContainerMapping implements Mapping {
    *
    * @param datanodeState - State from the Datanode.
    * @param knownState - State inside SCM.
+   * @param dnDetails
    * @return new SCM State for this container.
    */
   private HddsProtos.SCMContainerInfo reconcileState(
       StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState,
-      HddsProtos.SCMContainerInfo knownState) {
+      SCMContainerInfo knownState, DatanodeDetails dnDetails) {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
-    builder.setContainerID(knownState.getContainerID());
-    builder.setPipeline(knownState.getPipeline());
+    builder.setContainerID(knownState.getContainerID())
+        .setPipelineName(knownState.getPipelineName())
+        .setReplicationType(knownState.getReplicationType())
+        .setReplicationFactor(knownState.getReplicationFactor());
+
+    // TODO: If current state doesn't have this DN in list of DataNodes with replica
+    // then add it in list of replicas.
+
     // If used size is greater than allocated size, we will be updating
     // allocated size with used size. This update is done as a fallback
     // mechanism in case SCM crashes without properly updating allocated
@@ -464,13 +552,13 @@ public class ContainerMapping implements Mapping {
     long usedSize = datanodeState.getUsed();
     long allocated = knownState.getAllocatedBytes() > usedSize ?
         knownState.getAllocatedBytes() : usedSize;
-    builder.setAllocatedBytes(allocated);
-    builder.setUsedBytes(usedSize);
-    builder.setNumberOfKeys(datanodeState.getKeyCount());
-    builder.setState(knownState.getState());
-    builder.setStateEnterTime(knownState.getStateEnterTime());
-    builder.setContainerID(knownState.getContainerID());
-    builder.setDeleteTransactionId(knownState.getDeleteTransactionId());
+    builder.setAllocatedBytes(allocated)
+        .setUsedBytes(usedSize)
+        .setNumberOfKeys(datanodeState.getKeyCount())
+        .setState(knownState.getState())
+        .setStateEnterTime(knownState.getStateEnterTime())
+        .setContainerID(knownState.getContainerID())
+        .setDeleteTransactionId(knownState.getDeleteTransactionId());
     if (knownState.getOwner() != null) {
       builder.setOwner(knownState.getOwner());
     }
@@ -485,9 +573,11 @@ public class ContainerMapping implements Mapping {
    * one protobuf in one file and another definition in another file.
    *
    * @param newState - This is the state we maintain in SCM.
+   * @param pipeline
    * @throws IOException
    */
-  private boolean closeContainerIfNeeded(HddsProtos.SCMContainerInfo newState)
+  private boolean closeContainerIfNeeded(SCMContainerInfo newState,
+      Pipeline pipeline)
       throws IOException {
     float containerUsedPercentage = 1.0f *
         newState.getUsedBytes() / this.size;
@@ -498,7 +588,7 @@ public class ContainerMapping implements Mapping {
       // We will call closer till get to the closed state.
       // That is SCM will make this call repeatedly until we reach the closed
       // state.
-      closer.close(newState);
+      closer.close(newState, pipeline);
 
       if (shouldClose(scmInfo)) {
         // This event moves the Container from Open to Closing State, this is
@@ -568,6 +658,10 @@ public class ContainerMapping implements Mapping {
     if (containerStore != null) {
       containerStore.close();
     }
+
+    if (pipelineSelector != null) {
+      pipelineSelector.shutdown();
+    }
   }
 
   /**
@@ -598,10 +692,12 @@ public class ContainerMapping implements Mapping {
               .setAllocatedBytes(info.getAllocatedBytes())
               .setNumberOfKeys(oldInfo.getNumberOfKeys())
               .setOwner(oldInfo.getOwner())
-              .setPipeline(oldInfo.getPipeline())
+              .setPipelineName(oldInfo.getPipelineName())
               .setState(oldInfo.getState())
               .setUsedBytes(oldInfo.getUsedBytes())
               .setDeleteTransactionId(oldInfo.getDeleteTransactionId())
+              .setReplicationFactor(oldInfo.getReplicationFactor())
+              .setReplicationType(oldInfo.getReplicationType())
               .build();
           containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
         } else {
@@ -619,13 +715,13 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-  @Override
-  public NodeManager getNodeManager() {
-    return nodeManager;
-  }
-
   @VisibleForTesting
   public MetadataStore getContainerStore() {
     return containerStore;
+  }
+
+  @VisibleForTesting
+  public PipelineSelector getPipelineSelector() {
+    return pipelineSelector;
   }
 }

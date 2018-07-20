@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.ksm.KeySpaceManager;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -82,12 +82,12 @@ public interface MiniOzoneCluster {
   StorageContainerManager getStorageContainerManager();
 
   /**
-   * Returns {@link KeySpaceManager} associated with this
+   * Returns {@link OzoneManager} associated with this
    * {@link MiniOzoneCluster} instance.
    *
-   * @return {@link KeySpaceManager} instance
+   * @return {@link OzoneManager} instance
    */
-  KeySpaceManager getKeySpaceManager();
+  OzoneManager getOzoneManager();
 
   /**
    * Returns the list of {@link HddsDatanodeService} which are part of this
@@ -141,11 +141,11 @@ public interface MiniOzoneCluster {
   void restartStorageContainerManager() throws IOException;
 
   /**
-   * Restarts KeySpaceManager instance.
+   * Restarts OzoneManager instance.
    *
    * @throws IOException
    */
-  void restartKeySpaceManager() throws IOException;
+  void restartOzoneManager() throws IOException;
 
   /**
    * Restart a particular HddsDatanode.
@@ -184,13 +184,13 @@ public interface MiniOzoneCluster {
     protected Optional<Integer> hbInterval = Optional.empty();
     protected Optional<Integer> hbProcessorInterval = Optional.empty();
     protected Optional<String> scmId = Optional.empty();
-    protected Optional<String> ksmId = Optional.empty();
+    protected Optional<String> omId = Optional.empty();
 
     protected Boolean ozoneEnabled = true;
     protected Boolean randomContainerPort = true;
 
     // Use relative smaller number of handlers for testing
-    protected int numOfKsmHandlers = 20;
+    protected int numOfOmHandlers = 20;
     protected int numOfScmHandlers = 20;
     protected int numOfDatanodes = 1;
 
@@ -226,14 +226,14 @@ public interface MiniOzoneCluster {
     }
 
     /**
-     * Sets the KSM id.
+     * Sets the OM id.
      *
-     * @param id KSM Id
+     * @param id OM Id
      *
      * @return MiniOzoneCluster.Builder
      */
-    public Builder setKsmId(String id) {
-      ksmId = Optional.of(id);
+    public Builder setOmId(String id) {
+      omId = Optional.of(id);
       return this;
     }
 

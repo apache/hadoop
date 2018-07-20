@@ -23,15 +23,17 @@ import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -67,9 +69,9 @@ public class TestStorageContainerManagerHelper {
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 
-  public Map<String, KsmKeyInfo> createKeys(int numOfKeys, int keySize)
+  public Map<String, OmKeyInfo> createKeys(int numOfKeys, int keySize)
       throws Exception {
-    Map<String, KsmKeyInfo> keyLocationMap = Maps.newHashMap();
+    Map<String, OmKeyInfo> keyLocationMap = Maps.newHashMap();
     String volume = "volume" + RandomStringUtils.randomNumeric(5);
     String bucket = "bucket" + RandomStringUtils.randomNumeric(5);
     String userName = "user" + RandomStringUtils.randomNumeric(5);
@@ -104,12 +106,12 @@ public class TestStorageContainerManagerHelper {
     }
 
     for (String key : keyNames) {
-      KsmKeyArgs arg = new KsmKeyArgs.Builder()
+      OmKeyArgs arg = new OmKeyArgs.Builder()
           .setVolumeName(volume)
           .setBucketName(bucket)
           .setKeyName(key)
           .build();
-      KsmKeyInfo location = cluster.getKeySpaceManager()
+      OmKeyInfo location = cluster.getOzoneManager()
           .lookupKey(arg);
       keyLocationMap.put(key, location);
     }
@@ -158,13 +160,16 @@ public class TestStorageContainerManagerHelper {
 
   private MetadataStore getContainerMetadata(Long containerID)
       throws IOException {
-    ContainerInfo container = cluster.getStorageContainerManager()
-        .getClientProtocolServer().getContainer(containerID);
-    DatanodeDetails leadDN = container.getPipeline().getLeader();
+    ContainerWithPipeline containerWithPipeline = cluster
+        .getStorageContainerManager().getClientProtocolServer()
+        .getContainerWithPipeline(containerID);
+
+    DatanodeDetails leadDN = containerWithPipeline.getPipeline().getLeader();
     OzoneContainer containerServer =
         getContainerServerByDatanodeUuid(leadDN.getUuidString());
-    ContainerData containerData = containerServer.getContainerManager()
-        .readContainer(containerID);
+    KeyValueContainerData containerData = (KeyValueContainerData) containerServer
+        .getContainerSet()
+        .getContainer(containerID).getContainerData();
     return KeyUtils.getDB(containerData, conf);
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import com.google.protobuf.ByteString;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -31,13 +32,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -60,10 +60,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_BUCKET_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.KSM_VOLUME_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_BUCKET_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
@@ -86,12 +86,12 @@ public class SQLCLI  extends Configured implements Tool {
   private static final String CREATE_CONTAINER_INFO =
       "CREATE TABLE containerInfo (" +
           "containerID LONG PRIMARY KEY NOT NULL, " +
-          "leaderUUID TEXT NOT NULL)";
-  private static final String CREATE_CONTAINER_MEMBERS =
-      "CREATE TABLE containerMembers (" +
-          "containerName TEXT NOT NULL, " +
-          "datanodeUUID TEXT NOT NULL," +
-          "PRIMARY KEY(containerName, datanodeUUID));";
+          "replicationType TEXT NOT NULL," +
+          "replicationFactor TEXT NOT NULL," +
+          "usedBytes LONG NOT NULL," +
+          "allocatedBytes LONG NOT NULL," +
+          "owner TEXT," +
+          "numberOfKeys LONG)";
   private static final String CREATE_DATANODE_INFO =
       "CREATE TABLE datanodeInfo (" +
           "hostName TEXT NOT NULL, " +
@@ -99,8 +99,10 @@ public class SQLCLI  extends Configured implements Tool {
           "ipAddress TEXT, " +
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
-      "INSERT INTO containerInfo (containerID, leaderUUID) " +
-          "VALUES (\"%d\", \"%s\")";
+      "INSERT INTO containerInfo (containerID, replicationType, "
+          + "replicationFactor, usedBytes, allocatedBytes, owner, "
+          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", \"%d\", "
+          + "\"%s\", \"%d\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
           "containerPort) " +
@@ -118,7 +120,7 @@ public class SQLCLI  extends Configured implements Tool {
       "INSERT INTO openContainer (containerName, containerUsed) " +
           "VALUES (\"%s\", \"%s\")";
 
-  // for ksm.db
+  // for om.db
   private static final String CREATE_VOLUME_LIST =
       "CREATE TABLE volumeList (" +
           "userName TEXT NOT NULL," +
@@ -276,9 +278,9 @@ public class SQLCLI  extends Configured implements Tool {
     } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
       LOG.info("Converting open container DB");
       convertOpenContainerDB(dbPath, outPath);
-    } else if (dbName.toString().equals(KSM_DB_NAME)) {
-      LOG.info("Converting ksm DB");
-      convertKSMDB(dbPath, outPath);
+    } else if (dbName.toString().equals(OM_DB_NAME)) {
+      LOG.info("Converting om DB");
+      convertOMDB(dbPath, outPath);
     } else {
       LOG.error("Unrecognized db name {}", dbName);
     }
@@ -299,7 +301,7 @@ public class SQLCLI  extends Configured implements Tool {
   }
 
   /**
-   * Convert ksm.db to sqlite db file. With following schema.
+   * Convert om.db to sqlite db file. With following schema.
    * (* for primary key)
    *
    * 1. for key type USER, it contains a username and a list volumes
@@ -339,8 +341,8 @@ public class SQLCLI  extends Configured implements Tool {
    * @param outPath
    * @throws Exception
    */
-  private void convertKSMDB(Path dbPath, Path outPath) throws Exception {
-    LOG.info("Create tables for sql ksm db.");
+  private void convertOMDB(Path dbPath, Path outPath) throws Exception {
+    LOG.info("Create tables for sql om db.");
     File dbFile = dbPath.toFile();
     try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
         .setConf(conf).setDbFile(dbFile).build();
@@ -355,7 +357,7 @@ public class SQLCLI  extends Configured implements Tool {
         String keyString = DFSUtilClient.bytes2String(key);
         KeyType type = getKeyType(keyString);
         try {
-          insertKSMDB(conn, type, keyString, value);
+          insertOMDB(conn, type, keyString, value);
         } catch (IOException | SQLException ex) {
           LOG.error("Exception inserting key {} type {}", keyString, type, ex);
         }
@@ -364,8 +366,8 @@ public class SQLCLI  extends Configured implements Tool {
     }
   }
 
-  private void insertKSMDB(Connection conn, KeyType type, String keyName,
-      byte[] value) throws IOException, SQLException {
+  private void insertOMDB(Connection conn, KeyType type, String keyName,
+                          byte[] value) throws IOException, SQLException {
     switch (type) {
     case USER:
       VolumeList volumeList = VolumeList.parseFrom(value);
@@ -410,16 +412,16 @@ public class SQLCLI  extends Configured implements Tool {
       executeSQL(conn, insertKeyInfo);
       break;
     default:
-      throw new IOException("Unknown key from ksm.db");
+      throw new IOException("Unknown key from om.db");
     }
   }
 
   private KeyType getKeyType(String key) {
-    if (key.startsWith(KSM_USER_PREFIX)) {
+    if (key.startsWith(OM_USER_PREFIX)) {
       return KeyType.USER;
-    } else if (key.startsWith(KSM_VOLUME_PREFIX)) {
-      return key.replaceFirst(KSM_VOLUME_PREFIX, "")
-          .contains(KSM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
+    } else if (key.startsWith(OM_VOLUME_PREFIX)) {
+      return key.replaceFirst(OM_VOLUME_PREFIX, "")
+          .contains(OM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
     }else {
       return KeyType.KEY;
     }
@@ -469,10 +471,7 @@ public class SQLCLI  extends Configured implements Tool {
         .setConf(conf).setDbFile(dbFile).build();
         Connection conn = connectDB(outPath.toString())) {
       executeSQL(conn, CREATE_CONTAINER_INFO);
-      executeSQL(conn, CREATE_CONTAINER_MEMBERS);
-      executeSQL(conn, CREATE_DATANODE_INFO);
 
-      HashSet<String> uuidChecked = new HashSet<>();
       dbStore.iterate(null, (key, value) -> {
         long containerID = Longs.fromByteArray(key);
         ContainerInfo containerInfo = null;
@@ -481,8 +480,7 @@ public class SQLCLI  extends Configured implements Tool {
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema
-          insertContainerDB(conn, containerID,
-              containerInfo.getPipeline().getProtobufMessage(), uuidChecked);
+          insertContainerDB(conn, containerInfo, containerID);
           return true;
         } catch (SQLException e) {
           throw new IOException(e);
@@ -494,38 +492,23 @@ public class SQLCLI  extends Configured implements Tool {
   /**
    * Insert into the sqlite DB of container.db.
    * @param conn the connection to the sqlite DB.
-   * @param containerID the id of the container.
-   * @param pipeline the actual container pipeline object.
-   * @param uuidChecked the uuid that has been already inserted.
+   * @param containerInfo
+   * @param containerID
    * @throws SQLException throws exception.
    */
-  private void insertContainerDB(Connection conn, long containerID,
-      Pipeline pipeline, Set<String> uuidChecked) throws SQLException {
+  private void insertContainerDB(Connection conn, ContainerInfo containerInfo,
+      long containerID) throws SQLException {
     LOG.info("Insert to sql container db, for container {}", containerID);
     String insertContainerInfo = String.format(
         INSERT_CONTAINER_INFO, containerID,
-        pipeline.getLeaderID());
-    executeSQL(conn, insertContainerInfo);
+        containerInfo.getReplicationType(),
+        containerInfo.getReplicationFactor(),
+        containerInfo.getUsedBytes(),
+        containerInfo.getAllocatedBytes(),
+        containerInfo.getOwner(),
+        containerInfo.getNumberOfKeys());
 
-    for (HddsProtos.DatanodeDetailsProto dd :
-        pipeline.getMembersList()) {
-      String uuid = dd.getUuid();
-      if (!uuidChecked.contains(uuid)) {
-        // we may also not use this checked set, but catch exception instead
-        // but this seems a bit cleaner.
-        String ipAddr = dd.getIpAddress();
-        String hostName = dd.getHostName();
-        int containerPort = DatanodeDetails.getFromProtoBuf(dd)
-            .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue();
-        String insertMachineInfo = String.format(
-            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, containerPort);
-        executeSQL(conn, insertMachineInfo);
-        uuidChecked.add(uuid);
-      }
-      String insertContainerMembers = String.format(
-          INSERT_CONTAINER_MEMBERS, containerID, uuid);
-      executeSQL(conn, insertContainerMembers);
-    }
+    executeSQL(conn, insertContainerInfo);
     LOG.info("Insertion completed.");
   }
 

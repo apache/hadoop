@@ -56,6 +56,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -478,10 +479,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           return authUrl.openConnection(url, authToken, doAsUser);
         }
       });
+    } catch (ConnectException ex) {
+      String msg = "Failed to connect to: " + url.toString();
+      LOG.warn(msg);
+      throw new IOException(msg, ex);
+    } catch (SocketTimeoutException ex) {
+      LOG.warn("Failed to connect to {}:{}", url.getHost(), url.getPort());
+      throw ex;
     } catch (IOException ex) {
-      if (ex instanceof SocketTimeoutException) {
-        LOG.warn("Failed to connect to {}:{}", url.getHost(), url.getPort());
-      }
       throw ex;
     } catch (UndeclaredThrowableException ex) {
       throw new IOException(ex.getUndeclaredThrowable());
@@ -1036,13 +1041,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           public Token<?> run() throws Exception {
             // Not using the cached token here.. Creating a new token here
             // everytime.
-            LOG.debug("Getting new token from {}, renewer:{}", url, renewer);
+            LOG.info("Getting new token from {}, renewer:{}", url, renewer);
             return authUrl.getDelegationToken(url,
                 new DelegationTokenAuthenticatedURL.Token(), renewer, doAsUser);
           }
         });
         if (token != null) {
-          LOG.debug("New token received: ({})", token);
+          LOG.info("New token received: ({})", token);
           credentials.addToken(token.getService(), token);
           tokens = new Token<?>[] { token };
         } else {

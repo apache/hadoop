@@ -94,7 +94,7 @@ public final class ScmConfigKeys {
       "ozone.scm.datanode.port";
   public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
-  // OZONE_KSM_PORT_DEFAULT = 9862
+  // OZONE_OM_PORT_DEFAULT = 9862
   public static final String OZONE_SCM_BLOCK_CLIENT_PORT_KEY =
       "ozone.scm.block.client.port";
   public static final int OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT = 9863;
@@ -141,6 +141,7 @@ public final class ScmConfigKeys {
   public static final String HDDS_REST_HTTP_ADDRESS_KEY =
       "hdds.rest.http-address";
   public static final String HDDS_REST_HTTP_ADDRESS_DEFAULT = "0.0.0.0:9880";
+  public static final String HDDS_DATANODE_DIR_KEY = "hdds.datanode.dir";
   public static final String HDDS_REST_CSRF_ENABLED_KEY =
       "hdds.rest.rest-csrf.enabled";
   public static final boolean HDDS_REST_CSRF_ENABLED_DEFAULT = false;
@@ -155,19 +156,10 @@ public final class ScmConfigKeys {
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
 
-  public static final String OZONE_SCM_HEARTBEAT_INTERVAL =
-      "ozone.scm.heartbeat.interval";
-  public static final String OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT =
-      "30s";
-
   public static final String OZONE_SCM_DEADNODE_INTERVAL =
       "ozone.scm.dead.node.interval";
   public static final String OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
       "10m";
-
-  public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
-      "ozone.scm.max.hb.count.to.process";
-  public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
 
   public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL =
       "ozone.scm.heartbeat.thread.interval";
@@ -234,8 +226,9 @@ public final class ScmConfigKeys {
       "ozone.scm.container.provision_batch_size";
   public static final int OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE_DEFAULT = 20;
 
-  public static final String OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY =
-      "ozone.scm.container.deletion-choosing.policy";
+  public static final String
+      OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY =
+      "ozone.scm.keyvalue.container.deletion-choosing.policy";
 
   public static final String OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT =
       "ozone.scm.container.creation.lease.timeout";
@@ -243,6 +236,11 @@ public final class ScmConfigKeys {
   public static final String
       OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
 
+  public static final String OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT =
+      "ozone.scm.pipeline.creation.lease.timeout";
+
+  public static final String
+      OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
 
   public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
       "ozone.scm.block.deletion.max.retry";

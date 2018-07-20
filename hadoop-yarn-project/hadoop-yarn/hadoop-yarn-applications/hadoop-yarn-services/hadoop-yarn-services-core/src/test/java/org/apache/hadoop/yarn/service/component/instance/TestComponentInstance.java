@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,19 +60,20 @@ import static org.mockito.Mockito.when;
  */
 public class TestComponentInstance {
 
-  @Rule public ServiceTestUtils.ServiceFSWatcher rule =
+  @Rule
+  public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
-  @Test public void testContainerUpgrade() throws Exception {
+  @Test
+  public void testContainerUpgrade() throws Exception {
     ServiceContext context = TestComponent.createTestContext(rule,
         "testContainerUpgrade");
-    Component component =
-        context.scheduler.getAllComponents().entrySet().iterator().next()
-            .getValue();
+    Component component = context.scheduler.getAllComponents().entrySet()
+        .iterator().next().getValue();
     upgradeComponent(component);
 
-    ComponentInstance instance =
-        component.getAllComponentInstances().iterator().next();
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
     ComponentInstanceEvent instanceEvent = new ComponentInstanceEvent(
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
     instance.handle(instanceEvent);
@@ -82,16 +83,16 @@ public class TestComponentInstance {
         containerSpec.getState());
   }
 
-  @Test public void testContainerReadyAfterUpgrade() throws Exception {
+  @Test
+  public void testContainerReadyAfterUpgrade() throws Exception {
     ServiceContext context = TestComponent.createTestContext(rule,
         "testContainerStarted");
-    Component component =
-        context.scheduler.getAllComponents().entrySet().iterator().next()
-            .getValue();
+    Component component = context.scheduler.getAllComponents().entrySet()
+        .iterator().next().getValue();
     upgradeComponent(component);
 
-    ComponentInstance instance =
-        component.getAllComponentInstances().iterator().next();
+    ComponentInstance instance = component.getAllComponentInstances().iterator()
+        .next();
 
     ComponentInstanceEvent instanceEvent = new ComponentInstanceEvent(
         instance.getContainer().getId(), ComponentInstanceEventType.UPGRADE);
@@ -100,9 +101,8 @@ public class TestComponentInstance {
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
     Assert.assertEquals("instance not ready", ContainerState.READY,
-        instance.getCompSpec()
-            .getContainer(instance.getContainer().getId().toString())
-            .getState());
+        instance.getCompSpec().getContainer(
+            instance.getContainer().getId().toString()).getState());
   }
 
   private void upgradeComponent(Component component) {
@@ -113,9 +113,8 @@ public class TestComponentInstance {
 
   private Component createComponent(ServiceScheduler scheduler,
       org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum
-          restartPolicy,
-      int nSucceededInstances, int nFailedInstances, int totalAsk,
-      int componentId) {
+          restartPolicy, int nSucceededInstances, int nFailedInstances,
+      int totalAsk, int componentId) {
 
     assert (nSucceededInstances + nFailedInstances) <= totalAsk;
 
@@ -214,7 +213,8 @@ public class TestComponentInstance {
     return componentInstance;
   }
 
-  @Test public void testComponentRestartPolicy() {
+  @Test
+  public void testComponentRestartPolicy() {
 
     Map<String, Component> allComponents = new HashMap<>();
     Service mockService = mock(Service.class);

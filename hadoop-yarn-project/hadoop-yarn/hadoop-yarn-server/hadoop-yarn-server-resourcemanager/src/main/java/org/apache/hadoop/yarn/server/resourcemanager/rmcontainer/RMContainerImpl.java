@@ -701,11 +701,6 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Notify AllocationTagsManager
-      container.rmContext.getAllocationTagsManager().removeContainer(
-          container.getNodeId(), container.getContainerId(),
-          container.getAllocationTags());
-
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
       container.finishTime = System.currentTimeMillis();

@@ -94,7 +94,7 @@ public class ContainerMetrics {
                        new ContainerMetrics(intervals));
   }
 
-  public void incContainerOpcMetrics(ContainerProtos.Type type){
+  public void incContainerOpsMetrics(ContainerProtos.Type type) {
     numOps.incr();
     numOpsArray[type.ordinal()].incr();
   }

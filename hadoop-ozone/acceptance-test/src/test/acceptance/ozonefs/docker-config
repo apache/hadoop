@@ -15,8 +15,8 @@
 # limitations under the License.
 
 CORE-SITE.XML_fs.o3.impl=org.apache.hadoop.fs.ozone.OzoneFileSystem
-OZONE-SITE.XML_ozone.ksm.address=ksm
-OZONE-SITE.XML_ozone.ksm.http-address=ksm:9874
+OZONE-SITE.XML_ozone.om.address=ozoneManager
+OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id

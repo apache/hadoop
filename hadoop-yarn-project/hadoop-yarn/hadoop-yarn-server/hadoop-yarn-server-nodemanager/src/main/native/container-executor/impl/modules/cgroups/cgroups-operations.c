@@ -83,6 +83,8 @@ char* get_cgroups_path_to_write(
   }
 
 cleanup:
+  free((void *) cgroups_root);
+  free((void *) yarn_hierarchy_name);
   if (failed) {
     if (buffer) {
       free(buffer);

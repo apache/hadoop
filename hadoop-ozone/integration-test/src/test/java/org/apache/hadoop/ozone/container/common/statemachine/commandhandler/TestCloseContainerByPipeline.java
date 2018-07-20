@@ -23,8 +23,6 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -34,11 +32,10 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -48,7 +45,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 public class TestCloseContainerByPipeline {
@@ -101,20 +97,20 @@ public class TestCloseContainerByPipeline {
     key.close();
 
     //get the name of a valid container
-    KsmKeyArgs keyArgs =
-        new KsmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
+    OmKeyArgs keyArgs =
+        new OmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
             .setType(HddsProtos.ReplicationType.STAND_ALONE)
             .setFactor(HddsProtos.ReplicationFactor.ONE).setDataSize(1024)
             .setKeyName("testCloseContainer").build();
 
-    KsmKeyLocationInfo ksmKeyLocationInfo =
-        cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
+    OmKeyLocationInfo omKeyLocationInfo =
+        cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    long containerID = omKeyLocationInfo.getContainerID();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -156,20 +152,20 @@ public class TestCloseContainerByPipeline {
     key.close();
 
     //get the name of a valid container
-    KsmKeyArgs keyArgs =
-        new KsmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
+    OmKeyArgs keyArgs =
+        new OmKeyArgs.Builder().setVolumeName("test").setBucketName("test")
             .setType(HddsProtos.ReplicationType.STAND_ALONE)
             .setFactor(HddsProtos.ReplicationFactor.ONE).setDataSize(1024)
             .setKeyName("standalone").build();
 
-    KsmKeyLocationInfo ksmKeyLocationInfo =
-        cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
+    OmKeyLocationInfo omKeyLocationInfo =
+        cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    long containerID = omKeyLocationInfo.getContainerID();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -210,19 +206,19 @@ public class TestCloseContainerByPipeline {
     key.close();
 
     //get the name of a valid container
-    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder().setVolumeName("test").
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName("test").
         setBucketName("test").setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.THREE).setDataSize(1024)
         .setKeyName("ratis").build();
 
-    KsmKeyLocationInfo ksmKeyLocationInfo =
-        cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
+    OmKeyLocationInfo omKeyLocationInfo =
+        cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    long containerID = ksmKeyLocationInfo.getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerInfo(containerID)
-            .getPipeline().getMachines();
+    long containerID = omKeyLocationInfo.getContainerID();
+    List<DatanodeDetails> datanodes = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline().getMachines();
     Assert.assertTrue(datanodes.size() == 3);
 
     GenericTestUtils.LogCapturer logCapturer =
@@ -235,12 +231,12 @@ public class TestCloseContainerByPipeline {
           .addDatanodeCommand(details.getUuid(),
               new CloseContainerCommand(containerID,
                   HddsProtos.ReplicationType.RATIS));
-  }
+    }
 
     for (DatanodeDetails datanodeDetails : datanodes) {
       GenericTestUtils.waitFor(
           () -> isContainerClosed(cluster, containerID, datanodeDetails), 500,
-          5 * 1000);
+          15 * 1000);
       //double check if it's really closed (waitFor also throws an exception)
       Assert.assertTrue(isContainerClosed(cluster, containerID, datanodeDetails));
     }
@@ -256,17 +252,13 @@ public class TestCloseContainerByPipeline {
   private Boolean isContainerClosed(MiniOzoneCluster cluster, long containerID,
       DatanodeDetails datanode) {
     ContainerData containerData;
-    try {
-      for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes())
-        if (datanode.equals(datanodeService.getDatanodeDetails())) {
-          containerData =
-              datanodeService.getDatanodeStateMachine().getContainer()
-                  .getContainerManager().readContainer(containerID);
-          return !containerData.isOpen();
-        }
-    } catch (StorageContainerException e) {
-      throw new AssertionError(e);
-    }
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes())
+      if (datanode.equals(datanodeService.getDatanodeDetails())) {
+        containerData =
+            datanodeService.getDatanodeStateMachine().getContainer()
+                .getContainerSet().getContainer(containerID).getContainerData();
+        return !containerData.isOpen();
+      }
     return false;
   }
 }

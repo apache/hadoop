@@ -1203,6 +1203,27 @@ void test_trim_function() {
   free(trimmed);
 }
 
+int is_empty(char *name);
+
+void test_is_empty() {
+  printf("\nTesting is_empty function\n");
+  if (is_empty("/")) {
+    printf("FAIL: / should not be empty\n");
+    exit(1);
+  }
+  char *noexist = TEST_ROOT "/noexist";
+  if (is_empty(noexist)) {
+    printf("%s should not exist\n", noexist);
+    exit(1);
+  }
+  char *emptydir = TEST_ROOT "/emptydir";
+  mkdir(emptydir, S_IRWXU);
+  if (!is_empty(emptydir)) {
+    printf("FAIL: %s should be empty\n", emptydir);
+    exit(1);
+  }
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1263,6 +1284,9 @@ int main(int argc, char **argv) {
   }
 
   printf("\nStarting tests\n");
+
+  printf("\ntest_is_empty()\n");
+  test_is_empty();
 
   printf("\nTesting recursive_unlink_children()\n");
   test_recursive_unlink_children();

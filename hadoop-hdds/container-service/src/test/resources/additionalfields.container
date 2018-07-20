@@ -1,0 +1,11 @@
+!<KeyValueContainerData>
+containerDBType: RocksDB
+chunksPath: /hdds/current/aed-fg4-hji-jkl/containerDir0/1
+containerID: 9223372036854775807
+containerType: KeyValueContainer
+metadataPath: /hdds/current/aed-fg4-hji-jkl/containerDir0/1
+layOutVersion: 1
+maxSizeGB: 5
+metadata: {OWNER: ozone, VOLUME: hdfs}
+state: CLOSED
+aclEnabled: true

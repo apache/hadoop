@@ -152,7 +152,7 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
   @Override
   public List<DeleteBlockGroupResult> deleteKeyBlocks(
       List<BlockGroup> keyBlocksInfoList) throws IOException {
-    LOG.info("SCM is informed by KSM to delete {} blocks", keyBlocksInfoList
+    LOG.info("SCM is informed by OM to delete {} blocks", keyBlocksInfoList
         .size());
     List<DeleteBlockGroupResult> results = new ArrayList<>();
     for (BlockGroup keyBlocks : keyBlocksInfoList) {

@@ -214,6 +214,13 @@ public class Pipeline {
   }
 
   /**
+   * Update the State of the pipeline.
+   */
+  public void setLifeCycleState(HddsProtos.LifeCycleState nextState) {
+     lifeCycleState = nextState;
+  }
+
+  /**
    * Gets the pipeline Name.
    *
    * @return - Name of the pipeline

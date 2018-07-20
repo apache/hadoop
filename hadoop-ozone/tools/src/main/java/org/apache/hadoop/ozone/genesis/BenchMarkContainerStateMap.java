@@ -60,7 +60,9 @@ public class BenchMarkContainerStateMap {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(CLOSED)
-            .setPipeline(pipeline)
+            .setPipelineName(pipeline.getPipelineName())
+            .setReplicationType(pipeline.getType())
+            .setReplicationFactor(pipeline.getFactor())
             // This is bytes allocated for blocks inside container, not the
             // container size
             .setAllocatedBytes(0)
@@ -81,7 +83,9 @@ public class BenchMarkContainerStateMap {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(OPEN)
-            .setPipeline(pipeline)
+            .setPipelineName(pipeline.getPipelineName())
+            .setReplicationType(pipeline.getType())
+            .setReplicationFactor(pipeline.getFactor())
             // This is bytes allocated for blocks inside container, not the
             // container size
             .setAllocatedBytes(0)
@@ -101,7 +105,9 @@ public class BenchMarkContainerStateMap {
     try {
       ContainerInfo containerInfo = new ContainerInfo.Builder()
           .setState(OPEN)
-          .setPipeline(pipeline)
+          .setPipelineName(pipeline.getPipelineName())
+          .setReplicationType(pipeline.getType())
+          .setReplicationFactor(pipeline.getFactor())
           // This is bytes allocated for blocks inside container, not the
           // container size
           .setAllocatedBytes(0)
@@ -166,7 +172,9 @@ public class BenchMarkContainerStateMap {
     int cid = state.containerID.incrementAndGet();
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(CLOSED)
-        .setPipeline(pipeline)
+        .setPipelineName(pipeline.getPipelineName())
+        .setReplicationType(pipeline.getType())
+        .setReplicationFactor(pipeline.getFactor())
         // This is bytes allocated for blocks inside container, not the
         // container size
         .setAllocatedBytes(0)

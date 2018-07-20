@@ -30,7 +30,7 @@ import java.nio.file.NoSuchFileException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.OzoneRestUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
@@ -135,7 +135,7 @@ public abstract class VolumeProcessTemplate {
     OzoneException exp = null;
 
     if ((fsExp != null && fsExp.getMessage().endsWith(
-        KeySpaceManagerProtocolProtos.Status.VOLUME_ALREADY_EXISTS.name()))
+        OzoneManagerProtocolProtos.Status.VOLUME_ALREADY_EXISTS.name()))
         || fsExp instanceof FileAlreadyExistsException) {
       exp = ErrorTable
           .newError(ErrorTable.VOLUME_ALREADY_EXISTS, reqID, volume, hostName);

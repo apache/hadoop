@@ -225,7 +225,7 @@ cluster for existing HDFS clients.
 
 See [HDFS-10467](https://issues.apache.org/jira/browse/HDFS-10467) and the
 HDFS Router-based Federation
-[documentation](./hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html) for
+[documentation](./hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html) for
 more details.
 
 API-based configuration of Capacity Scheduler queue configuration

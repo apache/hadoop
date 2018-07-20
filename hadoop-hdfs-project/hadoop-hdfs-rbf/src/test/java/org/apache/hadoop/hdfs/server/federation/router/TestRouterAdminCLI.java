@@ -82,6 +82,7 @@ public class TestRouterAdminCLI {
         .stateStore()
         .admin()
         .rpc()
+        .safemode()
         .build();
     cluster.addRouterOverrides(conf);
 
@@ -501,13 +502,13 @@ public class TestRouterAdminCLI {
   public void testManageSafeMode() throws Exception {
     // ensure the Router become RUNNING state
     waitState(RouterServiceState.RUNNING);
-    assertFalse(routerContext.getRouter().getRpcServer().isInSafeMode());
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "enter"}));
     // verify state
     assertEquals(RouterServiceState.SAFEMODE,
         routerContext.getRouter().getRouterState());
-    assertTrue(routerContext.getRouter().getRpcServer().isInSafeMode());
+    assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
 
     System.setOut(new PrintStream(out));
     assertEquals(0, ToolRunner.run(admin,
@@ -519,7 +520,7 @@ public class TestRouterAdminCLI {
     // verify state
     assertEquals(RouterServiceState.RUNNING,
         routerContext.getRouter().getRouterState());
-    assertFalse(routerContext.getRouter().getRpcServer().isInSafeMode());
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
 
     out.reset();
     assertEquals(0, ToolRunner.run(admin,

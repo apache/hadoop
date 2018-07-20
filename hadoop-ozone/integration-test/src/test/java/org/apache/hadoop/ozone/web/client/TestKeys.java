@@ -44,17 +44,18 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
-import org.apache.hadoop.ozone.ksm.KeySpaceManager;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
+import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Status;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -644,15 +645,15 @@ public class TestKeys {
     }
   }
 
-  private int countKsmKeys(KeySpaceManager ksm) throws IOException {
+  private int countOmKeys(OzoneManager om) throws IOException {
     int totalCount = 0;
-    List<KsmVolumeArgs> volumes =
-        ksm.listAllVolumes(null, null, Integer.MAX_VALUE);
-    for (KsmVolumeArgs volume : volumes) {
-      List<KsmBucketInfo> buckets =
-          ksm.listBuckets(volume.getVolume(), null, null, Integer.MAX_VALUE);
-      for (KsmBucketInfo bucket : buckets) {
-        List<KsmKeyInfo> keys = ksm.listKeys(bucket.getVolumeName(),
+    List<OmVolumeArgs> volumes =
+        om.listAllVolumes(null, null, Integer.MAX_VALUE);
+    for (OmVolumeArgs volume : volumes) {
+      List<OmBucketInfo> buckets =
+          om.listBuckets(volume.getVolume(), null, null, Integer.MAX_VALUE);
+      for (OmBucketInfo bucket : buckets) {
+        List<OmKeyInfo> keys = om.listKeys(bucket.getVolumeName(),
             bucket.getBucketName(), null, null, Integer.MAX_VALUE);
         totalCount += keys.size();
       }
@@ -662,10 +663,10 @@ public class TestKeys {
 
   @Test
   public void testDeleteKey() throws Exception {
-    KeySpaceManager ksm = ozoneCluster.getKeySpaceManager();
+    OzoneManager ozoneManager = ozoneCluster.getOzoneManager();
     // To avoid interference from other test cases,
     // we collect number of existing keys at the beginning
-    int numOfExistedKeys = countKsmKeys(ksm);
+    int numOfExistedKeys = countOmKeys(ozoneManager);
 
     // Keep tracking bucket keys info while creating them
     PutHelper helper = new PutHelper(client, path);
@@ -689,22 +690,25 @@ public class TestKeys {
     // count the total number of created keys.
     Set<Pair<String, String>> buckets = bucketKeys.getAllBuckets();
     for (Pair<String, String> buk : buckets) {
-      List<KsmKeyInfo> createdKeys =
-          ksm.listKeys(buk.getKey(), buk.getValue(), null, null, 20);
+      List<OmKeyInfo> createdKeys =
+          ozoneManager.listKeys(buk.getKey(), buk.getValue(), null, null, 20);
 
       // Memorize chunks that has been created,
       // so we can verify actual deletions at DN side later.
-      for (KsmKeyInfo keyInfo : createdKeys) {
-        List<KsmKeyLocationInfo> locations =
+      for (OmKeyInfo keyInfo : createdKeys) {
+        List<OmKeyLocationInfo> locations =
             keyInfo.getLatestVersionLocations().getLocationList();
-        for (KsmKeyLocationInfo location : locations) {
-          KeyData keyData = new KeyData(location.getBlockID());
-          KeyData blockInfo = cm.getContainerManager()
-              .getKeyManager().getKey(keyData);
-          ContainerData containerData = cm.getContainerManager()
-              .readContainer(keyData.getContainerID());
-          File dataDir = ContainerUtils
-              .getDataDirectory(containerData).toFile();
+        for (OmKeyLocationInfo location : locations) {
+          KeyValueHandler  keyValueHandler = (KeyValueHandler) cm
+              .getDispatcher().getHandler(ContainerProtos.ContainerType
+                  .KeyValueContainer);
+          KeyValueContainer container = (KeyValueContainer) cm.getContainerSet()
+              .getContainer(location.getBlockID().getContainerID());
+          KeyData blockInfo = keyValueHandler
+              .getKeyManager().getKey(container, location.getBlockID());
+          KeyValueContainerData containerData = (KeyValueContainerData) container
+              .getContainerData();
+          File dataDir = new File(containerData.getChunksPath());
           for (ContainerProtos.ChunkInfo chunkInfo : blockInfo.getChunks()) {
             File chunkFile = dataDir.toPath()
                 .resolve(chunkInfo.getChunkName()).toFile();
@@ -721,9 +725,9 @@ public class TestKeys {
     // Ensure all keys are created.
     Assert.assertEquals(20, numOfCreatedKeys);
 
-    // Ensure all keys are visible from KSM.
+    // Ensure all keys are visible from OM.
     // Total number should be numOfCreated + numOfExisted
-    Assert.assertEquals(20 + numOfExistedKeys, countKsmKeys(ksm));
+    Assert.assertEquals(20 + numOfExistedKeys, countOmKeys(ozoneManager));
 
     // Delete 10 keys
     int delCount = 20;
@@ -732,21 +736,21 @@ public class TestKeys {
       List<String> bks = bucketKeys.getBucketKeys(bucketInfo.getValue());
       for (String keyName : bks) {
         if (delCount > 0) {
-          KsmKeyArgs arg =
-              new KsmKeyArgs.Builder().setVolumeName(bucketInfo.getKey())
+          OmKeyArgs arg =
+              new OmKeyArgs.Builder().setVolumeName(bucketInfo.getKey())
                   .setBucketName(bucketInfo.getValue()).setKeyName(keyName)
                   .build();
-          ksm.deleteKey(arg);
+          ozoneManager.deleteKey(arg);
           delCount--;
         }
       }
     }
 
-    // It should be pretty quick that keys are removed from KSM namespace,
+    // It should be pretty quick that keys are removed from OM namespace,
     // because actual deletion happens in async mode.
     GenericTestUtils.waitFor(() -> {
       try {
-        int num = countKsmKeys(ksm);
+        int num = countOmKeys(ozoneManager);
         return num == (numOfExistedKeys);
       } catch (IOException e) {
         return false;

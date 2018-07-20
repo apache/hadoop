@@ -66,7 +66,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(
-        "Initialized queue mappings, override: " + overrideWithQueueMappings);
+        "Initialized App Name queue mappings, override: " + overrideWithQueueMappings);
 
     List<QueueMappingEntity> queueMappings =
         conf.getQueueMappingEntity(QUEUE_MAPPING_NAME);
@@ -139,6 +139,8 @@ public class AppNameMappingPlacementRule extends PlacementRule {
     if (newMappings.size() > 0) {
       this.mappings = newMappings;
       this.overrideWithQueueMappings = overrideWithQueueMappings;
+      LOG.info("get valid queue mapping from app name config: " +
+          newMappings.toString() + ", override: " + overrideWithQueueMappings);
       return true;
     }
     return false;
@@ -149,16 +151,16 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   }
 
   private ApplicationPlacementContext getAppPlacementContext(String user,
-      ApplicationId applicationId) throws IOException {
+      String applicationName) throws IOException {
     for (QueueMappingEntity mapping : mappings) {
       if (mapping.getSource().equals(CURRENT_APP_MAPPING)) {
         if (mapping.getQueue().equals(CURRENT_APP_MAPPING)) {
-          return getPlacementContext(mapping, String.valueOf(applicationId));
+          return getPlacementContext(mapping, applicationName);
         } else {
           return getPlacementContext(mapping);
         }
       }
-      if (mapping.getSource().equals(applicationId.toString())) {
+      if (mapping.getSource().equals(applicationName)) {
         return getPlacementContext(mapping);
       }
     }
@@ -169,25 +171,25 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   public ApplicationPlacementContext getPlacementForApp(
       ApplicationSubmissionContext asc, String user) throws YarnException {
     String queueName = asc.getQueue();
-    ApplicationId applicationId = asc.getApplicationId();
+    String applicationName = asc.getApplicationName();
     if (mappings != null && mappings.size() > 0) {
       try {
         ApplicationPlacementContext mappedQueue = getAppPlacementContext(user,
-            applicationId);
+            applicationName);
         if (mappedQueue != null) {
           // We have a mapping, should we use it?
           if (queueName.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)
               //queueName will be same as mapped queue name in case of recovery
               || queueName.equals(mappedQueue.getQueue())
               || overrideWithQueueMappings) {
-            LOG.info("Application " + applicationId
+            LOG.info("Application " + applicationName
                 + " mapping [" + queueName + "] to [" + mappedQueue
                 + "] override " + overrideWithQueueMappings);
             return mappedQueue;
           }
         }
       } catch (IOException ioex) {
-        String message = "Failed to submit application " + applicationId +
+        String message = "Failed to submit application " + applicationName +
             " reason: " + ioex.getMessage();
         throw new YarnException(message);
       }

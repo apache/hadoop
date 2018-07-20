@@ -56,7 +56,7 @@ public class ContainerAllocation {
 
   RMContainer containerToBeUnreserved;
   private Resource resourceToBeAllocated = Resources.none();
-  AllocationState state;
+  private AllocationState state;
   NodeType containerNodeType = NodeType.NODE_LOCAL;
   NodeType requestLocalityType = null;
 

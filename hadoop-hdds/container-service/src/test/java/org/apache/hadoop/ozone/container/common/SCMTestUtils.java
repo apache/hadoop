@@ -25,15 +25,19 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolService;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerDatanodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 
 /**
  * Test Endpoint class.
@@ -109,8 +113,13 @@ public final class SCMTestUtils {
     }
   }
 
-  public static Configuration getConf() {
-    return new Configuration();
+  public static OzoneConfiguration getConf() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(HDDS_DATANODE_DIR_KEY, GenericTestUtils
+        .getRandomizedTempPath());
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, GenericTestUtils
+        .getRandomizedTempPath());
+    return conf;
   }
 
   public static OzoneConfiguration getOzoneConf() {

@@ -16,14 +16,20 @@
  */
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -33,11 +39,13 @@ public class VersionEndpointTask implements
     Callable<EndpointStateMachine.EndPointStates> {
   private final EndpointStateMachine rpcEndPoint;
   private final Configuration configuration;
+  private final OzoneContainer ozoneContainer;
 
   public VersionEndpointTask(EndpointStateMachine rpcEndPoint,
-      Configuration conf) {
+                             Configuration conf, OzoneContainer container) {
     this.rpcEndPoint = rpcEndPoint;
     this.configuration = conf;
+    this.ozoneContainer = container;
   }
 
   /**
@@ -52,7 +60,26 @@ public class VersionEndpointTask implements
     try{
       SCMVersionResponseProto versionResponse =
           rpcEndPoint.getEndPoint().getVersion(null);
-      rpcEndPoint.setVersion(VersionResponse.getFromProtobuf(versionResponse));
+      VersionResponse response = VersionResponse.getFromProtobuf(
+          versionResponse);
+      rpcEndPoint.setVersion(response);
+      VolumeSet volumeSet = ozoneContainer.getVolumeSet();
+      Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
+
+      String scmId = response.getValue(OzoneConsts.SCM_ID);
+      String clusterId = response.getValue(OzoneConsts.CLUSTER_ID);
+
+      Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
+          "null");
+      Preconditions.checkNotNull(scmId, "Reply from SCM: clusterId cannot be" +
+          " null");
+
+      // If version file does not exist create version file and also set scmId
+      for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
+        HddsVolume hddsVolume = entry.getValue();
+        hddsVolume.format(clusterId);
+        ozoneContainer.getDispatcher().setScmId(scmId);
+      }
 
       EndpointStateMachine.EndPointStates nextState =
           rpcEndPoint.getState().getNextState();

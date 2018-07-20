@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
+import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -31,9 +35,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -203,7 +205,6 @@ public class TestContainerServer {
   public void testClientServerWithContainerDispatcher() throws Exception {
     XceiverServer server = null;
     XceiverClient client = null;
-    String containerName = OzoneUtils.getRequestID();
 
     try {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
@@ -212,8 +213,8 @@ public class TestContainerServer {
           pipeline.getLeader()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
-      Dispatcher dispatcher =
-              new Dispatcher(mock(ContainerManager.class), conf);
+      HddsDispatcher dispatcher = new HddsDispatcher(
+          conf, mock(ContainerSet.class), mock(VolumeSet.class));
       dispatcher.init();
       DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
       server = new XceiverServer(datanodeDetails, conf, dispatcher);
@@ -228,10 +229,6 @@ public class TestContainerServer {
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
-      Assert.assertTrue(dispatcher.
-                          getContainerMetrics().
-                            getContainerOpsMetrics(
-                              ContainerProtos.Type.CreateContainer)== 1);
     } finally {
       if (client != null) {
         client.close();
@@ -261,6 +258,15 @@ public class TestContainerServer {
 
     @Override
     public void shutdown() {
+    }
+    @Override
+    public Handler getHandler(ContainerProtos.ContainerType containerType) {
+      return null;
+    }
+
+    @Override
+    public void setScmId(String scmId) {
+
     }
   }
 }

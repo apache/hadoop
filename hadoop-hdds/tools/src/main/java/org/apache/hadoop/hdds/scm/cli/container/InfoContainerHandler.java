@@ -24,7 +24,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerData;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 
 import java.io.IOException;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
 import static org.apache.hadoop.hdds.scm.cli.SCMCLI.CMD_WIDTH;
 import static org.apache.hadoop.hdds.scm.cli.SCMCLI.HELP_OP;
@@ -68,13 +68,12 @@ public class InfoContainerHandler extends OzoneCommandHandler {
       }
     }
     String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
-    ContainerInfo container = getScmClient().
-        getContainer(Long.parseLong(containerID));
+    ContainerWithPipeline container = getScmClient().
+        getContainerWithPipeline(Long.parseLong(containerID));
     Preconditions.checkNotNull(container, "Container cannot be null");
 
-    ContainerData containerData =
-        getScmClient().readContainer(container.getContainerID(),
-            container.getPipeline());
+    ContainerData containerData = getScmClient().readContainer(container
+        .getContainerInfo().getContainerID(), container.getPipeline());
 
     // Print container report info.
     logOut("Container id: %s", containerID);

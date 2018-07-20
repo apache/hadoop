@@ -88,7 +88,7 @@
 # Extra Java runtime options for all Hadoop commands. We don't support
 # IPv6 yet/still, so by default the preference is set to IPv4.
 # export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true"
-# For Kerberos debugging, an extended option set logs more invormation
+# For Kerberos debugging, an extended option set logs more information
 # export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true -Dsun.security.krb5.debug=true -Dsun.security.spnego.debug"
 
 # Some parts of the shell code may do special things dependent upon
@@ -120,9 +120,9 @@ esac
 #
 # By default, Apache Hadoop overrides Java's CLASSPATH
 # environment variable.  It is configured such
-# that it sarts out blank with new entries added after passing
+# that it starts out blank with new entries added after passing
 # a series of checks (file/dir exists, not already listed aka
-# de-deduplication).  During de-depulication, wildcards and/or
+# de-deduplication).  During de-deduplication, wildcards and/or
 # directories are *NOT* expanded to keep it simple. Therefore,
 # if the computed classpath has two specific mentions of
 # awesome-methods-1.0.jar, only the first one added will be seen.
@@ -404,13 +404,13 @@ esac
 # export HDFS_DFSROUTER_OPTS=""
 
 ###
-# HDFS Key Space Manager specific parameters
+# Ozone Manager specific parameters
 ###
-# Specify the JVM options to be used when starting the HDFS Key Space Manager.
+# Specify the JVM options to be used when starting the Ozone Manager.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
-# export HDFS_KSM_OPTS=""
+# export HDFS_OM_OPTS=""
 
 ###
 # HDFS StorageContainerManager specific parameters

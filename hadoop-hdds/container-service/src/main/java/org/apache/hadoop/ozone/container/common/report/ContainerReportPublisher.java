@@ -17,12 +17,19 @@
 
 package org.apache.hadoop.ozone.container.common.report;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_CONTAINER_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT;
 
 
 /**
@@ -49,9 +56,17 @@ public class ContainerReportPublisher extends
   protected long getReportFrequency() {
     if (containerReportInterval == null) {
       containerReportInterval = getConf().getTimeDuration(
-          OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL,
-          OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL_DEFAULT,
+          HDDS_CONTAINER_REPORT_INTERVAL,
+          HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT,
           TimeUnit.MILLISECONDS);
+
+      long heartbeatFrequency = HddsServerUtil.getScmHeartbeatInterval(
+          getConf());
+
+      Preconditions.checkState(
+          heartbeatFrequency < containerReportInterval,
+          HDDS_CONTAINER_REPORT_INTERVAL +
+              " cannot be configured lower than heartbeat frequency.");
     }
     // Add a random delay (0~30s) on top of the container report
     // interval (60s) so tha the SCM is overwhelmed by the container reports
@@ -64,7 +79,7 @@ public class ContainerReportPublisher extends
   }
 
   @Override
-  protected ContainerReportsProto getReport() {
-    return ContainerReportsProto.getDefaultInstance();
+  protected ContainerReportsProto getReport() throws IOException {
+    return getContext().getParent().getContainer().getContainerReport();
   }
 }

@@ -38,11 +38,10 @@ function hadoop_usage
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "freon" client "runs an ozone data generator"
   hadoop_add_subcommand "genesis" client "runs a collection of ozone benchmarks to help with tuning."
-  hadoop_add_subcommand "getozoneconf" client "get ozone config values from
-  configuration"
+  hadoop_add_subcommand "getozoneconf" client "get ozone config values from configuration"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
-  hadoop_add_subcommand "ksm" daemon "Ozone keyspace manager"
-  hadoop_add_subcommand "o3" client "command line interface for ozone"
+  hadoop_add_subcommand "om" daemon "Ozone Manager"
+  hadoop_add_subcommand "oz" client "command line interface for ozone"
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
@@ -94,9 +93,9 @@ function ozonecmd_case
     getozoneconf)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.OzoneGetConf;
     ;;
-    ksm)
+    om)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.ksm.KeySpaceManager
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.om.OzoneManager
     ;;
     oz)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell

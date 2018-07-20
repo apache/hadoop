@@ -175,7 +175,7 @@ Deployment
 
 By default, the Router is ready to take requests and monitor the NameNode in the local machine.
 It needs to know the State Store endpoint by setting `dfs.federation.router.store.driver.class`.
-The rest of the options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
+The rest of the options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 
 Once the Router is configured, it can be started:
 
@@ -290,7 +290,7 @@ Router configuration
 --------------------
 
 One can add the configurations for Router-based federation to **hdfs-site.xml**.
-The main options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
+The main options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 The configuration values are described in this section.
 
 ### RPC server
@@ -329,6 +329,18 @@ The administration server to manage the Mount Table.
 | dfs.federation.router.admin-address | 0.0.0.0:8111 | RPC address that handles the admin requests. |
 | dfs.federation.router.admin-bind-host | 0.0.0.0 | The actual address the RPC admin server will bind to. |
 | dfs.federation.router.admin.handler.count | 1 | The number of server threads for the router to handle RPC requests from admin. |
+
+### HTTP Server
+
+The HTTP Server to provide Web UI and the HDFS REST interface ([WebHDFS](../hadoop-hdfs/WebHDFS.html)) for the clients. The default URL is "`http://router_host:50071`".
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.http.enable | `true` | If `true`, the HTTP service to handle client requests in the router is enabled. |
+| dfs.federation.router.http-address | 0.0.0.0:50071 | HTTP address that handles the web requests to the Router. |
+| dfs.federation.router.http-bind-host | 0.0.0.0 | The actual address the HTTP server will bind to. |
+| dfs.federation.router.https-address | 0.0.0.0:50072 | HTTPS address that handles the web requests to the Router. |
+| dfs.federation.router.https-bind-host | 0.0.0.0 | The actual address the HTTPS server will bind to. |
 
 ### State Store
 

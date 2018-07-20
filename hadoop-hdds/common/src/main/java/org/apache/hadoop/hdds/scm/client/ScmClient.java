@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.client;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -25,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -45,7 +45,7 @@ public interface ScmClient {
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerInfo createContainer(String owner) throws IOException;
+  ContainerWithPipeline createContainer(String owner) throws IOException;
 
   /**
    * Gets a container by Name -- Throws if the container does not exist.
@@ -54,6 +54,14 @@ public interface ScmClient {
    * @throws IOException
    */
   ContainerInfo getContainer(long containerId) throws IOException;
+
+  /**
+   * Gets a container by Name -- Throws if the container does not exist.
+   * @param containerId - Container ID
+   * @return ContainerWithPipeline
+   * @throws IOException
+   */
+  ContainerWithPipeline getContainerWithPipeline(long containerId) throws IOException;
 
   /**
    * Close a container.
@@ -65,6 +73,14 @@ public interface ScmClient {
   void closeContainer(long containerId, Pipeline pipeline) throws IOException;
 
   /**
+   * Close a container.
+   *
+   * @param containerId - ID of the container.
+   * @throws IOException
+   */
+  void closeContainer(long containerId) throws IOException;
+
+  /**
    * Deletes an existing container.
    * @param containerId - ID of the container.
    * @param pipeline - Pipeline that represents the container.
@@ -72,6 +88,14 @@ public interface ScmClient {
    * @throws IOException
    */
   void deleteContainer(long containerId, Pipeline pipeline, boolean force) throws IOException;
+
+  /**
+   * Deletes an existing container.
+   * @param containerId - ID of the container.
+   * @param force - true to forcibly delete the container.
+   * @throws IOException
+   */
+  void deleteContainer(long containerId, boolean force) throws IOException;
 
   /**
    * Lists a range of containers and get their info.
@@ -96,6 +120,15 @@ public interface ScmClient {
       throws IOException;
 
   /**
+   * Read meta data from an existing container.
+   * @param containerID - ID of the container.
+   * @return ContainerInfo
+   * @throws IOException
+   */
+  ContainerData readContainer(long containerID)
+      throws IOException;
+
+  /**
    * Gets the container size -- Computed by SCM from Container Reports.
    * @param containerID - ID of the container.
    * @return number of bytes used by this container.
@@ -110,19 +143,19 @@ public interface ScmClient {
    * @return ContainerInfo
    * @throws IOException - in case of error.
    */
-  ContainerInfo createContainer(HddsProtos.ReplicationType type,
+  ContainerWithPipeline createContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor replicationFactor,
       String owner) throws IOException;
 
   /**
    * Returns a set of Nodes that meet a query criteria.
-   * @param nodeStatuses - A set of criteria that we want the node to have.
+   * @param nodeStatuses - Criteria that we want the node to have.
    * @param queryScope - Query scope - Cluster or pool.
    * @param poolName - if it is pool, a pool name is required.
    * @return A set of nodes that meet the requested criteria.
    * @throws IOException
    */
-  HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState> nodeStatuses,
+  List<HddsProtos.Node> queryNode(HddsProtos.NodeState nodeStatuses,
       HddsProtos.QueryScope queryScope, String poolName) throws IOException;
 
   /**

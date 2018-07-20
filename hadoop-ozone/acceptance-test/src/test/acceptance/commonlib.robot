@@ -21,12 +21,12 @@ Startup Ozone cluster with size
                                              Run                         echo "Starting new docker-compose environment" >> docker-compose.log
     ${rc}        ${output} =                 Run docker compose          up -d
     Should Be Equal As Integers             ${rc}                       0
-    Wait Until Keyword Succeeds             1min    5sec    Is Daemon started   ksm     HTTP server of KSM is listening
+    Wait Until Keyword Succeeds             1min    5sec    Is Daemon started   ozoneManager     HTTP server of OZONEMANAGER is listening
     Daemons are running without error
     Scale datanodes up                      5
 
 Daemons are running without error
-    Is daemon running without error           ksm
+    Is daemon running without error           ozoneManager
     Is daemon running without error           scm
     Is daemon running without error           datanode
 

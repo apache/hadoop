@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
@@ -74,6 +75,7 @@ public abstract class Resource implements Comparable<Resource> {
   public static final int MEMORY_INDEX = 0;
   @Private
   public static final int VCORES_INDEX = 1;
+
 
   @Public
   @Stable
@@ -255,18 +257,15 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource name of the resource
    * @return the ResourceInformation object for the resource
-   * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
   @InterfaceStability.Unstable
-  public ResourceInformation getResourceInformation(String resource)
-      throws ResourceNotFoundException {
+  public ResourceInformation getResourceInformation(String resource) {
     Integer index = ResourceUtils.getResourceTypeIndex().get(resource);
     if (index != null) {
       return resources[index];
     }
-    throw new ResourceNotFoundException("Unknown resource '" + resource
-        + "'. Known resources are " + Arrays.toString(resources));
+    throw new ResourceNotFoundException(this, resource);
   }
 
   /**
@@ -297,12 +296,10 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource name of the resource
    * @return the value for the resource
-   * @throws ResourceNotFoundException if the resource can't be found
    */
   @Public
   @InterfaceStability.Unstable
-  public long getResourceValue(String resource)
-      throws ResourceNotFoundException {
+  public long getResourceValue(String resource) {
     return getResourceInformation(resource).getValue();
   }
 
@@ -311,13 +308,11 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource the resource for which the ResourceInformation is provided
    * @param resourceInformation ResourceInformation object
-   * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
   @InterfaceStability.Unstable
   public void setResourceInformation(String resource,
-      ResourceInformation resourceInformation)
-      throws ResourceNotFoundException {
+      ResourceInformation resourceInformation) {
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(resourceInformation.getValue());
       return;
@@ -346,8 +341,7 @@ public abstract class Resource implements Comparable<Resource> {
       ResourceInformation resourceInformation)
       throws ResourceNotFoundException {
     if (index < 0 || index >= resources.length) {
-      throw new ResourceNotFoundException("Unknown resource at index '" + index
-          + "'. Valid resources are " + Arrays.toString(resources));
+      throwExceptionWhenArrayOutOfBound(index);
     }
     ResourceInformation.copy(resourceInformation, resources[index]);
   }
@@ -358,12 +352,10 @@ public abstract class Resource implements Comparable<Resource> {
    *
    * @param resource the resource for which the value is provided.
    * @param value    the value to set
-   * @throws ResourceNotFoundException if the resource is not found
    */
   @Public
   @InterfaceStability.Unstable
-  public void setResourceValue(String resource, long value)
-      throws ResourceNotFoundException {
+  public void setResourceValue(String resource, long value) {
     if (resource.equals(ResourceInformation.MEMORY_URI)) {
       this.setMemorySize(value);
       return;

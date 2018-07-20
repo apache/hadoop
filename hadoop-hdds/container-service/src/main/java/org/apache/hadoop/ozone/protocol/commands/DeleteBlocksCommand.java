@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +36,14 @@ public class DeleteBlocksCommand extends
 
 
   public DeleteBlocksCommand(List<DeletedBlocksTransaction> blocks) {
+    super();
+    this.blocksTobeDeleted = blocks;
+  }
+
+  // Should be called only for protobuf conversion
+  private DeleteBlocksCommand(List<DeletedBlocksTransaction> blocks,
+      long id) {
+    super(id);
     this.blocksTobeDeleted = blocks;
   }
 
@@ -56,11 +64,12 @@ public class DeleteBlocksCommand extends
   public static DeleteBlocksCommand getFromProtobuf(
       DeleteBlocksCommandProto deleteBlocksProto) {
     return new DeleteBlocksCommand(deleteBlocksProto
-        .getDeletedBlocksTransactionsList());
+        .getDeletedBlocksTransactionsList(), deleteBlocksProto.getCmdId());
   }
 
   public DeleteBlocksCommandProto getProto() {
     return DeleteBlocksCommandProto.newBuilder()
+        .setCmdId(getId())
         .addAllDeletedBlocksTransactions(blocksTobeDeleted).build();
   }
 }

@@ -17,7 +17,41 @@
  */
 package org.apache.hadoop.hdds;
 
+/**
+ * This class contains constants for configuration keys and default values
+ * used in hdds.
+ */
 public final class HddsConfigKeys {
+
+  /**
+   * Do not instantiate.
+   */
   private HddsConfigKeys() {
   }
+
+  public static final String HDDS_HEARTBEAT_INTERVAL =
+      "hdds.heartbeat.interval";
+  public static final String HDDS_HEARTBEAT_INTERVAL_DEFAULT =
+      "30s";
+
+  public static final String HDDS_NODE_REPORT_INTERVAL =
+      "hdds.node.report.interval";
+  public static final String HDDS_NODE_REPORT_INTERVAL_DEFAULT =
+      "60s";
+
+  public static final String HDDS_CONTAINER_REPORT_INTERVAL =
+      "hdds.container.report.interval";
+  public static final String HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT =
+      "60s";
+
+  public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL =
+      "hdds.command.status.report.interval";
+  public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT =
+      "60s";
+
+  public static final String HDDS_CONTAINER_ACTION_MAX_LIMIT =
+      "hdds.container.action.max.limit";
+  public static final int HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT =
+      20;
+
 }

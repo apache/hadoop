@@ -20,11 +20,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
@@ -61,6 +64,7 @@ public class SCMBlockDeletingService extends BackgroundService {
   private final DeletedBlockLog deletedBlockLog;
   private final Mapping mappingService;
   private final NodeManager nodeManager;
+  private final EventPublisher eventPublisher;
 
   // Block delete limit size is dynamically calculated based on container
   // delete limit size (ozone.block.deleting.container.limit.per.interval)
@@ -76,13 +80,14 @@ public class SCMBlockDeletingService extends BackgroundService {
   private int blockDeleteLimitSize;
 
   public SCMBlockDeletingService(DeletedBlockLog deletedBlockLog,
-      Mapping mapper, NodeManager nodeManager,
-      long  interval, long serviceTimeout, Configuration conf) {
+      Mapping mapper, NodeManager nodeManager, EventPublisher eventPublisher,
+      long interval, long serviceTimeout, Configuration conf) {
     super("SCMBlockDeletingService", interval, TimeUnit.MILLISECONDS,
         BLOCK_DELETING_SERVICE_CORE_POOL_SIZE, serviceTimeout);
     this.deletedBlockLog = deletedBlockLog;
     this.mappingService = mapper;
     this.nodeManager = nodeManager;
+    this.eventPublisher = eventPublisher;
 
     int containerLimit = conf.getInt(
         OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL,
@@ -145,8 +150,8 @@ public class SCMBlockDeletingService extends BackgroundService {
             // We should stop caching new commands if num of un-processed
             // command is bigger than a limit, e.g 50. In case datanode goes
             // offline for sometime, the cached commands be flooded.
-            nodeManager.addDatanodeCommand(dnId,
-                new DeleteBlocksCommand(dnTXs));
+            eventPublisher.fireEvent(SCMEvents.DATANODE_COMMAND,
+                new CommandForDatanode<>(dnId, new DeleteBlocksCommand(dnTXs)));
             LOG.debug(
                 "Added delete block command for datanode {} in the queue,"
                     + " number of delete block transactions: {}, TxID list: {}",

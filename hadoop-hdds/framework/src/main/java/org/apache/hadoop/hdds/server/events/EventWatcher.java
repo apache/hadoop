@@ -21,17 +21,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseAlreadyExistException;
 import org.apache.hadoop.ozone.lease.LeaseExpiredException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.lease.LeaseNotFoundException;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.commons.collections.map.HashedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,20 +60,41 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   private final Event<COMPLETION_PAYLOAD> completionEvent;
 
-  private final LeaseManager<UUID> leaseManager;
+  private final LeaseManager<Long> leaseManager;
 
-  protected final Map<UUID, TIMEOUT_PAYLOAD> trackedEventsByUUID =
+  private final EventWatcherMetrics metrics;
+
+  private final String name;
+
+  protected final Map<Long, TIMEOUT_PAYLOAD> trackedEventsByID =
       new ConcurrentHashMap<>();
 
   protected final Set<TIMEOUT_PAYLOAD> trackedEvents = new HashSet<>();
 
-  public EventWatcher(Event<TIMEOUT_PAYLOAD> startEvent,
+  private final Map<Long, Long> startTrackingTimes = new HashedMap();
+
+  public EventWatcher(String name, Event<TIMEOUT_PAYLOAD> startEvent,
       Event<COMPLETION_PAYLOAD> completionEvent,
-      LeaseManager<UUID> leaseManager) {
+      LeaseManager<Long> leaseManager) {
     this.startEvent = startEvent;
     this.completionEvent = completionEvent;
     this.leaseManager = leaseManager;
+    this.metrics = new EventWatcherMetrics();
+    Preconditions.checkNotNull(name);
+    if (name.equals("")) {
+      name = getClass().getSimpleName();
+    }
+    if (name.equals("")) {
+      //for anonymous inner classes
+      name = getClass().getName();
+    }
+    this.name = name;
+  }
 
+  public EventWatcher(Event<TIMEOUT_PAYLOAD> startEvent,
+      Event<COMPLETION_PAYLOAD> completionEvent,
+      LeaseManager<Long> leaseManager) {
+    this("", startEvent, completionEvent, leaseManager);
   }
 
   public void start(EventQueue queue) {
@@ -77,25 +102,30 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
     queue.addHandler(startEvent, this::handleStartEvent);
 
     queue.addHandler(completionEvent, (completionPayload, publisher) -> {
-      UUID uuid = completionPayload.getUUID();
+      long id = completionPayload.getId();
       try {
-        handleCompletion(uuid, publisher);
+        handleCompletion(id, publisher);
       } catch (LeaseNotFoundException e) {
         //It's already done. Too late, we already retried it.
         //Not a real problem.
-        LOG.warn("Completion event without active lease. UUID={}", uuid);
+        LOG.warn("Completion event without active lease. Id={}", id);
       }
     });
 
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.register(name, "EventWatcher metrics", metrics);
   }
 
   private synchronized void handleStartEvent(TIMEOUT_PAYLOAD payload,
       EventPublisher publisher) {
-    UUID identifier = payload.getUUID();
-    trackedEventsByUUID.put(identifier, payload);
+    metrics.incrementTrackedEvents();
+    long identifier = payload.getId();
+    startTrackingTimes.put(identifier, System.currentTimeMillis());
+
+    trackedEventsByID.put(identifier, payload);
     trackedEvents.add(payload);
     try {
-      Lease<UUID> lease = leaseManager.acquire(identifier);
+      Lease<Long> lease = leaseManager.acquire(identifier);
       try {
         lease.registerCallBack(() -> {
           handleTimeout(publisher, identifier);
@@ -110,18 +140,23 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
     }
   }
 
-  private synchronized void handleCompletion(UUID uuid,
+  private synchronized void handleCompletion(long id,
       EventPublisher publisher) throws LeaseNotFoundException {
-    leaseManager.release(uuid);
-    TIMEOUT_PAYLOAD payload = trackedEventsByUUID.remove(uuid);
+    metrics.incrementCompletedEvents();
+    leaseManager.release(id);
+    TIMEOUT_PAYLOAD payload = trackedEventsByID.remove(id);
     trackedEvents.remove(payload);
+    long originalTime = startTrackingTimes.remove(id);
+    metrics.updateFinishingTime(System.currentTimeMillis() - originalTime);
     onFinished(publisher, payload);
   }
 
   private synchronized void handleTimeout(EventPublisher publisher,
-      UUID identifier) {
-    TIMEOUT_PAYLOAD payload = trackedEventsByUUID.remove(identifier);
+      long identifier) {
+    metrics.incrementTimedOutEvents();
+    TIMEOUT_PAYLOAD payload = trackedEventsByID.remove(identifier);
     trackedEvents.remove(payload);
+    startTrackingTimes.remove(payload.getId());
     onTimeout(publisher, payload);
   }
 
@@ -135,12 +170,12 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   public synchronized boolean remove(TIMEOUT_PAYLOAD payload) {
     try {
-      leaseManager.release(payload.getUUID());
+      leaseManager.release(payload.getId());
     } catch (LeaseNotFoundException e) {
-      LOG.warn("Completion event without active lease. UUID={}",
-          payload.getUUID());
+      LOG.warn("Completion event without active lease. Id={}",
+          payload.getId());
     }
-    trackedEventsByUUID.remove(payload.getUUID());
+    trackedEventsByID.remove(payload.getId());
     return trackedEvents.remove(payload);
 
   }
@@ -151,7 +186,12 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   public List<TIMEOUT_PAYLOAD> getTimeoutEvents(
       Predicate<? super TIMEOUT_PAYLOAD> predicate) {
-    return trackedEventsByUUID.values().stream().filter(predicate)
+    return trackedEventsByID.values().stream().filter(predicate)
         .collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  protected EventWatcherMetrics getMetrics() {
+    return metrics;
   }
 }

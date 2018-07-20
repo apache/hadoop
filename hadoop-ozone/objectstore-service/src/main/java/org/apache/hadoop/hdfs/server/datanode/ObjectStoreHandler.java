@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
-import static org.apache.hadoop.ozone.KsmUtils.getKsmAddress;
+import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
 import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
@@ -34,9 +34,8 @@ import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.ksm.protocolPB
-    .KeySpaceManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.ObjectStoreApplication;
 import org.apache.hadoop.ozone.web.handlers.ServiceFilter;
@@ -72,8 +71,8 @@ public final class ObjectStoreHandler implements Closeable {
       LoggerFactory.getLogger(ObjectStoreHandler.class);
 
   private final ObjectStoreJerseyContainer objectStoreJerseyContainer;
-  private final KeySpaceManagerProtocolClientSideTranslatorPB
-      keySpaceManagerClient;
+  private final OzoneManagerProtocolClientSideTranslatorPB
+      ozoneManagerClient;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private final ScmBlockLocationProtocolClientSideTranslatorPB
@@ -119,28 +118,28 @@ public final class ObjectStoreHandler implements Closeable {
                   NetUtils.getDefaultSocketFactory(conf),
                   Client.getRpcTimeout(conf)));
 
-      RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
+      RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
           ProtobufRpcEngine.class);
-      long ksmVersion =
-          RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
-      InetSocketAddress ksmAddress = getKsmAddress(conf);
-      this.keySpaceManagerClient =
-          new KeySpaceManagerProtocolClientSideTranslatorPB(
-              RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
-              ksmAddress, UserGroupInformation.getCurrentUser(), conf,
+      long omVersion =
+          RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
+      InetSocketAddress omAddress = getOmAddress(conf);
+      this.ozoneManagerClient =
+          new OzoneManagerProtocolClientSideTranslatorPB(
+              RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+                  omAddress, UserGroupInformation.getCurrentUser(), conf,
               NetUtils.getDefaultSocketFactory(conf),
               Client.getRpcTimeout(conf)));
 
       storageHandler = new DistributedStorageHandler(
           new OzoneConfiguration(conf),
           this.storageContainerLocationClient,
-          this.keySpaceManagerClient);
+          this.ozoneManagerClient);
     } else {
       if (OzoneConsts.OZONE_HANDLER_LOCAL.equalsIgnoreCase(shType)) {
         storageHandler = new LocalStorageHandler(conf);
         this.storageContainerLocationClient = null;
         this.scmBlockLocationClient = null;
-        this.keySpaceManagerClient = null;
+        this.ozoneManagerClient = null;
       } else {
         throw new IllegalArgumentException(
             String.format("Unrecognized value for %s: %s,"
@@ -186,6 +185,6 @@ public final class ObjectStoreHandler implements Closeable {
     storageHandler.close();
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
     IOUtils.cleanupWithLogger(LOG, scmBlockLocationClient);
-    IOUtils.cleanupWithLogger(LOG, keySpaceManagerClient);
+    IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
   }
 }

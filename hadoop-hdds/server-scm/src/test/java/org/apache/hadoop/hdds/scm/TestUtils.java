@@ -17,8 +17,14 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol
     .proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol
+    .proto.StorageContainerDatanodeProtocolProtos.CommandStatus;
+import org.apache.hadoop.hdds.protocol
+    .proto.StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -88,6 +94,18 @@ public final class TestUtils {
       reportList.add(srb.build());
     }
     return reportList;
+  }
+
+  /**
+   * Create Command Status report object.
+   * @return CommandStatusReportsProto
+   */
+  public static CommandStatusReportsProto createCommandStatusReport(
+      List<CommandStatus> reports) {
+    CommandStatusReportsProto.Builder report = CommandStatusReportsProto
+        .newBuilder();
+    report.addAllCmdStatus(reports);
+    return report.build();
   }
 
 

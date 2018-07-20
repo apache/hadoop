@@ -26,19 +26,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -61,7 +60,7 @@ public class TestQueryNode {
 
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         interval, TimeUnit.MILLISECONDS);
-    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL, 1, SECONDS);
+    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 1, SECONDS);
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, SECONDS);
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
@@ -83,11 +82,10 @@ public class TestQueryNode {
 
   @Test
   public void testHealthyNodesCount() throws Exception {
-    HddsProtos.NodePool pool = scmClient.queryNode(
-        EnumSet.of(HEALTHY),
+    List<HddsProtos.Node> nodes = scmClient.queryNode(HEALTHY,
         HddsProtos.QueryScope.CLUSTER, "");
     assertEquals("Expected  live nodes", numOfDatanodes,
-        pool.getNodesCount());
+        nodes.size());
   }
 
   @Test(timeout = 10 * 1000L)
@@ -99,8 +97,8 @@ public class TestQueryNode {
             cluster.getStorageContainerManager().getNodeCount(STALE) == 2,
         100, 4 * 1000);
 
-    int nodeCount = scmClient.queryNode(EnumSet.of(STALE),
-        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
+    int nodeCount = scmClient.queryNode(STALE,
+        HddsProtos.QueryScope.CLUSTER, "").size();
     assertEquals("Mismatch of expected nodes count", 2, nodeCount);
 
     GenericTestUtils.waitFor(() ->
@@ -108,13 +106,13 @@ public class TestQueryNode {
         100, 4 * 1000);
 
     // Assert that we don't find any stale nodes.
-    nodeCount = scmClient.queryNode(EnumSet.of(STALE),
-        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
+    nodeCount = scmClient.queryNode(STALE,
+        HddsProtos.QueryScope.CLUSTER, "").size();
     assertEquals("Mismatch of expected nodes count", 0, nodeCount);
 
     // Assert that we find the expected number of dead nodes.
-    nodeCount = scmClient.queryNode(EnumSet.of(DEAD),
-        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
+    nodeCount = scmClient.queryNode(DEAD,
+        HddsProtos.QueryScope.CLUSTER, "").size();
     assertEquals("Mismatch of expected nodes count", 2, nodeCount);
   }
 }

@@ -79,7 +79,8 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  optional ContainerActionsProto containerActions = 4;
+  optional CommandStatusReportsProto commandStatusReport = 4;
+  optional ContainerActionsProto containerActions = 5;
 }
 
 /*
@@ -125,6 +126,22 @@ enum StorageTypeProto {
 
 message ContainerReportsProto {
   repeated ContainerInfo reports = 1;
+}
+
+message CommandStatusReportsProto {
+  repeated CommandStatus cmdStatus = 1;
+}
+
+message CommandStatus {
+  enum Status {
+    PENDING = 1;
+    EXECUTED = 2;
+    FAILED = 3;
+  }
+  required int64 cmdId = 1;
+  required Status status = 2 [default = PENDING];
+  required SCMCommandProto.Type type = 3;
+  optional string msg = 4;
 }
 
 message ContainerActionsProto {
@@ -193,6 +210,7 @@ message ReregisterCommandProto {}
 // HB response from SCM, contains a list of block deletion transactions.
 message DeleteBlocksCommandProto {
   repeated DeletedBlocksTransaction deletedBlocksTransactions = 1;
+  required int64 cmdId = 3;
 }
 
 // The deleted blocks which are stored in deletedBlock.db of scm.
@@ -226,6 +244,7 @@ This command asks the datanode to close a specific container.
 message CloseContainerCommandProto {
   required int64 containerID = 1;
   required hadoop.hdds.ReplicationType replicationType = 2;
+  required int64 cmdId = 3;
 }
 
 /**
@@ -233,6 +252,7 @@ This command asks the datanode to delete a specific container.
 */
 message DeleteContainerCommandProto {
   required int64 containerID = 1;
+  required int64 cmdId = 2;
 }
 
 /**
@@ -241,6 +261,7 @@ This command asks the datanode to replicate a container from specific sources.
 message ReplicateContainerCommandProto {
   required int64 containerID = 1;
   repeated DatanodeDetailsProto sources = 2;
+  required int64 cmdId = 3;
 }
 
 /**

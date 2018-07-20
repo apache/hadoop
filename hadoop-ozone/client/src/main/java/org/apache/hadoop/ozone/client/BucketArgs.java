@@ -81,7 +81,7 @@ public final class BucketArgs {
   }
 
   /**
-   * Returns new builder class that builds a KsmBucketInfo.
+   * Returns new builder class that builds a OmBucketInfo.
    *
    * @return Builder
    */
@@ -90,7 +90,7 @@ public final class BucketArgs {
   }
 
   /**
-   * Builder for KsmBucketInfo.
+   * Builder for OmBucketInfo.
    */
   public static class Builder {
     private Boolean versioning;

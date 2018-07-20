@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 /**
- * This class is the base CLI for scm, ksm and scmadm.
+ * This class is the base CLI for scm, om and scmadm.
  */
 public abstract class OzoneBaseCLI extends Configured implements Tool {
 

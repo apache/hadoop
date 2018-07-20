@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.client.rest;
 
-import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 
 import java.util.List;
 

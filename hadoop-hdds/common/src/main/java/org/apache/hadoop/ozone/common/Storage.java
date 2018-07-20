@@ -38,15 +38,16 @@ import java.util.Properties;
  * Local storage information is stored in a separate file VERSION.
  * It contains type of the node,
  * the storage layout version, the SCM id, and
- * the KSM/SCM state creation time.
+ * the OM/SCM state creation time.
  *
  */
 @InterfaceAudience.Private
 public abstract class Storage {
   private static final Logger LOG = LoggerFactory.getLogger(Storage.class);
 
-  protected static final String STORAGE_DIR_CURRENT = "current";
+  public static final String STORAGE_DIR_CURRENT = "current";
   protected static final String STORAGE_FILE_VERSION = "VERSION";
+  public static final String CONTAINER_DIR = "containerDir";
 
   private final NodeType nodeType;
   private final File root;
@@ -127,7 +128,7 @@ public abstract class Storage {
   abstract protected Properties getNodeProperties();
 
   /**
-   * Sets the Node properties spaecific to KSM/SCM.
+   * Sets the Node properties spaecific to OM/SCM.
    */
   private void setNodeProperties() {
     Properties nodeProperties = getNodeProperties();
@@ -152,7 +153,7 @@ public abstract class Storage {
    * File {@code VERSION} contains the following fields:
    * <ol>
    * <li>node type</li>
-   * <li>KSM/SCM state creation time</li>
+   * <li>OM/SCM state creation time</li>
    * <li>other fields specific for this node type</li>
    * </ol>
    * The version file is always written last during storage directory updates.

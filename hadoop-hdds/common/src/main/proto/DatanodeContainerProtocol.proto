@@ -132,6 +132,12 @@ enum Result {
   DELETE_ON_OPEN_CONTAINER = 26;
   CLOSED_CONTAINER_RETRY = 27;
   INVALID_CONTAINER_STATE = 28;
+  DISK_OUT_OF_SPACE = 29;
+  CONTAINER_ALREADY_EXISTS = 30;
+  CONTAINER_METADATA_ERROR = 31;
+  CONTAINER_FILES_CREATE_ERROR = 32;
+  CONTAINER_CHECKSUM_ERROR = 33;
+  UNKNOWN_CONTAINER_TYPE = 34;
 }
 
 /**
@@ -187,6 +193,7 @@ message ContainerCommandRequestProto {
   optional   PutSmallFileRequestProto putSmallFile = 16;
   optional   GetSmallFileRequestProto getSmallFile = 17;
   optional   CloseContainerRequestProto closeContainer = 18;
+
   required   string datanodeUuid = 19;
 }
 
@@ -239,7 +246,9 @@ enum ContainerType {
 
 // Container Messages.
 message  CreateContainerRequestProto {
-  required ContainerData containerData = 1;
+  required int64 containerID = 1;
+  repeated KeyValue metadata = 2;
+  optional ContainerType containerType = 3 [default = KeyValueContainer];
 }
 
 message  CreateContainerResponseProto {
@@ -254,8 +263,9 @@ message  ReadContainerResponseProto {
 }
 
 message  UpdateContainerRequestProto {
-  required ContainerData containerData = 1;
-  optional bool forceUpdate = 2 [default = false];
+  required int64 containerID = 1;
+  repeated KeyValue metadata = 2;
+  optional bool forceUpdate = 3 [default = false];
 }
 
 message  UpdateContainerResponseProto {
@@ -303,7 +313,7 @@ message  PutKeyResponseProto {
 }
 
 message  GetKeyRequestProto  {
-  required KeyData keyData = 1;
+  required DatanodeBlockID blockID = 1;
 }
 
 message  GetKeyResponseProto  {

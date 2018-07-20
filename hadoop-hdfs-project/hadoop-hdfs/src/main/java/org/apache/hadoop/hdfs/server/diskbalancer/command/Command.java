@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.StrBuilder;
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -491,7 +491,7 @@ public abstract class Command extends Configured implements Closeable {
   /**
    * Put output line to log and string buffer.
    * */
-  protected void recordOutput(final StrBuilder result,
+  protected void recordOutput(final TextStringBuilder result,
       final String outputLine) {
     LOG.info(outputLine);
     result.appendln(outputLine);
@@ -501,7 +501,7 @@ public abstract class Command extends Configured implements Closeable {
    * Parse top number of nodes to be processed.
    * @return top number of nodes to be processed.
    */
-  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result)
+  protected int parseTopNodes(final CommandLine cmd, final TextStringBuilder result)
       throws IllegalArgumentException {
     String outputLine = "";
     int nodes = 0;

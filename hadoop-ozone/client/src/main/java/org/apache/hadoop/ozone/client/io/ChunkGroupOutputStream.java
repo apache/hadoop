@@ -23,15 +23,16 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
-import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -66,10 +67,10 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final ArrayList<ChunkOutputStreamEntry> streamEntries;
   private int currentStreamIndex;
   private long byteOffset;
-  private final KeySpaceManagerProtocolClientSideTranslatorPB ksmClient;
+  private final OzoneManagerProtocolClientSideTranslatorPB omClient;
   private final
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
-  private final KsmKeyArgs keyArgs;
+  private final OmKeyArgs keyArgs;
   private final int openID;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
@@ -82,7 +83,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   @VisibleForTesting
   public ChunkGroupOutputStream() {
     streamEntries = new ArrayList<>();
-    ksmClient = null;
+    omClient = null;
     scmClient = null;
     keyArgs = null;
     openID = -1;
@@ -112,16 +113,16 @@ public class ChunkGroupOutputStream extends OutputStream {
   public ChunkGroupOutputStream(
       OpenKeySession handler, XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
-      KeySpaceManagerProtocolClientSideTranslatorPB ksmClient,
+      OzoneManagerProtocolClientSideTranslatorPB omClient,
       int chunkSize, String requestId, ReplicationFactor factor,
       ReplicationType type) throws IOException {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.byteOffset = 0;
-    this.ksmClient = ksmClient;
+    this.omClient = omClient;
     this.scmClient = scmClient;
-    KsmKeyInfo info = handler.getKeyInfo();
-    this.keyArgs = new KsmKeyArgs.Builder()
+    OmKeyInfo info = handler.getKeyInfo();
+    this.keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(info.getVolumeName())
         .setBucketName(info.getBucketName())
         .setKeyName(info.getKeyName())
@@ -149,24 +150,26 @@ public class ChunkGroupOutputStream extends OutputStream {
    * @param openVersion the version corresponding to the pre-allocation.
    * @throws IOException
    */
-  public void addPreallocateBlocks(KsmKeyLocationInfoGroup version,
+  public void addPreallocateBlocks(OmKeyLocationInfoGroup version,
       long openVersion) throws IOException {
     // server may return any number of blocks, (0 to any)
     // only the blocks allocated in this open session (block createVersion
     // equals to open session version)
-    for (KsmKeyLocationInfo subKeyInfo : version.getLocationList()) {
+    for (OmKeyLocationInfo subKeyInfo : version.getLocationList()) {
       if (subKeyInfo.getCreateVersion() == openVersion) {
         checkKeyLocationInfo(subKeyInfo);
       }
     }
   }
 
-  private void checkKeyLocationInfo(KsmKeyLocationInfo subKeyInfo)
+  private void checkKeyLocationInfo(OmKeyLocationInfo subKeyInfo)
       throws IOException {
-    ContainerInfo container = scmClient.getContainer(
-        subKeyInfo.getContainerID());
+    ContainerWithPipeline containerWithPipeline = scmClient
+        .getContainerWithPipeline(subKeyInfo.getContainerID());
+    ContainerInfo container = containerWithPipeline.getContainerInfo();
+
     XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(container.getPipeline(),
+        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline(),
             container.getContainerID());
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
@@ -207,7 +210,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     checkNotClosed();
 
     if (streamEntries.size() <= currentStreamIndex) {
-      Preconditions.checkNotNull(ksmClient);
+      Preconditions.checkNotNull(omClient);
       // allocate a new block, if a exception happens, log an error and
       // throw exception to the caller directly, and the write fails.
       try {
@@ -255,7 +258,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     int succeededAllocates = 0;
     while (len > 0) {
       if (streamEntries.size() <= currentStreamIndex) {
-        Preconditions.checkNotNull(ksmClient);
+        Preconditions.checkNotNull(omClient);
         // allocate a new block, if a exception happens, log an error and
         // throw exception to the caller directly, and the write fails.
         try {
@@ -283,7 +286,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   /**
-   * Contact KSM to get a new block. Set the new block with the index (e.g.
+   * Contact OM to get a new block. Set the new block with the index (e.g.
    * first block has index = 0, second has index = 1 etc.)
    *
    * The returned block is made to new ChunkOutputStreamEntry to write.
@@ -292,7 +295,7 @@ public class ChunkGroupOutputStream extends OutputStream {
    * @throws IOException
    */
   private void allocateNewBlock(int index) throws IOException {
-    KsmKeyLocationInfo subKeyInfo = ksmClient.allocateBlock(keyArgs, openID);
+    OmKeyLocationInfo subKeyInfo = omClient.allocateBlock(keyArgs, openID);
     checkKeyLocationInfo(subKeyInfo);
   }
 
@@ -308,7 +311,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   /**
-   * Commit the key to KSM, this will add the blocks as the new key blocks.
+   * Commit the key to OM, this will add the blocks as the new key blocks.
    *
    * @throws IOException
    */
@@ -326,7 +329,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     if (keyArgs != null) {
       // in test, this could be null
       keyArgs.setDataSize(byteOffset);
-      ksmClient.commitKey(keyArgs, openID);
+      omClient.commitKey(keyArgs, openID);
     } else {
       LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
     }
@@ -339,7 +342,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     private OpenKeySession openHandler;
     private XceiverClientManager xceiverManager;
     private StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
-    private KeySpaceManagerProtocolClientSideTranslatorPB ksmClient;
+    private OzoneManagerProtocolClientSideTranslatorPB omClient;
     private int chunkSize;
     private String requestID;
     private ReplicationType type;
@@ -361,9 +364,9 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setKsmClient(
-        KeySpaceManagerProtocolClientSideTranslatorPB client) {
-      this.ksmClient = client;
+    public Builder setOmClient(
+        OzoneManagerProtocolClientSideTranslatorPB client) {
+      this.omClient = client;
       return this;
     }
 
@@ -389,7 +392,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
     public ChunkGroupOutputStream build() throws IOException {
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
-          ksmClient, chunkSize, requestID, factor, type);
+          omClient, chunkSize, requestID, factor, type);
     }
   }
 

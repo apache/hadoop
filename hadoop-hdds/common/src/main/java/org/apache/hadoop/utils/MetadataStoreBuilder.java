@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.iq80.leveldb.Options;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,10 +47,14 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
  */
 public class MetadataStoreBuilder {
 
+  @VisibleForTesting
+  static final Logger LOG =
+      LoggerFactory.getLogger(MetadataStoreBuilder.class);
   private File dbFile;
   private long cacheSize;
   private boolean createIfMissing = true;
   private Configuration conf;
+  private String dbType;
 
   public static MetadataStoreBuilder newBuilder() {
     return new MetadataStoreBuilder();
@@ -73,6 +80,17 @@ public class MetadataStoreBuilder {
     return this;
   }
 
+  /**
+   * Set the container DB Type.
+   * @param type
+   * @return MetadataStoreBuilder
+   */
+  public MetadataStoreBuilder setDBType(String type) {
+    this.dbType = type;
+    return this;
+  }
+
+
   public MetadataStore build() throws IOException {
     if (dbFile == null) {
       throw new IllegalArgumentException("Failed to build metadata store, "
@@ -81,18 +99,26 @@ public class MetadataStoreBuilder {
 
     // Build db store based on configuration
     MetadataStore store = null;
-    String impl = conf == null ?
-        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT :
-        conf.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
-            OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
-    if (OZONE_METADATA_STORE_IMPL_LEVELDB.equals(impl)) {
+
+    if(dbType == null) {
+      LOG.debug("dbType is null, using ");
+      dbType = conf == null ?
+          OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT :
+          conf.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+              OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
+      LOG.debug("dbType is null, using dbType {} from ozone configuration",
+          dbType);
+    } else {
+      LOG.debug("Using dbType {} for metastore", dbType);
+    }
+    if (OZONE_METADATA_STORE_IMPL_LEVELDB.equals(dbType)) {
       Options options = new Options();
       options.createIfMissing(createIfMissing);
       if (cacheSize > 0) {
         options.cacheSize(cacheSize);
       }
       store = new LevelDBStore(dbFile, options);
-    } else if (OZONE_METADATA_STORE_IMPL_ROCKSDB.equals(impl)) {
+    } else if (OZONE_METADATA_STORE_IMPL_ROCKSDB.equals(dbType)) {
       org.rocksdb.Options opts = new org.rocksdb.Options();
       opts.setCreateIfMissing(createIfMissing);
 
@@ -119,7 +145,7 @@ public class MetadataStoreBuilder {
           + OzoneConfigKeys.OZONE_METADATA_STORE_IMPL
           + ". Expecting " + OZONE_METADATA_STORE_IMPL_LEVELDB
           + " or " + OZONE_METADATA_STORE_IMPL_ROCKSDB
-          + ", but met " + impl);
+          + ", but met " + dbType);
     }
     return store;
   }

@@ -18,15 +18,27 @@
 package org.apache.hadoop.ozone.protocol.commands;
 
 import com.google.protobuf.GeneratedMessage;
+import org.apache.hadoop.hdds.HddsIdFactory;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
 
 /**
  * A class that acts as the base class to convert between Java and SCM
  * commands in protobuf format.
  * @param <T>
  */
-public abstract class SCMCommand<T extends GeneratedMessage> {
+public abstract class SCMCommand<T extends GeneratedMessage> implements
+    IdentifiableEventPayload {
+  private long id;
+
+  SCMCommand() {
+    this.id = HddsIdFactory.getLongId();
+  }
+
+  SCMCommand(long id) {
+    this.id = id;
+  }
   /**
    * Returns the type of this command.
    * @return Type
@@ -38,4 +50,13 @@ public abstract class SCMCommand<T extends GeneratedMessage> {
    * @return A protobuf message.
    */
   public abstract byte[] getProtoBufMessage();
+
+  /**
+   * Gets the commandId of this object.
+   * @return uuid.
+   */
+  public long getId() {
+    return id;
+  }
+
 }

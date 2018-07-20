@@ -67,5 +67,6 @@ public class DeleteVolumeHandler extends Handler {
     }
 
     client.getObjectStore().deleteVolume(volumeName);
+    System.out.printf("Volume %s is deleted%n", volumeName);
   }
 }

@@ -105,6 +105,10 @@ public class VersionResponse {
             .addAllKeys(list).build();
   }
 
+  public String getValue(String key) {
+    return this.values.get(key);
+  }
+
   /**
    * Builder class.
    */

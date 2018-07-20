@@ -131,10 +131,10 @@ Following are the counters for containers:
 
 ### Key Space Metrics
 
-The metrics for various key space manager operations in HDFS Ozone.
+The metrics for various Ozone Manager operations in HDFS Ozone.
 
-key space manager (KSM) is a service that similar to the Namenode in HDFS.
-In the current design of KSM, it maintains metadata of all volumes, buckets and keys.
+The Ozone Manager (OM) is a service that similar to the Namenode in HDFS.
+In the current design of OM, it maintains metadata of all volumes, buckets and keys.
 These metrics are only available when ozone is enabled.
 
 Following is the set of counters maintained for each key space operation.
@@ -142,12 +142,12 @@ Following is the set of counters maintained for each key space operation.
 *Total number of operation* - We maintain an array which counts how
 many times a specific operation has been performed.
 Eg.`NumVolumeCreate` tells us how many times create volume has been
-invoked in KSM.
+invoked in OM.
 
 *Total number of failed operation* - This type operation is opposite to the above
 operation.
 Eg.`NumVolumeCreateFails` tells us how many times create volume has been invoked
-failed in KSM.
+failed in OM.
 
 Following are the counters for each of key space operations.
 

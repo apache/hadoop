@@ -282,4 +282,10 @@ public abstract class AppAdminClient extends CompositeService {
   public abstract int actionCleanUp(String appName, String userName) throws
       IOException, YarnException;
 
+  @Public
+  @Unstable
+  public abstract String getInstances(String appName,
+      List<String> components, String version, List<String> containerStates)
+      throws IOException, YarnException;
+
 }

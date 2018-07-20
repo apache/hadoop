@@ -34,10 +34,10 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
-import org.apache.hadoop.ozone.ksm.KeySpaceManager;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
-import org.apache.hadoop.ozone.ksm.KSMStorage;
+import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -59,6 +59,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
@@ -73,7 +74,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 
 /**
  * MiniOzoneCluster creates a complete in-process Ozone cluster suitable for
- * running tests.  The cluster consists of a KeySpaceManager,
+ * running tests.  The cluster consists of a OzoneManager,
  * StorageContainerManager and multiple DataNodes.
  */
 @InterfaceAudience.Private
@@ -84,7 +85,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   private final OzoneConfiguration conf;
   private final StorageContainerManager scm;
-  private final KeySpaceManager ksm;
+  private final OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
 
   /**
@@ -93,11 +94,11 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
    * @throws IOException if there is an I/O error
    */
   private MiniOzoneClusterImpl(OzoneConfiguration conf,
-                               KeySpaceManager ksm,
+                               OzoneManager ozoneManager,
                                StorageContainerManager scm,
                                List<HddsDatanodeService> hddsDatanodes) {
     this.conf = conf;
-    this.ksm = ksm;
+    this.ozoneManager = ozoneManager;
     this.scm = scm;
     this.hddsDatanodes = hddsDatanodes;
   }
@@ -147,8 +148,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public KeySpaceManager getKeySpaceManager() {
-    return this.ksm;
+  public OzoneManager getOzoneManager() {
+    return this.ozoneManager;
   }
 
   @Override
@@ -209,9 +210,9 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartKeySpaceManager() throws IOException {
-    ksm.stop();
-    ksm.start();
+  public void restartOzoneManager() throws IOException {
+    ozoneManager.stop();
+    ozoneManager.start();
   }
 
   @Override
@@ -247,10 +248,10 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
               scm.getClientProtocolServer().getScmInfo().getClusterId()));
       FileUtils.deleteDirectory(baseDir);
 
-      if (ksm != null) {
-        LOG.info("Shutting down the keySpaceManager");
-        ksm.stop();
-        ksm.join();
+      if (ozoneManager != null) {
+        LOG.info("Shutting down the OzoneManager");
+        ozoneManager.stop();
+        ozoneManager.join();
       }
 
       if (scm != null) {
@@ -291,11 +292,11 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       initializeConfiguration();
       StorageContainerManager scm = createSCM();
       scm.start();
-      KeySpaceManager ksm = createKSM();
-      ksm.start();
+      OzoneManager om = createOM();
+      om.start();
       List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       hddsDatanodes.forEach((datanode) -> datanode.start(null));
-      return new MiniOzoneClusterImpl(conf, ksm, scm, hddsDatanodes);
+      return new MiniOzoneClusterImpl(conf, om, scm, hddsDatanodes);
     }
 
     /**
@@ -331,20 +332,20 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     }
 
     /**
-     * Creates a new KeySpaceManager instance.
+     * Creates a new OzoneManager instance.
      *
-     * @return {@link KeySpaceManager}
+     * @return {@link OzoneManager}
      *
      * @throws IOException
      */
-    private KeySpaceManager createKSM() throws IOException {
-      configureKSM();
-      KSMStorage ksmStore = new KSMStorage(conf);
-      ksmStore.setClusterId(clusterId);
-      ksmStore.setScmId(scmId.get());
-      ksmStore.setKsmId(ksmId.orElse(UUID.randomUUID().toString()));
-      ksmStore.initialize();
-      return KeySpaceManager.createKSM(null, conf);
+    private OzoneManager createOM() throws IOException {
+      configureOM();
+      OMStorage omStore = new OMStorage(conf);
+      omStore.setClusterId(clusterId);
+      omStore.setScmId(scmId.get());
+      omStore.setOmId(omId.orElse(UUID.randomUUID().toString()));
+      omStore.initialize();
+      return OzoneManager.createOm(null, conf);
     }
 
     /**
@@ -392,11 +393,11 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
     private void configureSCMheartbeat() {
       if (hbInterval.isPresent()) {
-        conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
+        conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL,
             hbInterval.get(), TimeUnit.MILLISECONDS);
 
       } else {
-        conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
+        conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL,
             DEFAULT_HB_INTERVAL_MS,
             TimeUnit.MILLISECONDS);
       }
@@ -415,10 +416,10 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     }
 
 
-    private void configureKSM() {
-      conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      conf.setInt(KSMConfigKeys.OZONE_KSM_HANDLER_COUNT_KEY, numOfKsmHandlers);
+    private void configureOM() {
+      conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.setInt(OMConfigKeys.OZONE_OM_HANDLER_COUNT_KEY, numOfOmHandlers);
     }
 
     private void configureHddsDatanodes() {

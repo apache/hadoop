@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -204,6 +205,11 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public Map<String, Long> getAllocationTagsWithCount() {
     return node.getAllocationTagsWithCount();
+  }
+
+  @Override
+  public RMContext getRMContext() {
+    return node.getRMContext();
   }
 
   @Override

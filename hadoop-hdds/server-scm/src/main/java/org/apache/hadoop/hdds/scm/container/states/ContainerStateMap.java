@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.hdds.scm.container.states;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import java.util.HashSet;
+import java.util.Set;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,16 +51,16 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
  * Container State Map acts like a unified map for various attributes that are
  * used to select containers when we need allocated blocks.
  * <p>
- * This class provides the ability to query 4 classes of attributes. They are
+ * This class provides the ability to query 5 classes of attributes. They are
  * <p>
  * 1. LifeCycleStates - LifeCycle States of container describe in which state
  * a container is. For example, a container needs to be in Open State for a
  * client to able to write to it.
  * <p>
  * 2. Owners - Each instance of Name service, for example, Namenode of HDFS or
- * Key Space Manager (KSM) of Ozone or CBlockServer --  is an owner. It is
- * possible to have many KSMs for a Ozone cluster and only one SCM. But SCM
- * keeps the data from each KSM in separate bucket, never mixing them. To
+ * Ozone Manager (OM) of Ozone or CBlockServer --  is an owner. It is
+ * possible to have many OMs for a Ozone cluster and only one SCM. But SCM
+ * keeps the data from each OM in separate bucket, never mixing them. To
  * write data, often we have to find all open containers for a specific owner.
  * <p>
  * 3. ReplicationType - The clients are allowed to specify what kind of
@@ -66,6 +71,9 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
  * of data should be made, right now we support 2 different types, ONE
  * Replica and THREE Replica. User can specify how many copies should be made
  * for a ozone key.
+ * <p>
+ * 5.Pipeline - The pipeline constitute the set of Datanodes on which the
+ * open container resides physically.
  * <p>
  * The most common access pattern of this class is to select a container based
  * on all these parameters, for example, when allocating a block we will
@@ -81,8 +89,18 @@ public class ContainerStateMap {
   private final ContainerAttribute<String> ownerMap;
   private final ContainerAttribute<ReplicationFactor> factorMap;
   private final ContainerAttribute<ReplicationType> typeMap;
+  // This map constitutes the pipeline to open container mappings.
+  // This map will be queried for the list of open containers on a particular
+  // pipeline and issue a close on corresponding containers in case of
+  // following events:
+  //1. Dead datanode.
+  //2. Datanode out of space.
+  //3. Volume loss or volume out of space.
+  private final ContainerAttribute<String> openPipelineMap;
 
   private final Map<ContainerID, ContainerInfo> containerMap;
+  // Map to hold replicas of given container.
+  private final Map<ContainerID, Set<DatanodeDetails>> contReplicaMap;
   private final static NavigableSet<ContainerID> EMPTY_SET  =
       Collections.unmodifiableNavigableSet(new TreeSet<>());
 
@@ -99,8 +117,10 @@ public class ContainerStateMap {
     ownerMap = new ContainerAttribute<>();
     factorMap = new ContainerAttribute<>();
     typeMap = new ContainerAttribute<>();
+    openPipelineMap = new ContainerAttribute<>();
     containerMap = new HashMap<>();
     autoLock = new AutoCloseableLock();
+    contReplicaMap = new HashMap<>();
 //        new InstrumentedLock(getClass().getName(), LOG,
 //            new ReentrantLock(),
 //            1000,
@@ -116,7 +136,8 @@ public class ContainerStateMap {
   public void addContainer(ContainerInfo info)
       throws SCMException {
     Preconditions.checkNotNull(info, "Container Info cannot be null");
-    Preconditions.checkNotNull(info.getPipeline(), "Pipeline cannot be null");
+    Preconditions.checkArgument(info.getReplicationFactor().getNumber() > 0,
+        "ExpectedReplicaCount should be greater than 0");
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
       ContainerID id = ContainerID.valueof(info.getContainerID());
@@ -129,8 +150,11 @@ public class ContainerStateMap {
 
       lifeCycleStateMap.insert(info.getState(), id);
       ownerMap.insert(info.getOwner(), id);
-      factorMap.insert(info.getPipeline().getFactor(), id);
-      typeMap.insert(info.getPipeline().getType(), id);
+      factorMap.insert(info.getReplicationFactor(), id);
+      typeMap.insert(info.getReplicationType(), id);
+      if (info.isContainerOpen()) {
+        openPipelineMap.insert(info.getPipelineName(), id);
+      }
       LOG.trace("Created container with {} successfully.", id);
     }
   }
@@ -154,6 +178,84 @@ public class ContainerStateMap {
   public ContainerInfo getContainerInfo(long containerID) {
     ContainerID id = new ContainerID(containerID);
     return containerMap.get(id);
+  }
+
+  /**
+   * Returns the latest list of DataNodes where replica for given containerId
+   * exist. Throws an SCMException if no entry is found for given containerId.
+   *
+   * @param containerID
+   * @return Set<DatanodeDetails>
+   */
+  public Set<DatanodeDetails> getContainerReplicas(ContainerID containerID)
+      throws SCMException {
+    Preconditions.checkNotNull(containerID);
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      if (contReplicaMap.containsKey(containerID)) {
+        return Collections
+            .unmodifiableSet(contReplicaMap.get(containerID));
+      }
+    }
+    throw new SCMException(
+        "No entry exist for containerId: " + containerID + " in replica map.",
+        ResultCodes.FAILED_TO_FIND_CONTAINER);
+  }
+
+  /**
+   * Adds given datanodes as nodes where replica for given containerId exist.
+   * Logs a debug entry if a datanode is already added as replica for given
+   * ContainerId.
+   *
+   * @param containerID
+   * @param dnList
+   */
+  public void addContainerReplica(ContainerID containerID,
+      DatanodeDetails... dnList) {
+    Preconditions.checkNotNull(containerID);
+    // Take lock to avoid race condition around insertion.
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      for (DatanodeDetails dn : dnList) {
+        Preconditions.checkNotNull(dn);
+        if (contReplicaMap.containsKey(containerID)) {
+          if(!contReplicaMap.get(containerID).add(dn)) {
+            LOG.debug("ReplicaMap already contains entry for container Id: "
+                + "{},DataNode: {}", containerID, dn);
+          }
+        } else {
+          Set<DatanodeDetails> dnSet = new HashSet<>();
+          dnSet.add(dn);
+          contReplicaMap.put(containerID, dnSet);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove a container Replica for given DataNode.
+   *
+   * @param containerID
+   * @param dn
+   * @return True of dataNode is removed successfully else false.
+   */
+  public boolean removeContainerReplica(ContainerID containerID,
+      DatanodeDetails dn) throws SCMException {
+    Preconditions.checkNotNull(containerID);
+    Preconditions.checkNotNull(dn);
+
+    // Take lock to avoid race condition.
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      if (contReplicaMap.containsKey(containerID)) {
+        return contReplicaMap.get(containerID).remove(dn);
+      }
+    }
+    throw new SCMException(
+        "No entry exist for containerId: " + containerID + " in replica map.",
+        ResultCodes.FAILED_TO_FIND_CONTAINER);
+  }
+
+  @VisibleForTesting
+  public static Logger getLOG() {
+    return LOG;
   }
 
   /**
@@ -242,6 +344,11 @@ public class ContainerStateMap {
       throw new SCMException("Updating the container map failed.", ex,
           FAILED_TO_CHANGE_CONTAINER_STATE);
     }
+    // In case the container is set to closed state, it needs to be removed from
+    // the pipeline Map.
+    if (newState == LifeCycleState.CLOSED) {
+      openPipelineMap.remove(info.getPipelineName(), id);
+    }
   }
 
   /**
@@ -269,6 +376,20 @@ public class ContainerStateMap {
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
       return typeMap.getCollection(type);
+    }
+  }
+
+  /**
+   * Returns Open containers in the SCM by the Pipeline
+   *
+   * @param pipeline - Pipeline name.
+   * @return NavigableSet<ContainerID>
+   */
+  public NavigableSet<ContainerID> getOpenContainerIDsByPipeline(String pipeline) {
+    Preconditions.checkNotNull(pipeline);
+
+    try (AutoCloseableLock lock = autoLock.acquire()) {
+      return openPipelineMap.getCollection(pipeline);
     }
   }
 

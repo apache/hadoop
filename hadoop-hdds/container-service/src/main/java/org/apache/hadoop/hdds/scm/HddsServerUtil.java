@@ -29,12 +29,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -181,9 +183,8 @@ public final class HddsServerUtil {
    * @return - HB interval in seconds.
    */
   public static long getScmHeartbeatInterval(Configuration conf) {
-    return conf.getTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL,
-        ScmConfigKeys.OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT,
-        TimeUnit.SECONDS);
+    return conf.getTimeDuration(HDDS_HEARTBEAT_INTERVAL,
+        HDDS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
   }
 
   /**
@@ -225,7 +226,7 @@ public final class HddsServerUtil {
       sanitizeUserArgs(staleNodeIntervalMs, heartbeatIntervalMs, 3, 1000);
     } catch (IllegalArgumentException ex) {
       LOG.error("Stale Node Interval MS is cannot be honored due to " +
-          "mis-configured {}. ex:  {}", OZONE_SCM_HEARTBEAT_INTERVAL, ex);
+          "mis-configured {}. ex:  {}", HDDS_HEARTBEAT_INTERVAL, ex);
       throw ex;
     }
     return staleNodeIntervalMs;
@@ -256,17 +257,6 @@ public final class HddsServerUtil {
       throw ex;
     }
     return deadNodeIntervalMs;
-  }
-
-  /**
-   * Returns the maximum number of heartbeat to process per loop of the process
-   * thread.
-   * @param conf Configuration
-   * @return - int -- Number of HBs to process
-   */
-  public static int getMaxHBToProcessPerLoop(Configuration conf) {
-    return conf.getInt(ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS,
-        ScmConfigKeys.OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT);
   }
 
   /**

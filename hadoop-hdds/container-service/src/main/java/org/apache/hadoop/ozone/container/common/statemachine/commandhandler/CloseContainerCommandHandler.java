@@ -41,6 +41,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
       LoggerFactory.getLogger(CloseContainerCommandHandler.class);
   private int invocationCount;
   private long totalTime;
+  private boolean cmdExecuted;
 
   /**
    * Constructs a ContainerReport handler.
@@ -61,6 +62,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
       StateContext context, SCMConnectionManager connectionManager) {
     LOG.debug("Processing Close Container command.");
     invocationCount++;
+    cmdExecuted = false;
     long startTime = Time.monotonicNow();
     // TODO: define this as INVALID_CONTAINER_ID in HddsConsts.java (TBA)
     long containerID = -1;
@@ -88,10 +90,11 @@ public class CloseContainerCommandHandler implements CommandHandler {
       // submit the close container request for the XceiverServer to handle
       container.submitContainerRequest(
           request.build(), replicationType);
-
+      cmdExecuted = true;
     } catch (Exception e) {
       LOG.error("Can't close container " + containerID, e);
     } finally {
+      updateCommandStatus(context, command, cmdExecuted, LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }

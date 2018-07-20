@@ -58,6 +58,7 @@ void free_section(struct section *section) {
     section->name = NULL;
   }
   section->size = 0;
+  free(section);
 }
 
 //clean up method for freeing configuration
@@ -466,6 +467,7 @@ static void merge_sections(struct section *section1, struct section *section2, c
   section1->size += section2->size;
   if (free_second_section) {
     free(section2->name);
+    free(section2->kv_pairs);
     memset(section2, 0, sizeof(*section2));
     free(section2);
   }
@@ -708,6 +710,7 @@ char *get_config_path(const char *argv0) {
 
   const char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
   char *conf_file = resolve_config_path(orig_conf_file, executable_file);
+  free(executable_file);
   if (conf_file == NULL) {
     fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
   }

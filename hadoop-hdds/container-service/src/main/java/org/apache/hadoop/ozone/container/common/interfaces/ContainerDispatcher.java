@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -48,4 +49,17 @@ public interface ContainerDispatcher {
    * Shutdown Dispatcher services.
    */
   void shutdown();
+
+  /**
+   * Returns the handler for the specified containerType.
+   * @param containerType
+   * @return
+   */
+  Handler getHandler(ContainerProtos.ContainerType containerType);
+
+  /**
+   * If scmId is not set, this will set scmId, otherwise it is a no-op.
+   * @param scmId
+   */
+  void setScmId(String scmId);
 }

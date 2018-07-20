@@ -17,11 +17,14 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -41,6 +44,16 @@ public interface Mapping extends Closeable {
    * @throws IOException
    */
   ContainerInfo getContainer(long containerID) throws IOException;
+
+  /**
+   * Returns the ContainerInfo from the container ID.
+   *
+   * @param containerID - ID of container.
+   * @return - ContainerWithPipeline such as creation state and the pipeline.
+   * @throws IOException
+   */
+  ContainerWithPipeline getContainerWithPipeline(long containerID)
+      throws IOException;
 
   /**
    * Returns containers under certain conditions.
@@ -65,10 +78,10 @@ public interface Mapping extends Closeable {
    *
    * @param replicationFactor - replication factor of the container.
    * @param owner
-   * @return - Container Info.
+   * @return - ContainerWithPipeline.
    * @throws IOException
    */
-  ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
+  ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor replicationFactor, String owner)
       throws IOException;
 
@@ -116,8 +129,10 @@ public interface Mapping extends Closeable {
       throws IOException;
 
   /**
-   * Returns the nodeManager.
+   * Returns the ContainerWithPipeline.
    * @return NodeManager
    */
-  NodeManager getNodeManager();
+  ContainerWithPipeline getMatchingContainerWithPipeline(long size,
+      String owner, ReplicationType type, ReplicationFactor factor,
+      LifeCycleState state) throws IOException;
 }

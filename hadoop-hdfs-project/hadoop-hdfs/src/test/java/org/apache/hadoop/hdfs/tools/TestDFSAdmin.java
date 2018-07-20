@@ -27,7 +27,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.text.StrBuilder;
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -518,7 +518,7 @@ public class TestDFSAdmin {
   }
 
   private static String scanIntoString(final ByteArrayOutputStream baos) {
-    final StrBuilder sb = new StrBuilder();
+    final TextStringBuilder sb = new TextStringBuilder();
     final Scanner scanner = new Scanner(baos.toString());
     while (scanner.hasNextLine()) {
       sb.appendln(scanner.nextLine());

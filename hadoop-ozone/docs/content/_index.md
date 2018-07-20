@@ -56,14 +56,14 @@ This is like DFSClient in HDFS. This acts as the standard client to talk to
 Ozone. All other components that we have discussed so far rely on Ozone client
 (TODO: Add Ozone client documentation). 
 
-## Key Space Manager 
+## Ozone Manager
 
-Key Space Manager(KSM) takes care of the Ozone's namespace.
-All ozone entities like volumes, buckets and keys are managed by KSM
-(TODO: Add KSM documentation). In Short, KSM is the metadata manager for Ozone.
-KSM talks to blockManager(SCM) to get blocks and passes it on to the Ozone
+Ozone Manager (OM) takes care of the Ozone's namespace.
+All ozone entities like volumes, buckets and keys are managed by OM
+(TODO: Add OM documentation). In short, OM is the metadata manager for Ozone.
+OM talks to blockManager(SCM) to get blocks and passes it on to the Ozone
 client.  Ozone client writes data to these blocks.
-KSM will eventually be replicated via Apache Ratis for High Availability. 
+OM will eventually be replicated via Apache Ratis for High Availability. 
 
 ## Storage Container Manager
 Storage Container Manager (SCM) is the block and cluster manager for Ozone.

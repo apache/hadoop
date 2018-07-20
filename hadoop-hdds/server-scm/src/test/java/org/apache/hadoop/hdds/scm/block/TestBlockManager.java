@@ -74,7 +74,7 @@ public class TestBlockManager {
     }
     nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
-    blockManager = new BlockManagerImpl(conf, nodeManager, mapping);
+    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, null);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
       factor = HddsProtos.ReplicationFactor.THREE;

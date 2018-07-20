@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -77,7 +78,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 @InterfaceAudience.Private
 public class DiskBalancer {
 
-  private static final Logger LOG = LoggerFactory.getLogger(DiskBalancer
+  @VisibleForTesting
+  public static final Logger LOG = LoggerFactory.getLogger(DiskBalancer
       .class);
   private final FsDatasetSpi<?> dataset;
   private final String dataNodeUUID;
@@ -902,15 +904,19 @@ public class DiskBalancer {
         try {
           ExtendedBlock block = iter.nextBlock();
 
-          // A valid block is a finalized block, we iterate until we get
-          // finalized blocks
-          if (!this.dataset.isValidBlock(block)) {
-            continue;
-          }
+          if (block != null) {
+            // A valid block is a finalized block, we iterate until we get
+            // finalized blocks
+            if (!this.dataset.isValidBlock(block)) {
+              continue;
+            }
 
-          // We don't look for the best, we just do first fit
-          if (isLessThanNeeded(block.getNumBytes(), item)) {
-            return block;
+            // We don't look for the best, we just do first fit
+            if (isLessThanNeeded(block.getNumBytes(), item)) {
+              return block;
+            }
+          } else {
+            LOG.info("There are no blocks in the blockPool {}", iter.getBlockPoolId());
           }
 
         } catch (IOException e) {
@@ -1124,6 +1130,11 @@ public class DiskBalancer {
           } catch (InterruptedException e) {
             LOG.error("Copy Block Thread interrupted, exiting the copy.");
             Thread.currentThread().interrupt();
+            item.incErrorCount();
+            this.setExitFlag();
+          } catch (RuntimeException ex) {
+            // Exiting if any run time exceptions.
+            LOG.error("Got an unexpected Runtime Exception {}", ex);
             item.incErrorCount();
             this.setExitFlag();
           }

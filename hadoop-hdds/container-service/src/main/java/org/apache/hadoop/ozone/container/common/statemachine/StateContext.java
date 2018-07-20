@@ -17,12 +17,21 @@
 package org.apache.hadoop.ozone.container.common.statemachine;
 
 import com.google.protobuf.GeneratedMessage;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerAction;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .InitDatanodeState;
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
+import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
+import org.apache.hadoop.ozone.protocol.commands.CommandStatus
+    .CommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
@@ -48,11 +58,13 @@ public class StateContext {
   static final Logger LOG =
       LoggerFactory.getLogger(StateContext.class);
   private final Queue<SCMCommand> commandQueue;
+  private final Map<Long, CommandStatus> cmdStatusMap;
   private final Lock lock;
   private final DatanodeStateMachine parent;
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
   private final Queue<GeneratedMessage> reports;
+  private final Queue<ContainerAction> containerActions;
   private DatanodeStateMachine.DatanodeStates state;
 
   /**
@@ -68,7 +80,9 @@ public class StateContext {
     this.state = state;
     this.parent = parent;
     commandQueue = new LinkedList<>();
+    cmdStatusMap = new ConcurrentHashMap<>();
     reports = new LinkedList<>();
+    containerActions = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
   }
@@ -180,15 +194,45 @@ public class StateContext {
    * @return List<reports>
    */
   public List<GeneratedMessage> getReports(int maxLimit) {
-    List<GeneratedMessage> results = new ArrayList<>();
     synchronized (reports) {
-      GeneratedMessage report = reports.poll();
-      while(results.size() < maxLimit && report != null) {
-        results.add(report);
-        report = reports.poll();
-      }
+      return reports.parallelStream().limit(maxLimit)
+          .collect(Collectors.toList());
     }
-    return results;
+  }
+
+
+  /**
+   * Adds the ContainerAction to ContainerAction queue.
+   *
+   * @param containerAction ContainerAction to be added
+   */
+  public void addContainerAction(ContainerAction containerAction) {
+    synchronized (containerActions) {
+      containerActions.add(containerAction);
+    }
+  }
+
+  /**
+   * Returns all the pending ContainerActions from the ContainerAction queue,
+   * or empty list if the queue is empty.
+   *
+   * @return List<ContainerAction>
+   */
+  public List<ContainerAction> getAllPendingContainerActions() {
+    return getPendingContainerAction(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Returns pending ContainerActions from the ContainerAction queue with a
+   * max limit on list size, or empty list if the queue is empty.
+   *
+   * @return List<ContainerAction>
+   */
+  public List<ContainerAction> getPendingContainerAction(int maxLimit) {
+    synchronized (containerActions) {
+      return containerActions.parallelStream().limit(maxLimit)
+          .collect(Collectors.toList());
+    }
   }
 
   /**
@@ -269,6 +313,7 @@ public class StateContext {
     } finally {
       lock.unlock();
     }
+    this.addCmdStatus(command);
   }
 
   /**
@@ -279,4 +324,66 @@ public class StateContext {
     return stateExecutionCount.get();
   }
 
+  /**
+   * Returns the next {@link CommandStatus} or null if it is empty.
+   *
+   * @return {@link CommandStatus} or Null.
+   */
+  public CommandStatus getCmdStatus(Long key) {
+    return cmdStatusMap.get(key);
+  }
+
+  /**
+   * Adds a {@link CommandStatus} to the State Machine.
+   *
+   * @param status - {@link CommandStatus}.
+   */
+  public void addCmdStatus(Long key, CommandStatus status) {
+    cmdStatusMap.put(key, status);
+  }
+
+  /**
+   * Adds a {@link CommandStatus} to the State Machine for given SCMCommand.
+   *
+   * @param cmd - {@link SCMCommand}.
+   */
+  public void addCmdStatus(SCMCommand cmd) {
+    this.addCmdStatus(cmd.getId(),
+        CommandStatusBuilder.newBuilder()
+            .setCmdId(cmd.getId())
+            .setStatus(Status.PENDING)
+            .setType(cmd.getType())
+            .build());
+  }
+
+  /**
+   * Get map holding all {@link CommandStatus} objects.
+   *
+   */
+  public Map<Long, CommandStatus> getCommandStatusMap() {
+    return cmdStatusMap;
+  }
+
+  /**
+   * Remove object from cache in StateContext#cmdStatusMap.
+   *
+   */
+  public void removeCommandStatus(Long cmdId) {
+    cmdStatusMap.remove(cmdId);
+  }
+
+  /**
+   * Updates status of a pending status command.
+   * @param cmdId       command id
+   * @param cmdExecuted SCMCommand
+   * @return true if command status updated successfully else false.
+   */
+  public boolean updateCommandStatus(Long cmdId, boolean cmdExecuted) {
+    if(cmdStatusMap.containsKey(cmdId)) {
+      cmdStatusMap.get(cmdId)
+          .setStatus(cmdExecuted ? Status.EXECUTED : Status.FAILED);
+      return true;
+    }
+    return false;
+  }
 }

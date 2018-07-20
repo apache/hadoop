@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -81,17 +81,18 @@ public class TestContainerSmallFile {
   @Test
   public void testAllocateWrite() throws Exception {
     String traceID = UUID.randomUUID().toString();
-    ContainerInfo container =
+    ContainerWithPipeline container =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
-    XceiverClientSpi client = xceiverClientManager.acquireClient(
-        container.getPipeline(), container.getContainerID());
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline(),
+            container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(
-        container.getContainerID());
+        container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.writeSmallFile(client, blockID,
         "data123".getBytes(), traceID);
     ContainerProtos.GetSmallFileResponseProto response =
@@ -104,20 +105,21 @@ public class TestContainerSmallFile {
   @Test
   public void testInvalidKeyRead() throws Exception {
     String traceID = UUID.randomUUID().toString();
-    ContainerInfo container =
+    ContainerWithPipeline container =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
-    XceiverClientSpi client = xceiverClientManager.acquireClient(
-        container.getPipeline(), container.getContainerID());
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline(),
+            container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID);
 
     thrown.expect(StorageContainerException.class);
     thrown.expectMessage("Unable to find the key");
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(
-        container.getContainerID());
+        container.getContainerInfo().getContainerID());
     // Try to read a Key Container Name
     ContainerProtos.GetSmallFileResponseProto response =
         ContainerProtocolCalls.readSmallFile(client, blockID, traceID);
@@ -128,22 +130,22 @@ public class TestContainerSmallFile {
   public void testInvalidContainerRead() throws Exception {
     String traceID = UUID.randomUUID().toString();
     long nonExistContainerID = 8888L;
-    ContainerInfo container =
+    ContainerWithPipeline container =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
-    XceiverClientSpi client = xceiverClientManager.
-        acquireClient(container.getPipeline(), container.getContainerID());
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline(),
+            container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID);
     BlockID blockID = ContainerTestHelper.getTestBlockID(
-        container.getContainerID());
+        container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.writeSmallFile(client, blockID,
         "data123".getBytes(), traceID);
 
-
     thrown.expect(StorageContainerException.class);
-    thrown.expectMessage("Unable to find the container");
+    thrown.expectMessage("ContainerID 8888 does not exist");
 
     // Try to read a invalid key
     ContainerProtos.GetSmallFileResponseProto response =

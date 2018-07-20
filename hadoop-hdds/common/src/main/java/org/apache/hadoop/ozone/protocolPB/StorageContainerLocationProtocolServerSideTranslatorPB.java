@@ -21,7 +21,10 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
@@ -54,7 +57,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -82,10 +84,11 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ContainerResponseProto allocateContainer(RpcController unused,
       ContainerRequestProto request) throws ServiceException {
     try {
-      ContainerInfo container = impl.allocateContainer(request.getReplicationType(),
-          request.getReplicationFactor(), request.getOwner());
+      ContainerWithPipeline containerWithPipeline = impl
+          .allocateContainer(request.getReplicationType(),
+              request.getReplicationFactor(), request.getOwner());
       return ContainerResponseProto.newBuilder()
-          .setContainerInfo(container.getProtobuf())
+          .setContainerWithPipeline(containerWithPipeline.getProtobuf())
           .setErrorCode(ContainerResponseProto.Error.success)
           .build();
 
@@ -102,6 +105,21 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       ContainerInfo container = impl.getContainer(request.getContainerID());
       return GetContainerResponseProto.newBuilder()
           .setContainerInfo(container.getProtobuf())
+          .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetContainerWithPipelineResponseProto getContainerWithPipeline(
+      RpcController controller, GetContainerWithPipelineRequestProto request)
+      throws ServiceException {
+    try {
+      ContainerWithPipeline container = impl
+          .getContainerWithPipeline(request.getContainerID());
+      return GetContainerWithPipelineResponseProto.newBuilder()
+          .setContainerWithPipeline(container.getProtobuf())
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -152,13 +170,12 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       StorageContainerLocationProtocolProtos.NodeQueryRequestProto request)
       throws ServiceException {
     try {
-      EnumSet<HddsProtos.NodeState> nodeStateEnumSet = EnumSet.copyOf(request
-          .getQueryList());
-      HddsProtos.NodePool datanodes = impl.queryNode(nodeStateEnumSet,
+      HddsProtos.NodeState nodeState = request.getState();
+      List<HddsProtos.Node> datanodes = impl.queryNode(nodeState,
           request.getScope(), request.getPoolName());
       return StorageContainerLocationProtocolProtos
           .NodeQueryResponseProto.newBuilder()
-          .setDatanodes(datanodes)
+          .addAllDatanodes(datanodes)
           .build();
     } catch (Exception e) {
       throw new ServiceException(e);

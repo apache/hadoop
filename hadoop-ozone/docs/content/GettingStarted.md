@@ -194,12 +194,12 @@ This path will be created by datanodes if it doesn't exist already. Here is an
     </property>
     ```
 
-1. **ozone.ksm.address** OM server address. This is used by OzoneClient and
+1. **ozone.om.address** OM server address. This is used by OzoneClient and
 Ozone File System.
     ```
     <property>
-       <name>ozone.ksm.address</name>
-       <value>ksm.hadoop.apache.org</value>
+       <name>ozone.om.address</name>
+       <value>om.hadoop.apache.org</value>
     </property>
     ```
 
@@ -210,10 +210,10 @@ Ozone File System.
 | ozone.enabled                  | True                         | This enables SCM and  containers in HDFS cluster.                |
 | ozone.metadata.dirs            | file path                    | The metadata will be stored here.                                |
 | ozone.scm.names                | SCM server name              | Hostname:port or or IP:port address of SCM.                      |
-| ozone.scm.block.client.address | SCM server name and port     | Used by services like OM                                        |
+| ozone.scm.block.client.address | SCM server name and port     | Used by services like OM                                         |
 | ozone.scm.client.address       | SCM server name and port     | Used by client side                                              |
 | ozone.scm.datanode.address     | SCM server name and port     | Used by datanode to talk to SCM                                  |
-| ozone.ksm.address              | OM server name              | Used by Ozone handler and Ozone file system.                     |
+| ozone.om.address               | OM server name               | Used by Ozone handler and Ozone file system.                     |
 
 
 #### Sample ozone-site.xml
@@ -253,7 +253,7 @@ Ozone File System.
      </property>
 
      <property>
-       <name>ozone.ksm.address</name>
+       <name>ozone.om.address</name>
        <value>127.0.0.1:9874</value>
      </property>
 </configuration>
@@ -286,12 +286,12 @@ ozone --daemon start scm
 
 Once SCM gets started, OM must be initialized.
 ```
-ozone ksm -createObjectStore
+ozone om -createObjectStore
 ```
 
 Start OM.
 ```
-ozone --daemon start ksm
+ozone --daemon start om
 ```
 
 If you would like to start HDFS and Ozone together, you can do that by running
@@ -349,7 +349,7 @@ log4j.additivity.org.apache.hadoop.ozone=false
 ```
 
 On the SCM/OM side, you will be able to see
-1. `hadoop-hdfs-ksm-hostname.log`
+1. `hadoop-hdfs-om-hostname.log`
 1. `hadoop-hdfs-scm-hostname.log`
 
 ## Reporting Bugs

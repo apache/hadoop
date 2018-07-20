@@ -18,7 +18,8 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.TestConfigurationFieldsBase;
-import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
 /**
@@ -31,7 +32,7 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     xmlFilename = new String("ozone-default.xml");
     configurationClasses =
         new Class[] {OzoneConfigKeys.class, ScmConfigKeys.class,
-            KSMConfigKeys.class};
+            OMConfigKeys.class, HddsConfigKeys.class};
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
     xmlPropsToSkipCompare.add("hadoop.tags.custom");

@@ -21,10 +21,10 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipelines.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -57,8 +57,9 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @param containerSize - Container Size.
    */
   public StandaloneManagerImpl(NodeManager nodeManager,
-      ContainerPlacementPolicy placementPolicy, long containerSize) {
-    super();
+      ContainerPlacementPolicy placementPolicy, long containerSize,
+      Node2PipelineMap map) {
+    super(map);
     this.nodeManager = nodeManager;
     this.placementPolicy = placementPolicy;
     this.containerSize =  containerSize;
@@ -84,29 +85,19 @@ public class StandaloneManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           standAloneMembers.addAll(newNodesList);
-          LOG.info("Allocating a new standalone pipeline channel of size: {}",
-              count);
-          String channelName =
+          LOG.info("Allocating a new standalone pipeline of size: {}", count);
+          String pipelineName =
               "SA-" + UUID.randomUUID().toString().substring(3);
           return PipelineSelector.newPipelineFromNodes(newNodesList,
-              LifeCycleState.OPEN, ReplicationType.STAND_ALONE,
-              ReplicationFactor.ONE, channelName);
+              ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
         }
       }
     }
     return null;
   }
 
-  /**
-   * Creates a pipeline from a specified set of Nodes.
-   *
-   * @param pipelineID - Name of the pipeline
-   * @param datanodes - The list of datanodes that make this pipeline.
-   */
-  @Override
-  public void createPipeline(String pipelineID,
-                             List<DatanodeDetails> datanodes) {
-    //return newPipelineFromNodes(datanodes, pipelineID);
+  public void initializePipeline(Pipeline pipeline) {
+    // Nothing to be done for standalone pipeline
   }
 
   /**

@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
 /**
  * Node managers information on available resources 
@@ -189,4 +190,9 @@ public interface RMNode {
    * @return a map of each allocation tag and its count.
    */
   Map<String, Long> getAllocationTagsWithCount();
+
+  /**
+   * @return the RM context associated with this RM node.
+   */
+  RMContext getRMContext();
 }

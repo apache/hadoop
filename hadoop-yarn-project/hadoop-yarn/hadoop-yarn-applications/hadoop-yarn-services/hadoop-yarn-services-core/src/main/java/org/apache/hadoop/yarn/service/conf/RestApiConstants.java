@@ -37,10 +37,13 @@ public interface RestApiConstants {
   String COMPONENTS = "components";
   String COMPONENTS_PATH = SERVICE_PATH + "/" + COMPONENTS;
 
-  // Query param
   String SERVICE_NAME = "service_name";
   String COMPONENT_NAME = "component_name";
   String COMP_INSTANCE_NAME = "component_instance_name";
+
+  String PARAM_COMP_NAME = "componentName";
+  String PARAM_VERSION = "version";
+  String PARAM_CONTAINER_STATE = "containerState";
 
   String MEDIA_TYPE_JSON_UTF8 = MediaType.APPLICATION_JSON + ";charset=utf-8";
 

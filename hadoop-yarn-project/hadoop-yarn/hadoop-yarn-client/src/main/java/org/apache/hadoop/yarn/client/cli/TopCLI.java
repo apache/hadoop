@@ -867,7 +867,8 @@ public class TopCLI extends YarnCLI {
         TimeUnit.MILLISECONDS.toMinutes(uptime)
             - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(uptime));
     String uptimeStr = String.format("%dd, %d:%d", days, hours, minutes);
-    String currentTime = DateFormatUtils.ISO_TIME_NO_T_FORMAT.format(now);
+    String currentTime = DateFormatUtils.ISO_8601_EXTENDED_TIME_FORMAT
+        .format(now);
 
     ret.append(CLEAR_LINE);
     ret.append(limitLineLength(String.format(

@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hdds.server.events;
 
-import java.util.UUID;
-
 /**
  * Event with an additional unique identifier.
  *
  */
 public interface IdentifiableEventPayload {
 
-  UUID getUUID();
+  long getId();
 
 }

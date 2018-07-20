@@ -616,7 +616,9 @@ public class ReencryptionHandler implements Runnable {
       while (shouldPauseForTesting) {
         LOG.info("Sleeping in the re-encrypt handler for unit test.");
         synchronized (reencryptionHandler) {
-          reencryptionHandler.wait(30000);
+          if (shouldPauseForTesting) {
+            reencryptionHandler.wait(30000);
+          }
         }
         LOG.info("Continuing re-encrypt handler after pausing.");
       }

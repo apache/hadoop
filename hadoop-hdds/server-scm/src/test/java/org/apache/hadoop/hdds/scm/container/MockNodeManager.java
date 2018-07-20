@@ -19,21 +19,20 @@ package org.apache.hadoop.hdds.scm.container;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.assertj.core.util.Preconditions;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -130,11 +129,11 @@ public class MockNodeManager implements NodeManager {
    * Removes a data node from the management of this Node Manager.
    *
    * @param node - DataNode.
-   * @throws UnregisteredNodeException
+   * @throws NodeNotFoundException
    */
   @Override
   public void removeNode(DatanodeDetails node)
-      throws UnregisteredNodeException {
+      throws NodeNotFoundException {
 
   }
 
@@ -273,16 +272,6 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
-   * Used for testing.
-   *
-   * @return true if the HB check is done.
-   */
-  @Override
-  public boolean waitForHeartbeatProcessed() {
-    return false;
-  }
-
-  /**
    * Returns the node state of a specific node.
    *
    * @param dd - DatanodeDetails
@@ -304,6 +293,17 @@ public class MockNodeManager implements NodeManager {
       commandList.add(command);
       commandMap.put(dnId, commandList);
     }
+  }
+
+  /**
+   * Empty implementation for processNodeReport.
+   *
+   * @param dnUuid
+   * @param nodeReport
+   */
+  @Override
+  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
+    // do nothing
   }
 
   // Returns the number of commands that is queued to this node manager.
@@ -331,21 +331,6 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public void close() throws IOException {
-
-  }
-
-  /**
-   * When an object implementing interface <code>Runnable</code> is used to
-   * create a thread, starting the thread causes the object's <code>run</code>
-   * method to be called in that separately executing thread.
-   * <p>
-   * The general contract of the method <code>run</code> is that it may take any
-   * action whatsoever.
-   *
-   * @see Thread#run()
-   */
-  @Override
-  public void run() {
 
   }
 
@@ -379,32 +364,10 @@ public class MockNodeManager implements NodeManager {
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
    * @param datanodeDetails - Datanode ID.
-   * @param nodeReport - node report.
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeDetails datanodeDetails,
-      NodeReportProto nodeReport) {
-    if ((datanodeDetails != null) && (nodeReport != null) && (nodeReport
-        .getStorageReportCount() > 0)) {
-      SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
-
-      long totalCapacity = 0L;
-      long totalRemaining = 0L;
-      long totalScmUsed = 0L;
-      List<StorageReportProto> storageReports = nodeReport
-          .getStorageReportList();
-      for (StorageReportProto report : storageReports) {
-        totalCapacity += report.getCapacity();
-        totalRemaining += report.getRemaining();
-        totalScmUsed += report.getScmUsed();
-      }
-      aggregateStat.subtract(stat);
-      stat.set(totalCapacity, totalScmUsed, totalRemaining);
-      aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
-
-    }
+  public List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails) {
     return null;
   }
 
@@ -447,6 +410,13 @@ public class MockNodeManager implements NodeManager {
       aggregateStat.add(stat);
       nodeMetricMap.put(datanodeDetails.getUuid(), stat);
     }
+  }
+
+  @Override
+  public void onMessage(CommandForDatanode commandForDatanode,
+                        EventPublisher publisher) {
+    addDatanodeCommand(commandForDatanode.getDatanodeId(),
+        commandForDatanode.getCommand());
   }
 
   /**

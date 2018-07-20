@@ -1102,24 +1102,8 @@ public class ContainerManagerImpl extends CompositeService implements
           // Create the application
           // populate the flow context from the launch context if the timeline
           // service v.2 is enabled
-          FlowContext flowContext = null;
-          if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-            String flowName = launchContext.getEnvironment()
-                .get(TimelineUtils.FLOW_NAME_TAG_PREFIX);
-            String flowVersion = launchContext.getEnvironment()
-                .get(TimelineUtils.FLOW_VERSION_TAG_PREFIX);
-            String flowRunIdStr = launchContext.getEnvironment()
-                .get(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
-            long flowRunId = 0L;
-            if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
-              flowRunId = Long.parseLong(flowRunIdStr);
-            }
-            flowContext = new FlowContext(flowName, flowVersion, flowRunId);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Flow context: " + flowContext
-                  + " created for an application " + applicationID);
-            }
-          }
+          FlowContext flowContext =
+              getFlowContext(launchContext, applicationID);
 
           Application application =
               new ApplicationImpl(dispatcher, user, flowContext,
@@ -1137,6 +1121,31 @@ public class ContainerManagerImpl extends CompositeService implements
                     logAggregationContext, flowContext));
             dispatcher.getEventHandler().handle(new ApplicationInitEvent(
                 applicationID, appAcls, logAggregationContext));
+          }
+        } else if (containerTokenIdentifier.getContainerType()
+            == ContainerType.APPLICATION_MASTER) {
+          FlowContext flowContext =
+              getFlowContext(launchContext, applicationID);
+          if (flowContext != null) {
+            ApplicationImpl application =
+                (ApplicationImpl) context.getApplications().get(applicationID);
+
+            // update flowContext reference in ApplicationImpl
+            application.setFlowContext(flowContext);
+
+            // Required to update state store for recovery.
+            context.getNMStateStore().storeApplication(applicationID,
+                buildAppProto(applicationID, user, credentials,
+                    container.getLaunchContext().getApplicationACLs(),
+                    containerTokenIdentifier.getLogAggregationContext(),
+                    flowContext));
+
+            LOG.info(
+                "Updated application reference with flowContext " + flowContext
+                    + " for app " + applicationID);
+          } else {
+            LOG.info("TimelineService V2.0 is not enabled. Skipping updating "
+                + "flowContext for application " + applicationID);
           }
         }
 
@@ -1161,6 +1170,30 @@ public class ContainerManagerImpl extends CompositeService implements
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  private FlowContext getFlowContext(ContainerLaunchContext launchContext,
+      ApplicationId applicationID) {
+    FlowContext flowContext = null;
+    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+      String flowName = launchContext.getEnvironment()
+          .get(TimelineUtils.FLOW_NAME_TAG_PREFIX);
+      String flowVersion = launchContext.getEnvironment()
+          .get(TimelineUtils.FLOW_VERSION_TAG_PREFIX);
+      String flowRunIdStr = launchContext.getEnvironment()
+          .get(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
+      long flowRunId = 0L;
+      if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
+        flowRunId = Long.parseLong(flowRunIdStr);
+      }
+      flowContext = new FlowContext(flowName, flowVersion, flowRunId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Flow context: " + flowContext + " created for an application "
+                + applicationID);
+      }
+    }
+    return flowContext;
   }
 
   protected ContainerTokenIdentifier verifyAndGetContainerTokenIdentifier(

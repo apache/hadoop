@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -103,7 +104,7 @@ public class TestContainerMapping {
 
   @Test
   public void testallocateContainer() throws Exception {
-    ContainerInfo containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
@@ -120,7 +121,7 @@ public class TestContainerMapping {
      */
     Set<UUID> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
-      ContainerInfo containerInfo = mapping.allocateContainer(
+      ContainerWithPipeline containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
           containerOwner);
@@ -135,14 +136,13 @@ public class TestContainerMapping {
 
   @Test
   public void testGetContainer() throws IOException {
-    ContainerInfo containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
     Pipeline pipeline  = containerInfo.getPipeline();
     Assert.assertNotNull(pipeline);
-    Pipeline newPipeline = mapping.getContainer(
-        containerInfo.getContainerID()).getPipeline();
+    Pipeline newPipeline = containerInfo.getPipeline();
     Assert.assertEquals(pipeline.getLeader().getUuid(),
         newPipeline.getLeader().getUuid());
   }
@@ -165,12 +165,12 @@ public class TestContainerMapping {
   public void testContainerCreationLeaseTimeout() throws IOException,
       InterruptedException {
     nodeManager.setChillmode(false);
-    ContainerInfo containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
-    mapping.updateContainerState(containerInfo.getContainerID(),
-        HddsProtos.LifeCycleEvent.CREATE);
+    mapping.updateContainerState(containerInfo.getContainerInfo()
+            .getContainerID(), HddsProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
 
     NavigableSet<ContainerID> deleteContainers = mapping.getStateManager()
@@ -179,12 +179,14 @@ public class TestContainerMapping {
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.DELETING);
-    Assert.assertTrue(deleteContainers.contains(containerInfo.containerID()));
+    Assert.assertTrue(deleteContainers
+        .contains(containerInfo.getContainerInfo().containerID()));
 
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
-    mapping.updateContainerState(containerInfo.getContainerID(),
-        HddsProtos.LifeCycleEvent.CREATED);
+    mapping
+        .updateContainerState(containerInfo.getContainerInfo().getContainerID(),
+            HddsProtos.LifeCycleEvent.CREATED);
   }
 
   @Test
@@ -294,10 +296,11 @@ public class TestContainerMapping {
   private ContainerInfo createContainer()
       throws IOException {
     nodeManager.setChillmode(false);
-    ContainerInfo containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
+    ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
     mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATE);
     mapping.updateContainerState(containerInfo.getContainerID(),

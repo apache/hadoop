@@ -121,12 +121,16 @@ public class TestServiceCLI {
     basedir = new File("target", "apps");
     basedirProp = YARN_SERVICE_BASE_PATH + "=" + basedir.getAbsolutePath();
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
+    fs = new SliderFileSystem(conf);
     dependencyTarGzBaseDir = tmpFolder.getRoot();
+    fs.getFileSystem()
+        .setPermission(new Path(dependencyTarGzBaseDir.getAbsolutePath()),
+            new FsPermission("755"));
     dependencyTarGz = getDependencyTarGz(dependencyTarGzBaseDir);
     dependencyTarGzProp = DEPENDENCY_TARBALL_PATH + "=" + dependencyTarGz
         .toString();
     conf.set(DEPENDENCY_TARBALL_PATH, dependencyTarGz.toString());
-    fs = new SliderFileSystem(conf);
+
     if (basedir.exists()) {
       FileUtils.deleteDirectory(basedir);
     } else {
@@ -162,7 +166,7 @@ public class TestServiceCLI {
     checkApp(serviceName, "master", 1L, 1000L, "qname");
   }
 
-  @Test (timeout = 180000)
+  @Test
   public void testInitiateServiceUpgrade() throws Exception {
     String[] args = {"app", "-upgrade", "app-1",
         "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
@@ -181,7 +185,7 @@ public class TestServiceCLI {
     Assert.assertEquals(result, 0);
   }
 
-  @Test (timeout = 180000)
+  @Test
   public void testUpgradeInstances() throws Exception {
     conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
         DummyServiceClient.class.getName());
@@ -193,12 +197,24 @@ public class TestServiceCLI {
     Assert.assertEquals(result, 0);
   }
 
-  @Test (timeout = 180000)
+  @Test
   public void testUpgradeComponents() throws Exception {
     conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
         DummyServiceClient.class.getName());
     cli.setConf(conf);
     String[] args = {"app", "-upgrade", "app-1",
+        "-components", "comp1,comp2",
+        "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
+  @Test
+  public void testGetInstances() throws Exception {
+    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
+        DummyServiceClient.class.getName());
+    cli.setConf(conf);
+    String[] args = {"container", "-list", "app-1",
         "-components", "comp1,comp2",
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
@@ -308,6 +324,13 @@ public class TestServiceCLI {
     public int actionUpgradeComponents(String appName, List<String> components)
         throws IOException, YarnException {
       return 0;
+    }
+
+    @Override
+    public String getInstances(String appName, List<String> components,
+        String version, List<String> containerStates)
+        throws IOException, YarnException {
+      return "";
     }
   }
 }
