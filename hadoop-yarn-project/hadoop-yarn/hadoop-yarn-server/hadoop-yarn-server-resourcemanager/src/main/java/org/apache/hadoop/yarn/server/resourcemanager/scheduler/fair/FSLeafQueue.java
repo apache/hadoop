@@ -554,13 +554,14 @@ public class FSLeafQueue extends FSQueue {
    */
   private Resource minShareStarvation() {
     // If demand < minshare, we should use demand to determine starvation
-    Resource desiredShare = Resources.min(policy.getResourceCalculator(),
-        scheduler.getClusterResource(), getMinShare(), getDemand());
+    Resource starvation =
+        Resources.componentwiseMin(getMinShare(), getDemand());
 
-    Resource starvation = Resources.subtract(desiredShare, getResourceUsage());
+    Resources.subtractFromNonNegative(starvation, getResourceUsage());
+
     boolean starved = !Resources.isNone(starvation);
-
     long now = scheduler.getClock().getTime();
+
     if (!starved) {
       // Record that the queue is not starved
       setLastTimeAtMinShare(now);

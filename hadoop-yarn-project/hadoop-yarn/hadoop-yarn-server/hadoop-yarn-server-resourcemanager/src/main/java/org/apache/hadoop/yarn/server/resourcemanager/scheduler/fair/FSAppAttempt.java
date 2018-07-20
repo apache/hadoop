@@ -1094,8 +1094,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             (!hasRequestForRack || appSchedulingInfo.canDelayTo(key,
                 node.getRackName()) || (hasRequestForNode)) &&
             // The requested container must be able to fit on the node:
-            Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
-                resource,
+            Resources.fitsIn(resource,
                 node.getRMNode().getTotalCapability()))) {
       ret = false;
     } else if (!getQueue().fitsInMaxShare(resource)) {

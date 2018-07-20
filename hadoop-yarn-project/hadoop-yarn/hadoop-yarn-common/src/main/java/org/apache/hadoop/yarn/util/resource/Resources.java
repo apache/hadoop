@@ -242,7 +242,7 @@ public class Resources {
   public static boolean isNone(Resource other) {
     return NONE.equals(other);
   }
-  
+
   public static Resource unbounded() {
     return UNBOUNDED;
   }
@@ -300,8 +300,9 @@ public class Resources {
   }
 
   /**
-   * Subtract <code>rhs</code> from <code>lhs</code> and reset any negative
-   * values to zero.
+   * Subtract {@code rhs} from {@code lhs} and reset any negative values to
+   * zero. This call will modify {@code lhs}.
+   *
    * @param lhs {@link Resource} to subtract from
    * @param rhs {@link Resource} to subtract
    * @return the value of lhs after subtraction
@@ -315,6 +316,19 @@ public class Resources {
       lhs.setVirtualCores(0);
     }
     return lhs;
+  }
+
+  /**
+   * Subtract {@code rhs} from {@code lhs} and reset any negative values to
+   * zero. This call will operate on a copy of {@code lhs}, leaving {@code lhs}
+   * unmodified.
+   *
+   * @param lhs {@link Resource} to subtract from
+   * @param rhs {@link Resource} to subtract
+   * @return the value of lhs after subtraction
+   */
+  public static Resource subtractNonNegative(Resource lhs, Resource rhs) {
+    return subtractFromNonNegative(clone(lhs), rhs);
   }
 
   public static Resource negate(Resource resource) {

@@ -28,11 +28,12 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class FakeSchedulable implements Schedulable {
   private Resource usage;
-  private Resource minShare;
-  private Resource maxShare;
-  private Resource fairShare;
+  private final Resource demand;
+  private final Resource minShare;
+  private final Resource maxShare;
   private float weights;
-  private Priority priority;
+  private final Priority priority;
+  private Resource fairShare;
   private long startTime;
   
   public FakeSchedulable() {
@@ -75,10 +76,11 @@ public class FakeSchedulable implements Schedulable {
     this.minShare = minShare;
     this.maxShare = maxShare;
     this.weights = weight;
-    setFairShare(fairShare);
     this.usage = usage;
+    this.demand = Resources.multiply(usage, 2.0);
     this.priority = Records.newRecord(Priority.class);
-    this.startTime = startTime;
+    setFairShare(fairShare);
+    start(startTime);
   }
   
   @Override
@@ -92,13 +94,13 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
-  public void setFairShare(Resource fairShare) {
+  public final void setFairShare(Resource fairShare) {
     this.fairShare = fairShare;
   }
 
   @Override
   public Resource getDemand() {
-    return null;
+    return demand;
   }
 
   @Override
@@ -146,5 +148,9 @@ public class FakeSchedulable implements Schedulable {
 
   public void setResourceUsage(Resource usage) {
     this.usage = usage;
+  }
+
+  public final void start(long time) {
+    startTime = time;
   }
 }
