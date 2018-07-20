@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
@@ -42,7 +44,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -149,14 +150,25 @@ public class MountTableResolver
    * @param conf Configuration for this resolver.
    */
   private void initDefaultNameService(Configuration conf) {
-    try {
-      this.defaultNameService = conf.get(
-          DFS_ROUTER_DEFAULT_NAMESERVICE,
-          DFSUtil.getNamenodeNameServiceId(conf));
-    } catch (HadoopIllegalArgumentException e) {
-      LOG.error("Cannot find default name service, setting it to the first");
+    this.defaultNameService = conf.get(
+        DFS_ROUTER_DEFAULT_NAMESERVICE,
+        DFSUtil.getNamenodeNameServiceId(conf));
+
+    if (defaultNameService == null) {
+      LOG.warn(
+          "{} and {} is not set. Fallback to {} as the default name service.",
+          DFS_ROUTER_DEFAULT_NAMESERVICE, DFS_NAMESERVICE_ID, DFS_NAMESERVICES);
       Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
-      this.defaultNameService = nsIds.iterator().next();
+      if (nsIds.isEmpty()) {
+        this.defaultNameService = "";
+      } else {
+        this.defaultNameService = nsIds.iterator().next();
+      }
+    }
+
+    if (this.defaultNameService.equals("")) {
+      LOG.warn("Default name service is not set.");
+    } else {
       LOG.info("Default name service: {}", this.defaultNameService);
     }
   }
