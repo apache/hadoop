@@ -21,21 +21,23 @@ import com.google.protobuf.GeneratedMessage;
 import org.apache.hadoop.hdds.HddsIdFactory;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
 
 /**
  * A class that acts as the base class to convert between Java and SCM
  * commands in protobuf format.
  * @param <T>
  */
-public abstract class SCMCommand<T extends GeneratedMessage> {
-  private long cmdId;
+public abstract class SCMCommand<T extends GeneratedMessage> implements
+    IdentifiableEventPayload {
+  private long id;
 
   SCMCommand() {
-    this.cmdId = HddsIdFactory.getLongId();
+    this.id = HddsIdFactory.getLongId();
   }
 
-  SCMCommand(long cmdId) {
-    this.cmdId = cmdId;
+  SCMCommand(long id) {
+    this.id = id;
   }
   /**
    * Returns the type of this command.
@@ -53,8 +55,8 @@ public abstract class SCMCommand<T extends GeneratedMessage> {
    * Gets the commandId of this object.
    * @return uuid.
    */
-  public long getCmdId() {
-    return cmdId;
+  public long getId() {
+    return id;
   }
 
 }

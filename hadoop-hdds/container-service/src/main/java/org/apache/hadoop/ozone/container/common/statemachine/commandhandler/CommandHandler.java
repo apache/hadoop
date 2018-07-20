@@ -64,9 +64,9 @@ public interface CommandHandler {
    */
   default void updateCommandStatus(StateContext context, SCMCommand command,
       boolean cmdExecuted, Logger log) {
-    if (!context.updateCommandStatus(command.getCmdId(), cmdExecuted)) {
-      log.debug("{} with cmdId:{} not found.", command.getType(),
-          command.getCmdId());
+    if (!context.updateCommandStatus(command.getId(), cmdExecuted)) {
+      log.debug("{} with Id:{} not found.", command.getType(),
+          command.getId());
     }
   }
 }

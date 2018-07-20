@@ -55,7 +55,7 @@ public class ReregisterCommand extends
    * @return cmdId.
    */
   @Override
-  public long getCmdId() {
+  public long getId() {
     return 0;
   }
 

@@ -51,8 +51,8 @@ public class ReplicateContainerCommand
 
   // Should be called only for protobuf conversion
   public ReplicateContainerCommand(long containerID,
-      List<DatanodeDetails> sourceDatanodes, long cmdId) {
-    super(cmdId);
+      List<DatanodeDetails> sourceDatanodes, long id) {
+    super(id);
     this.containerID = containerID;
     this.sourceDatanodes = sourceDatanodes;
   }
@@ -69,7 +69,7 @@ public class ReplicateContainerCommand
 
   public ReplicateContainerCommandProto getProto() {
     Builder builder = ReplicateContainerCommandProto.newBuilder()
-        .setCmdId(getCmdId())
+        .setCmdId(getId())
         .setContainerID(containerID);
     for (DatanodeDetails dd : sourceDatanodes) {
       builder.addSources(dd.getProtoBufMessage());

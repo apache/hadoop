@@ -311,9 +311,9 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    this.addCmdStatus(cmd.getCmdId(),
+    this.addCmdStatus(cmd.getId(),
         CommandStatusBuilder.newBuilder()
-            .setCmdId(cmd.getCmdId())
+            .setCmdId(cmd.getId())
             .setStatus(Status.PENDING)
             .setType(cmd.getType())
             .build());

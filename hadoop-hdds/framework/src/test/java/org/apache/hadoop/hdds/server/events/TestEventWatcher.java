@@ -19,15 +19,9 @@ package org.apache.hadoop.hdds.server.events;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
-
-import org.apache.hadoop.metrics2.MetricsSource;
-import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.hdds.HddsIdFactory;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.lease.LeaseManager;
-import org.apache.hadoop.test.MetricsAsserts;
-
-import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,7 +41,7 @@ public class TestEventWatcher {
   private static final TypedEvent<ReplicationCompletedEvent>
       REPLICATION_COMPLETED = new TypedEvent<>(ReplicationCompletedEvent.class);
 
-  LeaseManager<UUID> leaseManager;
+  LeaseManager<Long> leaseManager;
 
   @Before
   public void startLeaseManager() {
@@ -77,21 +71,21 @@ public class TestEventWatcher {
 
     replicationWatcher.start(queue);
 
-    UUID uuid1 = UUID.randomUUID();
-    UUID uuid2 = UUID.randomUUID();
+    long id1 = HddsIdFactory.getLongId();
+    long id2 = HddsIdFactory.getLongId();
 
     queue.fireEvent(WATCH_UNDER_REPLICATED,
-        new UnderreplicatedEvent(uuid1, "C1"));
+        new UnderreplicatedEvent(id1, "C1"));
 
     queue.fireEvent(WATCH_UNDER_REPLICATED,
-        new UnderreplicatedEvent(uuid2, "C2"));
+        new UnderreplicatedEvent(id2, "C2"));
 
     Assert.assertEquals(0, underReplicatedEvents.getReceivedEvents().size());
 
     Thread.sleep(1000);
 
     queue.fireEvent(REPLICATION_COMPLETED,
-        new ReplicationCompletedEvent(uuid1, "C2", "D1"));
+        new ReplicationCompletedEvent(id1, "C2", "D1"));
 
     Assert.assertEquals(0, underReplicatedEvents.getReceivedEvents().size());
 
@@ -100,8 +94,8 @@ public class TestEventWatcher {
     queue.processAll(1000L);
 
     Assert.assertEquals(1, underReplicatedEvents.getReceivedEvents().size());
-    Assert.assertEquals(uuid2,
-        underReplicatedEvents.getReceivedEvents().get(0).UUID);
+    Assert.assertEquals(id2,
+        underReplicatedEvents.getReceivedEvents().get(0).id);
 
   }
 
@@ -121,15 +115,15 @@ public class TestEventWatcher {
     replicationWatcher.start(queue);
 
     UnderreplicatedEvent event1 =
-        new UnderreplicatedEvent(UUID.randomUUID(), "C1");
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C1");
 
     queue.fireEvent(WATCH_UNDER_REPLICATED, event1);
 
     queue.fireEvent(WATCH_UNDER_REPLICATED,
-        new UnderreplicatedEvent(UUID.randomUUID(), "C2"));
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C2"));
 
     queue.fireEvent(WATCH_UNDER_REPLICATED,
-        new UnderreplicatedEvent(UUID.randomUUID(), "C1"));
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C1"));
 
     queue.processAll(1000L);
     Thread.sleep(1000L);
@@ -166,13 +160,13 @@ public class TestEventWatcher {
 
     //send 3 event to track 3 in-progress activity
     UnderreplicatedEvent event1 =
-        new UnderreplicatedEvent(UUID.randomUUID(), "C1");
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C1");
 
     UnderreplicatedEvent event2 =
-        new UnderreplicatedEvent(UUID.randomUUID(), "C2");
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C2");
 
     UnderreplicatedEvent event3 =
-        new UnderreplicatedEvent(UUID.randomUUID(), "C1");
+        new UnderreplicatedEvent(HddsIdFactory.getLongId(), "C1");
 
     queue.fireEvent(WATCH_UNDER_REPLICATED, event1);
 
@@ -182,10 +176,9 @@ public class TestEventWatcher {
 
     //1st event is completed, don't need to track any more
     ReplicationCompletedEvent event1Completed =
-        new ReplicationCompletedEvent(event1.UUID, "C1", "D1");
+        new ReplicationCompletedEvent(event1.id, "C1", "D1");
 
     queue.fireEvent(REPLICATION_COMPLETED, event1Completed);
-
 
     Thread.sleep(2200l);
 
@@ -218,7 +211,7 @@ public class TestEventWatcher {
 
     public CommandWatcherExample(Event<UnderreplicatedEvent> startEvent,
         Event<ReplicationCompletedEvent> completionEvent,
-        LeaseManager<UUID> leaseManager) {
+        LeaseManager<Long> leaseManager) {
       super("TestCommandWatcher", startEvent, completionEvent, leaseManager);
     }
 
@@ -243,21 +236,21 @@ public class TestEventWatcher {
   private static class ReplicationCompletedEvent
       implements IdentifiableEventPayload {
 
-    private final UUID UUID;
+    private final long id;
 
     private final String containerId;
 
     private final String datanodeId;
 
-    public ReplicationCompletedEvent(UUID UUID, String containerId,
+    public ReplicationCompletedEvent(long id, String containerId,
         String datanodeId) {
-      this.UUID = UUID;
+      this.id = id;
       this.containerId = containerId;
       this.datanodeId = datanodeId;
     }
 
-    public UUID getUUID() {
-      return UUID;
+    public long getId() {
+      return id;
     }
 
     @Override
@@ -284,17 +277,17 @@ public class TestEventWatcher {
 
       implements IdentifiableEventPayload {
 
-    private final UUID UUID;
+    private final long id;
 
     private final String containerId;
 
-    public UnderreplicatedEvent(UUID UUID, String containerId) {
+    public UnderreplicatedEvent(long id, String containerId) {
       this.containerId = containerId;
-      this.UUID = UUID;
+      this.id = id;
     }
 
-    public UUID getUUID() {
-      return UUID;
+    public long getId() {
+      return id;
     }
   }
 

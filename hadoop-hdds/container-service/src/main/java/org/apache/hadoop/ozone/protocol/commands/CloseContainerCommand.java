@@ -41,8 +41,8 @@ public class CloseContainerCommand
 
   // Should be called only for protobuf conversion
   private CloseContainerCommand(long containerID,
-      HddsProtos.ReplicationType replicationType, long cmdId) {
-    super(cmdId);
+      HddsProtos.ReplicationType replicationType, long id) {
+    super(id);
     this.containerID = containerID;
     this.replicationType = replicationType;
   }
@@ -70,7 +70,7 @@ public class CloseContainerCommand
   public CloseContainerCommandProto getProto() {
     return CloseContainerCommandProto.newBuilder()
         .setContainerID(containerID)
-        .setCmdId(getCmdId())
+        .setCmdId(getId())
         .setReplicationType(replicationType).build();
   }
 

@@ -42,8 +42,8 @@ public class DeleteBlocksCommand extends
 
   // Should be called only for protobuf conversion
   private DeleteBlocksCommand(List<DeletedBlocksTransaction> blocks,
-      long cmdId) {
-    super(cmdId);
+      long id) {
+    super(id);
     this.blocksTobeDeleted = blocks;
   }
 
@@ -69,7 +69,7 @@ public class DeleteBlocksCommand extends
 
   public DeleteBlocksCommandProto getProto() {
     return DeleteBlocksCommandProto.newBuilder()
-        .setCmdId(getCmdId())
+        .setCmdId(getId())
         .addAllDeletedBlocksTransactions(blocksTobeDeleted).build();
   }
 }
