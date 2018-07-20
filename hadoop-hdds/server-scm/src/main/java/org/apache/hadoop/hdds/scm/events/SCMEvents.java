@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler.*;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .CommandStatusReportFromDatanode;
@@ -103,6 +104,29 @@ public final class SCMEvents {
    */
   public static final TypedEvent<DatanodeDetails> DEAD_NODE =
       new TypedEvent<>(DatanodeDetails.class, "Dead_Node");
+
+  /**
+   * This event will be triggered by CommandStatusReportHandler whenever a
+   * status for Replication SCMCommand is received.
+   */
+  public static final Event<ReplicationStatus> REPLICATION_STATUS = new
+      TypedEvent<>(ReplicationStatus.class, "ReplicateCommandStatus");
+  /**
+   * This event will be triggered by CommandStatusReportHandler whenever a
+   * status for CloseContainer SCMCommand is received.
+   */
+  public static final Event<CloseContainerStatus>
+      CLOSE_CONTAINER_STATUS =
+      new TypedEvent<>(CloseContainerStatus.class,
+          "CloseContainerCommandStatus");
+  /**
+   * This event will be triggered by CommandStatusReportHandler whenever a
+   * status for DeleteBlock SCMCommand is received.
+   */
+  public static final Event<DeleteBlockCommandStatus>
+      DELETE_BLOCK_STATUS =
+      new TypedEvent(DeleteBlockCommandStatus.class,
+          "DeleteBlockCommandStatus");
 
   /**
    * Private Ctor. Never Constructed.
