@@ -47,7 +47,7 @@ public abstract class Storage {
 
   public static final String STORAGE_DIR_CURRENT = "current";
   protected static final String STORAGE_FILE_VERSION = "VERSION";
-  public static final String CONTAINER_DIR = "containerdir";
+  public static final String CONTAINER_DIR = "containerDir";
 
   private final NodeType nodeType;
   private final File root;

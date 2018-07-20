@@ -111,15 +111,15 @@ public class KeyValueContainer implements Container {
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
           .getVolumesList(), maxSize);
-      String containerBasePath = containerVolume.getHddsRootDir().toString();
+      String hddsVolumeDir = containerVolume.getHddsRootDir().toString();
 
       long containerId = containerData.getContainerID();
       String containerName = Long.toString(containerId);
 
       containerMetaDataPath = KeyValueContainerLocationUtil
-          .getContainerMetaDataPath(containerBasePath, scmId, containerId);
+          .getContainerMetaDataPath(hddsVolumeDir, scmId, containerId);
       File chunksPath = KeyValueContainerLocationUtil.getChunksLocationPath(
-          containerBasePath, scmId, containerId);
+          hddsVolumeDir, scmId, containerId);
       File containerFile = KeyValueContainerLocationUtil.getContainerFile(
           containerMetaDataPath, containerName);
       File containerCheckSumFile = KeyValueContainerLocationUtil

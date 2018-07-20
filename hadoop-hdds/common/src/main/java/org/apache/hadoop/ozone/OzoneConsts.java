@@ -70,12 +70,9 @@ public final class OzoneConsts {
   public static final String CONTAINER_EXTENSION = ".container";
   public static final String CONTAINER_META = ".meta";
 
-  //  container storage is in the following format.
-  //  Data Volume basePath/containers/<containerName>/metadata and
-  //  Data Volume basePath/containers/<containerName>/data/...
+  // Refer to {@link ContainerReader} for container storage layout on disk.
   public static final String CONTAINER_PREFIX  = "containers";
   public static final String CONTAINER_META_PATH = "metadata";
-  public static final String CONTAINER_DATA_PATH = "data";
   public static final String CONTAINER_TEMPORARY_CHUNK_PREFIX = "tmp";
   public static final String CONTAINER_CHUNK_NAME_DELIMITER = ".";
   public static final String CONTAINER_ROOT_PREFIX = "repository";

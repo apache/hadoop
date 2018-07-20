@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
+import java.util.List;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerType;
@@ -38,7 +39,7 @@ import static java.lang.Math.max;
  * ContainerData is the in-memory representation of container metadata and is
  * represented on disk by the .container file.
  */
-public class ContainerData {
+public abstract class ContainerData {
 
   //Type of the container.
   // For now, we support only KeyValueContainer.
@@ -46,9 +47,6 @@ public class ContainerData {
 
   // Unique identifier for the container
   private final long containerID;
-
-  // Path to container root dir.
-  private String containerPath;
 
   // Layout version of the container data
   private final int layOutVersion;
@@ -85,7 +83,7 @@ public class ContainerData {
    * @param containerId - ContainerId
    * @param size - container maximum size
    */
-  public ContainerData(ContainerType type, long containerId, int size) {
+  protected ContainerData(ContainerType type, long containerId, int size) {
     this(type, containerId,
         ChunkLayOutVersion.getLatestVersion().getVersion(), size);
   }
@@ -97,7 +95,7 @@ public class ContainerData {
    * @param layOutVersion - Container layOutVersion
    * @param size - Container maximum size
    */
-  public ContainerData(ContainerType type, long containerId,
+  protected ContainerData(ContainerType type, long containerId,
     int layOutVersion, int size) {
     Preconditions.checkNotNull(type);
 
@@ -128,17 +126,7 @@ public class ContainerData {
    * Returns the path to base dir of the container.
    * @return Path to base dir.
    */
-  public String getContainerPath() {
-    return containerPath;
-  }
-
-  /**
-   * Set the base dir path of the container.
-   * @param baseDir path to base dir
-   */
-  public void setContainerPath(String baseDir) {
-    this.containerPath = baseDir;
-  }
+  public abstract String getContainerPath();
 
   /**
    * Returns the type of the container.
@@ -388,20 +376,6 @@ public class ContainerData {
   }
 
   /**
-   * Returns container metadata path.
-   */
-  public String getMetadataPath() {
-    return null;
-  }
-
-  /**
-   * Returns container data path.
-   */
-  public String getDataPath() {
-    return null;
-  }
-
-  /**
    * Increase the count of pending deletion blocks.
    *
    * @param numBlocks increment number
@@ -431,33 +405,7 @@ public class ContainerData {
    *
    * @return Protocol Buffer Message
    */
-  public ContainerProtos.ContainerData getProtoBufMessage() {
-    ContainerProtos.ContainerData.Builder builder =
-        ContainerProtos.ContainerData.newBuilder();
-
-    builder.setContainerID(this.getContainerID());
-
-    if (this.containerPath != null) {
-      builder.setContainerPath(this.containerPath);
-    }
-
-    builder.setState(this.getState());
-
-    for (Map.Entry<String, String> entry : metadata.entrySet()) {
-      ContainerProtos.KeyValue.Builder keyValBuilder =
-          ContainerProtos.KeyValue.newBuilder();
-      builder.addMetadata(keyValBuilder.setKey(entry.getKey())
-          .setValue(entry.getValue()).build());
-    }
-
-    if (this.getBytesUsed() >= 0) {
-      builder.setBytesUsed(this.getBytesUsed());
-    }
-
-    builder.setContainerType(containerType);
-
-    return builder.build();
-  }
+  public abstract ContainerProtos.ContainerData getProtoBufMessage();
 
   /**
    * Sets deleteTransactionId to latest delete transactionId for the container.

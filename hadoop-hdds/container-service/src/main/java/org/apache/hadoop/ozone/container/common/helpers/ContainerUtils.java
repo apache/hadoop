@@ -104,27 +104,6 @@ public final class ContainerUtils {
   }
 
   /**
-   * Returns a ReadContainer Response.
-   * @param msg requestProto message.
-   * @param containerData container data to be returned.
-   * @return ReadContainer Response
-   */
-  public static ContainerProtos.ContainerCommandResponseProto
-    getReadContainerResponse(ContainerProtos.ContainerCommandRequestProto msg,
-      ContainerData containerData) {
-    Preconditions.checkNotNull(containerData);
-
-    ContainerProtos.ReadContainerResponseProto.Builder response =
-        ContainerProtos.ReadContainerResponseProto.newBuilder();
-    response.setContainerData(containerData.getProtoBufMessage());
-
-    ContainerProtos.ContainerCommandResponseProto.Builder builder =
-        getSuccessResponseBuilder(msg);
-    builder.setReadContainer(response);
-    return builder.build();
-  }
-
-  /**
    * We found a command type but no associated payload for the command. Hence
    * return malformed Command as response.
    *

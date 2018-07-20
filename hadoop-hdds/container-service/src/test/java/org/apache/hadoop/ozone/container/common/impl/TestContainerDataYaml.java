@@ -151,9 +151,9 @@ public class TestContainerDataYaml {
       assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
           .getContainerType());
       assertEquals(9223372036854775807L, kvData.getContainerID());
-      assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData
+      assertEquals("/hdds/current/aed-fg4-hji-jkl/containerDir0/1", kvData
           .getChunksPath());
-      assertEquals("/hdds/current/aed-fg4-hji-jkl/containerdir0/1", kvData
+      assertEquals("/hdds/current/aed-fg4-hji-jkl/containerDir0/1", kvData
           .getMetadataPath());
       assertEquals(1, kvData.getLayOutVersion());
       assertEquals(2, kvData.getMetadata().size());

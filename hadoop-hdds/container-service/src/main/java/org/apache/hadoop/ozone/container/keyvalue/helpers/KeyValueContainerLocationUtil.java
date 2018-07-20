@@ -34,14 +34,16 @@ public final class KeyValueContainerLocationUtil {
   }
   /**
    * Returns Container Metadata Location.
-   * @param baseDir
+   * @param hddsVolumeDir base dir of the hdds volume where scm directories
+   *                      are stored
    * @param scmId
    * @param containerId
-   * @return containerMetadata Path
+   * @return containerMetadata Path to container metadata location where
+   * .container file will be stored.
    */
-  public static File getContainerMetaDataPath(String baseDir, String scmId,
+  public static File getContainerMetaDataPath(String hddsVolumeDir, String scmId,
                                               long containerId) {
-    String containerMetaDataPath = getBaseContainerLocation(baseDir, scmId,
+    String containerMetaDataPath = getBaseContainerLocation(hddsVolumeDir, scmId,
         containerId);
     containerMetaDataPath = containerMetaDataPath + File.separator +
         OzoneConsts.CONTAINER_META_PATH;
@@ -65,21 +67,21 @@ public final class KeyValueContainerLocationUtil {
 
   /**
    * Returns base directory for specified container.
-   * @param baseDir
+   * @param hddsVolumeDir
    * @param scmId
    * @param containerId
    * @return base directory for container.
    */
-  private static String getBaseContainerLocation(String baseDir, String scmId,
+  private static String getBaseContainerLocation(String hddsVolumeDir, String scmId,
                                         long containerId) {
-    Preconditions.checkNotNull(baseDir, "Base Directory cannot be null");
+    Preconditions.checkNotNull(hddsVolumeDir, "Base Directory cannot be null");
     Preconditions.checkNotNull(scmId, "scmUuid cannot be null");
     Preconditions.checkState(containerId >= 0,
         "Container Id cannot be negative.");
 
     String containerSubDirectory = getContainerSubDirectory(containerId);
 
-    String containerMetaDataPath = baseDir  + File.separator + scmId +
+    String containerMetaDataPath = hddsVolumeDir  + File.separator + scmId +
         File.separator + Storage.STORAGE_DIR_CURRENT + File.separator +
         containerSubDirectory + File.separator + containerId;
 

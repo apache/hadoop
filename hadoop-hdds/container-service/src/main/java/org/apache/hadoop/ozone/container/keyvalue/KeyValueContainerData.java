@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.yaml.snakeyaml.nodes.Tag;
 
@@ -73,9 +74,6 @@ public class KeyValueContainerData extends ContainerData {
   //Type of DB used to store key to chunks mapping
   private String containerDBType;
 
-  //Number of pending deletion blocks in container.
-  private int numPendingDeletionBlocks;
-
   private File dbFile = null;
 
   /**
@@ -85,7 +83,6 @@ public class KeyValueContainerData extends ContainerData {
    */
   public KeyValueContainerData(long id, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
-    this.numPendingDeletionBlocks = 0;
   }
 
   /**
@@ -97,7 +94,6 @@ public class KeyValueContainerData extends ContainerData {
   public KeyValueContainerData(long id, int layOutVersion, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
         size);
-    this.numPendingDeletionBlocks = 0;
   }
 
 
@@ -120,8 +116,8 @@ public class KeyValueContainerData extends ContainerData {
 
   /**
    * Returns container metadata path.
+   * @return - Physical path where container file and checksum is stored.
    */
-  @Override
   public String getMetadataPath() {
     return metadataPath;
   }
@@ -136,18 +132,21 @@ public class KeyValueContainerData extends ContainerData {
   }
 
   /**
-   * Get chunks path.
-   * @return - Physical path where container file and checksum is stored.
+   * Returns the path to base dir of the container.
+   * @return Path to base dir
    */
-  public String getChunksPath() {
-    return chunksPath;
+  public String getContainerPath() {
+    if (metadataPath == null) {
+      return null;
+    }
+    return new File(metadataPath).getParent();
   }
 
   /**
-   * Returns container chunks path.
+   * Get chunks path.
+   * @return - Path where chunks are stored
    */
-  @Override
-  public String getDataPath() {
+  public String getChunksPath() {
     return chunksPath;
   }
 
@@ -173,33 +172,6 @@ public class KeyValueContainerData extends ContainerData {
    */
   public void setContainerDBType(String containerDBType) {
     this.containerDBType = containerDBType;
-  }
-
-  /**
-   * Returns the number of pending deletion blocks in container.
-   * @return numPendingDeletionBlocks
-   */
-  public int getNumPendingDeletionBlocks() {
-    return numPendingDeletionBlocks;
-  }
-
-
-  /**
-   * Increase the count of pending deletion blocks.
-   *
-   * @param numBlocks increment number
-   */
-  public void incrPendingDeletionBlocks(int numBlocks) {
-    this.numPendingDeletionBlocks += numBlocks;
-  }
-
-  /**
-   * Decrease the count of pending deletion blocks.
-   *
-   * @param numBlocks decrement number
-   */
-  public void decrPendingDeletionBlocks(int numBlocks) {
-    this.numPendingDeletionBlocks -= numBlocks;
   }
 
   /**
@@ -260,7 +232,9 @@ public class KeyValueContainerData extends ContainerData {
     }
 
     if (protoData.hasContainerPath()) {
-      data.setContainerPath(protoData.getContainerPath());
+      String metadataPath = protoData.getContainerPath()+ File.separator +
+          OzoneConsts.CONTAINER_META_PATH;
+      data.setMetadataPath(metadataPath);
     }
 
     if (protoData.hasState()) {

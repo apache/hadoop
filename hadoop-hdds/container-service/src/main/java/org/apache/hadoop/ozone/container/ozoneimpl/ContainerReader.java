@@ -40,6 +40,21 @@ import java.io.IOException;
 
 /**
  * Class used to read .container files from Volume and build container map.
+ *
+ * Layout of the container directory on disk is as follows:
+ *
+ * ../hdds/VERSION
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.container
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.checksum
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.db
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/<<dataPath>>
+ *
+ * Note that the <<dataPath>> is dependent on the ContainerType.
+ * For KeyValueContainers, the data is stored in a "chunks" folder. As such,
+ * the <<dataPath>> layout for KeyValueContainers is
+ *
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/chunks/<<chunksFile>>
+ *
  */
 public class ContainerReader implements Runnable {
 
@@ -72,21 +87,6 @@ public class ContainerReader implements Runnable {
   public void readVolume(File hddsVolumeRootDir) {
     Preconditions.checkNotNull(hddsVolumeRootDir, "hddsVolumeRootDir" +
         "cannot be null");
-
-
-    /**
-     *
-     * layout of the container directory on the disk.
-     * /hdds/<<scmUuid>>/current/<<containerdir>>/</containerID>/metadata
-     * /<<containerID>>.container
-     * /hdds/<<scmUuid>>/current/<<containerdir>>/<<containerID>>/metadata
-     * /<<containerID>>.checksum
-     * /hdds/<<scmUuid>>/current/<<containerdir>>/<<containerID>>/metadata
-     * /<<containerID>>.db
-     * /hdds/<<scmUuid>>/current/<<containerdir>>/<<containerID>>/chunks
-     * /<<chunkFile>>
-     *
-     **/
 
     //filtering scm directory
     File[] scmDir = hddsVolumeRootDir.listFiles(new FileFilter() {

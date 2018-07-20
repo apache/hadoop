@@ -172,11 +172,11 @@ public class BlockDeletingService extends BackgroundService{
       implements BackgroundTask<BackgroundTaskResult> {
 
     private final int priority;
-    private final ContainerData containerData;
+    private final KeyValueContainerData containerData;
 
     BlockDeletingTask(ContainerData containerName, int priority) {
       this.priority = priority;
-      this.containerData = containerName;
+      this.containerData = (KeyValueContainerData) containerName;
     }
 
     @Override
@@ -199,10 +199,10 @@ public class BlockDeletingService extends BackgroundService{
       List<String> succeedBlocks = new LinkedList<>();
       LOG.debug("Container : {}, To-Delete blocks : {}",
           containerData.getContainerID(), toDeleteBlocks.size());
-      File dataDir = new File(containerData.getDataPath());
+      File dataDir = new File(containerData.getChunksPath());
       if (!dataDir.exists() || !dataDir.isDirectory()) {
         LOG.error("Invalid container data dir {} : "
-            + "not exist or not a directory", dataDir.getAbsolutePath());
+            + "does not exist or not a directory", dataDir.getAbsolutePath());
         return crr;
       }
 
