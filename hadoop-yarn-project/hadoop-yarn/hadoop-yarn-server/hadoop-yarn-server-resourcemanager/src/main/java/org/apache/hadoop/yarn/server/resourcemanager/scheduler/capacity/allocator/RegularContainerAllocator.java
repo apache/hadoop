@@ -263,7 +263,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             reservedContainer, schedulingMode, resourceLimits);
     
     if (null == reservedContainer) {
-      if (result.state == AllocationState.PRIORITY_SKIPPED) {
+      if (result.getAllocationState() == AllocationState.PRIORITY_SKIPPED) {
         // Don't count 'skipped nodes' as a scheduling opportunity!
         application.subtractSchedulingOpportunity(schedulerKey);
       }
@@ -487,8 +487,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
       // When a returned allocation is LOCALITY_SKIPPED, since we're in
       // off-switch request now, we will skip this app w.r.t priorities 
-      if (allocation.state == AllocationState.LOCALITY_SKIPPED) {
-        allocation.state = AllocationState.APP_SKIPPED;
+      if (allocation.getAllocationState() == AllocationState.LOCALITY_SKIPPED) {
+        allocation = ContainerAllocation.APP_SKIPPED;
       }
       allocation.requestLocalityType = requestLocalityType;
 
@@ -836,8 +836,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       result = tryAllocateOnNode(clusterResource, node, schedulingMode,
           resourceLimits, schedulerKey, reservedContainer);
 
-      if (AllocationState.ALLOCATED == result.state
-          || AllocationState.RESERVED == result.state) {
+      if (AllocationState.ALLOCATED == result.getAllocationState()
+          || AllocationState.RESERVED == result.getAllocationState()) {
         result = doAllocation(result, node, schedulerKey, reservedContainer);
         break;
       }
