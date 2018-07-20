@@ -153,13 +153,29 @@
     <description>The timeout duration for ratis server request.</description>
   </property>
   <property>
-    <name>ozone.container.report.interval</name>
+    <name>hdds.node.report.interval</name>
+    <value>60000ms</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Time interval of the datanode to send node report. Each
+      datanode periodically send node report to SCM. Unit could be
+      defined with postfix (ns,ms,s,m,h,d)</description>
+  </property>
+  <property>
+    <name>hdds.container.report.interval</name>
     <value>60000ms</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
     <description>Time interval of the datanode to send container report. Each
-      datanode periodically send container report upon receive
-      sendContainerReport from SCM. Unit could be defined with
-      postfix (ns,ms,s,m,h,d)</description>
+      datanode periodically send container report to SCM. Unit could be
+      defined with postfix (ns,ms,s,m,h,d)</description>
+  </property>
+  <property>
+    <name>hdds.command.status.report.interval</name>
+    <value>60000ms</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Time interval of the datanode to send status of command
+      execution. Each datanode periodically the execution status of commands
+      received from SCM to SCM. Unit could be defined with postfix
+      (ns,ms,s,m,h,d)</description>
   </property>
   <!--Ozone Settings-->
   <property>
@@ -677,7 +693,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.heartbeat.interval</name>
+    <name>hdds.heartbeat.interval</name>
     <value>30s</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>

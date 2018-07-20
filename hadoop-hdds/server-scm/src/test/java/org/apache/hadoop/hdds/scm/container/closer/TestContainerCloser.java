@@ -44,6 +44,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -52,8 +54,6 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent
     .CREATE;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent
     .CREATED;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_CONTAINER_REPORT_INTERVAL;
 
 /**
  * Test class for Closing Container.
@@ -72,7 +72,7 @@ public class TestContainerCloser {
     configuration = SCMTestUtils.getConf();
     size = configuration.getLong(OZONE_SCM_CONTAINER_SIZE_GB,
         OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024 * 1024 * 1024;
-    configuration.setTimeDuration(OZONE_CONTAINER_REPORT_INTERVAL,
+    configuration.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL,
         1, TimeUnit.SECONDS);
     testDir = GenericTestUtils
         .getTestDir(TestContainerMapping.class.getSimpleName());
@@ -137,7 +137,7 @@ public class TestContainerCloser {
     // second report is discarded by the system if it lands in the 3 * report
     // frequency window.
 
-    configuration.setTimeDuration(OZONE_CONTAINER_REPORT_INTERVAL, 1,
+    configuration.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1,
         TimeUnit.SECONDS);
 
     ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(

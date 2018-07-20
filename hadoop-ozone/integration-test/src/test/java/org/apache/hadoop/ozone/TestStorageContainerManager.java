@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone;
 
-import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.commons.lang3.RandomUtils;
@@ -67,6 +66,9 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
+import static org.junit.Assert.fail;
 
 /**
  * Test class that exercises the StorageContainerManager.
@@ -186,9 +188,7 @@ public class TestStorageContainerManager {
   public void testBlockDeletionTransactions() throws Exception {
     int numKeys = 5;
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
-        5,
-        TimeUnit.SECONDS);
+    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 5, TimeUnit.SECONDS);
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         3000,
         TimeUnit.MILLISECONDS);

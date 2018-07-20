@@ -17,8 +17,18 @@
 
 package org.apache.hadoop.ozone.container.common.report;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_NODE_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_NODE_REPORT_INTERVAL_DEFAULT;
 
 /**
  * Publishes NodeReport which will be sent to SCM as part of heartbeat.
@@ -28,13 +38,29 @@ import org.apache.hadoop.hdds.protocol.proto
  */
 public class NodeReportPublisher extends ReportPublisher<NodeReportProto> {
 
+  private Long nodeReportInterval;
+
   @Override
   protected long getReportFrequency() {
-    return 90000L;
+    if (nodeReportInterval == null) {
+      nodeReportInterval = getConf().getTimeDuration(
+          HDDS_NODE_REPORT_INTERVAL,
+          HDDS_NODE_REPORT_INTERVAL_DEFAULT,
+          TimeUnit.MILLISECONDS);
+
+      long heartbeatFrequency = HddsServerUtil.getScmHeartbeatInterval(
+          getConf());
+
+      Preconditions.checkState(
+          heartbeatFrequency < nodeReportInterval,
+          HDDS_NODE_REPORT_INTERVAL +
+              " cannot be configured lower than heartbeat frequency.");
+    }
+    return nodeReportInterval;
   }
 
   @Override
-  protected NodeReportProto getReport() {
-    return NodeReportProto.getDefaultInstance();
+  protected NodeReportProto getReport() throws IOException {
+    return getContext().getParent().getContainer().getNodeReport();
   }
 }

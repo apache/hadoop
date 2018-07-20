@@ -19,11 +19,19 @@ package org.apache.hadoop.ozone.container.common.report;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
+
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_COMMAND_STATUS_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT;
 
 /**
  * Publishes CommandStatusReport which will be sent to SCM as part of
@@ -42,9 +50,17 @@ public class CommandStatusReportPublisher extends
   protected long getReportFrequency() {
     if (cmdStatusReportInterval == -1) {
       cmdStatusReportInterval = getConf().getTimeDuration(
-          HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL,
-          HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT,
+          HDDS_COMMAND_STATUS_REPORT_INTERVAL,
+          HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT,
           TimeUnit.MILLISECONDS);
+
+      long heartbeatFrequency = HddsServerUtil.getScmHeartbeatInterval(
+          getConf());
+
+      Preconditions.checkState(
+          heartbeatFrequency < cmdStatusReportInterval,
+          HDDS_COMMAND_STATUS_REPORT_INTERVAL +
+              " cannot be configured lower than heartbeat frequency.");
     }
     return cmdStatusReportInterval;
   }

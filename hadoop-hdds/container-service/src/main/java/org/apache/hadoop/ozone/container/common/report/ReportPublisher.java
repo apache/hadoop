@@ -23,7 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine.DatanodeStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +36,9 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class ReportPublisher<T extends GeneratedMessage>
     implements Configurable, Runnable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ReportPublisher.class);
 
   private Configuration config;
   private StateContext context;
@@ -76,7 +82,11 @@ public abstract class ReportPublisher<T extends GeneratedMessage>
    * Generates and publishes the report to datanode state context.
    */
   private void publishReport() {
-    context.addReport(getReport());
+    try {
+      context.addReport(getReport());
+    } catch (IOException e) {
+      LOG.error("Exception while publishing report.", e);
+    }
   }
 
   /**
@@ -91,7 +101,7 @@ public abstract class ReportPublisher<T extends GeneratedMessage>
    *
    * @return datanode report
    */
-  protected abstract T getReport();
+  protected abstract T getReport() throws IOException;
 
   /**
    * Returns {@link StateContext}.

@@ -200,11 +200,6 @@ public final class OzoneConfigKeys {
   public static final int
       OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL_DEFAULT = 10;
 
-  public static final String OZONE_CONTAINER_REPORT_INTERVAL =
-      "ozone.container.report.interval";
-  public static final String OZONE_CONTAINER_REPORT_INTERVAL_DEFAULT =
-      "60s";
-
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT

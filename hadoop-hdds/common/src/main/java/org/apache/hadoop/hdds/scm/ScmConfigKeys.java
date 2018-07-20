@@ -156,11 +156,6 @@ public final class ScmConfigKeys {
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
 
-  public static final String OZONE_SCM_HEARTBEAT_INTERVAL =
-      "ozone.scm.heartbeat.interval";
-  public static final String OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT =
-      "30s";
-
   public static final String OZONE_SCM_DEADNODE_INTERVAL =
       "ozone.scm.dead.node.interval";
   public static final String OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =

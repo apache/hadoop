@@ -180,14 +180,9 @@ public class TestReportPublisher {
 
   @Test
   public void testAddingReportToHeartbeat() {
-    Configuration conf = new OzoneConfiguration();
-    ReportPublisherFactory factory = new ReportPublisherFactory(conf);
-    ReportPublisher nodeReportPublisher = factory.getPublisherFor(
-        NodeReportProto.class);
-    ReportPublisher containerReportPubliser = factory.getPublisherFor(
-        ContainerReportsProto.class);
-    GeneratedMessage nodeReport = nodeReportPublisher.getReport();
-    GeneratedMessage containerReport = containerReportPubliser.getReport();
+    GeneratedMessage nodeReport = NodeReportProto.getDefaultInstance();
+    GeneratedMessage containerReport = ContainerReportsProto
+        .getDefaultInstance();
     SCMHeartbeatRequestProto.Builder heartbeatBuilder =
         SCMHeartbeatRequestProto.newBuilder();
     heartbeatBuilder.setDatanodeDetails(
