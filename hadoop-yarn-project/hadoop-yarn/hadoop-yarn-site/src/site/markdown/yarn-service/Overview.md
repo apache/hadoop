@@ -56,6 +56,4 @@ The benefits of combining these workloads are two-fold:
 * [Registry DNS](RegistryDNS.html): Deep dives into the Registry DNS internals.
 * [Examples](Examples.html): List some example service definitions (`Yarnfile`).
 * [Configurations](Configurations.html): Describes how to configure the custom services on YARN.
-
-
- 
+* [Service Upgrade](ServiceUpgrade.html): Describes how to upgrade a YARN service which is an experimental feature.
