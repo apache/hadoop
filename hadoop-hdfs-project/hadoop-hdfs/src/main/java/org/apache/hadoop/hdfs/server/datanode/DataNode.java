@@ -3624,8 +3624,8 @@ public class DataNode extends ReconfigurableBase
     }
     return this.diskBalancer;
   }
-}
 
   StoragePolicySatisfyWorker getStoragePolicySatisfyWorker() {
     return storagePolicySatisfyWorker;
-  }}
+  }
+}
