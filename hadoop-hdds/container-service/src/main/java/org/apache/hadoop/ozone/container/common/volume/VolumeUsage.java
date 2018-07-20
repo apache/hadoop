@@ -24,8 +24,6 @@ import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.io.IOUtils;
-import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
-import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +47,6 @@ public class VolumeUsage {
   private final DF df;
   private final File scmUsedFile;
   private GetSpaceUsed scmUsage;
-  private Runnable shutdownHook;
 
   private static final String DU_CACHE_FILE = "scmUsed";
   private volatile boolean scmUsedSaved = false;
@@ -72,15 +69,6 @@ public class VolumeUsage {
         .setConf(conf)
         .setInitialUsed(loadScmUsed())
         .build();
-
-    // Ensure scm df is saved during shutdown.
-    shutdownHook = () -> {
-      if (!scmUsedSaved) {
-        saveScmUsed();
-      }
-    };
-    ShutdownHookManager.get().addShutdownHook(shutdownHook,
-        SHUTDOWN_HOOK_PRIORITY);
   }
 
   long getCapacity() {
@@ -106,11 +94,6 @@ public class VolumeUsage {
 
   public void shutdown() {
     saveScmUsed();
-    scmUsedSaved = true;
-
-    if (shutdownHook != null) {
-      ShutdownHookManager.get().removeShutdownHook(shutdownHook);
-    }
 
     if (scmUsage instanceof CachingGetSpaceUsed) {
       IOUtils.cleanupWithLogger(null, ((CachingGetSpaceUsed) scmUsage));

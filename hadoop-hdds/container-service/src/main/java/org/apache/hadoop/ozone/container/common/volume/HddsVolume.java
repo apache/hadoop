@@ -370,6 +370,4 @@ public final class HddsVolume {
   public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
     volumeInfo.setScmUsageForTesting(scmUsageForTest);
   }
-
-
 }

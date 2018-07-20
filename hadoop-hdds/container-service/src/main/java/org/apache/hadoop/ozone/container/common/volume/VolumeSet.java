@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
+
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
@@ -40,6 +42,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.InstrumentedLock;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,6 +91,8 @@ public class VolumeSet {
 
   private final String datanodeUuid;
   private String clusterID;
+
+  private Runnable shutdownHook;
 
   public VolumeSet(String dnUuid, Configuration conf)
       throws DiskOutOfSpaceException {
@@ -155,6 +160,13 @@ public class VolumeSet {
     if (volumeMap.size() == 0) {
       throw new DiskOutOfSpaceException("No storage location configured");
     }
+
+    // Ensure volume threads are stopped and scm df is saved during shutdown.
+    shutdownHook = () -> {
+      shutdown();
+    };
+    ShutdownHookManager.get().addShutdownHook(shutdownHook,
+        SHUTDOWN_HOOK_PRIORITY);
   }
 
   /**
@@ -295,6 +307,10 @@ public class VolumeSet {
         LOG.error("Failed to shutdown volume : " + hddsVolume.getHddsRootDir(),
             ex);
       }
+    }
+
+    if (shutdownHook != null) {
+      ShutdownHookManager.get().removeShutdownHook(shutdownHook);
     }
   }
 

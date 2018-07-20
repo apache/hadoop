@@ -129,4 +129,12 @@ public class VolumeInfo {
   public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
     usage.setScmUsageForTesting(scmUsageForTest);
   }
+
+  /**
+   * Only for testing. Do not use otherwise.
+   */
+  @VisibleForTesting
+  public VolumeUsage getUsageForTesting() {
+    return usage;
+  }
 }

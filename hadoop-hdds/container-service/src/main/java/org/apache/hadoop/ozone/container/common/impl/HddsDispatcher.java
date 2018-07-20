@@ -81,6 +81,8 @@ public class HddsDispatcher implements ContainerDispatcher {
 
   @Override
   public void shutdown() {
+    // Shutdown the volumes
+    volumeSet.shutdown();
   }
 
   @Override

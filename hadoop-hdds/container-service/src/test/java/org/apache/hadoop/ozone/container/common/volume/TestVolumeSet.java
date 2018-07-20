@@ -34,8 +34,10 @@ import static org.apache.hadoop.ozone.container.common.volume.HddsVolume
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -87,6 +89,7 @@ public class TestVolumeSet {
     for (HddsVolume volume : volumes) {
       FileUtils.deleteDirectory(volume.getHddsRootDir());
     }
+    volumeSet.shutdown();
   }
 
   private boolean checkVolumeExistsInVolumeSet(String volume) {
@@ -120,9 +123,6 @@ public class TestVolumeSet {
 
     // Add a volume to VolumeSet
     String volume3 = baseDir + "disk3";
-//    File dir3 = new File(volume3, "hdds");
-//    File[] files = dir3.listFiles();
-//    System.out.println("------ " + files[0].getPath());
     boolean success = volumeSet.addVolume(volume3);
 
     assertTrue(success);
@@ -203,5 +203,25 @@ public class TestVolumeSet {
     // Delete volume3
     File volume = new File(volume3);
     FileUtils.deleteDirectory(volume);
+  }
+
+  @Test
+  public void testShutdown() throws Exception {
+    List<HddsVolume> volumesList = volumeSet.getVolumesList();
+
+    volumeSet.shutdown();
+
+    // Verify that the volumes are shutdown and the volumeUsage is set to null.
+    for (HddsVolume volume : volumesList) {
+      Assert.assertNull(volume.getVolumeInfo().getUsageForTesting());
+      try {
+        // getAvailable() should throw null pointer exception as usage is null.
+        volume.getAvailable();
+        fail("Volume shutdown failed.");
+      } catch (NullPointerException ex) {
+        // Do Nothing. Exception is expected.
+      }
+    }
+
   }
 }
