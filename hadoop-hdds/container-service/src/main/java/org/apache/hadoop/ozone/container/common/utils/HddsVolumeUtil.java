@@ -25,8 +25,10 @@ import org.apache.hadoop.ozone.common.InconsistentStorageStateException;
 import org.apache.hadoop.ozone.container.common.DataNodeLayoutVersion;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -159,5 +161,59 @@ public final class HddsVolumeUtil {
           ". Version File : " + versionFile + " has null or empty " + propName);
     }
     return value;
+  }
+
+  /**
+   * Check Volume is consistent state or not.
+   * @param hddsVolume
+   * @param scmId
+   * @param clusterId
+   * @param logger
+   * @return true - if volume is in consistent state, otherwise false.
+   */
+  public static boolean checkVolume(HddsVolume hddsVolume, String scmId, String
+      clusterId, Logger logger) {
+    File hddsRoot = hddsVolume.getHddsRootDir();
+    String volumeRoot = hddsRoot.getPath();
+    File scmDir = new File(hddsRoot, scmId);
+
+    try {
+      hddsVolume.format(clusterId);
+    } catch (IOException ex) {
+      logger.error("Error during formatting volume {}, exception is {}",
+          volumeRoot, ex);
+      return false;
+    }
+
+    File[] hddsFiles = hddsRoot.listFiles();
+
+    if(hddsFiles == null) {
+      // This is the case for IOException, where listFiles returns null.
+      // So, we fail the volume.
+      return false;
+    } else if (hddsFiles.length == 1) {
+      // DN started for first time or this is a newly added volume.
+      // So we create scm directory.
+      if (!scmDir.mkdir()) {
+        logger.error("Unable to create scmDir {}", scmDir);
+        return false;
+      }
+      return true;
+    } else if(hddsFiles.length == 2) {
+      // The files should be Version and SCM directory
+      if (scmDir.exists()) {
+        return true;
+      } else {
+        logger.error("Volume {} is in Inconsistent state, expected scm " +
+                "directory {} does not exist", volumeRoot, scmDir
+            .getAbsolutePath());
+        return false;
+      }
+    } else {
+      // The hdds root dir should always have 2 files. One is Version file
+      // and other is SCM directory.
+      return false;
+    }
+
   }
 }

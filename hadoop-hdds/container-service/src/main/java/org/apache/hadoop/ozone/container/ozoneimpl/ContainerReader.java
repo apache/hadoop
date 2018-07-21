@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
@@ -64,14 +65,16 @@ public class ContainerReader implements Runnable {
   private final ContainerSet containerSet;
   private final OzoneConfiguration config;
   private final File hddsVolumeDir;
+  private final VolumeSet volumeSet;
 
-  ContainerReader(HddsVolume volume, ContainerSet cset, OzoneConfiguration
-      conf) {
+  ContainerReader(VolumeSet volSet, HddsVolume volume, ContainerSet cset,
+                  OzoneConfiguration conf) {
     Preconditions.checkNotNull(volume);
     this.hddsVolume = volume;
     this.hddsVolumeDir = hddsVolume.getHddsRootDir();
     this.containerSet = cset;
     this.config = conf;
+    this.volumeSet = volSet;
   }
 
   @Override
@@ -97,10 +100,18 @@ public class ContainerReader implements Runnable {
     });
 
     if (scmDir == null) {
-      LOG.error("Volume {} is empty with out metadata and chunks",
+      LOG.error("IO error for the volume {}, skipped loading",
           hddsVolumeRootDir);
+      volumeSet.failVolume(hddsVolumeRootDir.getPath());
       return;
     }
+
+    if (scmDir.length > 1) {
+      LOG.error("Volume {} is in Inconsistent state", hddsVolumeRootDir);
+      volumeSet.failVolume(hddsVolumeRootDir.getPath());
+      return;
+    }
+
     for (File scmLoc : scmDir) {
       File currentDir = null;
       currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
@@ -123,9 +134,8 @@ public class ContainerReader implements Runnable {
                     verifyContainerFile(containerName, containerFile,
                         checksumFile);
                   } else {
-                    LOG.error(
-                        "Missing container metadata files for Container: " +
-                            "{}", containerName);
+                    LOG.error("Missing container metadata files for " +
+                        "Container: {}", containerName);
                   }
                 } else {
                   LOG.error("Missing container metadata directory for " +

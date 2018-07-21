@@ -23,10 +23,14 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
+import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,6 +41,8 @@ import java.util.concurrent.Callable;
  */
 public class VersionEndpointTask implements
     Callable<EndpointStateMachine.EndPointStates> {
+  public static final Logger LOG = LoggerFactory.getLogger(VersionEndpointTask
+      .class);
   private final EndpointStateMachine rpcEndPoint;
   private final Configuration configuration;
   private final OzoneContainer ozoneContainer;
@@ -71,21 +77,32 @@ public class VersionEndpointTask implements
 
       Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
           "null");
-      Preconditions.checkNotNull(scmId, "Reply from SCM: clusterId cannot be" +
-          " null");
+      Preconditions.checkNotNull(clusterId, "Reply from SCM: clusterId " +
+          "cannot be null");
 
       // If version file does not exist create version file and also set scmId
       for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
         HddsVolume hddsVolume = entry.getValue();
-        hddsVolume.format(clusterId);
-        ozoneContainer.getDispatcher().setScmId(scmId);
+        boolean result = HddsVolumeUtil.checkVolume(hddsVolume, scmId,
+            clusterId, LOG);
+        if (!result) {
+          volumeSet.failVolume(hddsVolume.getHddsRootDir().getPath());
+        }
       }
+      if (volumeSet.getVolumesList().size() == 0) {
+        // All volumes are inconsistent state
+        throw new DiskOutOfSpaceException("All configured Volumes are in " +
+            "Inconsistent State");
+      }
+      ozoneContainer.getDispatcher().setScmId(scmId);
 
       EndpointStateMachine.EndPointStates nextState =
           rpcEndPoint.getState().getNextState();
       rpcEndPoint.setState(nextState);
       rpcEndPoint.zeroMissedCount();
-    } catch (IOException ex) {
+    } catch (DiskOutOfSpaceException ex) {
+      rpcEndPoint.setState(EndpointStateMachine.EndPointStates.SHUTDOWN);
+    } catch(IOException ex) {
       rpcEndPoint.logIfNeeded(ex);
     } finally {
       rpcEndPoint.unlock();

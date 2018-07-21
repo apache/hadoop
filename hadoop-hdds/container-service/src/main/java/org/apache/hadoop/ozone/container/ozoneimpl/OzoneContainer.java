@@ -106,7 +106,7 @@ public class OzoneContainer {
     while (volumeSetIterator.hasNext()) {
       HddsVolume volume = volumeSetIterator.next();
       File hddsVolumeRootDir = volume.getHddsRootDir();
-      Thread thread = new Thread(new ContainerReader(volume,
+      Thread thread = new Thread(new ContainerReader(volumeSet, volume,
           containerSet, config));
       thread.start();
       volumeThreads.add(thread);

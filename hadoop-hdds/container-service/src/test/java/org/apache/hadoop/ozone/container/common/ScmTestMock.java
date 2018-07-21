@@ -56,6 +56,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private AtomicInteger heartbeatCount = new AtomicInteger(0);
   private AtomicInteger rpcCount = new AtomicInteger(0);
   private AtomicInteger containerReportsCount = new AtomicInteger(0);
+  private String clusterId;
+  private String scmId;
+
+  public ScmTestMock() {
+    clusterId = UUID.randomUUID().toString();
+    scmId = UUID.randomUUID().toString();
+  }
 
   // Map of datanode to containers
   private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
@@ -157,8 +164,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     return VersionResponse.newBuilder()
         .setVersion(versionInfo.getVersion())
         .addValue(VersionInfo.DESCRIPTION_KEY, versionInfo.getDescription())
-        .addValue(OzoneConsts.SCM_ID, UUID.randomUUID().toString())
-        .addValue(OzoneConsts.CLUSTER_ID, UUID.randomUUID().toString())
+        .addValue(OzoneConsts.SCM_ID, scmId)
+        .addValue(OzoneConsts.CLUSTER_ID, clusterId)
         .build().getProtobufMessage();
 
   }
@@ -328,5 +335,21 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
 
   public void addScmCommandRequest(SCMCommandProto scmCmd) {
     scmCommandRequests.add(scmCmd);
+  }
+
+  /**
+   * Set scmId.
+   * @param id
+   */
+  public void setScmId(String id) {
+    this.scmId = id;
+  }
+
+  /**
+   * Set scmId.
+   * @return scmId
+   */
+  public String getScmId() {
+    return scmId;
   }
 }

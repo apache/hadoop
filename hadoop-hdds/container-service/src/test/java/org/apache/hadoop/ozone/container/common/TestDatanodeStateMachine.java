@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.RPC;
@@ -57,9 +58,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -68,7 +69,9 @@ import static org.junit.Assert.assertTrue;
 public class TestDatanodeStateMachine {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDatanodeStateMachine.class);
-  private final int scmServerCount = 3;
+  // Changing it to 1, as current code checks for multiple scm directories,
+  // and fail if exists
+  private final int scmServerCount = 1;
   private List<String> serverAddresses;
   private List<RPC.Server> scmServers;
   private List<ScmTestMock> mockServers;
@@ -90,7 +93,6 @@ public class TestDatanodeStateMachine {
       String address = "127.0.0.1";
       serverAddresses.add(address + ":" + port);
       ScmTestMock mock = new ScmTestMock();
-
       scmServers.add(SCMTestUtils.startScmRpcServer(conf, mock,
           new InetSocketAddress(address, port), 10));
       mockServers.add(mock);
@@ -107,7 +109,7 @@ public class TestDatanodeStateMachine {
     }
 
     File dataDir = new File(testRoot, "data");
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, dataDir.getAbsolutePath());
+    conf.set(HDDS_DATANODE_DIR_KEY, dataDir.getAbsolutePath());
     if (!dataDir.mkdirs()) {
       LOG.info("Data dir create failed.");
     }
@@ -145,7 +147,7 @@ public class TestDatanodeStateMachine {
     } catch (Exception e) {
       //ignore all execption from the shutdown
     } finally {
-      testRoot.delete();
+      FileUtil.fullyDelete(testRoot);
     }
   }
 
@@ -162,7 +164,7 @@ public class TestDatanodeStateMachine {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
-      GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 3,
+      GenericTestUtils.waitFor(() -> connectionManager.getValues().size() == 1,
           1000, 30000);
 
       stateMachine.stopDaemon();

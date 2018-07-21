@@ -70,8 +70,10 @@ import org.apache.hadoop.ozone.container.common.states.endpoint
     .RegisterEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint
     .VersionEndpointTask;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
@@ -173,6 +175,53 @@ public class TestEndPoint {
       Assert.assertNotNull(rpcEndPoint.getVersion());
     }
   }
+
+  @Test
+  public void testCheckVersionResponse() throws Exception {
+    OzoneConfiguration conf = SCMTestUtils.getConf();
+    try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
+        serverAddress, 1000)) {
+      GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+          .captureLogs(VersionEndpointTask.LOG);
+      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
+          conf);
+      rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
+      VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
+          conf, ozoneContainer);
+      EndpointStateMachine.EndPointStates newState = versionTask.call();
+
+      // if version call worked the endpoint should automatically move to the
+      // next state.
+      Assert.assertEquals(EndpointStateMachine.EndPointStates.REGISTER,
+          newState);
+
+      // Now rpcEndpoint should remember the version it got from SCM
+      Assert.assertNotNull(rpcEndPoint.getVersion());
+
+      // Now change server scmId, so datanode scmId  will be
+      // different from SCM server response scmId
+      String newScmId = UUID.randomUUID().toString();
+      scmServerImpl.setScmId(newScmId);
+      newState = versionTask.call();
+      Assert.assertEquals(EndpointStateMachine.EndPointStates.SHUTDOWN,
+            newState);
+      List<HddsVolume> volumesList = ozoneContainer.getVolumeSet()
+          .getFailedVolumesList();
+      Assert.assertTrue(volumesList.size() == 1);
+      File expectedScmDir = new File(volumesList.get(0).getHddsRootDir(),
+          scmServerImpl.getScmId());
+      Assert.assertTrue(logCapturer.getOutput().contains("expected scm " +
+          "directory " + expectedScmDir.getAbsolutePath() + " does not " +
+          "exist"));
+      Assert.assertTrue(ozoneContainer.getVolumeSet().getVolumesList().size()
+          == 0);
+      Assert.assertTrue(ozoneContainer.getVolumeSet().getFailedVolumesList()
+          .size() == 1);
+
+    }
+  }
+
+
 
   @Test
   /**
