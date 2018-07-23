@@ -254,7 +254,7 @@ public abstract class AbstractService implements Service {
    * @param exception the exception
    */
   protected final void noteFailure(Exception exception) {
-    LOG.debug("noteFailure {}" + exception);
+    LOG.debug("noteFailure", exception);
     if (exception == null) {
       //make sure failure logic doesn't itself cause problems
       return;
