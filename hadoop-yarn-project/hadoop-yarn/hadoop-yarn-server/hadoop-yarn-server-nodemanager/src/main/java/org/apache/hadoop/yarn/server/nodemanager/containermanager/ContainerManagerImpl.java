@@ -496,7 +496,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
-    containerScheduler.recoverActiveContainer(container, rcs.getStatus());
+    containerScheduler.recoverActiveContainer(container, rcs);
     app.handle(new ApplicationContainerInitEvent(container));
   }
 

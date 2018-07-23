@@ -41,6 +41,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 
 
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService
+        .RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,11 +232,11 @@ public class ContainerScheduler extends AbstractService implements
    * @param rcs Recovered Container status
    */
   public void recoverActiveContainer(Container container,
-      RecoveredContainerStatus rcs) {
+      RecoveredContainerState rcs) {
     ExecutionType execType =
         container.getContainerTokenIdentifier().getExecutionType();
-    if (rcs == RecoveredContainerStatus.QUEUED
-        || rcs == RecoveredContainerStatus.PAUSED) {
+    if (rcs.getStatus() == RecoveredContainerStatus.QUEUED
+        || rcs.getStatus() == RecoveredContainerStatus.PAUSED) {
       if (execType == ExecutionType.GUARANTEED) {
         queuedGuaranteedContainers.put(container.getContainerId(), container);
       } else if (execType == ExecutionType.OPPORTUNISTIC) {
@@ -244,9 +247,14 @@ public class ContainerScheduler extends AbstractService implements
             "UnKnown execution type received " + container.getContainerId()
                 + ", execType " + execType);
       }
-    } else if (rcs == RecoveredContainerStatus.LAUNCHED) {
+    } else if (rcs.getStatus() == RecoveredContainerStatus.LAUNCHED) {
       runningContainers.put(container.getContainerId(), container);
       utilizationTracker.addContainerResources(container);
+    }
+    if (rcs.getStatus() != RecoveredContainerStatus.COMPLETED
+            && rcs.getCapability() != null) {
+      metrics.launchedContainer();
+      metrics.allocateContainer(rcs.getCapability());
     }
   }
 
