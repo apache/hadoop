@@ -60,6 +60,7 @@ message DatanodeCommandProto {
     NullDatanodeCommand = 7;
     BlockIdCommand = 8;
     BlockECReconstructionCommand = 9;
+    SyncCommand = 10;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -74,6 +75,7 @@ message DatanodeCommandProto {
   optional RegisterCommandProto registerCmd = 7;
   optional BlockIdCommandProto blkIdCmd = 8;
   optional BlockECReconstructionCommandProto blkECReconstructionCmd = 9;
+  optional SyncCommandProto syncCommand = 10;
 }
 
 /**
@@ -154,6 +156,89 @@ message BlockECReconstructionCommandProto {
   repeated BlockECReconstructionInfoProto blockECReconstructioninfo = 1;
 }
 
+message SyncTaskIdProto {
+  required bytes syncTaskId = 1;
+  required string syncMountId = 2;
+}
+
+/**
+ * Instruct the datanode to perform a backup command
+ */
+message SyncCommandProto {
+  repeated BlockSyncTaskProto syncTasks = 1;
+}
+
+/**
+ * A block synchronization task as part of an orchestrated synchronization
+ * across potentially multiple datanodes (i.e. multipart put part).
+ */
+message BlockSyncTaskProto {
+  required SyncTaskIdProto syncTaskId = 1;
+
+  required bytes uploadHandle = 2;
+  required int32 partNumber = 3;
+  repeated LocatedBlockProto locatedBlocks = 4;
+  required string uri = 5;
+  required int32 offset = 6;
+  required int64 length = 7;
+}
+
+/**
+ * Block storage movement information
+ */
+message BlockMovingInfoProto {
+  required BlockProto block = 1;
+  required DatanodeInfoProto sourceDnInfo = 2;
+  required DatanodeInfoProto targetDnInfo = 3;
+  required StorageTypeProto sourceStorageType = 4;
+  required StorageTypeProto targetStorageType = 5;
+}
+
+/**
+ * Blocks for which storage movements has been attempted and finished
+ * with either success or failure.
+ */
+message BlocksStorageMoveAttemptFinishedProto {
+  repeated BlockProto blocks = 1;
+}
+
+/**
+ * A collection of feedbacks for a collection of sync tasks.
+ */
+message BulkSyncTaskExecutionFeedbackProto {
+  repeated SyncTaskExecutionFeedbackProto feedbacks = 1;
+}
+
+/**
+ * Feedback for a sync task that has been executed.
+ * syncTaskId - identifier for the task.
+ * outcome - success/error.
+ * operation - the type of operation.
+ * result - if the outcome is successful, the results of the sync task.
+ */
+message SyncTaskExecutionFeedbackProto {
+  required SyncTaskIdProto syncTaskId = 1;
+  required SyncTaskExecutionOutcomeProto outcome = 2;
+  optional SyncTaskExecutionResultProto result = 3;
+}
+
+/**
+ * Success of failure indication of a sync task.
+ */
+enum SyncTaskExecutionOutcomeProto {
+  FINISHED_SUCCESSFULLY = 0;
+  EXCEPTION = 1;
+}
+
+/**
+ * result - the opaque result data from the sync task.
+ * numberOfBytes - the number of bytes copied.
+ */
+message SyncTaskExecutionResultProto {
+  optional bytes result = 1;
+  optional int64 numberOfBytes = 2;
+}
+
 /**
  * registration - Information of the datanode registering with the namenode
  */
@@ -210,6 +295,7 @@ message HeartbeatRequestProto {
   optional bool requestFullBlockReportLease = 9 [ default = false ];
   repeated SlowPeerReportProto slowPeers = 10;
   repeated SlowDiskReportProto slowDisks = 11;
+  optional BulkSyncTaskExecutionFeedbackProto bulkSyncTaskExecutionFeedback = 12;
 }
 
 /**
@@ -275,7 +361,7 @@ message StorageBlockReportProto {
  */
 message BlockReportResponseProto {
   optional DatanodeCommandProto cmd = 1;
-} 
+}
 
 /**
  * registration - datanode registration information

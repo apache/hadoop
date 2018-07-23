@@ -109,6 +109,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   @Override
   public HeartbeatResponseProto sendHeartbeat(RpcController controller,
       HeartbeatRequestProto request) throws ServiceException {
+
     HeartbeatResponse response;
     try {
       final StorageReport[] report = PBHelperClient.convertStorageReports(
@@ -122,7 +123,10 @@ public class DatanodeProtocolServerSideTranslatorPB implements
           request.getXceiverCount(), request.getFailedVolumes(),
           volumeFailureSummary, request.getRequestFullBlockReportLease(),
           PBHelper.convertSlowPeerInfo(request.getSlowPeersList()),
-          PBHelper.convertSlowDiskInfo(request.getSlowDisksList()));
+          PBHelper.convertSlowDiskInfo(request.getSlowDisksList()),
+          PBHelper.convertBulkSyncTaskExecutionFeedback(
+              request.getBulkSyncTaskExecutionFeedback())
+      );
     } catch (IOException e) {
       throw new ServiceException(e);
     }
