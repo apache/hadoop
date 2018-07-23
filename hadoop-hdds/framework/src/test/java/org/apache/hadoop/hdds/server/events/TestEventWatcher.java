@@ -216,12 +216,12 @@ public class TestEventWatcher {
     }
 
     @Override
-    void onTimeout(EventPublisher publisher, UnderreplicatedEvent payload) {
+    protected void onTimeout(EventPublisher publisher, UnderreplicatedEvent payload) {
       publisher.fireEvent(UNDER_REPLICATED, payload);
     }
 
     @Override
-    void onFinished(EventPublisher publisher, UnderreplicatedEvent payload) {
+    protected void onFinished(EventPublisher publisher, UnderreplicatedEvent payload) {
       //Good job. We did it.
     }
 
@@ -230,8 +230,6 @@ public class TestEventWatcher {
       return super.getMetrics();
     }
   }
-
-  ;
 
   private static class ReplicationCompletedEvent
       implements IdentifiableEventPayload {

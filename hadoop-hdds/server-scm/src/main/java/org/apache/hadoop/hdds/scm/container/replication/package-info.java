@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.replication;
+package org.apache.hadoop.hdds.scm.container.replication;
 
 /**
- * Ozone Container replicaton related classes.
+ * HDDS (Closed) Container replicaton related classes.
  */

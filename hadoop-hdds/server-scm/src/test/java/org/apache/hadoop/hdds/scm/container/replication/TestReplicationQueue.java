@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.container.replication;
+package org.apache.hadoop.hdds.scm.container.replication;
 
 import java.util.Random;
 import java.util.UUID;
@@ -39,7 +39,7 @@ public class TestReplicationQueue {
   }
 
   @Test
-  public void testDuplicateAddOp() {
+  public void testDuplicateAddOp() throws InterruptedException {
     long contId = random.nextLong();
     String nodeId = UUID.randomUUID().toString();
     ReplicationRequest obj1, obj2, obj3;
@@ -53,12 +53,12 @@ public class TestReplicationQueue {
     replicationQueue.add(obj3);
     Assert.assertEquals("Should add only 1 msg as second one is duplicate",
         1, replicationQueue.size());
-    ReplicationRequest temp = replicationQueue.poll();
+    ReplicationRequest temp = replicationQueue.take();
     Assert.assertEquals(temp, obj3);
   }
 
   @Test
-  public void testPollOp() {
+  public void testPollOp() throws InterruptedException {
     long contId = random.nextLong();
     String nodeId = UUID.randomUUID().toString();
     ReplicationRequest msg1, msg2, msg3, msg4, msg5;
@@ -82,19 +82,19 @@ public class TestReplicationQueue {
     // Since Priority queue orders messages according to replication count,
     // message with lowest replication should be first
     ReplicationRequest temp;
-    temp = replicationQueue.poll();
+    temp = replicationQueue.take();
     Assert.assertEquals("Should have 2 objects",
         2, replicationQueue.size());
     Assert.assertEquals(temp, msg3);
 
-    temp = replicationQueue.poll();
+    temp = replicationQueue.take();
     Assert.assertEquals("Should have 1 objects",
         1, replicationQueue.size());
     Assert.assertEquals(temp, msg5);
 
     // Message 2 should be ordered before message 5 as both have same replication
     // number but message 2 has earlier timestamp.
-    temp = replicationQueue.poll();
+    temp = replicationQueue.take();
     Assert.assertEquals("Should have 0 objects",
         replicationQueue.size(), 0);
     Assert.assertEquals(temp, msg4);

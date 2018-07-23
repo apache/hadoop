@@ -1108,4 +1108,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.scm.watcher.timeout</name>
+    <value>10m</value>
+    <tag>OZONE, SCM, MANAGEMENT</tag>
+    <description>
+      Timeout for the watchers of the HDDS SCM CommandWatchers. After this
+      duration the Copy/Delete container commands will be sent again to the
+      datanode unless the datanode confirms the completion.
+    </description>
+  </property>
 </configuration>

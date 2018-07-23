@@ -180,9 +180,9 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
 
   }
 
-  abstract void onTimeout(EventPublisher publisher, TIMEOUT_PAYLOAD payload);
+  protected abstract void onTimeout(EventPublisher publisher, TIMEOUT_PAYLOAD payload);
 
-  abstract void onFinished(EventPublisher publisher, TIMEOUT_PAYLOAD payload);
+  protected abstract void onFinished(EventPublisher publisher, TIMEOUT_PAYLOAD payload);
 
   public List<TIMEOUT_PAYLOAD> getTimeoutEvents(
       Predicate<? super TIMEOUT_PAYLOAD> predicate) {

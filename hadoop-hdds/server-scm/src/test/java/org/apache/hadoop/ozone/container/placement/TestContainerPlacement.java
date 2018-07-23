@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -86,11 +87,11 @@ public class TestContainerPlacement {
     for (int x = 0; x < opsCount; x++) {
       long containerSize = random.nextInt(100) * OzoneConsts.GB;
       List<DatanodeDetails> nodesCapacity =
-          capacityPlacer.chooseDatanodes(nodesRequired, containerSize);
+          capacityPlacer.chooseDatanodes(new ArrayList<>(), nodesRequired, containerSize);
       assertEquals(nodesRequired, nodesCapacity.size());
 
       List<DatanodeDetails> nodesRandom =
-          randomPlacer.chooseDatanodes(nodesRequired, containerSize);
+          randomPlacer.chooseDatanodes(nodesCapacity, nodesRequired, containerSize);
 
       // One fifth of all calls are delete
       if (x % 5 == 0) {

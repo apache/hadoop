@@ -15,11 +15,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.container.replication;
+package org.apache.hadoop.hdds.scm.container.replication;
 
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * Priority queue to handle under-replicated and over replicated containers
@@ -28,13 +28,13 @@ import java.util.Queue;
  */
 public class ReplicationQueue {
 
-  private final Queue<ReplicationRequest> queue;
+  private final BlockingQueue<ReplicationRequest> queue;
 
-  ReplicationQueue() {
-    queue = new PriorityQueue<>();
+  public ReplicationQueue() {
+    queue = new PriorityBlockingQueue<>();
   }
 
-  public synchronized boolean add(ReplicationRequest repObj) {
+  public boolean add(ReplicationRequest repObj) {
     if (this.queue.contains(repObj)) {
       // Remove the earlier message and insert this one
       this.queue.remove(repObj);
@@ -42,7 +42,7 @@ public class ReplicationQueue {
     return this.queue.add(repObj);
   }
 
-  public synchronized boolean remove(ReplicationRequest repObj) {
+  public boolean remove(ReplicationRequest repObj) {
     return queue.remove(repObj);
   }
 
@@ -52,21 +52,18 @@ public class ReplicationQueue {
    *
    * @return the head of this queue, or {@code null} if this queue is empty
    */
-  public synchronized ReplicationRequest peek() {
+  public ReplicationRequest peek() {
     return queue.peek();
   }
 
   /**
-   * Retrieves and removes the head of this queue,
-   * or returns {@code null} if this queue is empty.
-   *
-   * @return the head of this queue, or {@code null} if this queue is empty
+   * Retrieves and removes the head of this queue (blocking queue).
    */
-  public synchronized ReplicationRequest poll() {
-    return queue.poll();
+  public ReplicationRequest take() throws InterruptedException {
+    return queue.take();
   }
 
-  public synchronized boolean removeAll(List<ReplicationRequest> repObjs) {
+  public boolean removeAll(List<ReplicationRequest> repObjs) {
     return queue.removeAll(repObjs);
   }
 
