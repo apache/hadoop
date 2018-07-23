@@ -18,28 +18,25 @@
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.sps.ExternalStoragePolicySatisfier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This manages satisfy storage policy invoked path ids and expose methods to
- * process these path ids. It maintains sps mode(INTERNAL/EXTERNAL/NONE)
+ * process these path ids. It maintains sps mode(EXTERNAL/NONE)
  * configured by the administrator.
- *
- * <p>
- * If the configured mode is {@link StoragePolicySatisfierMode.INTERNAL}, then
- * it will start internal sps daemon service inside namenode and process sps
- * invoked path ids to satisfy the storage policy.
  *
  * <p>
  * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
@@ -66,10 +63,9 @@ public class StoragePolicySatisfyManager {
   private final Queue<Long> pathsToBeTraveresed;
   private final int outstandingPathsLimit;
   private final Namesystem namesystem;
-  private final BlockManager blkMgr;
 
-  public StoragePolicySatisfyManager(Configuration conf, Namesystem namesystem,
-      BlockManager blkMgr) {
+  public StoragePolicySatisfyManager(Configuration conf,
+      Namesystem namesystem) {
     // StoragePolicySatisfier(SPS) configs
     storagePolicyEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
@@ -82,19 +78,14 @@ public class StoragePolicySatisfyManager {
         DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT);
     mode = StoragePolicySatisfierMode.fromString(modeVal);
     pathsToBeTraveresed = new LinkedList<Long>();
+    this.namesystem = namesystem;
     // instantiate SPS service by just keeps config reference and not starting
     // any supporting threads.
     spsService = new StoragePolicySatisfier(conf);
-    this.namesystem = namesystem;
-    this.blkMgr = blkMgr;
   }
 
   /**
    * This function will do following logic based on the configured sps mode:
-   *
-   * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.INTERNAL}, then
-   * starts internal daemon service inside namenode.
    *
    * <p>
    * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
@@ -113,17 +104,6 @@ public class StoragePolicySatisfyManager {
     }
 
     switch (mode) {
-    case INTERNAL:
-      if (spsService.isRunning()) {
-        LOG.info("Storage policy satisfier is already running"
-            + " as internal daemon service inside namenode.");
-        return;
-      }
-      // starts internal daemon service inside namenode
-      spsService.init(
-          new IntraSPSNameNodeContext(namesystem, blkMgr, spsService));
-      spsService.start(false, mode);
-      break;
     case EXTERNAL:
       LOG.info("Storage policy satisfier is configured as external, "
           + "please start external sps service explicitly to satisfy policy");
@@ -139,10 +119,6 @@ public class StoragePolicySatisfyManager {
 
   /**
    * This function will do following logic based on the configured sps mode:
-   *
-   * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.INTERNAL}, then
-   * stops internal daemon service inside namenode.
    *
    * <p>
    * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
@@ -162,16 +138,6 @@ public class StoragePolicySatisfyManager {
     }
 
     switch (mode) {
-    case INTERNAL:
-      removeAllPathIds();
-      if (!spsService.isRunning()) {
-        LOG.info("Internal storage policy satisfier daemon service"
-            + " is not running");
-        return;
-      }
-      // stops internal daemon service running inside namenode
-      spsService.stop(false);
-      break;
     case EXTERNAL:
       removeAllPathIds();
       if (LOG.isDebugEnabled()) {
@@ -194,11 +160,8 @@ public class StoragePolicySatisfyManager {
   }
 
   /**
-   * Sets new sps mode. If the new mode is internal, then it will start internal
-   * sps service inside namenode. If the new mode is external, then stops
-   * internal sps service running(if any) inside namenode. If the new mode is
-   * none, then it will disable the sps feature completely by clearing all
-   * queued up sps path's hint.
+   * Sets new sps mode. If the new mode is none, then it will disable the sps
+   * feature completely by clearing all queued up sps path's hint.
    */
   public void changeModeEvent(StoragePolicySatisfierMode newMode) {
     if (!storagePolicyEnabled) {
@@ -212,16 +175,6 @@ public class StoragePolicySatisfyManager {
     }
 
     switch (newMode) {
-    case INTERNAL:
-      if (spsService.isRunning()) {
-        LOG.info("Storage policy satisfier is already running as {} mode.",
-            mode);
-        return;
-      }
-      spsService.init(new IntraSPSNameNodeContext(this.namesystem, this.blkMgr,
-          spsService));
-      spsService.start(true, newMode);
-      break;
     case EXTERNAL:
       if (mode == newMode) {
         LOG.info("Storage policy satisfier is already in mode:{},"
@@ -238,7 +191,7 @@ public class StoragePolicySatisfyManager {
       }
       LOG.info("Disabling StoragePolicySatisfier, mode:{}", newMode);
       spsService.stop(true);
-      removeAllPathIds();
+      clearPathIds();
       break;
     default:
       if (LOG.isDebugEnabled()) {
@@ -252,74 +205,12 @@ public class StoragePolicySatisfyManager {
   }
 
   /**
-   * This function will do following logic based on the configured sps mode:
-   *
-   * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.INTERNAL}, then
-   * timed wait to stop internal storage policy satisfier daemon threads.
-   *
-   * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.EXTERNAL}, then
-   * it won't do anything, just ignore it.
-   *
-   * <p>
-   * If the configured mode is {@link StoragePolicySatisfierMode.NONE}, then the
-   * service is disabled. It won't do any action, just ignore it.
-   */
-  public void stopGracefully() {
-    switch (mode) {
-    case INTERNAL:
-      spsService.stopGracefully();
-      break;
-    case EXTERNAL:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring, StoragePolicySatisfier feature is running"
-            + " outside namenode");
-      }
-      break;
-    case NONE:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring, StoragePolicySatisfier feature is disabled");
-      }
-      break;
-    default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Invalid mode:{}", mode);
-      }
-      break;
-    }
-  }
-
-  /**
    * @return true if the internal storage policy satisfier daemon is running,
    *         false otherwise.
    */
-  public boolean isInternalSatisfierRunning() {
+  @VisibleForTesting
+  public boolean isSatisfierRunning() {
     return spsService.isRunning();
-  }
-
-  /**
-   * @return internal SPS service instance.
-   */
-  public SPSService getInternalSPSService() {
-    return this.spsService;
-  }
-
-  /**
-   * @return status Storage policy satisfy status of the path. It is supported
-   *         only for the internal sps daemon service.
-   * @throws IOException
-   *           if the Satisfier is not running inside namenode.
-   */
-  public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
-      String path) throws IOException {
-    if (mode != StoragePolicySatisfierMode.INTERNAL) {
-      LOG.debug("Satisfier is not running inside namenode, so status "
-          + "can't be returned.");
-      throw new IOException("Satisfier is not running inside namenode, "
-          + "so status can't be returned.");
-    }
-    return spsService.checkStoragePolicySatisfyPathStatus(path);
   }
 
   /**
@@ -348,10 +239,22 @@ public class StoragePolicySatisfyManager {
 
   /**
    * Removes the SPS path id from the list of sps paths.
+   *
+   * @throws IOException
    */
-  public void removePathId(long trackId) {
+  private void clearPathIds(){
     synchronized (pathsToBeTraveresed) {
-      pathsToBeTraveresed.remove(trackId);
+      Iterator<Long> iterator = pathsToBeTraveresed.iterator();
+      while (iterator.hasNext()) {
+        Long trackId = iterator.next();
+        try {
+          namesystem.removeXattr(trackId,
+              HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
+        } catch (IOException e) {
+          LOG.debug("Failed to remove sps xatttr!", e);
+        }
+        iterator.remove();
+      }
     }
   }
 
@@ -374,12 +277,11 @@ public class StoragePolicySatisfyManager {
   }
 
   /**
-   * @return true if sps is configured as an internal service or external
+   * @return true if sps is configured as an external
    *         service, false otherwise.
    */
   public boolean isEnabled() {
-    return mode == StoragePolicySatisfierMode.INTERNAL
-        || mode == StoragePolicySatisfierMode.EXTERNAL;
+    return mode == StoragePolicySatisfierMode.EXTERNAL;
   }
 
   /**

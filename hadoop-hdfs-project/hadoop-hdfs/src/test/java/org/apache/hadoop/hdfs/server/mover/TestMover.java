@@ -678,7 +678,7 @@ public class TestMover {
   public void testMoveWhenStoragePolicySatisfierIsRunning() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .storageTypes(
@@ -686,6 +686,9 @@ public class TestMover {
                 {StorageType.DISK}}).build();
     try {
       cluster.waitActive();
+      // Simulate External sps by creating #getNameNodeConnector instance.
+      DFSTestUtil.getNameNodeConnector(conf, HdfsServerConstants.MOVER_ID_PATH,
+          1, true);
       final DistributedFileSystem dfs = cluster.getFileSystem();
       final String file = "/testMoveWhenStoragePolicySatisfierIsRunning";
       // write to DISK
@@ -697,7 +700,7 @@ public class TestMover {
       dfs.setStoragePolicy(new Path(file), "COLD");
       int rc = ToolRunner.run(conf, new Mover.Cli(),
           new String[] {"-p", file.toString()});
-      int exitcode = ExitStatus.SKIPPED_DUE_TO_SPS.getExitCode();
+      int exitcode = ExitStatus.IO_EXCEPTION.getExitCode();
       Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
     } finally {
       cluster.shutdown();

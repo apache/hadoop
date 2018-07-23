@@ -130,7 +130,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheF
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolStatsProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckStoragePolicySatisfyPathStatusResponseProto.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
@@ -3398,41 +3397,5 @@ public class PBHelperClient {
       }
     }
     return typeProtos;
-  }
-
-  public static StoragePolicySatisfyPathStatus convert(
-      HdfsConstants.StoragePolicySatisfyPathStatus status) {
-    switch (status) {
-    case PENDING:
-      return StoragePolicySatisfyPathStatus.PENDING;
-    case IN_PROGRESS:
-      return StoragePolicySatisfyPathStatus.IN_PROGRESS;
-    case SUCCESS:
-      return StoragePolicySatisfyPathStatus.SUCCESS;
-    case FAILURE:
-      return StoragePolicySatisfyPathStatus.FAILURE;
-    case NOT_AVAILABLE:
-      return StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
-    default:
-      throw new IllegalArgumentException("Unexpected SPSStatus :" + status);
-    }
-  }
-
-  public static HdfsConstants.StoragePolicySatisfyPathStatus convert(
-      StoragePolicySatisfyPathStatus status) {
-    switch (status) {
-    case PENDING:
-      return HdfsConstants.StoragePolicySatisfyPathStatus.PENDING;
-    case IN_PROGRESS:
-      return HdfsConstants.StoragePolicySatisfyPathStatus.IN_PROGRESS;
-    case SUCCESS:
-      return HdfsConstants.StoragePolicySatisfyPathStatus.SUCCESS;
-    case FAILURE:
-      return HdfsConstants.StoragePolicySatisfyPathStatus.FAILURE;
-    case NOT_AVAILABLE:
-      return HdfsConstants.StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
-    default:
-      throw new IllegalArgumentException("Unexpected SPSStatus :" + status);
-    }
   }
 }

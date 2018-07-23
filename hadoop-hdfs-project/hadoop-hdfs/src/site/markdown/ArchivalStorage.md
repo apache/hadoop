@@ -106,9 +106,9 @@ Following 2 options will allow users to move the blocks based on new policy set.
 ### <u>S</u>torage <u>P</u>olicy <u>S</u>atisfier (SPS)
 
 When user changes the storage policy on a file/directory, user can call `HdfsAdmin` API `satisfyStoragePolicy()` to move the blocks as per the new policy set.
-The SPS daemon thread runs along with namenode and periodically scans for the storage mismatches between new policy set and the physical blocks placed. This will only track the files/directories for which user invoked satisfyStoragePolicy. If SPS identifies some blocks to be moved for a file, then it will schedule block movement tasks to datanodes. If there are any failures in movement, the SPS will re-attempt by sending new block movement tasks.
+The SPS tool running external to namenode periodically scans for the storage mismatches between new policy set and the physical blocks placed. This will only track the files/directories for which user invoked satisfyStoragePolicy. If SPS identifies some blocks to be moved for a file, then it will schedule block movement tasks to datanodes. If there are any failures in movement, the SPS will re-attempt by sending new block movement tasks.
 
-SPS can be enabled as internal service to Namenode or as an external service outside Namenode or disabled dynamically without restarting the Namenode.
+SPS can be enabled as an external service outside Namenode or disabled dynamically without restarting the Namenode.
 
 Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HDFS-10285)](https://issues.apache.org/jira/browse/HDFS-10285)
 
@@ -125,8 +125,8 @@ Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HD
 
 ####Configurations:
 
-*   **dfs.storage.policy.satisfier.mode** - Used to enable(internal service inside NN or external service outside NN) or disable SPS.
-   Following string values are supported - `internal`, `external`, `none`. Configuring `internal` or `external` value represents SPS is enable and `none` to disable.
+*   **dfs.storage.policy.satisfier.mode** - Used to enable external service outside NN or disable SPS.
+   Following string values are supported - `external`, `none`. Configuring `external` value represents SPS is enable and `none` to disable.
    The default value is `none`.
 
 *   **dfs.storage.policy.satisfier.recheck.timeout.millis** - A timeout to re-check the processed block storage movement
@@ -218,25 +218,17 @@ Schedule blocks to move based on file's/directory's current storage policy.
 
 * Command:
 
-        hdfs storagepolicies -satisfyStoragePolicy [-w] -path <path>
+        hdfs storagepolicies -satisfyStoragePolicy -path <path>
 
 * Arguments:
 
 | | |
 |:---- |:---- |
 | `-path <path>` | The path referring to either a directory or a file. |
-| `-w` | It requests that the command wait till all the files satisfy the policy in given path. This will print the current status of the path in each 10 sec and status are:<br/>PENDING - Path is in queue and not processed for satisfying the policy.<br/>IN_PROGRESS - Satisfying the storage policy for path.<br/>SUCCESS - Storage policy satisfied for the path.<br/>FAILURE : Few blocks failed to move.<br/>NOT_AVAILABLE - Status not available. |
 
-### SPS Running Status
 
-Check the running status of Storage Policy Satisfier service in namenode. If it is running, return 'yes'. Otherwise return 'no'.
-
-* Command:
-
-        hdfs storagepolicies -isInternalSatisfierRunning
-
-### Enable(internal service inside NN or external service outside NN) or Disable SPS without restarting Namenode
-If administrator wants to switch modes of SPS feature while Namenode is running, first he/she needs to update the desired value(internal or external or none) for the configuration item `dfs.storage.policy.satisfier.mode` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
+### Enable external service outside NN or Disable SPS without restarting Namenode
+If administrator wants to switch modes of SPS feature while Namenode is running, first he/she needs to update the desired value(external or none) for the configuration item `dfs.storage.policy.satisfier.mode` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
 
 * Command:
 

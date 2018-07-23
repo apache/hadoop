@@ -87,7 +87,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -2495,19 +2494,6 @@ public class RouterRpcServer extends AbstractService
   @Override
   public void satisfyStoragePolicy(String path) throws IOException {
     checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override
-  public boolean isInternalSatisfierRunning() throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return false;
-  }
-
-  @Override
-  public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
-      String path) throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
   }
 
   @Override

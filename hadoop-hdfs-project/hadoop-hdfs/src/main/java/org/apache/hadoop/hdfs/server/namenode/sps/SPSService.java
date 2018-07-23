@@ -102,11 +102,6 @@ public interface SPSService {
   int processingQueueSize();
 
   /**
-   * Clear inodeId present in the processing queue.
-   */
-  void clearQueue(long spsPath);
-
-  /**
    * @return the configuration.
    */
   Configuration getConf();

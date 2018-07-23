@@ -93,7 +93,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -719,9 +718,6 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.close();
     pendingReconstruction.stop();
     blocksMap.close();
-    if (getSPSManager() != null) {
-      getSPSManager().stopGracefully();
-    }
   }
 
   /** @return the datanodeManager */
@@ -3889,21 +3885,6 @@ public class BlockManager implements BlockStatsMXBean {
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
-
-    // notify SPS about the reported block
-    notifyStorageMovementAttemptFinishedBlk(storageInfo, block);
-  }
-
-  private void notifyStorageMovementAttemptFinishedBlk(
-      DatanodeStorageInfo storageInfo, Block block) {
-    if (getSPSManager() != null) {
-      SPSService sps = getSPSManager().getInternalSPSService();
-      if (sps.isRunning()) {
-        sps.notifyStorageMovementAttemptFinishedBlk(
-            storageInfo.getDatanodeDescriptor(), storageInfo.getStorageType(),
-            block);
-      }
-    }
   }
   
   private void processAndHandleReportedBlock(
@@ -5088,7 +5069,7 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Storage policy satisfier is disabled");
       return false;
     }
-    spsManager = new StoragePolicySatisfyManager(conf, namesystem, this);
+    spsManager = new StoragePolicySatisfyManager(conf, namesystem);
     return true;
   }
 

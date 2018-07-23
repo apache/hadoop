@@ -94,11 +94,6 @@ public interface Context {
   BlockStoragePolicy getStoragePolicy(byte policyId);
 
   /**
-   * Drop the SPS work in case if any previous work queued up.
-   */
-  void addDropPreviousSPSWorkAtDNs();
-
-  /**
    * Remove the hint which was added to track SPS call.
    *
    * @param spsPath

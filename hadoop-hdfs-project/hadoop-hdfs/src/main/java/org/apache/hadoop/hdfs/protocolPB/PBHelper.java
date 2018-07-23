@@ -42,11 +42,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBand
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockMovingInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DropSPSWorkCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
@@ -56,11 +54,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedStorageLocationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
@@ -102,8 +98,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.Block
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -111,7 +105,6 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DropSPSWorkCommand;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -143,10 +136,6 @@ public class PBHelper {
   private static final RegisterCommandProto REG_CMD_PROTO = 
       RegisterCommandProto.newBuilder().build();
   private static final RegisterCommand REG_CMD = new RegisterCommand();
-  private static final DropSPSWorkCommandProto DROP_SPS_WORK_CMD_PROTO =
-      DropSPSWorkCommandProto.newBuilder().build();
-  private static final DropSPSWorkCommand DROP_SPS_WORK_CMD =
-      new DropSPSWorkCommand();
 
   private PBHelper() {
     /** Hidden constructor */
@@ -480,10 +469,6 @@ public class PBHelper {
       return PBHelper.convert(proto.getBlkIdCmd());
     case BlockECReconstructionCommand:
       return PBHelper.convert(proto.getBlkECReconstructionCmd());
-    case BlockStorageMovementCommand:
-      return PBHelper.convert(proto.getBlkStorageMovementCmd());
-    case DropSPSWorkCommand:
-      return DROP_SPS_WORK_CMD;
     default:
       return null;
     }
@@ -617,15 +602,6 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockECReconstructionCommand)
           .setBlkECReconstructionCmd(
               convert((BlockECReconstructionCommand) datanodeCommand));
-      break;
-    case DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT:
-      builder.setCmdType(DatanodeCommandProto.Type.BlockStorageMovementCommand)
-          .setBlkStorageMovementCmd(
-              convert((BlockStorageMovementCommand) datanodeCommand));
-      break;
-    case DatanodeProtocol.DNA_DROP_SPS_WORK_COMMAND:
-      builder.setCmdType(DatanodeCommandProto.Type.DropSPSWorkCommand)
-          .setDropSPSWorkCmd(DROP_SPS_WORK_CMD_PROTO);
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
@@ -1147,80 +1123,5 @@ public class PBHelper {
         PBHelperClient.convert(providedStorageLocationProto);
 
     return new FileRegion(block, providedStorageLocation);
-  }
-
-  private static BlockStorageMovementCommandProto convert(
-      BlockStorageMovementCommand blkStorageMovementCmd) {
-    BlockStorageMovementCommandProto.Builder builder =
-        BlockStorageMovementCommandProto.newBuilder();
-
-    builder.setBlockPoolId(blkStorageMovementCmd.getBlockPoolId());
-    Collection<BlockMovingInfo> blockMovingInfos = blkStorageMovementCmd
-        .getBlockMovingTasks();
-    for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
-      builder.addBlockMovingInfo(convertBlockMovingInfo(blkMovingInfo));
-    }
-    return builder.build();
-  }
-
-  private static BlockMovingInfoProto convertBlockMovingInfo(
-      BlockMovingInfo blkMovingInfo) {
-    BlockMovingInfoProto.Builder builder = BlockMovingInfoProto
-        .newBuilder();
-    builder.setBlock(PBHelperClient.convert(blkMovingInfo.getBlock()));
-
-    DatanodeInfo sourceDnInfo = blkMovingInfo.getSource();
-    builder.setSourceDnInfo(PBHelperClient.convert(sourceDnInfo));
-
-    DatanodeInfo targetDnInfo = blkMovingInfo.getTarget();
-    builder.setTargetDnInfo(PBHelperClient.convert(targetDnInfo));
-
-    StorageType sourceStorageType = blkMovingInfo.getSourceStorageType();
-    builder.setSourceStorageType(
-        PBHelperClient.convertStorageType(sourceStorageType));
-
-    StorageType targetStorageType = blkMovingInfo.getTargetStorageType();
-    builder.setTargetStorageType(
-        PBHelperClient.convertStorageType(targetStorageType));
-
-    return builder.build();
-  }
-
-  private static DatanodeCommand convert(
-      BlockStorageMovementCommandProto blkStorageMovementCmdProto) {
-    Collection<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-    List<BlockMovingInfoProto> blkSPSatisfyList =
-        blkStorageMovementCmdProto.getBlockMovingInfoList();
-    for (BlockMovingInfoProto blkSPSatisfy : blkSPSatisfyList) {
-      blockMovingInfos.add(convertBlockMovingInfo(blkSPSatisfy));
-    }
-    return new BlockStorageMovementCommand(
-        DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT,
-        blkStorageMovementCmdProto.getBlockPoolId(), blockMovingInfos);
-  }
-
-  private static BlockMovingInfo convertBlockMovingInfo(
-      BlockMovingInfoProto blockStorageMovingInfoProto) {
-    BlockProto blockProto = blockStorageMovingInfoProto.getBlock();
-    Block block = PBHelperClient.convert(blockProto);
-
-    DatanodeInfoProto sourceDnInfoProto = blockStorageMovingInfoProto
-        .getSourceDnInfo();
-    DatanodeInfo sourceDnInfo = PBHelperClient.convert(sourceDnInfoProto);
-
-    DatanodeInfoProto targetDnInfoProto = blockStorageMovingInfoProto
-        .getTargetDnInfo();
-    DatanodeInfo targetDnInfo = PBHelperClient.convert(targetDnInfoProto);
-    StorageTypeProto srcStorageTypeProto = blockStorageMovingInfoProto
-        .getSourceStorageType();
-    StorageType srcStorageType = PBHelperClient
-        .convertStorageType(srcStorageTypeProto);
-
-    StorageTypeProto targetStorageTypeProto = blockStorageMovingInfoProto
-        .getTargetStorageType();
-    StorageType targetStorageType = PBHelperClient
-        .convertStorageType(targetStorageTypeProto);
-    return new BlockMovingInfo(block, sourceDnInfo, targetDnInfo,
-        srcStorageType, targetStorageType);
   }
 }

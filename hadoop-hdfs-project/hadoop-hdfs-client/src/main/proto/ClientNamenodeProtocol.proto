@@ -838,28 +838,6 @@ message SatisfyStoragePolicyResponseProto {
 
 }
 
-message IsInternalSatisfierRunningRequestProto {  // no parameters
-}
-
-message IsInternalSatisfierRunningResponseProto {
-  required bool running = 1;
-}
-
-message CheckStoragePolicySatisfyPathStatusRequestProto {  // no parameters
-  required string src = 1;
-}
-
-message CheckStoragePolicySatisfyPathStatusResponseProto {
-  enum StoragePolicySatisfyPathStatus {
-    PENDING = 0;
-    IN_PROGRESS = 1;
-    SUCCESS = 2;
-    FAILURE = 3;
-    NOT_AVAILABLE = 4;
-  }
-  required StoragePolicySatisfyPathStatus status = 1;
-}
-
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -1048,8 +1026,4 @@ service ClientNamenodeProtocol {
       returns(ListOpenFilesResponseProto);
   rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
       returns(SatisfyStoragePolicyResponseProto);
-  rpc isInternalSatisfierRunning(IsInternalSatisfierRunningRequestProto)
-      returns(IsInternalSatisfierRunningResponseProto);
-  rpc checkStoragePolicySatisfyPathStatus(CheckStoragePolicySatisfyPathStatusRequestProto)
-      returns(CheckStoragePolicySatisfyPathStatusResponseProto);
 }

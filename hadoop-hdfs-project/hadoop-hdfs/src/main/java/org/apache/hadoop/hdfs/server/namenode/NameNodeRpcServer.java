@@ -111,7 +111,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -2531,41 +2530,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     List<String> result = Lists.newArrayList(nn.getReconfigurableProperties());
     namesystem.logAuditEvent(true, operationName, null);
     return result;
-  }
-
-  @Override
-  public boolean isInternalSatisfierRunning() throws IOException {
-    checkNNStartup();
-    String operationName = "isInternalSatisfierRunning";
-    namesystem.checkSuperuserPrivilege(operationName);
-    if (nn.isStandbyState()) {
-      throw new StandbyException("Not supported by Standby Namenode.");
-    }
-    StoragePolicySatisfyManager spsMgr =
-        namesystem.getBlockManager().getSPSManager();
-    boolean isInternalSatisfierRunning = (spsMgr != null
-        ? spsMgr.isInternalSatisfierRunning() : false);
-    namesystem.logAuditEvent(true, operationName, null);
-    return isInternalSatisfierRunning;
-  }
-
-  @Override
-  public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
-      String path) throws IOException {
-    checkNNStartup();
-    if (nn.isStandbyState()) {
-      throw new StandbyException("Not supported by Standby Namenode.");
-    }
-    if (namesystem.getBlockManager().getSPSManager() == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Satisfier is not running inside namenode, so status "
-            + "can't be returned.");
-      }
-      throw new IOException("Satisfier is not running inside namenode, "
-          + "so status can't be returned.");
-    }
-    return namesystem.getBlockManager().getSPSManager()
-        .checkStoragePolicySatisfyPathStatus(path);
   }
 
   @Override

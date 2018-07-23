@@ -29,6 +29,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.sps.Context;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,12 +48,13 @@ public class TestStoragePolicySatisfyAdminCommands {
   private Configuration conf = null;
   private MiniDFSCluster cluster = null;
   private DistributedFileSystem dfs = null;
+  private StoragePolicySatisfier externalSps = null;
 
   @Before
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     // Reduced refresh cycle to update latest datanodes.
     conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
         1000);
@@ -58,6 +64,14 @@ public class TestStoragePolicySatisfyAdminCommands {
         .storageTypes(newtypes).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
+    NameNodeConnector nnc = DFSTestUtil.getNameNodeConnector(conf,
+        HdfsServerConstants.MOVER_ID_PATH, 1, false);
+
+    StoragePolicySatisfier externalSps = new StoragePolicySatisfier(conf);
+    Context externalCtxt = new ExternalSPSContext(externalSps, nnc);
+
+    externalSps.init(externalCtxt);
+    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
   }
 
   @After
@@ -69,6 +83,9 @@ public class TestStoragePolicySatisfyAdminCommands {
     if(cluster != null) {
       cluster.shutdown();
       cluster = null;
+    }
+    if (externalSps != null) {
+      externalSps.stopGracefully();
     }
   }
 
@@ -88,43 +105,6 @@ public class TestStoragePolicySatisfyAdminCommands {
     DFSTestUtil.toolRun(admin, "-satisfyStoragePolicy -path " + file, 0,
         "Scheduled blocks to move based on the current storage policy on "
             + file.toString());
-
-    DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
-        dfs);
-  }
-
-  @Test(timeout = 30000)
-  public void testIsSatisfierRunningCommand() throws Exception {
-    final String file = "/testIsSatisfierRunningCommand";
-    DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);
-    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning", 0, "yes");
-
-    cluster.getNameNode().reconfigureProperty(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.NONE.toString());
-    cluster.waitActive();
-
-    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning", 0, "no");
-
-    // Test with unnecessary args
-    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning status", 1,
-        "Can't understand arguments: ");
-  }
-
-  @Test(timeout = 90000)
-  public void testSatisfyStoragePolicyCommandWithWaitOption()
-      throws Exception {
-    final String file = "/testSatisfyStoragePolicyCommandWithWaitOption";
-    DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);
-
-    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-
-    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path " + file
-        + " -policy COLD", 0, "Set storage policy COLD on " + file.toString());
-
-    DFSTestUtil.toolRun(admin, "-satisfyStoragePolicy -w -path " + file, 0,
-        "Waiting for satisfy the policy");
 
     DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
         dfs);

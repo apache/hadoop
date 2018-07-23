@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
@@ -34,7 +33,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.FileNotFoundException;
-import com.google.common.base.Joiner;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -297,88 +295,6 @@ public class StoragePolicyAdmin extends Configured implements Tool {
         dfs.satisfyStoragePolicy(new Path(path));
         System.out.println("Scheduled blocks to move based on the current"
             + " storage policy on " + path);
-        boolean waitOpt = StringUtils.popOption("-w", args);
-        if (waitOpt) {
-          waitForSatisfyPolicy(dfs, path);
-        }
-      } catch (Exception e) {
-        System.err.println(AdminHelper.prettifyException(e));
-        return 2;
-      }
-      return 0;
-    }
-
-    private void waitForSatisfyPolicy(DistributedFileSystem dfs, String path)
-        throws IOException {
-      System.out.println("Waiting for satisfy the policy ...");
-      boolean running = true;
-      while (running) {
-        StoragePolicySatisfyPathStatus status = dfs.getClient()
-            .checkStoragePolicySatisfyPathStatus(path);
-        switch (status) {
-        case SUCCESS:
-        case FAILURE:
-        case NOT_AVAILABLE:
-          System.out.println(status);
-          running = false;
-          break;
-        case PENDING:
-        case IN_PROGRESS:
-          System.out.println(status);
-        default:
-          System.err.println("Unexpected storage policy satisfyer status,"
-              + " Exiting");
-          running = false;
-          break;
-        }
-
-        try {
-          Thread.sleep(10000);
-        } catch (InterruptedException e) {
-        }
-      }
-      System.out.println(" done");
-    }
-  }
-
-  /**
-   * Command to check storage policy satisfier status running internal(inside)
-   * Namenode.
-   */
-  private static class IsInternalSatisfierRunningCommand
-      implements AdminHelper.Command {
-    @Override
-    public String getName() {
-      return "-isInternalSatisfierRunning";
-    }
-
-    @Override
-    public String getShortUsage() {
-      return "[" + getName() + "]\n";
-    }
-
-    @Override
-    public String getLongUsage() {
-      return getShortUsage() + "\n"
-          + "Check the status of Storage Policy Statisfier"
-          + " running inside Namenode.\n\n";
-    }
-
-    @Override
-    public int run(Configuration conf, List<String> args) throws IOException {
-      if (!args.isEmpty()) {
-        System.err.print("Can't understand arguments: "
-            + Joiner.on(" ").join(args) + "\n");
-        System.err.println("Usage is " + getLongUsage());
-        return 1;
-      }
-      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
-      try {
-        if(dfs.getClient().isInternalSatisfierRunning()){
-          System.out.println("yes");
-        }else{
-          System.out.println("no");
-        }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
@@ -438,7 +354,6 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       new SetStoragePolicyCommand(),
       new GetStoragePolicyCommand(),
       new UnsetStoragePolicyCommand(),
-      new SatisfyStoragePolicyCommand(),
-      new IsInternalSatisfierRunningCommand()
+      new SatisfyStoragePolicyCommand()
   };
 }

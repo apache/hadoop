@@ -29,7 +29,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -45,11 +49,13 @@ import static org.junit.Assert.*;
  * Test persistence of satisfying files/directories.
  */
 public class TestPersistentStoragePolicySatisfier {
-
   private static Configuration conf;
 
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
+  private NameNodeConnector nnc;
+  private StoragePolicySatisfier sps;
+  private ExternalSPSContext ctxt;
 
   private static Path testFile =
       new Path("/testFile");
@@ -65,7 +71,6 @@ public class TestPersistentStoragePolicySatisfier {
   private static final String COLD = "COLD";
   private static final String WARM = "WARM";
   private static final String ONE_SSD = "ONE_SSD";
-  private static final String ALL_SSD = "ALL_SSD";
 
   private static StorageType[][] storageTypes = new StorageType[][] {
       {StorageType.DISK, StorageType.ARCHIVE, StorageType.SSD},
@@ -104,7 +109,7 @@ public class TestPersistentStoragePolicySatisfier {
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     // Reduced refresh cycle to update latest datanodes.
     conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
         1000);
@@ -124,6 +129,14 @@ public class TestPersistentStoragePolicySatisfier {
     } else {
       fs = cluster.getFileSystem();
     }
+    nnc = DFSTestUtil.getNameNodeConnector(conf,
+        HdfsServerConstants.MOVER_ID_PATH, 1, false);
+
+    sps = new StoragePolicySatisfier(conf);
+    ctxt = new ExternalSPSContext(sps, nnc);
+
+    sps.init(ctxt);
+    sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
 
     createTestFiles(fs, replication);
   }
@@ -157,6 +170,9 @@ public class TestPersistentStoragePolicySatisfier {
     if(cluster != null) {
       cluster.shutdown(true);
       cluster = null;
+    }
+    if (sps != null) {
+      sps.stopGracefully();
     }
   }
 
@@ -203,49 +219,6 @@ public class TestPersistentStoragePolicySatisfier {
   }
 
   /**
-   * Tests to verify satisfier persistence working as expected
-   * in HA env. This test case runs as below:
-   * 1. setup HA cluster env with simple HA topology.
-   * 2. switch the active NameNode from nn0/nn1 to nn1/nn0.
-   * 3. make sure all the storage policies are satisfied.
-   * @throws Exception
-   */
-  @Test(timeout = 300000)
-  public void testWithHA() throws Exception {
-    try {
-      // Enable HA env for testing.
-      clusterSetUp(true, new HdfsConfiguration());
-
-      fs.setStoragePolicy(testFile, ALL_SSD);
-      fs.satisfyStoragePolicy(testFile);
-
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
-
-      DFSTestUtil.waitExpectedStorageType(
-          testFileName, StorageType.SSD, 3, timeout, fs);
-
-      // test directory
-      fs.setStoragePolicy(parentDir, WARM);
-      fs.satisfyStoragePolicy(parentDir);
-      cluster.transitionToStandby(1);
-      cluster.transitionToActive(0);
-
-      DFSTestUtil.waitExpectedStorageType(
-          parentFileName, StorageType.DISK, 1, timeout, fs);
-      DFSTestUtil.waitExpectedStorageType(
-          parentFileName, StorageType.ARCHIVE, 2, timeout, fs);
-      DFSTestUtil.waitExpectedStorageType(
-          childFileName, StorageType.DISK, 1, timeout, fs);
-      DFSTestUtil.waitExpectedStorageType(
-          childFileName, StorageType.ARCHIVE, 2, timeout, fs);
-    } finally {
-      clusterShutdown();
-    }
-  }
-
-
-  /**
    * Tests to verify satisfier persistence working well with multiple
    * restarts operations. This test case runs as below:
    * 1. satisfy the storage policy of file1.
@@ -278,63 +251,6 @@ public class TestPersistentStoragePolicySatisfier {
           childFileName, StorageType.ARCHIVE, 3, timeout, fs);
     } finally {
       clusterShutdown();
-    }
-  }
-
-  /**
-   * Tests to verify satisfier persistence working well with
-   * federal HA env. This test case runs as below:
-   * 1. setup HA test environment with federal topology.
-   * 2. satisfy storage policy of file1.
-   * 3. switch active NameNode from nn0 to nn1.
-   * 4. switch active NameNode from nn2 to nn3.
-   * 5. check whether the storage policy of file1 is satisfied.
-   * @throws Exception
-   */
-  @Test(timeout = 300000)
-  public void testWithFederationHA() throws Exception {
-    MiniDFSCluster haCluster = null;
-    try {
-      conf = new HdfsConfiguration();
-      conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-          StoragePolicySatisfierMode.INTERNAL.toString());
-      // Reduced refresh cycle to update latest datanodes.
-      conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
-          1000);
-      haCluster = new MiniDFSCluster
-          .Builder(conf)
-          .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
-          .storageTypes(storageTypes)
-          .numDataNodes(storageTypes.length).build();
-      haCluster.waitActive();
-      haCluster.transitionToActive(1);
-      haCluster.transitionToActive(3);
-
-      fs = HATestUtil.configureFailoverFs(haCluster, conf);
-      createTestFiles(fs, (short) 3);
-
-      fs.setStoragePolicy(testFile, WARM);
-      fs.satisfyStoragePolicy(testFile);
-
-      haCluster.transitionToStandby(1);
-      haCluster.transitionToActive(0);
-      haCluster.transitionToStandby(3);
-      haCluster.transitionToActive(2);
-
-      DFSTestUtil.waitExpectedStorageType(
-          testFileName, StorageType.DISK, 1, timeout, fs);
-      DFSTestUtil.waitExpectedStorageType(
-          testFileName, StorageType.ARCHIVE, 2, timeout, fs);
-
-    } finally {
-      if(fs != null) {
-        fs.close();
-        fs = null;
-      }
-      if(haCluster != null) {
-        haCluster.shutdown(true);
-        haCluster = null;
-      }
     }
   }
 
@@ -388,7 +304,7 @@ public class TestPersistentStoragePolicySatisfier {
    * 3. make sure sps xattr is removed.
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 300000000)
   public void testDropSPS() throws Exception {
     try {
       clusterSetUp();

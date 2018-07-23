@@ -43,14 +43,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.Matcher;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
@@ -159,15 +157,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
           serviceMode);
       return;
     }
-    if (serviceMode == StoragePolicySatisfierMode.INTERNAL
-        && ctxt.isMoverRunning()) {
-      isRunning = false;
-      LOG.error(
-          "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
-              + HdfsServerConstants.MOVER_ID_PATH.toString()
-              + " been opened. Maybe a Mover instance is running!");
-      return;
-    }
     if (reconfigStart) {
       LOG.info("Starting {} StoragePolicySatisfier, as admin requested to "
           + "start it.", StringUtils.toLowerCase(serviceMode.toString()));
@@ -177,9 +166,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
     }
 
     isRunning = true;
-    // Ensure that all the previously submitted block movements(if any) have to
-    // be stopped in all datanodes.
-    addDropSPSWorkCommandsToAllDNs();
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -201,7 +187,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
     this.storageMovementsMonitor.stop();
     if (forceStop) {
       storageMovementNeeded.clearQueuesWithNotification();
-      addDropSPSWorkCommandsToAllDNs();
     } else {
       LOG.info("Stopping StoragePolicySatisfier.");
     }
@@ -232,14 +217,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   @Override
   public boolean isRunning() {
     return isRunning;
-  }
-
-  /**
-   * Adding drop commands to all datanodes to stop performing the satisfier
-   * block movements, if any.
-   */
-  private void addDropSPSWorkCommandsToAllDNs() {
-    ctxt.addDropPreviousSPSWorkAtDNs();
   }
 
   @Override
@@ -1101,13 +1078,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   /**
-   * Clear queues for given track id.
-   */
-  public void clearQueue(long trackId) {
-    storageMovementNeeded.clearQueue(trackId);
-  }
-
-  /**
    * This class contains information of an attempted blocks and its last
    * attempted or reported time stamp. This is used by
    * {@link BlockStorageMovementAttemptedItems#storageMovementAttemptedItems}.
@@ -1156,20 +1126,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
     Set<Block> getBlocks() {
       return this.blocks;
     }
-  }
-
-  /**
-   * Returns sps invoked path status. This method is used by internal satisfy
-   * storage policy service.
-   *
-   * @param path
-   *          sps path
-   * @return storage policy satisfy path status
-   * @throws IOException
-   */
-  public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
-      String path) throws IOException {
-    return storageMovementNeeded.getStatus(ctxt.getFileID(path));
   }
 
   @Override

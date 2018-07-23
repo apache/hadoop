@@ -68,15 +68,6 @@ public final class ExternalStoragePolicySatisfier {
       StoragePolicySatisfier sps = new StoragePolicySatisfier(spsConf);
       nnc = getNameNodeConnector(spsConf);
 
-      boolean spsRunning;
-      spsRunning = nnc.getDistributedFileSystem().getClient()
-          .isInternalSatisfierRunning();
-      if (spsRunning) {
-        throw new RuntimeException(
-            "Startup failed due to StoragePolicySatisfier"
-                + " running inside Namenode.");
-      }
-
       ExternalSPSContext context = new ExternalSPSContext(sps, nnc);
       sps.init(context);
       sps.start(true, StoragePolicySatisfierMode.EXTERNAL);

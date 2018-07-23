@@ -150,11 +150,6 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public void addDropPreviousSPSWorkAtDNs() {
-    // Nothing todo
-  }
-
-  @Override
   public void removeSPSHint(long inodeId) throws IOException {
     Path filePath = DFSUtilClient.makePathFromFileId(inodeId);
     nnc.getDistributedFileSystem().removeXAttr(filePath,

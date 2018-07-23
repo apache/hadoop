@@ -48,8 +48,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
@@ -657,25 +655,6 @@ public class Mover {
           NameNodeConnector nnc = iter.next();
           final Mover m = new Mover(nnc, conf, retryCount,
               excludedPinnedBlocks);
-
-          boolean spsRunning;
-          try {
-            spsRunning = nnc.getDistributedFileSystem().getClient()
-                .isInternalSatisfierRunning();
-          } catch (RemoteException e) {
-            IOException cause = e.unwrapRemoteException();
-            if (cause instanceof StandbyException) {
-              System.err.println("Skip Standby Namenode. " + nnc.toString());
-              continue;
-            }
-            throw e;
-          }
-          if (spsRunning) {
-            System.err.println("Mover failed due to StoragePolicySatisfier"
-                + " service running inside namenode. Exiting with status "
-                + ExitStatus.SKIPPED_DUE_TO_SPS + "... ");
-            return ExitStatus.SKIPPED_DUE_TO_SPS.getExitCode();
-          }
 
           final ExitStatus r = m.run();
 

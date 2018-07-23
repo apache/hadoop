@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.StorageTypeNodePair;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class TestBlockStorageMovementAttemptedItems {
   @Before
   public void setup() throws Exception {
     Configuration config = new HdfsConfiguration();
-    Context ctxt = Mockito.mock(IntraSPSNameNodeContext.class);
+    Context ctxt = Mockito.mock(ExternalSPSContext.class);
     SPSService sps = new StoragePolicySatisfier(config);
     Mockito.when(ctxt.isRunning()).thenReturn(true);
     Mockito.when(ctxt.isInSafeMode()).thenReturn(false);

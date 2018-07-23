@@ -30,8 +30,7 @@ public enum ExitStatus {
   IO_EXCEPTION(-4),
   ILLEGAL_ARGUMENTS(-5),
   INTERRUPTED(-6),
-  UNFINALIZED_UPGRADE(-7),
-  SKIPPED_DUE_TO_SPS(-8);
+  UNFINALIZED_UPGRADE(-7);
 
   private final int code;
 

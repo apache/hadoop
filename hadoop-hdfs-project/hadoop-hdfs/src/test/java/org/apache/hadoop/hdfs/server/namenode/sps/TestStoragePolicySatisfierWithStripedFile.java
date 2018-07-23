@@ -42,7 +42,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +72,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private int cellSize;
   private int defaultStripeBlockSize;
   private Configuration conf;
+  private StoragePolicySatisfier sps;
+  private ExternalSPSContext ctxt;
+  private NameNodeConnector nnc;
 
   private ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
@@ -87,7 +92,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     defaultStripeBlockSize = cellSize * stripesPerBlock;
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     // Reduced refresh cycle to update latest datanodes.
     conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
         1000);
@@ -102,8 +107,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
    */
   @Test(timeout = 300000)
   public void testMoverWithFullStripe() throws Exception {
-    // start 10 datanodes
-    int numOfDatanodes = 10;
+    // start 11 datanodes
+    int numOfDatanodes = 11;
     int storagesPerDatanode = 2;
     long capacity = 20 * defaultStripeBlockSize;
     long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
@@ -122,6 +127,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
             {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
@@ -133,7 +139,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
+      startSPS();
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -189,12 +195,12 @@ public class TestStoragePolicySatisfierWithStripedFile {
       LOG.info("Sets storage policy to COLD and invoked satisfyStoragePolicy");
       cluster.triggerHeartbeats();
 
-      waitForBlocksMovementAttemptReport(cluster, 9, 60000);
       // verify storage types and locations
       waitExpectedStorageType(cluster, fooFile, fileLen, StorageType.ARCHIVE, 9,
           9, 60000);
     } finally {
       cluster.shutdown();
+      sps.stopGracefully();
     }
   }
 
@@ -213,7 +219,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
   public void testWhenOnlyFewTargetNodesAreAvailableToSatisfyStoragePolicy()
       throws Exception {
     // start 10 datanodes
-    int numOfDatanodes = 10;
+    int numOfDatanodes = 11;
     int storagesPerDatanode = 2;
     long capacity = 20 * defaultStripeBlockSize;
     long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
@@ -234,6 +240,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
             {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE},
             {StorageType.DISK, StorageType.ARCHIVE}})
@@ -243,7 +250,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
+      startSPS();
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -271,6 +278,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           Assert.assertEquals(StorageType.DISK, type);
         }
       }
+      Thread.sleep(5000);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
           dataBlocks + parityBlocks);
 
@@ -296,13 +304,13 @@ public class TestStoragePolicySatisfierWithStripedFile {
       LOG.info("Sets storage policy to COLD and invoked satisfyStoragePolicy");
       cluster.triggerHeartbeats();
 
-      waitForBlocksMovementAttemptReport(cluster, 5, 60000);
-      waitForAttemptedItems(cluster, 1, 30000);
+      waitForAttemptedItems(1, 30000);
       // verify storage types and locations.
       waitExpectedStorageType(cluster, fooFile, fileLen, StorageType.ARCHIVE, 5,
           9, 60000);
     } finally {
       cluster.shutdown();
+      sps.stopGracefully();
     }
   }
 
@@ -352,6 +360,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
         .build();
     try {
       cluster.waitActive();
+      startSPS();
       DistributedFileSystem fs = cluster.getFileSystem();
       fs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -393,6 +402,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           StorageType.ARCHIVE, 9, 9, 60000);
     } finally {
       cluster.shutdown();
+      sps.stopGracefully();
     }
   }
 
@@ -444,6 +454,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
+      startSPS();
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -481,35 +492,25 @@ public class TestStoragePolicySatisfierWithStripedFile {
       LOG.info("Sets storage policy to COLD and invoked satisfyStoragePolicy");
       cluster.triggerHeartbeats();
 
-      waitForAttemptedItems(cluster, 1, 30000);
+      waitForAttemptedItems(1, 30000);
       // verify storage types and locations.
       waitExpectedStorageType(cluster, fooFile, fileLen, StorageType.DISK, 9, 9,
           60000);
-      waitForAttemptedItems(cluster, 1, 30000);
+      waitForAttemptedItems(1, 30000);
     } finally {
       cluster.shutdown();
+      sps.stopGracefully();
     }
   }
 
-  private void waitForAttemptedItems(MiniDFSCluster cluster,
-      long expectedBlkMovAttemptedCount, int timeout)
-          throws TimeoutException, InterruptedException {
-    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps =
-        (StoragePolicySatisfier) blockManager
-        .getSPSManager().getInternalSPSService();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
-            expectedBlkMovAttemptedCount,
-            ((BlockStorageMovementAttemptedItems) sps
-                .getAttemptedItemsMonitor()).getAttemptedItemsCount());
-        return ((BlockStorageMovementAttemptedItems) sps
-            .getAttemptedItemsMonitor())
-                .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
-      }
-    }, 100, timeout);
+  private void startSPS() throws IOException {
+    nnc = DFSTestUtil.getNameNodeConnector(conf,
+        HdfsServerConstants.MOVER_ID_PATH, 1, false);
+
+    sps = new StoragePolicySatisfier(conf);
+    ctxt = new ExternalSPSContext(sps, nnc);
+    sps.init(ctxt);
+    sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
   }
 
   private static void initConfWithStripe(Configuration conf,
@@ -562,24 +563,18 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }, 100, timeout);
   }
 
-  // Check whether the block movement attempt report has been arrived at the
-  // Namenode(SPS).
-  private void waitForBlocksMovementAttemptReport(MiniDFSCluster cluster,
-      long expectedMoveFinishedBlks, int timeout)
-          throws TimeoutException, InterruptedException {
-    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps =
-        (StoragePolicySatisfier) blockManager.getSPSManager()
-        .getInternalSPSService();
+  private void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
+      int timeout) throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        int actualCount = ((BlockStorageMovementAttemptedItems) (sps
-            .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount();
-        LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
-            expectedMoveFinishedBlks,
-            actualCount);
-        return actualCount >= expectedMoveFinishedBlks;
+        LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
+            expectedBlkMovAttemptedCount,
+            ((BlockStorageMovementAttemptedItems) (sps
+                .getAttemptedItemsMonitor())).getAttemptedItemsCount());
+        return ((BlockStorageMovementAttemptedItems) (sps
+            .getAttemptedItemsMonitor()))
+                .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
     }, 100, timeout);
   }

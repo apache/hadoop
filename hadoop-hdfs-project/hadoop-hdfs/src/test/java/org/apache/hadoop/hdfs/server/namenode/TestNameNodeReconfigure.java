@@ -248,17 +248,17 @@ public class TestNameNodeReconfigure {
 
     // enable SPS internally by keeping DFS_STORAGE_POLICY_ENABLED_KEY
     nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
+        StoragePolicySatisfierMode.EXTERNAL.toString());
 
     // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
     assertNull("SPS shouldn't start as "
         + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled",
             nameNode.getNamesystem().getBlockManager().getSPSManager());
     verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL, false);
+        StoragePolicySatisfierMode.EXTERNAL, false);
 
     assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        StoragePolicySatisfierMode.INTERNAL.toString(), nameNode.getConf()
+        StoragePolicySatisfierMode.EXTERNAL.toString(), nameNode.getConf()
             .get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
             DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
   }
@@ -285,12 +285,6 @@ public class TestNameNodeReconfigure {
           e.getCause());
     }
 
-    // enable internal SPS
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL, true);
-
     // disable SPS
     nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
@@ -302,7 +296,7 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.EXTERNAL.toString());
     assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
         false, nameNode.getNamesystem().getBlockManager().getSPSManager()
-            .isInternalSatisfierRunning());
+            .isSatisfierRunning());
     assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
         StoragePolicySatisfierMode.EXTERNAL.toString(),
         nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
@@ -337,27 +331,15 @@ public class TestNameNodeReconfigure {
               + " by admin. Seek for an admin help to enable it "
               + "or use Mover tool.", e);
     }
-
-    // start internal
-    nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        true, nameNode.getNamesystem().getBlockManager().getSPSManager()
-            .isInternalSatisfierRunning());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        StoragePolicySatisfierMode.INTERNAL.toString(),
-        nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-            DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
   }
 
   void verifySPSEnabled(final NameNode nameNode, String property,
       StoragePolicySatisfierMode expected, boolean isSatisfierRunning) {
     StoragePolicySatisfyManager spsMgr = nameNode
             .getNamesystem().getBlockManager().getSPSManager();
-    boolean isInternalSatisfierRunning = spsMgr != null
-        ? spsMgr.isInternalSatisfierRunning() : false;
-    assertEquals(property + " has wrong value", isSatisfierRunning,
-        isInternalSatisfierRunning);
+    boolean isSPSRunning = spsMgr != null ? spsMgr.isSatisfierRunning()
+        : false;
+    assertEquals(property + " has wrong value", isSPSRunning, isSPSRunning);
     String actual = nameNode.getConf().get(property,
         DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
     assertEquals(property + " has wrong value", expected,

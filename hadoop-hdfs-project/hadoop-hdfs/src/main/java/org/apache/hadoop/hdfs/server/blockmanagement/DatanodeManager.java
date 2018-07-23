@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
@@ -210,8 +209,6 @@ public class DatanodeManager {
    */
   private final long timeBetweenResendingCachingDirectivesMs;
 
-  private final boolean blocksToMoveLowPriority;
-
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -336,12 +333,6 @@ public class DatanodeManager {
     this.blocksPerPostponedMisreplicatedBlocksRescan = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
-
-    // SPS configuration to decide blocks to move can share equal ratio of
-    // maxtransfers with pending replica and erasure-coded reconstruction tasks
-    blocksToMoveLowPriority = conf.getBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_KEY,
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -1101,19 +1092,6 @@ public class DatanodeManager {
           nodeS.setSoftwareVersion(nodeReg.getSoftwareVersion());
           nodeS.setDisallowed(false); // Node is in the include list
 
-          // Sets dropSPSWork flag to true, to ensure that
-          // DNA_DROP_SPS_WORK_COMMAND will send to datanode via next heartbeat
-          // response immediately after the node registration. This is
-          // to avoid a situation, where multiple block attempt finished
-          // responses coming from different datanodes. After SPS monitor time
-          // out, it will retry the files which were scheduled to the
-          // disconnected(for long time more than heartbeat expiry) DN, by
-          // finding new datanode. Now, if the expired datanode reconnects back
-          // after SPS reschedules, it leads to get different movement attempt
-          // finished report from reconnected and newly datanode which is
-          // attempting the block movement.
-          nodeS.setDropSPSWork(true);
-
           // resolve network location
           if(this.rejectUnresolvedTopologyDN) {
             nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));
@@ -1691,47 +1669,18 @@ public class DatanodeManager {
     final List<DatanodeCommand> cmds = new ArrayList<>();
     // Allocate _approximately_ maxTransfers pending tasks to DataNode.
     // NN chooses pending tasks based on the ratio between the lengths of
-    // replication, erasure-coded block queues and block storage movement
-    // queues.
+    // replication and erasure-coded block queues.
     int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
     int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
-    int totalBlocksToMove = nodeinfo.getNumberOfBlocksToMoveStorages();
     int totalBlocks = totalReplicateBlocks + totalECBlocks;
-    if (totalBlocks > 0 || totalBlocksToMove > 0) {
-      int numReplicationTasks = 0;
-      int numECTasks = 0;
-      int numBlocksToMoveTasks = 0;
-      // Check blocksToMoveLowPriority configuration is true/false. If false,
-      // then equally sharing the max transfer. Otherwise gives high priority to
-      // the pending_replica/erasure-coded tasks and only the delta streams will
-      // be used for blocks to move tasks.
-      if (!blocksToMoveLowPriority) {
-        // add blocksToMove count to total blocks so that will get equal share
-        totalBlocks = totalBlocks + totalBlocksToMove;
-        numReplicationTasks = (int) Math
-            .ceil((double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
-        numECTasks = (int) Math
-            .ceil((double) (totalECBlocks * maxTransfers) / totalBlocks);
-        numBlocksToMoveTasks = (int) Math
-            .ceil((double) (totalBlocksToMove * maxTransfers) / totalBlocks);
-      } else {
-        // Calculate the replica and ec tasks, then pick blocksToMove if there
-        // is any streams available.
-        numReplicationTasks = (int) Math
-            .ceil((double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
-        numECTasks = (int) Math
-            .ceil((double) (totalECBlocks * maxTransfers) / totalBlocks);
-        int numTasks = numReplicationTasks + numECTasks;
-        if (numTasks < maxTransfers) {
-          int remainingMaxTransfers = maxTransfers - numTasks;
-          numBlocksToMoveTasks = Math.min(totalBlocksToMove,
-              remainingMaxTransfers);
-        }
-      }
+    if (totalBlocks > 0) {
+      int numReplicationTasks = (int) Math.ceil(
+          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
+      int numECTasks = (int) Math.ceil(
+          (double) (totalECBlocks * maxTransfers) / totalBlocks);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Pending replication tasks: " + numReplicationTasks
-            + " erasure-coded tasks: " + numECTasks + " blocks to move tasks: "
-            + numBlocksToMoveTasks);
+            + " erasure-coded tasks: " + numECTasks);
       }
       // check pending replication tasks
       List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
@@ -1746,23 +1695,6 @@ public class DatanodeManager {
       if (pendingECList != null && !pendingECList.isEmpty()) {
         cmds.add(new BlockECReconstructionCommand(
             DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
-      }
-      // check pending block storage movement tasks
-      if (nodeinfo.shouldDropSPSWork()) {
-        cmds.add(DropSPSWorkCommand.DNA_DROP_SPS_WORK_COMMAND);
-        // Set back to false to indicate that the new value has been sent to the
-        // datanode.
-        nodeinfo.setDropSPSWork(false);
-      } else {
-        // Get pending block storage movement tasks
-        BlockMovingInfo[] blkStorageMovementInfos = nodeinfo
-            .getBlocksToMoveStorages(numBlocksToMoveTasks);
-
-        if (blkStorageMovementInfos != null) {
-          cmds.add(new BlockStorageMovementCommand(
-              DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT, blockPoolId,
-              Arrays.asList(blkStorageMovementInfos)));
-        }
       }
     }
 
@@ -2034,18 +1966,6 @@ public class DatanodeManager {
   public String getSlowDisksReport() {
     return slowDiskTracker != null ?
         slowDiskTracker.getSlowDiskReportAsJsonString() : null;
-  }
-
-  /**
-   * Mark all DNs to drop SPS queues. A DNA_DROP_SPS_WORK_COMMAND will be added
-   * in heartbeat response, which will indicate DN to drop SPS queues
-   */
-  public void addDropSPSWorkCommandsToAllDNs() {
-    synchronized (this) {
-      for (DatanodeDescriptor dn : datanodeMap.values()) {
-        dn.setDropSPSWork(true);
-      }
-    }
   }
 
   /**

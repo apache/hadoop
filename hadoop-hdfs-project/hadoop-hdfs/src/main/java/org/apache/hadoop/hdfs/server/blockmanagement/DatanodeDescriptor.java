@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -207,14 +206,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private final LightWeightHashSet<Block> invalidateBlocks =
       new LightWeightHashSet<>();
 
-  /**
-   * A queue of blocks corresponding to trackID for moving its storage
-   * placements by this datanode.
-   */
-  private final BlockQueue<BlockMovingInfo> storageMovementBlocks =
-      new BlockQueue<>();
-  private volatile boolean dropSPSWork = false;
-
   /* Variables for maintaining number of blocks scheduled to be written to
    * this storage. This count is approximate and might be slightly bigger
    * in case of errors (e.g. datanode does not report if an error occurs
@@ -369,7 +360,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.pendingCached.clear();
     this.cached.clear();
     this.pendingUncached.clear();
-    this.storageMovementBlocks.clear();
   }
 
   public int numBlocks() {
@@ -1074,63 +1064,5 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
     return false;
-  }
-
-  /**
-   * Add the block infos which needs to move its storage locations.
-   *
-   * @param blkMovingInfo
-   *          - storage mismatched block info
-   */
-  public void addBlocksToMoveStorage(BlockMovingInfo blkMovingInfo) {
-    storageMovementBlocks.offer(blkMovingInfo);
-    BlockManager.LOG
-        .debug("Adding block move task " + blkMovingInfo + " to " + getName()
-            + ", current queue size is " + storageMovementBlocks.size());
-  }
-
-  /**
-   * Return the number of blocks queued up for movement.
-   */
-  public int getNumberOfBlocksToMoveStorages() {
-    return storageMovementBlocks.size();
-  }
-
-  /**
-   * Get the blocks to move to satisfy the storage media type.
-   *
-   * @param numBlocksToMoveTasks
-   *          total number of blocks which will be send to this datanode for
-   *          block movement.
-   *
-   * @return block infos which needs to move its storage locations or null if
-   *         there is no block infos to move.
-   */
-  public BlockMovingInfo[] getBlocksToMoveStorages(int numBlocksToMoveTasks) {
-    List<BlockMovingInfo> blockMovingInfos = storageMovementBlocks
-        .poll(numBlocksToMoveTasks);
-    if (blockMovingInfos == null || blockMovingInfos.size() <= 0) {
-      return null;
-    }
-    BlockMovingInfo[] blkMoveArray = new BlockMovingInfo[blockMovingInfos
-        .size()];
-    return blockMovingInfos.toArray(blkMoveArray);
-  }
-
-  /**
-   * Set whether to drop SPS related queues at DN side.
-   *
-   * @param dropSPSWork
-   *          - true if need to drop SPS queues, otherwise false.
-   */
-  public synchronized void setDropSPSWork(boolean dropSPSWork) {
-    this.dropSPSWork = dropSPSWork;
-  }
-
-  /**
-   * @return true if need to drop SPS queues at DN.
-   */
-  public synchronized boolean shouldDropSPSWork() {
-    return this.dropSPSWork;
   }
 }

@@ -209,7 +209,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -1363,9 +1362,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // Don't want to keep replication queues when not in Active.
         blockManager.clearQueues();
         blockManager.setInitializedReplQueues(false);
-        if (blockManager.getSPSManager() != null) {
-          blockManager.getSPSManager().stopGracefully();
-        }
       }
     } finally {
       writeUnlock("stopActiveServices");
@@ -2275,9 +2271,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     // checks sps status
     boolean disabled = (blockManager.getSPSManager() == null);
-    if (disabled || (blockManager
-        .getSPSManager().getMode() == StoragePolicySatisfierMode.INTERNAL
-        && !blockManager.getSPSManager().isInternalSatisfierRunning())) {
+    if (disabled) {
       throw new UnsupportedActionException(
           "Cannot request to satisfy storage policy "
               + "when storage policy satisfier feature has been disabled"

@@ -134,12 +134,6 @@ public final class HdfsConstants {
   public enum StoragePolicySatisfierMode {
 
     /**
-     * This mode represents that SPS service is running inside Namenode and can
-     * accept any SPS call request.
-     */
-    INTERNAL,
-
-    /**
      * This mode represents that SPS service is running outside Namenode as an
      * external service and can accept any SPS call request.
      */
@@ -164,40 +158,6 @@ public final class HdfsConstants {
     public static StoragePolicySatisfierMode fromString(String s) {
       return MAP.get(StringUtils.toUpperCase(s));
     }
-  }
-
-
-  /**
-   * Storage policy satisfy path status.
-   */
-  public enum StoragePolicySatisfyPathStatus {
-    /**
-     * Scheduled but not yet processed. This will come only in case of
-     * directory. Directory will be added first in "pendingWorkForDirectory"
-     * queue and then later it is processed recursively.
-     */
-    PENDING,
-
-    /**
-     * Satisfying the storage policy for path.
-     */
-    IN_PROGRESS,
-
-    /**
-     * Storage policy satisfied for the path.
-     */
-    SUCCESS,
-
-    /**
-     * Few blocks failed to move and the path is still not
-     * fully satisfied the storage policy.
-     */
-    FAILURE,
-
-    /**
-     * Status not available.
-     */
-    NOT_AVAILABLE
   }
 
   public enum RollingUpgradeAction {

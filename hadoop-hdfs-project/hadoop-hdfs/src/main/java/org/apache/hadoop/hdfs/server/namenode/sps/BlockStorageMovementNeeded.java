@@ -23,14 +23,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,9 +56,6 @@ public class BlockStorageMovementNeeded {
   private final Map<Long, DirPendingWorkInfo> pendingWorkForDirectory =
       new HashMap<>();
 
-  private final Map<Long, StoragePolicySatisfyPathStatusInfo> spsStatus =
-      new ConcurrentHashMap<>();
-
   private final Context ctxt;
 
   private Daemon pathIdCollector;
@@ -86,9 +79,6 @@ public class BlockStorageMovementNeeded {
    *          - track info for satisfy the policy
    */
   public synchronized void add(ItemInfo trackInfo) {
-    spsStatus.put(trackInfo.getFile(),
-        new StoragePolicySatisfyPathStatusInfo(
-            StoragePolicySatisfyPathStatus.IN_PROGRESS));
     storageMovementNeeded.add(trackInfo);
   }
 
@@ -129,7 +119,7 @@ public class BlockStorageMovementNeeded {
     if (itemInfo.getStartPath() == itemInfo.getFile()) {
       return;
     }
-    updatePendingDirScanStats(itemInfo.getFile(), 1, scanCompleted);
+    updatePendingDirScanStats(itemInfo.getStartPath(), 1, scanCompleted);
   }
 
   private void updatePendingDirScanStats(long startPath, int numScannedFiles,
@@ -181,7 +171,6 @@ public class BlockStorageMovementNeeded {
       if (!ctxt.isFileExist(startId)) {
         // directory deleted just remove it.
         this.pendingWorkForDirectory.remove(startId);
-        updateStatus(startId, isSuccess);
       } else {
         DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
         if (pendingWork != null) {
@@ -189,17 +178,13 @@ public class BlockStorageMovementNeeded {
           if (pendingWork.isDirWorkDone()) {
             ctxt.removeSPSHint(startId);
             pendingWorkForDirectory.remove(startId);
-            pendingWork.setFailure(!isSuccess);
-            updateStatus(startId, pendingWork.isPolicySatisfied());
           }
-          pendingWork.setFailure(isSuccess);
         }
       }
     } else {
       // Remove xAttr if trackID doesn't exist in
       // storageMovementAttemptedItems or file policy satisfied.
       ctxt.removeSPSHint(trackInfo.getFile());
-      updateStatus(trackInfo.getFile(), isSuccess);
     }
   }
 
@@ -213,24 +198,6 @@ public class BlockStorageMovementNeeded {
       }
     }
     pendingWorkForDirectory.remove(trackId);
-  }
-
-  /**
-   * Mark inode status as SUCCESS in map.
-   */
-  private void updateStatus(long startId, boolean isSuccess){
-    StoragePolicySatisfyPathStatusInfo spsStatusInfo =
-        spsStatus.get(startId);
-    if (spsStatusInfo == null) {
-      spsStatusInfo = new StoragePolicySatisfyPathStatusInfo();
-      spsStatus.put(startId, spsStatusInfo);
-    }
-
-    if (isSuccess) {
-      spsStatusInfo.setSuccess();
-    } else {
-      spsStatusInfo.setFailure();
-    }
   }
 
   /**
@@ -277,7 +244,6 @@ public class BlockStorageMovementNeeded {
     @Override
     public void run() {
       LOG.info("Starting SPSPathIdProcessor!.");
-      long lastStatusCleanTime = 0;
       Long startINode = null;
       while (ctxt.isRunning()) {
         try {
@@ -289,9 +255,6 @@ public class BlockStorageMovementNeeded {
               // Waiting for SPS path
               Thread.sleep(3000);
             } else {
-              spsStatus.put(startINode,
-                  new StoragePolicySatisfyPathStatusInfo(
-                      StoragePolicySatisfyPathStatus.IN_PROGRESS));
               ctxt.scanAndCollectFiles(startINode);
               // check if directory was empty and no child added to queue
               DirPendingWorkInfo dirPendingWorkInfo =
@@ -300,14 +263,7 @@ public class BlockStorageMovementNeeded {
                   && dirPendingWorkInfo.isDirWorkDone()) {
                 ctxt.removeSPSHint(startINode);
                 pendingWorkForDirectory.remove(startINode);
-                updateStatus(startINode, true);
               }
-            }
-            //Clear the SPS status if status is in SUCCESS more than 5 min.
-            if (Time.monotonicNow()
-                - lastStatusCleanTime > statusClearanceElapsedTimeMs) {
-              lastStatusCleanTime = Time.monotonicNow();
-              cleanSPSStatus();
             }
             startINode = null; // Current inode successfully scanned.
           }
@@ -328,16 +284,6 @@ public class BlockStorageMovementNeeded {
         }
       }
     }
-
-    private synchronized void cleanSPSStatus() {
-      for (Iterator<Entry<Long, StoragePolicySatisfyPathStatusInfo>> it =
-          spsStatus.entrySet().iterator(); it.hasNext();) {
-        Entry<Long, StoragePolicySatisfyPathStatusInfo> entry = it.next();
-        if (entry.getValue().canRemove()) {
-          it.remove();
-        }
-      }
-    }
   }
 
   /**
@@ -347,7 +293,6 @@ public class BlockStorageMovementNeeded {
 
     private int pendingWorkCount = 0;
     private boolean fullyScanned = false;
-    private boolean success = true;
 
     /**
      * Increment the pending work count for directory.
@@ -378,20 +323,6 @@ public class BlockStorageMovementNeeded {
     public synchronized void markScanCompleted() {
       this.fullyScanned = true;
     }
-
-    /**
-     * Return true if all the files block movement is success, otherwise false.
-     */
-    public boolean isPolicySatisfied() {
-      return success;
-    }
-
-    /**
-     * Set directory SPS status failed.
-     */
-    public void setFailure(boolean failure) {
-      this.success = this.success || failure;
-    }
   }
 
   public void activate() {
@@ -404,56 +335,6 @@ public class BlockStorageMovementNeeded {
     if (pathIdCollector != null) {
       pathIdCollector.interrupt();
     }
-  }
-
-  /**
-   * Represent the file/directory block movement status.
-   */
-  static class StoragePolicySatisfyPathStatusInfo {
-    private StoragePolicySatisfyPathStatus status =
-        StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
-    private long lastStatusUpdateTime;
-
-    StoragePolicySatisfyPathStatusInfo() {
-      this.lastStatusUpdateTime = 0;
-    }
-
-    StoragePolicySatisfyPathStatusInfo(StoragePolicySatisfyPathStatus status) {
-      this.status = status;
-      this.lastStatusUpdateTime = 0;
-    }
-
-    private void setSuccess() {
-      this.status = StoragePolicySatisfyPathStatus.SUCCESS;
-      this.lastStatusUpdateTime = Time.monotonicNow();
-    }
-
-    private void setFailure() {
-      this.status = StoragePolicySatisfyPathStatus.FAILURE;
-      this.lastStatusUpdateTime = Time.monotonicNow();
-    }
-
-    private StoragePolicySatisfyPathStatus getStatus() {
-      return status;
-    }
-
-    /**
-     * Return true if SUCCESS status cached more then 5 min.
-     */
-    private boolean canRemove() {
-      return (StoragePolicySatisfyPathStatus.SUCCESS == status
-          || StoragePolicySatisfyPathStatus.FAILURE == status)
-          && (Time.monotonicNow()
-              - lastStatusUpdateTime) > statusClearanceElapsedTimeMs;
-    }
-  }
-
-  public StoragePolicySatisfyPathStatus getStatus(long id) {
-    StoragePolicySatisfyPathStatusInfo spsStatusInfo = spsStatus.get(id);
-    if(spsStatusInfo == null){
-      return StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
-    }
-    return spsStatusInfo.getStatus();
   }
 
   @VisibleForTesting
