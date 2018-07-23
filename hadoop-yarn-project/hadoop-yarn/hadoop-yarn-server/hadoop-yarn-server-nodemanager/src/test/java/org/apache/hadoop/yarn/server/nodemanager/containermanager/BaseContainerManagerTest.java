@@ -107,7 +107,7 @@ public abstract class BaseContainerManagerTest {
   protected static File remoteLogDir;
   protected static File tmpDir;
 
-  protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
+  protected NodeManagerMetrics metrics = NodeManagerMetrics.create();
 
   public BaseContainerManagerTest() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
