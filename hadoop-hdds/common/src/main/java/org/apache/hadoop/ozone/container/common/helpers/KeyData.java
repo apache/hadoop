@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.ArrayList;
 
 /**
  * Helper class to convert Protobuf to Java classes.
@@ -131,7 +132,25 @@ public class KeyData {
   }
 
   /**
+   * Adds chinkInfo to the list
+   */
+  public void addChunk(ContainerProtos.ChunkInfo chunkInfo) {
+    if (chunks == null) {
+      chunks = new ArrayList<>();
+    }
+    chunks.add(chunkInfo);
+  }
+
+  /**
+   * removes the chunk.
+   */
+  public void removeChunk(ContainerProtos.ChunkInfo chunkInfo) {
+    chunks.remove(chunkInfo);
+  }
+
+  /**
    * Returns container ID.
+   *
    * @return long.
    */
   public long getContainerID() {
@@ -170,5 +189,4 @@ public class KeyData {
   public long getSize() {
     return chunks.parallelStream().mapToLong(e->e.getLen()).sum();
   }
-
 }

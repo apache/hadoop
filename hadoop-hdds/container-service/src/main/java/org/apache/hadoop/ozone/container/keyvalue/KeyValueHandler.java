@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
+import org.apache.hadoop.ozone.container.common.impl.OpenContainerBlockMap;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.SmallFileUtils;
@@ -117,7 +118,7 @@ public class KeyValueHandler extends Handler {
   private VolumeChoosingPolicy volumeChoosingPolicy;
   private final int maxContainerSizeGB;
   private final AutoCloseableLock handlerLock;
-
+  private final OpenContainerBlockMap openContainerBlockMap;
 
   public KeyValueHandler(Configuration config, ContainerSet contSet,
       VolumeSet volSet, ContainerMetrics metrics) {
@@ -145,6 +146,15 @@ public class KeyValueHandler extends Handler {
     // this handler lock is used for synchronizing createContainer Requests,
     // so using a fair lock here.
     handlerLock = new AutoCloseableLock(new ReentrantLock(true));
+    openContainerBlockMap = new OpenContainerBlockMap();
+  }
+
+  /**
+   * Returns OpenContainerBlockMap instance
+   * @return OpenContainerBlockMap
+   */
+  public OpenContainerBlockMap getOpenContainerBlockMap() {
+    return openContainerBlockMap;
   }
 
   @Override
@@ -333,8 +343,9 @@ public class KeyValueHandler extends Handler {
             "Container cannot be deleted because it is not empty.",
             ContainerProtos.Result.ERROR_CONTAINER_NOT_EMPTY);
       } else {
-        containerSet.removeContainer(
-            kvContainer.getContainerData().getContainerID());
+        long containerId = kvContainer.getContainerData().getContainerID();
+        containerSet.removeContainer(containerId);
+        openContainerBlockMap.removeContainer(containerId);
         // Release the lock first.
         // Avoid holding write locks for disk operations
         kvContainer.writeUnlock();
@@ -366,9 +377,21 @@ public class KeyValueHandler extends Handler {
     try {
       checkContainerOpen(kvContainer);
 
+      // remove the container from open block map once, all the blocks
+      // have been committed and the container is closed
+      kvContainer.getContainerData()
+          .setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+      commitPendingKeys(kvContainer);
       kvContainer.close();
+      // make sure the the container open keys from BlockMap gets removed
+      openContainerBlockMap.removeContainer(
+          request.getCloseContainer().getContainerID());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
+    } catch (IOException ex) {
+      return ContainerUtils.logAndReturnError(LOG,
+          new StorageContainerException("Close Container failed", ex,
+              IO_EXCEPTION), request);
     }
 
     return ContainerUtils.getSuccessResponse(request);
@@ -391,10 +414,8 @@ public class KeyValueHandler extends Handler {
 
       KeyData keyData = KeyData.getFromProtoBuf(
           request.getPutKey().getKeyData());
-      Preconditions.checkNotNull(keyData);
-
-      keyManager.putKey(kvContainer, keyData);
       long numBytes = keyData.getProtoBufMessage().toByteArray().length;
+      commitKey(keyData, kvContainer);
       metrics.incContainerBytesStats(Type.PutKey, numBytes);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -407,6 +428,25 @@ public class KeyValueHandler extends Handler {
     return KeyUtils.getKeyResponseSuccess(request);
   }
 
+  private void commitPendingKeys(KeyValueContainer kvContainer)
+      throws IOException {
+    long containerId = kvContainer.getContainerData().getContainerID();
+    List<KeyData> pendingKeys =
+        this.openContainerBlockMap.getOpenKeys(containerId);
+    if (pendingKeys != null) {
+      for (KeyData keyData : pendingKeys) {
+        commitKey(keyData, kvContainer);
+      }
+    }
+  }
+
+  private void commitKey(KeyData keyData, KeyValueContainer kvContainer)
+      throws IOException {
+    Preconditions.checkNotNull(keyData);
+    keyManager.putKey(kvContainer, keyData);
+    //update the open key Map in containerManager
+    this.openContainerBlockMap.removeFromKeyMap(keyData.getBlockID());
+  }
   /**
    * Handle Get Key operation. Calls KeyManager to process the request.
    */
@@ -519,11 +559,13 @@ public class KeyValueHandler extends Handler {
 
       BlockID blockID = BlockID.getFromProtobuf(
           request.getDeleteChunk().getBlockID());
-      ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(request.getDeleteChunk()
-          .getChunkData());
+      ContainerProtos.ChunkInfo chunkInfoProto = request.getDeleteChunk()
+          .getChunkData();
+      ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
       Preconditions.checkNotNull(chunkInfo);
 
       chunkManager.deleteChunk(kvContainer, blockID, chunkInfo);
+      openContainerBlockMap.updateOpenKeyMap(blockID, chunkInfoProto, true);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -552,8 +594,9 @@ public class KeyValueHandler extends Handler {
 
       BlockID blockID = BlockID.getFromProtobuf(
           request.getWriteChunk().getBlockID());
-      ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(request.getWriteChunk()
-          .getChunkData());
+      ContainerProtos.ChunkInfo chunkInfoProto =
+          request.getWriteChunk().getChunkData();
+      ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
       Preconditions.checkNotNull(chunkInfo);
 
       byte[] data = null;
@@ -570,6 +613,9 @@ public class KeyValueHandler extends Handler {
           request.getWriteChunk().getStage() == Stage.COMBINED) {
         metrics.incContainerBytesStats(Type.WriteChunk, request.getWriteChunk()
             .getChunkData().getLen());
+        // the openContainerBlockMap should be updated only while writing data
+        // not during COMMIT_STAGE of handling write chunk request.
+        openContainerBlockMap.updateOpenKeyMap(blockID, chunkInfoProto, false);
       }
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -610,8 +656,9 @@ public class KeyValueHandler extends Handler {
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(
           putSmallFileReq.getChunkInfo());
       Preconditions.checkNotNull(chunkInfo);
-
       byte[] data = putSmallFileReq.getData().toByteArray();
+      // chunks will be committed as a part of handling putSmallFile
+      // here. There is no need to maintain this info in openContainerBlockMap.
       chunkManager.writeChunk(
           kvContainer, blockID, chunkInfo, data, Stage.COMBINED);
 
