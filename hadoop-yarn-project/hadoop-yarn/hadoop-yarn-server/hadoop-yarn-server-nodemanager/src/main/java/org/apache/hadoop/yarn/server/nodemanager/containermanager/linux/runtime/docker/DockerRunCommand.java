@@ -65,19 +65,15 @@ public class DockerRunCommand extends DockerCommand {
   }
 
   public DockerRunCommand addMountLocation(String sourcePath, String
-      destinationPath, boolean createSource) {
-    boolean sourceExists = new File(sourcePath).exists();
-    if (!sourceExists && !createSource) {
-      return this;
-    }
-    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
+      destinationPath, String mode) {
+    super.addCommandArguments("mounts", sourcePath + ":" +
+        destinationPath + ":" + mode);
     return this;
   }
 
   public DockerRunCommand addReadWriteMountLocation(String sourcePath, String
       destinationPath) {
-    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addMountLocation(sourcePath, destinationPath, "rw");
   }
 
   public DockerRunCommand addAllReadWriteMountLocations(List<String> paths) {
@@ -93,14 +89,12 @@ public class DockerRunCommand extends DockerCommand {
     if (!sourceExists && !createSource) {
       return this;
     }
-    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addReadOnlyMountLocation(sourcePath, destinationPath);
   }
 
   public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
       destinationPath) {
-    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
-    return this;
+    return addMountLocation(sourcePath, destinationPath, "ro");
   }
 
   public DockerRunCommand addAllReadOnlyMountLocations(List<String> paths) {
