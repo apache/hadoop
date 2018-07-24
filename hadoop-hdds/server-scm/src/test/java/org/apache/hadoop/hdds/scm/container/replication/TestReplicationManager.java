@@ -73,7 +73,12 @@ public class TestReplicationManager {
   @Before
   public void initReplicationManager() throws IOException {
 
-    listOfDatanodeDetails = TestUtils.getListOfDatanodeDetails(5);
+    listOfDatanodeDetails = new ArrayList<>();
+    listOfDatanodeDetails.add(TestUtils.randomDatanodeDetails());
+    listOfDatanodeDetails.add(TestUtils.randomDatanodeDetails());
+    listOfDatanodeDetails.add(TestUtils.randomDatanodeDetails());
+    listOfDatanodeDetails.add(TestUtils.randomDatanodeDetails());
+    listOfDatanodeDetails.add(TestUtils.randomDatanodeDetails());
 
     containerPlacementPolicy =
         (excludedNodes, nodesRequired, sizeRequired) -> listOfDatanodeDetails

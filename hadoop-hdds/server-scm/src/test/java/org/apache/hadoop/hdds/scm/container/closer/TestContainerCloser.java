@@ -219,7 +219,7 @@ public class TestContainerCloser {
         .setWriteBytes(2000000000L)
         .setDeleteTransactionId(0);
     reports.addReports(ciBuilder);
-    mapping.processContainerReports(TestUtils.getDatanodeDetails(),
+    mapping.processContainerReports(TestUtils.randomDatanodeDetails(),
         reports.build());
   }
 }

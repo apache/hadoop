@@ -43,7 +43,7 @@ public class TestSCMContainerPlacementRandom {
 
     List<DatanodeDetails> datanodes = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      datanodes.add(TestUtils.getDatanodeDetails());
+      datanodes.add(TestUtils.randomDatanodeDetails());
     }
 
     NodeManager mockNodeManager = Mockito.mock(NodeManager.class);

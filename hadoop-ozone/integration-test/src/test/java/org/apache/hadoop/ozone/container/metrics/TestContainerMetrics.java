@@ -72,7 +72,7 @@ public class TestContainerMetrics {
       conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
           interval);
 
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, path);
       VolumeSet volumeSet = new VolumeSet(
           datanodeDetails.getUuidString(), conf);

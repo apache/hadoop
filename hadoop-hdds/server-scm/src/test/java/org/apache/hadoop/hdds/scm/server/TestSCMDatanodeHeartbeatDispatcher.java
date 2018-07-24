@@ -75,7 +75,7 @@ public class TestSCMDatanodeHeartbeatDispatcher {
           }
         });
 
-    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
 
     SCMHeartbeatRequestProto heartbeat =
         SCMHeartbeatRequestProto.newBuilder()
@@ -121,7 +121,7 @@ public class TestSCMDatanodeHeartbeatDispatcher {
           }
         });
 
-    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
 
     SCMHeartbeatRequestProto heartbeat =
         SCMHeartbeatRequestProto.newBuilder()

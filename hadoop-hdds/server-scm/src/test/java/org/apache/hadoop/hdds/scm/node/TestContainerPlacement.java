@@ -142,10 +142,6 @@ public class TestContainerPlacement {
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
-        String id = UUID.randomUUID().toString();
-        String path = testDir.getAbsolutePath() + "/" + id;
-        List<StorageReportProto> reports = TestUtils
-            .createStorageReport(capacity, used, remaining, path, null, id, 1);
         nodeManager.processHeartbeat(datanodeDetails);
       }
 

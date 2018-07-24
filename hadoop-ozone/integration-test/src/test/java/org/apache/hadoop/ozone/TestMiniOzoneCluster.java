@@ -109,9 +109,9 @@ public class TestMiniOzoneCluster {
   @Test
   public void testDatanodeIDPersistent() throws Exception {
     // Generate IDs for testing
-    DatanodeDetails id1 = TestUtils.getDatanodeDetails();
-    DatanodeDetails id2 = TestUtils.getDatanodeDetails();
-    DatanodeDetails id3 = TestUtils.getDatanodeDetails();
+    DatanodeDetails id1 = TestUtils.randomDatanodeDetails();
+    DatanodeDetails id2 = TestUtils.randomDatanodeDetails();
+    DatanodeDetails id3 = TestUtils.randomDatanodeDetails();
     id1.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 1));
     id2.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 2));
     id3.setPort(DatanodeDetails.newPort(Port.Name.STANDALONE, 3));
@@ -162,11 +162,11 @@ public class TestMiniOzoneCluster {
         true);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf);
+            TestUtils.randomDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf);
+            TestUtils.randomDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf)
+            TestUtils.randomDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
@@ -185,11 +185,11 @@ public class TestMiniOzoneCluster {
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf);
+            TestUtils.randomDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf);
+            TestUtils.randomDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            TestUtils.getDatanodeDetails(), ozoneConf)
+            TestUtils.randomDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
@@ -204,7 +204,7 @@ public class TestMiniOzoneCluster {
   private void createMalformedIDFile(File malformedFile)
       throws IOException{
     malformedFile.delete();
-    DatanodeDetails id = TestUtils.getDatanodeDetails();
+    DatanodeDetails id = TestUtils.randomDatanodeDetails();
     ContainerUtils.writeDatanodeDetailsTo(id, malformedFile);
 
     FileOutputStream out = new FileOutputStream(malformedFile);

@@ -64,7 +64,7 @@ public class TestOzoneContainer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
-      container = new OzoneContainer(TestUtils.getDatanodeDetails(),
+      container = new OzoneContainer(TestUtils.randomDatanodeDetails(),
           conf);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());

@@ -192,7 +192,7 @@ public class TestContainerMapping {
   @Test
   public void testFullContainerReport() throws IOException {
     ContainerInfo info = createContainer();
-    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
@@ -226,7 +226,7 @@ public class TestContainerMapping {
   @Test
   public void testContainerCloseWithContainerReport() throws IOException {
     ContainerInfo info = createContainer();
-    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         new ArrayList<>();
 

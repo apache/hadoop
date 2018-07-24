@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.scm.TestUtils.getDatanodeDetails;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
@@ -80,7 +80,7 @@ public class MockNodeManager implements NodeManager {
     aggregateStat = new SCMNodeStat();
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
-        DatanodeDetails dd = getDatanodeDetails();
+        DatanodeDetails dd = TestUtils.randomDatanodeDetails();
         populateNodeMetric(dd, x);
       }
     }

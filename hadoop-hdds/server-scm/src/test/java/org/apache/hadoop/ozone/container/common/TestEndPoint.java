@@ -16,15 +16,13 @@
  */
 package org.apache.hadoop.ozone.container.common;
 
+import java.util.List;
 import java.util.Map;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
 import org.apache.hadoop.hdds.protocol.proto.
@@ -44,8 +42,6 @@ import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -57,8 +53,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -84,10 +78,8 @@ import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.scm.TestUtils.getDatanodeDetails;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.ozone.container.common.ContainerTestUtils
@@ -159,7 +151,7 @@ public class TestEndPoint {
     OzoneConfiguration conf = SCMTestUtils.getConf();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, 1000)) {
-      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
+      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
           conf);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
@@ -183,8 +175,8 @@ public class TestEndPoint {
         serverAddress, 1000)) {
       GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
           .captureLogs(VersionEndpointTask.LOG);
-      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
-          conf);
+      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils
+          .randomDatanodeDetails(), conf);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -235,7 +227,7 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         nonExistentServerAddress, 1000)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
+      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
           conf);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -262,7 +254,7 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, (int) rpcTimeout)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      OzoneContainer ozoneContainer = new OzoneContainer(getDatanodeDetails(),
+      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
           conf);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -280,14 +272,14 @@ public class TestEndPoint {
 
   @Test
   public void testRegister() throws Exception {
-    DatanodeDetails nodeToRegister = getDatanodeDetails();
+    DatanodeDetails nodeToRegister = TestUtils.randomDatanodeDetails();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(
         SCMTestUtils.getConf(), serverAddress, 1000)) {
       SCMRegisteredResponseProto responseProto = rpcEndPoint.getEndPoint()
           .register(nodeToRegister.getProtoBufMessage(), TestUtils
                   .createNodeReport(
-                      getStorageReports(nodeToRegister.getUuidString())),
-              createContainerReport(10, nodeToRegister));
+                      getStorageReports(nodeToRegister.getUuid())),
+              TestUtils.getRandomContainerReports(10));
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(nodeToRegister.getUuidString(),
           responseProto.getDatanodeUUID());
@@ -298,9 +290,9 @@ public class TestEndPoint {
     }
   }
 
-  private List<StorageReportProto> getStorageReports(String id) {
+  private StorageReportProto getStorageReports(UUID id) {
     String storagePath = testDir.getAbsolutePath() + "/" + id;
-    return TestUtils.createStorageReport(100, 10, 90, storagePath, null, id, 1);
+    return TestUtils.createStorageReport(id, storagePath, 100, 10, 90, null);
   }
 
   private EndpointStateMachine registerTaskHelper(InetSocketAddress scmAddress,
@@ -312,13 +304,13 @@ public class TestEndPoint {
     rpcEndPoint.setState(EndpointStateMachine.EndPointStates.REGISTER);
     OzoneContainer ozoneContainer = mock(OzoneContainer.class);
     when(ozoneContainer.getNodeReport()).thenReturn(TestUtils
-        .createNodeReport(getStorageReports(UUID.randomUUID().toString())));
+        .createNodeReport(getStorageReports(UUID.randomUUID())));
     when(ozoneContainer.getContainerReport()).thenReturn(
-        createContainerReport(10, null));
+        TestUtils.getRandomContainerReports(10));
     RegisterEndpointTask endpointTask =
         new RegisterEndpointTask(rpcEndPoint, conf, ozoneContainer);
     if (!clearDatanodeDetails) {
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       endpointTask.setDatanodeDetails(datanodeDetails);
     }
     endpointTask.call();
@@ -371,15 +363,14 @@ public class TestEndPoint {
 
   @Test
   public void testHeartbeat() throws Exception {
-    DatanodeDetails dataNode = getDatanodeDetails();
+    DatanodeDetails dataNode = TestUtils.randomDatanodeDetails();
     try (EndpointStateMachine rpcEndPoint =
              createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
-      String storageId = UUID.randomUUID().toString();
       SCMHeartbeatRequestProto request = SCMHeartbeatRequestProto.newBuilder()
           .setDatanodeDetails(dataNode.getProtoBufMessage())
           .setNodeReport(TestUtils.createNodeReport(
-              getStorageReports(storageId)))
+              getStorageReports(UUID.randomUUID())))
           .build();
 
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
@@ -391,11 +382,10 @@ public class TestEndPoint {
 
   @Test
   public void testHeartbeatWithCommandStatusReport() throws Exception {
-    DatanodeDetails dataNode = getDatanodeDetails();
+    DatanodeDetails dataNode = TestUtils.randomDatanodeDetails();
     try (EndpointStateMachine rpcEndPoint =
         createEndpoint(SCMTestUtils.getConf(),
             serverAddress, 1000)) {
-      String storageId = UUID.randomUUID().toString();
       // Add some scmCommands for heartbeat response
       addScmCommands();
 
@@ -403,7 +393,7 @@ public class TestEndPoint {
       SCMHeartbeatRequestProto request = SCMHeartbeatRequestProto.newBuilder()
           .setDatanodeDetails(dataNode.getProtoBufMessage())
           .setNodeReport(TestUtils.createNodeReport(
-              getStorageReports(storageId)))
+              getStorageReports(UUID.randomUUID())))
           .build();
 
       SCMHeartbeatResponseProto responseProto = rpcEndPoint.getEndPoint()
@@ -482,11 +472,11 @@ public class TestEndPoint {
 
     // Create a datanode state machine for stateConext used by endpoint task
     try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-        TestUtils.getDatanodeDetails(), conf);
-        EndpointStateMachine rpcEndPoint =
+        TestUtils.randomDatanodeDetails(), conf);
+         EndpointStateMachine rpcEndPoint =
             createEndpoint(conf, scmAddress, rpcTimeout)) {
       HddsProtos.DatanodeDetailsProto datanodeDetailsProto =
-          getDatanodeDetails().getProtoBufMessage();
+          TestUtils.randomDatanodeDetails().getProtoBufMessage();
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
 
       final StateContext stateContext =
@@ -528,28 +518,6 @@ public class TestEndPoint {
     scmServerImpl.setRpcResponseDelay(0);
     Assert.assertThat(end - start,
         lessThanOrEqualTo(rpcTimeout + tolerance));
-  }
-
-  private ContainerReportsProto createContainerReport(
-      int count, DatanodeDetails datanodeDetails) {
-    StorageContainerDatanodeProtocolProtos.ContainerReportsProto.Builder
-        reportsBuilder = StorageContainerDatanodeProtocolProtos
-        .ContainerReportsProto.newBuilder();
-    for (int x = 0; x < count; x++) {
-      long containerID = RandomUtils.nextLong();
-      ContainerReport report = new ContainerReport(containerID,
-            DigestUtils.sha256Hex("Simulated"));
-      report.setKeyCount(1000);
-      report.setSize(OzoneConsts.GB * 5);
-      report.setBytesUsed(OzoneConsts.GB * 2);
-      report.setReadCount(100);
-      report.setReadBytes(OzoneConsts.GB * 1);
-      report.setWriteCount(50);
-      report.setWriteBytes(OzoneConsts.GB * 2);
-
-      reportsBuilder.addReports(report.getProtoBufMessage());
-    }
-    return reportsBuilder.build();
   }
 
 }

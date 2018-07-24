@@ -44,7 +44,7 @@ public class TestSCMContainerPlacementCapacity {
 
     List<DatanodeDetails> datanodes = new ArrayList<>();
     for (int i = 0; i < 7; i++) {
-      datanodes.add(TestUtils.getDatanodeDetails());
+      datanodes.add(TestUtils.randomDatanodeDetails());
     }
 
     NodeManager mockNodeManager = Mockito.mock(NodeManager.class);
