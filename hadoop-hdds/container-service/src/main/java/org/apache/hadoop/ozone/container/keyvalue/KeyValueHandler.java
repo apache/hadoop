@@ -136,7 +136,7 @@ public class KeyValueHandler extends Handler {
             TimeUnit.MILLISECONDS);
     this.blockDeletingService =
         new BlockDeletingService(containerSet, svcInterval, serviceTimeout,
-            config);
+            TimeUnit.MILLISECONDS, config);
     blockDeletingService.start();
     // TODO: Add supoort for different volumeChoosingPolicies.
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
