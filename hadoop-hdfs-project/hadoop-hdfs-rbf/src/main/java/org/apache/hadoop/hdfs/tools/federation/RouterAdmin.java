@@ -632,8 +632,8 @@ public class RouterAdmin extends Configured implements Tool {
    * @throws IOException Error clearing the mount point.
    */
   private boolean clrQuota(String mount) throws IOException {
-    return updateQuota(mount, HdfsConstants.QUOTA_DONT_SET,
-        HdfsConstants.QUOTA_DONT_SET);
+    return updateQuota(mount, HdfsConstants.QUOTA_RESET,
+        HdfsConstants.QUOTA_RESET);
   }
 
   /**
@@ -668,8 +668,8 @@ public class RouterAdmin extends Configured implements Tool {
       long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
       long ssCount = existingEntry.getQuota().getSpaceConsumed();
       // If nsQuota and ssQuota were unset, clear nsQuota and ssQuota.
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET &&
-          ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+      if (nsQuota == HdfsConstants.QUOTA_RESET &&
+          ssQuota == HdfsConstants.QUOTA_RESET) {
         nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
         ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
       } else {

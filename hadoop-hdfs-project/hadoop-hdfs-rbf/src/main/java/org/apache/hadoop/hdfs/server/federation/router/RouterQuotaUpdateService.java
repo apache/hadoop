@@ -111,7 +111,7 @@ public class RouterQuotaUpdateService extends PeriodicService {
 
         // If quota is not set in some subclusters under federation path,
         // set quota for this path.
-        if (currentQuotaUsage.getQuota() == HdfsConstants.QUOTA_DONT_SET) {
+        if (currentQuotaUsage.getQuota() == HdfsConstants.QUOTA_RESET) {
           try {
             this.rpcServer.setQuota(src, nsQuota, ssQuota, null);
           } catch (IOException ioe) {

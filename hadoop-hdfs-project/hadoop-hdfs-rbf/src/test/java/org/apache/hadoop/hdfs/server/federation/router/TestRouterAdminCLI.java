@@ -116,6 +116,14 @@ public class TestRouterAdminCLI {
         Mockito.anyLong(), Mockito.anyLong(), (StorageType) Mockito.any());
     Whitebox.setInternalState(
         routerContext.getRouter().getRpcServer(), "quotaCall", quota);
+
+    RouterRpcServer spyRpcServer =
+        Mockito.spy(routerContext.getRouter().createRpcServer());
+    Whitebox
+        .setInternalState(routerContext.getRouter(), "rpcServer", spyRpcServer);
+
+    Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
+
   }
 
   @AfterClass
@@ -448,10 +456,10 @@ public class TestRouterAdminCLI {
     // verify the default quota set
     assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
         quotaUsage.getFileAndDirectoryCount());
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
     assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
         quotaUsage.getSpaceConsumed());
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getSpaceQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
 
     long nsQuota = 50;
     long ssQuota = 100;
@@ -495,8 +503,8 @@ public class TestRouterAdminCLI {
     quotaUsage = mountTable.getQuota();
 
     // verify if quota unset successfully
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getQuota());
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getSpaceQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
   }
 
   @Test
