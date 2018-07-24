@@ -1095,118 +1095,155 @@ static char* get_mount_source(const char *mount) {
   return strndup(mount, len);
 }
 
-static int add_mounts(const struct configuration *command_config, const struct configuration *conf, const char *key,
-                      const int ro, args *args) {
-  const char *ro_suffix = "";
+static char* get_mount_type(const char *mount) {
+  const char *tmp = strrchr(mount, ':');
+  if (tmp == NULL) {
+    fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
+    return NULL;
+  }
+  if (strlen(tmp) < 2) {
+    fprintf(ERRORFILE, "Invalid docker mount '%s'\n", mount);
+    return NULL;
+  }
+  char *mount_type = strdup(&tmp[1]);
+  if (strncmp("ro", mount_type, 2) != 0 &&
+      strncmp("rw", mount_type, 2) != 0) {
+    fprintf(ERRORFILE, "Invalid docker mount type '%s'\n", mount_type);
+    free(mount_type);
+    return NULL;
+  }
+  if (strlen(mount_type) > 2) {
+    if (strlen(mount_type) < 8 ||
+        (strcmp("shared", mount_type + 3) != 0 &&
+        strcmp("rshared", mount_type + 3) != 0 &&
+        strcmp("slave", mount_type + 3) != 0 &&
+        strcmp("rslave", mount_type + 3) != 0 &&
+        strcmp("private", mount_type + 3) != 0 &&
+        strcmp("rprivate", mount_type + 3) != 0)) {
+      fprintf(ERRORFILE, "Invalid docker mount type '%s'\n", mount_type);
+      free(mount_type);
+      return NULL;
+    }
+    mount_type[2] = ',';
+  }
+  return mount_type;
+}
+
+static int add_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
   const char *tmp_path_buffer[2] = {NULL, NULL};
   char *mount_src = NULL;
+  char *mount_type = NULL;
   char **permitted_ro_mounts = get_configuration_values_delimiter("docker.allowed.ro-mounts",
                                                                   CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char **permitted_rw_mounts = get_configuration_values_delimiter("docker.allowed.rw-mounts",
                                                                   CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
-  char **values = get_configuration_values_delimiter(key, DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  char **values = get_configuration_values_delimiter("mounts", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
   char *config_path = get_config_path("");
   const char *container_executor_cfg_path = normalize_mount(config_path, 0);
   free(config_path);
   int i = 0, permitted_rw = 0, permitted_ro = 0, ret = 0;
-  if (ro != 0) {
-    ro_suffix = ":ro";
+  if (values == NULL) {
+    goto free_and_exit;
   }
-  if (values != NULL) {
-    // Disable mount volumes if image is not trusted.
-    if (check_trusted_image(command_config, conf) != 0) {
-      fprintf(ERRORFILE, "Disable mount volume for untrusted image\n");
-      // YARN will implicitly bind node manager local directory to
-      // docker image.  This can create file system security holes,
-      // if docker container has binary to escalate privileges.
-      // For untrusted image, we drop mounting without reporting
-      // INVALID_DOCKER_MOUNT messages to allow running untrusted
-      // image in a sandbox.
-      ret = 0;
+  // Disable mount volumes if image is not trusted.
+  if (check_trusted_image(command_config, conf) != 0) {
+    fprintf(ERRORFILE, "Disable mount volume for untrusted image\n");
+    // YARN will implicitly bind node manager local directory to
+    // docker image.  This can create file system security holes,
+    // if docker container has binary to escalate privileges.
+    // For untrusted image, we drop mounting without reporting
+    // INVALID_DOCKER_MOUNT messages to allow running untrusted
+    // image in a sandbox.
+    ret = 0;
+    goto free_and_exit;
+  }
+  ret = normalize_mounts(permitted_ro_mounts, 1);
+  ret |= normalize_mounts(permitted_rw_mounts, 1);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Unable to find permitted docker mounts on disk\n");
+    ret = MOUNT_ACCESS_ERROR;
+    goto free_and_exit;
+  }
+  for (i = 0; values[i] != NULL; i++) {
+    mount_src = get_mount_source(values[i]);
+    if (mount_src == NULL) {
+      fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
+      ret = INVALID_DOCKER_MOUNT;
       goto free_and_exit;
     }
-    ret = normalize_mounts(permitted_ro_mounts, 1);
-    ret |= normalize_mounts(permitted_rw_mounts, 1);
-    if (ret != 0) {
-      fprintf(ERRORFILE, "Unable to find permitted docker mounts on disk\n");
-      ret = MOUNT_ACCESS_ERROR;
+    mount_type = get_mount_type(values[i]);
+    if (mount_type == NULL) {
+      fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
+      ret = INVALID_DOCKER_MOUNT;
       goto free_and_exit;
     }
-    for (i = 0; values[i] != NULL; i++) {
-      mount_src = get_mount_source(values[i]);
-      if (mount_src == NULL) {
-        fprintf(ERRORFILE, "Invalid docker mount '%s'\n", values[i]);
-        ret = INVALID_DOCKER_MOUNT;
-        goto free_and_exit;
-      }
-      permitted_rw = check_mount_permitted((const char **) permitted_rw_mounts, mount_src);
-      permitted_ro = check_mount_permitted((const char **) permitted_ro_mounts, mount_src);
-      if (permitted_ro == -1 || permitted_rw == -1) {
-        fprintf(ERRORFILE, "Invalid docker mount '%s', realpath=%s\n", values[i], mount_src);
-        ret = INVALID_DOCKER_MOUNT;
-        goto free_and_exit;
-      }
+    permitted_rw = check_mount_permitted((const char **) permitted_rw_mounts, mount_src);
+    permitted_ro = check_mount_permitted((const char **) permitted_ro_mounts, mount_src);
+    if (permitted_ro == -1 || permitted_rw == -1) {
+      fprintf(ERRORFILE, "Invalid docker mount '%s', realpath=%s\n", values[i], mount_src);
+      ret = INVALID_DOCKER_MOUNT;
+      goto free_and_exit;
+    }
+    if (strncmp("rw", mount_type, 2) == 0) {
       // rw mount
-      if (ro == 0) {
-        if (permitted_rw == 0) {
-          fprintf(ERRORFILE, "Invalid docker rw mount '%s', realpath=%s\n", values[i], mount_src);
+      if (permitted_rw == 0) {
+        fprintf(ERRORFILE, "Invalid docker rw mount '%s', realpath=%s\n", values[i], mount_src);
+        ret = INVALID_DOCKER_RW_MOUNT;
+        goto free_and_exit;
+      } else {
+        // determine if the user can modify the container-executor.cfg file
+        tmp_path_buffer[0] = normalize_mount(mount_src, 0);
+        // just re-use the function, flip the args to check if the container-executor path is in the requested
+        // mount point
+        ret = check_mount_permitted(tmp_path_buffer, container_executor_cfg_path);
+        free((void *) tmp_path_buffer[0]);
+        if (ret == 1) {
+          fprintf(ERRORFILE, "Attempting to mount a parent directory '%s' of container-executor.cfg as read-write\n",
+                  values[i]);
           ret = INVALID_DOCKER_RW_MOUNT;
           goto free_and_exit;
-        } else {
-          // determine if the user can modify the container-executor.cfg file
-          tmp_path_buffer[0] = normalize_mount(mount_src, 0);
-          // just re-use the function, flip the args to check if the container-executor path is in the requested
-          // mount point
-          ret = check_mount_permitted(tmp_path_buffer, container_executor_cfg_path);
-          free((void *) tmp_path_buffer[0]);
-          if (ret == 1) {
-            fprintf(ERRORFILE, "Attempting to mount a parent directory '%s' of container-executor.cfg as read-write\n",
-                    values[i]);
-            ret = INVALID_DOCKER_RW_MOUNT;
-            goto free_and_exit;
-          }
         }
       }
-      //ro mount
-      if (ro != 0 && permitted_ro == 0 && permitted_rw == 0) {
+    } else {
+      // ro mount
+      if (permitted_ro == 0 && permitted_rw == 0) {
         fprintf(ERRORFILE, "Invalid docker ro mount '%s', realpath=%s\n", values[i], mount_src);
         ret = INVALID_DOCKER_RO_MOUNT;
         goto free_and_exit;
       }
-
-      ret = add_to_args(args, "-v");
-      if (ret != 0) {
-        ret = BUFFER_TOO_SMALL;
-        goto free_and_exit;
-      }
-
-      char *tmp_buffer = make_string("%s%s", values[i], (char *) ro_suffix);
-      ret = add_to_args(args, tmp_buffer);
-      free(tmp_buffer);
-      if (ret != 0) {
-        ret = BUFFER_TOO_SMALL;
-        goto free_and_exit;
-      }
-      free(mount_src);
-      mount_src = NULL;
     }
+
+    if (strlen(mount_type) > 2) {
+      // overwrite separator between read mode and propagation option with ','
+      int mount_type_index = strlen(values[i]) - strlen(mount_type);
+      values[i][mount_type_index + 2] = ',';
+    }
+
+    ret = add_to_args(args, "-v");
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+      goto free_and_exit;
+    }
+
+    ret = add_to_args(args, values[i]);
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+      goto free_and_exit;
+    }
+    free(mount_src);
+    free(mount_type);
+    mount_src = NULL;
+    mount_type = NULL;
   }
 
 free_and_exit:
   free(mount_src);
+  free(mount_type);
   free_values(permitted_ro_mounts);
   free_values(permitted_rw_mounts);
   free_values(values);
   free((void *) container_executor_cfg_path);
   return ret;
-}
-
-static int add_ro_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
-  return add_mounts(command_config, conf, "ro-mounts", 1, args);
-}
-
-static int  add_rw_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
-  return add_mounts(command_config, conf, "rw-mounts", 0, args);
 }
 
 static int check_privileges(const char *user) {
@@ -1427,12 +1464,7 @@ int get_docker_run_command(const char *command_file, const struct configuration 
     goto free_and_exit;
   }
 
-  ret = add_ro_mounts(&command_config, conf, args);
-  if (ret != 0) {
-    goto free_and_exit;
-  }
-
-  ret = add_rw_mounts(&command_config, conf, args);
+  ret = add_mounts(&command_config, conf, args);
   if (ret != 0) {
     goto free_and_exit;
   }
