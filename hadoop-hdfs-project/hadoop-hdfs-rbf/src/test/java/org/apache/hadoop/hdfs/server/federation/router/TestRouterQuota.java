@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -460,8 +461,10 @@ public class TestRouterQuota {
   public void testQuotaSynchronization() throws IOException {
     long updateNsQuota = 3;
     long updateSsQuota = 4;
+    FileSystem nnFs = nnContext1.getFileSystem();
+    nnFs.mkdirs(new Path("/testsync"));
     MountTable mountTable = MountTable.newInstance("/quotaSync",
-        Collections.singletonMap("ns0", "/"), Time.now(), Time.now());
+        Collections.singletonMap("ns0", "/testsync"), Time.now(), Time.now());
     mountTable.setQuota(new RouterQuotaUsage.Builder().quota(1)
         .spaceQuota(2).build());
     // Add new mount table
@@ -469,7 +472,7 @@ public class TestRouterQuota {
 
     // ensure the quota is not set as updated value
     QuotaUsage realQuota = nnContext1.getFileSystem()
-        .getQuotaUsage(new Path("/"));
+        .getQuotaUsage(new Path("/testsync"));
     assertNotEquals(updateNsQuota, realQuota.getQuota());
     assertNotEquals(updateSsQuota, realQuota.getSpaceQuota());
 
@@ -489,9 +492,26 @@ public class TestRouterQuota {
 
     // verify if the quota is updated in real path
     realQuota = nnContext1.getFileSystem().getQuotaUsage(
-        new Path("/"));
+        new Path("/testsync"));
     assertEquals(updateNsQuota, realQuota.getQuota());
     assertEquals(updateSsQuota, realQuota.getSpaceQuota());
+
+    // Clear the quota
+    mountTable.setQuota(new RouterQuotaUsage.Builder()
+        .quota(HdfsConstants.QUOTA_RESET)
+        .spaceQuota(HdfsConstants.QUOTA_RESET).build());
+
+    updateRequest = UpdateMountTableEntryRequest
+        .newInstance(mountTable);
+    client = routerContext.getAdminClient();
+    mountTableManager = client.getMountTableManager();
+    mountTableManager.updateMountTableEntry(updateRequest);
+
+    // verify if the quota is updated in real path
+    realQuota = nnContext1.getFileSystem().getQuotaUsage(
+        new Path("/testsync"));
+    assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getSpaceQuota());
   }
 
   @Test

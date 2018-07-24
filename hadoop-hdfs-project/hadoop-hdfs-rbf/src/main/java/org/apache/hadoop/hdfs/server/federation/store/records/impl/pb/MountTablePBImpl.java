@@ -257,9 +257,9 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
   public RouterQuotaUsage getQuota() {
     MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
 
-    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    long nsQuota = HdfsConstants.QUOTA_RESET;
     long nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
-    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
+    long ssQuota = HdfsConstants.QUOTA_RESET;
     long ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
     if (proto.hasQuota()) {
       QuotaUsageProto quotaProto = proto.getQuota();
