@@ -155,8 +155,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
 
     } else {
-      throw new IllegalArgumentException(
-          "No event handler registered for event " + event);
+      LOG.warn("No event handler registered for event " + event);
     }
 
   }

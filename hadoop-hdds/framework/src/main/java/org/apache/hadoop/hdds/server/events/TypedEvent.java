@@ -50,7 +50,9 @@ public class TypedEvent<T> implements Event<T> {
 
   @Override
   public String toString() {
-    return "TypedEvent{" + "payloadType=" + payloadType + ", name='" + name
-        + '\'' + '}';
+    return "TypedEvent{" +
+        "payloadType=" + payloadType.getSimpleName() +
+        ", name='" + name + '\'' +
+        '}';
   }
 }

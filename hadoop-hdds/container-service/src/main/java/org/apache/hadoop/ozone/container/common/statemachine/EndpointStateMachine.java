@@ -203,11 +203,11 @@ public class EndpointStateMachine
     this.incMissed();
     if (this.getMissedCount() % getLogWarnInterval(conf) ==
         0) {
-      LOG.warn("Unable to communicate to SCM server at {}. We have not been " +
+      LOG.error("Unable to communicate to SCM server at {}. We have not been " +
               "able to communicate to this SCM server for past {} seconds.",
           this.getAddress().getHostString() + ":" + this.getAddress().getPort(),
           this.getMissedCount() * getScmHeartbeatInterval(
-              this.conf));
+              this.conf), ex);
     }
   }
 
