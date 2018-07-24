@@ -364,17 +364,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       ApplicationSubmissionContext submissionContext, long submitTime,
       String user, boolean isRecovery, long startTime) throws YarnException {
 
-    ApplicationPlacementContext placementContext = null;
-    try {
-      placementContext = placeApplication(rmContext, submissionContext, user);
-    } catch (YarnException e) {
-      String msg =
-          "Failed to place application " + submissionContext.getApplicationId()
-              + " to queue and specified " + "queue is invalid : "
-              + submissionContext.getQueue();
-      LOG.error(msg, e);
-      throw e;
-    }
+    ApplicationPlacementContext placementContext =
+        placeApplication(rmContext.getQueuePlacementManager(),
+            submissionContext, user, isRecovery);
 
     // We only replace the queue when it's a new application
     if (!isRecovery) {
@@ -789,23 +781,31 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   }
 
   @VisibleForTesting
-  ApplicationPlacementContext placeApplication(RMContext rmContext,
-      ApplicationSubmissionContext context, String user) throws YarnException {
+  ApplicationPlacementContext placeApplication(
+      PlacementManager placementManager, ApplicationSubmissionContext context,
+      String user, boolean isRecovery) throws YarnException {
     ApplicationPlacementContext placementContext = null;
-    PlacementManager placementManager = rmContext.getQueuePlacementManager();
-
     if (placementManager != null) {
-      placementContext = placementManager.placeApplication(context, user);
-    } else{
-      if ( context.getQueue() == null || context.getQueue().isEmpty()) {
-        final String msg = "Queue Placement Manager is not set. Cannot place "
-            + "application : " + context.getApplicationId() + " to queue and "
-            + "specified queue is invalid " + context.getQueue();
-        LOG.error(msg);
-        throw new YarnException(msg);
+      try {
+        placementContext = placementManager.placeApplication(context, user);
+      } catch (YarnException e) {
+        // Placement could also fail if the user doesn't exist in system
+        // skip if the user is not found during recovery.
+        if (isRecovery) {
+          LOG.warn("PlaceApplication failed,skipping on recovery of rm");
+          return placementContext;
+        }
+        throw e;
       }
     }
-
+    if (placementContext == null && (context.getQueue() == null) || context
+        .getQueue().isEmpty()) {
+      String msg = "Failed to place application " + context.getApplicationId()
+          + " to queue and specified " + "queue is invalid : " + context
+          .getQueue();
+      LOG.error(msg);
+      throw new YarnException(msg);
+    }
     return placementContext;
   }
 
