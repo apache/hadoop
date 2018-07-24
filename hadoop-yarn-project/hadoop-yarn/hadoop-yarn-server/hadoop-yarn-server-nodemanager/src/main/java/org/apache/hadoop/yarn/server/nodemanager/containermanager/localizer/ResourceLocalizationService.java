@@ -406,7 +406,7 @@ public class ResourceLocalizationService extends CompositeService
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      server.refreshServiceAcl(conf, new NMPolicyProvider());
+      server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
     }
     
     return server;

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocolPB;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocolPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocolPB;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocolPB;
 import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 
@@ -67,6 +68,8 @@ public class RMPolicyProvider extends PolicyProvider {
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL, 
         ApplicationMasterProtocolPB.class),
+    new Service(YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_DISTRIBUTEDSCHEDULING_PROTOCOL,
+              DistributedSchedulingAMProtocolPB.class),
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCEMANAGER_ADMINISTRATION_PROTOCOL, 
         ResourceManagerAdministrationProtocolPB.class),

@@ -2248,6 +2248,9 @@ public class YarnConfiguration extends Configuration {
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL =
       "security.applicationmaster.protocol.acl";
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_DISTRIBUTEDSCHEDULING_PROTOCOL =
+      "security.distributedscheduling.protocol.acl";
 
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL =
@@ -2263,6 +2266,10 @@ public class YarnConfiguration extends Configuration {
   public static final String
       YARN_SECURITY_SERVICE_AUTHORIZATION_COLLECTOR_NODEMANAGER_PROTOCOL =
       "security.collector-nodemanager.protocol.acl";
+
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_NODEMANAGER_PROTOCOL =
+      "security.applicationmaster-nodemanager.applicationmaster.protocol.acl";
 
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
