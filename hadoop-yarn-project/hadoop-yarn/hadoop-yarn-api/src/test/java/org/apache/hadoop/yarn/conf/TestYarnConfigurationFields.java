@@ -68,6 +68,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
             .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL);
     configurationPropsToSkipCompare.add(YarnConfiguration
         .YARN_SECURITY_SERVICE_AUTHORIZATION_COLLECTOR_NODEMANAGER_PROTOCOL);
+    configurationPropsToSkipCompare.add(YarnConfiguration
+        .YARN_SECURITY_SERVICE_AUTHORIZATION_DISTRIBUTEDSCHEDULING_PROTOCOL);
+    configurationPropsToSkipCompare.add(YarnConfiguration
+        .YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_NODEMANAGER_PROTOCOL);
     configurationPropsToSkipCompare.add(YarnConfiguration.CURATOR_LEADER_ELECTOR);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.RM_RESERVATION_SYSTEM_MAX_PERIODICITY);

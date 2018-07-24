@@ -70,6 +70,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.scheduler.DistributedScheduler;
+import org.apache.hadoop.yarn.server.nodemanager.security.authorize
+    .NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
@@ -168,6 +170,12 @@ public class AMRMProxyService extends CompositeService implements
         rpc.getServer(ApplicationMasterProtocol.class, this,
             listenerEndpoint, serverConf, this.secretManager,
             numWorkerThreads);
+
+    if (conf
+        .getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+            false)) {
+        this.server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
+    }
 
     this.server.start();
     LOG.info("AMRMProxyService listening on address: "

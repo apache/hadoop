@@ -610,7 +610,7 @@ public class ContainerManagerImpl extends CompositeService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(conf, new NMPolicyProvider());
+      refreshServiceAcls(conf, NMPolicyProvider.getInstance());
     }
     
     String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
