@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -58,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -740,11 +740,14 @@ public class TestContainerResizing {
   @Test
   public void testIncreaseContainerUnreservedWhenApplicationCompleted()
       throws Exception {
+    // Disable relaunch app attempt on failure, in order to check
+    // resource usages for current app only.
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     /**
      * Similar to testIncreaseContainerUnreservedWhenContainerCompleted, when
      * application finishes, reserved increase container should be cancelled
      */
-    MockRM rm1 = new MockRM() {
+    MockRM rm1 = new MockRM(conf) {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
@@ -807,9 +810,14 @@ public class TestContainerResizing {
     Assert.assertEquals(6 * GB,
         app.getAppAttemptResourceUsage().getReserved().getMemorySize());
 
-    // Kill the application
-    cs.handle(new AppAttemptRemovedSchedulerEvent(am1.getApplicationAttemptId(),
-        RMAppAttemptState.KILLED, false));
+    // Kill the application by killing the AM container
+    ContainerId amContainer =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
+    cs.killContainer(cs.getRMContainer(amContainer));
+    rm1.waitForState(am1.getApplicationAttemptId(),
+        RMAppAttemptState.FAILED);
+    rm1.waitForState(am1.getApplicationAttemptId().getApplicationId(),
+        RMAppState.FAILED);
 
     /* Check statuses after reservation satisfied */
     // Increase request should be unreserved
