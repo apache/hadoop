@@ -161,8 +161,8 @@ public class RouterQuotaManager {
       long ssQuota = quota.getSpaceQuota();
 
       // once nsQuota or ssQuota was set, this mount table is quota set
-      if (nsQuota != HdfsConstants.QUOTA_DONT_SET
-          || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
+      if (nsQuota != HdfsConstants.QUOTA_RESET
+          || ssQuota != HdfsConstants.QUOTA_RESET) {
         return true;
       }
     }

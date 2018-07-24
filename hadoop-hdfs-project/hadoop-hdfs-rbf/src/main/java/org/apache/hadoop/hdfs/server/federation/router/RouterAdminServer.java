@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
@@ -253,8 +254,11 @@ public class RouterAdminServer extends AbstractService
 
     if (nsQuota != HdfsConstants.QUOTA_DONT_SET
         || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
-      this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
-          ssQuota, null);
+      HdfsFileStatus ret = this.router.getRpcServer().getFileInfo(path);
+      if (ret != null) {
+        this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
+            ssQuota, null);
+      }
     }
   }
 

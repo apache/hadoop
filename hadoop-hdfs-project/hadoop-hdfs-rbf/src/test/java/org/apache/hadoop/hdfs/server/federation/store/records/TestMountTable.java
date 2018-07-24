@@ -84,9 +84,9 @@ public class TestMountTable {
 
     RouterQuotaUsage quota = record.getQuota();
     assertEquals(0, quota.getFileAndDirectoryCount());
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quota.getQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quota.getQuota());
     assertEquals(0, quota.getSpaceConsumed());
-    assertEquals(HdfsConstants.QUOTA_DONT_SET, quota.getSpaceQuota());
+    assertEquals(HdfsConstants.QUOTA_RESET, quota.getSpaceQuota());
 
     MountTable record2 =
         MountTable.newInstance(SRC, DST_MAP, DATE_CREATED, DATE_MOD);
