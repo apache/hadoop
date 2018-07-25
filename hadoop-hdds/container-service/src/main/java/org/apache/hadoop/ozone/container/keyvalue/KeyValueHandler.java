@@ -435,10 +435,8 @@ public class KeyValueHandler extends Handler {
     long containerId = kvContainer.getContainerData().getContainerID();
     List<KeyData> pendingKeys =
         this.openContainerBlockMap.getOpenKeys(containerId);
-    if (pendingKeys != null) {
-      for (KeyData keyData : pendingKeys) {
-        commitKey(keyData, kvContainer);
-      }
+    for(KeyData keyData : pendingKeys) {
+      commitKey(keyData, kvContainer);
     }
   }
 
@@ -598,7 +596,7 @@ public class KeyValueHandler extends Handler {
       Preconditions.checkNotNull(chunkInfo);
 
       chunkManager.deleteChunk(kvContainer, blockID, chunkInfo);
-      openContainerBlockMap.updateOpenKeyMap(blockID, chunkInfoProto, true);
+      openContainerBlockMap.removeChunk(blockID, chunkInfoProto);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -648,7 +646,7 @@ public class KeyValueHandler extends Handler {
             .getChunkData().getLen());
         // the openContainerBlockMap should be updated only while writing data
         // not during COMMIT_STAGE of handling write chunk request.
-        openContainerBlockMap.updateOpenKeyMap(blockID, chunkInfoProto, false);
+        openContainerBlockMap.addChunk(blockID, chunkInfoProto);
       }
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);

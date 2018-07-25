@@ -162,9 +162,9 @@ public class TestCloseContainerHandler {
     Pipeline pipeline = createSingleNodePipeline();
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
     // the key should exist in the map
-    Assert.assertTrue(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID)
-            .containsKey(blockID.getLocalID()));
+    Assert.assertNotNull(
+        openContainerBlockMap.getKeyDataMap(testContainerID)
+            .get(blockID.getLocalID()));
     KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkProtoList = new LinkedList<>();
     for (ChunkInfo i : chunkList) {
@@ -184,7 +184,7 @@ public class TestCloseContainerHandler {
 
     //the open key should be removed from Map
     Assert.assertNull(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID));
+        openContainerBlockMap.getKeyDataMap(testContainerID));
   }
 
   @Test
@@ -196,11 +196,11 @@ public class TestCloseContainerHandler {
     Pipeline pipeline = createSingleNodePipeline();
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
     // the key should exist in the map
+    Assert.assertNotNull(
+        openContainerBlockMap.getKeyDataMap(testContainerID)
+            .get(blockID.getLocalID()));
     Assert.assertTrue(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID)
-            .containsKey(blockID.getLocalID()));
-    Assert.assertTrue(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID)
+        openContainerBlockMap.getKeyDataMap(testContainerID)
             .get(blockID.getLocalID()).getChunks().size() == 3);
     ContainerProtos.DeleteChunkRequestProto.Builder deleteChunkProto =
         ContainerProtos.DeleteChunkRequestProto.newBuilder();
@@ -219,7 +219,7 @@ public class TestCloseContainerHandler {
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertTrue(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID)
+        openContainerBlockMap.getKeyDataMap(testContainerID)
             .get(blockID.getLocalID()).getChunks().size() == 2);
 
   }
@@ -234,12 +234,12 @@ public class TestCloseContainerHandler {
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
 
     Container container = containerSet.getContainer(testContainerID);
-    KeyData keyData = openContainerBlockMap.getContainerOpenKeyMap().
-        get(testContainerID).get(blockID.getLocalID());
+    KeyData keyData = openContainerBlockMap.
+        getKeyDataMap(testContainerID).get(blockID.getLocalID());
     // the key should exist in the map
-    Assert.assertTrue(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID)
-            .containsKey(blockID.getLocalID()));
+    Assert.assertNotNull(
+        openContainerBlockMap.getKeyDataMap(testContainerID)
+            .get(blockID.getLocalID()));
     Assert.assertTrue(
         keyData.getChunks().size() == chunkList.size());
     ContainerProtos.CloseContainerRequestProto.Builder closeContainerProto =
@@ -253,7 +253,7 @@ public class TestCloseContainerHandler {
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertNull(
-        openContainerBlockMap.getContainerOpenKeyMap().get(testContainerID));
+        openContainerBlockMap.getKeyDataMap(testContainerID));
     // Make sure the key got committed
     Assert.assertNotNull(handler.getKeyManager().getKey(container, blockID));
   }
