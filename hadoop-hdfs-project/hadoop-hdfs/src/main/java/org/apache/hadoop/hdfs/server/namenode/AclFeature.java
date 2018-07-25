@@ -73,6 +73,11 @@ public class AclFeature implements INode.Feature, ReferenceCounter {
   }
 
   @Override
+  public String toString() {
+    return "AclFeature : " + Integer.toHexString(hashCode()) + " Size of entries : " + entries.length;
+  }
+
+  @Override
   public int hashCode() {
     return Arrays.hashCode(entries);
   }
