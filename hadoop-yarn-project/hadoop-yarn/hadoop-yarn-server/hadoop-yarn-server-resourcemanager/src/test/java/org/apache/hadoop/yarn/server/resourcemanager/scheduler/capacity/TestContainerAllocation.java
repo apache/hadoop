@@ -941,4 +941,47 @@ public class TestContainerAllocation {
 
     rm1.close();
   }
+
+  @Test
+  public void testActiveUsersWithOnlyPendingApps() throws Exception {
+
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    newConf.setMaximumAMResourcePercentPerPartition(
+        CapacitySchedulerConfiguration.ROOT + ".default", "", 0.2f);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "u1", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "u2", null, "default");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    RMApp app3 = rm1.submitApp(1 * GB, "app", "u3", null, "default");
+
+    RMApp app4 = rm1.submitApp(1 * GB, "app", "u4", null, "default");
+
+    // Each application asks 50 * 1GB containers
+    am1.allocate("*", 1 * GB, 50, null);
+    am2.allocate("*", 1 * GB, 50, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    for (int i = 0; i < 10; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+      Thread.sleep(1000);
+    }
+    LeafQueue lq = (LeafQueue) cs.getQueue("default");
+    UsersManager um = (UsersManager) lq.getAbstractUsersManager();
+
+    Assert.assertEquals(4, um.getNumActiveUsers());
+    Assert.assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
+    Assert.assertEquals(2, lq.getMetrics().getAppsPending());
+    rm1.close();
+  }
 }
