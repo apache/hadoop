@@ -70,15 +70,6 @@ public class PlacementManager {
         }
       }
 
-      // Failed to get where to place application
-      if (null == placement && null == asc.getQueue()) {
-        String msg = "Failed to place application " +
-            asc.getApplicationId() + " to queue and specified "
-            + "queue is invalid : " + asc.getQueue();
-        LOG.error(msg);
-        throw new YarnException(msg);
-      }
-
       return placement;
     } finally {
       readLock.unlock();
