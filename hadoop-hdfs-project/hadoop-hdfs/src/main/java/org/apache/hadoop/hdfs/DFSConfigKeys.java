@@ -220,6 +220,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.maintenance.replication.min";
   public static final int     DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT
       = 1;
+
+  public static final String  DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY = "dfs.namenode.max-corrupt-file-blocks-returned";
+  public static final int     DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_DEFAULT = 100;
+
   public static final String  DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
