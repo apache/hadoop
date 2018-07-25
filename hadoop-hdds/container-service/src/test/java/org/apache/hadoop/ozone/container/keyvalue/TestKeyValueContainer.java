@@ -69,8 +69,7 @@ public class TestKeyValueContainer {
   private String scmId = UUID.randomUUID().toString();
   private VolumeSet volumeSet;
   private RoundRobinVolumeChoosingPolicy volumeChoosingPolicy;
-  private long containerId = 1L;
-  private String containerName = String.valueOf(containerId);
+  private long containerID = 1L;
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
 
@@ -111,16 +110,12 @@ public class TestKeyValueContainer {
     assertTrue(chunksPath != null);
     File containerMetaDataLoc = new File(containerMetaDataPath);
 
-    //Check whether container file, check sum file and container db file exists
-    // or not.
+    //Check whether container file and container db file exists or not.
     assertTrue(KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerName).exists(), ".Container File does" +
+        containerMetaDataLoc, containerID).exists(), ".Container File does" +
         " not exist");
-    assertTrue(KeyValueContainerLocationUtil.getContainerCheckSumFile(
-        containerMetaDataLoc, containerName).exists(), "Container check sum " +
-        "File does" + " not exist");
     assertTrue(KeyValueContainerLocationUtil.getContainerDBFile(
-        containerMetaDataLoc, containerName).exists(), "Container DB does " +
+        containerMetaDataLoc, containerID).exists(), "Container DB does " +
         "not exist");
   }
 
@@ -172,10 +167,10 @@ public class TestKeyValueContainer {
 
     assertFalse("Container File still exists",
         KeyValueContainerLocationUtil.getContainerFile(containerMetaDataLoc,
-            containerName).exists());
+            containerID).exists());
     assertFalse("Container DB file still exists",
         KeyValueContainerLocationUtil.getContainerDBFile(containerMetaDataLoc,
-            containerName).exists());
+            containerID).exists());
   }
 
 
@@ -195,7 +190,7 @@ public class TestKeyValueContainer {
         .getMetadataPath();
     File containerMetaDataLoc = new File(containerMetaDataPath);
     File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerName);
+        containerMetaDataLoc, containerID);
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
@@ -236,7 +231,7 @@ public class TestKeyValueContainer {
         .getMetadataPath();
     File containerMetaDataLoc = new File(containerMetaDataPath);
     File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerName);
+        containerMetaDataLoc, containerID);
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);

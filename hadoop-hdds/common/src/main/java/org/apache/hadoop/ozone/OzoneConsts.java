@@ -98,7 +98,6 @@ public final class OzoneConsts {
   public static final String OM_DB_NAME = "om.db";
 
   public static final String STORAGE_DIR_CHUNKS = "chunks";
-  public static final String CONTAINER_FILE_CHECKSUM_EXTENSION = ".chksm";
 
   /**
    * Supports Bucket Versioning.
@@ -190,4 +189,5 @@ public final class OzoneConsts {
   public static final String METADATA_PATH = "metadataPath";
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";
+  public static final String CHECKSUM = "checksum";
 }

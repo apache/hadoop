@@ -18,22 +18,33 @@
 package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.List;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerLifeCycleState;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.yaml.snakeyaml.Yaml;
 
 import static java.lang.Math.max;
+import static org.apache.hadoop.ozone.OzoneConsts.CHECKSUM;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ID;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
+import static org.apache.hadoop.ozone.OzoneConsts.LAYOUTVERSION;
+import static org.apache.hadoop.ozone.OzoneConsts.MAX_SIZE_GB;
+import static org.apache.hadoop.ozone.OzoneConsts.METADATA;
+import static org.apache.hadoop.ozone.OzoneConsts.STATE;
 
 /**
  * ContainerData is the in-memory representation of container metadata and is
@@ -71,6 +82,23 @@ public abstract class ContainerData {
   private HddsVolume volume;
 
   private long deleteTransactionId;
+
+  private String checksum;
+  public static final Charset CHARSET_ENCODING = Charset.forName("UTF-8");
+  private static final String DUMMY_CHECKSUM = new String(new byte[64],
+      CHARSET_ENCODING);
+
+  // Common Fields need to be stored in .container file.
+  protected static final List<String> YAML_FIELDS =
+      Collections.unmodifiableList(Lists.newArrayList(
+      CONTAINER_TYPE,
+      CONTAINER_ID,
+      LAYOUTVERSION,
+      STATE,
+      METADATA,
+      MAX_SIZE_GB,
+      CHECKSUM));
+
 
   /**
    * Number of pending deletion blocks in container.
@@ -113,6 +141,7 @@ public abstract class ContainerData {
     this.maxSizeGB = size;
     this.numPendingDeletionBlocks = new AtomicInteger(0);
     this.deleteTransactionId = 0;
+    setChecksumTo0ByteArray();
   }
 
   /**
@@ -398,6 +427,41 @@ public abstract class ContainerData {
    */
   public int getNumPendingDeletionBlocks() {
     return this.numPendingDeletionBlocks.get();
+  }
+
+  public void setChecksumTo0ByteArray() {
+    this.checksum = DUMMY_CHECKSUM;
+  }
+
+  public void setChecksum(String checkSum) {
+    this.checksum = checkSum;
+  }
+
+  public String getChecksum() {
+    return this.checksum;
+  }
+
+  /**
+   * Compute the checksum for ContainerData using the specified Yaml (based
+   * on ContainerType) and set the checksum.
+   *
+   * Checksum of ContainerData is calculated by setting the
+   * {@link ContainerData#checksum} field to a 64-byte array with all 0's -
+   * {@link ContainerData#DUMMY_CHECKSUM}. After the checksum is calculated,
+   * the checksum field is updated with this value.
+   *
+   * @param yaml Yaml for ContainerType to get the ContainerData as Yaml String
+   * @throws IOException
+   */
+  public void computeAndSetChecksum(Yaml yaml) throws IOException {
+    // Set checksum to dummy value - 0 byte array, to calculate the checksum
+    // of rest of the data.
+    setChecksumTo0ByteArray();
+
+    // Dump yaml data into a string to compute its checksum
+    String containerDataYamlStr = yaml.dump(this);
+
+    this.checksum = ContainerUtils.getChecksum(containerDataYamlStr);
   }
 
   /**

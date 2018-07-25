@@ -24,12 +24,12 @@ import java.nio.file.StandardCopyOption;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerType;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -49,10 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -113,26 +110,24 @@ public class KeyValueContainer implements Container {
           .getVolumesList(), maxSize);
       String hddsVolumeDir = containerVolume.getHddsRootDir().toString();
 
-      long containerId = containerData.getContainerID();
-      String containerName = Long.toString(containerId);
+      long containerID = containerData.getContainerID();
 
       containerMetaDataPath = KeyValueContainerLocationUtil
-          .getContainerMetaDataPath(hddsVolumeDir, scmId, containerId);
+          .getContainerMetaDataPath(hddsVolumeDir, scmId, containerID);
       File chunksPath = KeyValueContainerLocationUtil.getChunksLocationPath(
-          hddsVolumeDir, scmId, containerId);
+          hddsVolumeDir, scmId, containerID);
+
       File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-          containerMetaDataPath, containerName);
-      File containerCheckSumFile = KeyValueContainerLocationUtil
-          .getContainerCheckSumFile(containerMetaDataPath, containerName);
+          containerMetaDataPath, containerID);
       File dbFile = KeyValueContainerLocationUtil.getContainerDBFile(
-          containerMetaDataPath, containerName);
+          containerMetaDataPath, containerID);
 
       // Check if it is new Container.
       ContainerUtils.verifyIsNewContainer(containerMetaDataPath);
 
       //Create Metadata path chunks path and metadata db
       KeyValueContainerUtil.createContainerMetaData(containerMetaDataPath,
-          chunksPath, dbFile, containerName, config);
+          chunksPath, dbFile, config);
 
       String impl = config.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
           OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
@@ -144,9 +139,8 @@ public class KeyValueContainer implements Container {
       containerData.setDbFile(dbFile);
       containerData.setVolume(containerVolume);
 
-      // Create .container file and .chksm file
-      writeToContainerFile(containerFile, containerCheckSumFile, true);
-
+      // Create .container file
+      writeToContainerFile(containerFile, true);
 
     } catch (StorageContainerException ex) {
       if (containerMetaDataPath != null && containerMetaDataPath.getParentFile()
@@ -176,97 +170,64 @@ public class KeyValueContainer implements Container {
    * Creates .container file and checksum file.
    *
    * @param containerFile
-   * @param checksumFile
    * @param isCreate true if we are creating a new container file and false if
    *                we are updating an existing container file.
    * @throws StorageContainerException
    */
-  private void writeToContainerFile(File containerFile, File
-      checksumFile, boolean isCreate)
+  private void writeToContainerFile(File containerFile, boolean isCreate)
       throws StorageContainerException {
     File tempContainerFile = null;
-    File tempChecksumFile = null;
-    FileOutputStream containerCheckSumStream = null;
-    Writer writer = null;
     long containerId = containerData.getContainerID();
     try {
       tempContainerFile = createTempFile(containerFile);
-      tempChecksumFile = createTempFile(checksumFile);
-      ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
-              .KeyValueContainer, tempContainerFile, containerData);
-
-      //Compute Checksum for container file
-      String checksum = KeyValueContainerUtil.computeCheckSum(containerId,
-          tempContainerFile);
-      containerCheckSumStream = new FileOutputStream(tempChecksumFile);
-      writer = new OutputStreamWriter(containerCheckSumStream, "UTF-8");
-      writer.write(checksum);
-      writer.flush();
+      ContainerDataYaml.createContainerFile(
+          ContainerType.KeyValueContainer, containerData, tempContainerFile);
 
       if (isCreate) {
         // When creating a new container, .container file should not exist
         // already.
         NativeIO.renameTo(tempContainerFile, containerFile);
-        NativeIO.renameTo(tempChecksumFile, checksumFile);
       } else {
         // When updating a container, the .container file should exist. If
         // not, the container is in an inconsistent state.
         Files.move(tempContainerFile.toPath(), containerFile.toPath(),
             StandardCopyOption.REPLACE_EXISTING);
-        Files.move(tempChecksumFile.toPath(), checksumFile.toPath(),
-            StandardCopyOption.REPLACE_EXISTING);
       }
 
     } catch (IOException ex) {
       throw new StorageContainerException("Error during creation of " +
-          "required files(.container, .chksm) for container. ContainerID: "
-          + containerId, ex, CONTAINER_FILES_CREATE_ERROR);
+          ".container file. ContainerID: " + containerId, ex,
+          CONTAINER_FILES_CREATE_ERROR);
     } finally {
-      IOUtils.closeStream(containerCheckSumStream);
       if (tempContainerFile != null && tempContainerFile.exists()) {
         if (!tempContainerFile.delete()) {
           LOG.warn("Unable to delete container temporary file: {}.",
               tempContainerFile.getAbsolutePath());
         }
       }
-      if (tempChecksumFile != null && tempChecksumFile.exists()) {
-        if (!tempChecksumFile.delete()) {
-          LOG.warn("Unable to delete container temporary checksum file: {}.",
-              tempContainerFile.getAbsolutePath());
-        }
-      }
-      try {
-        if (writer != null) {
-          writer.close();
-        }
-      } catch (IOException ex) {
-        LOG.warn("Error occurred during closing the writer.  Container " +
-            "Name:" + containerId);
-      }
-
     }
   }
 
 
-  private void updateContainerFile(File containerFile, File
-      checksumFile) throws StorageContainerException {
+  private void updateContainerFile(File containerFile)
+      throws StorageContainerException {
 
     long containerId = containerData.getContainerID();
 
-    if (containerFile.exists() && checksumFile.exists()) {
-      try {
-        writeToContainerFile(containerFile, checksumFile, false);
-      } catch (IOException e) {
-        //TODO : Container update failure is not handled currently. Might
-        // lead to loss of .container file. When Update container feature
-        // support is added, this failure should also be handled.
-        throw new StorageContainerException("Container update failed. " +
-            "ContainerID: " + containerId, CONTAINER_FILES_CREATE_ERROR);
-      }
-    } else {
+    if (!containerFile.exists()) {
       throw new StorageContainerException("Container is an Inconsistent " +
-          "state, missing required files(.container, .chksm). ContainerID: " +
-          containerId, INVALID_CONTAINER_STATE);
+          "state, missing .container file. ContainerID: " + containerId,
+          INVALID_CONTAINER_STATE);
+    }
+
+    try {
+      writeToContainerFile(containerFile, false);
+    } catch (IOException e) {
+      //TODO : Container update failure is not handled currently. Might
+      // lead to loss of .container file. When Update container feature
+      // support is added, this failure should also be handled.
+      throw new StorageContainerException("Container update failed. " +
+          "ContainerID: " + containerId, CONTAINER_FILES_CREATE_ERROR);
     }
   }
 
@@ -305,10 +266,9 @@ public class KeyValueContainer implements Container {
       }
       containerData.closeContainer();
       File containerFile = getContainerFile();
-      File containerCheckSumFile = getContainerCheckSumFile();
 
       // update the new container data to .container File
-      updateContainerFile(containerFile, containerCheckSumFile);
+      updateContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
       throw ex;
@@ -340,8 +300,8 @@ public class KeyValueContainer implements Container {
   }
 
   @Override
-  public ContainerProtos.ContainerType getContainerType() {
-    return ContainerProtos.ContainerType.KeyValueContainer;
+  public ContainerType getContainerType() {
+    return ContainerType.KeyValueContainer;
   }
 
   @Override
@@ -369,10 +329,10 @@ public class KeyValueContainer implements Container {
       for (Map.Entry<String, String> entry : metadata.entrySet()) {
         containerData.addMetadata(entry.getKey(), entry.getValue());
       }
+
       File containerFile = getContainerFile();
-      File containerCheckSumFile = getContainerCheckSumFile();
       // update the new container data to .container File
-      updateContainerFile(containerFile, containerCheckSumFile);
+      updateContainerFile(containerFile);
     } catch (StorageContainerException  ex) {
       // TODO:
       // On error, reset the metadata.
@@ -458,15 +418,6 @@ public class KeyValueContainer implements Container {
   private File getContainerFile() {
     return new File(containerData.getMetadataPath(), containerData
         .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
-  }
-
-  /**
-   * Returns container checksum file.
-   * @return container checksum file
-   */
-  private File getContainerCheckSumFile() {
-    return new File(containerData.getMetadataPath(), containerData
-        .getContainerID() + OzoneConsts.CONTAINER_FILE_CHECKSUM_EXTENSION);
   }
 
   /**

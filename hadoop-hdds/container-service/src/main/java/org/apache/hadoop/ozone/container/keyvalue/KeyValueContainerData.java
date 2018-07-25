@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import java.util.Collections;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -34,13 +35,7 @@ import java.util.Map;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CHUNKS_PATH;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ID;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
-import static org.apache.hadoop.ozone.OzoneConsts.LAYOUTVERSION;
-import static org.apache.hadoop.ozone.OzoneConsts.MAX_SIZE_GB;
-import static org.apache.hadoop.ozone.OzoneConsts.METADATA;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA_PATH;
-import static org.apache.hadoop.ozone.OzoneConsts.STATE;
 
 /**
  * This class represents the KeyValueContainer metadata, which is the
@@ -53,17 +48,7 @@ public class KeyValueContainerData extends ContainerData {
   public static final Tag KEYVALUE_YAML_TAG = new Tag("KeyValueContainerData");
 
   // Fields need to be stored in .container file.
-  private static final List<String> YAML_FIELDS =
-      Lists.newArrayList(
-          CONTAINER_TYPE,
-          CONTAINER_ID,
-          LAYOUTVERSION,
-          STATE,
-          METADATA,
-          METADATA_PATH,
-          CHUNKS_PATH,
-          CONTAINER_DB_TYPE,
-          MAX_SIZE_GB);
+  private static final List<String> KV_YAML_FIELDS;
 
   // Path to Container metadata Level DB/RocksDB Store and .container file.
   private String metadataPath;
@@ -75,6 +60,15 @@ public class KeyValueContainerData extends ContainerData {
   private String containerDBType;
 
   private File dbFile = null;
+
+  static {
+    // Initialize YAML fields
+    KV_YAML_FIELDS = Lists.newArrayList();
+    KV_YAML_FIELDS.addAll(YAML_FIELDS);
+    KV_YAML_FIELDS.add(METADATA_PATH);
+    KV_YAML_FIELDS.add(CHUNKS_PATH);
+    KV_YAML_FIELDS.add(CONTAINER_DB_TYPE);
+  }
 
   /**
    * Constructs KeyValueContainerData object.
@@ -210,7 +204,7 @@ public class KeyValueContainerData extends ContainerData {
   }
 
   public static List<String> getYamlFields() {
-    return YAML_FIELDS;
+    return Collections.unmodifiableList(KV_YAML_FIELDS);
   }
 
   /**

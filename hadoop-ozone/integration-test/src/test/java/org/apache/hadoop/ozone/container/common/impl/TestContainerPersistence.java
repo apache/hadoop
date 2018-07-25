@@ -716,7 +716,7 @@ public class TestContainerPersistence {
 
     File orgContainerFile = KeyValueContainerLocationUtil.getContainerFile(
         new File(container.getContainerData().getMetadataPath()),
-        String.valueOf(testContainerID));
+        testContainerID);
     Assert.assertTrue(orgContainerFile.exists());
 
     Map<String, String> newMetadata = Maps.newHashMap();
@@ -740,7 +740,7 @@ public class TestContainerPersistence {
     // Verify container data on disk
     File newContainerFile = KeyValueContainerLocationUtil.getContainerFile(
         new File(actualNewData.getMetadataPath()),
-        String.valueOf(testContainerID));
+        testContainerID);
     Assert.assertTrue("Container file should exist.",
         newContainerFile.exists());
     Assert.assertEquals("Container file should be in same location.",
@@ -780,8 +780,8 @@ public class TestContainerPersistence {
 
     // Update a non-existing container
     exception.expect(StorageContainerException.class);
-    exception.expectMessage("Container is an Inconsistent state, missing " +
-        "required files(.container, .chksm).");
+    exception.expectMessage("Container is an Inconsistent " +
+        "state, missing .container file.");
     Container nonExistentContainer = new KeyValueContainer(
         new KeyValueContainerData(RandomUtils.nextLong(),
             ContainerTestHelper.CONTAINER_MAX_SIZE_GB), conf);

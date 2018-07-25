@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.impl;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
@@ -37,39 +38,58 @@ import static org.junit.Assert.fail;
  */
 public class TestContainerDataYaml {
 
-  private static final int MAXSIZE = 5;
-  @Test
-  public void testCreateContainerFile() throws IOException {
-    String path = new FileSystemTestHelper().getTestRootDir();
-    String containerPath = "1.container";
+  private static long testContainerID = 1234;
 
-    File filePath = new File(new FileSystemTestHelper().getTestRootDir());
-    filePath.mkdirs();
+  private static String testRoot = new FileSystemTestHelper().getTestRootDir();
+
+  private static final int MAXSIZE = 5;
+
+  /**
+   * Creates a .container file. cleanup() should be called at the end of the
+   * test when container file is created.
+   */
+  private File createContainerFile(long containerID) throws IOException {
+    new File(testRoot).mkdirs();
+
+    String containerPath = containerID + ".container";
 
     KeyValueContainerData keyValueContainerData = new KeyValueContainerData(
-        Long.MAX_VALUE, MAXSIZE);
+        containerID, MAXSIZE);
     keyValueContainerData.setContainerDBType("RocksDB");
-    keyValueContainerData.setMetadataPath(path);
-    keyValueContainerData.setChunksPath(path);
+    keyValueContainerData.setMetadataPath(testRoot);
+    keyValueContainerData.setChunksPath(testRoot);
 
-    File containerFile = new File(filePath, containerPath);
+    File containerFile = new File(testRoot, containerPath);
 
     // Create .container file with ContainerData
     ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
-            .KeyValueContainer, containerFile, keyValueContainerData);
+        .KeyValueContainer, keyValueContainerData, containerFile);
 
     //Check .container file exists or not.
     assertTrue(containerFile.exists());
 
+    return containerFile;
+  }
+
+  private void cleanup() {
+    FileUtil.fullyDelete(new File(testRoot));
+  }
+
+  @Test
+  public void testCreateContainerFile() throws IOException {
+    long containerID = testContainerID++;
+
+    File containerFile = createContainerFile(containerID);
+
     // Read from .container file, and verify data.
     KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
-    assertEquals(Long.MAX_VALUE, kvData.getContainerID());
+    assertEquals(containerID, kvData.getContainerID());
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
-    assertEquals(path, kvData.getMetadataPath());
-    assertEquals(path, kvData.getChunksPath());
+    assertEquals(containerFile.getParent(), kvData.getMetadataPath());
+    assertEquals(containerFile.getParent(), kvData.getChunksPath());
     assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
@@ -82,22 +102,20 @@ public class TestContainerDataYaml {
     kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
 
 
-    // Update .container file with new ContainerData.
-    containerFile = new File(filePath, containerPath);
     ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
-            .KeyValueContainer, containerFile, kvData);
+            .KeyValueContainer, kvData, containerFile);
 
     // Reading newly updated data from .container file
     kvData =  (KeyValueContainerData) ContainerDataYaml.readContainerFile(
         containerFile);
 
     // verify data.
-    assertEquals(Long.MAX_VALUE, kvData.getContainerID());
+    assertEquals(containerID, kvData.getContainerID());
     assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData
         .getContainerType());
     assertEquals("RocksDB", kvData.getContainerDBType());
-    assertEquals(path, kvData.getMetadataPath());
-    assertEquals(path, kvData.getChunksPath());
+    assertEquals(containerFile.getParent(), kvData.getMetadataPath());
+    assertEquals(containerFile.getParent(), kvData.getChunksPath());
     assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
@@ -105,19 +123,15 @@ public class TestContainerDataYaml {
     assertEquals("hdfs", kvData.getMetadata().get("VOLUME"));
     assertEquals("ozone", kvData.getMetadata().get("OWNER"));
     assertEquals(MAXSIZE, kvData.getMaxSizeGB());
-
-    FileUtil.fullyDelete(filePath);
-
-
   }
 
   @Test
   public void testIncorrectContainerFile() throws IOException{
     try {
-      String path = "incorrect.container";
+      String containerFile = "incorrect.container";
       //Get file from resources folder
       ClassLoader classLoader = getClass().getClassLoader();
-      File file = new File(classLoader.getResource(path).getFile());
+      File file = new File(classLoader.getResource(containerFile).getFile());
       KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
           .readContainerFile(file);
       fail("testIncorrectContainerFile failed");
@@ -137,12 +151,13 @@ public class TestContainerDataYaml {
     // created or not.
 
     try {
-      String path = "additionalfields.container";
+      String containerFile = "additionalfields.container";
       //Get file from resources folder
       ClassLoader classLoader = getClass().getClassLoader();
-      File file = new File(classLoader.getResource(path).getFile());
+      File file = new File(classLoader.getResource(containerFile).getFile());
       KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
           .readContainerFile(file);
+      ContainerUtils.verifyChecksum(kvData);
 
       //Checking the Container file data is consistent or not
       assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData
@@ -159,9 +174,45 @@ public class TestContainerDataYaml {
       assertEquals(2, kvData.getMetadata().size());
 
     } catch (Exception ex) {
+      ex.printStackTrace();
       fail("testCheckBackWardCompatabilityOfContainerFile failed");
     }
   }
 
+  /**
+   * Test to verify {@link ContainerUtils#verifyChecksum(ContainerData)}.
+   */
+  @Test
+  public void testChecksumInContainerFile() throws IOException {
+    long containerID = testContainerID++;
 
+    File containerFile = createContainerFile(containerID);
+
+    // Read from .container file, and verify data.
+    KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
+        .readContainerFile(containerFile);
+    ContainerUtils.verifyChecksum(kvData);
+
+    cleanup();
+  }
+
+  /**
+   * Test to verify incorrect checksum is detected.
+   */
+  @Test
+  public void testIncorrectChecksum() {
+    try {
+      String containerFile = "incorrect.checksum.container";
+      //Get file from resources folder
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource(containerFile).getFile());
+      KeyValueContainerData kvData = (KeyValueContainerData) ContainerDataYaml
+          .readContainerFile(file);
+      ContainerUtils.verifyChecksum(kvData);
+      fail("testIncorrectChecksum failed");
+    } catch (Exception ex) {
+      GenericTestUtils.assertExceptionContains("Container checksum error for " +
+          "ContainerID:", ex);
+    }
+  }
 }

@@ -101,42 +101,26 @@ public final class KeyValueContainerLocationUtil {
   /**
    * Returns containerFile.
    * @param containerMetaDataPath
-   * @param containerName
+   * @param containerID
    * @return .container File name
    */
-  public static File getContainerFile(File containerMetaDataPath, String
-      containerName) {
+  public static File getContainerFile(File containerMetaDataPath,
+      long containerID) {
     Preconditions.checkNotNull(containerMetaDataPath);
-    Preconditions.checkNotNull(containerName);
-    return new File(containerMetaDataPath, containerName +
+    return new File(containerMetaDataPath, containerID +
         OzoneConsts.CONTAINER_EXTENSION);
   }
 
   /**
    * Return containerDB File.
    * @param containerMetaDataPath
-   * @param containerName
+   * @param containerID
    * @return containerDB File name
    */
-  public static File getContainerDBFile(File containerMetaDataPath, String
-      containerName) {
+  public static File getContainerDBFile(File containerMetaDataPath,
+      long containerID) {
     Preconditions.checkNotNull(containerMetaDataPath);
-    Preconditions.checkNotNull(containerName);
-    return new File(containerMetaDataPath, containerName + OzoneConsts
+    return new File(containerMetaDataPath, containerID + OzoneConsts
         .DN_CONTAINER_DB);
-  }
-
-  /**
-   * Returns container checksum file.
-   * @param containerMetaDataPath
-   * @param containerName
-   * @return container checksum file
-   */
-  public static File getContainerCheckSumFile(File containerMetaDataPath,
-                                              String containerName) {
-    Preconditions.checkNotNull(containerMetaDataPath);
-    Preconditions.checkNotNull(containerName);
-    return new File(containerMetaDataPath, containerName + OzoneConsts
-        .CONTAINER_FILE_CHECKSUM_EXTENSION);
   }
 }

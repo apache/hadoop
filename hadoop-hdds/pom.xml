@@ -104,6 +104,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
+            <exclude>src/test/resources/incorrect.checksum.container</exclude>
           </excludes>
         </configuration>
       </plugin>
