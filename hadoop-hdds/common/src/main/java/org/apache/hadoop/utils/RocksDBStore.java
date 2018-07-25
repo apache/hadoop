@@ -380,4 +380,9 @@ public class RocksDBStore implements MetadataStore {
     return statMBeanName;
   }
 
+  @Override
+  public MetaStoreIterator<KeyValue> iterator() {
+    return new RocksDBStoreIterator(db.newIterator());
+  }
+
 }

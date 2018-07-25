@@ -379,4 +379,9 @@ public class LevelDBStore implements MetadataStore {
     }
     return result;
   }
+
+  @Override
+  public MetaStoreIterator<KeyValue> iterator() {
+    return new LevelDBStoreIterator(db.iterator());
+  }
 }

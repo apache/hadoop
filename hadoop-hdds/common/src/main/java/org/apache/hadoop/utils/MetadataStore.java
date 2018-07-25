@@ -169,4 +169,59 @@ public interface MetadataStore extends Closeable{
    */
   void iterate(byte[] from, EntryConsumer consumer)
       throws IOException;
+
+  /**
+   * Returns the iterator for this metadata store.
+   * @return MetaStoreIterator
+   */
+  MetaStoreIterator<KeyValue> iterator();
+
+  /**
+   * Class used to represent the key and value pair of a db entry.
+   */
+  class KeyValue {
+
+    private final byte[] key;
+    private final byte[] value;
+
+    /**
+     * KeyValue Constructor, used to represent a key and value of a db entry.
+     * @param key
+     * @param value
+     */
+    private KeyValue(byte[] key, byte[] value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    /**
+     * Return key.
+     * @return byte[]
+     */
+    public byte[] getKey() {
+      byte[] result = new byte[key.length];
+      System.arraycopy(key, 0, result, 0, key.length);
+      return result;
+    }
+
+    /**
+     * Return value.
+     * @return byte[]
+     */
+    public byte[] getValue() {
+      byte[] result = new byte[value.length];
+      System.arraycopy(value, 0, result, 0, value.length);
+      return result;
+    }
+
+    /**
+     * Create a KeyValue pair.
+     * @param key
+     * @param value
+     * @return KeyValue object.
+     */
+    public static KeyValue create(byte[] key, byte[] value) {
+      return new KeyValue(key, value);
+    }
+  }
 }
