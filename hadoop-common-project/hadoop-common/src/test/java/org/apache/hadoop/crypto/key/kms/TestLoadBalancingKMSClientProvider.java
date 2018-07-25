@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -26,11 +27,14 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+
+import javax.net.ssl.SSLHandshakeException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -44,12 +48,17 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Sets;
 
 public class TestLoadBalancingKMSClientProvider {
+
+  @Rule
+  public Timeout testTimeout = new Timeout(30 * 1000);
 
   @BeforeClass
   public static void setup() throws IOException {
@@ -637,5 +646,75 @@ public class TestLoadBalancingKMSClientProvider {
             Mockito.any(Options.class));
     verify(p2, Mockito.times(1)).createKey(Mockito.eq("test3"),
             Mockito.any(Options.class));
+  }
+
+  /**
+   * Tests the operation succeeds second time after SSLHandshakeException.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesWithSSLHandshakeExceptionSucceedsSecondTime()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 3);
+    final String keyName = "test";
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    when(p1.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new SSLHandshakeException("p1"))
+        .thenReturn(new KMSClientProvider.KMSKeyVersion(keyName, "v1",
+            new byte[0]));
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new ConnectException("p2"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+
+    kp.createKey(keyName, new Options(conf));
+    verify(p1, Mockito.times(2)).createKey(Mockito.eq(keyName),
+        Mockito.any(Options.class));
+    verify(p2, Mockito.times(1)).createKey(Mockito.eq(keyName),
+        Mockito.any(Options.class));
+  }
+
+  /**
+   * Tests the operation fails at every attempt after SSLHandshakeException.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesWithSSLHandshakeExceptionFailsAtEveryAttempt()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 2);
+    final String keyName = "test";
+    final String exceptionMessage = "p1 exception message";
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    Exception originalSslEx = new SSLHandshakeException(exceptionMessage);
+    when(p1.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(originalSslEx);
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new ConnectException("p2 exception message"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+
+    Exception interceptedEx = intercept(ConnectException.class,
+        "SSLHandshakeException: " + exceptionMessage,
+        ()-> kp.createKey(keyName, new Options(conf)));
+    assertEquals(originalSslEx, interceptedEx.getCause());
+
+    verify(p1, Mockito.times(2)).createKey(Mockito.eq(keyName),
+        Mockito.any(Options.class));
+    verify(p2, Mockito.times(1)).createKey(Mockito.eq(keyName),
+        Mockito.any(Options.class));
   }
 }
