@@ -198,6 +198,8 @@ public class KeyValueHandler extends Handler {
       return handlePutSmallFile(request, kvContainer);
     case GetSmallFile:
       return handleGetSmallFile(request, kvContainer);
+    case GetCommittedBlockLength:
+      return handleGetCommittedBlockLength(request, kvContainer);
     }
     return null;
   }
@@ -443,6 +445,8 @@ public class KeyValueHandler extends Handler {
   private void commitKey(KeyData keyData, KeyValueContainer kvContainer)
       throws IOException {
     Preconditions.checkNotNull(keyData);
+    //sets the total size of the key before committing
+    keyData.computeSize();
     keyManager.putKey(kvContainer, keyData);
     //update the open key Map in containerManager
     this.openContainerBlockMap.removeFromKeyMap(keyData.getBlockID());
@@ -476,6 +480,35 @@ public class KeyValueHandler extends Handler {
     }
 
     return KeyUtils.getKeyDataResponse(request, responseData);
+  }
+
+  /**
+   * Handles GetCommittedBlockLength operation.
+   * Calls KeyManager to process the request.
+   */
+  ContainerCommandResponseProto handleGetCommittedBlockLength(
+      ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
+    if (!request.hasGetCommittedBlockLength()) {
+      LOG.debug("Malformed Get Key request. trace ID: {}",
+          request.getTraceID());
+      return ContainerUtils.malformedRequest(request);
+    }
+
+    long blockLength;
+    try {
+      BlockID blockID = BlockID.getFromProtobuf(
+          request.getGetCommittedBlockLength().getBlockID());
+      blockLength = keyManager.getCommittedBlockLength(kvContainer, blockID);
+
+    } catch (StorageContainerException ex) {
+      return ContainerUtils.logAndReturnError(LOG, ex, request);
+    } catch (IOException ex) {
+      return ContainerUtils.logAndReturnError(LOG,
+          new StorageContainerException("GetCommittedBlockLength failed", ex,
+              IO_EXCEPTION), request);
+    }
+
+    return KeyUtils.getBlockLengthResponse(request, blockLength);
   }
 
   /**
@@ -665,6 +698,7 @@ public class KeyValueHandler extends Handler {
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       keyData.setChunks(chunks);
+      keyData.computeSize();
       keyManager.putKey(kvContainer, keyData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
 

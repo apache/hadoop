@@ -99,7 +99,7 @@ enum Type {
   PutSmallFile = 15;
   GetSmallFile = 16;
   CloseContainer = 17;
-
+  GetCommittedBlockLength = 18;
 }
 
 
@@ -193,8 +193,8 @@ message ContainerCommandRequestProto {
   optional   PutSmallFileRequestProto putSmallFile = 16;
   optional   GetSmallFileRequestProto getSmallFile = 17;
   optional   CloseContainerRequestProto closeContainer = 18;
-
-  required   string datanodeUuid = 19;
+  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 19;
+  required   string datanodeUuid = 20;
 }
 
 message ContainerCommandResponseProto {
@@ -223,6 +223,7 @@ message ContainerCommandResponseProto {
   optional PutSmallFileResponseProto putSmallFile = 19;
   optional GetSmallFileResponseProto getSmallFile = 20;
   optional CloseContainerResponseProto closeContainer = 21;
+  optional GetCommittedBlockLengthResponseProto getCommittedBlockLength = 22;
 
 }
 
@@ -302,6 +303,7 @@ message KeyData {
   optional int64 flags = 2; // for future use.
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
+  optional int64 size = 5;
 }
 
 // Key Messages.
@@ -323,6 +325,15 @@ message  GetKeyResponseProto  {
 
 message  DeleteKeyRequestProto {
   required DatanodeBlockID blockID = 1;
+}
+
+message  GetCommittedBlockLengthRequestProto {
+  required DatanodeBlockID blockID = 1;
+}
+
+message  GetCommittedBlockLengthResponseProto {
+  required DatanodeBlockID blockID = 1;
+  required int64 blockLength = 2;
 }
 
 message   DeleteKeyResponseProto {

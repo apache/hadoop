@@ -99,6 +99,34 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
+   * Calls the container protocol to get the length of a committed block.
+   *
+   * @param xceiverClient client to perform call
+   * @param blockID blockId for the Block
+   * @param traceID container protocol call args
+   * @return container protocol getLastCommittedBlockLength response
+   * @throws IOException if there is an I/O error while performing the call
+   */
+  public static ContainerProtos.GetCommittedBlockLengthResponseProto
+  getCommittedBlockLength(
+      XceiverClientSpi xceiverClient, BlockID blockID, String traceID)
+      throws IOException {
+    ContainerProtos.GetCommittedBlockLengthRequestProto.Builder
+        getBlockLengthRequestBuilder =
+        ContainerProtos.GetCommittedBlockLengthRequestProto.newBuilder().
+            setBlockID(blockID.getDatanodeBlockIDProtobuf());
+    String id = xceiverClient.getPipeline().getLeader().getUuidString();
+    ContainerCommandRequestProto request =
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(Type.GetCommittedBlockLength).setTraceID(traceID)
+            .setDatanodeUuid(id)
+            .setGetCommittedBlockLength(getBlockLengthRequestBuilder).build();
+    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
+    validateContainerResponse(response);
+    return response.getGetCommittedBlockLength();
+  }
+
+  /**
    * Calls the container protocol to put a container key.
    *
    * @param xceiverClient client to perform call

@@ -120,6 +120,32 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   /**
+   * Returns the length of the committed block.
+   *
+   * @param container - Container from which key need to be get.
+   * @param blockID - BlockID of the key.
+   * @return length of the block.
+   * @throws IOException in case, the block key does not exist in db.
+   */
+  @Override
+  public long getCommittedBlockLength(Container container, BlockID blockID)
+      throws IOException {
+    KeyValueContainerData containerData = (KeyValueContainerData) container
+        .getContainerData();
+    MetadataStore db = KeyUtils.getDB(containerData, config);
+    // This is a post condition that acts as a hint to the user.
+    // Should never fail.
+    Preconditions.checkNotNull(db, "DB cannot be null here");
+    byte[] kData = db.get(Longs.toByteArray(blockID.getLocalID()));
+    if (kData == null) {
+      throw new StorageContainerException("Unable to find the key.",
+          NO_SUCH_KEY);
+    }
+    ContainerProtos.KeyData keyData = ContainerProtos.KeyData.parseFrom(kData);
+    return keyData.getSize();
+  }
+
+  /**
    * Deletes an existing Key.
    *
    * @param container - Container from which key need to be deleted.
@@ -164,6 +190,7 @@ public class KeyManagerImpl implements KeyManager {
    * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
+  @Override
   public List<KeyData> listKey(Container container, long startLocalID, int
       count) throws IOException {
     Preconditions.checkNotNull(container, "container cannot be null");

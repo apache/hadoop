@@ -144,4 +144,24 @@ public final class KeyUtils {
     builder.setGetKey(getKey);
     return  builder.build();
   }
+
+  /**
+   * Returns successful getCommittedBlockLength Response.
+   * @param msg - Request.
+   * @return Response.
+   */
+  public static ContainerProtos.ContainerCommandResponseProto
+  getBlockLengthResponse(ContainerProtos.
+      ContainerCommandRequestProto msg, long blockLength) {
+    ContainerProtos.GetCommittedBlockLengthResponseProto.Builder
+        getCommittedBlockLengthResponseBuilder = ContainerProtos.
+        GetCommittedBlockLengthResponseProto.newBuilder();
+    getCommittedBlockLengthResponseBuilder.setBlockLength(blockLength);
+    getCommittedBlockLengthResponseBuilder
+        .setBlockID(msg.getGetCommittedBlockLength().getBlockID());
+    ContainerProtos.ContainerCommandResponseProto.Builder builder =
+        ContainerUtils.getSuccessResponseBuilder(msg);
+    builder.setGetCommittedBlockLength(getCommittedBlockLengthResponseBuilder);
+    return  builder.build();
+  }
 }

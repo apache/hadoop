@@ -42,6 +42,11 @@ public class KeyData {
   private List<ContainerProtos.ChunkInfo> chunks;
 
   /**
+   * total size of the key.
+   */
+  private long size;
+
+  /**
    * Constructs a KeyData Object.
    *
    * @param blockID
@@ -49,6 +54,7 @@ public class KeyData {
   public KeyData(BlockID blockID) {
     this.blockID = blockID;
     this.metadata = new TreeMap<>();
+    this.size = 0;
   }
 
   /**
@@ -66,6 +72,9 @@ public class KeyData {
           data.getMetadata(x).getValue());
     }
     keyData.setChunks(data.getChunksList());
+    if (data.hasSize()) {
+      keyData.setSize(data.getSize());
+    }
     return keyData;
   }
 
@@ -84,6 +93,7 @@ public class KeyData {
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }
+    builder.setSize(size);
     return builder.build();
   }
 
@@ -183,10 +193,25 @@ public class KeyData {
   }
 
   /**
+   * sets the total size of the block
+   * @param size size of the block
+   */
+  public void setSize(long size) {
+    this.size = size;
+  }
+
+  /**
    * Get the total size of chunks allocated for the key.
    * @return total size of the key.
    */
   public long getSize() {
-    return chunks.parallelStream().mapToLong(e->e.getLen()).sum();
+    return size;
+  }
+
+  /**
+   * computes the total size of chunks allocated for the key.
+   */
+  public void computeSize() {
+    setSize(chunks.parallelStream().mapToLong(e -> e.getLen()).sum());
   }
 }

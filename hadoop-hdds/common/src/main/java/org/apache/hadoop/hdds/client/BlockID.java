@@ -20,8 +20,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
+import java.util.Objects;
+
 /**
- * BlockID of ozone (containerID + localID)
+ * BlockID of ozone (containerID  localID)
  */
 public class BlockID {
   private long containerID;
@@ -68,4 +70,20 @@ public class BlockID {
         blockID.getLocalID());
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BlockID blockID = (BlockID) o;
+    return containerID == blockID.containerID && localID == blockID.localID;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(containerID, localID);
+  }
 }

@@ -181,6 +181,8 @@ public class HddsDispatcher implements ContainerDispatcher {
           .getContainerID();
     case GetSmallFile:
       return request.getGetSmallFile().getKey().getBlockID().getContainerID();
+    case GetCommittedBlockLength:
+      return request.getGetCommittedBlockLength().getBlockID().getContainerID();
     }
 
     throw new StorageContainerException(

@@ -70,6 +70,13 @@ public interface KeyManager {
       IOException;
 
   /**
+   * Returns the last committed block length for the block.
+   * @param blockID blockId
+   */
+  long getCommittedBlockLength(Container container, BlockID blockID)
+      throws IOException;
+
+  /**
    * Shutdown ContainerManager.
    */
   void shutdown();
