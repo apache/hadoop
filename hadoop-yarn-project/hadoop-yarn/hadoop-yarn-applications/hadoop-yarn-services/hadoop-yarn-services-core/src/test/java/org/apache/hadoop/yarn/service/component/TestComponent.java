@@ -178,7 +178,8 @@ public class TestComponent {
           org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
           "successful", 0);
       comp.handle(new ComponentEvent(comp.getName(),
-          ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus));
+          ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus)
+          .setContainerId(instanceContainer.getId()));
       componentInstance.handle(
           new ComponentInstanceEvent(componentInstance.getContainer().getId(),
               ComponentInstanceEventType.STOP).setStatus(containerStatus));

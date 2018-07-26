@@ -76,6 +76,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     Comparable<ComponentInstance> {
   private static final Logger LOG =
       LoggerFactory.getLogger(ComponentInstance.class);
+  private static final String FAILED_BEFORE_LAUNCH_DIAG =
+      "failed before launch";
 
   private  StateMachine<ComponentInstanceState, ComponentInstanceEventType,
       ComponentInstanceEvent> stateMachine;
@@ -241,7 +243,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   @VisibleForTesting
   static void handleComponentInstanceRelaunch(
-      ComponentInstance compInstance, ComponentInstanceEvent event) {
+      ComponentInstance compInstance, ComponentInstanceEvent event,
+      boolean failureBeforeLaunch) {
     Component comp = compInstance.getComponent();
 
     // Do we need to relaunch the service?
@@ -257,8 +260,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               + ": {} completed. Reinsert back to pending list and requested " +
               "a new container." + System.lineSeparator() +
               " exitStatus={}, diagnostics={}.",
-          event.getContainerId(), event.getStatus().getExitStatus(),
-          event.getStatus().getDiagnostics());
+          event.getContainerId(), failureBeforeLaunch ? null :
+              event.getStatus().getExitStatus(),
+          failureBeforeLaunch ? FAILED_BEFORE_LAUNCH_DIAG :
+              event.getStatus().getDiagnostics());
     } else {
       // When no relaunch, update component's #succeeded/#failed
       // instances.
@@ -297,8 +302,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
       Component comp = compInstance.component;
       String containerDiag =
-          compInstance.getCompInstanceId() + ": " + event.getStatus()
-              .getDiagnostics();
+          compInstance.getCompInstanceId() + ": " + (failedBeforeLaunching ?
+              FAILED_BEFORE_LAUNCH_DIAG : event.getStatus().getDiagnostics());
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
       compInstance.cancelContainerStatusRetriever();
       if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
@@ -312,6 +317,9 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       boolean shouldFailService = false;
 
       final ServiceScheduler scheduler = comp.getScheduler();
+      scheduler.getAmRMClient().releaseAssignedContainer(
+          event.getContainerId());
+
       // Check if it exceeds the failure threshold, but only if health threshold
       // monitor is not enabled
       if (!comp.isHealthThresholdMonitorEnabled()
@@ -352,7 +360,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
       // According to component restart policy, handle container restart
       // or finish the service (if all components finished)
-      handleComponentInstanceRelaunch(compInstance, event);
+      handleComponentInstanceRelaunch(compInstance, event,
+          failedBeforeLaunching);
 
       if (shouldFailService) {
         scheduler.getTerminationHandler().terminate(-1);
