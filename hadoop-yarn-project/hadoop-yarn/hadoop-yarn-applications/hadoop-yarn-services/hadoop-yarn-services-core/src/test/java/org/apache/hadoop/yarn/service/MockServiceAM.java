@@ -68,6 +68,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
@@ -98,6 +99,8 @@ public class MockServiceAM extends ServiceMaster {
 
   private Map<ContainerId, ContainerStatus> containerStatuses =
       new ConcurrentHashMap<>();
+
+  private Set<ContainerId> releasedContainers = ConcurrentHashMap.newKeySet();
 
   private Credentials amCreds;
 
@@ -223,6 +226,13 @@ public class MockServiceAM extends ServiceMaster {
             return response;
           }
 
+          @Override
+          public synchronized void releaseAssignedContainer(
+              ContainerId containerId) {
+            releasedContainers.add(containerId);
+            super.releaseAssignedContainer(containerId);
+          }
+
           @Override public void unregisterApplicationMaster(
               FinalApplicationStatus appStatus, String appMessage,
               String appTrackingUrl) {
@@ -288,7 +298,7 @@ public class MockServiceAM extends ServiceMaster {
   }
 
   /**
-   *
+   * Creates a mock container and container ID and feeds to the component.
    * @param service The service for the component
    * @param id The id for the container
    * @param compName The component to which the container is fed
@@ -297,6 +307,18 @@ public class MockServiceAM extends ServiceMaster {
   public Container feedContainerToComp(Service service, int id,
       String compName) {
     ContainerId containerId = createContainerId(id);
+    return feedContainerToComp(service, containerId, compName);
+  }
+
+  /**
+   * Feeds the container to the component.
+   * @param service The service for the component
+   * @param containerId container id
+   * @param compName The component to which the container is fed
+   * @return
+   */
+  public Container feedContainerToComp(Service service, ContainerId containerId,
+      String compName) {
     Container container = createContainer(containerId, compName);
     synchronized (feedContainers) {
       feedContainers.add(container);
@@ -422,5 +444,15 @@ public class MockServiceAM extends ServiceMaster {
       dob.close();
     }
     return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
+
+  /**
+   * Waits for the container to get released
+   * @param containerId           ContainerId
+   */
+  public void waitForContainerToRelease(ContainerId containerId)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> releasedContainers.contains(containerId),
+        1000, 9990000);
   }
 }

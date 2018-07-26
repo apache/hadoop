@@ -22,8 +22,11 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
+import org.apache.hadoop.yarn.service.component.ComponentEvent;
+import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.ProviderService;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
@@ -116,9 +119,12 @@ public class ContainerLaunchService extends AbstractService{
                   launcher.completeContainerLaunch(), true);
         }
       } catch (Exception e) {
-        LOG.error(instance.getCompInstanceId()
-            + ": Failed to launch container. ", e);
-
+        LOG.error("{}: Failed to launch container.",
+            instance.getCompInstanceId(), e);
+        ComponentEvent event = new ComponentEvent(instance.getCompName(),
+            ComponentEventType.CONTAINER_COMPLETED)
+            .setInstance(instance).setContainerId(container.getId());
+        context.scheduler.getDispatcher().getEventHandler().handle(event);
       }
     }
   }

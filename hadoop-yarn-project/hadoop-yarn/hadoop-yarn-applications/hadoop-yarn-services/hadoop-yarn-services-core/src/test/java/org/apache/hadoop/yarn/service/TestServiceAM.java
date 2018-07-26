@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
@@ -389,6 +390,40 @@ public class TestServiceAM extends ServiceTestUtils{
     am.updateContainerStatus(exampleApp, 1, comp1Name, "newer.host");
     GenericTestUtils.waitFor(() -> comp1inst0.getContainerStatus().getHost()
         .equals("newer.host"), 2000, 200000);
+    am.stop();
+  }
+
+  // Test to verify that the containers are released and the
+  // component instance is added to the pending queue when building the launch
+  // context fails.
+  @Test(timeout = 9990000)
+  public void testContainersReleasedWhenPreLaunchFails()
+      throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
+    exampleApp.setName("testContainersReleasedWhenPreLaunchFails");
+
+    Component compA = createComponent("compa", 1, "pwd");
+    Artifact artifact = new Artifact();
+    artifact.setType(Artifact.TypeEnum.TARBALL);
+    compA.artifact(artifact);
+    exampleApp.addComponent(compA);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    am.init(conf);
+    am.start();
+
+    ContainerId containerId = am.createContainerId(1);
+
+    // allocate a container
+    am.feedContainerToComp(exampleApp, containerId, "compa");
+    am.waitForContainerToRelease(containerId);
+
+    Assert.assertEquals(1,
+        am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
 }

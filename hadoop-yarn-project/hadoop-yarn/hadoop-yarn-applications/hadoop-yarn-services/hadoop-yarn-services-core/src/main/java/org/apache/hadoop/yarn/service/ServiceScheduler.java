@@ -687,7 +687,8 @@ public class ServiceScheduler extends CompositeService {
         }
         ComponentEvent event =
             new ComponentEvent(instance.getCompName(), CONTAINER_COMPLETED)
-                .setStatus(status).setInstance(instance);
+                .setStatus(status).setInstance(instance)
+                .setContainerId(containerId);
         dispatcher.getEventHandler().handle(event);
       }
     }
