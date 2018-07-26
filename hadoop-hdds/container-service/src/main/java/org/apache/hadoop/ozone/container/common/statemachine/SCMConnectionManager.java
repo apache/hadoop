@@ -67,7 +67,7 @@ public class SCMConnectionManager
     this.rpcTimeout = timeOut.intValue();
     this.scmMachines = new HashMap<>();
     this.conf = conf;
-    jmxBean = MBeans.register("OzoneDataNode",
+    jmxBean = MBeans.register("HddsDatanode",
         "SCMConnectionManager",
         this);
   }
