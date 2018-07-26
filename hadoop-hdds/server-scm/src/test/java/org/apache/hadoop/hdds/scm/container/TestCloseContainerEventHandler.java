@@ -66,7 +66,8 @@ public class TestCloseContainerEventHandler {
     configuration
         .set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new ContainerMapping(configuration, nodeManager, 128);
+    mapping = new ContainerMapping(configuration, nodeManager, 128,
+        new EventQueue());
     eventQueue = new EventQueue();
     eventQueue.addHandler(CLOSE_CONTAINER,
         new CloseContainerEventHandler(mapping));
@@ -122,12 +123,7 @@ public class TestCloseContainerEventHandler {
     // state, so firing close container event should not queue CLOSE
     // command in the Datanode
     Assert.assertEquals(0, nodeManager.getCommandCount(datanode));
-    // Make sure the information is logged
-    Assert.assertTrue(logCapturer.getOutput().contains(
-        "container with id : " + id.getId()
-            + " is in ALLOCATED state and need not be closed"));
     //Execute these state transitions so that we can close the container.
-    mapping.updateContainerState(id.getId(), CREATE);
     mapping.updateContainerState(id.getId(), CREATED);
     eventQueue.fireEvent(CLOSE_CONTAINER,
         new ContainerID(
@@ -164,12 +160,7 @@ public class TestCloseContainerEventHandler {
       Assert.assertEquals(closeCount[i], nodeManager.getCommandCount(details));
       i++;
     }
-    // Make sure the information is logged
-    Assert.assertTrue(logCapturer.getOutput().contains(
-        "container with id : " + id.getId()
-            + " is in ALLOCATED state and need not be closed"));
     //Execute these state transitions so that we can close the container.
-    mapping.updateContainerState(id.getId(), CREATE);
     mapping.updateContainerState(id.getId(), CREATED);
     eventQueue.fireEvent(CLOSE_CONTAINER, id);
     eventQueue.processAll(1000);

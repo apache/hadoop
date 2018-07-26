@@ -19,11 +19,14 @@ package org.apache.hadoop.hdds.scm.pipelines;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .SCMContainerPlacementRandom;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.ratis.RatisManagerImpl;
@@ -33,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.statemachine
     .InvalidStateTransitionException;
@@ -48,6 +52,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -65,6 +70,8 @@ public class PipelineSelector {
   private final ContainerPlacementPolicy placementPolicy;
   private final NodeManager nodeManager;
   private final Configuration conf;
+  private final ContainerStateManager containerStateManager;
+  private final EventPublisher eventPublisher;
   private final RatisManagerImpl ratisManager;
   private final StandaloneManagerImpl standaloneManager;
   private final long containerSize;
@@ -79,9 +86,12 @@ public class PipelineSelector {
    * @param nodeManager - node manager
    * @param conf - Ozone Config
    */
-  public PipelineSelector(NodeManager nodeManager, Configuration conf) {
+  public PipelineSelector(NodeManager nodeManager,
+      ContainerStateManager containerStateManager, Configuration conf,
+      EventPublisher eventPublisher) {
     this.nodeManager = nodeManager;
     this.conf = conf;
+    this.eventPublisher = eventPublisher;
     this.placementPolicy = createContainerPlacementPolicy(nodeManager, conf);
     this.containerSize = OzoneConsts.GB * this.conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
@@ -99,6 +109,7 @@ public class PipelineSelector {
         ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT,
         ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT_DEFAULT,
         TimeUnit.MILLISECONDS);
+    this.containerStateManager = containerStateManager;
     pipelineLeaseManager = new LeaseManager<>("PipelineCreation",
         pipelineCreationLeaseTimeout);
     pipelineLeaseManager.start();
@@ -306,15 +317,54 @@ public class PipelineSelector {
   }
 
   /**
-   * Close the  pipeline with the given clusterId.
+   * Finalize a given pipeline.
    */
-
-  public void closePipeline(ReplicationType replicationType, String
-      pipelineID) throws IOException {
-    PipelineManager manager = getPipelineManager(replicationType);
+  public void finalizePipeline(Pipeline pipeline) throws IOException {
+    PipelineManager manager = getPipelineManager(pipeline.getType());
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
-    LOG.debug("Closing pipeline. pipelineID: {}", pipelineID);
-    manager.closePipeline(pipelineID);
+    LOG.debug("Finalizing pipeline. pipelineID: {}", pipeline.getPipelineName());
+    // Remove the pipeline from active allocation
+    manager.finalizePipeline(pipeline);
+    updatePipelineState(pipeline, HddsProtos.LifeCycleEvent.FINALIZE);
+    closePipelineIfNoOpenContainers(pipeline);
+  }
+
+  /**
+   * Close a given pipeline.
+   */
+  public void closePipelineIfNoOpenContainers(Pipeline pipeline) throws IOException {
+    if (pipeline.getLifeCycleState() != LifeCycleState.CLOSING) {
+      return;
+    }
+    NavigableSet<ContainerID> containerIDS = containerStateManager
+        .getMatchingContainerIDsByPipeline(pipeline.getPipelineName());
+    if (containerIDS.size() == 0) {
+      updatePipelineState(pipeline, HddsProtos.LifeCycleEvent.CLOSE);
+      LOG.info("Closing pipeline. pipelineID: {}", pipeline.getPipelineName());
+    }
+  }
+
+  /**
+   * Close a given pipeline.
+   */
+  private void closePipeline(Pipeline pipeline) {
+    PipelineManager manager = getPipelineManager(pipeline.getType());
+    Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
+    LOG.debug("Closing pipeline. pipelineID: {}", pipeline.getPipelineName());
+    NavigableSet<ContainerID> containers =
+        containerStateManager
+            .getMatchingContainerIDsByPipeline(pipeline.getPipelineName());
+    Preconditions.checkArgument(containers.size() == 0);
+    manager.closePipeline(pipeline);
+  }
+
+  private void closeContainersByPipeline(Pipeline pipeline) {
+    NavigableSet<ContainerID> containers =
+        containerStateManager
+            .getMatchingContainerIDsByPipeline(pipeline.getPipelineName());
+    for (ContainerID id : containers) {
+      eventPublisher.fireEvent(SCMEvents.CLOSE_CONTAINER, id);
+    }
   }
 
   /**
@@ -352,7 +402,7 @@ public class PipelineSelector {
         node2PipelineMap.getPipelines(dnId);
     for (Pipeline pipeline : pipelineSet) {
       getPipelineManager(pipeline.getType())
-          .removePipeline(pipeline);
+          .closePipeline(pipeline);
     }
     node2PipelineMap.removeDatanode(dnId);
   }
@@ -398,12 +448,12 @@ public class PipelineSelector {
         break;
 
       case FINALIZE:
-        //TODO: cleanup pipeline by closing all the containers on the pipeline
+        closeContainersByPipeline(pipeline);
         break;
 
       case CLOSE:
       case TIMEOUT:
-        // TODO: Release the nodes here when pipelines are destroyed
+        closePipeline(pipeline);
         break;
       default:
         throw new SCMException("Unsupported pipeline LifeCycleEvent.",

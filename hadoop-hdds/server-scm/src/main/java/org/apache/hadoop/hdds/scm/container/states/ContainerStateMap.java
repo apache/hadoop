@@ -346,7 +346,7 @@ public class ContainerStateMap {
     }
     // In case the container is set to closed state, it needs to be removed from
     // the pipeline Map.
-    if (newState == LifeCycleState.CLOSED) {
+    if (!info.isContainerOpen()) {
       openPipelineMap.remove(info.getPipelineName(), id);
     }
   }

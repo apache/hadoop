@@ -101,13 +101,14 @@ public class StandaloneManagerImpl extends PipelineManager {
   }
 
   /**
-   * Close the  pipeline with the given clusterId.
-   *
-   * @param pipelineID
+   * Close the pipeline.
    */
-  @Override
-  public void closePipeline(String pipelineID) throws IOException {
-
+  public void closePipeline(Pipeline pipeline) {
+    super.closePipeline(pipeline);
+    for (DatanodeDetails node : pipeline.getMachines()) {
+      // A node should always be the in standalone members list.
+      Preconditions.checkArgument(standAloneMembers.remove(node));
+    }
   }
 
   /**

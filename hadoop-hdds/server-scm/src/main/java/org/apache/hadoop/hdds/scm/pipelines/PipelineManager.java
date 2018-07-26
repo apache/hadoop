@@ -38,14 +38,14 @@ public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
   private final List<Pipeline> activePipelines;
-  private final Map<String, Pipeline> activePipelineMap;
+  private final Map<String, Pipeline> pipelineMap;
   private final AtomicInteger pipelineIndex;
   private final Node2PipelineMap node2PipelineMap;
 
   public PipelineManager(Node2PipelineMap map) {
     activePipelines = new LinkedList<>();
     pipelineIndex = new AtomicInteger(0);
-    activePipelineMap = new WeakHashMap<>();
+    pipelineMap = new WeakHashMap<>();
     node2PipelineMap = map;
   }
 
@@ -85,8 +85,8 @@ public abstract class PipelineManager {
     Pipeline pipeline = null;
 
     // 1. Check if pipeline already exists
-    if (activePipelineMap.containsKey(pipelineName)) {
-      pipeline = activePipelineMap.get(pipelineName);
+    if (pipelineMap.containsKey(pipelineName)) {
+      pipeline = pipelineMap.get(pipelineName);
       LOG.debug("Returning pipeline for pipelineName:{}", pipelineName);
       return pipeline;
     } else {
@@ -114,11 +114,6 @@ public abstract class PipelineManager {
    * TODO: move the initialization to Ozone Client later
    */
   public abstract void initializePipeline(Pipeline pipeline) throws IOException;
-
-  public void removePipeline(Pipeline pipeline) {
-    activePipelines.remove(pipeline);
-    activePipelineMap.remove(pipeline.getPipelineName());
-  }
 
   /**
    * Find a Pipeline that is operational.
@@ -172,16 +167,28 @@ public abstract class PipelineManager {
               + "replicationType:{} replicationFactor:{}",
           pipeline.getPipelineName(), replicationType, replicationFactor);
       activePipelines.add(pipeline);
-      activePipelineMap.put(pipeline.getPipelineName(), pipeline);
+      pipelineMap.put(pipeline.getPipelineName(), pipeline);
       node2PipelineMap.addPipeline(pipeline);
     }
     return pipeline;
   }
 
   /**
-   * Close the  pipeline with the given clusterId.
+   * Remove the pipeline from active allocation
+   * @param pipeline pipeline to be finalized
    */
-  public abstract void closePipeline(String pipelineID) throws IOException;
+  public synchronized void finalizePipeline(Pipeline pipeline) {
+    activePipelines.remove(pipeline);
+  }
+
+  /**
+   *
+   * @param pipeline
+   */
+  public void closePipeline(Pipeline pipeline) {
+    pipelineMap.remove(pipeline.getPipelineName());
+    node2PipelineMap.removePipeline(pipeline);
+  }
 
   /**
    * list members in the pipeline .

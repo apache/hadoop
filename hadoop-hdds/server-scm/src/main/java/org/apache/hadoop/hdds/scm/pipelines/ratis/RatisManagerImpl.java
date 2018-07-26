@@ -108,13 +108,15 @@ public class RatisManagerImpl extends PipelineManager {
   }
 
   /**
-   * Close the  pipeline with the given clusterId.
-   *
-   * @param pipelineID
+   * Close the pipeline.
    */
-  @Override
-  public void closePipeline(String pipelineID) throws IOException {
-
+  public void closePipeline(Pipeline pipeline) {
+    super.closePipeline(pipeline);
+    for (DatanodeDetails node : pipeline.getMachines()) {
+      // A node should always be the in ratis members list.
+      Preconditions.checkArgument(ratisMembers.remove(node));
+    }
+    //TODO: should the raft ring also be destroyed as well?
   }
 
   /**

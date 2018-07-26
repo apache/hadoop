@@ -192,7 +192,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     scmNodeManager = new SCMNodeManager(
         conf, scmStorage.getClusterID(), this, eventQueue);
     scmContainerManager = new ContainerMapping(
-        conf, getScmNodeManager(), cacheSize);
+        conf, getScmNodeManager(), cacheSize, eventQueue);
     scmBlockManager = new BlockManagerImpl(
         conf, getScmNodeManager(), scmContainerManager, eventQueue);
 

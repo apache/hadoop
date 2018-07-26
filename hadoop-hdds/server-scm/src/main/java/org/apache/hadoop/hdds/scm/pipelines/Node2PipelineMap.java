@@ -102,18 +102,27 @@ public class Node2PipelineMap {
         Collections.unmodifiableSet(v));
   }
 
-/**
- * Adds a pipeline entry to a given dataNode in the map.
- * @param pipeline Pipeline to be added
- */
- public synchronized void addPipeline(Pipeline pipeline) throws SCMException {
-   for (DatanodeDetails details : pipeline.getDatanodes().values()) {
-     UUID dnId = details.getUuid();
-     dn2PipelineMap
-         .computeIfAbsent(dnId,k->Collections.synchronizedSet(new HashSet<>()))
-         .add(pipeline);
-   }
- }
+  /**
+   * Adds a pipeline entry to a given dataNode in the map.
+   * @param pipeline Pipeline to be added
+   */
+  public synchronized void addPipeline(Pipeline pipeline) {
+    for (DatanodeDetails details : pipeline.getDatanodes().values()) {
+      UUID dnId = details.getUuid();
+      dn2PipelineMap
+          .computeIfAbsent(dnId,
+              k -> Collections.synchronizedSet(new HashSet<>()))
+          .add(pipeline);
+    }
+  }
+
+  public synchronized void removePipeline(Pipeline pipeline) {
+    for (DatanodeDetails details : pipeline.getDatanodes().values()) {
+      UUID dnId = details.getUuid();
+      dn2PipelineMap.computeIfPresent(dnId,
+          (k, v) -> {v.remove(pipeline); return v;});
+    }
+  }
 
   public Map<UUID, Set<Pipeline>> getDn2PipelineMap() {
     return Collections.unmodifiableMap(dn2PipelineMap);
