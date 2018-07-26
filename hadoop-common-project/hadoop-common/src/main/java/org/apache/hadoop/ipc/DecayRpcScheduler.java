@@ -391,6 +391,7 @@ public class DecayRpcScheduler implements RpcScheduler,
    * counts current.
    */
   private void decayCurrentCounts() {
+    LOG.debug("Start to decay current counts.");
     try {
       long totalDecayedCount = 0;
       long totalRawCount = 0;
@@ -410,7 +411,12 @@ public class DecayRpcScheduler implements RpcScheduler,
         totalDecayedCount += nextValue;
         decayedCount.set(nextValue);
 
+        LOG.debug("Decaying counts for the user: {}, " +
+            "its decayedCount: {}, rawCount: {}", entry.getKey(),
+            nextValue, rawCount.get());
         if (nextValue == 0) {
+          LOG.debug("The decayed count for the user {} is zero " +
+              "and being cleaned.", entry.getKey());
           // We will clean up unused keys here. An interesting optimization
           // might be to have an upper bound on keyspace in callCounts and only
           // clean once we pass it.
@@ -422,6 +428,8 @@ public class DecayRpcScheduler implements RpcScheduler,
       totalDecayedCallCount.set(totalDecayedCount);
       totalRawCallCount.set(totalRawCount);
 
+      LOG.debug("After decaying the stored counts, totalDecayedCount: {}, " +
+          "totalRawCallCount: {}.", totalDecayedCount, totalRawCount);
       // Now refresh the cache of scheduling decisions
       recomputeScheduleCache();
 
