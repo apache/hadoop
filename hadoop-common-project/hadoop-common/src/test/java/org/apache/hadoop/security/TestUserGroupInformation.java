@@ -47,6 +47,7 @@ import org.slf4j.event.Level;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.kerberos.KeyTab;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
@@ -61,6 +62,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -88,7 +90,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestUserGroupInformation {
@@ -1210,5 +1215,38 @@ public class TestUserGroupInformation {
     // unblock the original call.
     barrier.await();
     assertSame(testUgi1.getSubject(), blockingLookup.get().getSubject());
+  }
+
+  @Test
+  public void testKerberosTicketIsDestroyedChecked() throws Exception {
+    // Create UserGroupInformation
+    GenericTestUtils.setLogLevel(UserGroupInformation.LOG, Level.DEBUG);
+    Set<User> users = new HashSet<>();
+    users.add(new User("Foo"));
+    Subject subject =
+        new Subject(true, users, new HashSet<>(), new HashSet<>());
+    UserGroupInformation ugi = spy(new UserGroupInformation(subject));
+
+    // throw IOException in the middle of the autoRenewalForUserCreds
+    doThrow(new IOException()).when(ugi).reloginFromTicketCache();
+
+    // Create and destroy the KerberosTicket, so endTime will be null
+    Date d = new Date();
+    KerberosPrincipal kp = new KerberosPrincipal("Foo");
+    KerberosTicket tgt = spy(new KerberosTicket(new byte[]{}, kp, kp, new
+        byte[]{}, 0, null, d, d, d, d, null));
+    tgt.destroy();
+
+    // run AutoRenewalForUserCredsRunnable with this
+    UserGroupInformation.AutoRenewalForUserCredsRunnable userCredsRunnable =
+        ugi.new AutoRenewalForUserCredsRunnable(tgt,
+            Boolean.toString(Boolean.TRUE), 100);
+
+    // Set the runnable to not to run in a loop
+    userCredsRunnable.setRunRenewalLoop(false);
+    // there should be no exception when calling this
+    userCredsRunnable.run();
+    // isDestroyed should be called at least once
+    Mockito.verify(tgt, atLeastOnce()).isDestroyed();
   }
 }
