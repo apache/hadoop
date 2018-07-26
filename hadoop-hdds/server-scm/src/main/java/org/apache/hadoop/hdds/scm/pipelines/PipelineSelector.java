@@ -99,8 +99,8 @@ public class PipelineSelector {
         ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT,
         ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_LEASE_TIMEOUT_DEFAULT,
         TimeUnit.MILLISECONDS);
-    LOG.trace("Starting Pipeline Lease Manager.");
-    pipelineLeaseManager = new LeaseManager<>(pipelineCreationLeaseTimeout);
+    pipelineLeaseManager = new LeaseManager<>("PipelineCreation",
+        pipelineCreationLeaseTimeout);
     pipelineLeaseManager.start();
 
     // These are the steady states of a container.

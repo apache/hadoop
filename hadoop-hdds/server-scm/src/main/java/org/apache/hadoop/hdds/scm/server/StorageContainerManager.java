@@ -223,7 +223,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
             HDDS_SCM_WATCHER_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
 
-    commandWatcherLeaseManager = new LeaseManager<>(watcherTimeout);
+    commandWatcherLeaseManager = new LeaseManager<>("CommandWatcher",
+        watcherTimeout);
 
     //TODO: support configurable containerPlacement policy
     ContainerPlacementPolicy containerPlacementPolicy =

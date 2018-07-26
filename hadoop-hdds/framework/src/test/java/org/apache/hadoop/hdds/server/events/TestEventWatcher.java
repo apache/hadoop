@@ -46,7 +46,7 @@ public class TestEventWatcher {
   @Before
   public void startLeaseManager() {
     DefaultMetricsSystem.instance();
-    leaseManager = new LeaseManager<>(2000l);
+    leaseManager = new LeaseManager<>("Test", 2000L);
     leaseManager.start();
   }
 

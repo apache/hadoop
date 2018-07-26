@@ -67,7 +67,7 @@ public class TestLeaseManager {
   public void testLeaseAcquireAndRelease() throws LeaseException {
     //It is assumed that the test case execution won't take more than 5 seconds,
     //if it takes more time increase the defaultTimeout value of LeaseManager.
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     DummyResource resourceTwo = new DummyResource("two");
@@ -93,7 +93,7 @@ public class TestLeaseManager {
 
   @Test
   public void testLeaseAlreadyExist() throws LeaseException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     DummyResource resourceTwo = new DummyResource("two");
@@ -113,7 +113,7 @@ public class TestLeaseManager {
 
   @Test
   public void testLeaseNotFound() throws LeaseException, InterruptedException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     DummyResource resourceTwo = new DummyResource("two");
@@ -154,7 +154,7 @@ public class TestLeaseManager {
 
   @Test
   public void testCustomLeaseTimeout() throws LeaseException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     DummyResource resourceTwo = new DummyResource("two");
@@ -179,7 +179,7 @@ public class TestLeaseManager {
   @Test
   public void testLeaseCallback() throws LeaseException, InterruptedException {
     Map<DummyResource, String> leaseStatus = new HashMap<>();
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     Lease<DummyResource> leaseOne = manager.acquire(resourceOne);
@@ -209,7 +209,7 @@ public class TestLeaseManager {
       throws LeaseException, InterruptedException {
     // Callbacks should not be executed in case of lease release
     Map<DummyResource, String> leaseStatus = new HashMap<>();
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     Lease<DummyResource> leaseOne = manager.acquire(resourceOne);
@@ -231,7 +231,7 @@ public class TestLeaseManager {
   public void testLeaseCallbackWithMultipleLeases()
       throws LeaseException, InterruptedException {
     Map<DummyResource, String> leaseStatus = new HashMap<>();
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     DummyResource resourceTwo = new DummyResource("two");
@@ -302,7 +302,7 @@ public class TestLeaseManager {
 
   @Test
   public void testReuseReleasedLease() throws LeaseException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     Lease<DummyResource> leaseOne = manager.acquire(resourceOne);
@@ -324,13 +324,12 @@ public class TestLeaseManager {
   @Test
   public void testReuseTimedOutLease()
       throws LeaseException, InterruptedException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     Lease<DummyResource> leaseOne = manager.acquire(resourceOne);
     Assert.assertEquals(leaseOne, manager.get(resourceOne));
     Assert.assertFalse(leaseOne.hasExpired());
-
     // wait for lease to expire
     long sleepTime = leaseOne.getRemainingTime() + 1000;
     try {
@@ -352,7 +351,7 @@ public class TestLeaseManager {
 
   @Test
   public void testRenewLease() throws LeaseException, InterruptedException {
-    LeaseManager<DummyResource> manager = new LeaseManager<>(5000);
+    LeaseManager<DummyResource> manager = new LeaseManager<>("Test", 5000);
     manager.start();
     DummyResource resourceOne = new DummyResource("one");
     Lease<DummyResource> leaseOne = manager.acquire(resourceOne);

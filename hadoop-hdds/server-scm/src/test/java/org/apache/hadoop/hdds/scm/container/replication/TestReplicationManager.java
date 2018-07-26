@@ -112,7 +112,7 @@ public class TestReplicationManager {
 
     //GIVEN
 
-    LeaseManager<Long> leaseManager = new LeaseManager<>(100000L);
+    LeaseManager<Long> leaseManager = new LeaseManager<>("Test", 100000L);
     try {
       leaseManager.start();
 
@@ -152,7 +152,7 @@ public class TestReplicationManager {
   public void testCommandWatcher() throws InterruptedException, IOException {
 
     Logger.getRootLogger().setLevel(Level.DEBUG);
-    LeaseManager<Long> leaseManager = new LeaseManager<>(1000L);
+    LeaseManager<Long> leaseManager = new LeaseManager<>("Test", 1000L);
 
     try {
       leaseManager.start();
