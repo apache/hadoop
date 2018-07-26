@@ -6183,11 +6183,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>mkdir: `dir0/dir1': No such file or directory</expected-output>
+          <expected-output>.*mkdir:.*dir0': No such file or directory$</expected-output>
         </comparator>
       </comparators>
     </test>
-    
+
     <test> <!-- TESTED -->
       <description>mkdir: Test recreate of existing directory fails</description>
       <test-commands>
