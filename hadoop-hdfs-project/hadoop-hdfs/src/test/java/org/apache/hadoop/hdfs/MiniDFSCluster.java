@@ -1021,7 +1021,7 @@ public class MiniDFSCluster implements AutoCloseable {
     Collection<URI> prevNNDirs = null;
     for (NNConf nn : nameservice.getNNs()) {
       initNameNodeConf(conf, nsId, nsCounter, nn.getNnId(), manageNameDfsDirs,
-          manageNameDfsDirs,  nnIndex);
+          enableManagedDfsDirsRedundancy,  nnIndex);
       Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
       if (format) {
         // delete the existing namespaces
