@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service.component;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -518,10 +519,10 @@ public class Component implements EventHandler<ComponentEvent> {
   private static class ContainerCompletedTransition extends BaseTransition {
     @Override
     public void transition(Component component, ComponentEvent event) {
-
+      Preconditions.checkNotNull(event.getContainerId());
       component.updateMetrics(event.getStatus());
       component.dispatcher.getEventHandler().handle(
-          new ComponentInstanceEvent(event.getStatus().getContainerId(), STOP)
+          new ComponentInstanceEvent(event.getContainerId(), STOP)
               .setStatus(event.getStatus()));
 
       ComponentRestartPolicy restartPolicy =
@@ -784,28 +785,33 @@ public class Component implements EventHandler<ComponentEvent> {
   }
 
   private void updateMetrics(ContainerStatus status) {
-    switch (status.getExitStatus()) {
-    case SUCCESS:
-      componentMetrics.containersSucceeded.incr();
-      scheduler.getServiceMetrics().containersSucceeded.incr();
-      return;
-    case PREEMPTED:
-      componentMetrics.containersPreempted.incr();
-      scheduler.getServiceMetrics().containersPreempted.incr();
-      break;
-    case DISKS_FAILED:
-      componentMetrics.containersDiskFailure.incr();
-      scheduler.getServiceMetrics().containersDiskFailure.incr();
-      break;
-    default:
-      break;
+    //when a container preparation fails while building launch context, then
+    //the container status may not exist.
+    if (status != null) {
+      switch (status.getExitStatus()) {
+        case SUCCESS:
+          componentMetrics.containersSucceeded.incr();
+          scheduler.getServiceMetrics().containersSucceeded.incr();
+          return;
+        case PREEMPTED:
+          componentMetrics.containersPreempted.incr();
+          scheduler.getServiceMetrics().containersPreempted.incr();
+          break;
+        case DISKS_FAILED:
+          componentMetrics.containersDiskFailure.incr();
+          scheduler.getServiceMetrics().containersDiskFailure.incr();
+          break;
+        default:
+          break;
+      }
     }
 
     // containersFailed include preempted, disks_failed etc.
     componentMetrics.containersFailed.incr();
     scheduler.getServiceMetrics().containersFailed.incr();
 
-    if (Apps.shouldCountTowardsNodeBlacklisting(status.getExitStatus())) {
+    if (status != null && Apps.shouldCountTowardsNodeBlacklisting(
+        status.getExitStatus())) {
       String host = scheduler.getLiveInstances().get(status.getContainerId())
           .getNodeId().getHost();
       failureTracker.incNodeFailure(host);
