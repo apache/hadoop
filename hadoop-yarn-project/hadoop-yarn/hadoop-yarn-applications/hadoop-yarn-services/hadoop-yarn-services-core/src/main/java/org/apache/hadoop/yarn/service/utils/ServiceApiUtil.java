@@ -282,7 +282,7 @@ public class ServiceApiUtil {
 
     AbstractClientProvider compClientProvider = ProviderFactory
         .getClientProvider(comp.getArtifact());
-    compClientProvider.validateArtifact(comp.getArtifact(), fs);
+    compClientProvider.validateArtifact(comp.getArtifact(), comp.getName(), fs);
 
     if (comp.getLaunchCommand() == null && (comp.getArtifact() == null || comp
         .getArtifact().getType() != Artifact.TypeEnum.DOCKER)) {
@@ -299,7 +299,7 @@ public class ServiceApiUtil {
               + ": " + comp.getNumberOfContainers(), comp.getName()));
     }
     compClientProvider.validateConfigFiles(comp.getConfiguration()
-        .getFiles(), fs);
+        .getFiles(), comp.getName(), fs);
 
     MonitorUtils.getProbe(comp.getReadinessCheck());
   }
