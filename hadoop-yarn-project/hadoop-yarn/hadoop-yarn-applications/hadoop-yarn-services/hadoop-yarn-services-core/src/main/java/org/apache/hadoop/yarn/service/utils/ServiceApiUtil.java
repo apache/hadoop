@@ -234,6 +234,16 @@ public class ServiceApiUtil {
 
   public static void validateKerberosPrincipal(
       KerberosPrincipal kerberosPrincipal) throws IOException {
+    try {
+      if (!kerberosPrincipal.getPrincipalName().contains("/")) {
+        throw new IllegalArgumentException(String.format(
+            RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
+            kerberosPrincipal.getPrincipalName()));
+      }
+    } catch (NullPointerException e) {
+      throw new IllegalArgumentException(
+          RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_MISSING);
+    }
     if (!StringUtils.isEmpty(kerberosPrincipal.getKeytab())) {
       try {
         // validate URI format
