@@ -125,4 +125,8 @@ public interface RestApiErrorMessages {
 
   String ERROR_COMP_DOES_NOT_NEED_UPGRADE = "The component (%s) does not need" +
       " an upgrade.";
+  String ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT = "Kerberos principal (%s) does " +
+      " not contain a hostname.";
+  String ERROR_KERBEROS_PRINCIPAL_MISSING = "Kerberos principal or keytab is" +
+      " missing.";
 }

@@ -625,4 +625,29 @@ public class TestServiceApiUtil {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
   }
+
+  @Test
+  public void testKerberosPrincipalNameFormat() throws IOException {
+    Service app = createValidApplication("comp-a");
+    KerberosPrincipal kp = new KerberosPrincipal();
+    kp.setPrincipalName("user@domain.com");
+    app.setKerberosPrincipal(kp);
+
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+      Assert.fail(EXCEPTION_PREFIX + "service with invalid principal name format.");
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+          String.format(RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
+              kp.getPrincipalName()),
+          e.getMessage());
+    }
+
+    kp.setPrincipalName("user/_HOST@domain.com");
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+    } catch (IllegalArgumentException e) {
+      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+    }
+  }
 }
