@@ -53,6 +53,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
+        .InvalidResourceType;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -88,6 +90,12 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static org.apache.hadoop.yarn.exceptions
+        .InvalidResourceRequestException.InvalidResourceType
+        .GREATER_THEN_MAX_ALLOCATION;
+import static org.apache.hadoop.yarn.exceptions
+        .InvalidResourceRequestException.InvalidResourceType.LESS_THAN_ZERO;
 
 /**
  * This is the default Application Master Service processor. It has be the
@@ -231,8 +239,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           maximumCapacity, app.getQueue(),
           getScheduler(), getRmContext());
     } catch (InvalidResourceRequestException e) {
-      LOG.warn("Invalid resource ask by application " + appAttemptId, e);
-      throw e;
+      RMAppAttempt rmAppAttempt = app.getRMAppAttempt(appAttemptId);
+      handleInvalidResourceException(e, rmAppAttempt);
     }
 
     try {
@@ -334,6 +342,17 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setContainersFromPreviousAttempts(
         allocation.getPreviousAttemptContainers());
+  }
+
+  private void handleInvalidResourceException(InvalidResourceRequestException e,
+          RMAppAttempt rmAppAttempt) throws InvalidResourceRequestException {
+    if (e.getInvalidResourceType() == LESS_THAN_ZERO ||
+            e.getInvalidResourceType() == GREATER_THEN_MAX_ALLOCATION) {
+      rmAppAttempt.updateAMLaunchDiagnostics(e.getMessage());
+    }
+    LOG.warn("Invalid resource ask by application " +
+            rmAppAttempt.getAppAttemptId(), e);
+    throw e;
   }
 
   private void handleNodeUpdates(RMApp app, AllocateResponse allocateResponse) {
