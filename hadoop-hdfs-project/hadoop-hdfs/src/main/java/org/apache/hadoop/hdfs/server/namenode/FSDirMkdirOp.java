@@ -110,10 +110,7 @@ class FSDirMkdirOp {
    * Create all ancestor directories and return the parent inodes.
    *
    * @param fsd FSDirectory
-   * @param existing The INodesInPath instance containing all the existing
-   *                 ancestral INodes
-   * @param children The relative path from the parent towards children,
-   *                 starting with "/"
+   * @param iip inodes in path to the fs directory
    * @param perm the permission of the directory. Note that all ancestors
    *             created along the path has implicit {@code u+wx} permissions.
    * @param inheritPerms if the ancestor directories should inherit permissions
