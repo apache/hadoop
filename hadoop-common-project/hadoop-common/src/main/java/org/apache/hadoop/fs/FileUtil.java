@@ -30,7 +30,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.AccessDeniedException;
@@ -203,18 +206,26 @@ public class FileUtil {
       return "";
     }
 
-    if (Files.isSymbolicLink(f.toPath())) {
+    // This will make sure we remove the protocol as file://
+    java.nio.file.Path pathFile;
+    try {
+      pathFile = Paths.get(new URL(f.toString()).toURI());
+    } catch (MalformedURLException | URISyntaxException e) {
+      pathFile = f.toPath();
+    }
+
+    if (Files.isSymbolicLink(pathFile)) {
       java.nio.file.Path p = null;
       try {
-        p = Files.readSymbolicLink(f.toPath());
+        p = Files.readSymbolicLink(pathFile);
       } catch (Exception e) {
-        LOG.warn("Exception while reading the symbolic link "
-            + f.getAbsolutePath() + ". Exception= " + e.getMessage());
+        LOG.warn("Exception while reading the symbolic link {}. Exception= {}",
+            f, e.getMessage());
         return "";
       }
       return p.toAbsolutePath().toString();
     }
-    LOG.warn("The file " + f.getAbsolutePath() + " is not a symbolic link.");
+    LOG.warn("The file {} is not a symbolic link.", f);
     return "";
   }
 
