@@ -114,18 +114,16 @@ public class KeyValueContainer implements Container {
 
       containerMetaDataPath = KeyValueContainerLocationUtil
           .getContainerMetaDataPath(hddsVolumeDir, scmId, containerID);
+      containerData.setMetadataPath(containerMetaDataPath.getPath());
+
       File chunksPath = KeyValueContainerLocationUtil.getChunksLocationPath(
           hddsVolumeDir, scmId, containerID);
-
-      File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-          containerMetaDataPath, containerID);
-      File dbFile = KeyValueContainerLocationUtil.getContainerDBFile(
-          containerMetaDataPath, containerID);
 
       // Check if it is new Container.
       ContainerUtils.verifyIsNewContainer(containerMetaDataPath);
 
       //Create Metadata path chunks path and metadata db
+      File dbFile = getContainerDBFile();
       KeyValueContainerUtil.createContainerMetaData(containerMetaDataPath,
           chunksPath, dbFile, config);
 
@@ -133,13 +131,13 @@ public class KeyValueContainer implements Container {
           OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
 
       //Set containerData for the KeyValueContainer.
-      containerData.setMetadataPath(containerMetaDataPath.getPath());
       containerData.setChunksPath(chunksPath.getPath());
       containerData.setContainerDBType(impl);
       containerData.setDbFile(dbFile);
       containerData.setVolume(containerVolume);
 
       // Create .container file
+      File containerFile = getContainerFile();
       writeToContainerFile(containerFile, true);
 
     } catch (StorageContainerException ex) {
@@ -415,9 +413,19 @@ public class KeyValueContainer implements Container {
    * Returns containerFile.
    * @return .container File name
    */
-  private File getContainerFile() {
+  @Override
+  public File getContainerFile() {
     return new File(containerData.getMetadataPath(), containerData
         .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
+  }
+
+  /**
+   * Returns container DB file
+   * @return
+   */
+  public File getContainerDBFile() {
+    return new File(containerData.getMetadataPath(), containerData
+        .getContainerID() + OzoneConsts.DN_CONTAINER_DB);
   }
 
   /**

@@ -23,8 +23,8 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
@@ -32,7 +32,6 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,8 +118,7 @@ public class ContainerReader implements Runnable {
     }
 
     for (File scmLoc : scmDir) {
-      File currentDir = null;
-      currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
+      File currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
       File[] containerTopDirs = currentDir.listFiles();
       if (containerTopDirs != null) {
         for (File containerTopDir : containerTopDirs) {
@@ -128,21 +126,14 @@ public class ContainerReader implements Runnable {
             File[] containerDirs = containerTopDir.listFiles();
             if (containerDirs != null) {
               for (File containerDir : containerDirs) {
-                File metadataPath = new File(containerDir + File.separator +
-                    OzoneConsts.CONTAINER_META_PATH);
-                long containerID = Long.parseLong(containerDir.getName());
-                if (metadataPath.exists()) {
-                  File containerFile = KeyValueContainerLocationUtil
-                      .getContainerFile(metadataPath, containerID);
-                  if (containerFile.exists()) {
-                    verifyContainerFile(containerID, containerFile);
-                  } else {
-                    LOG.error("Missing .container file for ContainerID: {}",
-                        containerID);
-                  }
+                File containerFile = ContainerUtils.getContainerFile(
+                    containerDir);
+                long containerID = ContainerUtils.getContainerID(containerDir);
+                if (containerFile.exists()) {
+                  verifyContainerFile(containerID, containerFile);
                 } else {
-                  LOG.error("Missing container metadata directory for " +
-                      "ContainerID: {}", containerID);
+                  LOG.error("Missing .container file for ContainerID: {}",
+                      containerDir.getName());
                 }
               }
             }

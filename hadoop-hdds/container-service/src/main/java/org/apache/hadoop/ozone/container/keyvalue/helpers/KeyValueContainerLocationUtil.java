@@ -99,27 +99,10 @@ public final class KeyValueContainerLocationUtil {
   }
 
   /**
-   * Returns containerFile.
-   * @param containerMetaDataPath
-   * @param containerID
-   * @return .container File name
-   */
-  public static File getContainerFile(File containerMetaDataPath,
-      long containerID) {
-    Preconditions.checkNotNull(containerMetaDataPath);
-    return new File(containerMetaDataPath, containerID +
-        OzoneConsts.CONTAINER_EXTENSION);
-  }
-
-  /**
    * Return containerDB File.
-   * @param containerMetaDataPath
-   * @param containerID
-   * @return containerDB File name
    */
   public static File getContainerDBFile(File containerMetaDataPath,
       long containerID) {
-    Preconditions.checkNotNull(containerMetaDataPath);
     return new File(containerMetaDataPath, containerID + OzoneConsts
         .DN_CONTAINER_DB);
   }

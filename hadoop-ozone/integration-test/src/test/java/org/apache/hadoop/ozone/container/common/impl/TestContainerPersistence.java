@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume
@@ -40,8 +41,6 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
-import org.apache.hadoop.ozone.container.keyvalue.helpers
-    .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
@@ -714,9 +713,7 @@ public class TestContainerPersistence {
     KeyValueContainer container =
         (KeyValueContainer) addContainer(containerSet, testContainerID);
 
-    File orgContainerFile = KeyValueContainerLocationUtil.getContainerFile(
-        new File(container.getContainerData().getMetadataPath()),
-        testContainerID);
+    File orgContainerFile = container.getContainerFile();
     Assert.assertTrue(orgContainerFile.exists());
 
     Map<String, String> newMetadata = Maps.newHashMap();
@@ -738,9 +735,9 @@ public class TestContainerPersistence {
         actualNewData.getMetadata().get("owner"));
 
     // Verify container data on disk
-    File newContainerFile = KeyValueContainerLocationUtil.getContainerFile(
-        new File(actualNewData.getMetadataPath()),
-        testContainerID);
+    File containerBaseDir = new File(actualNewData.getMetadataPath())
+        .getParentFile();
+    File newContainerFile = ContainerUtils.getContainerFile(containerBaseDir);
     Assert.assertTrue("Container file should exist.",
         newContainerFile.exists());
     Assert.assertEquals("Container file should be in same location.",

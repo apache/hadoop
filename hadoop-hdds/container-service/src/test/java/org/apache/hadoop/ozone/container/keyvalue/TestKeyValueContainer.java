@@ -111,11 +111,9 @@ public class TestKeyValueContainer {
     File containerMetaDataLoc = new File(containerMetaDataPath);
 
     //Check whether container file and container db file exists or not.
-    assertTrue(KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerID).exists(), ".Container File does" +
-        " not exist");
-    assertTrue(KeyValueContainerLocationUtil.getContainerDBFile(
-        containerMetaDataLoc, containerID).exists(), "Container DB does " +
+    assertTrue(keyValueContainer.getContainerFile().exists(),
+        ".Container File does not exist");
+    assertTrue(keyValueContainer.getContainerDBFile().exists(), "Container DB does " +
         "not exist");
   }
 
@@ -166,11 +164,9 @@ public class TestKeyValueContainer {
         .getParentFile().exists());
 
     assertFalse("Container File still exists",
-        KeyValueContainerLocationUtil.getContainerFile(containerMetaDataLoc,
-            containerID).exists());
+        keyValueContainer.getContainerFile().exists());
     assertFalse("Container DB file still exists",
-        KeyValueContainerLocationUtil.getContainerDBFile(containerMetaDataLoc,
-            containerID).exists());
+        keyValueContainer.getContainerDBFile().exists());
   }
 
 
@@ -188,9 +184,7 @@ public class TestKeyValueContainer {
     //Check state in the .container file
     String containerMetaDataPath = keyValueContainerData
         .getMetadataPath();
-    File containerMetaDataLoc = new File(containerMetaDataPath);
-    File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerID);
+    File containerFile = keyValueContainer.getContainerFile();
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
@@ -227,11 +221,7 @@ public class TestKeyValueContainer {
     assertEquals(2, keyValueContainerData.getMetadata().size());
 
     //Check metadata in the .container file
-    String containerMetaDataPath = keyValueContainerData
-        .getMetadataPath();
-    File containerMetaDataLoc = new File(containerMetaDataPath);
-    File containerFile = KeyValueContainerLocationUtil.getContainerFile(
-        containerMetaDataLoc, containerID);
+    File containerFile = keyValueContainer.getContainerFile();
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);

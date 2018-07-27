@@ -199,20 +199,6 @@ public final class ContainerUtils {
   }
 
   /**
-   * Returns container file location.
-   *
-   * @param containerData - Data
-   * @param location - Root path
-   * @return Path
-   */
-  public static File getContainerFile(ContainerData containerData,
-      Path location) {
-    return location.resolve(Long.toString(containerData
-        .getContainerID()).concat(CONTAINER_EXTENSION))
-        .toFile();
-  }
-
-  /**
    * Persistent a {@link DatanodeDetails} to a local file.
    *
    * @throws IOException when read/write error occurs
@@ -300,4 +286,24 @@ public final class ContainerUtils {
     }
   }
 
+  /**
+   * Get the .container file from the containerBaseDir
+   * @param containerBaseDir container base directory. The name of this
+   *                         directory is same as the containerID
+   * @return the .container file
+   */
+  public static File getContainerFile(File containerBaseDir) {
+    // Container file layout is
+    // .../<<containerID>>/metadata/<<containerID>>.container
+    String containerFilePath = OzoneConsts.CONTAINER_META_PATH + File.separator
+        + getContainerID(containerBaseDir) + OzoneConsts.CONTAINER_EXTENSION;
+    return new File(containerBaseDir, containerFilePath);
+  }
+
+  /**
+   * ContainerID can be decoded from the container base directory name
+   */
+  public static long getContainerID(File containerBaseDir) {
+    return Long.parseLong(containerBaseDir.getName());
+  }
 }
