@@ -172,7 +172,9 @@ public class DiskBalancerCLI extends Configured implements Tool {
     try {
       res = ToolRunner.run(shell, argv);
     } catch (Exception ex) {
-      LOG.error(ex.toString());
+      String msg = String.format("Exception thrown while running %s.",
+          DiskBalancerCLI.class.getSimpleName());
+      LOG.error(msg, ex);
       res = 1;
     }
     System.exit(res);
