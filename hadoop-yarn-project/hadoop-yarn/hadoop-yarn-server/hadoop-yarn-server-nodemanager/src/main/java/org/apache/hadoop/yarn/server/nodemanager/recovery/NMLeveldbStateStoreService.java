@@ -142,9 +142,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       NM_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
   private static final String CONTAINER_TOKENS_KEY_PREFIX =
       "ContainerTokens/";
-  private static final String CONTAINER_TOKENS_CURRENT_MASTER_KEY =
+  private static final String CONTAINER_TOKEN_SECRETMANAGER_CURRENT_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
-  private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
+  private static final String CONTAINER_TOKEN_SECRETMANAGER_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
@@ -652,6 +652,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_UPDATE_TOKEN_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_START_TIME_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_LOG_DIR_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_VERSION_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_REMAIN_RETRIES_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_RESTART_TIMES_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_WORK_DIR_KEY_SUFFIX));
         List<String> unknownKeysForContainer = containerUnknownKeySuffixes
             .removeAll(containerId);
         for (String unknownKeySuffix : unknownKeysForContainer) {
@@ -1163,13 +1169,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerTokenCurrentMasterKey(MasterKey key)
       throws IOException {
-    storeMasterKey(CONTAINER_TOKENS_CURRENT_MASTER_KEY, key);
+    storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_CURRENT_MASTER_KEY, key);
   }
 
   @Override
   public void storeContainerTokenPreviousMasterKey(MasterKey key)
       throws IOException {
-    storeMasterKey(CONTAINER_TOKENS_PREV_MASTER_KEY, key);
+    storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_PREV_MASTER_KEY, key);
   }
 
   @Override
