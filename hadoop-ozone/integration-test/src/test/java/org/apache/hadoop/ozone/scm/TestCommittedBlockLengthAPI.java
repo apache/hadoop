@@ -104,16 +104,6 @@ public class TestCommittedBlockLengthAPI {
             .getWriteChunkRequest(container.getPipeline(), blockID,
                 data.length);
     client.sendCommand(writeChunkRequest);
-    try {
-      // since there is neither explicit putKey request made for the block,
-      // nor the container is closed, GetCommittedBlockLength request
-      // should fail here.
-      response = ContainerProtocolCalls
-          .getCommittedBlockLength(client, blockID, traceID);
-      Assert.fail("Expected exception not thrown");
-    } catch (StorageContainerException sce) {
-      Assert.assertTrue(sce.getMessage().contains("Unable to find the key"));
-    }
     // Now, explicitly make a putKey request for the block.
     ContainerProtos.ContainerCommandRequestProto putKeyRequest =
         ContainerTestHelper
@@ -186,6 +176,41 @@ public class TestCommittedBlockLengthAPI {
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getMessage().contains("Unable to find the key"));
     }
+    xceiverClientManager.releaseClient(client);
+  }
+
+  @Test
+  public void testGetCommittedBlockLengthForOpenBlock() throws Exception {
+    String traceID = UUID.randomUUID().toString();
+    ContainerWithPipeline container = storageContainerLocationClient
+        .allocateContainer(xceiverClientManager.getType(),
+            HddsProtos.ReplicationFactor.ONE, containerOwner);
+    long containerID = container.getContainerInfo().getContainerID();
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline(), containerID);
+    ContainerProtocolCalls
+        .createContainer(client, containerID, traceID);
+
+    BlockID blockID =
+        ContainerTestHelper.getTestBlockID(containerID);
+    ContainerProtos.ContainerCommandRequestProto requestProto =
+        ContainerTestHelper
+            .getWriteChunkRequest(container.getPipeline(), blockID, 1024);
+    client.sendCommand(requestProto);
+    try {
+      ContainerProtocolCalls.getCommittedBlockLength(client, blockID, traceID);
+      Assert.fail("Expected Exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert.assertEquals(ContainerProtos.Result.BLOCK_NOT_COMMITTED,
+          sce.getResult());
+    }
+    // now close the container, it should auto commit pending open blocks
+    ContainerProtocolCalls
+        .closeContainer(client, containerID, traceID);
+    ContainerProtos.GetCommittedBlockLengthResponseProto response =
+        ContainerProtocolCalls
+            .getCommittedBlockLength(client, blockID, traceID);
+    Assert.assertTrue(response.getBlockLength() == 1024);
     xceiverClientManager.releaseClient(client);
   }
 }

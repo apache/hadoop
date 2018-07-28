@@ -129,6 +129,18 @@ public class OpenContainerBlockMap {
         -> blocks.removeAndGetSize(blockID.getLocalID()) == 0? null: blocks);
   }
 
+  /**
+   * Returns true if the block exists in the map, false otherwise
+   *
+   * @param blockID
+   * @return True, if it exists, false otherwise
+   */
+  public boolean checkIfBlockExists(BlockID blockID) {
+    KeyDataMap keyDataMap = containers.get(blockID.getContainerID());
+    return keyDataMap == null ? false :
+        keyDataMap.get(blockID.getLocalID()) != null;
+  }
+
   @VisibleForTesting
   KeyDataMap getKeyDataMap(long containerId) {
     return containers.get(containerId);

@@ -91,6 +91,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.GET_SMALL_FILE_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.PUT_SMALL_FILE_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.BLOCK_NOT_COMMITTED;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Stage;
@@ -494,10 +496,14 @@ public class KeyValueHandler extends Handler {
 
     long blockLength;
     try {
-      BlockID blockID = BlockID.getFromProtobuf(
-          request.getGetCommittedBlockLength().getBlockID());
+      BlockID blockID = BlockID
+          .getFromProtobuf(request.getGetCommittedBlockLength().getBlockID());
+      // Check if it really exists in the openContainerBlockMap
+      if (openContainerBlockMap.checkIfBlockExists(blockID)) {
+        String msg = "Block " + blockID + " is not committed yet.";
+        throw new StorageContainerException(msg, BLOCK_NOT_COMMITTED);
+      }
       blockLength = keyManager.getCommittedBlockLength(kvContainer, blockID);
-
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
