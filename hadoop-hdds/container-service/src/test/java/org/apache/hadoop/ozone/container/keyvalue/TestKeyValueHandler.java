@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -55,6 +56,7 @@ public class TestKeyValueHandler {
   private final String baseDir = MiniDFSCluster.getBaseDirectory();
   private final String volume = baseDir + "disk1";
 
+  private static final long DUMMY_CONTAINER_ID = 9999;
 
   @Test
   /**
@@ -74,8 +76,13 @@ public class TestKeyValueHandler {
 
     // Test Create Container Request handling
     ContainerCommandRequestProto createContainerRequest =
-        getDummyCommandRequestProto(ContainerProtos.Type.CreateContainer);
-
+        ContainerProtos.ContainerCommandRequestProto.newBuilder()
+            .setCmdType(ContainerProtos.Type.CreateContainer)
+            .setContainerID(DUMMY_CONTAINER_ID)
+            .setDatanodeUuid(DATANODE_UUID)
+            .setCreateContainer(ContainerProtos.CreateContainerRequestProto
+                .getDefaultInstance())
+            .build();
     dispatcher.dispatch(createContainerRequest);
     Mockito.verify(handler, times(1)).handleCreateContainer(
         any(ContainerCommandRequestProto.class), any());
@@ -191,6 +198,7 @@ public class TestKeyValueHandler {
     ContainerCommandRequestProto request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder()
             .setCmdType(cmdType)
+            .setContainerID(DUMMY_CONTAINER_ID)
             .setDatanodeUuid(DATANODE_UUID)
             .build();
 

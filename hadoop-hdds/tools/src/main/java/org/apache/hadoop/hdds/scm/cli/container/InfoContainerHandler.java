@@ -81,7 +81,6 @@ public class InfoContainerHandler extends OzoneCommandHandler {
         containerData.getState() == ContainerLifeCycleState.OPEN ? "OPEN" :
             "CLOSED";
     logOut("Container State: %s", openStatus);
-    logOut("Container DB Path: %s", containerData.getDbPath());
     logOut("Container Path: %s", containerData.getContainerPath());
 
     // Output meta data.

@@ -196,7 +196,7 @@ public class OzoneContainer {
     ContainerProtos.Type type = request.getCmdType();
     switch (type) {
     case CloseContainer:
-      return request.getCloseContainer().getContainerID();
+      return request.getContainerID();
       // Right now, we handle only closeContainer via queuing it over the
       // over the XceiVerServer. For all other commands we throw Illegal
       // argument exception here. Will need to extend the switch cases

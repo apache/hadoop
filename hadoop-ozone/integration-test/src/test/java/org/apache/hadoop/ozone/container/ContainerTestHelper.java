@@ -220,6 +220,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.WriteChunk);
+    request.setContainerID(blockID.getContainerID());
     request.setWriteChunk(writeRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -261,6 +262,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
+    request.setContainerID(blockID.getContainerID());
     request.setPutSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -279,6 +281,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetSmallFile);
+    request.setContainerID(getKey.getGetKey().getBlockID().getContainerID());
     request.setGetSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -308,6 +311,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder newRequest =
         ContainerCommandRequestProto.newBuilder();
     newRequest.setCmdType(ContainerProtos.Type.ReadChunk);
+    newRequest.setContainerID(readRequest.getBlockID().getContainerID());
     newRequest.setReadChunk(readRequest);
     newRequest.setTraceID(UUID.randomUUID().toString());
     newRequest.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -340,6 +344,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteChunk);
+    request.setContainerID(writeRequest.getBlockID().getContainerID());
     request.setDeleteChunk(deleteRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -356,15 +361,12 @@ public final class ContainerTestHelper {
       long containerID, Pipeline pipeline) throws IOException {
     LOG.trace("addContainer: {}", containerID);
 
-    ContainerProtos.CreateContainerRequestProto.Builder createRequest =
-        ContainerProtos.CreateContainerRequestProto
-            .newBuilder();
-    createRequest.setContainerID(containerID);
-
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
-    request.setCreateContainer(createRequest);
+    request.setContainerID(containerID);
+    request.setCreateContainer(
+        ContainerProtos.CreateContainerRequestProto.getDefaultInstance());
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
 
@@ -385,7 +387,6 @@ public final class ContainerTestHelper {
       long containerID, Map<String, String> metaData) throws IOException {
     ContainerProtos.UpdateContainerRequestProto.Builder updateRequestBuilder =
         ContainerProtos.UpdateContainerRequestProto.newBuilder();
-    updateRequestBuilder.setContainerID(containerID);
     String[] keys = metaData.keySet().toArray(new String[]{});
     for(int i=0; i<keys.length; i++) {
       KeyValue.Builder kvBuilder = KeyValue.newBuilder();
@@ -399,6 +400,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.UpdateContainer);
+    request.setContainerID(containerID);
     request.setUpdateContainer(updateRequestBuilder.build());
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -412,14 +414,13 @@ public final class ContainerTestHelper {
    */
   public static ContainerCommandResponseProto
       getCreateContainerResponse(ContainerCommandRequestProto request) {
-    ContainerProtos.CreateContainerResponseProto.Builder createResponse =
-        ContainerProtos.CreateContainerResponseProto.newBuilder();
 
     ContainerCommandResponseProto.Builder response =
         ContainerCommandResponseProto.newBuilder();
     response.setCmdType(ContainerProtos.Type.CreateContainer);
     response.setTraceID(request.getTraceID());
-    response.setCreateContainer(createResponse.build());
+    response.setCreateContainer(
+        ContainerProtos.CreateContainerResponseProto.getDefaultInstance());
     response.setResult(ContainerProtos.Result.SUCCESS);
     return response.build();
   }
@@ -448,6 +449,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.PutKey);
+    request.setContainerID(keyData.getContainerID());
     request.setPutKey(putRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -474,6 +476,7 @@ public final class ContainerTestHelper {
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetKey);
+    request.setContainerID(blockID.getContainerID());
     request.setGetKey(getRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -501,14 +504,16 @@ public final class ContainerTestHelper {
    */
   public static ContainerCommandRequestProto getDeleteKeyRequest(
       Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
-    LOG.trace("deleteKey: name={}",
-        putKeyRequest.getKeyData().getBlockID());
+    ContainerProtos.DatanodeBlockID blockID = putKeyRequest.getKeyData()
+        .getBlockID();
+    LOG.trace("deleteKey: name={}", blockID);
     ContainerProtos.DeleteKeyRequestProto.Builder delRequest =
         ContainerProtos.DeleteKeyRequestProto.newBuilder();
-    delRequest.setBlockID(putKeyRequest.getKeyData().getBlockID());
+    delRequest.setBlockID(blockID);
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteKey);
+    request.setContainerID(blockID.getContainerID());
     request.setDeleteKey(delRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -523,12 +528,12 @@ public final class ContainerTestHelper {
    */
   public static ContainerCommandRequestProto getCloseContainer(
       Pipeline pipeline, long containerID) {
-    ContainerProtos.CloseContainerRequestProto closeRequest =
-        ContainerProtos.CloseContainerRequestProto.newBuilder().
-            setContainerID(containerID).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
-        ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
-            .Type.CloseContainer).setCloseContainer(closeRequest)
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(ContainerProtos.Type.CloseContainer)
+            .setContainerID(containerID)
+            .setCloseContainer(
+                ContainerProtos.CloseContainerRequestProto.getDefaultInstance())
             .setTraceID(UUID.randomUUID().toString())
             .setDatanodeUuid(pipeline.getLeader().getUuidString())
             .build();
@@ -545,14 +550,14 @@ public final class ContainerTestHelper {
   public static ContainerCommandRequestProto getRequestWithoutTraceId(
       Pipeline pipeline, long containerID) {
     Preconditions.checkNotNull(pipeline);
-    ContainerProtos.CloseContainerRequestProto closeRequest =
-            ContainerProtos.CloseContainerRequestProto.newBuilder().
-                setContainerID(containerID).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
-            ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
-                    .Type.CloseContainer).setCloseContainer(closeRequest)
-                    .setDatanodeUuid(pipeline.getLeader().getUuidString())
-                    .build();
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(ContainerProtos.Type.CloseContainer)
+            .setContainerID(containerID)
+            .setCloseContainer(
+                ContainerProtos.CloseContainerRequestProto.getDefaultInstance())
+            .setDatanodeUuid(pipeline.getLeader().getUuidString())
+            .build();
     return cmd;
   }
 
@@ -566,10 +571,12 @@ public final class ContainerTestHelper {
     Preconditions.checkNotNull(pipeline);
     ContainerProtos.DeleteContainerRequestProto deleteRequest =
         ContainerProtos.DeleteContainerRequestProto.newBuilder().
-            setContainerID(containerID).
             setForceDelete(forceDelete).build();
     return ContainerCommandRequestProto.newBuilder()
         .setCmdType(ContainerProtos.Type.DeleteContainer)
+        .setContainerID(containerID)
+        .setDeleteContainer(
+            ContainerProtos.DeleteContainerRequestProto.getDefaultInstance())
         .setDeleteContainer(deleteRequest)
         .setTraceID(UUID.randomUUID().toString())
         .setDatanodeUuid(pipeline.getLeader().getUuidString())

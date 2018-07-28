@@ -98,13 +98,16 @@ public class HddsDispatcher implements ContainerDispatcher {
     long startTime = System.nanoTime();
     ContainerProtos.Type cmdType = msg.getCmdType();
     try {
-      long containerID = getContainerID(msg);
+      long containerID = msg.getContainerID();
 
       metrics.incContainerOpsMetrics(cmdType);
       if (cmdType != ContainerProtos.Type.CreateContainer) {
         container = getContainer(containerID);
         containerType = getContainerType(container);
       } else {
+        if (!msg.hasCreateContainer()) {
+          return ContainerUtils.malformedRequest(msg);
+        }
         containerType = msg.getCreateContainer().getContainerType();
       }
     } catch (StorageContainerException ex) {
@@ -141,52 +144,6 @@ public class HddsDispatcher implements ContainerDispatcher {
         handlerMap.getValue().setScmID(scmID);
       }
     }
-  }
-
-  private long getContainerID(ContainerCommandRequestProto request)
-      throws StorageContainerException {
-    ContainerProtos.Type cmdType = request.getCmdType();
-
-    switch(cmdType) {
-    case CreateContainer:
-      return request.getCreateContainer().getContainerID();
-    case ReadContainer:
-      return request.getReadContainer().getContainerID();
-    case UpdateContainer:
-      return request.getUpdateContainer().getContainerID();
-    case DeleteContainer:
-      return request.getDeleteContainer().getContainerID();
-    case ListContainer:
-      return request.getListContainer().getStartContainerID();
-    case CloseContainer:
-      return request.getCloseContainer().getContainerID();
-    case PutKey:
-      return request.getPutKey().getKeyData().getBlockID().getContainerID();
-    case GetKey:
-      return request.getGetKey().getBlockID().getContainerID();
-    case DeleteKey:
-      return request.getDeleteKey().getBlockID().getContainerID();
-    case ListKey:
-      return request.getListKey().getContainerID();
-    case ReadChunk:
-      return request.getReadChunk().getBlockID().getContainerID();
-    case DeleteChunk:
-      return request.getDeleteChunk().getBlockID().getContainerID();
-    case WriteChunk:
-      return request.getWriteChunk().getBlockID().getContainerID();
-    case ListChunk:
-      return request.getListChunk().getBlockID().getContainerID();
-    case PutSmallFile:
-      return request.getPutSmallFile().getKey().getKeyData().getBlockID()
-          .getContainerID();
-    case GetSmallFile:
-      return request.getGetSmallFile().getKey().getBlockID().getContainerID();
-    case GetCommittedBlockLength:
-      return request.getGetCommittedBlockLength().getBlockID().getContainerID();
-    }
-
-    throw new StorageContainerException(
-        ContainerProtos.Result.UNSUPPORTED_REQUEST);
   }
 
   @VisibleForTesting

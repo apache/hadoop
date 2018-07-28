@@ -76,14 +76,12 @@ public class CloseContainerCommandHandler implements CommandHandler {
       HddsProtos.ReplicationType replicationType =
           closeContainerProto.getReplicationType();
 
-      ContainerProtos.CloseContainerRequestProto.Builder closeRequest =
-          ContainerProtos.CloseContainerRequestProto.newBuilder();
-      closeRequest.setContainerID(containerID);
-
       ContainerProtos.ContainerCommandRequestProto.Builder request =
           ContainerProtos.ContainerCommandRequestProto.newBuilder();
       request.setCmdType(ContainerProtos.Type.CloseContainer);
-      request.setCloseContainer(closeRequest);
+      request.setContainerID(containerID);
+      request.setCloseContainer(
+          ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
       request.setTraceID(UUID.randomUUID().toString());
       request.setDatanodeUuid(
           context.getParent().getDatanodeDetails().getUuidString());

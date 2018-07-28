@@ -177,7 +177,6 @@ public class KeyValueContainerData extends ContainerData {
     ContainerProtos.ContainerData.Builder builder = ContainerProtos
         .ContainerData.newBuilder();
     builder.setContainerID(this.getContainerID());
-    builder.setDbPath(this.getDbFile().getPath());
     builder.setContainerPath(this.getMetadataPath());
     builder.setState(this.getState());
 
@@ -194,10 +193,6 @@ public class KeyValueContainerData extends ContainerData {
 
     if(this.getContainerType() != null) {
       builder.setContainerType(ContainerProtos.ContainerType.KeyValueContainer);
-    }
-
-    if(this.getContainerDBType() != null) {
-      builder.setContainerDBType(containerDBType);
     }
 
     return builder.build();
@@ -237,10 +232,6 @@ public class KeyValueContainerData extends ContainerData {
 
     if (protoData.hasBytesUsed()) {
       data.setBytesUsed(protoData.getBytesUsed());
-    }
-
-    if(protoData.hasContainerDBType()) {
-      data.setContainerDBType(protoData.getContainerDBType());
     }
 
     return data;

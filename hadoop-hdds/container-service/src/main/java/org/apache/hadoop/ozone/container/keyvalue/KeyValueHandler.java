@@ -231,13 +231,7 @@ public class KeyValueHandler extends Handler {
     // container would be created here.
     Preconditions.checkArgument(kvContainer == null);
 
-    CreateContainerRequestProto createContainerReq =
-        request.getCreateContainer();
-    long containerID = createContainerReq.getContainerID();
-    if (createContainerReq.hasContainerType()) {
-      Preconditions.checkArgument(createContainerReq.getContainerType()
-          .equals(ContainerType.KeyValueContainer));
-    }
+    long containerID = request.getContainerID();
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
         containerID, maxContainerSizeGB);
@@ -381,15 +375,15 @@ public class KeyValueHandler extends Handler {
     try {
       checkContainerOpen(kvContainer);
 
+      KeyValueContainerData kvData = kvContainer.getContainerData();
+
       // remove the container from open block map once, all the blocks
       // have been committed and the container is closed
-      kvContainer.getContainerData()
-          .setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+      kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
       commitPendingKeys(kvContainer);
       kvContainer.close();
       // make sure the the container open keys from BlockMap gets removed
-      openContainerBlockMap.removeContainer(
-          request.getCloseContainer().getContainerID());
+      openContainerBlockMap.removeContainer(kvData.getContainerID());
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
