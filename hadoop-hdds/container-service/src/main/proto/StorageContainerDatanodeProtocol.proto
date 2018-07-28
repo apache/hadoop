@@ -229,9 +229,11 @@ message DeletedBlocksTransaction {
 message ContainerBlocksDeletionACKProto {
   message DeleteBlockTransactionResult {
     required int64 txID = 1;
-    required bool success = 2;
+    required int64 containerID = 2;
+    required bool success = 3;
   }
   repeated DeleteBlockTransactionResult results = 1;
+  required string dnId = 2;
 }
 
 // SendACK response returned by datanode to SCM, currently empty.

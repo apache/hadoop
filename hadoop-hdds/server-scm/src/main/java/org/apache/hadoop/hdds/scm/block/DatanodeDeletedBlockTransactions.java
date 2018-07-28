@@ -53,7 +53,8 @@ public class DatanodeDeletedBlockTransactions {
     this.nodeNum = nodeNum;
   }
 
-  public void addTransaction(DeletedBlocksTransaction tx) throws IOException {
+  public void addTransaction(DeletedBlocksTransaction tx,
+      Set<UUID> dnsWithTransactionCommitted) throws IOException {
     Pipeline pipeline = null;
     try {
       pipeline = mappingService.getContainerWithPipeline(tx.getContainerID())
@@ -71,29 +72,37 @@ public class DatanodeDeletedBlockTransactions {
 
     for (DatanodeDetails dd : pipeline.getMachines()) {
       UUID dnID = dd.getUuid();
-      if (transactions.containsKey(dnID)) {
-        List<DeletedBlocksTransaction> txs = transactions.get(dnID);
-        if (txs != null && txs.size() < maximumAllowedTXNum) {
-          boolean hasContained = false;
-          for (DeletedBlocksTransaction t : txs) {
-            if (t.getContainerID() == tx.getContainerID()) {
-              hasContained = true;
-              break;
-            }
-          }
+      if (dnsWithTransactionCommitted == null ||
+          !dnsWithTransactionCommitted.contains(dnID)) {
+        // Transaction need not be sent to dns which have already committed it
+        addTransactionToDN(dnID, tx);
+      }
+    }
+  }
 
-          if (!hasContained) {
-            txs.add(tx);
-            currentTXNum++;
+  private void addTransactionToDN(UUID dnID, DeletedBlocksTransaction tx) {
+    if (transactions.containsKey(dnID)) {
+      List<DeletedBlocksTransaction> txs = transactions.get(dnID);
+      if (txs != null && txs.size() < maximumAllowedTXNum) {
+        boolean hasContained = false;
+        for (DeletedBlocksTransaction t : txs) {
+          if (t.getContainerID() == tx.getContainerID()) {
+            hasContained = true;
+            break;
           }
         }
-      } else {
-        currentTXNum++;
-        transactions.put(dnID, tx);
+
+        if (!hasContained) {
+          txs.add(tx);
+          currentTXNum++;
+        }
       }
-      SCMBlockDeletingService.LOG.debug("Transaction added: {} <- TX({})", dnID,
-          tx.getTxID());
+    } else {
+      currentTXNum++;
+      transactions.put(dnID, tx);
     }
+    SCMBlockDeletingService.LOG
+        .debug("Transaction added: {} <- TX({})", dnID, tx.getTxID());
   }
 
   Set<UUID> getDatanodeIDs() {
