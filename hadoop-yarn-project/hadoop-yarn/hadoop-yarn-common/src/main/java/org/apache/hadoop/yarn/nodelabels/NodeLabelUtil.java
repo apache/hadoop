@@ -38,6 +38,8 @@ public final class NodeLabelUtil {
       Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_]*");
   private static final Pattern PREFIX_PATTERN =
       Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_\\.]*");
+  private static final Pattern ATTRIBUTE_VALUE_PATTERN =
+      Pattern.compile("^[0-9a-zA-Z][0-9a-zA-Z-_.]*");
 
   public static void checkAndThrowLabelName(String label) throws IOException {
     if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {
@@ -69,7 +71,7 @@ public final class NodeLabelUtil {
       return;
     }
 
-    boolean match = LABEL_OR_VALUE_PATTERN.matcher(value).matches();
+    boolean match = ATTRIBUTE_VALUE_PATTERN.matcher(value).matches();
 
     if (!match) {
       throw new IOException("attribute value should only contains "
