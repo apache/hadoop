@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 /**
- * Map: containerId -> (localId -> KeyData).
+ * Map: containerId -> (localId -> {@link KeyData}).
  * The outer container map does not entail locking for a better performance.
  * The inner {@link KeyDataMap} is synchronized.
  *

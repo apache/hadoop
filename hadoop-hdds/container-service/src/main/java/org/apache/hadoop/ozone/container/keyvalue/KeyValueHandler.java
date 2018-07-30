@@ -439,8 +439,6 @@ public class KeyValueHandler extends Handler {
   private void commitKey(KeyData keyData, KeyValueContainer kvContainer)
       throws IOException {
     Preconditions.checkNotNull(keyData);
-    //sets the total size of the key before committing
-    keyData.computeSize();
     keyManager.putKey(kvContainer, keyData);
     //update the open key Map in containerManager
     this.openContainerBlockMap.removeFromKeyMap(keyData.getBlockID());
@@ -696,7 +694,6 @@ public class KeyValueHandler extends Handler {
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       keyData.setChunks(chunks);
-      keyData.computeSize();
       keyManager.putKey(kvContainer, keyData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
 
