@@ -203,7 +203,11 @@ public class TestDataNodeVolumeFailureToleration {
   @Test
   public void testVolumeAndTolerableConfiguration() throws Exception {
     // Check if Block Pool Service exit for an invalid conf value.
-    testVolumeConfig(-1, 0, false, true);
+    testVolumeConfig(-2, 0, false, true);
+    // Test for one good volume at least
+    testVolumeConfig(-1, 0, true, true);
+    testVolumeConfig(-1, 1, true, true);
+    testVolumeConfig(-1, 2, false, true);
 
     // Ditto if the value is too big.
     testVolumeConfig(100, 0, false, true);

@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation.CheckContext;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -105,10 +106,11 @@ public class StorageLocationChecker {
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
 
-    if (maxVolumeFailuresTolerated < 0) {
+    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " (should be non-negative)");
+          + maxVolumeFailuresTolerated + " "
+          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
     }
 
     this.timer = timer;
@@ -213,12 +215,22 @@ public class StorageLocationChecker {
       }
     }
 
-    if (failedLocations.size() > maxVolumeFailuresTolerated) {
-      throw new DiskErrorException("Too many failed volumes - "
-          + "current valid volumes: " + goodLocations.size()
-          + ", volumes configured: " + dataDirs.size()
-          + ", volumes failed: " + failedLocations.size()
-          + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
+    if (maxVolumeFailuresTolerated == DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
+      if (dataDirs.size() == failedLocations.size()) {
+        throw new DiskErrorException("Too many failed volumes - "
+            + "current valid volumes: " + goodLocations.size()
+            + ", volumes configured: " + dataDirs.size()
+            + ", volumes failed: " + failedLocations.size()
+            + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
+      }
+    } else {
+      if (failedLocations.size() > maxVolumeFailuresTolerated) {
+        throw new DiskErrorException("Too many failed volumes - "
+            + "current valid volumes: " + goodLocations.size()
+            + ", volumes configured: " + dataDirs.size()
+            + ", volumes failed: " + failedLocations.size()
+            + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
+      }
     }
 
     if (goodLocations.size() == 0) {
