@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.ratis.shaded.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
@@ -183,34 +184,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return Objects.requireNonNull(client.get(), "client is null");
   }
 
-  private boolean isReadOnly(ContainerCommandRequestProto proto) {
-    switch (proto.getCmdType()) {
-    case ReadContainer:
-    case ReadChunk:
-    case ListKey:
-    case GetKey:
-    case GetSmallFile:
-    case ListContainer:
-    case ListChunk:
-      return true;
-    case CloseContainer:
-    case WriteChunk:
-    case UpdateContainer:
-    case CompactChunk:
-    case CreateContainer:
-    case DeleteChunk:
-    case DeleteContainer:
-    case DeleteKey:
-    case PutKey:
-    case PutSmallFile:
-    default:
-      return false;
-    }
-  }
-
   private RaftClientReply sendRequest(ContainerCommandRequestProto request)
       throws IOException {
-    boolean isReadOnlyRequest = isReadOnly(request);
+    boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
     ByteString byteString = request.toByteString();
     LOG.debug("sendCommand {} {}", isReadOnlyRequest, request);
     final RaftClientReply reply =  isReadOnlyRequest ?
@@ -222,7 +198,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   private CompletableFuture<RaftClientReply> sendRequestAsync(
       ContainerCommandRequestProto request) throws IOException {
-    boolean isReadOnlyRequest = isReadOnly(request);
+    boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
     ByteString byteString = request.toByteString();
     LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
     return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :

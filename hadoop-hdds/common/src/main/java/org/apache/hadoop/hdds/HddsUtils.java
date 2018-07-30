@@ -24,6 +24,7 @@ import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
@@ -313,6 +314,38 @@ public final class HddsUtils {
       name = DNS.getDefaultHost(dnsInterface, nameServer, fallbackToHosts);
     }
     return name;
+  }
+
+  /**
+   * Checks if the container command is read only or not.
+   * @param proto ContainerCommand Request proto
+   * @return True if its readOnly , false otherwise.
+   */
+  public static boolean isReadOnly(
+      ContainerProtos.ContainerCommandRequestProto proto) {
+    switch (proto.getCmdType()) {
+    case ReadContainer:
+    case ReadChunk:
+    case ListKey:
+    case GetKey:
+    case GetSmallFile:
+    case ListContainer:
+    case ListChunk:
+    case GetCommittedBlockLength:
+      return true;
+    case CloseContainer:
+    case WriteChunk:
+    case UpdateContainer:
+    case CompactChunk:
+    case CreateContainer:
+    case DeleteChunk:
+    case DeleteContainer:
+    case DeleteKey:
+    case PutKey:
+    case PutSmallFile:
+    default:
+      return false;
+    }
   }
 
 }
