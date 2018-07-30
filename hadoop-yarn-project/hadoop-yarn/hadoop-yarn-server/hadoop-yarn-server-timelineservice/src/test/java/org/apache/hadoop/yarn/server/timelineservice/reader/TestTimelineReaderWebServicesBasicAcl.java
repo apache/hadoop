@@ -88,6 +88,10 @@ public class TestTimelineReaderWebServicesBasicAcl {
     Assert.assertFalse(TimelineReaderWebServices
         .validateAuthUserWithEntityUser(manager, null, user1));
 
+    // true because ugi is null
+    Assert.assertTrue(
+        TimelineReaderWebServices.checkAccess(manager, null, user1));
+
     // incoming ugi is admin asking for entity owner user1
     Assert.assertTrue(
         TimelineReaderWebServices.checkAccess(manager, adminUgi, user1));

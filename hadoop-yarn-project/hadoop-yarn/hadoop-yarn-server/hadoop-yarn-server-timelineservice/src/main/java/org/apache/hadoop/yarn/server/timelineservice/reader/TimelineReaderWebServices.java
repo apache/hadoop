@@ -3532,7 +3532,8 @@ public class TimelineReaderWebServices {
   static boolean checkAccess(TimelineReaderManager readerManager,
       UserGroupInformation ugi, String entityUser) {
     if (isDisplayEntityPerUserFilterEnabled(readerManager.getConfig())) {
-      if (!validateAuthUserWithEntityUser(readerManager, ugi, entityUser)) {
+      if (ugi != null && !validateAuthUserWithEntityUser(readerManager, ugi,
+          entityUser)) {
         String userName = ugi.getShortUserName();
         String msg = "User " + userName
             + " is not allowed to read TimelineService V2 data.";
