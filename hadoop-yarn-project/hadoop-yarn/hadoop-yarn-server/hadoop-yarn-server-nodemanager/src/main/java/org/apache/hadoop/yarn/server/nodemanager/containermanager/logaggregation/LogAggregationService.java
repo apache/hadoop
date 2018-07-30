@@ -117,9 +117,9 @@ public class LogAggregationService extends AbstractService implements
         LOG.info("Log aggregation debug mode enabled. rollingMonitorInterval = "
             + rollingMonitorInterval);
       } else {
-        LOG.warn("rollingMonitorIntervall should be more than or equal to "
-            + MIN_LOG_ROLLING_INTERVAL + " seconds. Using "
-            + MIN_LOG_ROLLING_INTERVAL + " seconds instead.");
+        LOG.warn("rollingMonitorInterval should be more than or equal to {} " +
+                "seconds. Using {} seconds instead.",
+                MIN_LOG_ROLLING_INTERVAL, MIN_LOG_ROLLING_INTERVAL);
         this.rollingMonitorInterval = MIN_LOG_ROLLING_INTERVAL;
       }
     } else if (rollingMonitorInterval <= 0) {
