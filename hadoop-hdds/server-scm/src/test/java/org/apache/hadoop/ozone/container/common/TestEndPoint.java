@@ -151,8 +151,8 @@ public class TestEndPoint {
     OzoneConfiguration conf = SCMTestUtils.getConf();
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, 1000)) {
-      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf);
+      OzoneContainer ozoneContainer = new OzoneContainer(
+          TestUtils.randomDatanodeDetails(), conf, null);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -176,7 +176,7 @@ public class TestEndPoint {
       GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
           .captureLogs(VersionEndpointTask.LOG);
       OzoneContainer ozoneContainer = new OzoneContainer(TestUtils
-          .randomDatanodeDetails(), conf);
+          .randomDatanodeDetails(), conf, null);
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
@@ -228,7 +228,7 @@ public class TestEndPoint {
         nonExistentServerAddress, 1000)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf);
+          conf, null);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
       EndpointStateMachine.EndPointStates newState = versionTask.call();
@@ -254,8 +254,8 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, (int) rpcTimeout)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf);
+      OzoneContainer ozoneContainer = new OzoneContainer(
+          TestUtils.randomDatanodeDetails(), conf, null);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
 

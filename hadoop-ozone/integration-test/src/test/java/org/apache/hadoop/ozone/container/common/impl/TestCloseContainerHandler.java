@@ -86,7 +86,7 @@ public class TestCloseContainerHandler {
             .setHostName("localhost").setIpAddress("127.0.0.1").build();
     volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
 
-    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
+    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, null);
     handler = (KeyValueHandler) dispatcher
         .getHandler(ContainerProtos.ContainerType.KeyValueContainer);
     openContainerBlockMap = handler.getOpenContainerBlockMap();

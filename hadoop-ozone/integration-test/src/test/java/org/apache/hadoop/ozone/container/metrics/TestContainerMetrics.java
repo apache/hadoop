@@ -78,7 +78,7 @@ public class TestContainerMetrics {
           datanodeDetails.getUuidString(), conf);
       ContainerSet containerSet = new ContainerSet();
       HddsDispatcher dispatcher = new HddsDispatcher(conf, containerSet,
-          volumeSet);
+          volumeSet, null);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
       server = new XceiverServer(datanodeDetails, conf, dispatcher);

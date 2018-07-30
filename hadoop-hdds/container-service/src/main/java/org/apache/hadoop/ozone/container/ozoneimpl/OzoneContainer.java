@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -70,7 +71,7 @@ public class OzoneContainer {
    * @throws IOException
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
-      conf) throws IOException {
+      conf, StateContext context) throws IOException {
     this.dnDetails = datanodeDetails;
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
@@ -79,7 +80,8 @@ public class OzoneContainer {
         ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     buildContainerSet();
-    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet);
+    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
+        context);
     server = new XceiverServerSpi[]{
         useGrpc ? new XceiverServerGrpc(datanodeDetails, this.config, this
             .hddsDispatcher) :

@@ -20,6 +20,9 @@ package org.apache.hadoop.ozone.genesis;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .DatanodeStateMachine.DatanodeStates;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -104,7 +107,8 @@ public class BenchMarkDatanodeDispatcher {
     ContainerSet containerSet = new ContainerSet();
     VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);
 
-    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
+    dispatcher = new HddsDispatcher(conf, containerSet, volumeSet,
+        new StateContext(conf, DatanodeStates.RUNNING, null));
     dispatcher.init();
 
     containerCount = new AtomicInteger();

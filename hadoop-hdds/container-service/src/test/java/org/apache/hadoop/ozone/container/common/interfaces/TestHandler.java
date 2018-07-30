@@ -52,15 +52,13 @@ public class TestHandler {
   private VolumeSet volumeSet;
   private Handler handler;
 
-  private final static String DATANODE_UUID = UUID.randomUUID().toString();
-
   @Before
   public void setup() throws Exception {
     this.conf = new Configuration();
     this.containerSet = Mockito.mock(ContainerSet.class);
     this.volumeSet = Mockito.mock(VolumeSet.class);
 
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet);
+    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, null);
   }
 
   @Test

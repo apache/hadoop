@@ -89,7 +89,7 @@ public class DatanodeStateMachine implements Closeable {
     heartbeatFrequency = TimeUnit.SECONDS.toMillis(
         getScmHeartbeatInterval(conf));
     container = new OzoneContainer(this.datanodeDetails,
-        new OzoneConfiguration(conf));
+        new OzoneConfiguration(conf), context);
     nextHB = new AtomicLong(Time.monotonicNow());
 
      // When we add new handlers just adding a new handler here should do the

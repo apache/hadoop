@@ -214,7 +214,7 @@ public class TestContainerServer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, mock(ContainerSet.class), mock(VolumeSet.class));
+          conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
       dispatcher.init();
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       server = new XceiverServer(datanodeDetails, conf, dispatcher);

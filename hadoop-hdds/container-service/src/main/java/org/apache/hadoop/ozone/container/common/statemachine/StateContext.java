@@ -36,7 +36,6 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -209,6 +208,19 @@ public class StateContext {
   public void addContainerAction(ContainerAction containerAction) {
     synchronized (containerActions) {
       containerActions.add(containerAction);
+    }
+  }
+
+  /**
+   * Add ContainerAction to ContainerAction queue if it's not present.
+   *
+   * @param containerAction ContainerAction to be added
+   */
+  public void addContainerActionIfAbsent(ContainerAction containerAction) {
+    synchronized (containerActions) {
+      if (!containerActions.contains(containerAction)) {
+        containerActions.add(containerAction);
+      }
     }
   }
 
