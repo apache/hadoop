@@ -31,6 +31,7 @@ import org.junit.rules.Timeout;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 
 /**
  * Tests regular and multi-part upload functionality for
@@ -48,7 +49,10 @@ public class TestAliyunOSSBlockOutputStream {
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(Constants.MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, 5 * 1024 * 1024);
-    conf.setInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 5 * 1024 * 1024);
+    conf.setInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 1024 * 1024);
+    conf.setInt(IO_CHUNK_BUFFER_SIZE,
+        conf.getInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 0));
+    conf.setInt(Constants.UPLOAD_ACTIVE_BLOCKS_KEY, 20);
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
@@ -82,6 +86,12 @@ public class TestAliyunOSSBlockOutputStream {
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 6 * 1024 * 1024);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
         6 * 1024 * 1024 + 1);
+  }
+
+  @Test
+  public void testMultiPartUploadConcurrent() throws IOException {
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        50 * 1024 * 1024 - 1);
   }
 
   @Test
