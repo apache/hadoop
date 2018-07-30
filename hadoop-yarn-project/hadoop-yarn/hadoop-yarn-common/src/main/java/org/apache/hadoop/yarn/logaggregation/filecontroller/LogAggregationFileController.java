@@ -115,16 +115,16 @@ public abstract class LogAggregationFileController {
    */
   public void initialize(Configuration conf, String controllerName) {
     this.conf = conf;
-    int configuredRentionSize = conf.getInt(
+    int configuredRetentionSize = conf.getInt(
         YarnConfiguration.NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP,
         YarnConfiguration
             .DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP);
-    if (configuredRentionSize <= 0) {
+    if (configuredRetentionSize <= 0) {
       this.retentionSize =
           YarnConfiguration
               .DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP;
     } else {
-      this.retentionSize = configuredRentionSize;
+      this.retentionSize = configuredRetentionSize;
     }
     this.fileControllerName = controllerName;
     initInternal(conf);

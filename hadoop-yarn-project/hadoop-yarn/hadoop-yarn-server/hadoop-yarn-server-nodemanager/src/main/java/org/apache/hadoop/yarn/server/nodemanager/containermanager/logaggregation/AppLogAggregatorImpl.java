@@ -632,7 +632,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       // need to return files uploaded or older-than-retention clean up.
       return Sets.union(logValue.getCurrentUpLoadedFilesPath(),
-          logValue.getObseleteRetentionLogFiles());
+          logValue.getObsoleteRetentionLogFiles());
 
     }
   }
