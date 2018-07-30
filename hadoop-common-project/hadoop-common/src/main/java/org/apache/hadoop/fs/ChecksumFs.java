@@ -26,7 +26,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
@@ -528,39 +526,4 @@ public abstract class ChecksumFs extends FilterFs {
     }
     return results.toArray(new FileStatus[results.size()]);
   }
-
-  @Override
-  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
-      throws AccessControlException, FileNotFoundException,
-             UnresolvedLinkException, IOException {
-    final RemoteIterator<LocatedFileStatus> iter =
-        getMyFs().listLocatedStatus(f);
-    return new RemoteIterator<LocatedFileStatus>() {
-
-      private LocatedFileStatus next = null;
-
-      @Override
-      public boolean hasNext() throws IOException {
-        while (next == null && iter.hasNext()) {
-          LocatedFileStatus unfilteredNext = iter.next();
-          if (!isChecksumFile(unfilteredNext.getPath())) {
-            next = unfilteredNext;
-          }
-        }
-        return next != null;
-      }
-
-      @Override
-      public LocatedFileStatus next() throws IOException {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        LocatedFileStatus tmp = next;
-        next = null;
-        return tmp;
-      }
-
-    };
-  }
-
 }
