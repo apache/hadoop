@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
@@ -41,6 +42,9 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+
+
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<ApplicationId, ContainerManagerApplicationProto> apps;
@@ -127,11 +131,19 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   public synchronized void storeContainer(ContainerId containerId,
-      int version, long startTime, StartContainerRequest startRequest)
-      throws IOException {
+      int version, long startTime, StartContainerRequest startRequest) {
     RecoveredContainerState rcs = new RecoveredContainerState();
     rcs.startRequest = startRequest;
     rcs.version = version;
+    try {
+      ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
+          .newContainerTokenIdentifier(startRequest.getContainerToken());
+      rcs.capability =
+          new ResourcePBImpl(containerTokenIdentifier.getProto().getResource());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     rcs.setStartTime(startTime);
     containerStates.put(containerId, rcs);
   }

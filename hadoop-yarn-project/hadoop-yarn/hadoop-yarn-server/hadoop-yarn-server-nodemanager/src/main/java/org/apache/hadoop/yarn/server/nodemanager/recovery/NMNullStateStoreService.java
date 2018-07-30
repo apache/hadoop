@@ -71,7 +71,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int version,
-      long startTime, StartContainerRequest startRequest) throws IOException {
+      long startTime, StartContainerRequest startRequest) {
   }
 
   @Override
