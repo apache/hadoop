@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -186,6 +188,11 @@ public class DummyContainerManager extends ContainerManagerImpl {
           default:
             // Ignore
           }
+      }
+
+      @Override
+      public Set<ApplicationId> getInvalidTokenApps() {
+        return Collections.emptySet();
       }
     };
   }
