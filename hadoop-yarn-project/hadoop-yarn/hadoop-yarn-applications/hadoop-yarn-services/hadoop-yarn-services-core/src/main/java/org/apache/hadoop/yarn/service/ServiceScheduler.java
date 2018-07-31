@@ -649,6 +649,7 @@ public class ServiceScheduler extends CompositeService {
     @Override
     public void onContainersReceivedFromPreviousAttempts(
         List<Container> containers) {
+      LOG.info("Containers recovered after AM registered: {}", containers);
       if (containers == null || containers.isEmpty()) {
         return;
       }

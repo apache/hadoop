@@ -785,6 +785,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       List<Container> returnContainerList = new ArrayList<>
           (recoveredPreviousAttemptContainers);
       recoveredPreviousAttemptContainers.clear();
+      updateNMTokens(returnContainerList);
       return returnContainerList;
     } finally {
       writeLock.unlock();

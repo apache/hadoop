@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -950,12 +951,15 @@ public class FairScheduler extends
     Resource headroom = application.getHeadroom();
     application.setApplicationHeadroomForMetrics(headroom);
 
+    List<Container> previousAttemptContainers = application
+        .pullPreviousAttemptContainers();
+    List<NMToken> updatedNMTokens = application.pullUpdatedNMTokens();
     return new Allocation(newlyAllocatedContainers, headroom,
         preemptionContainerIds, null, null,
-        application.pullUpdatedNMTokens(), null, null,
+        updatedNMTokens, null, null,
         application.pullNewlyPromotedContainers(),
         application.pullNewlyDemotedContainers(),
-        application.pullPreviousAttemptContainers());
+        previousAttemptContainers);
   }
 
   private List<MaxResourceValidationResult> validateResourceRequests(
