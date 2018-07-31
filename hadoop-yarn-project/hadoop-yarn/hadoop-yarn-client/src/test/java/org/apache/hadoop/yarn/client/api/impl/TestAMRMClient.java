@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -79,6 +81,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.eclipse.jetty.util.log.Log;
@@ -1992,6 +1995,80 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
         amClient.stop();
       }
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testNoUpdateTrackingUrl()  {
+    try {
+      AMRMClientImpl<ContainerRequest> amClient = null;
+      amClient = new AMRMClientImpl<>();
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      assertEquals("", amClient.appTrackingUrl);
+
+      ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol.class);
+      AllocateResponse mockResponse = mock(AllocateResponse.class);
+      when(mockRM.allocate(any(AllocateRequest.class)))
+          .thenReturn(mockResponse);
+      ApplicationMasterProtocol realRM = amClient.rmClient;
+      amClient.rmClient = mockRM;
+      // Do allocate without updated tracking url
+      amClient.allocate(0.1f);
+      ArgumentCaptor<AllocateRequest> argument =
+          ArgumentCaptor.forClass(AllocateRequest.class);
+      verify(mockRM).allocate(argument.capture());
+      assertNull(argument.getValue().getTrackingUrl());
+
+      amClient.rmClient = realRM;
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
+    } catch (IOException | YarnException e) {
+      throw new AssertionError(
+          "testNoUpdateTrackingUrl unexpectedly threw exception: " + e);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testUpdateTrackingUrl() {
+    try {
+      AMRMClientImpl<ContainerRequest> amClient = null;
+      amClient = new AMRMClientImpl<>();
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      String trackingUrl = "hadoop.apache.org";
+      assertEquals("", amClient.appTrackingUrl);
+
+      ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol.class);
+      AllocateResponse mockResponse = mock(AllocateResponse.class);
+      when(mockRM.allocate(any(AllocateRequest.class)))
+          .thenReturn(mockResponse);
+      ApplicationMasterProtocol realRM = amClient.rmClient;
+      amClient.rmClient = mockRM;
+      // Do allocate with updated tracking url
+      amClient.updateTrackingUrl(trackingUrl);
+      assertEquals(trackingUrl, amClient.newTrackingUrl);
+      assertEquals("", amClient.appTrackingUrl);
+      amClient.allocate(0.1f);
+      assertNull(amClient.newTrackingUrl);
+      assertEquals(trackingUrl, amClient.appTrackingUrl);
+      ArgumentCaptor<AllocateRequest> argument
+          = ArgumentCaptor.forClass(AllocateRequest.class);
+      verify(mockRM).allocate(argument.capture());
+      assertEquals(trackingUrl, argument.getValue().getTrackingUrl());
+
+      amClient.rmClient = realRM;
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
+    } catch (IOException | YarnException e) {
+      throw new AssertionError(
+          "testUpdateTrackingUrl unexpectedly threw exception: " + e);
     }
   }
 }

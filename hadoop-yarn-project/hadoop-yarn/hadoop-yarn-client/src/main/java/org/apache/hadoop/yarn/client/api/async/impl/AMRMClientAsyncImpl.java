@@ -286,6 +286,11 @@ extends AMRMClientAsync<T> {
                               List<String> blacklistRemovals) {
     client.updateBlacklist(blacklistAdditions, blacklistRemovals);
   }
+
+  @Override
+  public void updateTrackingUrl(String trackingUrl) {
+    client.updateTrackingUrl(trackingUrl);
+  }
   
   private class HeartbeatThread extends Thread {
     public HeartbeatThread() {

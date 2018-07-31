@@ -382,7 +382,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // Send the status update to the appAttempt.
     getRmContext().getDispatcher().getEventHandler().handle(
         new RMAppAttemptStatusupdateEvent(appAttemptId, request
-            .getProgress()));
+            .getProgress(), request.getTrackingUrl()));
   }
 
   @Override
