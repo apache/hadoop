@@ -1015,6 +1015,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.datanode.registration.retry-hostname-dns-lookup</name>
+  <value>false</value>
+  <description>
+    If true, then the namenode will retry reverse dns lookup for hostname of the
+    datanode. This helps in environments where DNS lookup can be flaky.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.decommission.interval</name>
   <value>30s</value>
   <description>Namenode periodicity in seconds to check if

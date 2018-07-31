@@ -163,6 +163,8 @@ public class DatanodeManager {
    */
   private boolean hasClusterEverBeenMultiRack = false;
 
+  private final boolean retryHostnameDNSLookupInRegistration;
+
   private final boolean checkIpHostnameInRegistration;
   /**
    * Whether we should tell datanodes what to cache in replies to
@@ -308,6 +310,12 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT);
     LOG.info(DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY
         + "=" + checkIpHostnameInRegistration);
+
+    this.retryHostnameDNSLookupInRegistration = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_RETRY_HOSTNAME_DNS_LOOKUP_KEY,
+        DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_RETRY_HOSTNAME_DNS_LOOKUP_DEFAULT);
+    LOG.info(DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_RETRY_HOSTNAME_DNS_LOOKUP_KEY
+        + "=" + retryHostnameDNSLookupInRegistration);
 
     this.avoidStaleDataNodesForRead = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY,
@@ -1015,13 +1023,32 @@ public class DatanodeManager {
       // Mostly called inside an RPC, update ip and peer hostname
       String hostname = dnAddress.getHostName();
       String ip = dnAddress.getHostAddress();
-      if (checkIpHostnameInRegistration && !isNameResolved(dnAddress)) {
+      // Special case, local addresses are also considered acceptable. This is particularly
+      // important on Windows, where 127.0.0.1 does not resolve to "localhost".
+      if (checkIpHostnameInRegistration && !NetUtils.isLocalAddress(dnAddress)) {
+        // Check if name resolution was successful for the given address.  If IP
+        // address and host name are the same, then it means name resolution has failed.
+        boolean hostnameResolutionFailed = hostname.equals(ip);
         // Reject registration of unresolved datanode to prevent performance
-        // impact of repetitive DNS lookups later.
-        final String message = "hostname cannot be resolved (ip="
-            + ip + ", hostname=" + hostname + ")";
-        LOG.warn("Unresolved datanode registration: " + message);
-        throw new DisallowedDatanodeException(nodeReg, message);
+        // impact of repetitive DNS lookups unless retryHostnameDNSLookupInRegistration is set.
+        if (hostnameResolutionFailed && retryHostnameDNSLookupInRegistration) {
+          try {
+            dnAddress = InetAddress.getByName(ip);
+            // Results of getHostName are cached permanently. So, we try one more time with
+            // a temporary InetAddress object.
+            hostname = dnAddress.getHostName();
+          } catch (UnknownHostException uhe) {
+            // Ignore.
+          }
+          // Check if the DNS lookup retry was successful.
+          hostnameResolutionFailed = hostname.equals(ip);
+        }
+        if (hostnameResolutionFailed) {
+          final String message = "hostname cannot be resolved (ip="
+              + ip + ", hostname=" + hostname + ")";
+          LOG.warn("Unresolved datanode registration: " + message);
+          throw new DisallowedDatanodeException(nodeReg, message);
+        }
       }
       // update node registration with the ip and hostname from rpc request
       nodeReg.setIpAddr(ip);
@@ -1516,22 +1543,6 @@ public class DatanodeManager {
           ", nodes = " + nodes);
     }
     return nodes;
-  }
-  
-  /**
-   * Checks if name resolution was successful for the given address.  If IP
-   * address and host name are the same, then it means name resolution has
-   * failed.  As a special case, local addresses are also considered
-   * acceptable.  This is particularly important on Windows, where 127.0.0.1 does
-   * not resolve to "localhost".
-   *
-   * @param address InetAddress to check
-   * @return boolean true if name resolution successful or address is local
-   */
-  private static boolean isNameResolved(InetAddress address) {
-    String hostname = address.getHostName();
-    String ip = address.getHostAddress();
-    return !hostname.equals(ip) || NetUtils.isLocalAddress(address);
   }
   
   private void setDatanodeDead(DatanodeDescriptor node) {

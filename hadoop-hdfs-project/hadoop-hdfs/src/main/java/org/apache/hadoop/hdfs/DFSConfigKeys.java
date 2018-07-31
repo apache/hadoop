@@ -371,6 +371,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
 
+  public static final String DFS_NAMENODE_DATANODE_REGISTRATION_RETRY_HOSTNAME_DNS_LOOKUP_KEY = "dfs.namenode.datanode.registration.retry-hostname-dns-lookup";
+  public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_RETRY_HOSTNAME_DNS_LOOKUP_DEFAULT = false;
+
   public static final String  DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES =
       "dfs.namenode.list.cache.pools.num.responses";
   public static final int     DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT = 100;
