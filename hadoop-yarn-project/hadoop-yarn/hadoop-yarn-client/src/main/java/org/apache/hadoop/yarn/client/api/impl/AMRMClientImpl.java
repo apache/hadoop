@@ -95,6 +95,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected String appHostName;
   protected int appHostPort;
   protected String appTrackingUrl;
+  protected String newTrackingUrl;
 
   protected ApplicationMasterProtocol rmClient;
   protected Resource clusterAvailableResources;
@@ -281,6 +282,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
             .responseId(lastResponseId).progress(progressIndicator)
             .askList(askList).resourceBlacklistRequest(blacklistRequest)
             .releaseList(releaseList).updateRequests(updateList).build();
+
+        if (this.newTrackingUrl != null) {
+          allocateRequest.setTrackingUrl(this.newTrackingUrl);
+          this.appTrackingUrl = this.newTrackingUrl;
+          this.newTrackingUrl = null;
+        }
         // clear blacklistAdditions and blacklistRemovals before
         // unsynchronized part
         blacklistAdditions.clear();
@@ -930,6 +937,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       LOG.warn("The same resources appear in both blacklistAdditions and " +
           "blacklistRemovals in updateBlacklist.");
     }
+  }
+
+  @Override
+  public synchronized void updateTrackingUrl(String trackingUrl) {
+    this.newTrackingUrl = trackingUrl;
   }
 
   private void updateAMRMToken(Token token) throws IOException {
