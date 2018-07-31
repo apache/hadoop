@@ -534,6 +534,16 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.logAggregationDisabled = true;
   }
 
+  @Override
+  public void enableLogAggregation() {
+    this.logAggregationDisabled = false;
+  }
+
+  @Override
+  public boolean isAggregationEnabled() {
+    return !logAggregationDisabled;
+  }
+
   @Private
   @VisibleForTesting
   // This is only used for testing.
@@ -614,6 +624,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   @VisibleForTesting
   public UserGroupInformation getUgi() {
     return this.userUgi;
+  }
+
+  public UserGroupInformation updateCredentials(Credentials cred) {
+    this.userUgi.addCredentials(cred);
+    return userUgi;
   }
 
   @Private
