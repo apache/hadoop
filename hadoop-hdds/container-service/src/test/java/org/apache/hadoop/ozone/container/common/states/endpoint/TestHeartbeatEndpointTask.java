@@ -289,10 +289,7 @@ public class TestHeartbeatEndpointTask {
 
   private ContainerAction getContainerAction() {
     ContainerAction.Builder builder = ContainerAction.newBuilder();
-    ContainerInfo containerInfo = ContainerInfo.newBuilder()
-        .setContainerID(1L)
-        .build();
-    builder.setContainer(containerInfo)
+    builder.setContainerID(1L)
         .setAction(ContainerAction.Action.CLOSE)
         .setReason(ContainerAction.Reason.CONTAINER_FULL);
     return builder.build();

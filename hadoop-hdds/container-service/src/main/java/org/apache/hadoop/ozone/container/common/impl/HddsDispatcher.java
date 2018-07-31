@@ -168,19 +168,8 @@ public class HddsDispatcher implements ContainerDispatcher {
       double containerUsedPercentage = 1.0f * containerData.getBytesUsed() /
           StorageUnit.GB.toBytes(containerData.getMaxSizeGB());
       if (containerUsedPercentage >= containerCloseThreshold) {
-
-        ContainerInfo containerInfo = ContainerInfo.newBuilder()
-            .setContainerID(containerData.getContainerID())
-            .setReadCount(containerData.getReadCount())
-            .setWriteCount(containerData.getWriteCount())
-            .setReadBytes(containerData.getReadBytes())
-            .setWriteBytes(containerData.getWriteBytes())
-            .setUsed(containerData.getBytesUsed())
-            .setState(HddsProtos.LifeCycleState.OPEN)
-            .build();
-
         ContainerAction action = ContainerAction.newBuilder()
-            .setContainer(containerInfo)
+            .setContainerID(containerData.getContainerID())
             .setAction(ContainerAction.Action.CLOSE)
             .setReason(ContainerAction.Reason.CONTAINER_FULL)
             .build();

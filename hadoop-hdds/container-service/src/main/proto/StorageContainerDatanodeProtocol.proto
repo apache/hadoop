@@ -157,7 +157,7 @@ message ContainerAction {
     CONTAINER_FULL = 1;
   }
 
-  required ContainerInfo container = 1;
+  required int64 containerID = 1;
   required Action action = 2;
   optional Reason reason = 3;
 }
