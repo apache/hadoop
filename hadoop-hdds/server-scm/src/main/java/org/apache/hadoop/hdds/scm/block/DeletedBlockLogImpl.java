@@ -386,9 +386,11 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
               .parseFrom(value);
 
           if (block.getCount() > -1 && block.getCount() <= maxRetry) {
-            Set<UUID> dnsWithTransactionCommitted = transactionToDNsCommitMap
-                .putIfAbsent(block.getTxID(), new ConcurrentHashSet<>());
-            transactions.addTransaction(block, dnsWithTransactionCommitted);
+            if (transactions.addTransaction(block,
+                transactionToDNsCommitMap.get(block.getTxID()))) {
+              transactionToDNsCommitMap
+                  .putIfAbsent(block.getTxID(), new ConcurrentHashSet<>());
+            }
           }
           return !transactions.isFull();
         }

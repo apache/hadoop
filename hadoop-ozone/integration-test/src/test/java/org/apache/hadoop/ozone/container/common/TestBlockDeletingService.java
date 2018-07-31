@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
@@ -356,10 +357,18 @@ public class TestBlockDeletingService {
       // 1st interval processes 1 container 1 block and 10 chunks
       deleteAndWait(service, 1);
       Assert.assertEquals(10, getNumberOfChunksInContainers(containerSet));
-      deleteAndWait(service, 2);
-      deleteAndWait(service, 3);
-      deleteAndWait(service, 4);
-      deleteAndWait(service, 5);
+
+      AtomicInteger timesToProcess = new AtomicInteger(1);
+      GenericTestUtils.waitFor(() -> {
+        try {
+          timesToProcess.incrementAndGet();
+          deleteAndWait(service, timesToProcess.get());
+          if (getNumberOfChunksInContainers(containerSet) == 0) {
+            return true;
+          }
+        } catch (Exception e) {}
+        return false;
+      }, 100, 100000);
       Assert.assertEquals(0, getNumberOfChunksInContainers(containerSet));
     } finally {
       service.shutdown();

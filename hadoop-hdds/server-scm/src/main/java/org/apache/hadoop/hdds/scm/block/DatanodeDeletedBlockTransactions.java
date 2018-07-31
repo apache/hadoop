@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 /**
@@ -53,21 +55,26 @@ public class DatanodeDeletedBlockTransactions {
     this.nodeNum = nodeNum;
   }
 
-  public void addTransaction(DeletedBlocksTransaction tx,
-      Set<UUID> dnsWithTransactionCommitted) throws IOException {
+  public boolean addTransaction(DeletedBlocksTransaction tx,
+      Set<UUID> dnsWithTransactionCommitted) {
     Pipeline pipeline = null;
     try {
-      pipeline = mappingService.getContainerWithPipeline(tx.getContainerID())
-          .getPipeline();
+      ContainerWithPipeline containerWithPipeline =
+          mappingService.getContainerWithPipeline(tx.getContainerID());
+      if (containerWithPipeline.getContainerInfo().isContainerOpen()) {
+        return false;
+      }
+      pipeline = containerWithPipeline.getPipeline();
     } catch (IOException e) {
       SCMBlockDeletingService.LOG.warn("Got container info error.", e);
+      return false;
     }
 
     if (pipeline == null) {
       SCMBlockDeletingService.LOG.warn(
           "Container {} not found, continue to process next",
           tx.getContainerID());
-      return;
+      return false;
     }
 
     for (DatanodeDetails dd : pipeline.getMachines()) {
@@ -78,6 +85,7 @@ public class DatanodeDeletedBlockTransactions {
         addTransactionToDN(dnID, tx);
       }
     }
+    return true;
   }
 
   private void addTransactionToDN(UUID dnID, DeletedBlocksTransaction tx) {

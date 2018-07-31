@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -698,6 +699,8 @@ public class TestKeys {
       for (OmKeyInfo keyInfo : createdKeys) {
         List<OmKeyLocationInfo> locations =
             keyInfo.getLatestVersionLocations().getLocationList();
+        OzoneTestUtils.closeContainers(keyInfo.getKeyLocationVersions(),
+            ozoneCluster.getStorageContainerManager());
         for (OmKeyLocationInfo location : locations) {
           KeyValueHandler  keyValueHandler = (KeyValueHandler) cm
               .getDispatcher().getHandler(ContainerProtos.ContainerType
