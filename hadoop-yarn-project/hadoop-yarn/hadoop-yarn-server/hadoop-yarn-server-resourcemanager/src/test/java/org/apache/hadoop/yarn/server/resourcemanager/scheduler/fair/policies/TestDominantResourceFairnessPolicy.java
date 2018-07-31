@@ -24,7 +24,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -458,33 +457,20 @@ public class TestDominantResourceFairnessPolicy {
     }
     Comparator DRFComparator = createComparator(100000, 50000);
 
-    // To simulate unallocated resource changes
-    Thread modThread = modificationThread(schedulableList);
-    modThread.start();
+    /*
+     * The old sort should fail, but timing it makes testing to flaky.
+     * TimSort which is used does not handle the concurrent modification of
+     * objects it is sorting. This is the test that should fail:
+     *  modThread.start();
+     *  try {
+     *    Collections.sort(schedulableList, DRFComparator);
+     *  } catch (IllegalArgumentException iae) {
+     *    // failed sort
+     *  }
+     */
 
-    // This should fail: make sure that we do test correctly
-    // TimSort which is used does not handle the concurrent modification of
-    // objects it is sorting.
-    try {
-      Collections.sort(schedulableList, DRFComparator);
-      fail("Sorting should have failed and did not");
-    } catch (IllegalArgumentException iae) {
-      assertEquals(iae.getMessage(), "Comparison method violates its general contract!");
-    }
-    try {
-      modThread.join();
-    } catch (InterruptedException ie) {
-      fail("ModThread join failed: " + ie.getMessage());
-    }
-
-    // clean up and try again using TreeSet which should work
-    schedulableList.clear();
-    for (int i=0; i<10000; i++) {
-      schedulableList.add(
-          (FakeSchedulable)createSchedulable((i%10)*100, (i%3)*2));
-    }
     TreeSet<Schedulable> sortedSchedulable = new TreeSet<>(DRFComparator);
-    modThread = modificationThread(schedulableList);
+    Thread modThread = modificationThread(schedulableList);
     modThread.start();
     sortedSchedulable.addAll(schedulableList);
     try {
