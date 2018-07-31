@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,24 +16,42 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.utils;
+package org.apache.hadoop.ozone.container.common.interfaces;
 
-import java.util.Iterator;
+
+import java.io.IOException;
+import java.util.NoSuchElementException;
 
 /**
- * Iterator for MetaDataStore DB.
+ * Block Iterator for container. Each container type need to implement this
+ * interface.
  * @param <T>
  */
-public interface MetaStoreIterator<T> extends Iterator<T> {
+public interface BlockIterator<T> {
 
   /**
-   * seek to first entry.
+   * This checks if iterator has next element. If it has returns true,
+   * otherwise false.
+   * @return boolean
+   */
+  boolean hasNext() throws IOException;
+
+  /**
+   * Seek to first entry.
    */
   void seekToFirst();
 
   /**
-   * seek to last entry.
+   * Seek to last entry.
    */
   void seekToLast();
+
+  /**
+   * Get next block in the container.
+   * @return next block or null if there are no blocks
+   * @throws IOException
+   */
+  T nextBlock() throws IOException, NoSuchElementException;
+
 
 }
