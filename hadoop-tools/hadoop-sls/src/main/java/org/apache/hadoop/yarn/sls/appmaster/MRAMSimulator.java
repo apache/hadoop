@@ -126,10 +126,11 @@ public class MRAMSimulator extends AMSimulator {
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
       long traceStartTime, long traceFinishTime, String user, String queue,
       boolean isTracked, String oldAppId, long baselineStartTimeMS,
-      Resource amContainerResource, Map<String, String> params) {
+      Resource amContainerResource, String nodeLabelExpr,
+      Map<String, String> params) {
     super.init(heartbeatInterval, containerList, rm, se,
         traceStartTime, traceFinishTime, user, queue, isTracked, oldAppId,
-        baselineStartTimeMS, amContainerResource, params);
+        baselineStartTimeMS, amContainerResource, nodeLabelExpr, params);
     amtype = "mapreduce";
 
     // get map/reduce tasks

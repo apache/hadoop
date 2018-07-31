@@ -19,8 +19,13 @@ package org.apache.hadoop.yarn.client.util;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -29,6 +34,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  * YARN clients.
  */
 public abstract class YarnClientUtils {
+
+  private static final String ADD_LABEL_FORMAT_ERR_MSG =
+      "Input format for adding node-labels is not correct, it should be "
+          + "labelName1[(exclusive=true/false)],LabelName2[] ..";
+
+  public static final String NO_LABEL_ERR_MSG =
+      "No cluster node-labels are specified";
+
   /**
    * Look up and return the resource manager's principal. This method
    * automatically does the <code>_HOST</code> replacement in the principal and
@@ -77,6 +90,70 @@ public abstract class YarnClientUtils {
         YarnConfiguration.DEFAULT_RM_PORT).getHostName();
 
     return SecurityUtil.getServerPrincipal(rmPrincipal, hostname);
+  }
+
+  /**
+   * Creates node labels from string
+   * @param args nodelabels string to be parsed
+   * @return list of node labels
+   */
+  public static List<NodeLabel> buildNodeLabelsFromStr(String args) {
+    List<NodeLabel> nodeLabels = new ArrayList<>();
+    for (String p : args.split(",")) {
+      if (!p.trim().isEmpty()) {
+        String labelName = p;
+
+        // Try to parse exclusive
+        boolean exclusive = NodeLabel.DEFAULT_NODE_LABEL_EXCLUSIVITY;
+        int leftParenthesisIdx = p.indexOf("(");
+        int rightParenthesisIdx = p.indexOf(")");
+
+        if ((leftParenthesisIdx == -1 && rightParenthesisIdx != -1)
+            || (leftParenthesisIdx != -1 && rightParenthesisIdx == -1)) {
+          // Parentheses not match
+          throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+        }
+
+        if (leftParenthesisIdx > 0 && rightParenthesisIdx > 0) {
+          if (leftParenthesisIdx > rightParenthesisIdx) {
+            // Parentheses not match
+            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+          }
+
+          String property = p.substring(p.indexOf("(") + 1, p.indexOf(")"));
+          if (property.contains("=")) {
+            String key = property.substring(0, property.indexOf("=")).trim();
+            String value =
+                property
+                    .substring(property.indexOf("=") + 1, property.length())
+                    .trim();
+
+            // Now we only support one property, which is exclusive, so check if
+            // key = exclusive and value = {true/false}
+            if (key.equals("exclusive")
+                && ImmutableSet.of("true", "false").contains(value)) {
+              exclusive = Boolean.parseBoolean(value);
+            } else {
+              throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+            }
+          } else if (!property.trim().isEmpty()) {
+            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+          }
+        }
+
+        // Try to get labelName if there's "(..)"
+        if (labelName.contains("(")) {
+          labelName = labelName.substring(0, labelName.indexOf("(")).trim();
+        }
+
+        nodeLabels.add(NodeLabel.newInstance(labelName, exclusive));
+      }
+    }
+
+    if (nodeLabels.isEmpty()) {
+      throw new IllegalArgumentException(NO_LABEL_ERR_MSG);
+    }
+    return nodeLabels;
   }
 
   /**

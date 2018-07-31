@@ -104,6 +104,7 @@ public class SLSConfiguration {
   public static final String JOB_START_MS = JOB_PREFIX + "start.ms";
   public static final String JOB_END_MS = JOB_PREFIX + "end.ms";
   public static final String JOB_QUEUE_NAME = JOB_PREFIX + "queue.name";
+  public static final String JOB_LABEL_EXPR = JOB_PREFIX + "label.expression";
   public static final String JOB_USER = JOB_PREFIX + "user";
   public static final String JOB_COUNT = JOB_PREFIX + "count";
   public static final String JOB_TASKS = JOB_PREFIX + "tasks";

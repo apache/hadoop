@@ -19,10 +19,13 @@ package org.apache.hadoop.yarn.sls.appmaster;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
@@ -42,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 @RunWith(Parameterized.class)
 public class TestAMSimulator {
@@ -73,6 +77,7 @@ public class TestAMSimulator {
     conf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricOutputDir.toString());
     conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
     conf.set(SLSConfiguration.RM_SCHEDULER, scheduler.getName());
+    conf.set(YarnConfiguration.NODE_LABELS_ENABLED, "true");
     conf.setBoolean(SLSConfiguration.METRICS_SWITCH, true);
     rm = new ResourceManager();
     rm.init(conf);
@@ -140,7 +145,7 @@ public class TestAMSimulator {
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
     app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
-        appId, 0, SLSConfiguration.getAMContainerResource(conf), null);
+        appId, 0, SLSConfiguration.getAMContainerResource(conf), null, null);
     app.firstStep();
 
     verifySchedulerMetrics(appId);
@@ -150,6 +155,34 @@ public class TestAMSimulator {
 
     // Finish this app
     app.lastStep();
+  }
+
+  @Test
+  public void testAMSimulatorWithNodeLabels() throws Exception {
+    if (scheduler.equals(CapacityScheduler.class)) {
+      // add label to the cluster
+      RMAdminCLI rmAdminCLI = new RMAdminCLI(conf);
+      String[] args = {"-addToClusterNodeLabels", "label1"};
+      rmAdminCLI.run(args);
+
+      MockAMSimulator app = new MockAMSimulator();
+      String appId = "app1";
+      String queue = "default";
+      List<ContainerSimulator> containers = new ArrayList<>();
+      app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
+          appId, 0, SLSConfiguration.getAMContainerResource(conf),
+          "label1", null);
+      app.firstStep();
+
+      verifySchedulerMetrics(appId);
+
+      ConcurrentMap<ApplicationId, RMApp> rmApps =
+          rm.getRMContext().getRMApps();
+      Assert.assertEquals(1, rmApps.size());
+      RMApp rmApp = rmApps.get(app.appId);
+      Assert.assertNotNull(rmApp);
+      Assert.assertEquals("label1", rmApp.getAmNodeLabelExpression());
+    }
   }
 
   @After
