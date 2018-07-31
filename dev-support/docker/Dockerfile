@@ -115,7 +115,7 @@ RUN apt-get -q install --no-install-recommends -y bats
 ####
 # Install pylint
 ####
-RUN pip install pylint
+RUN pip install pylint==1.9.2
 
 ####
 # Install dateutil.parser
