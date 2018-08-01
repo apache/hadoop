@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.IOException;
@@ -142,7 +143,7 @@ public interface MiniOzoneCluster {
    * @throws InterruptedException
    */
   void restartStorageContainerManager() throws InterruptedException,
-      TimeoutException, IOException;
+      TimeoutException, IOException, AuthenticationException;
 
   /**
    * Restarts OzoneManager instance.

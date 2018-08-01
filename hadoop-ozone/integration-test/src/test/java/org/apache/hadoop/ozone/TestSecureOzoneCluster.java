@@ -89,10 +89,6 @@ public final class TestSecureOzoneCluster {
       startMiniKdc();
       setSecureConfig(conf);
       createCredentialsInKDC(conf, miniKdc);
-
-      clusterId = UUID.randomUUID().toString();
-      scmId = UUID.randomUUID().toString();
-      omId = UUID.randomUUID().toString();
     } catch (IOException e) {
       LOGGER.error("Failed to initialize TestSecureOzoneCluster", e);
     } catch (Exception e) {
@@ -120,11 +116,12 @@ public final class TestSecureOzoneCluster {
     createPrincipal(scmKeytab,
         conf.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
      createPrincipal(spnegoKeytab,
-         conf.get(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY),
-         conf.get(OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
-    createPrincipal(omKeyTab,
+         conf.get(ScmConfigKeys
+             .HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
         conf.get(OMConfigKeys
-            .OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
+            .OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+    createPrincipal(omKeyTab,
+        conf.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
   }
 
   private void createPrincipal(File keytab, String... principal)
@@ -156,7 +153,7 @@ public final class TestSecureOzoneCluster {
 
     conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/" + host + "@" + realm);
-    conf.set(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
         "HTTP_SCM/" + host + "@" + realm);
 
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
@@ -170,7 +167,7 @@ public final class TestSecureOzoneCluster {
 
     conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
-    conf.set(ScmConfigKeys.SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY,
         spnegoKeytab.getAbsolutePath());
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
@@ -189,6 +186,11 @@ public final class TestSecureOzoneCluster {
 
   private void initSCM()
       throws IOException, AuthenticationException {
+
+    clusterId = UUID.randomUUID().toString();
+    scmId = UUID.randomUUID().toString();
+    omId = UUID.randomUUID().toString();
+
     final String path = GenericTestUtils
         .getTempPath(UUID.randomUUID().toString());
     Path scmPath = Paths.get(path, "scm-meta");

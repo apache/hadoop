@@ -433,7 +433,6 @@
     </description>
   </property>
   <property>
-<<<<<<< HEAD
     <name>ozone.om.keytab.file</name>
     <value/>
     <tag>OM, SECURITY</tag>
@@ -443,9 +442,6 @@
   </property>
   <property>
     <name>ozone.om.db.cache.size.mb</name>
-=======
-    <name>ozone.ksm.db.cache.size.mb</name>
->>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value>128</value>
     <tag>OM, PERFORMANCE</tag>
     <description>
@@ -933,7 +929,7 @@
   </property>
 
   <property>
-    <name>hdds.scm.container.creation.lease.timeout</name>
+    <name>ozone.scm.container.creation.lease.timeout</name>
     <value>60s</value>
     <tag>OZONE, SCM</tag>
     <description>
@@ -987,11 +983,7 @@
     </description>
   </property>
   <property>
-<<<<<<< HEAD
     <name>hdds.container.close.threshold</name>
-=======
-    <name>hdds.scm.container.close.threshold</name>
->>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value>0.9f</value>
     <tag>OZONE, DATANODE</tag>
     <description>
@@ -1123,6 +1115,7 @@
       to occur.
     </description>
   </property>
+
   <property>
     <name>hdds.lock.suppress.warning.interval.ms</name>
     <value>10000</value>
@@ -1132,13 +1125,7 @@
       consecutive warnings within this interval.
     </description>
   </property>
-  <property>
-    <name>ozone.security.enabled</name>
-    <value>false</value>
-    <tag> OZONE, SECURITY, FLAG</tag>
-    <description>True if security is enabled for ozone. When this property is true, hadoop.security.authentication should be Kerberos.
-    </description>
-  </property>
+
   <property>
     <name>hdds.command.status.report.interval</name>
     <value>30s</value>
@@ -1206,8 +1193,8 @@
       datanode unless the datanode confirms the completion.
     </description>
   </property>
+
   <property>
-<<<<<<< HEAD
     <name>hdds.db.profile</name>
     <value>SSD</value>
     <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
@@ -1215,6 +1202,7 @@
     that tunes the RocksDB settings for the hardware it is running
     on. Right now, we have SSD and DISK as profile options.</description>
   </property>
+
   <property>
     <name>hdds.datanode.replication.work.dir</name>
     <tag>DATANODE</tag>
@@ -1235,10 +1223,15 @@
   </property>
 
   <property>
-    <name>ozone.scm.kerberos.keytab.file</name>
-=======
+    <name>ozone.security.enabled</name>
+    <value>false</value>
+    <tag> OZONE, SECURITY, FLAG</tag>
+    <description>True if security is enabled for ozone. When this property is true, hadoop.security.authentication should be Kerberos.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.scm.kerberos.keytab.file</name>
->>>>>>> HDDS-70. Fix config names for secure ksm and scm. Contributed by Ajay Kumar.
     <value></value>
     <tag> OZONE, SECURITY</tag>
     <description> The keytab file used by each SCM daemon to login as its

@@ -217,7 +217,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
   @Override
   public void restartStorageContainerManager()
-      throws TimeoutException, InterruptedException, IOException {
+      throws TimeoutException, InterruptedException, IOException, AuthenticationException {
     scm.stop();
     scm.join();
     scm = StorageContainerManager.createSCM(null, conf);

@@ -302,11 +302,6 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";
 
-  public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
-      + "kerberos.keytab.file";
-  public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"
-      + ".kerberos.principal";
-
   /**
    * There is no need to instantiate this class.
    */

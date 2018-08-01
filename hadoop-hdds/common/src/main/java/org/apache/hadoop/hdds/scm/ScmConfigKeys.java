@@ -279,10 +279,12 @@ public final class ScmConfigKeys {
   public static final String HDDS_SCM_WATCHER_TIMEOUT_DEFAULT =
       "10m";
 
-  public static final String SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY =
-      "ozone.scm.web.authentication.kerberos.principal";
-  public static final String SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY =
-      "ozone.scm.web.authentication.kerberos.keytab";
+  public static final String
+      HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY =
+      "hdds.scm.web.authentication.kerberos.principal";
+  public static final String
+      HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY =
+      "hdds.scm.web.authentication.kerberos.keytab";
   /**
    * Never constructed.
    */

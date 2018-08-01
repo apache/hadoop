@@ -433,7 +433,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     out.println(USAGE + "\n");
   }
 
-<<<<<<< HEAD
   /**
    * Create an SCM instance based on the supplied command-line arguments.
    *
@@ -444,11 +443,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @param args command line arguments.
    * @param conf HDDS configuration
    * @return SCM instance
-   * @throws IOException
+   * @throws IOException, AuthenticationException
    */
   @VisibleForTesting
   public static StorageContainerManager createSCM(
-      String[] args, OzoneConfiguration conf) throws IOException {
+      String[] args, OzoneConfiguration conf)
+      throws IOException, AuthenticationException {
     return createSCM(args, conf, false);
   }
 
@@ -459,7 +459,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @param conf HDDS configuration
    * @param printBanner if true, then log a verbose startup message.
    * @return SCM instance
-   * @throws IOException
+   * @throws IOException, AuthenticationException
    */
   private static StorageContainerManager createSCM(
       String[] args,

@@ -112,5 +112,4 @@ public final class HddsConfigKeys {
   public static final String HDDS_PUBLIC_KEY_FILE_NAME = "hdds.public.key.file"
       + ".name";
   public static final String HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT = "public.pem";
->>>>>>> HDDS-100. SCM CA: generate public/private key pair for SCM/OM/DNs. Contributed by Ajay Kumar.
 }
