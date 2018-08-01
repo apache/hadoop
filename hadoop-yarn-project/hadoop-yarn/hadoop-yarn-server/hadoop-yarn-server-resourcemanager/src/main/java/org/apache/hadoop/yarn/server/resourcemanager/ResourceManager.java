@@ -757,8 +757,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       masterService = createApplicationMasterService();
+      createAndRegisterOpportunisticDispatcher(masterService);
       addService(masterService) ;
       rmContext.setApplicationMasterService(masterService);
+
 
       applicationACLsManager = new ApplicationACLsManager(conf);
 
@@ -805,6 +807,23 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       super.serviceInit(conf);
+    }
+
+    private void createAndRegisterOpportunisticDispatcher(
+        ApplicationMasterService service) {
+      if (!isOpportunisticSchedulingEnabled(conf)) {
+        return;
+      }
+      EventDispatcher oppContainerAllocEventDispatcher = new EventDispatcher(
+          (OpportunisticContainerAllocatorAMService) service,
+          OpportunisticContainerAllocatorAMService.class.getName());
+      // Add an event dispatcher for the
+      // OpportunisticContainerAllocatorAMService to handle node
+      // additions, updates and removals. Since the SchedulerEvent is currently
+      // a super set of theses, we register interest for it.
+      addService(oppContainerAllocEventDispatcher);
+      rmDispatcher
+          .register(SchedulerEventType.class, oppContainerAllocEventDispatcher);
     }
 
     @Override
@@ -1335,8 +1354,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected ApplicationMasterService createApplicationMasterService() {
     Configuration config = this.rmContext.getYarnConfiguration();
-    if (YarnConfiguration.isOpportunisticContainerAllocationEnabled(config)
-        || YarnConfiguration.isDistSchedulingEnabled(config)) {
+    if (isOpportunisticSchedulingEnabled(conf)) {
       if (YarnConfiguration.isDistSchedulingEnabled(config) &&
           !YarnConfiguration
               .isOpportunisticContainerAllocationEnabled(config)) {
@@ -1348,16 +1366,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
           oppContainerAllocatingAMService =
           new OpportunisticContainerAllocatorAMService(this.rmContext,
               scheduler);
-      EventDispatcher oppContainerAllocEventDispatcher =
-          new EventDispatcher(oppContainerAllocatingAMService,
-              OpportunisticContainerAllocatorAMService.class.getName());
-      // Add an event dispatcher for the
-      // OpportunisticContainerAllocatorAMService to handle node
-      // additions, updates and removals. Since the SchedulerEvent is currently
-      // a super set of theses, we register interest for it.
-      addService(oppContainerAllocEventDispatcher);
-      rmDispatcher.register(SchedulerEventType.class,
-          oppContainerAllocEventDispatcher);
       this.rmContext.setContainerQueueLimitCalculator(
           oppContainerAllocatingAMService.getNodeManagerQueueLimitCalculator());
       return oppContainerAllocatingAMService;
@@ -1371,6 +1379,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected RMSecretManagerService createRMSecretManagerService() {
     return new RMSecretManagerService(conf, rmContext);
+  }
+
+  private boolean isOpportunisticSchedulingEnabled(Configuration conf) {
+    return YarnConfiguration.isOpportunisticContainerAllocationEnabled(conf)
+        || YarnConfiguration.isDistSchedulingEnabled(conf);
   }
 
   /**
