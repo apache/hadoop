@@ -27,7 +27,7 @@ public final class OmKeyLocationInfo {
   private final BlockID blockID;
   private final boolean shouldCreateContainer;
   // the id of this subkey in all the subkeys.
-  private final long length;
+  private long length;
   private final long offset;
   // the version number indicating when this block was added
   private long createVersion;
@@ -66,6 +66,10 @@ public final class OmKeyLocationInfo {
 
   public long getLength() {
     return length;
+  }
+
+  public void setLength(long length) {
+    this.length = length;
   }
 
   public long getOffset() {

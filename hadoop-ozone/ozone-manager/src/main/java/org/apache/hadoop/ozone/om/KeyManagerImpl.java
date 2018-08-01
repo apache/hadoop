@@ -342,6 +342,10 @@ public class KeyManagerImpl implements KeyManager {
           OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(openKeyData));
       keyInfo.setDataSize(args.getDataSize());
       keyInfo.setModificationTime(Time.now());
+      List<OmKeyLocationInfo> locationInfoList = args.getLocationInfoList();
+      Preconditions.checkNotNull(locationInfoList);
+      //update the block length for each block
+      keyInfo.updateLocationInfoList(locationInfoList);
       BatchOperation batch = new BatchOperation();
       batch.delete(openKey);
       batch.put(objectKeyBytes, keyInfo.getProtobuf().toByteArray());

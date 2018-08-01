@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.om.protocolPB;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.protobuf.RpcController;
@@ -581,11 +582,16 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   public void commitKey(OmKeyArgs args, int clientID)
       throws IOException {
     CommitKeyRequest.Builder req = CommitKeyRequest.newBuilder();
+    List<OmKeyLocationInfo> locationInfoList = args.getLocationInfoList();
+    Preconditions.checkNotNull(locationInfoList);
     KeyArgs keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize()).build();
+        .setDataSize(args.getDataSize())
+        .addAllKeyLocations(
+            locationInfoList.stream().map(OmKeyLocationInfo::getProtobuf)
+                .collect(Collectors.toList())).build();
     req.setKeyArgs(keyArgs);
     req.setClientID(clientID);
 

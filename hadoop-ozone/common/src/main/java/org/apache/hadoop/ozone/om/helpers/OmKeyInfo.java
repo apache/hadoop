@@ -101,8 +101,7 @@ public final class OmKeyInfo {
     this.dataSize = size;
   }
 
-  public synchronized OmKeyLocationInfoGroup getLatestVersionLocations()
-      throws IOException {
+  public synchronized OmKeyLocationInfoGroup getLatestVersionLocations() {
     return keyLocationVersions.size() == 0? null :
         keyLocationVersions.get(keyLocationVersions.size() - 1);
   }
@@ -113,6 +112,32 @@ public final class OmKeyInfo {
 
   public void updateModifcationTime() {
     this.modificationTime = Time.monotonicNow();
+  }
+
+  /**
+   * updates the length of the each block in the list given.
+   * This will be called when the key is being committed to OzoneManager.
+   *
+   * @param locationInfoList list of locationInfo
+   * @throws IOException
+   */
+  public void updateLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
+    OmKeyLocationInfoGroup keyLocationInfoGroup = getLatestVersionLocations();
+    List<OmKeyLocationInfo> currentList =
+        keyLocationInfoGroup.getLocationList();
+    Preconditions.checkNotNull(keyLocationInfoGroup);
+    Preconditions.checkState(locationInfoList.size() <= currentList.size());
+    for (OmKeyLocationInfo current : currentList) {
+      // For Versioning, while committing the key for the newer version,
+      // we just need to update the lengths for new blocks. Need to iterate over
+      // and find the new blocks added in the latest version.
+      for (OmKeyLocationInfo info : locationInfoList) {
+        if (info.getBlockID().equals(current.getBlockID())) {
+          current.setLength(info.getLength());
+          break;
+        }
+      }
+    }
   }
 
   /**

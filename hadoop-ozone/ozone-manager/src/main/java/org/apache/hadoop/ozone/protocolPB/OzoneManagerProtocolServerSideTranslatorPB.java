@@ -519,9 +519,12 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
-          .setDataSize(keyArgs.getDataSize())
+          .setLocationInfoList(keyArgs.getKeyLocationsList().stream()
+              .map(OmKeyLocationInfo::getFromProtobuf)
+              .collect(Collectors.toList()))
           .setType(type)
           .setFactor(factor)
+          .setDataSize(keyArgs.getDataSize())
           .build();
       int id = request.getClientID();
       impl.commitKey(omKeyArgs, id);
