@@ -1381,6 +1381,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void msync() throws IOException {
+    // TODO : need to be filled up if needed. May be a no-op here.
+  }
+
+  @Override // ClientProtocol
   public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException {
     checkNNStartup();

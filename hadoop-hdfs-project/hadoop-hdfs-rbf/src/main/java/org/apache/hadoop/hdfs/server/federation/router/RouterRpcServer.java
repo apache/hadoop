@@ -1194,6 +1194,11 @@ public class RouterRpcServer extends AbstractService
   }
 
   @Override // ClientProtocol
+  public void msync() throws IOException {
+    clientProto.msync();
+  }
+
+  @Override // ClientProtocol
   public void satisfyStoragePolicy(String path) throws IOException {
     clientProto.satisfyStoragePolicy(path);
   }
