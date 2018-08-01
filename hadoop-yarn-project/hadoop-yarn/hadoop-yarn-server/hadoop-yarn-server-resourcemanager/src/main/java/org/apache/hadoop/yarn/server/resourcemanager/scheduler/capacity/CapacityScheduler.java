@@ -437,6 +437,7 @@ public class CapacityScheduler extends
   public void serviceStop() throws Exception {
     try {
       writeLock.lock();
+      this.activitiesManager.stop();
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
           t.interrupt();
