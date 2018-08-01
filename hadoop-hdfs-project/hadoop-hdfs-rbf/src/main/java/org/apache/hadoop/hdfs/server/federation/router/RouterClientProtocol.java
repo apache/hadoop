@@ -1396,6 +1396,13 @@ public class RouterClientProtocol implements ClientProtocol {
     return null;
   }
 
+  @Override
+  public void msync() throws IOException {
+    // TODO revisit if router should support msync
+    throw new UnsupportedOperationException(
+        "msync is not supported for router");
+  }
+
   /**
    * Determines combinations of eligible src/dst locations for a rename. A
    * rename cannot change the namespace. Renames are only allowed if there is an

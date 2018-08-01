@@ -1081,6 +1081,13 @@ public class RouterRpcServer extends AbstractService
     return clientProto.listOpenFiles(prevId);
   }
 
+  @Override
+  public void msync() throws IOException {
+    // TODO revisit if router should support msync
+    throw new UnsupportedOperationException(
+        "msync is not supported for router");
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
       throws IOException {

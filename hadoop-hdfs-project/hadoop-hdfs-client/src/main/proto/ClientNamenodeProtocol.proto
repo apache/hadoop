@@ -762,6 +762,12 @@ message ListOpenFilesResponseProto {
   required bool hasMore = 2;
 }
 
+message MsyncRequestProto {
+}
+
+message MsyncResponseProto {
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -916,4 +922,11 @@ service ClientNamenodeProtocol {
       returns(GetQuotaUsageResponseProto);
   rpc listOpenFiles(ListOpenFilesRequestProto)
       returns(ListOpenFilesResponseProto);
+<<<<<<< HEAD
+=======
+  rpc msync(MsyncRequestProto)
+      returns(MsyncResponseProto);
+  rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
+      returns(SatisfyStoragePolicyResponseProto);
+>>>>>>> eae0a5d54a2... HDFS-13688. [SBN read] Introduce msync API call. Contributed by Chen Liang.
 }

@@ -153,8 +153,8 @@ public interface QJournalProtocol {
    * @return Response containing serialized edits to be loaded
    * @see org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache
    */
-  GetJournaledEditsResponseProto getJournaledEdits(String jid,
-      String nameServiceId, long sinceTxId, int maxTxns) throws IOException;
+  GetJournaledEditsResponseProto getJournaledEdits(String jid, long sinceTxId,
+      int maxTxns) throws IOException;
 
   /**
    * Begin the recovery process for a given segment. See the HDFS-3077

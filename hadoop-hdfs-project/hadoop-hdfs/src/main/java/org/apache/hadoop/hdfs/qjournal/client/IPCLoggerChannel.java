@@ -555,8 +555,8 @@ public class IPCLoggerChannel implements AsyncLogger {
         new Callable<GetJournaledEditsResponseProto>() {
           @Override
           public GetJournaledEditsResponseProto call() throws IOException {
-            return getProxy().getJournaledEdits(journalId, nameServiceId,
-                fromTxnId, maxTransactions);
+            return getProxy().getJournaledEdits(journalId, fromTxnId,
+                maxTransactions);
           }
         });
   }
