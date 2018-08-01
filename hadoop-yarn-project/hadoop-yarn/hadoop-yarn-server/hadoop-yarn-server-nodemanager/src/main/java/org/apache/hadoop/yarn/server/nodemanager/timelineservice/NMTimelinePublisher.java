@@ -189,9 +189,20 @@ public class NMTimelinePublisher extends CompositeService {
           LOG.error("Seems like client has been removed before the container"
               + " metric could be published for " + container.getContainerId());
         }
-      } catch (IOException | YarnException e) {
+      } catch (IOException e) {
         LOG.error("Failed to publish Container metrics for container "
-            + container.getContainerId(), e);
+            + container.getContainerId());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to publish Container metrics for container "
+              + container.getContainerId(), e);
+        }
+      } catch (YarnException e) {
+        LOG.error("Failed to publish Container metrics for container "
+            + container.getContainerId() + " Error: " + e.getMessage());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to publish Container metrics for container "
+              + container.getContainerId(), e);
+        }
       }
     }
   }
@@ -283,9 +294,20 @@ public class NMTimelinePublisher extends CompositeService {
         LOG.error("Seems like client has been removed before the event could be"
             + " published for " + container.getContainerId());
       }
-    } catch (IOException | YarnException e) {
+    } catch (IOException e) {
       LOG.error("Failed to publish Container metrics for container "
-          + container.getContainerId(), e);
+          + container.getContainerId());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to publish Container metrics for container "
+            + container.getContainerId(), e);
+      }
+    } catch (YarnException e) {
+      LOG.error("Failed to publish Container metrics for container "
+          + container.getContainerId() + " Error: " +  e.getMessage());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to publish Container metrics for container "
+            + container.getContainerId(), e);
+      }
     }
   }
 
@@ -314,8 +336,17 @@ public class NMTimelinePublisher extends CompositeService {
         LOG.error("Seems like client has been removed before the entity "
             + "could be published for " + entity);
       }
-    } catch (Exception e) {
-      LOG.error("Error when publishing entity " + entity, e);
+    } catch (IOException e) {
+      LOG.error("Error when publishing entity " + entity);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error when publishing entity " + entity, e);
+      }
+    } catch (YarnException e) {
+      LOG.error("Error when publishing entity " + entity + " Error: " +
+          e.getMessage());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error when publishing entity " + entity, e);
+      }
     }
   }
 

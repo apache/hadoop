@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -453,8 +454,11 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       entities.addEntity(entity);
       timelineCollector.putEntities(entities,
           UserGroupInformation.getCurrentUser());
-    } catch (Exception e) {
-      LOG.error("Error when publishing entity " + entity, e);
+    } catch (IOException e) {
+      LOG.error("Error when publishing entity " + entity);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error when publishing entity " + entity, e);
+      }
     }
   }
 
