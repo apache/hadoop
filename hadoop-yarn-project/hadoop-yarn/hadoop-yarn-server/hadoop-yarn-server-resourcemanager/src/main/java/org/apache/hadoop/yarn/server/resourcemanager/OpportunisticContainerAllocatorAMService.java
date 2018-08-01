@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -417,7 +418,8 @@ public class OpportunisticContainerAllocatorAMService
     return nodeMonitor.getThresholdCalculator();
   }
 
-  private synchronized List<RemoteNode> getLeastLoadedNodes() {
+  @VisibleForTesting
+  synchronized List<RemoteNode> getLeastLoadedNodes() {
     long currTime = System.currentTimeMillis();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
         || (cachedNodes == null)) {
