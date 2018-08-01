@@ -352,6 +352,7 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";
+
   /**
    * Config properties to set client side checksum properties.
    */

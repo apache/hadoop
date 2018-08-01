@@ -530,6 +530,14 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.keytab.file</name>
+    <value/>
+    <tag>OM, SECURITY</tag>
+    <description>
+      The keytab file for Kerberos authentication in OM.
+    </description>
+  </property>
+  <property>
     <name>ozone.om.db.cache.size.mb</name>
     <value>128</value>
     <tag>OM, PERFORMANCE</tag>
@@ -1041,7 +1049,7 @@
   </property>
 
   <property>
-    <name>hdds.scm.container.creation.lease.timeout</name>
+    <name>ozone.scm.container.creation.lease.timeout</name>
     <value>60s</value>
     <tag>OZONE, SCM</tag>
     <description>
@@ -1300,6 +1308,7 @@
       datanode unless the datanode confirms the completion.
     </description>
   </property>
+
   <property>
     <name>hdds.db.profile</name>
     <value>DISK</value>
@@ -1308,6 +1317,7 @@
     that tunes the RocksDB settings for the hardware it is running
     on. Right now, we have SSD and DISK as profile options.</description>
   </property>
+
   <property>
     <name>hdds.datanode.replication.work.dir</name>
     <tag>DATANODE</tag>
@@ -1407,6 +1417,14 @@
     <description>Time interval used to store the omMetrics in to a
       file. Background thread perodically stores the OM metrics in to a
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
+    </description>
+  </property>
+  <property>
+    <name>ozone.security.enabled</name>
+    <value>false</value>
+    <tag> OZONE, SECURITY, FLAG</tag>
+    <description>True if security is enabled for ozone. When this property is
+     true, hadoop.security.authentication should be Kerberos.
     </description>
   </property>
 
