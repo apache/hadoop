@@ -697,6 +697,14 @@ public class TestRegistryDNS extends Assert {
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
     assertTrue("not an ARecord", recs[1] instanceof ARecord);
   }
+
+  @Test(timeout=5000)
+  public void testUpstreamFault() throws Exception {
+    Name name = Name.fromString("19.0.17.172.in-addr.arpa.");
+    Record[] recs = getRegistryDNS().getRecords(name, Type.CNAME);
+    assertNull("Record is not null", recs);
+  }
+
   public RegistryDNS getRegistryDNS() {
     return registryDNS;
   }
