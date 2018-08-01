@@ -1535,6 +1535,11 @@ public class RouterClientProtocol implements ClientProtocol {
     return null;
   }
 
+  @Override
+  public void msync() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+  }
+
   /**
    * Determines combinations of eligible src/dst locations for a rename. A
    * rename cannot change the namespace. Renames are only allowed if there is an

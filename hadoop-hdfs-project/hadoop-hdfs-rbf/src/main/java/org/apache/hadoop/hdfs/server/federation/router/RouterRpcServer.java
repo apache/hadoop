@@ -1191,6 +1191,11 @@ public class RouterRpcServer extends AbstractService
     return clientProto.listOpenFiles(prevId, openFilesTypes, path);
   }
 
+  @Override // ClientProtocol
+  public void msync() throws IOException {
+    clientProto.msync();
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
       long minBlockSize) throws IOException {

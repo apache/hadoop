@@ -1788,4 +1788,15 @@ public interface ClientProtocol {
   @ReadOnly
   BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException;
+
+  /**
+   * Called by client to wait until the server has reached the state id of the
+   * client. The client and server state id are given by client side and server
+   * side alignment context respectively. This can be a blocking call.
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  void msync() throws IOException;
 }
