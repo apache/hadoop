@@ -27,56 +27,25 @@ import org.apache.hadoop.hdfs.XAttrHelper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 /**
  * Class to pack XAttrs into byte[].<br>
  * For each XAttr:<br>
  *   The first 4 bytes represents XAttr namespace and name<br>
  *     [0:3)  - XAttr namespace<br>
- *     [3:8) - Reserved<br>
- *     [8:32) - The name of the entry, which is an ID that points to a
+ *     [3:32) - The name of the entry, which is an ID that points to a
  *              string in map<br>
  *   The following two bytes represents the length of XAttr value<br>
  *   The remaining bytes is the XAttr value<br>
  */
 class XAttrFormat {
-  private enum XAttrStatusFormat {
-
-    NAMESPACE(null, 3),
-    RESERVED(NAMESPACE.BITS, 5),
-    NAME(RESERVED.BITS, 24);
-
-    private final LongBitFormat BITS;
-
-    XAttrStatusFormat(LongBitFormat previous, int length) {
-      BITS = new LongBitFormat(name(), previous, length, 0);
-    }
-
-    static XAttr.NameSpace getNamespace(int xattrStatus) {
-      int ordinal = (int) NAMESPACE.BITS.retrieve(xattrStatus);
-      return XAttr.NameSpace.values()[ordinal];
-    }
-
-    static String getName(int xattrStatus) {
-      int id = (int) NAME.BITS.retrieve(xattrStatus);
-      return XAttrStorage.getName(id);
-    }
-
-    static int toInt(XAttr.NameSpace namespace, String name) {
-      long xattrStatusInt = 0;
-
-      xattrStatusInt = NAMESPACE.BITS
-          .combine(namespace.ordinal(), xattrStatusInt);
-      int nid = XAttrStorage.getNameSerialNumber(name);
-      xattrStatusInt = NAME.BITS
-          .combine(nid, xattrStatusInt);
-
-      return (int) xattrStatusInt;
-    }
-  }
-
+  private static final int XATTR_NAMESPACE_MASK = (1 << 3) - 1;
+  private static final int XATTR_NAMESPACE_OFFSET = 29;
+  private static final int XATTR_NAME_MASK = (1 << 29) - 1;
+  private static final int XATTR_NAME_ID_MAX = 1 << 29;
   private static final int XATTR_VALUE_LEN_MAX = 1 << 16;
+  private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES =
+      XAttr.NameSpace.values();
 
   /**
    * Unpack byte[] to XAttrs.
@@ -95,8 +64,10 @@ class XAttrFormat {
       int v = Ints.fromBytes(attrs[i], attrs[i + 1],
           attrs[i + 2], attrs[i + 3]);
       i += 4;
-      builder.setNameSpace(XAttrStatusFormat.getNamespace(v));
-      builder.setName(XAttrStatusFormat.getName(v));
+      int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
+      int nid = v & XATTR_NAME_MASK;
+      builder.setNameSpace(XATTR_NAMESPACE_VALUES[ns]);
+      builder.setName(XAttrStorage.getName(nid));
       int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
       i += 2;
       if (vlen > 0) {
@@ -129,8 +100,10 @@ class XAttrFormat {
       int v = Ints.fromBytes(attrs[i], attrs[i + 1],
           attrs[i + 2], attrs[i + 3]);
       i += 4;
-      XAttr.NameSpace namespace = XAttrStatusFormat.getNamespace(v);
-      String name = XAttrStatusFormat.getName(v);
+      int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
+      int nid = v & XATTR_NAME_MASK;
+      XAttr.NameSpace namespace = XATTR_NAMESPACE_VALUES[ns];
+      String name = XAttrStorage.getName(nid);
       int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
       i += 2;
       if (xAttr.getNameSpace() == namespace &&
@@ -161,7 +134,15 @@ class XAttrFormat {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try {
       for (XAttr a : xAttrs) {
-        int v = XAttrStatusFormat.toInt(a.getNameSpace(), a.getName());
+        int nsOrd = a.getNameSpace().ordinal();
+        Preconditions.checkArgument(nsOrd < 8, "Too many namespaces.");
+        int nid = XAttrStorage.getNameSerialNumber(a.getName());
+        Preconditions.checkArgument(nid < XATTR_NAME_ID_MAX,
+            "Too large serial number of the xattr name");
+
+        // big-endian
+        int v = ((nsOrd & XATTR_NAMESPACE_MASK) << XATTR_NAMESPACE_OFFSET)
+            | (nid & XATTR_NAME_MASK);
         out.write(Ints.toByteArray(v));
         int vlen = a.getValue() == null ? 0 : a.getValue().length;
         Preconditions.checkArgument(vlen < XATTR_VALUE_LEN_MAX,
