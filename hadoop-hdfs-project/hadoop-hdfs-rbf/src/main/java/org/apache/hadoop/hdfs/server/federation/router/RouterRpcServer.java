@@ -2071,6 +2071,11 @@ public class RouterRpcServer extends AbstractService
     return null;
   }
 
+  @Override // ClientProtocol
+  public void msync() throws IOException {
+
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
       throws IOException {
