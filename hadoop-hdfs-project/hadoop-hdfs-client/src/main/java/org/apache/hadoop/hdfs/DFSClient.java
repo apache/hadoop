@@ -3181,4 +3181,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     return new OpenFilesIterator(namenode, tracer, openFilesTypes, path);
   }
+
+  /**
+   * A blocking call to wait for Observer NameNode state ID to reach to the
+   * current client state ID. Current client state ID is given by the client
+   * alignment context.
+   * An assumption is that client alignment context has the state ID set at this
+   * point. This is become ObserverReadProxyProvider sets up the initial state
+   * ID when it is being created.
+   *
+   * @throws IOException
+   */
+  public void msync() throws IOException {
+    namenode.msync();
+  }
 }

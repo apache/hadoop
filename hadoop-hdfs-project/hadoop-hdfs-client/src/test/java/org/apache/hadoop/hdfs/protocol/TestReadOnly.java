@@ -71,7 +71,8 @@ public class TestReadOnly {
           "getDataEncryptionKey",
           "getCurrentEditLogTxid",
           "getEditsFromTxid",
-          "getQuotaUsage"
+          "getQuotaUsage",
+          "msync"
       )
   );
 

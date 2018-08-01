@@ -1533,6 +1533,11 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void msync() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+  }
+
+  @Override
   public void satisfyStoragePolicy(String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
   }
