@@ -797,6 +797,12 @@ class BPOfferService {
           ((BlockECReconstructionCommand) cmd).getECTasks();
       dn.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
       break;
+    case DatanodeProtocol.DNA_BACKUP:
+      LOG.info("DatanodeCommand action: DNA_BACKUP");
+      Collection<BlockSyncTask> backupTasks =
+          ((SyncCommand) cmd).getSyncTasks();
+      dn.getSyncServiceSatisfierDatanodeWorker().processSyncTasks(backupTasks);
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
