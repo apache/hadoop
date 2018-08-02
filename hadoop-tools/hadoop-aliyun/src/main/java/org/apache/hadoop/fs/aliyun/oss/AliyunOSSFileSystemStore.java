@@ -450,6 +450,8 @@ public class AliyunOSSFileSystemStore {
       request.setRange(byteStart, byteEnd);
       return ossClient.getObject(request).getObjectContent();
     } catch (OSSException | ClientException e) {
+      LOG.error("Exception thrown when store retrieves key: "
+              + key + ", exception: " + e);
       return null;
     }
   }
