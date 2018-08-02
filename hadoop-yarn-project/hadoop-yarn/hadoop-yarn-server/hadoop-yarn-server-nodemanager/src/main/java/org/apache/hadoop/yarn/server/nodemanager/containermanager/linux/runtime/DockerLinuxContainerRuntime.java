@@ -298,7 +298,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     this.nmContext = nmContext;
     this.conf = conf;
-    dockerClient = new DockerClient(conf);
+    dockerClient = new DockerClient();
     allowedNetworks.clear();
     defaultROMounts.clear();
     defaultRWMounts.clear();
@@ -973,7 +973,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String containerIdStr = containerId.toString();
     // Check to see if the container already exists for relaunch
     DockerCommandExecutor.DockerContainerStatus containerStatus =
-        DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
+        DockerCommandExecutor.getContainerStatus(containerIdStr,
             privilegedOperationExecutor, nmContext);
     if (containerStatus != null &&
         DockerCommandExecutor.isStartable(containerStatus)) {
@@ -1219,13 +1219,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private void handleContainerStop(String containerId, Map<String, String> env)
       throws ContainerExecutionException {
     DockerCommandExecutor.DockerContainerStatus containerStatus =
-        DockerCommandExecutor.getContainerStatus(containerId, conf,
+        DockerCommandExecutor.getContainerStatus(containerId,
             privilegedOperationExecutor, nmContext);
     if (DockerCommandExecutor.isStoppable(containerStatus)) {
       DockerStopCommand dockerStopCommand = new DockerStopCommand(
           containerId).setGracePeriod(dockerStopGracePeriod);
       DockerCommandExecutor.executeDockerCommand(dockerStopCommand, containerId,
-          env, conf, privilegedOperationExecutor, false, nmContext);
+          env, privilegedOperationExecutor, false, nmContext);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -1247,14 +1247,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (isContainerRequestedAsPrivileged(container)) {
       String containerId = container.getContainerId().toString();
       DockerCommandExecutor.DockerContainerStatus containerStatus =
-          DockerCommandExecutor.getContainerStatus(containerId, conf,
+          DockerCommandExecutor.getContainerStatus(containerId,
           privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isKillable(containerStatus)) {
         DockerKillCommand dockerKillCommand =
             new DockerKillCommand(containerId).setSignal(signal.name());
         DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-            containerId, env, conf, privilegedOperationExecutor, false,
-            nmContext);
+            containerId, env, privilegedOperationExecutor, false, nmContext);
       } else {
         LOG.debug(
             "Container status is {}, skipping kill - {}",
@@ -1292,12 +1291,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           + containerId);
     } else {
       DockerCommandExecutor.DockerContainerStatus containerStatus =
-          DockerCommandExecutor.getContainerStatus(containerId, conf,
+          DockerCommandExecutor.getContainerStatus(containerId,
               privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isRemovable(containerStatus)) {
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            env, conf, privilegedOperationExecutor, false, nmContext);
+            env, privilegedOperationExecutor, false, nmContext);
       }
     }
   }

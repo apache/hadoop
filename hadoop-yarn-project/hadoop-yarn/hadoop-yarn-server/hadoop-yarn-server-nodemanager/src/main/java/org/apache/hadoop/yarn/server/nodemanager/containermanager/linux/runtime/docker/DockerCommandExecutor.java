@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -68,19 +67,18 @@ public final class DockerCommandExecutor {
    * @param dockerCommand               the docker command to run.
    * @param containerId                 the id of the container.
    * @param env                         environment for the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @param disableFailureLogging       disable logging for known rc failures.
    * @return the output of the operation.
    * @throws ContainerExecutionException if the operation fails.
    */
   public static String executeDockerCommand(DockerCommand dockerCommand,
-      String containerId, Map<String, String> env, Configuration conf,
+      String containerId, Map<String, String> env,
       PrivilegedOperationExecutor privilegedOperationExecutor,
       boolean disableFailureLogging, Context nmContext)
       throws ContainerExecutionException {
     PrivilegedOperation dockerOp = dockerCommand.preparePrivilegedOperation(
-        dockerCommand, containerId, env, conf, nmContext);
+        dockerCommand, containerId, env, nmContext);
 
     if (disableFailureLogging) {
       dockerOp.disableFailureLogging();
@@ -108,18 +106,16 @@ public final class DockerCommandExecutor {
    * an exception and the nonexistent status is returned.
    *
    * @param containerId                 the id of the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @return a {@link DockerContainerStatus} representing the current status.
    */
   public static DockerContainerStatus getContainerStatus(String containerId,
-      Configuration conf,
       PrivilegedOperationExecutor privilegedOperationExecutor,
       Context nmContext) {
     try {
       DockerContainerStatus dockerContainerStatus;
       String currentContainerStatus =
-          executeStatusCommand(containerId, conf,
+          executeStatusCommand(containerId,
           privilegedOperationExecutor, nmContext);
       if (currentContainerStatus == null) {
         dockerContainerStatus = DockerContainerStatus.UNKNOWN;
@@ -170,13 +166,11 @@ public final class DockerCommandExecutor {
    * status.
    *
    * @param containerId                 the id of the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @return the current container status.
    * @throws ContainerExecutionException if the docker operation fails to run.
    */
   private static String executeStatusCommand(String containerId,
-      Configuration conf,
       PrivilegedOperationExecutor privilegedOperationExecutor,
       Context nmContext)
       throws ContainerExecutionException {
@@ -184,8 +178,7 @@ public final class DockerCommandExecutor {
         new DockerInspectCommand(containerId).getContainerStatus();
     try {
       return DockerCommandExecutor.executeDockerCommand(dockerInspectCommand,
-          containerId, null, conf, privilegedOperationExecutor, true,
-          nmContext);
+          containerId, null, privilegedOperationExecutor, true, nmContext);
     } catch (ContainerExecutionException e) {
       throw new ContainerExecutionException(e);
     }
