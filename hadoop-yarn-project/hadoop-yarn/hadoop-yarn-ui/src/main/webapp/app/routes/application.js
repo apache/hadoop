@@ -21,7 +21,10 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model() {
-    return this.store.findAll('ClusterInfo', {reload: true});
+    return Ember.RSVP.hash({
+      clusterInfo: this.store.findAll('ClusterInfo', {reload: true}),
+      userInfo: this.store.findAll('cluster-user-info', {reload: true})
+    });
   },
 
   actions: {
@@ -46,5 +49,6 @@ export default AbstractRoute.extend({
 
   unloadAll: function() {
     this.store.unloadAll('ClusterInfo');
+    this.store.unloadAll('cluster-user-info');
   },
 });
