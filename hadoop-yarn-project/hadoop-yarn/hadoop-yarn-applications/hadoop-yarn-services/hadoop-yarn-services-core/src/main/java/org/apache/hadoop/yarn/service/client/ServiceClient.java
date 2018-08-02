@@ -253,7 +253,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (!liveService.getState().equals(ServiceState.STABLE)) {
       String message = service.getName() + " is at " +
           liveService.getState()
-          + " state, upgrade can not be invoked when service is STABLE.";
+          + " state and upgrade can only be initiated when service is STABLE.";
       LOG.error(message);
       throw new YarnException(message);
     }
