@@ -944,12 +944,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       PrivilegedOperationExecutor privOpExecutor =
           PrivilegedOperationExecutor.getInstance(super.getConf());
       if (DockerCommandExecutor.isRemovable(
-          DockerCommandExecutor.getContainerStatus(containerId,
-              super.getConf(), privOpExecutor, nmContext))) {
+          DockerCommandExecutor.getContainerStatus(containerId, privOpExecutor,
+              nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            null, super.getConf(), privOpExecutor, false, nmContext);
+            null, privOpExecutor, false, nmContext);
       }
     } catch (ContainerExecutionException e) {
       LOG.warn("Unable to remove docker container: " + containerId);

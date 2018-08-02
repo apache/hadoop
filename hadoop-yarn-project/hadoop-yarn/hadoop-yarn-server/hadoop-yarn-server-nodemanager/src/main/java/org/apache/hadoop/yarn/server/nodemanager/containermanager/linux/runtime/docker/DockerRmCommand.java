@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 
@@ -37,7 +36,7 @@ public class DockerRmCommand extends DockerCommand {
   @Override
   public PrivilegedOperation preparePrivilegedOperation(
       DockerCommand dockerCommand, String containerName, Map<String,
-      String> env, Configuration conf, Context nmContext) {
+      String> env, Context nmContext) {
     PrivilegedOperation dockerOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.REMOVE_DOCKER_CONTAINER);
     dockerOp.appendArgs(containerName);
