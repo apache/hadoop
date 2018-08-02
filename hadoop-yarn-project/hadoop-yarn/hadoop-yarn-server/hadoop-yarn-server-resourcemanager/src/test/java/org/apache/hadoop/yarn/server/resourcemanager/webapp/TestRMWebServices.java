@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -842,5 +843,25 @@ public class TestRMWebServices extends JerseyTestBase {
         QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
     Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "yarn",
         QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
+  }
+
+  @Test
+  public void testClusterUserInfo() throws JSONException, Exception {
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+    when(mockRM.getRMLoginUser()).thenReturn("yarn");
+    RMWebServices webSvc =
+            new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    ClusterUserInfo userInfo = webSvc.getClusterUserInfo(mockHsr);
+    verifyClusterUserInfo(userInfo, "yarn", "admin");
+  }
+
+  public void verifyClusterUserInfo(ClusterUserInfo userInfo,
+            String rmLoginUser, String requestedUser) {
+    assertEquals("rmLoginUser doesn't match: ",
+            rmLoginUser, userInfo.getRmLoginUser());
+    assertEquals("requestedUser doesn't match: ",
+            requestedUser, userInfo.getRequestedUser());
   }
 }

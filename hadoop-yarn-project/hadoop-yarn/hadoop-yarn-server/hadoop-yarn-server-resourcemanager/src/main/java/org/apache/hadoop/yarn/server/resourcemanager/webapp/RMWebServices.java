@@ -160,6 +160,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -333,6 +334,17 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterInfo getClusterInfo() {
     initForReadableEndpoints();
     return new ClusterInfo(this.rm);
+  }
+
+  @GET
+  @Path(RMWSConsts.CLUSTER_USER_INFO)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public ClusterUserInfo getClusterUserInfo(@Context HttpServletRequest hsr) {
+    initForReadableEndpoints();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    return new ClusterUserInfo(this.rm, callerUGI);
   }
 
   @GET

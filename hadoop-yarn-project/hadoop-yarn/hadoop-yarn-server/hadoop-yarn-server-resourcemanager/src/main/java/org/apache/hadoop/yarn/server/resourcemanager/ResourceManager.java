@@ -222,6 +222,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return clusterTimeStamp;
   }
 
+  public String getRMLoginUser() {
+    return rmLoginUGI.getShortUserName();
+  }
+
   @VisibleForTesting
   protected static void setClusterTimeStamp(long timestamp) {
     clusterTimeStamp = timestamp;
