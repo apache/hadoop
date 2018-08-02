@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -105,6 +106,11 @@ public class PassThroughRESTRequestInterceptor
   @Override
   public ClusterInfo getClusterInfo() {
     return getNextInterceptor().getClusterInfo();
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    return getNextInterceptor().getClusterUserInfo(hsr);
   }
 
   @Override
