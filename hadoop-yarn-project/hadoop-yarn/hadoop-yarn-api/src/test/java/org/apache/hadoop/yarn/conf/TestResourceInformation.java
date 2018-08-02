@@ -43,7 +43,7 @@ public class TestResourceInformation {
     Assert.assertEquals("Resource units incorrect", units, ri.getUnits());
     units = "z";
     try {
-      ResourceInformation.newInstance(name, units);
+      ResourceInformation.newInstance(name, units).setUnits(units);
       Assert.fail(units + "is not a valid unit");
     } catch (IllegalArgumentException ie) {
       // do nothing

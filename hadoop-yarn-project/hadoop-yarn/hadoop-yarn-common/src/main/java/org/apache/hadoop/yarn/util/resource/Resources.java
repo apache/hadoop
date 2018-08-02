@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 /**
  * Resources is a computation class which provides a set of apis to do
@@ -257,12 +256,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-
-        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
-            ? rhsValue.getValue()
-            : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                lhsValue.getUnits(), rhsValue.getValue());
-        lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
+        lhs.setResourceValue(i, lhsValue.getValue() + rhsValue.getValue());
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -281,12 +275,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-
-        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
-            ? rhsValue.getValue()
-            : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                lhsValue.getUnits(), rhsValue.getValue());
-        lhs.setResourceValue(i, lhsValue.getValue() - convertedRhs);
+        lhs.setResourceValue(i, lhsValue.getValue() - rhsValue.getValue());
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
         continue;
@@ -365,12 +354,7 @@ public class Resources {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
 
-        long convertedRhs = (long) (((rhsValue.getUnits()
-            .equals(lhsValue.getUnits()))
-                ? rhsValue.getValue()
-                : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                    lhsValue.getUnits(), rhsValue.getValue()))
-            * by);
+        long convertedRhs = (long) (rhsValue.getValue() * by);
         lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
@@ -511,12 +495,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = bigger.getResourceInformation(i);
         ResourceInformation lhsValue = smaller.getResourceInformation(i);
-
-        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
-            ? rhsValue.getValue()
-            : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                lhsValue.getUnits(), rhsValue.getValue());
-        if (lhsValue.getValue() > convertedRhs) {
+        if (lhsValue.getValue() > rhsValue.getValue()) {
           return false;
         }
       } catch (ResourceNotFoundException ye) {
@@ -539,12 +518,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-
-        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
-            ? rhsValue.getValue()
-            : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                lhsValue.getUnits(), rhsValue.getValue());
-        ResourceInformation outInfo = lhsValue.getValue() < convertedRhs
+        ResourceInformation outInfo = lhsValue.getValue() < rhsValue.getValue()
             ? lhsValue
             : rhsValue;
         ret.setResourceInformation(i, outInfo);
@@ -563,12 +537,7 @@ public class Resources {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-
-        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
-            ? rhsValue.getValue()
-            : UnitsConversionUtil.convert(rhsValue.getUnits(),
-                lhsValue.getUnits(), rhsValue.getValue());
-        ResourceInformation outInfo = lhsValue.getValue() > convertedRhs
+        ResourceInformation outInfo = lhsValue.getValue() > rhsValue.getValue()
             ? lhsValue
             : rhsValue;
         ret.setResourceInformation(i, outInfo);

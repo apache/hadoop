@@ -202,7 +202,7 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     ResourceInformation ret = new ResourceInformation();
     ret.setName(name);
     ret.setResourceType(type);
-    ret.setUnits(units);
+    ret.setUnitsWithoutValidation(units);
     ret.setValue(value);
     ret.setMinimumAllocation(minimumAllocation);
     ret.setMaximumAllocation(maximumAllocation);

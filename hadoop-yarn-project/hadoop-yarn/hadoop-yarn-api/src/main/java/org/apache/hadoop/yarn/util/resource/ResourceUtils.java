@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -527,6 +528,12 @@ public class ResourceUtils {
       String units = getUnits(value);
       Long resourceValue =
           Long.valueOf(value.substring(0, value.length() - units.length()));
+      String destUnit = getDefaultUnit(resourceType);
+      if(!units.equals(destUnit)) {
+        resourceValue = UnitsConversionUtil.convert(
+            units, destUnit, resourceValue);
+        units = destUnit;
+      }
       nodeResources.get(resourceType).setValue(resourceValue);
       nodeResources.get(resourceType).setUnits(units);
       if (LOG.isDebugEnabled()) {

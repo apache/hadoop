@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -298,11 +297,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
    */
   private double calculateShare(ResourceInformation clusterRes,
       ResourceInformation res) {
-      // Convert the resources' units into the cluster resource's units
-    long value = UnitsConversionUtil.convert(res.getUnits(),
-          clusterRes.getUnits(), res.getValue());
-
-    return (double) value / clusterRes.getValue();
+    return (double) res.getValue() / clusterRes.getValue();
   }
 
   /**
@@ -340,11 +335,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation availableResource = available
           .getResourceInformation(i);
       ResourceInformation requiredResource = required.getResourceInformation(i);
-      long requiredResourceValue = UnitsConversionUtil.convert(
-          requiredResource.getUnits(), availableResource.getUnits(),
-          requiredResource.getValue());
-      if (requiredResourceValue != 0) {
-        long tmp = availableResource.getValue() / requiredResourceValue;
+      if (requiredResource.getValue() != 0) {
+        long tmp = availableResource.getValue() / requiredResource.getValue();
         min = min < tmp ? min : tmp;
       }
     }
@@ -387,11 +379,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation aResourceInformation = a.getResourceInformation(i);
       ResourceInformation bResourceInformation = b.getResourceInformation(i);
-      long bResourceValue = UnitsConversionUtil.convert(
-          bResourceInformation.getUnits(), aResourceInformation.getUnits(),
-          bResourceInformation.getValue());
       float tmp = (float) aResourceInformation.getValue()
-          / (float) bResourceValue;
+          / (float) bResourceInformation.getValue();
       ratio = ratio > tmp ? ratio : tmp;
     }
     return ratio;
@@ -437,23 +426,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long minimumValue = UnitsConversionUtil.convert(
-          minimumResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          minimumResourceInformation.getValue());
-      long maximumValue = UnitsConversionUtil.convert(
-          maximumResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          maximumResourceInformation.getValue());
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
-      long value = Math.max(rValue, minimumValue);
-      if (stepFactorValue != 0) {
-        value = roundUp(value, stepFactorValue);
+      long value = Math.max(rValue, minimumResourceInformation.getValue());
+      if (stepFactorResourceInformation.getValue() != 0) {
+        value = roundUp(value, stepFactorResourceInformation.getValue());
       }
-      tmp.setValue(Math.min(value, maximumValue));
+      tmp.setValue(Math.min(value, maximumResourceInformation.getValue()));
       ret.setResourceInformation(i, tmp);
     }
     return ret;
@@ -478,10 +455,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
           .getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value = rValue;
       if (stepFactorValue != 0) {
         value = roundUp
@@ -506,10 +480,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
           .getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       ret.setResourceValue(i, ResourceCalculator
           .roundUp((long) Math.ceil(rValue * by[i]), stepFactorValue));
     }
@@ -539,10 +510,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value;
       if (stepFactorValue != 0) {
         value = roundUp
@@ -566,10 +534,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
           .getResourceInformation(i);
       ResourceInformation bResourceInformation = bigger
           .getResourceInformation(i);
-      long sResourceValue = UnitsConversionUtil.convert(
-          sResourceInformation.getUnits(), bResourceInformation.getUnits(),
-          sResourceInformation.getValue());
-      if (sResourceValue > bResourceInformation.getValue()) {
+      if (sResourceInformation.getValue() > bResourceInformation.getValue()) {
         return false;
       }
     }
@@ -587,11 +552,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       ResourceInformation tmp = ret.getResourceInformation(i);
 
       long rValue = rResourceInformation.getValue();
-      long stepFactorValue = UnitsConversionUtil.convert(
-          stepFactorResourceInformation.getUnits(),
-          rResourceInformation.getUnits(),
-          stepFactorResourceInformation.getValue());
-
+      long stepFactorValue = stepFactorResourceInformation.getValue();
       long value = rValue;
       if (stepFactorValue != 0) {
         value = roundDown(rValue, stepFactorValue);

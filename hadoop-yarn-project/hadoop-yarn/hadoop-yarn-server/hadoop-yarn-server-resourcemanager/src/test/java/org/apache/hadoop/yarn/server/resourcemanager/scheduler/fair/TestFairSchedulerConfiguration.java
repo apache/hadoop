@@ -414,7 +414,7 @@ public class TestFairSchedulerConfiguration {
           calculator.normalize(customResource(10000L, ""), min, max, increment)
             .getResourceInformation(A_CUSTOM_RESOURCE));
       assertEquals(customResourceInformation(20000L, ""),
-          calculator.normalize(customResource(10001L, ""), min, max, increment)
+          calculator.normalize(customResource(19999L, ""), min, max, increment)
             .getResourceInformation(A_CUSTOM_RESOURCE));
       assertEquals(customResourceInformation(10L, "k"),
           calculator.normalize(customResource(9L, "k"), min, max, increment)
