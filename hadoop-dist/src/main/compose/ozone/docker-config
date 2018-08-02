@@ -22,6 +22,7 @@ OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
 OZONE-SITE.XML_ozone.handler.type=distributed
 OZONE-SITE.XML_ozone.scm.client.address=scm
+OZONE-SITE.XML_ozone.replication=1
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout

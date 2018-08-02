@@ -92,6 +92,7 @@ public class Shell extends Configured implements Tool {
   public static final String DELETE_KEY = "deleteKey";
   public static final String LIST_KEY = "listKey";
   public static final String FILE = "file";
+  public static final String REPLICATION_FACTOR = "replicationFactor";
 
   // Listing related command line arguments
   public static final String LIST_LENGTH = "length";
@@ -292,6 +293,9 @@ public class Shell extends Configured implements Tool {
         new Option(FILE, true, "Data file path");
     opts.addOption(fileArgument);
 
+    Option repFactor =
+        new Option(REPLICATION_FACTOR, true, "Replication factor (1 or 3)");
+    opts.addOption(repFactor);
   }
 
   /**
