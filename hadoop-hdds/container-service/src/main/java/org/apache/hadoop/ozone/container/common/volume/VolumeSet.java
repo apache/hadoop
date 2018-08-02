@@ -167,7 +167,7 @@ public class VolumeSet {
 
     // Ensure volume threads are stopped and scm df is saved during shutdown.
     shutdownHook = () -> {
-      shutdown();
+      saveVolumeSetUsed();
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
@@ -303,7 +303,11 @@ public class VolumeSet {
     return choosingPolicy.chooseVolume(getVolumesList(), containerSize);
   }
 
-  public void shutdown() {
+  /**
+   * This method, call shutdown on each volume to shutdown volume usage
+   * thread and write scmUsed on each volume.
+   */
+  private void saveVolumeSetUsed() {
     for (HddsVolume hddsVolume : volumeMap.values()) {
       try {
         hddsVolume.shutdown();
@@ -312,7 +316,14 @@ public class VolumeSet {
             ex);
       }
     }
+  }
 
+  /**
+   * Shutdown's the volumeset, if saveVolumeSetUsed is false, call's
+   * {@link VolumeSet#saveVolumeSetUsed}.
+   */
+  public void shutdown() {
+    saveVolumeSetUsed();
     if (shutdownHook != null) {
       ShutdownHookManager.get().removeShutdownHook(shutdownHook);
     }
