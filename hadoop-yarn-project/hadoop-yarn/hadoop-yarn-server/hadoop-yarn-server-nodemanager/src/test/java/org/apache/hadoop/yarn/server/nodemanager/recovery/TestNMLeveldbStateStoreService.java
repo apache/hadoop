@@ -231,7 +231,9 @@ public class TestNMLeveldbStateStoreService {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
-    StartContainerRequest containerReq = createContainerRequest(containerId);
+    Resource containerResource = Resource.newInstance(1024, 2);
+    StartContainerRequest containerReq =
+        createContainerRequest(containerId, containerResource);
 
     // store a container and verify recovered
     long containerStartTime = System.currentTimeMillis();
@@ -253,6 +255,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
+    assertEquals(containerResource, rcs.getCapability());
 
     // store a new container record without StartContainerRequest
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 6);
@@ -272,6 +275,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
+    assertEquals(containerResource, rcs.getCapability());
 
     // launch the container, add some diagnostics, and verify recovered
     StringBuilder diags = new StringBuilder();
@@ -287,6 +291,7 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertEquals(diags.toString(), rcs.getDiagnostics());
+    assertEquals(containerResource, rcs.getCapability());
 
     // pause the container, and verify recovered
     stateStore.storeContainerPaused(containerId);
@@ -372,7 +377,17 @@ public class TestNMLeveldbStateStoreService {
   }
 
   private StartContainerRequest createContainerRequest(
+          ContainerId containerId, Resource res) {
+    return createContainerRequestInternal(containerId, res);
+  }
+
+  private StartContainerRequest createContainerRequest(
       ContainerId containerId) {
+    return createContainerRequestInternal(containerId, null);
+  }
+
+  private StartContainerRequest createContainerRequestInternal(ContainerId
+          containerId, Resource res) {
     LocalResource lrsrc = LocalResource.newInstance(
         URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
@@ -398,6 +413,10 @@ public class TestNMLeveldbStateStoreService {
         localResources, env, containerCmds, serviceData, containerTokens,
         acls);
     Resource containerRsrc = Resource.newInstance(1357, 3);
+
+    if (res != null) {
+      containerRsrc = res;
+    }
     ContainerTokenIdentifier containerTokenId =
         new ContainerTokenIdentifier(containerId, "host", "user",
             containerRsrc, 9876543210L, 42, 2468, Priority.newInstance(7),

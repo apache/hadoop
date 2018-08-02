@@ -382,7 +382,8 @@ public abstract class NMStateStoreService extends AbstractService {
    * @throws IOException
    */
   public abstract void storeContainer(ContainerId containerId,
-      int containerVersion, long startTime, StartContainerRequest startRequest)
+          int containerVersion, long startTime,
+          StartContainerRequest startRequest)
       throws IOException;
 
   /**
