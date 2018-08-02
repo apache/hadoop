@@ -58,5 +58,13 @@ export default Ember.Controller.extend({
       return true;
     }
     return false;
-  }.property('currentPath')
+  }.property('currentPath'),
+
+  clusterInfo: function() {
+    return this.model.clusterInfo.get('firstObject');
+  }.property('model.clusterInfo'),
+
+  userInfo: function() {
+    return this.model.userInfo.get('firstObject');
+  }.property('model.userInfo'),
 });
