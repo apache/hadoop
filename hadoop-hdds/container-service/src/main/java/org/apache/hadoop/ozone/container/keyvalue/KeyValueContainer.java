@@ -346,6 +346,12 @@ public class KeyValueContainer implements Container {
     containerData.updateDeleteTransactionId(deleteTransactionId);
   }
 
+  @Override
+  public KeyValueBlockIterator blockIterator() throws IOException{
+    return new KeyValueBlockIterator(containerData.getContainerID(), new File(
+        containerData.getContainerPath()));
+  }
+
   /**
    * Acquire read lock.
    */
@@ -420,7 +426,7 @@ public class KeyValueContainer implements Container {
   }
 
   /**
-   * Returns container DB file
+   * Returns container DB file.
    * @return
    */
   public File getContainerDBFile() {
