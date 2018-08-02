@@ -20,8 +20,15 @@
 package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler.*;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .CloseContainerStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .DeleteBlockCommandStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .ReplicationStatus;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .ContainerActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .CommandStatusReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -56,6 +63,13 @@ public final class SCMEvents {
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
 
+  /**
+   * ContainerActions are sent by Datanode. This event is received by
+   * SCMDatanodeHeartbeatDispatcher and CONTAINER_ACTIONS event is generated.
+   */
+  public static final TypedEvent<ContainerActionsFromDatanode>
+      CONTAINER_ACTIONS = new TypedEvent<>(ContainerActionsFromDatanode.class,
+      "Container_Actions");
   /**
    * A Command status report will be sent by datanodes. This repoort is received
    * by SCMDatanodeHeartbeatDispatcher and CommandReport event is generated.

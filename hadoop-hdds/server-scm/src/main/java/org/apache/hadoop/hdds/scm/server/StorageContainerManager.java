@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
+import org.apache.hadoop.hdds.scm.container.ContainerActionsHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.ContainerReportHandler;
 import org.apache.hadoop.hdds.scm.container.Mapping;
@@ -209,10 +210,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     NewNodeHandler newNodeHandler = new NewNodeHandler(node2ContainerMap);
     StaleNodeHandler staleNodeHandler = new StaleNodeHandler(node2ContainerMap);
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(node2ContainerMap);
+    ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.NODE_REPORT, nodeReportHandler);
     eventQueue.addHandler(SCMEvents.CONTAINER_REPORT, containerReportHandler);
+    eventQueue.addHandler(SCMEvents.CONTAINER_ACTIONS, actionsHandler);
     eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
     eventQueue.addHandler(SCMEvents.NEW_NODE, newNodeHandler);
     eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
