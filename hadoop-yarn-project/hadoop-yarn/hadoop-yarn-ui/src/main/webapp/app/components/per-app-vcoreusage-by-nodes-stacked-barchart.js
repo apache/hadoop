@@ -21,26 +21,45 @@ import StackedBarchart from 'yarn-ui/components/stacked-barchart';
 export default StackedBarchart.extend({
   getDataForRender: function(containers, nodes) {
     var arr = [];
-    var nodeToContainers = {};
+    var nodeToResources = {};
     nodes.forEach(function(n) {
-      nodeToContainers[n.id] = 0;
+      nodeToResources[n.id] =
+      {
+        used: Number(n.get("usedVirtualCores")),
+        avail: Number(n.get("availableVirtualCores"))
+      };
     });
 
     containers.forEach(function(c) {
-      var nodeId = c.get("assignedNodeId");
-      var n = nodeToContainers[nodeId];
-      if (undefined !== n) {
-        nodeToContainers[nodeId] += 1;
+      res = nodeToResources[c.get("assignedNodeId")];
+      if (res) {
+        if (!res.usedByTheApp) {
+          res.usedByTheApp = 0;
+        }
+        res.usedByTheApp += Number(c.get("allocatedVCores"));
       }
     });
 
-    for (var nodeId in nodeToContainers) {
-      var n = nodeToContainers[nodeId];
+    for (var nodeId in nodeToResources) {
+      var res = nodeToResources[nodeId];
 
       var subArr = [];
+      var value = res.usedByTheApp ? res.usedByTheApp : 0;
       subArr.push({
-        value: n,
-        bindText: "This app has " + n + " containers running on node=" + nodeId
+        value: value,
+        bindText: "This app uses " + value + " vcores on node=" + nodeId,
+      });
+
+      value = res.used - value;
+      value = Math.max(value, 0);
+      subArr.push({
+        value: value,
+        bindText: "Other applications use " + value + " vcores on node=" + nodeId,
+      });
+
+      subArr.push({
+        value: res.avail,
+        bindText: res.avail + (res.avail > 1 ? " vcores are" : " vcore is") + " available on node=" + nodeId
       });
 
       arr.push(subArr);
@@ -52,7 +71,7 @@ export default StackedBarchart.extend({
   didInsertElement: function() {
     this.initChart(true);
 
-    this.colors = ["Orange", "Grey", "Gainsboro"];
+    this.colors = ["lightsalmon", "Grey", "mediumaquamarine"];
 
     var containers = this.get("rmContainers");
     var nodes = this.get("nodes");
@@ -60,6 +79,7 @@ export default StackedBarchart.extend({
     var data = this.getDataForRender(containers, nodes);
 
     this.show(
-      data, this.get("title"), ["Running containers from this app"]);
+      data, this.get("title"), ["Used by this app", "Used by other apps", "Available"]
+    );
   },
 });
