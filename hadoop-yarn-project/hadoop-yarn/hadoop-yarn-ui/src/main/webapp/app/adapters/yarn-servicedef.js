@@ -16,13 +16,22 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
 import RESTAbstractAdapter from './restabstract';
 
 export default RESTAbstractAdapter.extend({
   address: "rmWebAddress",
   restNameSpace: "dashService",
   serverName: "DASH",
+
+  normalizeErrorResponse(status, headers, payload) {
+    if (payload && typeof payload === 'object' && payload.errors) {
+      return payload.errors;
+    } else {
+      return [
+        payload
+      ];
+    }
+  },
 
   deployService(request, user) {
     var url = this.buildURL();
