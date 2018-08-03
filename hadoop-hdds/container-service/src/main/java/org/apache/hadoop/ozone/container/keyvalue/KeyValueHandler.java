@@ -31,8 +31,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .CreateContainerRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .KeyValue;
@@ -66,6 +64,7 @@ import org.apache.hadoop.ozone.container.keyvalue.interfaces.KeyManager;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine
     .background.BlockDeletingService;
 import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +103,8 @@ import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_DATANODE_VOLUME_CHOOSING_POLICY;
 
 /**
  * Handler for KeyValue Container type.
@@ -140,8 +141,9 @@ public class KeyValueHandler extends Handler {
         new BlockDeletingService(containerSet, svcInterval, serviceTimeout,
             TimeUnit.MILLISECONDS, config);
     blockDeletingService.start();
-    // TODO: Add supoort for different volumeChoosingPolicies.
-    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
+    volumeChoosingPolicy = ReflectionUtils.newInstance(conf.getClass(
+        HDDS_DATANODE_VOLUME_CHOOSING_POLICY, RoundRobinVolumeChoosingPolicy
+            .class, VolumeChoosingPolicy.class), conf);
     maxContainerSizeGB = config.getInt(ScmConfigKeys
             .OZONE_SCM_CONTAINER_SIZE_GB, ScmConfigKeys
         .OZONE_SCM_CONTAINER_SIZE_DEFAULT);
@@ -151,6 +153,10 @@ public class KeyValueHandler extends Handler {
     openContainerBlockMap = new OpenContainerBlockMap();
   }
 
+  @VisibleForTesting
+  public VolumeChoosingPolicy getVolumeChoosingPolicyForTesting() {
+    return volumeChoosingPolicy;
+  }
   /**
    * Returns OpenContainerBlockMap instance
    * @return OpenContainerBlockMap

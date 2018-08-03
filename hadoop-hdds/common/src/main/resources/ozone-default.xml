@@ -75,6 +75,17 @@
     </description>
   </property>
   <property>
+    <name>hdds.datanode.volume.choosing.policy</name>
+    <value/>
+    <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT</tag>
+    <description>
+      The class name of the policy for choosing volumes in the list of
+      directories.  Defaults to
+      org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy.
+      This volume choosing policy selects volumes in a round-robin order.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.enabled</name>
     <value>false</value>
     <tag>OZONE, MANAGEMENT, PIPELINE, RATIS</tag>

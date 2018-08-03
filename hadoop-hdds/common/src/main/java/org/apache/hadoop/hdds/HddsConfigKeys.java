@@ -54,4 +54,8 @@ public final class HddsConfigKeys {
   public static final int HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT =
       20;
 
+  // Configuration to allow volume choosing policy.
+  public static final String HDDS_DATANODE_VOLUME_CHOOSING_POLICY =
+      "hdds.datanode.volume.choosing.policy";
+
 }

@@ -19,25 +19,36 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
+import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
-import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
 import org.mockito.Mockito;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_DATANODE_VOLUME_CHOOSING_POLICY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.times;
 
 
+import java.io.File;
 import java.util.UUID;
 
 /**
@@ -191,6 +202,39 @@ public class TestKeyValueHandler {
     dispatcher.dispatch(getSmallFileRequest);
     Mockito.verify(handler, times(1)).handleGetSmallFile(
         any(ContainerCommandRequestProto.class), any());
+  }
+
+  @Test
+  public void testVolumeSetInKeyValueHandler() throws Exception{
+    File path = GenericTestUtils.getRandomizedTestDir();
+    try {
+      Configuration conf = new OzoneConfiguration();
+      conf.set(HDDS_DATANODE_DIR_KEY, path.getAbsolutePath());
+      ContainerSet cset = new ContainerSet();
+      int[] interval = new int[1];
+      interval[0] = 2;
+      ContainerMetrics metrics = new ContainerMetrics(interval);
+      VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
+      KeyValueHandler keyValueHandler = new KeyValueHandler(conf, cset,
+          volumeSet, metrics);
+      assertEquals(keyValueHandler.getVolumeChoosingPolicyForTesting()
+          .getClass().getName(), "org.apache.hadoop.ozone.container.common" +
+          ".volume.RoundRobinVolumeChoosingPolicy");
+
+      //Set a class which is not of sub class of VolumeChoosingPolicy
+      conf.set(HDDS_DATANODE_VOLUME_CHOOSING_POLICY,
+          "org.apache.hadoop.ozone.container.common.impl.HddsDispatcher");
+      try {
+        new KeyValueHandler(conf, cset, volumeSet, metrics);
+      } catch (RuntimeException ex) {
+        GenericTestUtils.assertExceptionContains("class org.apache.hadoop" +
+            ".ozone.container.common.impl.HddsDispatcher not org.apache" +
+            ".hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy",
+            ex);
+      }
+    } finally {
+      FileUtil.fullyDelete(path);
+    }
   }
 
   private ContainerCommandRequestProto getDummyCommandRequestProto(
