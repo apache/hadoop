@@ -42,7 +42,7 @@ export default DS.JSONAPISerializer.extend({
           user: payload.user,
           queue: payload.queue,
           state: payload.state,
-          startTime: Converter.timeStampToDate(payload.startedTime),
+          startTime: payload.startedTime, // will be formatted in em-table
           elapsedTime: payload.elapsedTime,
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           finalStatus: payload.finalStatus,
