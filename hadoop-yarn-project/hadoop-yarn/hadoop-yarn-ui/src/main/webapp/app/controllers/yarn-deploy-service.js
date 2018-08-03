@@ -60,8 +60,12 @@ export default Ember.Controller.extend({
     adapter.deployService(requestJson, userName).then(function() {
       self.set('serviceResponse', {message: 'Service has been accepted successfully. Redirecting to services in a second.', type: 'success'});
       self.gotoServices();
-    }, function(errmsg) {
-      self.set('serviceResponse', {message: errmsg, type: 'error'});
+    }, function(errr) {
+      let messg = 'Error: Deploy service failed!';
+      if (errr.errors && errr.errors[0] && errr.errors[0].diagnostics) {
+        messg = 'Error: ' + errr.errors[0].diagnostics;
+      }
+      self.set('serviceResponse', {message: messg, type: 'error'});
     }).finally(function() {
       self.set('isLoading', false);
     });

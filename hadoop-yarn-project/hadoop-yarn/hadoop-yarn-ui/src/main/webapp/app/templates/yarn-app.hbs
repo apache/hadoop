@@ -19,10 +19,12 @@
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
 {{#if actionResponse}}
-  <div class="col-md-12">
-    <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
-      <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
-      <strong>{{actionResponse.msg}}</strong>
+  <div class="row">
+    <div class="col-md-12">
+      <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
+        <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
+        <strong>{{actionResponse.msg}}</strong>
+      </div>
     </div>
   </div>
 {{/if}}
