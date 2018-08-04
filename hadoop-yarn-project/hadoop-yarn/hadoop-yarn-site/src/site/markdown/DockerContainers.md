@@ -19,10 +19,8 @@ Launching Applications Using Docker Containers
 
 Security Warning
 ---------------
-**IMPORTANT** This feature is experimental and is not complete. **IMPORTANT**
-Enabling this feature and running Docker containers in your cluster has security
-implications. With this feature enabled, it may be possible to gain root access
-to the YARN NodeManager hosts. Given Docker's integration with many powerful
+**IMPORTANT** Enabling this feature and running Docker containers in your
+cluster has security implications. Given Docker's integration with many powerful
 kernel features, it is imperative that administrators understand
 [Docker security](https://docs.docker.com/engine/security/security/) before
 enabling this feature.
@@ -55,10 +53,6 @@ NodeManager.
 Docker for YARN provides both consistency (all YARN containers will have the
 same software environment) and isolation (no interference with whatever is
 installed on the physical machine).
-
-Docker support in the LCE is still evolving. To track progress, follow
-[YARN-3611](https://issues.apache.org/jira/browse/YARN-3611), the umbrella JIRA
-for Docker support improvements.
 
 Cluster Configuration
 ---------------------
@@ -153,7 +147,30 @@ The following properties should be set in yarn-site.xml:
     <value>false</value>
     <description>
       Optional. Whether applications are allowed to run in privileged
-      containers.
+      containers. Privileged containers are granted the complete set of
+      capabilities and are not subject to the limitations imposed by the device
+      cgroup controller. In other words, privileged containers can do almost
+      everything that the host can do. Use with extreme care.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
+    <value>false</value>
+    <description>
+      Optional. Whether or not users are allowed to request that Docker
+      containers honor the debug deletion delay. This is useful for
+      troubleshooting Docker container related launch failures.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.stop.grace-period</name>
+    <value>10</value>
+    <description>
+      Optional. A configurable value to pass to the Docker Stop command. This
+      value defines the number of seconds between the docker stop command sending
+      a SIGTERM and a SIGKILL.
     </description>
   </property>
 
@@ -177,6 +194,36 @@ The following properties should be set in yarn-site.xml:
       "none" or "NONE"
     </description>
   </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
+    <value>true</value>
+    <description>
+      Optional. Whether docker containers are run with the UID and GID of the
+      calling user.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-uid-threshold</name>
+    <value>1</value>
+    <description>
+      Optional. The minimum acceptable UID for a remapped user. Users with UIDs
+      lower than this value will not be allowed to launch containers when user
+      remapping is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
+    <value>1</value>
+    <description>
+      Optional. The minimum acceptable GID for a remapped user. Users belonging
+      to any group with a GID lower than this value will not be allowed to
+      launch containers when user remapping is enabled.
+    </description>
+  </property>
+
 </configuration>
 ```
 
@@ -204,6 +251,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.networks` | Comma separated networks that containers are allowed to use. If no network is specified when launching the container, the default Docker network will be used. |
 | `docker.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
 | `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
+| `docker.allowed.volume-drivers` | Comma separated list of volume drivers which are allowed to be used. By default, no volume drivers are allowed. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
 | `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |

@@ -1729,16 +1729,19 @@
     <description>This configuration setting determines the capabilities
       assigned to docker containers when they are launched. While these may not
       be case-sensitive from a docker perspective, it is best to keep these
-      uppercase. To run without any capabilites, set this value to
+      uppercase. To run without any capabilities, set this value to
       "none" or "NONE"</description>
     <name>yarn.nodemanager.runtime.linux.docker.capabilities</name>
     <value>CHOWN,DAC_OVERRIDE,FSETID,FOWNER,MKNOD,NET_RAW,SETGID,SETUID,SETFCAP,SETPCAP,NET_BIND_SERVICE,SYS_CHROOT,KILL,AUDIT_WRITE</value>
   </property>
 
   <property>
-    <description>This configuration setting determines if
-      privileged docker containers are allowed on this cluster.
-      Use with extreme care.</description>
+    <description>This configuration setting determines if privileged docker
+      containers are allowed on this cluster. Privileged containers are granted
+      the complete set of capabilities and are not subject to the limitations
+      imposed by the device cgroup controller. In other words, privileged
+      containers can do almost everything that the host can do. Use with
+      extreme care.</description>
     <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed</name>
     <value>false</value>
   </property>
@@ -2018,8 +2021,6 @@
     <name>yarn.nodemanager.recovery.supervised</name>
     <value>false</value>
   </property>
-
-  <!--Docker configuration-->
 
   <property>
     <description>
