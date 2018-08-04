@@ -282,7 +282,7 @@ public class LogLevel {
 
     /**
      * Configures the client to send HTTP/HTTPS request to the URL.
-     * Supports SPENGO for authentication.
+     * Supports SPNEGO for authentication.
      * @param urlString URL and query string to the daemon's web UI
      * @throws Exception if unable to connect
      */

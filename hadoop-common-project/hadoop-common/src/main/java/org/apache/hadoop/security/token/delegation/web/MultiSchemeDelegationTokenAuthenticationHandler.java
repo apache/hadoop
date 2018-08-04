@@ -42,7 +42,7 @@ import com.google.common.base.Splitter;
  * A {@link CompositeAuthenticationHandler} that supports multiple HTTP
  * authentication schemes along with Delegation Token functionality. e.g.
  * server can support multiple authentication mechanisms such as Kerberos
- * (SPENGO) and LDAP. During the authentication phase, server will specify
+ * (SPNEGO) and LDAP. During the authentication phase, server will specify
  * all possible authentication schemes and let client choose the appropriate
  * scheme. Please refer to RFC-2616 and HADOOP-12082 for more details.
  *

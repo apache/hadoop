@@ -134,7 +134,7 @@ Additionally, WebHDFS supports OAuth2 on the client side. The Namenode and Datan
 
 WebHDFS supports two type of OAuth2 code grants (user-provided refresh and access token or user provided credential) by default and provides a pluggable mechanism for implementing other OAuth2 authentications per the [OAuth2 RFC](https://tools.ietf.org/html/rfc6749), or custom authentications.  When using either of the provided code grant mechanisms, the WebHDFS client will refresh the access token as necessary.
 
-OAuth2 should only be enabled for clients not running with Kerberos SPENGO.
+OAuth2 should only be enabled for clients not running with Kerberos SPNEGO.
 
 | OAuth2 code grant mechanism | Description | Value of `dfs.webhdfs.oauth2.access.token.provider` that implements code grant |
 |:---- |:---- |:----|
