@@ -316,15 +316,11 @@ set, the behavior will depend on whether the
 the command will be overridden when LCE launches the image with YARN's
 container launch script.
 
-If a Docker image has an
-[entry point](https://docs.docker.com/engine/reference/builder/#entrypoint)
-set, the entry point will be honored, but the default command may be
-overridden, as just mentioned above. Unless the entry point is
-something similar to `sh -c` or
-`YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE` is set to true, the net
-result will likely be undesirable. Because the YARN container launch script
-is required to correctly launch the YARN task, use of entry points is
-discouraged.
+If a Docker image has an entry point set and
+YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE is set to true,
+launch_command will be passed to ENTRYPOINT program as CMD parameters in
+Docker.  The format of launch_command looks like: param1,param2 and this
+translates to CMD [ "param1","param2" ] in Docker.
 
 If an application requests a Docker image that has not already been loaded by
 the Docker daemon on the host where it is to execute, the Docker daemon will
