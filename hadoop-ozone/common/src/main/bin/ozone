@@ -34,6 +34,7 @@ function hadoop_usage
 
 
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "fs" client "run a filesystem command on ozone file system"
   hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "freon" client "runs an ozone data generator"
@@ -108,6 +109,9 @@ function ozonecmd_case
       HADOOP_CLASSNAME='org.apache.hadoop.hdds.scm.server.StorageContainerManager'
       hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
+    ;;
+    fs)
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
     ;;
     scmcli)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
