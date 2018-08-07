@@ -251,14 +251,20 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       // re-ask the failed container.
       comp.requestContainers(1);
       comp.reInsertPendingInstance(compInstance);
-      LOG.info(compInstance.getCompInstanceId()
-              + ": {} completed. Reinsert back to pending list and requested " +
-              "a new container." + System.lineSeparator() +
-              " exitStatus={}, diagnostics={}.",
-          event.getContainerId(), failureBeforeLaunch ? null :
-              event.getStatus().getExitStatus(),
-          failureBeforeLaunch ? FAILED_BEFORE_LAUNCH_DIAG :
-              event.getStatus().getDiagnostics());
+
+      StringBuilder builder = new StringBuilder();
+      builder.append(compInstance.getCompInstanceId()).append(": ");
+      builder.append(event.getContainerId()).append(" completed. Reinsert back to pending list and requested ");
+      builder.append("a new container.").append(System.lineSeparator());
+      builder.append(" exitStatus=").append(failureBeforeLaunch ? null : event.getStatus().getExitStatus());
+      builder.append(", diagnostics=");
+      builder.append(failureBeforeLaunch ? FAILED_BEFORE_LAUNCH_DIAG : event.getStatus().getDiagnostics());
+
+      if (event.getStatus().getExitStatus() != 0) {
+        LOG.error(builder.toString());
+      } else {
+        LOG.info(builder.toString());
+      }
     } else {
       // When no relaunch, update component's #succeeded/#failed
       // instances.
