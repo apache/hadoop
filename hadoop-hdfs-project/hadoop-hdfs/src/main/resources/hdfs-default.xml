@@ -4868,6 +4868,15 @@
   </property>
 
   <property>
+    <name>dfs.provided.aliasmap.inmemory.server.log</name>
+    <value>false</value>
+    <description>
+      Ensures that InMemoryAliasMap server logs every call to it.
+      Set to false by default.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.provided.aliasmap.text.delimiter</name>
     <value>,</value>
     <description>
