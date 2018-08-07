@@ -252,8 +252,10 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
 | `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
-| `FSN(Read/Write)Lock`*OperationName*`NumOps` | Total number of acquiring lock by operations |
-| `FSN(Read/Write)Lock`*OperationName*`AvgTime` | Average time of holding the lock by operations in milliseconds |
+| `FSN(Read/Write)Lock`*OperationName*`NanosNumOps` | Total number of acquiring lock by operations |
+| `FSN(Read/Write)Lock`*OperationName*`NanosAvgTime` | Average time of holding the lock by operations in nanoseconds |
+| `FSN(Read/Write)LockOverallNanosNumOps`  | Total number of acquiring lock by all operations |
+| `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
 
 JournalNode
 -----------
