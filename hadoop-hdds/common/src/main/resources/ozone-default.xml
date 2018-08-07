@@ -815,7 +815,7 @@
   <property>
     <name>ozone.scm.names</name>
     <value/>
-    <tag>OZONE</tag>
+    <tag>OZONE, REQUIRED</tag>
     <description>
       The value of this property is a set of DNS | DNS:PORT | IP
       Address | IP:PORT. Written as a comma separated string. e.g. scm1,
