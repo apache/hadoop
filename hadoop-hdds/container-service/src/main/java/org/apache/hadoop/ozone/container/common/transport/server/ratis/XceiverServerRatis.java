@@ -72,7 +72,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
   private final int port;
   private final RaftServer server;
-  private ThreadPoolExecutor writeChunkExecutor;
+  private ThreadPoolExecutor chunkExecutor;
 
   private XceiverServerRatis(DatanodeDetails dd, int port, String storageDir,
       ContainerDispatcher dispatcher, Configuration conf) throws IOException {
@@ -117,13 +117,13 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     setRequestTimeout(serverProperties, clientRequestTimeout,
         serverRequestTimeout);
 
-    writeChunkExecutor =
+    chunkExecutor =
         new ThreadPoolExecutor(numWriteChunkThreads, numWriteChunkThreads,
             100, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(1024),
             new ThreadPoolExecutor.CallerRunsPolicy());
     ContainerStateMachine stateMachine =
-        new ContainerStateMachine(dispatcher, writeChunkExecutor);
+        new ContainerStateMachine(dispatcher, chunkExecutor);
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setGroup(RatisHelper.emptyRaftGroup())
@@ -225,14 +225,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public void start() throws IOException {
     LOG.info("Starting {} {} at port {}", getClass().getSimpleName(),
         server.getId(), getIPCPort());
-    writeChunkExecutor.prestartAllCoreThreads();
+    chunkExecutor.prestartAllCoreThreads();
     server.start();
   }
 
   @Override
   public void stop() {
     try {
-      writeChunkExecutor.shutdown();
+      chunkExecutor.shutdown();
       server.close();
     } catch (IOException e) {
       throw new RuntimeException(e);

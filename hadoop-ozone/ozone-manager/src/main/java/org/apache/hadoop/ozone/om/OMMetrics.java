@@ -88,7 +88,7 @@ public class OMMetrics {
   public static OMMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     return ms.register(SOURCE_NAME,
-        "Oozne Manager Metrics",
+        "Ozone Manager Metrics",
         new OMMetrics());
   }
 
