@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -65,7 +65,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 /**
  * Base class to implement Log Aggregation File Controller.
  */
-@Private
+@Public
 @Unstable
 public abstract class LogAggregationFileController {
 
