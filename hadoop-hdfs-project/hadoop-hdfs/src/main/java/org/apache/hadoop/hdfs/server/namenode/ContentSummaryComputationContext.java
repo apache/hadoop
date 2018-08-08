@@ -191,6 +191,8 @@ public class ContentSummaryComputationContext {
               .getEnabledPolicyByName(ecPolicyName)
               .getName();
         }
+      } else if (inode.getParent() != null) {
+          return getErasureCodingPolicyName(inode.getParent());
       }
     } catch (IOException ioe) {
       LOG.warn("Encountered error getting ec policy for "
