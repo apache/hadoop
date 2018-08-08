@@ -18,10 +18,19 @@
 
 package org.apache.hadoop.fs.azure.contract;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Append test, skipping one of them.
@@ -37,5 +46,19 @@ public class ITestAzureNativeContractAppend extends AbstractContractAppendTest {
   @Override
   public void testRenameFileBeingAppended() throws Throwable {
     skip("Skipping as renaming an opened file is not supported");
+  }
+
+  /**
+   * Wasb returns a different exception, so change the intercept logic here.
+   */
+  @Override
+  @Test
+  public void testAppendDirectory() throws Exception {
+    final FileSystem fs = getFileSystem();
+
+    final Path folderPath = path("testAppendDirectory");
+    fs.mkdirs(folderPath);
+    intercept(FileNotFoundException.class,
+        () -> fs.append(folderPath));
   }
 }

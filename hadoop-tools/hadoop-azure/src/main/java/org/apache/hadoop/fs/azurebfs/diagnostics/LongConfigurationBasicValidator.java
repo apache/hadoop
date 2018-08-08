@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.fs.azurebfs.diagnostics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.diagnostics.ConfigurationValidator;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
 /**
- * Long configuration value Validator
+ * Long configuration value Validator.
  */
-@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class LongConfigurationBasicValidator extends ConfigurationBasicValidator<Long> implements ConfigurationValidator {
   private final long min;

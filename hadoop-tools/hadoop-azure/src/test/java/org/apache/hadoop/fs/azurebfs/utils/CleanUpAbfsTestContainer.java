@@ -24,7 +24,7 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.junit.Test;
 
-import static org.apache.hadoop.fs.azurebfs.DependencyInjectedTest.TEST_CONTAINER_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ABFS_TEST_CONTAINER_PREFIX;
 
 /**
  * If unit tests were interrupted and crushed accidentally, the test containers won't be deleted.
@@ -38,7 +38,7 @@ public class CleanUpAbfsTestContainer {
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
     Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
+            = blobClient.listContainers(ABFS_TEST_CONTAINER_PREFIX);
     for (CloudBlobContainer container : containers) {
       count++;
       System.out.println(String.format("Container %s URI %s",
@@ -54,7 +54,7 @@ public class CleanUpAbfsTestContainer {
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
     Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
+            = blobClient.listContainers(ABFS_TEST_CONTAINER_PREFIX);
     for (CloudBlobContainer container : containers) {
       System.out.println(String.format("Container %s URI %s",
               container.getName(),

@@ -22,36 +22,37 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.azurebfs.DependencyInjectedTest;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 
 /**
- * Dependency inject for ABFS contract tests.
+ * Bind ABFS contract tests to the Azure test setup/teardown.
  */
-public class DependencyInjectedContractTest extends DependencyInjectedTest {
+public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
   private final URI testUri;
 
-  public DependencyInjectedContractTest(final boolean secure) throws Exception {
+  public ABFSContractTestBinding(final boolean secure) throws Exception {
     this(secure, true);
   }
 
-  public DependencyInjectedContractTest(final boolean secure, final boolean useExistedFileSystem) throws Exception{
+  public ABFSContractTestBinding(final boolean secure,
+      final boolean useExistingFileSystem) throws Exception{
     super(secure);
-    if (useExistedFileSystem) {
+    if (useExistingFileSystem) {
       Configuration configuration = getConfiguration();
       String testUrl = configuration.get(TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
 
       if (secure) {
         testUrl = testUrl.replaceFirst(FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME);
       }
-      updateTestUrl(testUrl);
+      setTestUrl(testUrl);
 
       this.testUri = new URI(testUrl);
       //Get container for contract tests
       configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, this.testUri.toString());
       String[] splitAuthority = this.testUri.getAuthority().split("\\@");
-      updateFileSystemName(splitAuthority[0]);
+      setFileSystemName(splitAuthority[0]);
     } else {
       this.testUri = new URI(super.getTestUrl());
     }

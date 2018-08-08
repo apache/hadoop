@@ -23,15 +23,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 
-import org.slf4j.Logger;
-
 /**
- * The AbfsRestOperation for Rest AbfsClient
+ * The AbfsRestOperation for Rest AbfsClient.
  */
 public class AbfsRestOperation {
   // Blob FS client, which has the credentials, retry policy, and logs.
@@ -47,7 +48,7 @@ public class AbfsRestOperation {
   // request body and all the download methods have a response body.
   private final boolean hasRequestBody;
 
-  private final Logger logger;
+  private final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
   // For uploads, this is the request entity body.  For downloads,
   // this will hold the response entity body.
@@ -79,7 +80,6 @@ public class AbfsRestOperation {
     this.requestHeaders = requestHeaders;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
-    this.logger = client.LOG;
   }
 
   /**
@@ -150,11 +150,11 @@ public class AbfsRestOperation {
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     } catch (IOException ex) {
-      if (logger.isDebugEnabled()) {
+      if (LOG.isDebugEnabled()) {
         if (httpOperation != null) {
-          logger.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
+          LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
         } else {
-          logger.debug("HttpRequestFailure: " + method + "," + url, ex);
+          LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
         }
       }
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -163,8 +163,8 @@ public class AbfsRestOperation {
       return false;
     }
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("HttpRequest: " + httpOperation.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("HttpRequest: " + httpOperation.toString());
     }
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {

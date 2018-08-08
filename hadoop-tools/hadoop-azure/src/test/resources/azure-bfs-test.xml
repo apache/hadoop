@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <!--
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -13,7 +14,6 @@
   limitations under the License.
 -->
 
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
 
   <!--
@@ -62,15 +62,5 @@
   <!--<name>fs.azure.abfs.emulator.enabled</name>-->
   <!--<value>false</value>-->
   <!--</property>-->
-
-  <property>
-    <name>fs.AbstractFileSystem.abfs.impl</name>
-    <value>org.apache.hadoop.fs.azurebfs.Abfs</value>
-  </property>
-
-  <property>
-    <name>fs.AbstractFileSystem.abfss.impl</name>
-    <value>org.apache.hadoop.fs.azurebfs.Abfss</value>
-  </property>
 
 </configuration>

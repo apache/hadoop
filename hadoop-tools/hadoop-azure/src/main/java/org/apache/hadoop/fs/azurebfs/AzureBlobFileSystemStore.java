@@ -103,7 +103,7 @@ public class AzureBlobFileSystemStore {
   private final Set<String> azureAtomicRenameDirSet;
 
 
-  public AzureBlobFileSystemStore(URI uri, boolean isSeure, Configuration configuration, UserGroupInformation userGroupInformation)
+  public AzureBlobFileSystemStore(URI uri, boolean isSecure, Configuration configuration, UserGroupInformation userGroupInformation)
           throws AzureBlobFileSystemException {
     this.uri = uri;
     try {
@@ -113,9 +113,10 @@ public class AzureBlobFileSystemStore {
     }
 
     this.userGroupInformation = userGroupInformation;
-    this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+    this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
+        abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
 
-    initializeClient(uri, isSeure);
+    initializeClient(uri, isSecure);
   }
 
   @VisibleForTesting
@@ -134,8 +135,7 @@ public class AzureBlobFileSystemStore {
   }
 
   public Hashtable<String, String> getFilesystemProperties() throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "getFilesystemProperties for filesystem: {}",
+    LOG.debug("getFilesystemProperties for filesystem: {}",
             client.getFileSystem());
 
     final Hashtable<String, String> parsedXmsProperties;
@@ -148,13 +148,13 @@ public class AzureBlobFileSystemStore {
     return parsedXmsProperties;
   }
 
-  public void setFilesystemProperties(final Hashtable<String, String> properties) throws AzureBlobFileSystemException {
-    if (properties == null || properties.size() == 0) {
+  public void setFilesystemProperties(final Hashtable<String, String> properties)
+      throws AzureBlobFileSystemException {
+    if (properties == null || properties.isEmpty()) {
       return;
     }
 
-    this.LOG.debug(
-            "setFilesystemProperties for filesystem: {} with properties: {}",
+    LOG.debug("setFilesystemProperties for filesystem: {} with properties: {}",
             client.getFileSystem(),
             properties);
 
@@ -169,10 +169,9 @@ public class AzureBlobFileSystemStore {
   }
 
   public Hashtable<String, String> getPathProperties(final Path path) throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "getPathProperties for filesystem: {} path: {}",
+    LOG.debug("getPathProperties for filesystem: {} path: {}",
             client.getFileSystem(),
-            path.toString());
+           path);
 
     final Hashtable<String, String> parsedXmsProperties;
     final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
@@ -185,10 +184,9 @@ public class AzureBlobFileSystemStore {
   }
 
   public void setPathProperties(final Path path, final Hashtable<String, String> properties) throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "setFilesystemProperties for filesystem: {} path: {} with properties: {}",
+    LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
             client.getFileSystem(),
-            path.toString(),
+            path,
             properties);
 
     final String commaSeparatedProperties;
@@ -201,26 +199,23 @@ public class AzureBlobFileSystemStore {
   }
 
   public void createFilesystem() throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "createFilesystem for filesystem: {}",
+    LOG.debug("createFilesystem for filesystem: {}",
             client.getFileSystem());
 
     client.createFilesystem();
   }
 
   public void deleteFilesystem() throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "deleteFilesystem for filesystem: {}",
+    LOG.debug("deleteFilesystem for filesystem: {}",
             client.getFileSystem());
 
     client.deleteFilesystem();
   }
 
   public OutputStream createFile(final Path path, final boolean overwrite) throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "createFile filesystem: {} path: {} overwrite: {}",
+    LOG.debug("createFile filesystem: {} path: {} overwrite: {}",
             client.getFileSystem(),
-            path.toString(),
+            path,
             overwrite);
 
     client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite);
@@ -232,23 +227,19 @@ public class AzureBlobFileSystemStore {
     return outputStream;
   }
 
-  public Void createDirectory(final Path path) throws AzureBlobFileSystemException {
-    this.LOG.debug(
-            "createDirectory filesystem: {} path: {} overwrite: {}",
+  public void createDirectory(final Path path) throws AzureBlobFileSystemException {
+    LOG.debug("createDirectory filesystem: {} path: {}",
             client.getFileSystem(),
-            path.toString());
+            path);
 
     client.createPath("/" + getRelativePath(path), false, true);
-
-    return null;
   }
 
   public InputStream openFileForRead(final Path path, final FileSystem.Statistics statistics) throws AzureBlobFileSystemException {
 
-    this.LOG.debug(
-            "openFileForRead filesystem: {} path: {}",
+    LOG.debug("openFileForRead filesystem: {} path: {}",
             client.getFileSystem(),
-            path.toString());
+            path);
 
     final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
@@ -266,16 +257,16 @@ public class AzureBlobFileSystemStore {
 
     // Add statistics for InputStream
     return new FSDataInputStream(
-            new AbfsInputStream(client, statistics, AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
+            new AbfsInputStream(client, statistics,
+                AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
                     abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(), eTag));
   }
 
   public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
           AzureBlobFileSystemException {
-    this.LOG.debug(
-            "openFileForWrite filesystem: {} path: {} overwrite: {}",
+    LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
             client.getFileSystem(),
-            path.toString(),
+            path,
             overwrite);
 
     final AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
@@ -304,23 +295,21 @@ public class AzureBlobFileSystemStore {
           AzureBlobFileSystemException {
 
     if (isAtomicRenameKey(source.getName())) {
-      this.LOG.warn("The atomic rename feature is not supported by the ABFS scheme; however rename,"
+      LOG.warn("The atomic rename feature is not supported by the ABFS scheme; however rename,"
               +" create and delete operations are atomic if Namespace is enabled for your Azure Storage account.");
     }
 
-    this.LOG.debug(
-            "renameAsync filesystem: {} source: {} destination: {}",
+    LOG.debug("renameAsync filesystem: {} source: {} destination: {}",
             client.getFileSystem(),
-            source.toString(),
-            destination.toString());
+            source,
+            destination);
 
     String continuation = null;
     long deadline = now() + RENAME_TIMEOUT_MILISECONDS;
 
     do {
       if (now() > deadline) {
-        LOG.debug(
-                "Rename {} to {} timed out.",
+        LOG.debug("Rename {} to {} timed out.",
                 source,
                 destination);
 
@@ -334,13 +323,12 @@ public class AzureBlobFileSystemStore {
     } while (continuation != null && !continuation.isEmpty());
   }
 
-  public void delete(final Path path, final boolean recursive) throws
-          AzureBlobFileSystemException {
+  public void delete(final Path path, final boolean recursive)
+      throws AzureBlobFileSystemException {
 
-    this.LOG.debug(
-            "delete filesystem: {} path: {} recursive: {}",
+    LOG.debug("delete filesystem: {} path: {} recursive: {}",
             client.getFileSystem(),
-            path.toString(),
+            path,
             String.valueOf(recursive));
 
     String continuation = null;
@@ -348,13 +336,13 @@ public class AzureBlobFileSystemStore {
 
     do {
       if (now() > deadline) {
-        this.LOG.debug(
-                "Delete directory {} timed out.", path);
+        LOG.debug("Delete directory {} timed out.", path);
 
         throw new TimeoutException("Delete directory timed out.");
       }
 
-      AbfsRestOperation op = client.deletePath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), recursive, continuation);
+      AbfsRestOperation op = client.deletePath(
+          AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), recursive, continuation);
       continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
 
     } while (continuation != null && !continuation.isEmpty());
@@ -362,10 +350,9 @@ public class AzureBlobFileSystemStore {
 
   public FileStatus getFileStatus(final Path path) throws IOException {
 
-    this.LOG.debug(
-            "getFileStatus filesystem: {} path: {}",
+    LOG.debug("getFileStatus filesystem: {} path: {}",
             client.getFileSystem(),
-            path.toString());
+           path);
 
     if (path.isRoot()) {
       AbfsRestOperation op = client.getFilesystemProperties();
@@ -405,10 +392,9 @@ public class AzureBlobFileSystemStore {
   }
 
   public FileStatus[] listStatus(final Path path) throws IOException {
-    this.LOG.debug(
-            "listStatus filesystem: {} path: {}",
+    LOG.debug("listStatus filesystem: {} path: {}",
             client.getFileSystem(),
-            path.toString());
+           path);
 
     String relativePath = path.isRoot() ? AbfsHttpConstants.EMPTY_STRING : getRelativePath(path);
     String continuation = null;
@@ -480,10 +466,12 @@ public class AzureBlobFileSystemStore {
 
     final String[] authorityParts = authority.split(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
 
-    if (authorityParts.length < 2 || "".equals(authorityParts[0])) {
+    if (authorityParts.length < 2 || authorityParts[0] != null
+        && authorityParts[0].isEmpty()) {
       final String errMsg = String
-              .format("URI '%s' has a malformed authority, expected container name. "
-                              + "Authority takes the form "+ FileSystemUriSchemes.ABFS_SCHEME + "://[<container name>@]<account name>",
+              .format("'%s' has a malformed authority, expected container name. "
+                      + "Authority takes the form "
+                      + FileSystemUriSchemes.ABFS_SCHEME + "://[<container name>@]<account name>",
                       uri.toString());
       throw new InvalidUriException(errMsg);
     }
@@ -499,11 +487,16 @@ public class AzureBlobFileSystemStore {
     try {
       baseUrl = new URL(url);
     } catch (MalformedURLException e) {
-      throw new InvalidUriException(String.format("URI '%s' is malformed", uri.toString()));
+      throw new InvalidUriException(uri.toString());
     }
 
+    int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+    if (dotIndex <= 0) {
+      throw new InvalidUriException(
+          uri.toString() + " - account name is not fully qualified.");
+    }
     SharedKeyCredentials creds =
-            new SharedKeyCredentials(accountName.substring(0, accountName.indexOf(AbfsHttpConstants.DOT)),
+            new SharedKeyCredentials(accountName.substring(0, dotIndex),
                     this.abfsConfiguration.getStorageAccountKey(accountName));
 
     this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy());
@@ -513,7 +506,7 @@ public class AzureBlobFileSystemStore {
     Preconditions.checkNotNull(path, "path");
     final String relativePath = path.toUri().getPath();
 
-    if (relativePath.length() == 0) {
+    if (relativePath.isEmpty()) {
       return relativePath;
     }
 
@@ -537,7 +530,8 @@ public class AzureBlobFileSystemStore {
   }
 
   private boolean parseIsDirectory(final String resourceType) {
-    return resourceType == null ? false : resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
+    return resourceType != null
+        && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
   private DateTime parseLastModifiedTime(final String lastModifiedTime) {
@@ -628,7 +622,7 @@ public class AzureBlobFileSystemStore {
           }
         }
       } catch (URISyntaxException e) {
-        this.LOG.info("URI syntax error creating URI for {}", dir);
+        LOG.info("URI syntax error creating URI for {}", dir);
       }
     }
 
@@ -658,20 +652,21 @@ public class AzureBlobFileSystemStore {
      */
     @Override
     public boolean equals(Object obj) {
-      if (obj == this) {
-        return true;
-      }
-
-      if (obj == null) {
+      if (!(obj instanceof FileStatus)) {
         return false;
       }
 
-      if (this.getClass() == obj.getClass()) {
-        VersionedFileStatus other = (VersionedFileStatus) obj;
-        return this.getPath().equals(other.getPath()) && this.version.equals(other.version);
+      FileStatus other = (FileStatus) obj;
+
+      if (!other.equals(this)) {// compare the path
+        return false;
       }
 
-      return false;
+      if (other instanceof VersionedFileStatus) {
+        return this.version.equals(((VersionedFileStatus)other).version);
+      }
+
+      return true;
     }
 
     /**
@@ -694,6 +689,16 @@ public class AzureBlobFileSystemStore {
      */
     public String getVersion() {
       return this.version;
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "VersionedFileStatus{");
+      sb.append(super.toString());
+      sb.append("; version='").append(version).append('\'');
+      sb.append('}');
+      return sb.toString();
     }
   }
 

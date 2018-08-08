@@ -25,12 +25,12 @@ import java.lang.annotation.Target;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Definitions of Annotations for all types of the validators
+ * Definitions of Annotations for all types of the validators.
  */
 @InterfaceStability.Evolving
 public class ConfigurationValidationAnnotations {
   /**
-   * Describes the requirements when validating the annotated int field
+   * Describes the requirements when validating the annotated int field.
    */
   @Target({ ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)
@@ -47,7 +47,7 @@ public class ConfigurationValidationAnnotations {
   }
 
   /**
-   * Describes the requirements when validating the annotated long field
+   * Describes the requirements when validating the annotated long field.
    */
   @Target({ ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)
@@ -64,7 +64,7 @@ public class ConfigurationValidationAnnotations {
   }
 
   /**
-   * Describes the requirements when validating the annotated String field
+   * Describes the requirements when validating the annotated String field.
    */
   @Target({ ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)
@@ -77,7 +77,7 @@ public class ConfigurationValidationAnnotations {
   }
 
   /**
-   * Describes the requirements when validating the annotated String field
+   * Describes the requirements when validating the annotated String field.
    */
   @Target({ ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)
@@ -90,7 +90,7 @@ public class ConfigurationValidationAnnotations {
   }
 
   /**
-   * Describes the requirements when validating the annotated boolean field
+   * Describes the requirements when validating the annotated boolean field.
    */
   @Target({ ElementType.FIELD })
   @Retention(RetentionPolicy.RUNTIME)

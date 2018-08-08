@@ -18,71 +18,30 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.util.concurrent.Callable;
-
 import org.junit.Test;
 
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 
 /**
  * Test mkdir operation.
  */
-public class ITestAzureBlobFileSystemMkDir extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
   public ITestAzureBlobFileSystemMkDir() {
     super();
   }
 
   @Test
   public void testCreateDirWithExistingDir() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    assertTrue(fs.mkdirs(new Path("testFolder")));
-    assertTrue(fs.mkdirs(new Path("testFolder")));
-  }
-
-  @Test(expected = FileAlreadyExistsException.class)
-  public void createDirectoryUnderFile() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(new Path("testFile"));
-    fs.mkdirs(new Path("testFile/TestDirectory"));
-  }
-
-  @Test
-  public void testCreateDirectoryOverExistingFiles() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(new Path("/testPath"));
-    FileAlreadyExistsException ex = intercept(
-        FileAlreadyExistsException.class,
-        new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            fs.mkdirs(new Path("/testPath"));
-            return null;
-          }
-        });
-
-    assertTrue(ex instanceof FileAlreadyExistsException);
-
-    fs.create(new Path("/testPath1/file1"));
-    ex = intercept(
-        FileAlreadyExistsException.class,
-        new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            fs.mkdirs(new Path("/testPath1/file1"));
-            return null;
-          }
-        });
-
-    assertTrue(ex instanceof FileAlreadyExistsException);
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("testFolder");
+    assertMkdirs(fs, path);
+    assertMkdirs(fs, path);
   }
 
   @Test
   public void testCreateRoot() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    assertTrue(fs.mkdirs(new Path("/")));
+    assertMkdirs(getFileSystem(), new Path("/"));
   }
 }

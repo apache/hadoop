@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class TestConfigurationKeys {
   public static final String FS_AZURE_TEST_ACCOUNT_NAME = "fs.azure.test.account.name";
   public static final String FS_AZURE_TEST_ACCOUNT_KEY_PREFIX = "fs.azure.test.account.key.";
   public static final String FS_AZURE_TEST_HOST_NAME = "fs.azure.test.host.name";
   public static final String FS_AZURE_TEST_HOST_PORT = "fs.azure.test.host.port";
   public static final String FS_AZURE_CONTRACT_TEST_URI = "fs.contract.test.fs.abfs";
+
+  public static final String ABFS_TEST_RESOURCE_XML = "azure-bfs-test.xml";
+
+  public static final String ABFS_TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
 
   private TestConfigurationKeys() {}
 }

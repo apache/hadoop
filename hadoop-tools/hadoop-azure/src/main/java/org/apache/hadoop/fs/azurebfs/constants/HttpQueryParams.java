@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Responsible to keep all Http Query params here
+ * Responsible to keep all Http Query params here.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

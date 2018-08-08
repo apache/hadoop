@@ -22,29 +22,32 @@ import java.io.FileNotFoundException;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 /**
  * Test filesystem initialization and creation.
  */
-public class ITestAzureBlobFileSystemInitAndCreate extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemInitAndCreate extends
+    AbstractAbfsIntegrationTest {
   public ITestAzureBlobFileSystemInitAndCreate() {
-    super();
 
     this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
   }
 
   @Override
-  public void initialize() {
+  public void setup() {
   }
 
   @Override
-  public void testCleanup() {
+  public void teardown() {
   }
 
   @Test (expected = FileNotFoundException.class)
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
-    super.initialize();
-    this.getFileSystem();
+    super.setup();
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
   }
 }

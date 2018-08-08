@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.util.Arrays;
 
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -40,30 +41,31 @@ public class ITestAbfsFileSystemContractAppend extends AbstractContractAppendTes
   }
 
   private final boolean isSecure;
-  private final DependencyInjectedContractTest dependencyInjectedContractTest;
+  private final ABFSContractTestBinding binding;
 
   public ITestAbfsFileSystemContractAppend(final boolean secure) throws Exception {
     this.isSecure = secure;
-    dependencyInjectedContractTest = new DependencyInjectedContractTest(this.isSecure);
+    binding = new ABFSContractTestBinding(this.isSecure);
   }
 
   @Override
   public void setup() throws Exception {
-    dependencyInjectedContractTest.initialize();
+    binding.setup();
     super.setup();
   }
 
   @Override
   protected Configuration createConfiguration() {
-    return this.dependencyInjectedContractTest.getConfiguration();
+    return binding.getConfiguration();
   }
 
   @Override
   protected AbstractFSContract createContract(final Configuration conf) {
-    return new ITestAbfsFileSystemContract(conf, this.isSecure);
+    return new AbfsFileSystemContract(conf, isSecure);
   }
 
   @Override
+  @Test
   public void testRenameFileBeingAppended() throws Throwable {
     skip("Skipping as renaming an opened file is not supported");
   }

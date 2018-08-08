@@ -1639,16 +1639,31 @@
     SAS keys to communicate with Azure storage.
   </description>
 </property>
+
 <property>
   <name>fs.abfs.impl</name>
   <value>org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem</value>
   <description>The implementation class of the Azure Blob Filesystem</description>
 </property>
+
 <property>
   <name>fs.abfss.impl</name>
   <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
   <description>The implementation class of the Secure Azure Blob Filesystem</description>
 </property>
+
+<property>
+  <name>fs.AbstractFileSystem.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.Abfs</value>
+  <description>AbstractFileSystem implementation class of abfs://</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.Abfss</value>
+  <description>AbstractFileSystem implementation class of abfss://</description>
+</property>
+
 <property>
   <name>fs.azure.local.sas.key.mode</name>
   <value>false</value>

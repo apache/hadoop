@@ -18,32 +18,31 @@
 package org.apache.hadoop.fs.azurebfs;
 
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertArrayEquals;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test random read operation.
  */
-public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemRandomRead extends
+    AbstractAbfsScaleTest {
   private static final int KILOBYTE = 1024;
   private static final int MEGABYTE = KILOBYTE * KILOBYTE;
   private static final long TEST_FILE_SIZE = 8 * MEGABYTE;
@@ -62,6 +61,9 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
   private static final String ABFS = "ABFS";
   private static long testFileLength = 0;
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestAzureBlobFileSystemRandomRead.class);
+
   public ITestAzureBlobFileSystemRandomRead() throws Exception {
     super();
   }
@@ -76,7 +78,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       // forward seek and read a kilobyte into first kilobyte of bufferV2
       inputStream.seek(5 * MEGABYTE);
       int numBytesRead = inputStream.read(buffer, 0, KILOBYTE);
-      assertEquals(KILOBYTE, numBytesRead);
+      assertEquals("Wrong number of bytes read", KILOBYTE, numBytesRead);
 
       int len = MEGABYTE;
       int offset = buffer.length - len;
@@ -84,7 +86,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       // reverse seek and read a megabyte into last megabyte of bufferV1
       inputStream.seek(3 * MEGABYTE);
       numBytesRead = inputStream.read(buffer, offset, len);
-      assertEquals(len, numBytesRead);
+      assertEquals("Wrong number of bytes read after seek", len, numBytesRead);
     }
   }
 
@@ -391,7 +393,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       afterSeekElapsedMs = sequentialRead(ABFS,
               this.getFileSystem(), true);
       ratio = afterSeekElapsedMs / beforeSeekElapsedMs;
-      System.out.println((String.format(
+      LOG.info((String.format(
               "beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d, ratio=%3$.2f",
               (long) beforeSeekElapsedMs,
               (long) afterSeekElapsedMs,
@@ -425,7 +427,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
 
       ratio = v2ElapsedMs / v1ElapsedMs;
 
-      System.out.println(String.format(
+      LOG.info(String.format(
               "v1ElapsedMs=%1$d, v2ElapsedMs=%2$d, ratio=%3$.2f",
               (long) v1ElapsedMs,
               (long) v2ElapsedMs,
@@ -464,7 +466,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       }
       long elapsedTimeMs = timer.elapsedTimeMs();
 
-      System.out.println(String.format(
+      LOG.info(String.format(
               "v%1$s: bytesRead=%2$d, elapsedMs=%3$d, Mbps=%4$.2f,"
                       + " afterReverseSeek=%5$s",
               version,
@@ -496,7 +498,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
         } while (bytesRead > 0 && totalBytesRead < minBytesToRead);
       long elapsedTimeMs = timer.elapsedTimeMs();
       inputStream.close();
-      System.out.println(String.format(
+      LOG.info(String.format(
               "v%1$d: totalBytesRead=%2$d, elapsedTimeMs=%3$d, Mbps=%4$.2f",
               version,
               totalBytesRead,
@@ -535,7 +537,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
       character = (character == 'z') ? 'a' : (char) ((int) character + 1);
     }
 
-    System.out.println(String.format("Creating test file %s of size: %d ", TEST_FILE_PATH, TEST_FILE_SIZE));
+    LOG.info(String.format("Creating test file %s of size: %d ", TEST_FILE_PATH, TEST_FILE_SIZE));
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
     try (FSDataOutputStream outputStream = fs.create(TEST_FILE_PATH)) {
@@ -544,7 +546,7 @@ public class ITestAzureBlobFileSystemRandomRead extends DependencyInjectedTest {
         outputStream.write(buffer);
         bytesWritten += buffer.length;
       }
-      System.out.println(String.format("Closing stream %s", outputStream));
+      LOG.info("Closing stream {}", outputStream);
       ContractTestUtils.NanoTimer closeTimer
               = new ContractTestUtils.NanoTimer();
       outputStream.close();

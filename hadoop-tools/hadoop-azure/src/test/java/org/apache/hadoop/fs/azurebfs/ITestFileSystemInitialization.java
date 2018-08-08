@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 
-import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
@@ -30,30 +30,45 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 /**
  * Test AzureBlobFileSystem initialization.
  */
-public class ITestFileSystemInitialization extends DependencyInjectedTest {
+public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
   public ITestFileSystemInitialization() {
     super();
   }
 
   @Test
   public void ensureAzureBlobFileSystemIsInitialized() throws Exception {
-    final FileSystem fs = this.getFileSystem();
-    final String accountName = this.getAccountName();
-    final String filesystem = this.getFileSystemName();
+    final AzureBlobFileSystem fs = getFileSystem();
+    final String accountName = getAccountName();
+    final String filesystem = getFileSystemName();
 
-    Assert.assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SCHEME, filesystem + "@" + accountName, null, null, null));
-    Assert.assertNotNull(fs.getWorkingDirectory());
+    assertEquals(fs.getUri(),
+        new URI(FileSystemUriSchemes.ABFS_SCHEME,
+            filesystem + "@" + accountName,
+            null,
+            null,
+            null));
+    assertNotNull("working directory", fs.getWorkingDirectory());
   }
 
   @Test
   public void ensureSecureAzureBlobFileSystemIsInitialized() throws Exception {
-    final String accountName = this.getAccountName();
-    final String filesystem = this.getFileSystemName();
-    final URI defaultUri = new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME, filesystem + "@" + accountName, null, null, null);
-    this.getConfiguration().set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
+    final String accountName = getAccountName();
+    final String filesystem = getFileSystemName();
+    final URI defaultUri = new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
+        filesystem + "@" + accountName,
+        null,
+        null,
+        null);
+    Configuration conf = getConfiguration();
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
 
-    final FileSystem fs = this.getFileSystem();
-    Assert.assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME, filesystem + "@" + accountName, null, null, null));
-    Assert.assertNotNull(fs.getWorkingDirectory());
+    try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(conf)) {
+      assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
+          filesystem + "@" + accountName,
+          null,
+          null,
+          null));
+      assertNotNull("working directory", fs.getWorkingDirectory());
+    }
   }
 }

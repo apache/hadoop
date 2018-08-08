@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,7 +36,7 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
 /**
- * The BlobFsOutputStream for Rest AbfsClient
+ * The BlobFsOutputStream for Rest AbfsClient.
  */
 public class AbfsOutputStream extends OutputStream implements Syncable {
   private final AbfsClient client;
@@ -79,8 +80,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
         maxConcurrentRequestCount,
         10L,
         TimeUnit.SECONDS,
-        new LinkedBlockingQueue());
-    this.completionService = new ExecutorCompletionService(this.threadExecutor);
+        new LinkedBlockingQueue<>());
+    this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
   }
 
   /**
@@ -111,9 +112,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
   @Override
   public synchronized void write(final byte[] data, final int off, final int length)
       throws IOException {
-    if (this.lastError != null) {
-      throw this.lastError;
-    }
+    maybeThrowLastError();
 
     Preconditions.checkArgument(data != null, "null data");
 
@@ -143,6 +142,19 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
   }
 
   /**
+   * Throw the last error recorded if not null.
+   * After the stream is closed, this is always set to
+   * an exception, so acts as a guard against method invocation once
+   * closed.
+   * @throws IOException if lastError is set
+   */
+  private void maybeThrowLastError() throws IOException {
+    if (lastError != null) {
+      throw lastError;
+    }
+  }
+
+  /**
    * Flushes this output stream and forces any buffered output bytes to be
    * written out. If any data remains in the payload it is committed to the
    * service. Data is queued for writing and forced out to the service
@@ -150,7 +162,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void flush() throws IOException {
-    this.flushInternalAsync();
+    flushInternalAsync();
   }
 
   /** Similar to posix fsync, flush out the data in client's user buffer
@@ -159,7 +171,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void hsync() throws IOException {
-    this.flushInternal();
+    flushInternal();
   }
 
   /** Flush out the data in client's user buffer. After the return of
@@ -168,7 +180,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void hflush() throws IOException {
-    this.flushInternal();
+    flushInternal();
   }
 
   /**
@@ -186,34 +198,30 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
     }
 
     try {
-      this.flushInternal();
-      this.threadExecutor.shutdown();
+      flushInternal();
+      threadExecutor.shutdown();
     } finally {
-      this.lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-      this.buffer = null;
-      this.bufferIndex = 0;
-      this.closed = true;
-      this.writeOperations.clear();
-      if (!this.threadExecutor.isShutdown()) {
-        this.threadExecutor.shutdownNow();
+      lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+      buffer = null;
+      bufferIndex = 0;
+      closed = true;
+      writeOperations.clear();
+      if (!threadExecutor.isShutdown()) {
+        threadExecutor.shutdownNow();
       }
     }
   }
 
   private synchronized void flushInternal() throws IOException {
-    if (this.lastError != null) {
-      throw this.lastError;
-    }
-    this.writeCurrentBufferToService();
-    this.flushWrittenBytesToService();
+    maybeThrowLastError();
+    writeCurrentBufferToService();
+    flushWrittenBytesToService();
   }
 
   private synchronized void flushInternalAsync() throws IOException {
-    if (this.lastError != null) {
-      throw this.lastError;
-    }
-    this.writeCurrentBufferToService();
-    this.flushWrittenBytesToServiceAsync();
+    maybeThrowLastError();
+    writeCurrentBufferToService();
+    flushWrittenBytesToServiceAsync();
   }
 
   private synchronized void writeCurrentBufferToService() throws IOException {
@@ -221,19 +229,19 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
       return;
     }
 
-    final byte[] bytes = this.buffer;
+    final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
 
-    this.buffer = new byte[bufferSize];
-    this.bufferIndex = 0;
-    final long offset = this.position;
-    this.position += bytesLength;
+    buffer = new byte[bufferSize];
+    bufferIndex = 0;
+    final long offset = position;
+    position += bytesLength;
 
-    if (this.threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
-      this.waitForTaskToComplete();
+    if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
+      waitForTaskToComplete();
     }
 
-    final Future job = this.completionService.submit(new Callable<Void>() {
+    final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         client.append(path, offset, bytes, 0,
@@ -242,25 +250,25 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
       }
     });
 
-    this.writeOperations.add(new WriteOperation(job, offset, bytesLength));
+    writeOperations.add(new WriteOperation(job, offset, bytesLength));
 
     // Try to shrink the queue
     shrinkWriteOperationQueue();
   }
 
   private synchronized void flushWrittenBytesToService() throws IOException {
-    for (WriteOperation writeOperation : this.writeOperations) {
+    for (WriteOperation writeOperation : writeOperations) {
       try {
         writeOperation.task.get();
       } catch (Exception ex) {
-        if (AzureBlobFileSystemException.class.isInstance(ex.getCause())) {
-          ex = AzureBlobFileSystemException.class.cast(ex.getCause());
+        if (ex.getCause() instanceof AzureBlobFileSystemException) {
+          ex = (AzureBlobFileSystemException)ex.getCause();
         }
-        this.lastError = new IOException(ex);
-        throw this.lastError;
+        lastError = new IOException(ex);
+        throw lastError;
       }
     }
-    flushWrittenBytesToServiceInternal(this.position, false);
+    flushWrittenBytesToServiceInternal(position, false);
   }
 
   private synchronized void flushWrittenBytesToServiceAsync() throws IOException {
@@ -273,7 +281,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
     this.lastTotalAppendOffset = 0;
   }
 
-  private synchronized void flushWrittenBytesToServiceInternal(final long offset, final boolean retainUncommitedData) throws IOException {
+  private synchronized void flushWrittenBytesToServiceInternal(final long offset,
+      final boolean retainUncommitedData) throws IOException {
     try {
       client.flush(path, offset, retainUncommitedData);
     } catch (AzureBlobFileSystemException ex) {
@@ -288,31 +297,33 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   private synchronized void shrinkWriteOperationQueue() throws IOException {
     try {
-      while (this.writeOperations.peek() != null && this.writeOperations.peek().task.isDone()) {
-        this.writeOperations.peek().task.get();
-        this.lastTotalAppendOffset += this.writeOperations.peek().length;
-        this.writeOperations.remove();
+      while (writeOperations.peek() != null && writeOperations.peek().task.isDone()) {
+        writeOperations.peek().task.get();
+        lastTotalAppendOffset += writeOperations.peek().length;
+        writeOperations.remove();
       }
     } catch (Exception e) {
-      if (AzureBlobFileSystemException.class.isInstance(e.getCause())) {
-        this.lastError = IOException.class.cast(e.getCause());
+      if (e.getCause() instanceof AzureBlobFileSystemException) {
+        lastError = (AzureBlobFileSystemException)e.getCause();
       } else {
-        this.lastError = new IOException(e);
+        lastError = new IOException(e);
       }
-      throw this.lastError;
+      throw lastError;
     }
   }
 
   private void waitForTaskToComplete() throws IOException {
     boolean completed;
-    for (completed = false; this.completionService.poll() != null; completed = true) {}
+    for (completed = false; completionService.poll() != null; completed = true) {
+      // keep polling until there is no data
+    }
 
     if (!completed) {
       try {
-        this.completionService.take();
+        completionService.take();
       } catch (InterruptedException e) {
-        this.lastError = new IOException(e);
-        throw this.lastError;
+        lastError = (IOException)new InterruptedIOException(e.toString()).initCause(e);
+        throw lastError;
       }
     }
   }

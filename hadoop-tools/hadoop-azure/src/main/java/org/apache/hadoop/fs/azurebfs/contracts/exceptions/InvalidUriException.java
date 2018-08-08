@@ -28,6 +28,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class InvalidUriException extends AzureBlobFileSystemException {
   public InvalidUriException(String url) {
-    super(String.format("%s is invalid.", url));
+    super(String.format("Invalid URI %s", url));
   }
 }

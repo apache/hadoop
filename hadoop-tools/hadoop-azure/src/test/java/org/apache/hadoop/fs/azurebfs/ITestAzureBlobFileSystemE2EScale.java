@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -35,28 +34,24 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
 /**
  * Test end to end between ABFS client and ABFS server with heavy traffic.
  */
-public class ITestAzureBlobFileSystemE2EScale extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemE2EScale extends
+    AbstractAbfsScaleTest {
   private static final int TEN = 10;
   private static final int ONE_THOUSAND = 1000;
   private static final int BASE_SIZE = 1024;
   private static final int ONE_MB = 1024 * 1024;
   private static final int DEFAULT_WRITE_TIMES = 100;
-  private static final Path TEST_FILE = new Path("testfile");
+  private static final Path TEST_FILE = new Path("ITestAzureBlobFileSystemE2EScale");
 
   public ITestAzureBlobFileSystemE2EScale() {
-    super();
   }
 
   @Test
-  public void testWriteHeavyBytesToFile() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+  public void testWriteHeavyBytesToFileAcrossThreads() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
     final FSDataOutputStream stream = fs.create(TEST_FILE);
     ExecutorService es = Executors.newFixedThreadPool(TEN);
 
@@ -65,7 +60,8 @@ public class ITestAzureBlobFileSystemE2EScale extends DependencyInjectedTest {
     new Random().nextBytes(b);
     List<Future<Void>> tasks = new ArrayList<>();
 
-    for (int i = 0; i < DEFAULT_WRITE_TIMES; i++) {
+    int operationCount = DEFAULT_WRITE_TIMES;
+    for (int i = 0; i < operationCount; i++) {
       Callable<Void> callable = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
@@ -86,48 +82,38 @@ public class ITestAzureBlobFileSystemE2EScale extends DependencyInjectedTest {
 
     es.shutdownNow();
     FileStatus fileStatus = fs.getFileStatus(TEST_FILE);
-    assertEquals(testWriteBufferSize * DEFAULT_WRITE_TIMES, fileStatus.getLen());
-  }
-
-  @Test
-  public void testReadWriteHeavyBytesToFile() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    final FSDataOutputStream stream = fs.create(TEST_FILE);
-
-    int testBufferSize = 5 * TEN * ONE_THOUSAND * BASE_SIZE;
-    final byte[] b = new byte[testBufferSize];
-    new Random().nextBytes(b);
-    stream.write(b);
-    stream.close();
-
-    final byte[] r = new byte[testBufferSize];
-    FSDataInputStream inputStream = fs.open(TEST_FILE, 4 * ONE_MB);
-    int result = inputStream.read(r);
-    inputStream.close();
-
-    assertNotEquals(-1, result);
-    assertArrayEquals(r, b);
+    assertEquals(testWriteBufferSize * operationCount, fileStatus.getLen());
   }
 
   @Test
   public void testReadWriteHeavyBytesToFileWithStatistics() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    final FSDataOutputStream stream = fs.create(TEST_FILE);
-    final FileSystem.Statistics abfsStatistics = fs.getFsStatistics();
-    abfsStatistics.reset();
+    final AzureBlobFileSystem fs = getFileSystem();
+    final FileSystem.Statistics abfsStatistics;
+    int testBufferSize;
+    final byte[] sourceData;
+    try(final FSDataOutputStream stream = fs.create(TEST_FILE)) {
+      abfsStatistics = fs.getFsStatistics();
+      abfsStatistics.reset();
 
-    int testBufferSize = 5 * TEN * ONE_THOUSAND * BASE_SIZE;
-    final byte[] b = new byte[testBufferSize];
-    new Random().nextBytes(b);
-    stream.write(b);
-    stream.close();
+      testBufferSize = 5 * TEN * ONE_THOUSAND * BASE_SIZE;
+      sourceData = new byte[testBufferSize];
+      new Random().nextBytes(sourceData);
+      stream.write(sourceData);
+    }
 
-    final byte[] r = new byte[testBufferSize];
-    FSDataInputStream inputStream = fs.open(TEST_FILE, 4 * ONE_MB);
-    inputStream.read(r);
-    inputStream.close();
+    final byte[] remoteData = new byte[testBufferSize];
+    int bytesRead;
+    try (FSDataInputStream inputStream = fs.open(TEST_FILE, 4 * ONE_MB)) {
+      bytesRead = inputStream.read(remoteData);
+    }
 
-    Assert.assertEquals(r.length, abfsStatistics.getBytesRead());
-    Assert.assertEquals(b.length, abfsStatistics.getBytesWritten());
+    String stats = abfsStatistics.toString();
+    assertEquals("Bytes read in " + stats,
+        remoteData.length, abfsStatistics.getBytesRead());
+    assertEquals("bytes written in " + stats,
+        sourceData.length, abfsStatistics.getBytesWritten());
+    assertEquals("bytesRead from read() call", testBufferSize, bytesRead );
+    assertArrayEquals("round tripped data", sourceData, remoteData);
+
   }
 }

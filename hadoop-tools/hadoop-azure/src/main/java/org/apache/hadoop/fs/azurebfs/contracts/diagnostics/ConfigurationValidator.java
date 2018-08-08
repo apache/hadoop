@@ -18,19 +18,17 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.diagnostics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
 /**
  * ConfigurationValidator to validate the value of a configuration key
- * @param <T> the type of the validator and the validated value
+ * @param <T> the type of the validator and the validated value.
  */
-@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface ConfigurationValidator<T> {
   /**
-   * Validates the configValue
+   * Validates the configValue.
    * @return validated value of type T
    */
   T validate(String configValue) throws InvalidConfigurationValueException;

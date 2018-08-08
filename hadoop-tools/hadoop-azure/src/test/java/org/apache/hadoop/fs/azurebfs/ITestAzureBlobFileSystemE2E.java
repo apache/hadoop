@@ -38,7 +38,7 @@ import static org.junit.Assert.assertArrayEquals;
 /**
  * Test end to end between ABFS client and ABFS server.
  */
-public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   private static final Path TEST_FILE = new Path("testfile");
   private static final int TEST_BYTE = 100;
   private static final int TEST_OFFSET = 100;
@@ -53,11 +53,11 @@ public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
 
   @Test
   public void testWriteOneByteToFile() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    FSDataOutputStream stream = fs.create(TEST_FILE);
+    final AzureBlobFileSystem fs = getFileSystem();
 
-    stream.write(TEST_BYTE);
-    stream.close();
+    try(FSDataOutputStream stream = fs.create(TEST_FILE)) {
+      stream.write(TEST_BYTE);
+    }
 
     FileStatus fileStatus = fs.getFileStatus(TEST_FILE);
     assertEquals(1, fileStatus.getLen());
@@ -65,52 +65,52 @@ public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
 
   @Test
   public void testReadWriteBytesToFile() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
     testWriteOneByteToFile();
-    FSDataInputStream inputStream = fs.open(TEST_FILE, TEST_DEFAULT_BUFFER_SIZE);
-    int i = inputStream.read();
-    inputStream.close();
-
-    assertEquals(TEST_BYTE, i);
+    try(FSDataInputStream inputStream = fs.open(TEST_FILE,
+        TEST_DEFAULT_BUFFER_SIZE)) {
+      assertEquals(TEST_BYTE, inputStream.read());
+    }
   }
 
   @Test (expected = IOException.class)
   public void testOOBWrites() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
     int readBufferSize = fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize();
-
-    fs.create(TEST_FILE);
-    FSDataOutputStream writeStream = fs.create(TEST_FILE);
 
     byte[] bytesToRead = new byte[readBufferSize];
     final byte[] b = new byte[2 * readBufferSize];
     new Random().nextBytes(b);
 
-    writeStream.write(b);
-    writeStream.flush();
-    writeStream.close();
 
-    FSDataInputStream readStream = fs.open(TEST_FILE);
-    readStream.read(bytesToRead, 0, readBufferSize);
+    try(FSDataOutputStream writeStream = fs.create(TEST_FILE)) {
+      writeStream.write(b);
+      writeStream.flush();
+    }
 
-    writeStream = fs.create(TEST_FILE);
-    writeStream.write(b);
-    writeStream.flush();
-    writeStream.close();
+    try (FSDataInputStream readStream = fs.open(TEST_FILE)) {
+      assertEquals(readBufferSize,
+          readStream.read(bytesToRead, 0, readBufferSize));
 
-    readStream.read(bytesToRead, 0, readBufferSize);
-    readStream.close();
+      try (FSDataOutputStream writeStream = fs.create(TEST_FILE)) {
+        writeStream.write(b);
+        writeStream.flush();
+      }
+
+      assertEquals(readBufferSize,
+          readStream.read(bytesToRead, 0, readBufferSize));
+    }
   }
 
   @Test
   public void testWriteWithBufferOffset() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    final FSDataOutputStream stream = fs.create(TEST_FILE);
+    final AzureBlobFileSystem fs = getFileSystem();
 
     final byte[] b = new byte[1024 * 1000];
     new Random().nextBytes(b);
-    stream.write(b, TEST_OFFSET, b.length - TEST_OFFSET);
-    stream.close();
+    try(final FSDataOutputStream stream = fs.create(TEST_FILE)) {
+      stream.write(b, TEST_OFFSET, b.length - TEST_OFFSET);
+    }
 
     final byte[] r = new byte[TEST_DEFAULT_READ_BUFFER_SIZE];
     FSDataInputStream inputStream = fs.open(TEST_FILE, TEST_DEFAULT_BUFFER_SIZE);
@@ -124,13 +124,11 @@ public class ITestAzureBlobFileSystemE2E extends DependencyInjectedTest {
 
   @Test
   public void testReadWriteHeavyBytesToFileWithSmallerChunks() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    final FSDataOutputStream stream = fs.create(TEST_FILE);
+    final AzureBlobFileSystem fs = getFileSystem();
 
     final byte[] writeBuffer = new byte[5 * 1000 * 1024];
     new Random().nextBytes(writeBuffer);
-    stream.write(writeBuffer);
-    stream.close();
+    write(TEST_FILE, writeBuffer);
 
     final byte[] readBuffer = new byte[5 * 1000 * 1024];
     FSDataInputStream inputStream = fs.open(TEST_FILE, TEST_DEFAULT_BUFFER_SIZE);

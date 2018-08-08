@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 
@@ -26,7 +25,6 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
  * A secure {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
  * href="http://store.azure.com/">Windows Azure</a>
  */
-@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SecureAzureBlobFileSystem extends AzureBlobFileSystem {
   @Override
