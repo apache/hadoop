@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
 /**
- * Boolean configuration value validator
+ * Boolean configuration value validator.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

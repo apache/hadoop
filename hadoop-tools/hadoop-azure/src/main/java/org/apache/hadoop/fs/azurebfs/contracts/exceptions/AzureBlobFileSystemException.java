@@ -40,7 +40,7 @@ public abstract class AzureBlobFileSystemException extends IOException {
   @Override
   public String toString() {
     if (this.getMessage() == null && this.getCause() == null) {
-      return "";
+      return "AzureBlobFileSystemException";
     }
 
     if (this.getCause() == null) {

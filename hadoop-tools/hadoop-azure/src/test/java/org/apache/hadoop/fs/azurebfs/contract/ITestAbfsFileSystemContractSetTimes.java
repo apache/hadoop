@@ -37,26 +37,26 @@ public class ITestAbfsFileSystemContractSetTimes extends AbstractContractSetTime
   }
 
   private final boolean isSecure;
-  private final DependencyInjectedContractTest dependencyInjectedContractTest;
+  private final ABFSContractTestBinding binding;
 
   public ITestAbfsFileSystemContractSetTimes(final boolean secure) throws Exception {
     this.isSecure = secure;
-    dependencyInjectedContractTest = new DependencyInjectedContractTest(this.isSecure);
+    binding = new ABFSContractTestBinding(this.isSecure);
   }
 
   @Override
   public void setup() throws Exception {
-    dependencyInjectedContractTest.initialize();
+    binding.setup();
     super.setup();
   }
 
   @Override
   protected Configuration createConfiguration() {
-    return this.dependencyInjectedContractTest.getConfiguration();
+    return binding.getConfiguration();
   }
 
   @Override
   protected AbstractFSContract createContract(final Configuration conf) {
-    return new ITestAbfsFileSystemContract(conf, this.isSecure);
+    return new AbfsFileSystemContract(conf, isSecure);
   }
 }

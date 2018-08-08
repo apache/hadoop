@@ -27,13 +27,11 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 /**
  * Test AzureBlobFileSystem back compatibility with WASB.
  */
-public class ITestAzureBlobFileSystemBackCompat extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemBackCompat extends
+    AbstractAbfsIntegrationTest {
   public ITestAzureBlobFileSystemBackCompat() {
     super();
   }
@@ -54,13 +52,13 @@ public class ITestAzureBlobFileSystemBackCompat extends DependencyInjectedTest {
     blockBlob.uploadText("");
 
     FileStatus[] fileStatuses = fs.listStatus(new Path("/test/10/"));
-    assertEquals(fileStatuses.length, 2);
-    assertEquals(fileStatuses[0].getPath().getName(), "10");
+    assertEquals(2, fileStatuses.length);
+    assertEquals("10", fileStatuses[0].getPath().getName());
     assertTrue(fileStatuses[0].isDirectory());
-    assertEquals(fileStatuses[0].getLen(), 0);
-    assertEquals(fileStatuses[1].getPath().getName(), "123");
+    assertEquals(0, fileStatuses[0].getLen());
+    assertEquals("123", fileStatuses[1].getPath().getName());
     assertTrue(fileStatuses[1].isDirectory());
-    assertEquals(fileStatuses[1].getLen(), 0);
+    assertEquals(0, fileStatuses[1].getLen());
   }
 
   private String getBlobConnectionString() {

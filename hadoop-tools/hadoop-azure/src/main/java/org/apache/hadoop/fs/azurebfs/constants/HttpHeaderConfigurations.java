@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Responsible to keep all abfs http headers here
+ * Responsible to keep all abfs http headers here.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

@@ -24,18 +24,17 @@ import java.util.EnumSet;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 
 /**
  * Test create operation.
  */
-public class ITestAzureBlobFileSystemCreate extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemCreate extends
+    AbstractAbfsIntegrationTest {
   private static final Path TEST_FILE_PATH = new Path("testfile");
   private static final Path TEST_FOLDER_PATH = new Path("testFolder");
   private static final String TEST_CHILD_FILE = "childFile";
@@ -43,68 +42,65 @@ public class ITestAzureBlobFileSystemCreate extends DependencyInjectedTest {
     super();
   }
 
-  @Test(expected = FileAlreadyExistsException.class)
-  public void testCreateFileWithExistingDir() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.mkdirs(TEST_FOLDER_PATH);
-    fs.create(TEST_FOLDER_PATH);
-  }
-
   @Test
-  public void testEnsureFileCreated() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(TEST_FILE_PATH);
-
-    FileStatus fileStatus = fs.getFileStatus(TEST_FILE_PATH);
-    assertNotNull(fileStatus);
+  public void testEnsureFileCreatedImmediately() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
+    try {
+      assertIsFile(fs, TEST_FILE_PATH);
+    } finally {
+      out.close();
+    }
+    assertIsFile(fs, TEST_FILE_PATH);
   }
 
   @Test
   @SuppressWarnings("deprecation")
   public void testCreateNonRecursive() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
     Path testFile = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     try {
       fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null);
-      assertTrue("Should've thrown", false);
-    } catch (FileNotFoundException e) {
+      fail("Should've thrown");
+    } catch (FileNotFoundException expected) {
     }
     fs.mkdirs(TEST_FOLDER_PATH);
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
-    assertTrue(fs.exists(testFile));
+    assertIsFile(fs, testFile);
   }
 
   @Test
   @SuppressWarnings("deprecation")
   public void testCreateNonRecursive1() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
     Path testFile = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     try {
       fs.createNonRecursive(testFile, FsPermission.getDefault(), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), 1024, (short) 1, 1024, null);
-      assertTrue("Should've thrown", false);
-    } catch (FileNotFoundException e) {
+      fail("Should've thrown");
+    } catch (FileNotFoundException expected) {
     }
     fs.mkdirs(TEST_FOLDER_PATH);
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
-    assertTrue(fs.exists(testFile));
+    assertIsFile(fs, testFile);
+
   }
 
   @Test
   @SuppressWarnings("deprecation")
   public void testCreateNonRecursive2() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
 
     Path testFile = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     try {
       fs.createNonRecursive(testFile, FsPermission.getDefault(), false, 1024, (short) 1, 1024, null);
-      assertTrue("Should've thrown", false);
+      fail("Should've thrown");
     } catch (FileNotFoundException e) {
     }
     fs.mkdirs(TEST_FOLDER_PATH);
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
-    assertTrue(fs.exists(testFile));
+    assertIsFile(fs, testFile);
   }
 }

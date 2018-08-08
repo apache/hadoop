@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.diagnostics.ConfigurationValidato
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 
 /**
- * Integer configuration value Validator
+ * Integer configuration value Validator.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

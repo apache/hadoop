@@ -33,30 +33,29 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 
 /**
  * Test copy operation.
  */
-public class ITestAzureBlobFileSystemCopy extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemCopy extends AbstractAbfsIntegrationTest {
   public ITestAzureBlobFileSystemCopy() {
     super();
   }
 
   @Test
   public void testCopyFromLocalFileSystem() throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem();
     Path localFilePath = new Path(System.getProperty("test.build.data",
         "azure_test"));
-    FileSystem localFs = FileSystem.get(new Configuration());
+    FileSystem localFs = FileSystem.getLocal(new Configuration());
     localFs.delete(localFilePath, true);
     try {
       writeString(localFs, localFilePath, "Testing");
       Path dstPath = new Path("copiedFromLocal");
       assertTrue(FileUtil.copy(localFs, localFilePath, fs, dstPath, false,
           fs.getConf()));
-      assertTrue(fs.exists(dstPath));
+      assertIsFile(fs, dstPath);
       assertEquals("Testing", readString(fs, dstPath));
       fs.delete(dstPath, true);
     } finally {
@@ -65,36 +64,32 @@ public class ITestAzureBlobFileSystemCopy extends DependencyInjectedTest {
   }
 
   private String readString(FileSystem fs, Path testFile) throws IOException {
-    FSDataInputStream inputStream = fs.open(testFile);
-    String ret = readString(inputStream);
-    inputStream.close();
-    return ret;
+    return readString(fs.open(testFile));
   }
 
   private String readString(FSDataInputStream inputStream) throws IOException {
-    BufferedReader reader = new BufferedReader(new InputStreamReader(
-        inputStream));
-    final int bufferSize = 1024;
-    char[] buffer = new char[bufferSize];
-    int count = reader.read(buffer, 0, bufferSize);
-    if (count > bufferSize) {
-      throw new IOException("Exceeded buffer size");
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        inputStream))) {
+      final int bufferSize = 1024;
+      char[] buffer = new char[bufferSize];
+      int count = reader.read(buffer, 0, bufferSize);
+      if (count > bufferSize) {
+        throw new IOException("Exceeded buffer size");
+      }
+      return new String(buffer, 0, count);
     }
-    inputStream.close();
-    return new String(buffer, 0, count);
   }
 
   private void writeString(FileSystem fs, Path path, String value)
       throws IOException {
-    FSDataOutputStream outputStream = fs.create(path, true);
-    writeString(outputStream, value);
+    writeString(fs.create(path, true), value);
   }
 
   private void writeString(FSDataOutputStream outputStream, String value)
       throws IOException {
-    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-        outputStream));
-    writer.write(value);
-    writer.close();
+    try(BufferedWriter writer = new BufferedWriter(
+        new OutputStreamWriter(outputStream))) {
+      writer.write(value);
+    }
   }
 }

@@ -574,3 +574,79 @@ mvn test -Dtest=CleanupTestContainers
 
 This will delete the containers; the output log of the test run will
 provide the details and summary of the operation.
+
+
+## Testing ABFS
+
+The ABFS Connector tests share the same account as the wasb tests; this is
+needed for cross-connector compatibility tests.
+
+This makes for a somewhat complex set of configuration options.
+
+Here are the settings for an account `ACCOUNTNAME`
+
+```xml
+<property>
+  <name>abfs.account.name</name>
+  <value>ACCOUNTNAME</value>
+</property>
+
+<property>
+  <name>abfs.account.full.name</name>
+  <value>${abfs.account.name}.dfs.core.windows.net</value>
+</property>
+
+<property>
+  <name>abfs.account.key</name>
+  <value>SECRETKEY==</value>
+</property>
+
+<property>
+  <name>fs.azure.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.account.key.ACCOUNTNAME.blob.core.windows.net</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.test.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.test.account.key.ACCOUNTNAME.blob.core.windows.net</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.account.key.ACCOUNTNAME</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.test.account.key.ACCOUNTNAME</name>
+  <value>${abfs.account.key}</value>
+</property>
+
+<property>
+  <name>fs.azure.test.account.name</name>
+  <value>${abfs.account.full.name}</value>
+</property>
+
+<property>
+  <name>fs.contract.test.fs.abfs</name>
+  <value>abfs://TESTCONTAINER@ACCOUNTNAME.dfs.core.windows.net</value>
+  <description>Container for contract tests</description>
+</property>
+
+<property>
+  <name>fs.contract.test.fs.abfss</name>
+  <value>abfss://TESTCONTAINER@ACCOUNTNAME.dfs.core.windows.net</value>
+  <description>Container for contract tests</description>
+</property>
+
+
+```

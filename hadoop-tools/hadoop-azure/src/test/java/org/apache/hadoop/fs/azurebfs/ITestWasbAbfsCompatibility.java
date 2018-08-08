@@ -17,59 +17,62 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
+import org.junit.Assume;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 
 /**
  * Test compatibility between ABFS client and WASB client.
  */
-public class ITestWasbAbfsCompatibility extends DependencyInjectedTest {
+public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   private static final String WASB_TEST_CONTEXT = "wasb test file";
   private static final String ABFS_TEST_CONTEXT = "abfs test file";
   private static final String TEST_CONTEXT = "THIS IS FOR TEST";
 
-  public ITestWasbAbfsCompatibility() throws Exception {
-    super();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
-    Assume.assumeFalse(this.isEmulator());
+  public ITestWasbAbfsCompatibility() throws Exception {
+    Assume.assumeFalse("Emulator is not supported", isEmulator());
   }
 
   @Test
   public void testListFileStatus() throws Exception {
     // crate file using abfs
-    AzureBlobFileSystem fs = this.getFileSystem();
-    NativeAzureFileSystem wasb = this.getWasbFileSystem();
+    AzureBlobFileSystem fs = getFileSystem();
+    NativeAzureFileSystem wasb = getWasbFileSystem();
 
     Path path1 = new Path("/testfiles/~12/!008/3/abFsTestfile");
-    FSDataOutputStream abfsStream = fs.create(path1, true);
-    abfsStream.write(ABFS_TEST_CONTEXT.getBytes());
-    abfsStream.flush();
-    abfsStream.hsync();
-    abfsStream.close();
+    try(FSDataOutputStream abfsStream = fs.create(path1, true)) {
+      abfsStream.write(ABFS_TEST_CONTEXT.getBytes());
+      abfsStream.flush();
+      abfsStream.hsync();
+    }
 
     // create file using wasb
     Path path2 = new Path("/testfiles/~12/!008/3/nativeFsTestfile");
-    System.out.println(wasb.getUri());
-    FSDataOutputStream nativeFsStream = wasb.create(path2, true);
-    nativeFsStream.write(WASB_TEST_CONTEXT.getBytes());
-    nativeFsStream.flush();
-    nativeFsStream.hsync();
-    nativeFsStream.close();
+    LOG.info("{}", wasb.getUri());
+    try(FSDataOutputStream nativeFsStream = wasb.create(path2, true)) {
+      nativeFsStream.write(WASB_TEST_CONTEXT.getBytes());
+      nativeFsStream.flush();
+      nativeFsStream.hsync();
+    }
     // list file using abfs and wasb
     FileStatus[] abfsFileStatus = fs.listStatus(new Path("/testfiles/~12/!008/3/"));
     FileStatus[] nativeFsFileStatus = wasb.listStatus(new Path("/testfiles/~12/!008/3/"));
@@ -83,52 +86,34 @@ public class ITestWasbAbfsCompatibility extends DependencyInjectedTest {
     boolean[] createFileWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readFileWithAbfs = new boolean[]{false, true, true, false};
 
-    AzureBlobFileSystem abfs = this.getFileSystem();
-    NativeAzureFileSystem wasb = this.getWasbFileSystem();
+    AzureBlobFileSystem abfs = getFileSystem();
+    NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    FileSystem fs;
-    BufferedReader br = null;
     for (int i = 0; i< 4; i++) {
-      try {
-        Path path = new Path("/testfiles/~12/!008/testfile" + i);
-        if (createFileWithAbfs[i]) {
-          fs = abfs;
-        } else {
-          fs = wasb;
-        }
+      Path path = new Path("/testfiles/~12/!008/testfile" + i);
+      final FileSystem createFs = createFileWithAbfs[i] ? abfs : wasb;
 
-        // Write
-        FSDataOutputStream nativeFsStream = fs.create(path, true);
+      // Write
+      try(FSDataOutputStream nativeFsStream = createFs.create(path, true)) {
         nativeFsStream.write(TEST_CONTEXT.getBytes());
         nativeFsStream.flush();
         nativeFsStream.hsync();
-        nativeFsStream.close();
-
-        // Check file status
-        assertEquals(true, fs.exists(path));
-        assertEquals(false, fs.getFileStatus(path).isDirectory());
-
-        // Read
-        if (readFileWithAbfs[i]) {
-          fs = abfs;
-        } else {
-          fs = wasb;
-        }
-        FSDataInputStream inputStream = fs.open(path);
-        br = new BufferedReader(new InputStreamReader(fs.open(path)));
-        String line = br.readLine();
-        assertEquals(TEST_CONTEXT, line);
-
-        // Remove file
-        fs.delete(path, true);
-        assertFalse(fs.exists(path));
-      } catch (Exception e) {
-        e.printStackTrace();
-      } finally {
-        if (br != null) {
-          br.close();
-        }
       }
+
+      // Check file status
+      ContractTestUtils.assertIsFile(createFs, path);
+
+      // Read
+      final FileSystem readFs = readFileWithAbfs[i] ? abfs : wasb;
+
+      try(BufferedReader br =new BufferedReader(new InputStreamReader(readFs.open(path)))) {
+        String line = br.readLine();
+        assertEquals("Wrong text from " + readFs,
+            TEST_CONTEXT, line);
+      }
+
+      // Remove file
+      assertDeleted(readFs, path, true);
     }
   }
 
@@ -137,32 +122,22 @@ public class ITestWasbAbfsCompatibility extends DependencyInjectedTest {
     boolean[] createDirWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readDirWithAbfs = new boolean[]{false, true, true, false};
 
-    AzureBlobFileSystem abfs = this.getFileSystem();
-    NativeAzureFileSystem wasb = this.getWasbFileSystem();
+    AzureBlobFileSystem abfs = getFileSystem();
+    NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    FileSystem fs;
     for (int i = 0; i < 4; i++) {
       Path path = new Path("/testDir/t" + i);
       //create
-      if (createDirWithAbfs[i]) {
-        fs = abfs;
-      } else {
-        fs = wasb;
-      }
-      assertTrue(fs.mkdirs(path));
+      final FileSystem createFs = createDirWithAbfs[i] ? abfs : wasb;
+      assertTrue(createFs.mkdirs(path));
       //check
-      assertTrue(fs.exists(path));
+      assertPathExists(createFs, "Created dir not found with " + createFs, path);
       //read
-      if (readDirWithAbfs[i]) {
-        fs = abfs;
-      } else {
-        fs = wasb;
-      }
-      assertTrue(fs.exists(path));
-      FileStatus dirStatus = fs.getFileStatus(path);
-      assertTrue(dirStatus.isDirectory());
-      fs.delete(path, true);
-      assertFalse(fs.exists(path));
+      final FileSystem readFs = readDirWithAbfs[i] ? abfs : wasb;
+      assertPathExists(readFs, "Created dir not found with " + readFs,
+          path);
+      assertIsDirectory(readFs, path);
+      assertDeleted(readFs, path, true);
     }
   }
 
@@ -171,17 +146,18 @@ public class ITestWasbAbfsCompatibility extends DependencyInjectedTest {
   public void testUrlConversion(){
     String abfsUrl = "abfs://abcde-1111-1111-1111-1111@xxxx.dfs.xxx.xxx.xxxx.xxxx";
     String wabsUrl = "wasb://abcde-1111-1111-1111-1111@xxxx.blob.xxx.xxx.xxxx.xxxx";
-    Assert.assertEquals(abfsUrl, wasbUrlToAbfsUrl(wabsUrl));
-    Assert.assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl));
+    assertEquals(abfsUrl, wasbUrlToAbfsUrl(wabsUrl));
+    assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl));
   }
 
   @Test
   public void testSetWorkingDirectory() throws Exception {
     //create folders
-    AzureBlobFileSystem abfs = this.getFileSystem();
-    NativeAzureFileSystem wasb = this.getWasbFileSystem();
+    AzureBlobFileSystem abfs = getFileSystem();
+    NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    assertTrue(abfs.mkdirs(new Path("/d1/d2/d3/d4")));
+    Path d1d4 = new Path("/d1/d2/d3/d4");
+    assertMkdirs(abfs, d1d4);
 
     //set working directory to path1
     Path path1 = new Path("/d1/d2");
@@ -195,7 +171,7 @@ public class ITestWasbAbfsCompatibility extends DependencyInjectedTest {
     wasb.setWorkingDirectory(path2);
     abfs.setWorkingDirectory(path2);
 
-    Path path3 = new Path("/d1/d2/d3/d4");
+    Path path3 = d1d4;
     assertEquals(path3, wasb.getWorkingDirectory());
     assertEquals(path3, abfs.getWorkingDirectory());
   }

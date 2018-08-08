@@ -29,12 +29,12 @@ import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
  * identifier, if defined. This guarantees paths unique to tests
  * running in parallel.
  */
-public class ITestAbfsFileSystemContract extends AbstractBondedFSContract {
+public class AbfsFileSystemContract extends AbstractBondedFSContract {
 
   public static final String CONTRACT_XML = "abfs.xml";
   private final boolean isSecure;
 
-  protected ITestAbfsFileSystemContract(final Configuration conf, boolean secure) {
+  protected AbfsFileSystemContract(final Configuration conf, boolean secure) {
     super(conf);
     //insert the base features
     addConfResource(CONTRACT_XML);
@@ -43,12 +43,23 @@ public class ITestAbfsFileSystemContract extends AbstractBondedFSContract {
 
   @Override
   public String getScheme() {
-    return isSecure ? FileSystemUriSchemes.ABFS_SECURE_SCHEME : FileSystemUriSchemes.ABFS_SCHEME;
+    return isSecure ?
+        FileSystemUriSchemes.ABFS_SECURE_SCHEME
+        : FileSystemUriSchemes.ABFS_SCHEME;
   }
 
   @Override
   public Path getTestPath() {
-    Path path = new Path(UriUtils.generateUniqueTestPath());
-    return path;
+    return new Path(UriUtils.generateUniqueTestPath());
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "AbfsFileSystemContract{");
+    sb.append("isSecure=").append(isSecure);
+    sb.append(super.toString());
+    sb.append('}');
+    return sb.toString();
   }
 }

@@ -18,61 +18,74 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.Arrays;
 import java.util.Random;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.DependencyInjectedTest;
 
-import org.junit.Test;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 
 /**
  * Test read, write and seek.
+ * Uses package-private methods in AbfsConfiguration, which is why it is in
+ * this package.
  */
-public class ITestReadWriteAndSeek extends DependencyInjectedTest {
+@RunWith(Parameterized.class)
+public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final Path TEST_PATH = new Path("/testfile");
-  public ITestReadWriteAndSeek() {
-    super();
+
+  @Parameterized.Parameters(name = "Size={0}")
+  public static Iterable<Object[]> sizes() {
+    return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
+        {DEFAULT_READ_BUFFER_SIZE},
+        {MAX_BUFFER_SIZE}});
+  }
+
+  private final int size;
+
+  public ITestAbfsReadWriteAndSeek(final int size) {
+    this.size = size;
   }
 
   @Test
   public void testReadAndWriteWithDifferentBufferSizesAndSeek() throws Exception {
-    testReadWriteAndSeek(MIN_BUFFER_SIZE);
-    testReadWriteAndSeek(DEFAULT_READ_BUFFER_SIZE);
-    testReadWriteAndSeek(MAX_BUFFER_SIZE);
+    testReadWriteAndSeek(size);
   }
 
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
-    final AzureBlobFileSystem fs = this.getFileSystem();
-    final AbfsConfiguration abfsConfiguration = new AbfsConfiguration(this.getConfiguration());
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration abfsConfiguration = new AbfsConfiguration(getConfiguration());
 
-    fs.create(TEST_PATH);
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
 
-    final FSDataOutputStream stream = fs.create(TEST_PATH);
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
-    stream.write(b);
-    stream.close();
+    try(final FSDataOutputStream stream = fs.create(TEST_PATH)) {
+      stream.write(b);
+    }
 
-    final byte[] r = new byte[2 * bufferSize];
-    final FSDataInputStream inputStream = fs.open(TEST_PATH);
-    inputStream.seek(bufferSize);
-    int result = inputStream.read(r, bufferSize, bufferSize);
-    assertNotEquals(-1, result);
-
-    inputStream.seek(0);
-    result = inputStream.read(r, 0, bufferSize);
-    assertNotEquals(-1, result);
-    assertArrayEquals(r, b);
+    final byte[] readBuffer = new byte[2 * bufferSize];
+    int result;
+    try(final FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+      inputStream.seek(bufferSize);
+      result = inputStream.read(readBuffer, bufferSize, bufferSize);
+      assertNotEquals(-1, result);
+      inputStream.seek(0);
+      result = inputStream.read(readBuffer, 0, bufferSize);
+    }
+    assertNotEquals("data read in final read()", -1, result);
+    assertArrayEquals(readBuffer, b);
   }
 }

@@ -36,14 +36,10 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -54,13 +50,15 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -69,8 +67,7 @@ import org.apache.hadoop.util.Progressable;
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
  * href="http://store.azure.com/">Windows Azure</a>
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public class AzureBlobFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
@@ -88,8 +85,7 @@ public class AzureBlobFileSystem extends FileSystem {
     super.initialize(uri, configuration);
     setConf(configuration);
 
-    this.LOG.debug(
-        "Initializing AzureBlobFileSystem for {}", uri);
+    LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
@@ -97,16 +93,24 @@ public class AzureBlobFileSystem extends FileSystem {
     this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
     this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecure(), configuration, userGroupInformation);
 
-    this.LOG.debug(
-        "Initializing NativeAzureFileSystem for {}", uri);
+    LOG.debug("Initializing NativeAzureFileSystem for {}", uri);
 
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsStore.getAbfsConfiguration().getCreateRemoteFileSystemDuringInitialization()) {
       this.createFileSystem();
     }
+  }
 
-    this.mkdirs(this.workingDir);
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "AzureBlobFileSystem{");
+    sb.append("uri=").append(uri);
+    sb.append(", user='").append(user).append('\'');
+    sb.append(", primaryUserGroup='").append(primaryUserGroup).append('\'');
+    sb.append('}');
+    return sb.toString();
   }
 
   public boolean isSecure() {
@@ -120,8 +124,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
-    this.LOG.debug(
-        "AzureBlobFileSystem.open path: {} bufferSize: {}", path.toString(), bufferSize);
+    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(makeQualified(path), statistics);
@@ -135,9 +138,8 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
       final short replication, final long blockSize, final Progressable progress) throws IOException {
-    this.LOG.debug(
-        "AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
-        f.toString(),
+    LOG.debug("AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
+        f,
         permission,
         overwrite,
         blockSize);
@@ -196,7 +198,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
-    this.LOG.debug(
+    LOG.debug(
         "AzureBlobFileSystem.append path: {} bufferSize: {}",
         f.toString(),
         bufferSize);
@@ -211,7 +213,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   public boolean rename(final Path src, final Path dst) throws IOException {
-    this.LOG.debug(
+    LOG.debug(
         "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
 
     Path parentFolder = src.getParent();
@@ -250,7 +252,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public boolean delete(final Path f, final boolean recursive) throws IOException {
-    this.LOG.debug(
+    LOG.debug(
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
 
     if (f.isRoot()) {
@@ -273,7 +275,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public FileStatus[] listStatus(final Path f) throws IOException {
-    this.LOG.debug(
+    LOG.debug(
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
 
     try {
@@ -287,8 +289,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
-    this.LOG.debug(
-        "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f.toString(), permission);
+    LOG.debug(
+        "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
@@ -312,13 +314,13 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     super.close();
-    this.LOG.debug("AzureBlobFileSystem.close");
+    LOG.debug("AzureBlobFileSystem.close");
     this.isClosed = true;
   }
 
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
-    this.LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f.toString());
+    LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f);
 
     try {
       return abfsStore.getFileStatus(makeQualified(f));
@@ -350,7 +352,8 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public Path getHomeDirectory() {
     return makeQualified(new Path(
-            FileSystemConfigurations.USER_HOME_DIRECTORY_PREFIX + "/" + this.userGroupInformation.getShortUserName()));
+            FileSystemConfigurations.USER_HOME_DIRECTORY_PREFIX
+                + "/" + this.userGroupInformation.getShortUserName()));
   }
 
   /**
@@ -360,7 +363,7 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file,
-      long start, long len) throws IOException {
+      long start, long len) {
     if (file == null) {
       return null;
     }
@@ -403,7 +406,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   private boolean deleteRoot() throws IOException {
-    this.LOG.debug("Deleting root content");
+    LOG.debug("Deleting root content");
 
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
@@ -441,15 +444,14 @@ public class AzureBlobFileSystem extends FileSystem {
   private FileStatus tryGetFileStatus(final Path f) {
     try {
       return getFileStatus(f);
-    }
-    catch (IOException ex) {
-      this.LOG.debug("File not found {}", f.toString());
+    } catch (IOException ex) {
+      LOG.debug("File not found {}", f);
       return null;
     }
   }
 
   private void createFileSystem() throws IOException {
-    this.LOG.debug(
+    LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
     try {
       this.abfsStore.createFilesystem();
@@ -493,7 +495,8 @@ public class AzureBlobFileSystem extends FileSystem {
       return false;
     }
 
-    if (scheme.equals(FileSystemUriSchemes.ABFS_SCHEME) || scheme.equals(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
+    if (scheme.equals(FileSystemUriSchemes.ABFS_SCHEME)
+        || scheme.equals(FileSystemUriSchemes.ABFS_SECURE_SCHEME)) {
       return true;
     }
 
@@ -501,34 +504,45 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  <T> FileSystemOperation execute(
+  <T> FileSystemOperation<T> execute(
       final String scopeDescription,
       final Callable<T> callableFileOperation) throws IOException {
     return execute(scopeDescription, callableFileOperation, null);
   }
 
   @VisibleForTesting
-  <T> FileSystemOperation execute(
+  <T> FileSystemOperation<T> execute(
       final String scopeDescription,
       final Callable<T> callableFileOperation,
       T defaultResultValue) throws IOException {
 
     try {
       final T executionResult = callableFileOperation.call();
-      return new FileSystemOperation(executionResult, null);
+      return new FileSystemOperation<>(executionResult, null);
     } catch (AbfsRestOperationException abfsRestOperationException) {
-      return new FileSystemOperation(defaultResultValue, abfsRestOperationException);
+      return new FileSystemOperation<>(defaultResultValue, abfsRestOperationException);
     } catch (AzureBlobFileSystemException azureBlobFileSystemException) {
       throw new IOException(azureBlobFileSystemException);
     } catch (Exception exception) {
       if (exception instanceof ExecutionException) {
         exception = (Exception) getRootCause(exception);
       }
-      final FileSystemOperationUnhandledException fileSystemOperationUnhandledException = new FileSystemOperationUnhandledException(exception);
+      final FileSystemOperationUnhandledException fileSystemOperationUnhandledException
+          = new FileSystemOperationUnhandledException(exception);
       throw new IOException(fileSystemOperationUnhandledException);
     }
   }
 
+  /**
+   * Given a path and exception, choose which IOException subclass
+   * to create.
+   * Will return if and only iff the error code is in the list of allowed
+   * error codes.
+   * @param path path of operation triggering exception; may be null
+   * @param exception the exception caught
+   * @param allowedErrorCodesList varargs list of error codes.
+   * @throws IOException if the exception error code is not on the allowed list.
+   */
   private void checkException(final Path path,
                               final AzureBlobFileSystemException exception,
                               final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
@@ -542,9 +556,11 @@ public class AzureBlobFileSystem extends FileSystem {
 
       //AbfsRestOperationException.getMessage() contains full error info including path/uri.
       if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw new FileNotFoundException(ere.getMessage());
+        throw (IOException)new FileNotFoundException(ere.getMessage())
+            .initCause(exception);
       } else if (statusCode == HttpURLConnection.HTTP_CONFLICT) {
-        throw new FileAlreadyExistsException(ere.getMessage());
+        throw (IOException)new FileAlreadyExistsException(ere.getMessage())
+            .initCause(exception);
       } else {
         throw ere;
       }

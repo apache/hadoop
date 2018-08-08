@@ -22,6 +22,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -38,11 +39,11 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.codec.Charsets;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.Charsets;
 /**
  * Represents the shared key credentials used to access an Azure Storage
  * account.
@@ -89,7 +90,7 @@ public class SharedKeyCredentials {
   }
 
   private String computeHmac256(final String stringToSign) {
-    byte[] utf8Bytes = null;
+    byte[] utf8Bytes;
     try {
       utf8Bytes = stringToSign.getBytes(AbfsHttpConstants.UTF_8);
     } catch (final UnsupportedEncodingException e) {
@@ -158,7 +159,7 @@ public class SharedKeyCredentials {
   }
 
   /**
-   * Initialie the HmacSha256 associated with the account key.
+   * Initialize the HmacSha256 associated with the account key.
    */
   private void initializeMac() {
     // Initializes the HMAC-SHA256 Mac and SecretKey.
@@ -171,7 +172,7 @@ public class SharedKeyCredentials {
   }
 
   /**
-   * Append a string to a string builder with a newline constant
+   * Append a string to a string builder with a newline constant.
    *
    * @param builder the StringBuilder object
    * @param element the string to append.
@@ -194,9 +195,10 @@ public class SharedKeyCredentials {
    * @param conn          the HttpURLConnection for the operation.
    * @return A canonicalized string.
    */
-  private static String canonicalizeHttpRequest(final java.net.URL address, final String accountName,
-                                                final String method, final String contentType, final long contentLength, final String date,
-                                                final HttpURLConnection conn) throws UnsupportedEncodingException {
+  private static String canonicalizeHttpRequest(final URL address,
+      final String accountName, final String method, final String contentType,
+      final long contentLength, final String date, final HttpURLConnection conn)
+      throws UnsupportedEncodingException {
 
     // The first element should be the Method of the request.
     // I.e. GET, POST, PUT, or HEAD.
@@ -246,7 +248,8 @@ public class SharedKeyCredentials {
    * @param accountName the account name for the request.
    * @return the canonicalized resource string.
    */
-  private static String getCanonicalizedResource(final java.net.URL address, final String accountName) throws UnsupportedEncodingException {
+  private static String getCanonicalizedResource(final URL address,
+      final String accountName) throws UnsupportedEncodingException {
     // Resource path
     final StringBuilder resourcepath = new StringBuilder(AbfsHttpConstants.FORWARD_SLASH);
     resourcepath.append(accountName);
@@ -263,7 +266,7 @@ public class SharedKeyCredentials {
 
     final Map<String, String[]> queryVariables = parseQueryString(address.getQuery());
 
-    final Map<String, String> lowercasedKeyNameValue = new HashMap<String, String>();
+    final Map<String, String> lowercasedKeyNameValue = new HashMap<>();
 
     for (final Entry<String, String[]> entry : queryVariables.entrySet()) {
       // sort the value and organize it as comma separated values
@@ -303,14 +306,17 @@ public class SharedKeyCredentials {
   }
 
   /**
-   * Gets all the values for the given header in the one to many map, performs a trimStart() on each return value
+   * Gets all the values for the given header in the one to many map,
+   * performs a trimStart() on each return value.
    *
    * @param headers    a one to many map of key / values representing the header values for the connection.
    * @param headerName the name of the header to lookup
    * @return an ArrayList<String> of all trimmed values corresponding to the requested headerName. This may be empty
    * if the header is not found.
    */
-  private static ArrayList<String> getHeaderValues(final Map<String, List<String>> headers, final String headerName) {
+  private static ArrayList<String> getHeaderValues(
+      final Map<String, List<String>> headers,
+      final String headerName) {
 
     final ArrayList<String> arrayOfValues = new ArrayList<String>();
     List<String> values = null;
@@ -338,7 +344,7 @@ public class SharedKeyCredentials {
    * @return a HashMap<String, String[]> of the key values.
    */
   private static HashMap<String, String[]> parseQueryString(String parseString) throws UnsupportedEncodingException {
-    final HashMap<String, String[]> retVals = new HashMap<String, String[]>();
+    final HashMap<String, String[]> retVals = new HashMap<>();
     if (parseString == null || parseString.isEmpty()) {
       return retVals;
     }

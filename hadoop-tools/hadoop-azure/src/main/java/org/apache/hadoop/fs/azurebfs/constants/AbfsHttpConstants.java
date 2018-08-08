@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Responsible to keep all constant keys used in abfs rest client here
+ * Responsible to keep all constant keys used in abfs rest client here.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

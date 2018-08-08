@@ -28,7 +28,7 @@ import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * The Read Buffer Manager for Rest AbfsClient
+ * The Read Buffer Manager for Rest AbfsClient.
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
@@ -40,11 +40,11 @@ final class ReadBufferManager {
 
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
-  private Stack<Integer> freeList = new Stack<Integer>();   // indices in buffers[] array that are available
+  private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
 
-  private Queue<ReadBuffer> readAheadQueue = new LinkedList<ReadBuffer>(); // queue of requests that are not picked up by any worker thread yet
-  private LinkedList<ReadBuffer> inProgressList = new LinkedList<ReadBuffer>(); // requests being processed by worker threads
-  private LinkedList<ReadBuffer> completedReadList = new LinkedList<ReadBuffer>(); // buffers available for reading
+  private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
+  private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
+  private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
   private static final ReadBufferManager BUFFER_MANAGER; // singleton, initialized in static initialization block
 
   static {
@@ -85,7 +85,7 @@ final class ReadBufferManager {
 
 
   /**
-   * {@link AbfsInputStream} calls this method to queue read-aheads
+   * {@link AbfsInputStream} calls this method to queue read-aheads.
    *
    * @param stream          The {@link AbfsInputStream} for which to do the read-ahead
    * @param requestedOffset The offset in the file which shoukd be read
@@ -93,15 +93,15 @@ final class ReadBufferManager {
    */
   void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength) {
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Start Queueing readAhead for " + stream.getPath() + " offset " + requestedOffset
-          + " length " + requestedLength);
+      LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
+          stream.getPath(), requestedOffset, requestedLength);
     }
     ReadBuffer buffer;
     synchronized (this) {
       if (isAlreadyQueued(stream, requestedOffset)) {
         return; // already queued, do not queue again
       }
-      if (freeList.size() == 0 && !tryEvict()) {
+      if (freeList.isEmpty() && !tryEvict()) {
         return; // no buffers available, cannot queue anything
       }
 
@@ -121,8 +121,8 @@ final class ReadBufferManager {
       notifyAll();
     }
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Done q-ing readAhead for file " + stream.getPath() + " offset " + requestedOffset
-          + " buffer idx " + buffer.getBufferindex());
+      LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
+          stream.getPath(), requestedOffset, buffer.getBufferindex());
     }
   }
 
@@ -144,7 +144,8 @@ final class ReadBufferManager {
   int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer) {
     // not synchronized, so have to be careful with locking
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("getBlock for file " + stream.getPath() + " position " + position + " thread " + Thread.currentThread().getName());
+      LOGGER.trace("getBlock for file {}  position {}  thread {}",
+          stream.getPath(), position, Thread.currentThread().getName());
     }
 
     waitForProcess(stream, position);
@@ -155,12 +156,13 @@ final class ReadBufferManager {
     }
     if (bytesRead > 0) {
       if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("Done read from Cache for " + stream.getPath() + " position " + position + " length " + bytesRead);
+        LOGGER.trace("Done read from Cache for {} position {} length {}",
+            stream.getPath(), position, bytesRead);
       }
       return bytesRead;
     }
 
-    // otherwise, just say we got nothing - calling thread can do it's own read
+    // otherwise, just say we got nothing - calling thread can do its own read
     return 0;
   }
 
@@ -179,8 +181,8 @@ final class ReadBufferManager {
     if (readBuf != null) {         // if in in-progress queue, then block for it
       try {
         if (LOGGER.isTraceEnabled()) {
-          LOGGER.trace("got a relevant read buffer for file " + stream.getPath() + " offset " + readBuf.getOffset()
-                  + " buffer idx " + readBuf.getBufferindex());
+          LOGGER.trace("got a relevant read buffer for file {} offset {} buffer idx {}",
+              stream.getPath(), readBuf.getOffset(), readBuf.getBufferindex());
         }
         readBuf.getLatch().await();  // blocking wait on the caller stream's thread
         // Note on correctness: readBuf gets out of inProgressList only in 1 place: after worker thread
@@ -193,8 +195,8 @@ final class ReadBufferManager {
         Thread.currentThread().interrupt();
       }
       if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("latch done for file " + stream.getPath() + " buffer idx " + readBuf.getBufferindex()
-                + " length " + readBuf.getLength());
+        LOGGER.trace("latch done for file {} buffer idx {} length {}",
+            stream.getPath(), readBuf.getBufferindex(), readBuf.getLength());
       }
     }
   }
@@ -254,8 +256,8 @@ final class ReadBufferManager {
     freeList.push(buf.getBufferindex());
     completedReadList.remove(buf);
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Evicting buffer idx " + buf.getBufferindex() + "; was used for file " + buf.getStream().getPath()
-          + " offset " + buf.getOffset() + " length " + buf.getLength());
+      LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
+          buf.getBufferindex(), buf.getStream().getPath(), buf.getOffset(), buf.getLength());
     }
     return true;
   }
@@ -344,13 +346,14 @@ final class ReadBufferManager {
       inProgressList.add(buffer);
     }
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker picked file " + buffer.getStream().getPath() + " for offset " + buffer.getOffset());
+      LOGGER.trace("ReadBufferWorker picked file {} for offset {}",
+          buffer.getStream().getPath(), buffer.getOffset());
     }
     return buffer;
   }
 
   /**
-   * ReadBufferWorker thread calls this method to post completion
+   * ReadBufferWorker thread calls this method to post completion.
    *
    * @param buffer            the buffer whose read was completed
    * @param result            the {@link ReadBufferStatus} after the read operation in the worker thread
@@ -358,8 +361,8 @@ final class ReadBufferManager {
    */
   void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed file " + buffer.getStream().getPath() + " for offset " + buffer.getOffset()
-          + " bytes " + bytesActuallyRead);
+      LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}",
+          buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead);
     }
     synchronized (this) {
       inProgressList.remove(buffer);
@@ -380,8 +383,9 @@ final class ReadBufferManager {
   /**
    * Similar to System.currentTimeMillis, except implemented with System.nanoTime().
    * System.currentTimeMillis can go backwards when system clock is changed (e.g., with NTP time synchronization),
-   * making it unsuitable for measuring time intervals. nanotime is strictly monotonically increasing,
-   * so it is much more suitable to measuring intervals.
+   * making it unsuitable for measuring time intervals. nanotime is strictly monotonically increasing per CPU core.
+   * Note: it is not monotonic across Sockets, and even within a CPU, its only the
+   * more recent parts which share a clock across all cores.
    *
    * @return current time in milliseconds
    */

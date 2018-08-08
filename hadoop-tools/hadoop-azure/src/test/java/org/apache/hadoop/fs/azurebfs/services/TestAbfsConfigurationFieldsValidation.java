@@ -48,7 +48,7 @@ import org.junit.Test;
  * Test ConfigurationServiceFieldsValidation.
  */
 public class TestAbfsConfigurationFieldsValidation {
-  private AbfsConfiguration abfsConfiguration;
+  private final AbfsConfiguration abfsConfiguration;
 
   private static final String INT_KEY= "intKey";
   private static final String LONG_KEY= "longKey";
@@ -89,12 +89,10 @@ public class TestAbfsConfigurationFieldsValidation {
   private boolean boolField;
 
   public TestAbfsConfigurationFieldsValidation() throws Exception {
-    super();
     Base64 base64 = new Base64();
     this.encodedString = new String(base64.encode("base64Value".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
     this.encodedAccountKey = new String(base64.encode("someAccountKey".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
-    Configuration configuration = new Configuration();
-    configuration.addResource("azure-bfs-test.xml");
+    Configuration configuration = new Configuration(false);
     configuration.set(INT_KEY, "1234565");
     configuration.set(LONG_KEY, "4194304");
     configuration.set(STRING_KEY, "stringValue");

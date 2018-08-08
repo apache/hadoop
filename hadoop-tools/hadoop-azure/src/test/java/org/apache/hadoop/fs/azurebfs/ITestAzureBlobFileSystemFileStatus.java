@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
+
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -25,12 +27,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Test FileStatus.
  */
-public class ITestAzureBlobFileSystemFileStatus extends DependencyInjectedTest {
+public class ITestAzureBlobFileSystemFileStatus extends
+    AbstractAbfsIntegrationTest {
   private static final Path TEST_FILE = new Path("testFile");
   private static final Path TEST_FOLDER = new Path("testDir");
   public ITestAzureBlobFileSystemFileStatus() {
@@ -41,24 +42,38 @@ public class ITestAzureBlobFileSystemFileStatus extends DependencyInjectedTest {
   public void testEnsureStatusWorksForRoot() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
 
-    fs.getFileStatus(new Path("/"));
-    fs.listStatus(new Path("/"));
+    Path root = new Path("/");
+    FileStatus[] rootls = fs.listStatus(root);
+    assertEquals("root listing", 0, rootls.length);
   }
 
   @Test
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(TEST_FILE);
+    touch(TEST_FILE);
+    validateStatus(fs, TEST_FILE);
+  }
+
+  private FileStatus validateStatus(final AzureBlobFileSystem fs, final Path name)
+      throws IOException {
+    FileStatus fileStatus = fs.getFileStatus(name);
+    String errorInStatus = "error in " + fileStatus + " from " + fs;
+    assertEquals(errorInStatus + ": permission",
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL),
+        fileStatus.getPermission());
+    assertEquals(errorInStatus + ": owner",
+        fs.getOwnerUser(), fileStatus.getOwner());
+    assertEquals(errorInStatus + ": group",
+        fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup());
+    return fileStatus;
+  }
+
+  @Test
+  public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
     fs.mkdirs(TEST_FOLDER);
 
-    FileStatus fileStatus = fs.getFileStatus(TEST_FILE);
-    assertEquals(new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL), fileStatus.getPermission());
-    assertEquals(fs.getOwnerUser(), fileStatus.getGroup());
-    assertEquals(fs.getOwnerUserPrimaryGroup(), fileStatus.getOwner());
-
-    fileStatus = fs.getFileStatus(TEST_FOLDER);
-    assertEquals(new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL), fileStatus.getPermission());
-    assertEquals(fs.getOwnerUser(), fileStatus.getGroup());
-    assertEquals(fs.getOwnerUserPrimaryGroup(), fileStatus.getOwner());
+    validateStatus(fs, TEST_FOLDER);
   }
+
 }

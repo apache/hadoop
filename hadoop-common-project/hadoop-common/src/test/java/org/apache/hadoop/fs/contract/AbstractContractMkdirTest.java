@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 
@@ -175,4 +176,11 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
     }
   }
 
+  @Test
+  public void testCreateDirWithExistingDir() throws Exception {
+    Path path = path("testCreateDirWithExistingDir");
+    final FileSystem fs = getFileSystem();
+    assertMkdirs(fs, path);
+    assertMkdirs(fs, path);
+  }
 }

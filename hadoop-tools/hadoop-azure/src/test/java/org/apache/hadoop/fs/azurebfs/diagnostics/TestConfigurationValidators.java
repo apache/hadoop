@@ -19,10 +19,11 @@
 package org.apache.hadoop.fs.azurebfs.diagnostics;
 
 import org.apache.commons.codec.Charsets;
+
+import org.junit.Assert;
 import org.junit.Test;
 
 
-import org.apache.hadoop.fs.azurebfs.DependencyInjectedTest;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.commons.codec.binary.Base64;
 
@@ -36,7 +37,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Test configuration validators.
  */
-public class TestConfigurationValidators extends DependencyInjectedTest {
+public class TestConfigurationValidators extends Assert {
 
   private static final String FAKE_KEY = "FakeKey";
 

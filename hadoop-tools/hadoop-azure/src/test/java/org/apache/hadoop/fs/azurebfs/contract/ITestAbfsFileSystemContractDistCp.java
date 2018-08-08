@@ -25,20 +25,20 @@ import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
  * Contract test for distCp operation.
  */
 public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTest {
-  private final DependencyInjectedContractTest dependencyInjectedContractTest;
+  private final ABFSContractTestBinding binding;
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {
-    dependencyInjectedContractTest = new DependencyInjectedContractTest(false);
+    binding = new ABFSContractTestBinding(false);
   }
 
   @Override
   public void setup() throws Exception {
-    dependencyInjectedContractTest.initialize();
+    binding.setup();
     super.setup();
   }
 
   @Override
-  protected ITestAbfsFileSystemContract createContract(Configuration conf) {
-    return new ITestAbfsFileSystemContract(conf, false);
+  protected AbfsFileSystemContract createContract(Configuration conf) {
+    return new AbfsFileSystemContract(conf, false);
   }
 }

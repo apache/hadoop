@@ -20,10 +20,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,33 +30,76 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 
 /**
  * Test AzureBlobFileSystem registration.
+ * Use casts to have interesting stack traces on failures.
  */
-public class ITestFileSystemRegistration extends DependencyInjectedTest {
+public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
+
+  protected static final String ABFS = "org.apache.hadoop.fs.azurebfs.Abfs";
+  protected static final String ABFSS = "org.apache.hadoop.fs.azurebfs.Abfss";
+
   public ITestFileSystemRegistration() throws Exception {
-    super();
+  }
+
+  private void assertConfigMatches(Configuration conf, String key, String expected) {
+    String v = conf.get(key);
+    assertNotNull("No value for key " + key, v);
+    assertEquals("Wrong value for key " + key, expected, v);
+  }
+
+  @Test
+  public void testAbfsFileSystemRegistered() throws Throwable {
+    assertConfigMatches(new Configuration(true),
+        "fs.abfs.impl",
+        "org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem");
+  }
+
+  @Test
+  public void testSecureAbfsFileSystemRegistered() throws Throwable {
+    assertConfigMatches(new Configuration(true),
+        "fs.abfss.impl",
+        "org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem");
+  }
+
+  @Test
+  public void testAbfsFileContextRegistered() throws Throwable {
+    assertConfigMatches(new Configuration(true),
+        "fs.AbstractFileSystem.abfs.impl",
+        ABFS);
+  }
+
+  @Test
+  public void testSecureAbfsFileContextRegistered() throws Throwable {
+    assertConfigMatches(new Configuration(true),
+        "fs.AbstractFileSystem.abfss.impl",
+        ABFSS);
   }
 
   @Test
   public void ensureAzureBlobFileSystemIsDefaultFileSystem() throws Exception {
-    FileSystem fs = FileSystem.get(this.getConfiguration());
-    Assert.assertTrue(fs instanceof AzureBlobFileSystem);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(getConfiguration());
+    assertNotNull("filesystem", fs);
 
-    AbstractFileSystem afs = FileContext.getFileContext(this.getConfiguration()).getDefaultFileSystem();
-    Assert.assertTrue(afs instanceof Abfs);
+    Abfs afs = (Abfs) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+    assertNotNull("filecontext", afs);
   }
 
   @Test
   public void ensureSecureAzureBlobFileSystemIsDefaultFileSystem() throws Exception {
-    final String accountName = this.getAccountName();
-    final String fileSystemName = this.getFileSystemName();
+    final String accountName = getAccountName();
+    final String fileSystemName = getFileSystemName();
 
-    final URI defaultUri = new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME, fileSystemName + "@" + accountName, null, null, null);
-    this.getConfiguration().set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
+    final URI defaultUri = new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
+        fileSystemName + "@" + accountName,
+        null,
+        null,
+        null);
+    getConfiguration().set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        defaultUri.toString());
 
-    FileSystem fs = FileSystem.get(this.getConfiguration());
-    Assert.assertTrue(fs instanceof SecureAzureBlobFileSystem);
-
-    AbstractFileSystem afs = FileContext.getFileContext(this.getConfiguration()).getDefaultFileSystem();
-    Assert.assertTrue(afs instanceof Abfss);
+    SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.get(
+        getConfiguration());
+    assertNotNull("filesystem", fs);
+    Abfss afs = (Abfss) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+    assertNotNull("filecontext", afs);
   }
 }

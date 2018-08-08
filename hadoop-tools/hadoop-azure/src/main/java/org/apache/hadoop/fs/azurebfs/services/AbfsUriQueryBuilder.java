@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+
 /**
- * The UrlQueryBuilder for Rest AbfsClient
+ * The UrlQueryBuilder for Rest AbfsClient.
  */
 public class AbfsUriQueryBuilder {
   private Map<String, String> parameters;
