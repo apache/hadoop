@@ -499,8 +499,10 @@ public class QuorumJournalManager implements JournalManager {
     // the cache used for RPC calls is not enabled; fall back to using the
     // streaming mechanism to serve such requests
     if (inProgressOk && inProgressTailingEnabled) {
-      LOG.info("Tailing edits starting from txn ID " + fromTxnId +
-          " via RPC mechanism");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Tailing edits starting from txn ID " + fromTxnId +
+            " via RPC mechanism");
+      }
       try {
         Collection<EditLogInputStream> rpcStreams = new ArrayList<>();
         selectRpcInputStreams(rpcStreams, fromTxnId, onlyDurableTxns);
