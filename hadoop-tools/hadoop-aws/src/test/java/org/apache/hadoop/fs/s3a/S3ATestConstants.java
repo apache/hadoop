@@ -106,6 +106,11 @@ public interface S3ATestConstants {
   String KEY_HUGE_PARTITION_SIZE = S3A_SCALE_TEST + "huge.partitionsize";
 
   /**
+   * Size of partitions to upload: {@value}.
+   */
+  String DEFAULT_HUGE_PARTITION_SIZE = "8M";
+
+  /**
    * The default huge size is small —full 5GB+ scale tests are something
    * to run in long test runs on EC2 VMs. {@value}.
    */

@@ -15,51 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.contract.localfs;
 
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.test.GenericTestUtils.getRandomizedTestDir;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
-import java.io.File;
-import java.io.IOException;
+import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
  * Test the FileSystemMultipartUploader on local file system.
  */
-public class TestLocalFileSystemMultipartUploader
-    extends AbstractSystemMultipartUploaderTest {
-
-  private static FileSystem fs;
-  private File tmp;
-
-  @BeforeClass
-  public static void init() throws IOException {
-    fs = LocalFileSystem.getLocal(new Configuration());
-  }
-
-  @Before
-  public void setup() throws IOException {
-    tmp = getRandomizedTestDir();
-    tmp.mkdirs();
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    tmp.delete();
-  }
+public class TestLocalFSContractMultipartUploader
+    extends AbstractContractMultipartUploaderTest {
 
   @Override
-  public FileSystem getFS() {
-    return fs;
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new LocalFSContract(conf);
   }
 
+  /**
+   * There is no real need to upload any particular size.
+   * @return 1 kilobyte
+   */
   @Override
-  public Path getBaseTestPath() {
-    return new Path(tmp.getAbsolutePath());
+  protected int partSizeInBytes() {
+    return 1024;
   }
-
 }

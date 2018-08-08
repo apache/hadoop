@@ -25,15 +25,16 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Opaque, serializable reference to an entity in the FileSystem. May contain
- * metadata sufficient to resolve or verify subsequent accesses indepedent of
+ * metadata sufficient to resolve or verify subsequent accesses independent of
  * other modifications to the FileSystem.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@FunctionalInterface
 public interface PathHandle extends Serializable {
 
   /**
-   * @return Serialized from in bytes.
+   * @return Serialized form in bytes.
    */
   default byte[] toByteArray() {
     ByteBuffer bb = bytes();
@@ -42,6 +43,10 @@ public interface PathHandle extends Serializable {
     return ret;
   }
 
+  /**
+   * Get the bytes of this path handle.
+   * @return the bytes to get to the process completing the upload.
+   */
   ByteBuffer bytes();
 
   @Override

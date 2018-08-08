@@ -219,6 +219,10 @@ public class WriteOperationHelper {
       List<PartETag> partETags,
       long length,
       Retried retrying) throws IOException {
+    if (partETags.isEmpty()) {
+      throw new IOException(
+          "No upload parts in multipart upload to " + destKey);
+    }
     return invoker.retry("Completing multipart commit", destKey,
         true,
         retrying,

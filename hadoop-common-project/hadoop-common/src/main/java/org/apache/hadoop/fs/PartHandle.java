@@ -16,14 +16,14 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
- * Opaque, serializable reference to an part id for multipart uploads.
+ * Opaque, serializable reference to a part id for multipart uploads.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
