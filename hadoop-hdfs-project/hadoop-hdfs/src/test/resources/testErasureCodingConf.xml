@@ -154,11 +154,31 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Add a list of erasure coding policies</expected-output>
+          <expected-output>Add a list of user defined erasure coding policies</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>[-addPolicies -policyFile &lt;file&gt;]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: removePolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help removePolicy
+        </ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Remove an user defined erasure coding policy</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-removePolicy -policy &lt;policy&gt;]</expected-output>
         </comparator>
       </comparators>
     </test>

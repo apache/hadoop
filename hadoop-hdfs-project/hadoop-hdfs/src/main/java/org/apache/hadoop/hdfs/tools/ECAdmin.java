@@ -154,7 +154,7 @@ public class ECAdmin extends Configured implements Tool {
       listing.addRow("<file>",
           "The path of the xml file which defines the EC policies to add");
       return getShortUsage() + "\n" +
-          "Add a list of erasure coding policies.\n" +
+          "Add a list of user defined erasure coding policies.\n" +
           listing.toString();
     }
 
@@ -268,7 +268,7 @@ public class ECAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<policy>", "The name of the erasure coding policy");
       return getShortUsage() + "\n" +
-          "Remove an erasure coding policy.\n" +
+          "Remove an user defined erasure coding policy.\n" +
           listing.toString();
     }
 
