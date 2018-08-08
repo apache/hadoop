@@ -33,7 +33,6 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
@@ -240,21 +239,6 @@ public class TestKeyValueContainer {
         .readContainerFile(containerFile);
     assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
         keyValueContainerData.getState());
-  }
-
-  @Test
-  public void testCloseInvalidContainer() throws Exception {
-    try {
-      keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
-          .INVALID);
-      keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
-      keyValueContainer.close();
-      fail("testCloseInvalidContainer failed");
-    } catch (StorageContainerException ex) {
-      assertEquals(ContainerProtos.Result.INVALID_CONTAINER_STATE,
-          ex.getResult());
-      GenericTestUtils.assertExceptionContains("Invalid container data", ex);
-    }
   }
 
   @Test

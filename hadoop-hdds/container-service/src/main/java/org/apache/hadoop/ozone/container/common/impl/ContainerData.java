@@ -257,7 +257,6 @@ public abstract class ContainerData {
    * Marks this container as closed.
    */
   public synchronized void closeContainer() {
-    // TODO: closed or closing here
     setState(ContainerLifeCycleState.CLOSED);
   }
 

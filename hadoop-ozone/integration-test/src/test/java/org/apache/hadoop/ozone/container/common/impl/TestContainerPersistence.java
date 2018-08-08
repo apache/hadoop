@@ -775,14 +775,6 @@ public class TestContainerPersistence {
     Assert.assertEquals("bilbo_new_1",
         actualNewData.getMetadata().get("owner"));
 
-    // Update a non-existing container
-    exception.expect(StorageContainerException.class);
-    exception.expectMessage("Container is an Inconsistent " +
-        "state, missing .container file.");
-    Container nonExistentContainer = new KeyValueContainer(
-        new KeyValueContainerData(RandomUtils.nextLong(),
-            ContainerTestHelper.CONTAINER_MAX_SIZE_GB), conf);
-    nonExistentContainer.update(newMetadata, false);
   }
 
   private KeyData writeKeyHelper(BlockID blockID)

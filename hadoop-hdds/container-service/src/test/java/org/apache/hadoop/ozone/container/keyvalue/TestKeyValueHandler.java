@@ -25,12 +25,16 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -59,8 +63,8 @@ public class TestKeyValueHandler {
   @Rule
   public TestRule timeout = new Timeout(300000);
 
-  private HddsDispatcher dispatcher;
-  private KeyValueHandler handler;
+  private static HddsDispatcher dispatcher;
+  private static KeyValueHandler handler;
 
   private final static String DATANODE_UUID = UUID.randomUUID().toString();
 
@@ -69,14 +73,11 @@ public class TestKeyValueHandler {
 
   private static final long DUMMY_CONTAINER_ID = 9999;
 
-  @Test
-  /**
-   * Test that Handler handles different command types correctly.
-   */
-  public void testHandlerCommandHandling() throws Exception{
+  @BeforeClass
+  public static void setup() throws StorageContainerException {
     // Create mock HddsDispatcher and KeyValueHandler.
-    this.handler = Mockito.mock(KeyValueHandler.class);
-    this.dispatcher = Mockito.mock(HddsDispatcher.class);
+    handler = Mockito.mock(KeyValueHandler.class);
+    dispatcher = Mockito.mock(HddsDispatcher.class);
     Mockito.when(dispatcher.getHandler(any())).thenReturn(handler);
     Mockito.when(dispatcher.dispatch(any())).thenCallRealMethod();
     Mockito.when(dispatcher.getContainer(anyLong())).thenReturn(
@@ -84,6 +85,13 @@ public class TestKeyValueHandler {
     Mockito.when(handler.handle(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(dispatcher).setMetricsForTesting(any());
     dispatcher.setMetricsForTesting(Mockito.mock(ContainerMetrics.class));
+  }
+
+  @Test
+  /**
+   * Test that Handler handles different command types correctly.
+   */
+  public void testHandlerCommandHandling() throws Exception {
 
     // Test Create Container Request handling
     ContainerCommandRequestProto createContainerRequest =
@@ -250,4 +258,33 @@ public class TestKeyValueHandler {
   }
 
 
+  @Test
+  public void testCloseInvalidContainer() {
+    long containerID = 1234L;
+    Configuration conf = new Configuration();
+    KeyValueContainerData kvData = new KeyValueContainerData(containerID, 1);
+    KeyValueContainer container = new KeyValueContainer(kvData, conf);
+    kvData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
+
+    // Create Close container request
+    ContainerCommandRequestProto closeContainerRequest =
+        ContainerProtos.ContainerCommandRequestProto.newBuilder()
+            .setCmdType(ContainerProtos.Type.CloseContainer)
+            .setContainerID(DUMMY_CONTAINER_ID)
+            .setDatanodeUuid(DATANODE_UUID)
+            .setCloseContainer(ContainerProtos.CloseContainerRequestProto
+                .getDefaultInstance())
+            .build();
+    dispatcher.dispatch(closeContainerRequest);
+
+    Mockito.when(handler.handleCloseContainer(any(), any()))
+        .thenCallRealMethod();
+    // Closing invalid container should return error response.
+    ContainerProtos.ContainerCommandResponseProto response =
+        handler.handleCloseContainer(closeContainerRequest, container);
+
+    Assert.assertTrue("Close container should return Invalid container error",
+        response.getResult().equals(
+            ContainerProtos.Result.INVALID_CONTAINER_STATE));
+  }
 }

@@ -29,6 +29,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetSmallFileRequestProto;
@@ -76,6 +78,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CLOSED_CONTAINER_RETRY;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -378,8 +382,18 @@ public class KeyValueHandler extends Handler {
       return ContainerUtils.malformedRequest(request);
     }
 
+    long containerID = kvContainer.getContainerData().getContainerID();
+    ContainerLifeCycleState containerState = kvContainer.getContainerState();
+
     try {
-      checkContainerOpen(kvContainer);
+      if (containerState == ContainerLifeCycleState.CLOSED) {
+        throw new StorageContainerException("Container already closed. " +
+            "ContainerID: " + containerID, CLOSED_CONTAINER_RETRY);
+      } else if (containerState == ContainerLifeCycleState.INVALID) {
+        LOG.debug("Invalid container data. ContainerID: {}", containerID);
+        throw new StorageContainerException("Invalid container data. " +
+            "ContainerID: " + containerID, INVALID_CONTAINER_STATE);
+      }
 
       KeyValueContainerData kvData = kvContainer.getContainerData();
 
@@ -773,10 +787,9 @@ public class KeyValueHandler extends Handler {
   private void checkContainerOpen(KeyValueContainer kvContainer)
       throws StorageContainerException {
 
-    ContainerProtos.ContainerLifeCycleState containerState =
-        kvContainer.getContainerState();
+    ContainerLifeCycleState containerState = kvContainer.getContainerState();
 
-    if (containerState == ContainerProtos.ContainerLifeCycleState.OPEN) {
+    if (containerState == ContainerLifeCycleState.OPEN) {
       return;
     } else {
       String msg = "Requested operation not allowed as ContainerState is " +

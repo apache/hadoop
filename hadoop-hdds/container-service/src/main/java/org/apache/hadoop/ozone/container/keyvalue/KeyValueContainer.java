@@ -138,7 +138,7 @@ public class KeyValueContainer implements Container {
 
       // Create .container file
       File containerFile = getContainerFile();
-      writeToContainerFile(containerFile, true);
+      createContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
       if (containerMetaDataPath != null && containerMetaDataPath.getParentFile()
@@ -165,11 +165,11 @@ public class KeyValueContainer implements Container {
   }
 
   /**
-   * Creates .container file and checksum file.
+   * Writes to .container file.
    *
-   * @param containerFile
-   * @param isCreate true if we are creating a new container file and false if
-   *                we are updating an existing container file.
+   * @param containerFile container file name
+   * @param isCreate True if creating a new file. False is updating an
+   *                 existing container file.
    * @throws StorageContainerException
    */
   private void writeToContainerFile(File containerFile, boolean isCreate)
@@ -181,19 +181,18 @@ public class KeyValueContainer implements Container {
       ContainerDataYaml.createContainerFile(
           ContainerType.KeyValueContainer, containerData, tempContainerFile);
 
+      // NativeIO.renameTo is an atomic function. But it might fail if the
+      // container file already exists. Hence, we handle the two cases
+      // separately.
       if (isCreate) {
-        // When creating a new container, .container file should not exist
-        // already.
         NativeIO.renameTo(tempContainerFile, containerFile);
       } else {
-        // When updating a container, the .container file should exist. If
-        // not, the container is in an inconsistent state.
         Files.move(tempContainerFile.toPath(), containerFile.toPath(),
             StandardCopyOption.REPLACE_EXISTING);
       }
 
     } catch (IOException ex) {
-      throw new StorageContainerException("Error during creation of " +
+      throw new StorageContainerException("Error while creating/ updating " +
           ".container file. ContainerID: " + containerId, ex,
           CONTAINER_FILES_CREATE_ERROR);
     } finally {
@@ -206,27 +205,14 @@ public class KeyValueContainer implements Container {
     }
   }
 
+  private void createContainerFile(File containerFile)
+      throws StorageContainerException {
+    writeToContainerFile(containerFile, true);
+  }
 
   private void updateContainerFile(File containerFile)
       throws StorageContainerException {
-
-    long containerId = containerData.getContainerID();
-
-    if (!containerFile.exists()) {
-      throw new StorageContainerException("Container is an Inconsistent " +
-          "state, missing .container file. ContainerID: " + containerId,
-          INVALID_CONTAINER_STATE);
-    }
-
-    try {
-      writeToContainerFile(containerFile, false);
-    } catch (IOException e) {
-      //TODO : Container update failure is not handled currently. Might
-      // lead to loss of .container file. When Update container feature
-      // support is added, this failure should also be handled.
-      throw new StorageContainerException("Container update failed. " +
-          "ContainerID: " + containerId, CONTAINER_FILES_CREATE_ERROR);
-    }
+    writeToContainerFile(containerFile, false);
   }
 
 
@@ -256,19 +242,15 @@ public class KeyValueContainer implements Container {
     // complete this action
     try {
       writeLock();
-      long containerId = containerData.getContainerID();
-      if(!containerData.isValid()) {
-        LOG.debug("Invalid container data. Container Id: {}", containerId);
-        throw new StorageContainerException("Invalid container data. " +
-            "ContainerID: " + containerId, INVALID_CONTAINER_STATE);
-      }
+
       containerData.closeContainer();
       File containerFile = getContainerFile();
-
       // update the new container data to .container File
       updateContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
+      // Failed to update .container file. Reset the state to CLOSING
+      containerData.setState(ContainerLifeCycleState.CLOSING);
       throw ex;
     } finally {
       writeUnlock();
@@ -332,8 +314,6 @@ public class KeyValueContainer implements Container {
       // update the new container data to .container File
       updateContainerFile(containerFile);
     } catch (StorageContainerException  ex) {
-      // TODO:
-      // On error, reset the metadata.
       containerData.setMetadata(oldMetadata);
       throw ex;
     } finally {
