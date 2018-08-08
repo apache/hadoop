@@ -224,4 +224,20 @@ public class TestDataModels {
     Assert
         .assertEquals(cluster.getNodes().size(), newCluster.getNodes().size());
   }
+
+  @Test
+  public void testUsageLimitedToCapacity() throws Exception {
+    DiskBalancerTestUtil util = new DiskBalancerTestUtil();
+
+    // If usage is greater than capacity, then it should be set to capacity
+    DiskBalancerVolume v1 = util.createRandomVolume(StorageType.DISK);
+    v1.setCapacity(DiskBalancerTestUtil.GB);
+    v1.setUsed(2 * DiskBalancerTestUtil.GB);
+    Assert.assertEquals(v1.getUsed(),v1.getCapacity());
+    // If usage is less than capacity, usage should be set to the real usage
+    DiskBalancerVolume v2 = util.createRandomVolume(StorageType.DISK);
+    v2.setCapacity(2*DiskBalancerTestUtil.GB);
+    v2.setUsed(DiskBalancerTestUtil.GB);
+    Assert.assertEquals(v1.getUsed(),DiskBalancerTestUtil.GB);
+  }
 }
