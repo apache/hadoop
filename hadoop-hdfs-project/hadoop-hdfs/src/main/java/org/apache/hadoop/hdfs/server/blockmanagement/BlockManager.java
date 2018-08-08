@@ -4428,6 +4428,14 @@ public class BlockManager implements BlockStatsMXBean {
     return this.neededReconstruction.getCorruptReplicationOneBlockSize();
   }
 
+  public long getHighestPriorityReplicatedBlockCount(){
+    return this.neededReconstruction.getHighestPriorityReplicatedBlockCount();
+  }
+
+  public long getHighestPriorityECBlockCount(){
+    return this.neededReconstruction.getHighestPriorityECBlockCount();
+  }
+
   public BlockInfo addBlockCollection(BlockInfo block,
       BlockCollection bc) {
     return blocksMap.addBlockCollection(block, bc);

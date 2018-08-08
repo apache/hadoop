@@ -549,6 +549,11 @@ public class DFSAdmin extends FsShell {
         replicatedBlockStats.getMissingReplicaBlocks());
     System.out.println("\tMissing blocks (with replication factor 1): " +
         replicatedBlockStats.getMissingReplicationOneBlocks());
+    if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
+      System.out.println("\tLow redundancy blocks with highest priority " +
+          "to recover: " +
+          replicatedBlockStats.getHighestPriorityLowRedundancyBlocks());
+    }
     System.out.println("\tPending deletion blocks: " +
         replicatedBlockStats.getPendingDeletionBlocks());
 
@@ -561,6 +566,11 @@ public class DFSAdmin extends FsShell {
         ecBlockGroupStats.getCorruptBlockGroups());
     System.out.println("\tMissing block groups: " +
         ecBlockGroupStats.getMissingBlockGroups());
+    if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
+      System.out.println("\tLow redundancy blocks with highest priority " +
+          "to recover: " +
+          ecBlockGroupStats.getHighestPriorityLowRedundancyBlocks());
+    }
     System.out.println("\tPending deletion blocks: " +
         ecBlockGroupStats.getPendingDeletionBlocks());
 
