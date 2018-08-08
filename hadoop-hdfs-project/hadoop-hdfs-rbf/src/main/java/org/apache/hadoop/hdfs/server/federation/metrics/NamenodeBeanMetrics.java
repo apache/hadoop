@@ -321,6 +321,16 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return 0;
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return 0;
+  }
+
+  @Override
   public String getCorruptFiles() {
     return "N/A";
   }
