@@ -67,11 +67,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       .withInitial(() -> new HashMap<NodeNotChosenReason, Integer>());
 
   private enum NodeNotChosenReason {
-    NOT_IN_SERVICE("the node isn't in service"),
+    NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
     TOO_MANY_NODES_ON_RACK("the rack has too many chosen nodes"),
-    NOT_ENOUGH_STORAGE_SPACE("no enough storage space to place the block");
+    NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block");
 
     private final String text;
 
