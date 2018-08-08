@@ -111,7 +111,7 @@ Here is the sample of minimal setup for RM failover.
   <value>master2:8088</value>
 </property>
 <property>
-  <name>yarn.resourcemanager.zk-address</name>
+  <name>hadoop.zk.address</name>
   <value>zk1:2181,zk2:2181,zk3:2181</value>
 </property>
 ```
