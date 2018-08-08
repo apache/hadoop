@@ -881,6 +881,8 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.println(containerReport.getFinishTime());
       containerReportStr.print("\tState : ");
       containerReportStr.println(containerReport.getContainerState());
+      containerReportStr.print("\tExecution-Type : ");
+      containerReportStr.println(containerReport.getExecutionType());
       containerReportStr.print("\tLOG-URL : ");
       containerReportStr.println(containerReport.getLogUrl());
       containerReportStr.print("\tHost : ");
