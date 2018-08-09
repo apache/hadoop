@@ -370,7 +370,7 @@ public class ContainerImpl implements Container {
        UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.SCHEDULED, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER,
-        new KillBeforeRunningTransition())
+        new KillTransition())
     .addTransition(ContainerState.SCHEDULED, ContainerState.SCHEDULED,
         ContainerEventType.UPDATE_CONTAINER_TOKEN,
         new NotifyContainerSchedulerOfUpdateTransition())
@@ -604,6 +604,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.EXITED_WITH_SUCCESS,
         ContainerState.EXITED_WITH_SUCCESS,
         ContainerEventType.UPDATE_CONTAINER_TOKEN)
+    .addTransition(ContainerState.EXITED_WITH_SUCCESS,
+        ContainerState.EXITED_WITH_SUCCESS,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST)
 
     // From EXITED_WITH_FAILURE State
     .addTransition(ContainerState.EXITED_WITH_FAILURE, ContainerState.DONE,
@@ -621,6 +624,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.EXITED_WITH_FAILURE,
         ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.UPDATE_CONTAINER_TOKEN)
+    .addTransition(ContainerState.EXITED_WITH_FAILURE,
+        ContainerState.EXITED_WITH_FAILURE,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST)
 
     // From KILLING State.
     .addTransition(ContainerState.KILLING,
@@ -680,6 +686,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
         ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
         ContainerEventType.UPDATE_CONTAINER_TOKEN)
+    .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+        ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST)
 
     // From DONE
     .addTransition(ContainerState.DONE, ContainerState.DONE,
@@ -700,6 +709,8 @@ public class ContainerImpl implements Container {
     // No transition - assuming container is on its way to completion
     .addTransition(ContainerState.DONE, ContainerState.DONE,
         ContainerEventType.UPDATE_CONTAINER_TOKEN)
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST)
 
     // create the topology tables
     .installTopology();
