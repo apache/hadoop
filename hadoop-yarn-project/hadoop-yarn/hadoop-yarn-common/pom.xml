@@ -237,10 +237,10 @@
             <exclude>src/main/resources/webapps/test/.keep</exclude>
             <exclude>src/main/resources/webapps/proxy/.keep</exclude>
             <exclude>src/main/resources/webapps/node/.keep</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.9.4/js/jquery.dataTables.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.7/css/jui-dt.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.7/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.7/images/Sorting icons.psd</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.10.7/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.12.1.custom.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/jquery-3.3.1.min.js</exclude>
