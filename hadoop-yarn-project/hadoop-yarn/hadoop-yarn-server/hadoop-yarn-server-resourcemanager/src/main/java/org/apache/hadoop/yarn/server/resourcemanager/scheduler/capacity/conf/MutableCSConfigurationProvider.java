@@ -126,6 +126,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
+  public Configuration getConfiguration() {
+    return new Configuration(schedConf);
+  }
+
+  @Override
   public ConfigurationMutationACLPolicy getAclMutationPolicy() {
     return aclMutationPolicy;
   }

@@ -4964,6 +4964,7 @@ Please note that this feature is currently in the alpha stage and is subject to 
 
 ### HTTP Operations Supported
 
+      * GET
       * PUT
 
 ### Elements of the *sched-conf* object
@@ -4974,6 +4975,45 @@ Please note that this feature is currently in the alpha stage and is subject to 
 | add-queue | object | A queue to add to the scheduler along with this queue's configurations |
 | remove-queue | string | Full path name of a queue to remove |
 | global-updates | map | Map of key value pairs to update scheduler's global configuration |
+
+### GET Request Examples
+
+Get requests are used to retrieve the scheduler's configuration that is currently loaded into scheduler's context.
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      Content-Type: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+
+Response Header:
+
+      TTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+
+```xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <configuration>
+        <property>
+          <name>yarn.scheduler.capacity.root.queues</name>
+          <value>default</value>
+        </property>
+        <property>
+          <name>yarn.scheduler.capacity.maximum-applications</name>
+          <value>10000</value>
+        </property>
+        <property>
+          <name>yarn.scheduler.capacity.root.default.capacity</name>
+          <value>100</value>
+        </property>
+      </configuration>
+```
 
 ### PUT Request Examples
 
