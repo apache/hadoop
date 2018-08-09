@@ -30,6 +30,7 @@ Note this example requires registry DNS.
 ```
 {
   "name": "httpd-service",
+  "version": "1.0",
   "lifetime": "3600",
   "components": [
     {
@@ -169,9 +170,10 @@ Then visit port 8080 for each IP to view the pages.
 Docker images may have built with ENTRYPOINT to enable start up of docker image without any parameters.
 When passing parameters to ENTRYPOINT enabled image, `launch_command` is delimited by comma (,).
 
+```
 {
   "name": "sleeper-service",
-  "version": "1",
+  "version": "1.0",
   "components" :
   [
     {
@@ -198,3 +200,4 @@ When passing parameters to ENTRYPOINT enabled image, `launch_command` is delimit
     }
   ]
 }
+```
