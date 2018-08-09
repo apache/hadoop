@@ -109,4 +109,28 @@ if [ -n "$ENSURE_KSM_INITIALIZED" ]; then
    fi
 fi
 
+
+# Supports byteman script to instrument hadoop process with byteman script
+#
+#
+if [ -n "$BYTEMAN_SCRIPT" ] || [ -n "$BYTEMAN_SCRIPT_URL" ]; then
+
+  export PATH=$PATH:$BYTEMAN_DIR/bin
+
+  if [ ! -z "$BYTEMAN_SCRIPT_URL" ]; then
+    sudo wget $BYTEMAN_SCRIPT_URL -O /tmp/byteman.btm
+    export BYTEMAN_SCRIPT=/tmp/byteman.btm
+  fi
+
+  if [ ! -f "$BYTEMAN_SCRIPT" ]; then
+    echo "ERROR: The defined $BYTEMAN_SCRIPT does not exist!!!"
+    exit -1
+  fi
+
+  AGENT_STRING="-javaagent:/opt/byteman.jar=script:$BYTEMAN_SCRIPT"
+  export HADOOP_OPTS="$AGENT_STRING $HADOOP_OPTS"
+  echo "Process is instrumented with adding $AGENT_STRING to HADOOP_OPTS"
+fi
+
+
 $@
