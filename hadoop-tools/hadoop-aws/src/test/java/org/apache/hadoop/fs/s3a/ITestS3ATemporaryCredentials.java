@@ -19,15 +19,14 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
-import java.net.URI;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 
-import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
 
@@ -55,6 +54,14 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   private static final long TEST_FILE_SIZE = 1024;
 
+  private AWSCredentialProviderList credentials;
+
+  @Override
+  public void teardown() throws Exception {
+    S3AUtils.closeAutocloseables(LOG, credentials);
+    super.teardown();
+  }
+
   /**
    * Test use of STS for requesting temporary credentials.
    *
@@ -63,7 +70,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * S3A tests to request temporary credentials, then attempt to use those
    * credentials instead.
    *
-   * @throws IOException
+   * @throws IOException failure
    */
   @Test
   public void testSTS() throws IOException {
@@ -71,21 +78,20 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     if (!conf.getBoolean(TEST_STS_ENABLED, true)) {
       skip("STS functional tests disabled");
     }
+    S3AFileSystem testFS = getFileSystem();
+    credentials = testFS.shareCredentials("testSTS");
 
-    S3xLoginHelper.Login login = S3AUtils.getAWSAccessKeys(
-        URI.create("s3a://foobar"), conf);
-    if (!login.hasLogin()) {
-      skip("testSTS disabled because AWS credentials not configured");
-    }
-    AWSCredentialsProvider parentCredentials = new BasicAWSCredentialsProvider(
-        login.getUser(), login.getPassword());
+    String bucket = testFS.getBucket();
+    AWSSecurityTokenServiceClientBuilder builder = STSClientFactory.builder(
+        conf,
+        bucket,
+        credentials,
+        conf.getTrimmed(TEST_STS_ENDPOINT, ""), "");
+    AWSSecurityTokenService stsClient = builder.build();
 
-    String stsEndpoint = conf.getTrimmed(TEST_STS_ENDPOINT, "");
-    AWSSecurityTokenServiceClient stsClient;
-    stsClient = new AWSSecurityTokenServiceClient(parentCredentials);
-    if (!stsEndpoint.isEmpty()) {
-      LOG.debug("STS Endpoint ={}", stsEndpoint);
-      stsClient.setEndpoint(stsEndpoint);
+    if (!conf.getTrimmed(TEST_STS_ENDPOINT, "").isEmpty()) {
+      LOG.debug("STS Endpoint ={}", conf.getTrimmed(TEST_STS_ENDPOINT, ""));
+      stsClient.setEndpoint(conf.getTrimmed(TEST_STS_ENDPOINT, ""));
     }
     GetSessionTokenRequest sessionTokenRequest = new GetSessionTokenRequest();
     sessionTokenRequest.setDurationSeconds(900);
@@ -93,23 +99,28 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     sessionTokenResult = stsClient.getSessionToken(sessionTokenRequest);
     Credentials sessionCreds = sessionTokenResult.getCredentials();
 
-    String childAccessKey = sessionCreds.getAccessKeyId();
-    conf.set(ACCESS_KEY, childAccessKey);
-    String childSecretKey = sessionCreds.getSecretAccessKey();
-    conf.set(SECRET_KEY, childSecretKey);
-    String sessionToken = sessionCreds.getSessionToken();
-    conf.set(SESSION_TOKEN, sessionToken);
+    // clone configuration so changes here do not affect the base FS.
+    Configuration conf2 = new Configuration(conf);
+    S3AUtils.clearBucketOption(conf2, bucket, AWS_CREDENTIALS_PROVIDER);
+    S3AUtils.clearBucketOption(conf2, bucket, ACCESS_KEY);
+    S3AUtils.clearBucketOption(conf2, bucket, SECRET_KEY);
+    S3AUtils.clearBucketOption(conf2, bucket, SESSION_TOKEN);
 
-    conf.set(AWS_CREDENTIALS_PROVIDER, PROVIDER_CLASS);
+    conf2.set(ACCESS_KEY, sessionCreds.getAccessKeyId());
+    conf2.set(SECRET_KEY, sessionCreds.getSecretAccessKey());
+    conf2.set(SESSION_TOKEN, sessionCreds.getSessionToken());
 
-    try(S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
+    conf2.set(AWS_CREDENTIALS_PROVIDER, PROVIDER_CLASS);
+
+    // with valid credentials, we can set properties.
+    try(S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf2)) {
       createAndVerifyFile(fs, path("testSTS"), TEST_FILE_SIZE);
     }
 
     // now create an invalid set of credentials by changing the session
     // token
-    conf.set(SESSION_TOKEN, "invalid-" + sessionToken);
-    try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
+    conf2.set(SESSION_TOKEN, "invalid-" + sessionCreds.getSessionToken());
+    try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf2)) {
       createAndVerifyFile(fs, path("testSTSInvalidToken"), TEST_FILE_SIZE);
       fail("Expected an access exception, but file access to "
           + fs.getUri() + " was allowed: " + fs);

@@ -37,6 +37,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
@@ -154,8 +155,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(InterruptedException.class, fail);
     // note this does not pick up subclasses (like socket timeout)
     policyMap.put(InterruptedIOException.class, fail);
-    // interesting question: should this be retried ever?
+    // Access denial and auth exceptions are not retried
     policyMap.put(AccessDeniedException.class, fail);
+    policyMap.put(NoAuthWithAWSException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 

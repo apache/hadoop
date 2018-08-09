@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -28,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -37,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
@@ -71,7 +74,9 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     // Other configs would break test assumptions
     conf.set(FAIL_INJECT_INCONSISTENCY_KEY, DEFAULT_DELAY_KEY_SUBSTRING);
     conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 1.0f);
-    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, DEFAULT_DELAY_KEY_MSEC);
+    // this is a long value to guarantee that the inconsistency holds
+    // even over long-haul connections, and in the debugger too/
+    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, (long) (60 * 1000));
     return new S3AContract(conf);
   }
 
@@ -524,37 +529,60 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");
     ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
+    assertListSizeEqual(
+        "InconsistentAmazonS3Client added back objects incorrectly " +
+            "in a non-recursive listing",
+        preDeleteDelimited.getObjectSummaries(),
+        postDeleteDelimited.getObjectSummaries());
 
-    assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
+    assertListSizeEqual("InconsistentAmazonS3Client added back prefixes incorrectly " +
             "in a non-recursive listing",
-        preDeleteDelimited.getObjectSummaries().size(),
-        postDeleteDelimited.getObjectSummaries().size()
+        preDeleteDelimited.getCommonPrefixes(),
+        postDeleteDelimited.getCommonPrefixes()
     );
-    assertEquals("InconsistentAmazonS3Client added back prefixes incorrectly " +
-            "in a non-recursive listing",
-        preDeleteDelimited.getCommonPrefixes().size(),
-        postDeleteDelimited.getCommonPrefixes().size()
-    );
-    assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
+    assertListSizeEqual("InconsistentAmazonS3Client added back objects incorrectly " +
             "in a recursive listing",
-        preDeleteUndelimited.getObjectSummaries().size(),
-        postDeleteUndelimited.getObjectSummaries().size()
+        preDeleteUndelimited.getObjectSummaries(),
+        postDeleteUndelimited.getObjectSummaries()
     );
-    assertEquals("InconsistentAmazonS3Client added back prefixes incorrectly " +
+
+    assertListSizeEqual("InconsistentAmazonS3Client added back prefixes incorrectly " +
             "in a recursive listing",
-        preDeleteUndelimited.getCommonPrefixes().size(),
-        postDeleteUndelimited.getCommonPrefixes().size()
+        preDeleteUndelimited.getCommonPrefixes(),
+        postDeleteUndelimited.getCommonPrefixes()
     );
   }
 
   /**
-   * retrying v2 list.
-   * @param fs
-   * @param key
-   * @param delimiter
-   * @return
+   * Assert that the two list sizes match; failure message includes the lists.
+   * @param message text for the assertion
+   * @param expected expected list
+   * @param actual actual list
+   * @param <T> type of list
+   */
+  private <T> void assertListSizeEqual(String message,
+      List<T> expected,
+      List<T> actual) {
+    String leftContents = expected.stream()
+        .map(n -> n.toString())
+        .collect(Collectors.joining("\n"));
+    String rightContents = actual.stream()
+        .map(n -> n.toString())
+        .collect(Collectors.joining("\n"));
+    String summary = "\nExpected:" + leftContents
+        + "\n-----------\nActual:" + rightContents;
+    assertEquals(message + summary, expected.size(), actual.size());
+  }
+
+  /**
+   * Retrying v2 list directly through the s3 client.
+   * @param fs filesystem
+   * @param key key to list under
+   * @param delimiter any delimiter
+   * @return the listing
    * @throws IOException on error
    */
+  @Retries.RetryRaw
   private ListObjectsV2Result listObjectsV2(S3AFileSystem fs,
       String key, String delimiter) throws IOException {
     ListObjectsV2Request k = fs.createListObjectsRequest(key, delimiter)

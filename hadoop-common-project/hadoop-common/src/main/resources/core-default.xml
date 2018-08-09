@@ -1033,7 +1033,19 @@
   <name>fs.s3a.assumed.role.sts.endpoint</name>
   <value/>
   <description>
-    AWS Simple Token Service Endpoint. If unset, uses the default endpoint.
+    AWS Security Token Service Endpoint.
+    If unset, uses the default endpoint.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+  <value>us-west-1</value>
+  <description>
+    AWS Security Token Service Endpoint's region;
+    Needed if fs.s3a.assumed.role.sts.endpoint points to an endpoint
+    other than the default one and the v4 signature is used.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
@@ -1058,7 +1070,9 @@
 <property>
   <name>fs.s3a.connection.ssl.enabled</name>
   <value>true</value>
-  <description>Enables or disables SSL connections to S3.</description>
+  <description>Enables or disables SSL connections to AWS services.
+    Also sets the default port to use for the s3a proxy settings,
+    when not explicitly set in fs.s3a.proxy.port.</description>
 </property>
 
 <property>

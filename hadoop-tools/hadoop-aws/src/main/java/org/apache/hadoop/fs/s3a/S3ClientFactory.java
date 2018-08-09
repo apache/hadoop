@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -37,9 +38,13 @@ public interface S3ClientFactory {
    * Creates a new {@link AmazonS3} client.
    *
    * @param name raw input S3A file system URI
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param credentialSet credentials to use
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI name) throws IOException;
+  AmazonS3 createS3Client(URI name,
+      final String bucket,
+      final AWSCredentialsProvider credentialSet) throws IOException;
 
 }

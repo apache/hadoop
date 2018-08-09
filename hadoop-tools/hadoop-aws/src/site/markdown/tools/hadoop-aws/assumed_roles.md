@@ -29,7 +29,7 @@ assumed roles for different buckets.
 *IAM Assumed Roles are unlikely to be supported by third-party systems
 supporting the S3 APIs.*
 
-## Using IAM Assumed Roles
+## <a name="using_assumed_roles"></a> Using IAM Assumed Roles
 
 ### Before You Begin
 
@@ -40,6 +40,8 @@ are, how to configure their policies, etc.
 * You need a pair of long-lived IAM User credentials, not the root account set.
 * Have the AWS CLI installed, and test that it works there.
 * Give the role access to S3, and, if using S3Guard, to DynamoDB.
+* For working with data encrypted with SSE-KMS, the role must
+have access to the appropriate KMS keys.
 
 Trying to learn how IAM Assumed Roles work by debugging stack traces from
 the S3A client is "suboptimal".
@@ -51,7 +53,7 @@ To use assumed roles, the client must be configured to use the
 in the configuration option `fs.s3a.aws.credentials.provider`.
 
 This AWS Credential provider will read in the `fs.s3a.assumed.role` options needed to connect to the
-Session Token Service [Assumed Role API](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html),
+Security Token Service [Assumed Role API](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html),
 first authenticating with the full credentials, then assuming the specific role
 specified. It will then refresh this login at the configured rate of
 `fs.s3a.assumed.role.session.duration`
@@ -69,7 +71,7 @@ which uses `fs.s3a.access.key` and `fs.s3a.secret.key`.
 Note: although you can list other AWS credential providers in  to the
 Assumed Role Credential Provider, it can only cause confusion.
 
-### <a name="using"></a> Using Assumed Roles
+### <a name="using"></a> Configuring Assumed Roles
 
 To use assumed roles, the S3A client credentials provider must be set to
 the `AssumedRoleCredentialProvider`, and `fs.s3a.assumed.role.arn` to
@@ -78,7 +80,6 @@ the previously created ARN.
 ```xml
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider</value>
   <value>org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider</value>
 </property>
 
@@ -159,7 +160,18 @@ Here are the full set of configuration options.
   <name>fs.s3a.assumed.role.sts.endpoint</name>
   <value/>
   <description>
-    AWS Simple Token Service Endpoint. If unset, uses the default endpoint.
+    AWS Security Token Service Endpoint. If unset, uses the default endpoint.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+  <value>us-west-1</value>
+  <description>
+    AWS Security Token Service Endpoint's region;
+    Needed if fs.s3a.assumed.role.sts.endpoint points to an endpoint
+    other than the default one and the v4 signature is used.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
@@ -194,39 +206,101 @@ These lists represent the minimum actions to which the client's principal
 must have in order to work with a bucket.
 
 
-### Read Access Permissions
+### <a name="read-permissions"></a> Read Access Permissions
 
 Permissions which must be granted when reading from a bucket:
 
 
-| Action | S3A operations |
-|--------|----------|
-| `s3:ListBucket` | `listStatus()`, `getFileStatus()` and elsewhere |
-| `s3:GetObject` | `getFileStatus()`, `open()` and elsewhere |
-| `s3:ListBucketMultipartUploads` |  Aborting/cleaning up S3A commit operations|
+```
+s3:Get*
+s3:ListBucket
+```
 
+When using S3Guard, the client needs the appropriate
+<a href="s3guard-permissions">DynamoDB access permissions</a>
 
-The `s3:ListBucketMultipartUploads` is only needed when committing work
-via the [S3A committers](committers.html).
-However, it must be granted to the root path in order to safely clean up jobs.
-It is simplest to permit this in all buckets, even if it is only actually
-needed when writing data.
+To use SSE-KMS encryption, the client needs the
+<a href="sse-kms-permissions">SSE-KMS Permissions</a> to access the
+KMS key(s).
 
+### <a name="write-permissions"></a> Write Access Permissions
 
-### Write Access Permissions
+These permissions must all be granted for write access:
 
-These permissions must *also* be granted for write access:
+```
+s3:Get*
+s3:Delete*
+s3:Put*
+s3:ListBucket
+s3:ListBucketMultipartUploads
+s3:AbortMultipartUpload
+```
 
+### <a name="sse-kms-permissions"></a> SSE-KMS Permissions
 
-| Action | S3A operations |
-|--------|----------|
-| `s3:PutObject` | `mkdir()`, `create()`, `rename()`, `delete()` |
-| `s3:DeleteObject` | `mkdir()`, `create()`, `rename()`, `delete()` |
-| `s3:AbortMultipartUpload` | S3A committer `abortJob()` and `cleanup()` operations |
-| `s3:ListMultipartUploadParts` | S3A committer `abortJob()` and `cleanup()` operations |
+When to read data encrypted using SSE-KMS, the client must have
+ `kms:Decrypt` permission for the specific key a file was encrypted with.
 
+```
+kms:Decrypt
+```
 
-### Mixed Permissions in a single S3 Bucket
+To write data using SSE-KMS, the client must have all the following permissions.
+
+```
+kms:Decrypt
+kms:GenerateDataKey
+```
+
+This includes renaming: renamed files are encrypted with the encryption key
+of the current S3A client; it must decrypt the source file first.
+
+If the caller doesn't have these permissions, the operation will fail with an
+`AccessDeniedException`: the S3 Store does not provide the specifics of
+the cause of the failure.
+
+### <a name="s3guard-permissions"></a> S3Guard Permissions
+
+To use S3Guard, all clients must have a subset of the
+[AWS DynamoDB Permissions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/api-permissions-reference.html).
+
+To work with buckets protected with S3Guard, the client must have
+all the following rights on the DynamoDB Table used to protect that bucket.
+
+```
+dynamodb:BatchGetItem
+dynamodb:BatchWriteItem
+dynamodb:DeleteItem
+dynamodb:DescribeTable
+dynamodb:GetItem
+dynamodb:PutItem
+dynamodb:Query
+dynamodb:UpdateItem
+```
+
+This is true, *even if the client only has read access to the data*.
+
+For the `hadoop s3guard` table management commands, _extra_ permissions are required:
+
+```
+dynamodb:CreateTable
+dynamodb:DescribeLimits
+dynamodb:DeleteTable
+dynamodb:Scan
+dynamodb:TagResource
+dynamodb:UntagResource
+dynamodb:UpdateTable
+```
+
+Without these permissions, tables cannot be created, destroyed or have their IO capacity
+changed through the `s3guard set-capacity` call.
+The `dynamodb:Scan` permission is needed for `s3guard prune`
+
+The `dynamodb:CreateTable` permission is needed by a client it tries to
+create the DynamoDB table on startup, that is
+`fs.s3a.s3guard.ddb.table.create` is `true` and the table does not already exist.
+
+### <a name="mixed-permissions"></a> Mixed Permissions in a single S3 Bucket
 
 Mixing permissions down the "directory tree" is limited
 only to the extent of supporting writeable directories under
@@ -274,7 +348,7 @@ This example has the base bucket read only, and a directory underneath,
     "Action" : [
       "s3:ListBucket",
       "s3:ListBucketMultipartUploads",
-      "s3:GetObject"
+      "s3:Get*"
       ],
     "Resource" : "arn:aws:s3:::example-bucket/*"
   }, {
@@ -320,7 +394,7 @@ the command line before trying to use the S3A client.
 `hadoop fs -mkdirs -p s3a://bucket/path/p1/`
 
 
-### <a name="no_role"></a>IOException: "Unset property fs.s3a.assumed.role.arn"
+### <a name="no_role"></a> IOException: "Unset property fs.s3a.assumed.role.arn"
 
 The Assumed Role Credential Provider is enabled, but `fs.s3a.assumed.role.arn` is unset.
 
@@ -339,7 +413,7 @@ java.io.IOException: Unset property fs.s3a.assumed.role.arn
   at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
 ```
 
-### <a name="not_authorized_for_assumed_role"></a>"Not authorized to perform sts:AssumeRole"
+### <a name="not_authorized_for_assumed_role"></a> "Not authorized to perform sts:AssumeRole"
 
 This can arise if the role ARN set in `fs.s3a.assumed.role.arn` is invalid
 or one to which the caller has no access.
@@ -399,7 +473,8 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
 The value of `fs.s3a.assumed.role.session.duration` is out of range.
 
 ```
-java.lang.IllegalArgumentException: Assume Role session duration should be in the range of 15min - 1Hr
+java.lang.IllegalArgumentException: Assume Role session duration should be in the range of 15min
+- 1Hr
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider$Builder.withRoleSessionDurationSeconds(STSAssumeRoleSessionCredentialsProvider.java:437)
   at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:86)
 ```
@@ -603,7 +678,7 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
 
 ### <a name="invalid_token"></a> `AccessDeniedException/InvalidClientTokenId`: "The security token included in the request is invalid"
 
-The credentials used to authenticate with the AWS Simple Token Service are invalid.
+The credentials used to authenticate with the AWS Security Token Service are invalid.
 
 ```
 [ERROR] Failures:
@@ -682,26 +757,7 @@ org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.f
   at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3354)
   at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:474)
   at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
-  at org.apache.hadoop.fs.s3a.ITestAssumeRole.lambda$expectFileSystemFailure$0(ITestAssumeRole.java:70)
-  at org.apache.hadoop.fs.s3a.ITestAssumeRole.lambda$interceptC$1(ITestAssumeRole.java:84)
-  at org.apache.hadoop.test.LambdaTestUtils.intercept(LambdaTestUtils.java:491)
-  at org.apache.hadoop.test.LambdaTestUtils.intercept(LambdaTestUtils.java:377)
-  at org.apache.hadoop.test.LambdaTestUtils.intercept(LambdaTestUtils.java:446)
-  at org.apache.hadoop.fs.s3a.ITestAssumeRole.interceptC(ITestAssumeRole.java:82)
-  at org.apache.hadoop.fs.s3a.ITestAssumeRole.expectFileSystemFailure(ITestAssumeRole.java:68)
-  at org.apache.hadoop.fs.s3a.ITestAssumeRole.testAssumeRoleBadSession(ITestAssumeRole.java:216)
-  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
-  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-  at java.lang.reflect.Method.invoke(Method.java:498)
-  at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
-  at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
-  at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
-  at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
-  at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
-  at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
-  at org.junit.rules.TestWatcher$1.evaluate(TestWatcher.java:55)
-  at org.junit.internal.runners.statements.FailOnTimeout$StatementThread.run(FailOnTimeout.java:74)
+
 Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
     1 validation error detected: Value 'Session Names cannot Hava Spaces!' at 'roleSessionName'
     failed to satisfy constraint:
@@ -742,10 +798,11 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
 ### <a name="access_denied"></a> `java.nio.file.AccessDeniedException` within a FileSystem API call
 
 If an operation fails with an `AccessDeniedException`, then the role does not have
-the permission for the S3 Operation invoked during the call
+the permission for the S3 Operation invoked during the call.
 
 ```
-java.nio.file.AccessDeniedException: s3a://bucket/readonlyDir: rename(s3a://bucket/readonlyDir, s3a://bucket/renameDest)
+java.nio.file.AccessDeniedException: s3a://bucket/readonlyDir:
+  rename(s3a://bucket/readonlyDir, s3a://bucket/renameDest)
  on s3a://bucket/readonlyDir:
   com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
   (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 2805F2ABF5246BB1;
@@ -795,3 +852,33 @@ check the path for the operation.
 Make sure that all the read and write permissions are allowed for any bucket/path
 to which data is being written to, and read permissions for all
 buckets read from.
+
+If the bucket is using SSE-KMS to encrypt data:
+
+1. The caller must have the `kms:Decrypt` permission to read the data.
+1. The caller needs `kms:Decrypt` and `kms:GenerateDataKey`.
+
+Without permissions, the request fails *and there is no explicit message indicating
+that this is an encryption-key issue*.
+
+### <a name="dynamodb_exception"></a> `AccessDeniedException` + `AmazonDynamoDBException`
+
+```
+java.nio.file.AccessDeniedException: bucket1:
+  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
+  User: arn:aws:sts::980678866538:assumed-role/s3guard-test-role/test is not authorized to perform:
+  dynamodb:DescribeTable on resource: arn:aws:dynamodb:us-west-1:980678866538:table/bucket1
+   (Service: AmazonDynamoDBv2; Status Code: 400;
+```
+
+The caller is trying to access an S3 bucket which uses S3Guard, but the caller
+lacks the relevant DynamoDB access permissions.
+
+The `dynamodb:DescribeTable` operation is the first one used in S3Guard to access,
+the DynamoDB table, so it is often the first to fail. It can be a sign
+that the role has no permissions at all to access the table named in the exception,
+or just that this specific permission has been omitted.
+
+If the role policy requested for the assumed role didn't ask for any DynamoDB
+permissions, this is where all attempts to work with a S3Guarded bucket will
+fail. Check the value of `fs.s3a.assumed.role.policy`

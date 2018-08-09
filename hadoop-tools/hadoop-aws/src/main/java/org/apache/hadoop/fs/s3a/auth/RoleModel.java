@@ -205,6 +205,14 @@ public class RoleModel {
     return new Policy(statements);
   }
 
+  /**
+   * From a set of statements, create a policy.
+   * @param statements statements
+   * @return the policy
+   */
+  public static Policy policy(final List<RoleModel.Statement> statements) {
+    return new Policy(statements);
+  }
 
   /**
    * Effect options.

@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.util.StopWatch;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,6 +52,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
@@ -144,8 +146,11 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
     // Also create a "raw" fs without any MetadataStore configured
     Configuration conf = new Configuration(getConfiguration());
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     URI fsUri = getFileSystem().getUri();
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+    S3AUtils.setBucketOption(conf,fsUri.getHost(),
+        METADATASTORE_AUTHORITATIVE,
+        S3GUARD_METASTORE_NULL);
     rawFs = (S3AFileSystem) FileSystem.newInstance(fsUri, conf);
   }
 

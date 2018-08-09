@@ -36,14 +36,6 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -60,6 +52,9 @@ import org.junit.rules.TemporaryFolder;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
+import static org.junit.Assert.*;
 
 /**
  * S3A tests for configuration.
@@ -134,12 +129,26 @@ public class ITestS3AConfiguration {
     conf.setInt(Constants.PROXY_PORT, 1);
     String proxy =
         conf.get(Constants.PROXY_HOST) + ":" + conf.get(Constants.PROXY_PORT);
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a connection error for proxy server at " + proxy);
-    } catch (AWSClientIOException e) {
-      // expected
-    }
+    expectFSCreateFailure(AWSClientIOException.class,
+        conf, "when using proxy " + proxy);
+  }
+
+  /**
+   * Expect a filesystem to not be created from a configuration
+   * @return the exception intercepted
+   * @throws Exception any other exception
+   */
+  private <E extends Throwable> E expectFSCreateFailure(
+      Class<E> clazz,
+      Configuration conf,
+      String text)
+      throws Exception {
+
+    return intercept(clazz,
+        () -> {
+          fs = S3ATestUtils.createTestFileSystem(conf);
+          return "expected failure creating FS " + text + " got " + fs;
+        });
   }
 
   @Test
@@ -148,15 +157,13 @@ public class ITestS3AConfiguration {
     conf.unset(Constants.PROXY_HOST);
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.setInt(Constants.PROXY_PORT, 1);
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a proxy configuration error");
-    } catch (IllegalArgumentException e) {
-      String msg = e.toString();
-      if (!msg.contains(Constants.PROXY_HOST) &&
-          !msg.contains(Constants.PROXY_PORT)) {
-        throw e;
-      }
+    IllegalArgumentException e = expectFSCreateFailure(
+        IllegalArgumentException.class,
+        conf, "Expected a connection error for proxy server");
+    String msg = e.toString();
+    if (!msg.contains(Constants.PROXY_HOST) &&
+        !msg.contains(Constants.PROXY_PORT)) {
+      throw e;
     }
   }
 
@@ -167,19 +174,11 @@ public class ITestS3AConfiguration {
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.set(Constants.SECURE_CONNECTIONS, "true");
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a connection error for proxy server");
-    } catch (AWSClientIOException e) {
-      // expected
-    }
+    expectFSCreateFailure(AWSClientIOException.class,
+        conf, "Expected a connection error for proxy server");
     conf.set(Constants.SECURE_CONNECTIONS, "false");
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a connection error for proxy server");
-    } catch (AWSClientIOException e) {
-      // expected
-    }
+    expectFSCreateFailure(AWSClientIOException.class,
+        conf, "Expected a connection error for proxy server");
   }
 
   @Test
@@ -189,31 +188,31 @@ public class ITestS3AConfiguration {
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
     conf.set(Constants.PROXY_USERNAME, "user");
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a connection error for proxy server");
-    } catch (IllegalArgumentException e) {
-      String msg = e.toString();
-      if (!msg.contains(Constants.PROXY_USERNAME) &&
-          !msg.contains(Constants.PROXY_PASSWORD)) {
-        throw e;
-      }
+    IllegalArgumentException e = expectFSCreateFailure(
+        IllegalArgumentException.class,
+        conf, "Expected a connection error for proxy server");
+    assertIsProxyUsernameError(e);
+  }
+
+  private void assertIsProxyUsernameError(final IllegalArgumentException e) {
+    String msg = e.toString();
+    if (!msg.contains(Constants.PROXY_USERNAME) &&
+        !msg.contains(Constants.PROXY_PASSWORD)) {
+      throw e;
     }
+  }
+
+  @Test
+  public void testUsernameInconsistentWithPassword2() throws Exception {
     conf = new Configuration();
     conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.setInt(Constants.PROXY_PORT, 1);
     conf.set(Constants.PROXY_PASSWORD, "password");
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      fail("Expected a connection error for proxy server");
-    } catch (IllegalArgumentException e) {
-      String msg = e.toString();
-      if (!msg.contains(Constants.PROXY_USERNAME) &&
-          !msg.contains(Constants.PROXY_PASSWORD)) {
-        throw e;
-      }
-    }
+    IllegalArgumentException e = expectFSCreateFailure(
+        IllegalArgumentException.class,
+        conf, "Expected a connection error for proxy server");
+    assertIsProxyUsernameError(e);
   }
 
   @Test
@@ -393,7 +392,7 @@ public class ITestS3AConfiguration {
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-      assertEquals(e.getStatusCode(), HttpStatus.SC_MOVED_PERMANENTLY);
+      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
     }
   }
 
@@ -428,8 +427,16 @@ public class ITestS3AConfiguration {
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
+    AWSCredentialProviderList credentials =
+        fs.shareCredentials("testCloseIdempotent");
+    credentials.close();
     fs.close();
+    assertTrue("Closing FS didn't close credentials " + credentials,
+        credentials.isClosed());
+    assertEquals("refcount not zero in " + credentials, 0, credentials.getRefCount());
     fs.close();
+    // and the numbers should not change
+    assertEquals("refcount not zero in " + credentials, 0, credentials.getRefCount());
   }
 
   @Test

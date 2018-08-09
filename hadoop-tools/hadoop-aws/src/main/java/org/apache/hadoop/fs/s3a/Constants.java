@@ -84,10 +84,27 @@ public final class Constants {
   public static final String ASSUMED_ROLE_SESSION_DURATION =
       "fs.s3a.assumed.role.session.duration";
 
-  /** Simple Token Service Endpoint. If unset, uses the default endpoint. */
+  /** Security Token Service Endpoint. If unset, uses the default endpoint. */
   public static final String ASSUMED_ROLE_STS_ENDPOINT =
       "fs.s3a.assumed.role.sts.endpoint";
 
+  /**
+   * Region for the STS endpoint; only relevant if the endpoint
+   * is set.
+   */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION =
+      "fs.s3a.assumed.role.sts.endpoint.region";
+
+  /**
+   * Default value for the STS endpoint region; needed for
+   * v4 signing.
+   */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT =
+      "us-west-1";
+
+  /**
+   * Default duration of an assumed role.
+   */
   public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "30m";
 
   /** list of providers to authenticate for the assumed role. */
