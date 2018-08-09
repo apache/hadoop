@@ -312,7 +312,7 @@ tr.even { background: rgba(0, 0, 255, 0.05); }
  * Sorting classes for columns
  */
 tr.odd td.sorting_1 { background: rgba(0, 0, 0, 0.03); }
-tr.odd td.sorting_2 { background: rgba(0, 0, 0, 0.02); } 
+tr.odd td.sorting_2 { background: rgba(0, 0, 0, 0.02); }
 tr.odd td.sorting_3 { background: rgba(0, 0, 0, 0.02); }
 tr.even td.sorting_1 { background: rgba(0, 0, 0, 0.08); }
 tr.even td.sorting_2 { background: rgba(0, 0, 0, 0.06); }
