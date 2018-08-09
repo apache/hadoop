@@ -23,6 +23,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,7 +156,14 @@ public class ContainersLauncher extends AbstractService
       case CLEANUP_CONTAINER_FOR_REINIT:
         ContainerLaunch launcher = running.remove(containerId);
         if (launcher == null) {
-          // Container not launched. So nothing needs to be done.
+          // Container not launched.
+          // triggering KILLING to CONTAINER_CLEANEDUP_AFTER_KILL transition.
+          dispatcher.getEventHandler().handle(
+              new ContainerExitEvent(containerId,
+                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+                  Shell.WINDOWS ? ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode() :
+                  ContainerExecutor.ExitCode.TERMINATED.getExitCode(),
+                  "Container terminated before launch."));
           return;
         }
 
