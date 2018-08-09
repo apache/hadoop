@@ -63,4 +63,9 @@ public class AutoCreatedLeafQueueConfig {
   public CapacitySchedulerConfiguration getLeafQueueConfigs() {
     return leafQueueConfigs;
   }
+
+  @Override public String toString() {
+    return "AutoCreatedLeafQueueConfig{" + "queueCapacities=" + queueCapacities
+        + ", leafQueueConfigs=" + leafQueueConfigs + '}';
+  }
 }
