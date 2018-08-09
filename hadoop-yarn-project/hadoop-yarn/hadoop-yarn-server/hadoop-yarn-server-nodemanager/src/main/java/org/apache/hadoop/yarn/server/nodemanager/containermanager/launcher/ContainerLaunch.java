@@ -469,14 +469,10 @@ public class ContainerLaunch implements Callable<Integer> {
         || exitCode == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
-
-      // If Container was killed before starting... NO need to do this.
-      if (!killedBeforeStart) {
-        dispatcher.getEventHandler().handle(
-            new ContainerExitEvent(containerId,
-                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
-                diagnosticInfo.toString()));
-      }
+      dispatcher.getEventHandler().handle(
+          new ContainerExitEvent(containerId,
+              ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
+              diagnosticInfo.toString()));
     } else if (exitCode != 0) {
       handleContainerExitWithFailure(containerId, exitCode, containerLogDir,
           diagnosticInfo);
