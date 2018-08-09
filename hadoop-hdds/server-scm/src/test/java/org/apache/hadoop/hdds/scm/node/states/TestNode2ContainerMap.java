@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Test classes for Node2ContainerMap.
  */
-public class Node2ContainerMapTest {
+public class TestNode2ContainerMap {
   private final static int DATANODE_COUNT = 300;
   private final static int CONTAINER_COUNT = 1000;
   private final Map<UUID, TreeSet<ContainerID>> testData = new
@@ -120,6 +120,26 @@ public class Node2ContainerMapTest {
   }
 
   @Test
+  public void testUpdateDatanodeMap() throws SCMException {
+    UUID datanodeId = getFirstKey();
+    Set<ContainerID> values = testData.get(datanodeId);
+    Node2ContainerMap map = new Node2ContainerMap();
+    map.insertNewDatanode(datanodeId, values);
+    Assert.assertTrue(map.isKnownDatanode(datanodeId));
+    Assert.assertEquals(CONTAINER_COUNT, map.getContainers(datanodeId).size());
+
+    //remove one container
+    values.remove(values.iterator().next());
+    Assert.assertEquals(CONTAINER_COUNT - 1, values.size());
+    Assert.assertEquals(CONTAINER_COUNT, map.getContainers(datanodeId).size());
+
+    map.setContainersForDatanode(datanodeId, values);
+
+    Assert.assertEquals(values.size(), map.getContainers(datanodeId).size());
+    Assert.assertEquals(values, map.getContainers(datanodeId));
+  }
+
+  @Test
   public void testProcessReportInsertAll() throws SCMException {
     Node2ContainerMap map = new Node2ContainerMap();
 
@@ -183,7 +203,7 @@ public class Node2ContainerMapTest {
 
     final int newCount = 100;
     // This is not a mistake, the treeset seems to be reverse sorted.
-    ContainerID last = values.pollFirst();
+    ContainerID last = values.first();
     TreeSet<ContainerID> addedContainers = new TreeSet<>();
     for (int x = 1; x <= newCount; x++) {
       long cTemp = last.getId() + x;
@@ -224,7 +244,7 @@ public class Node2ContainerMapTest {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.pollLast();
+    ContainerID first = values.last();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.
@@ -270,7 +290,7 @@ public class Node2ContainerMapTest {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.pollLast();
+    ContainerID first = values.last();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.

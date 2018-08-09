@@ -174,6 +174,15 @@ public final class SCMEvents {
       new TypedEvent<>(ReplicationCompleted.class);
 
   /**
+   * Signal for all the components (but especially for the replication
+   * manager and container report handler) that the replication could be
+   * started. Should be send only if (almost) all the container state are
+   * available from the datanodes.
+   */
+  public static final TypedEvent<Boolean> START_REPLICATION =
+      new TypedEvent<>(Boolean.class);
+
+  /**
    * Private Ctor. Never Constructed.
    */
   private SCMEvents() {

@@ -29,16 +29,22 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 public class ReplicationRequest implements Comparable<ReplicationRequest>,
     Serializable {
   private final long containerId;
-  private final short replicationCount;
-  private final short expecReplicationCount;
+  private final int replicationCount;
+  private final int expecReplicationCount;
   private final long timestamp;
 
-  public ReplicationRequest(long containerId, short replicationCount,
-      long timestamp, short expecReplicationCount) {
+  public ReplicationRequest(long containerId, int replicationCount,
+      long timestamp, int expecReplicationCount) {
     this.containerId = containerId;
     this.replicationCount = replicationCount;
     this.timestamp = timestamp;
     this.expecReplicationCount = expecReplicationCount;
+  }
+
+  public ReplicationRequest(long containerId, int replicationCount,
+      int expecReplicationCount) {
+    this(containerId, replicationCount, System.currentTimeMillis(),
+        expecReplicationCount);
   }
 
   /**
@@ -93,7 +99,7 @@ public class ReplicationRequest implements Comparable<ReplicationRequest>,
     return containerId;
   }
 
-  public short getReplicationCount() {
+  public int getReplicationCount() {
     return replicationCount;
   }
 
@@ -101,7 +107,17 @@ public class ReplicationRequest implements Comparable<ReplicationRequest>,
     return timestamp;
   }
 
-  public short getExpecReplicationCount() {
+  public int getExpecReplicationCount() {
     return expecReplicationCount;
+  }
+
+  @Override
+  public String toString() {
+    return "ReplicationRequest{" +
+        "containerId=" + containerId +
+        ", replicationCount=" + replicationCount +
+        ", expecReplicationCount=" + expecReplicationCount +
+        ", timestamp=" + timestamp +
+        '}';
   }
 }

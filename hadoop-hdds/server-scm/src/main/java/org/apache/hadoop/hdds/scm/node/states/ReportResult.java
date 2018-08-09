@@ -21,10 +21,13 @@ package org.apache.hadoop.hdds.scm.node.states;
 
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 
+import java.util.Collections;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
+
 /**
- * A Container Report gets processsed by the Node2Container and returns the
+ * A Container Report gets processsed by the Node2Container and returns
  * Report Result class.
  */
 public class ReportResult {
@@ -36,6 +39,8 @@ public class ReportResult {
       Set<ContainerID> missingContainers,
       Set<ContainerID> newContainers) {
     this.status = status;
+    Preconditions.checkNotNull(missingContainers);
+    Preconditions.checkNotNull(newContainers);
     this.missingContainers = missingContainers;
     this.newContainers = newContainers;
   }
@@ -80,7 +85,16 @@ public class ReportResult {
     }
 
     ReportResult build() {
-      return new ReportResult(status, missingContainers, newContainers);
+
+      Set<ContainerID> nullSafeMissingContainers = this.missingContainers;
+      Set<ContainerID> nullSafeNewContainers = this.newContainers;
+      if (nullSafeNewContainers == null) {
+        nullSafeNewContainers = Collections.emptySet();
+      }
+      if (nullSafeMissingContainers == null) {
+        nullSafeMissingContainers = Collections.emptySet();
+      }
+      return new ReportResult(status, nullSafeMissingContainers, nullSafeNewContainers);
     }
   }
 }
