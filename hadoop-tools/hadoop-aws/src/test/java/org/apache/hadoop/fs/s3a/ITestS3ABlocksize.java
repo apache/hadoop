@@ -82,14 +82,4 @@ public class ITestS3ABlocksize extends AbstractS3ATestBase {
         status.getBlockSize() >= 0);
   }
 
-  @Test
-  public void testVerifyBucketExists() {
-    S3AFileSystem fs = getFileSystem();
-    try {
-      fs.verifyBucketExists();
-    } catch (IOException e) {
-      fail(e.getMessage());
-    }
-  }
-
 }
