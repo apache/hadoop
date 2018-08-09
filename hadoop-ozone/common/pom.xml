@@ -29,8 +29,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>jar</packaging>
 
   <properties>
+    <ozone.version>0.2.1-SNAPSHOT</ozone.version>
+    <ozone.release>Acadia</ozone.release>
     <hadoop.component>ozone</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <declared.ozone.version>${ozone.version}</declared.ozone.version>
   </properties>
 
   <dependencies>
@@ -38,11 +41,43 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <excludes>
+          <exclude>ozone-version-info.properties</exclude>
+        </excludes>
+        <filtering>false</filtering>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <includes>
+          <include>ozone-version-info.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
+          <execution>
+            <id>version-info</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>version-info</goal>
+            </goals>
+            <configuration>
+              <source>
+                <directory>${basedir}/../</directory>
+                <includes>
+                  <include>*/src/main/java/**/*.java</include>
+                  <include>*/src/main/proto/*.proto</include>
+                </includes>
+              </source>
+            </configuration>
+          </execution>
           <execution>
             <id>compile-protoc</id>
             <goals>

@@ -117,7 +117,7 @@ function ozonecmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
     ;;
     version)
-      HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.util.OzoneVersionInfo
     ;;
     genconf)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.genconf.GenerateOzoneRequiredConfigurations
