@@ -115,6 +115,11 @@ public class AllocationTagsManager {
 
     private void removeTagFromInnerMap(Map<String, Long> innerMap, String tag) {
       Long count = innerMap.get(tag);
+      if (count == null) {
+        LOG.warn("Trying to remove tags, however the tag " + tag
+            + " no longer exists on this node/rack.");
+        return;
+      }
       if (count > 1) {
         innerMap.put(tag, count - 1);
       } else {

@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -38,6 +39,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -58,6 +60,41 @@ public class TestAllocationTagsManager {
       rm.getRMContext().getRMNodes().putIfAbsent(rmNode.getNodeID(), rmNode);
     }
     rmContext = rm.getRMContext();
+  }
+
+  @Test
+  public void testMultipleAddRemoveContainer() {
+    AllocationTagsManager atm = new AllocationTagsManager(rmContext);
+
+    NodeId nodeId = NodeId.fromString("host1:123");
+    ContainerId cid1 = TestUtils.getMockContainerId(1, 1);
+    ContainerId cid2 = TestUtils.getMockContainerId(1, 2);
+    ContainerId cid3 = TestUtils.getMockContainerId(1, 3);
+    Set<String> tags1 = ImmutableSet.of("mapper", "reducer");
+    Set<String> tags2 = ImmutableSet.of("mapper");
+    Set<String> tags3 = ImmutableSet.of("zk");
+
+    // node - mapper : 2
+    //      - reduce : 1
+    atm.addContainer(nodeId, cid1, tags1);
+    atm.addContainer(nodeId, cid2, tags2);
+    atm.addContainer(nodeId, cid3, tags3);
+    Assert.assertEquals(2L,
+        (long) atm.getAllocationTagsWithCount(nodeId).get("mapper"));
+    Assert.assertEquals(1L,
+        (long) atm.getAllocationTagsWithCount(nodeId).get("reducer"));
+
+    // remove container1
+    atm.removeContainer(nodeId, cid1, tags1);
+    Assert.assertEquals(1L,
+        (long) atm.getAllocationTagsWithCount(nodeId).get("mapper"));
+    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
+
+    // remove the same container again, the reducer no longer exists,
+    // make sure there is no NPE here
+    atm.removeContainer(nodeId, cid1, tags1);
+    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("mapper"));
+    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
   }
 
   @Test
