@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +40,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -86,8 +89,9 @@ public class TestResourceManager {
   }
 
   @Test
-  public void testResourceAllocation() throws IOException,
-      YarnException, InterruptedException {
+  public void testResourceAllocation()
+      throws IOException, YarnException, InterruptedException,
+      TimeoutException {
     LOG.info("--- START: testResourceAllocation ---");
         
     final int memory = 4 * 1024;
@@ -104,6 +108,14 @@ public class TestResourceManager {
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
       registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
           Resources.createResource(memory/2, vcores/2));
+
+    // nodes should be in RUNNING state
+    RMNodeImpl node1 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
+        nm1.getNodeId());
+    RMNodeImpl node2 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
+        nm2.getNodeId());
+    node1.handle(new RMNodeStartedEvent(nm1.getNodeId(), null, null));
+    node2.handle(new RMNodeStartedEvent(nm2.getNodeId(), null, null));
 
     // Submit an application
     Application application = new Application("user1", resourceManager);
