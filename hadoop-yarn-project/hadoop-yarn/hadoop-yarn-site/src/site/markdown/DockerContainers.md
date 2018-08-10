@@ -296,7 +296,8 @@ owner as the container user.  If the application owner is not a valid user
 in the Docker image, the application will fail. The container user is specified
 by the user's UID. If the user's UID is different between the NodeManager host
 and the Docker image, the container may be launched as the wrong user or may
-fail to launch because the UID does not exist.
+fail to launch because the UID does not exist.  See
+[User Management in Docker Container](#user-management) section for more details.
 
 Second, the Docker image must have whatever is expected by the application
 in order to execute.  In the case of Hadoop (MapReduce or Spark), the Docker
@@ -411,6 +412,197 @@ environment variable can then be set to request this mount. In this example,
 the environment variable would be set to "/sys/fs/cgroup:/sys/fs/cgroup:ro".
 The destination path is not restricted, "/sys/fs/cgroup:/cgroup:ro" would also
 be valid given the example admin whitelist.
+
+<a href="#user-management"></a>User Management in Docker Container
+-----------------------------------
+
+YARN's Docker container support launches container processes using the uid:gid
+identity of the user, as defined on the NodeManager host. User and group name
+mismatches between the NodeManager host and container can lead to permission
+issues, failed container launches, or even security holes. Centralizing user and
+group management for both hosts and containers greatly reduces these risks. When
+running containerized applications on YARN, it is necessary to understand which
+uid:gid pair will be used to launch the container's process.
+
+As an example of what is meant by uid:gid pair, consider the following. By
+default, in non-secure mode, YARN will launch processes as the user `nobody`
+(see the table at the bottom of
+[Using CGroups with YARN](./NodeManagerCgroups.html) for how the run as user is
+determined in non-secure mode). On CentOS based systems, the `nobody` user's uid
+is `99` and the `nobody` group is `99`. As a result, YARN will call `docker run`
+with `--user 99:99`. If the `nobody` user does not have the uid `99` in the
+container, the launch may fail or have unexpected results.
+
+One exception to this rule is the use of Privileged Docker containers.
+Privileged containers will not set the uid:gid pair when launching the container
+and will honor the USER or GROUP entries in the Dockerfile. This allows running
+privileged containers as any user which has security implications. Please
+understand these implications before enabling Privileged Docker containers.
+
+There are many ways to address user and group management. Docker, by default,
+will authenticate users against `/etc/passwd` (and `/etc/shadow`) within the
+container. Using the default `/etc/passwd` supplied in the Docker image is
+unlikely to contain the appropriate user entries and will result in launch
+failures. It is highly recommended to centralize user and group management.
+Several approaches to user and group management are outlined below.
+
+### Static user management
+
+The most basic approach to managing user and groups is to modify the user and
+group within the Docker image. This approach is only viable in non-secure mode
+where all container processes will be launched as a single known user, for
+instance `nobody`. In this case, the only requirement is that the uid:gid pair
+of the nobody user and group must match between the host and container. On a
+CentOS based system, this means that the nobody user in the container needs the
+UID `99` and the nobody group in the container needs GID `99`.
+
+One approach to change the UID and GID is by leveraging `usermod` and
+`groupmod`. The following sets the correct UID and GID for the nobody
+user/group.
+```
+usermod -u 99 nobody
+groupmod -g 99 nobody
+```
+
+This approach is not recommended beyond testing given the inflexibility to add
+users.
+
+### Bind mounting
+
+When organizations already have automation in place to create local users on
+each system, it may be appropriate to bind mount /etc/passwd and /etc/group
+into the container as an alternative to modifying the container image directly.
+To enable the ability to bind mount /etc/passwd and /etc/group, update
+`docker.allowed.ro-mounts` in `container-executor.cfg` to include those paths.
+When submitting the application, `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` will
+need to include `/etc/passwd:/etc/passwd:ro` and `/etc/group:/etc/group:ro`.
+
+There are several challenges with this bind mount approach that need to be
+considered.
+
+1. Any users and groups defined in the image will be overwritten by the host's users and groups
+2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutible in the container. Do not mount these read-write as it can render the host inoperable.
+
+This approach is not recommended beyond testing given the inflexibility to
+modify running containers.
+
+### SSSD
+
+An alternative approach that allows for centrally managing users and groups is
+SSSD. System Security Services Daemon (SSSD) provides access to different
+identity and authentication providers, such as LDAP or Active Directory.
+
+The traditional schema for Linux authentication is as follows:
+```
+application -> libpam -> pam_authenticate -> pam_unix.so -> /etc/passwd
+```
+
+If we use SSSD for user lookup, it becomes:
+```
+application -> libpam -> pam_authenticate -> pam_sss.so -> SSSD -> pam_unix.so -> /etc/passwd
+```
+
+We can bind-mount the UNIX sockets SSSD communicates over into the container.
+This will allow the SSSD client side libraries to authenticate against the SSSD
+running on the host. As a result, user information does not need to exist in
+/etc/passwd of the docker image and will instead be serviced by SSSD.
+
+Step by step configuration for host and container:
+
+1. Host config
+
+   - Install packages
+     ```
+     # yum -y install sssd-common sssd-proxy
+     ```
+   - create a PAM service for the container.
+     ```
+     # cat /etc/pam.d/sss_proxy
+     auth required pam_unix.so
+     account required pam_unix.so
+     password required pam_unix.so
+     session required pam_unix.so
+     ```
+   - create SSSD config file, /etc/sssd/sssd.conf
+     Please note that the permissions must be 0600 and the file must be owned by root:root.
+     ```
+     # cat /etc/sssd/sssd/conf
+     [sssd]
+     services = nss,pam
+     config_file_version = 2
+     domains = proxy
+     [nss]
+     [pam]
+     [domain/proxy]
+     id_provider = proxy
+     proxy_lib_name = files
+     proxy_pam_target = sss_proxy
+     ```
+   - start sssd
+     ```
+     # systemctl start sssd
+     ```
+   - verify a user can be retrieved with sssd
+     ```
+     # getent passwd -s sss localuser
+     ```
+
+2. Container setup
+
+   It's important to bind-mount the /var/lib/sss/pipes directory from the host to the container since SSSD UNIX sockets are located there.
+   ```
+   -v /var/lib/sss/pipes:/var/lib/sss/pipes:rw
+   ```
+
+3. Container config
+
+   All the steps below should be executed on the container itself.
+
+   - Install only the sss client libraries
+     ```
+     # yum -y install sssd-client
+     ```
+
+   - make sure sss is configured for passwd and group databases in
+     ```
+     /etc/nsswitch.conf
+     ```
+
+   - configure the PAM service that the application uses to call into SSSD
+     ```
+     # cat /etc/pam.d/system-auth
+     #%PAM-1.0
+     # This file is auto-generated.
+     # User changes will be destroyed the next time authconfig is run.
+     auth        required      pam_env.so
+     auth        sufficient    pam_unix.so try_first_pass nullok
+     auth        sufficient    pam_sss.so forward_pass
+     auth        required      pam_deny.so
+
+     account     required      pam_unix.so
+     account     [default=bad success=ok user_unknown=ignore] pam_sss.so
+     account     required      pam_permit.so
+
+     password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
+     password    sufficient    pam_unix.so try_first_pass use_authtok nullok sha512 shadow
+     password    sufficient    pam_sss.so use_authtok
+     password    required      pam_deny.so
+
+     session     optional      pam_keyinit.so revoke
+     session     required      pam_limits.so
+     -session     optional      pam_systemd.so
+     session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+     session     required      pam_unix.so
+     session     optional      pam_sss.so
+     ```
+
+   - Save the docker image and use the docker image as base image for your applications.
+
+   - test the docker image launched in YARN environment.
+     ```
+     $ id
+     uid=5000(localuser) gid=5000(localuser) groups=5000(localuser),1337(hadoop)
+     ```
 
 Privileged Container Security Consideration
 -------------------------------------------
