@@ -1788,7 +1788,6 @@ public class NameNode extends ReconfigurableBase implements
 
   synchronized HAServiceStatus getServiceStatus()
       throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
