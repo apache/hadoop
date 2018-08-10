@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -43,6 +45,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -743,6 +747,71 @@ public class TestCapacitySchedulerAsyncScheduling {
         + "it try to release an outdated reserved container", tryCommitResult);
 
     rm1.close();
+  }
+
+  @Test(timeout = 30000)
+  public void testCommitProposalsForUnusableNode() throws Exception {
+    // disable async-scheduling for simulating complex scene
+    Configuration disableAsyncConf = new Configuration(conf);
+    disableAsyncConf.setBoolean(
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, false);
+
+    // init RM & NMs
+    final MockRM rm = new MockRM(disableAsyncConf);
+    rm.start();
+    final MockNM nm1 = rm.registerNode("192.168.0.1:1234", 8 * GB);
+    final MockNM nm2 = rm.registerNode("192.168.0.2:2234", 8 * GB);
+    final MockNM nm3 = rm.registerNode("192.168.0.3:2234", 8 * GB);
+    rm.drainEvents();
+    CapacityScheduler cs =
+        (CapacityScheduler) rm.getRMContext().getScheduler();
+    SchedulerNode sn1 = cs.getSchedulerNode(nm1.getNodeId());
+
+    // launch app1-am on nm1
+    RMApp app1 = rm.submitApp(1 * GB, "app1", "user", null, false, "default",
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS, null, null, true, true);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+    // launch app2-am on nm2
+    RMApp app2 = rm.submitApp(1 * GB, "app2", "user", null, false, "default",
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS, null, null, true, true);
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
+
+    // app2 asks 1 * 8G container
+    am2.allocate(ImmutableList.of(ResourceRequest
+        .newInstance(Priority.newInstance(0), "*",
+            Resources.createResource(8 * GB), 1)), null);
+
+    List<Object> reservedProposalParts = new ArrayList<>();
+    final CapacityScheduler spyCs = Mockito.spy(cs);
+    // handle CapacityScheduler#tryCommit
+    Mockito.doAnswer(new Answer<Object>() {
+      public Boolean answer(InvocationOnMock invocation) throws Exception {
+        for (Object argument : invocation.getArguments()) {
+          reservedProposalParts.add(argument);
+        }
+        return false;
+      }
+    }).when(spyCs).tryCommit(Mockito.any(Resource.class),
+        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
+
+    spyCs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
+
+    // decommission nm1
+    RMNode rmNode1 = cs.getNode(nm1.getNodeId()).getRMNode();
+    cs.getRMContext().getDispatcher().getEventHandler().handle(
+        new RMNodeEvent(nm1.getNodeId(), RMNodeEventType.DECOMMISSION));
+    rm.drainEvents();
+    Assert.assertEquals(NodeState.DECOMMISSIONED, rmNode1.getState());
+    Assert.assertNull(cs.getNode(nm1.getNodeId()));
+
+    // try commit after nm1 decommissioned
+    boolean isSuccess =
+        cs.tryCommit((Resource) reservedProposalParts.get(0),
+            (ResourceCommitRequest) reservedProposalParts.get(1),
+            (Boolean) reservedProposalParts.get(2));
+    Assert.assertFalse(isSuccess);
+    rm.stop();
   }
 
   private ResourceCommitRequest createAllocateFromReservedProposal(

@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -220,6 +221,7 @@ public class TestUtils {
     when(rmNode.getNodeAddress()).thenReturn(host+":"+port);
     when(rmNode.getHostName()).thenReturn(host);
     when(rmNode.getRackName()).thenReturn(rack);
+    when(rmNode.getState()).thenReturn(NodeState.RUNNING);
     
     FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
     LOG.info("node = " + host + " avail=" + node.getUnallocatedResource());

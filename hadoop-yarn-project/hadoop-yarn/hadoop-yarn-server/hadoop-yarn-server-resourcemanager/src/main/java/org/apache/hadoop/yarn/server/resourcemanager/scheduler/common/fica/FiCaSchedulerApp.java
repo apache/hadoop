@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -429,6 +430,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode>
             schedulerContainer = allocation.getAllocatedOrReservedContainer();
 
+        // Make sure node is in RUNNING state
+        if (schedulerContainer.getSchedulerNode().getRMNode().getState()
+            != NodeState.RUNNING) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Failed to accept this proposal because node "
+                + schedulerContainer.getSchedulerNode().getNodeID() + " is in "
+                + schedulerContainer.getSchedulerNode().getRMNode().getState()
+                + " state (not RUNNING)");
+          }
+          return false;
+        }
         if (schedulerContainer.isAllocated()) {
           // When allocate a new container
           containerRequest =
