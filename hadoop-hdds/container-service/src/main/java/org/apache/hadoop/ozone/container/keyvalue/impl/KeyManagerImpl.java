@@ -67,9 +67,10 @@ public class KeyManagerImpl implements KeyManager {
    *
    * @param container - Container for which key need to be added.
    * @param data     - Key Data.
+   * @return length of the key.
    * @throws IOException
    */
-  public void putKey(Container container, KeyData data) throws IOException {
+  public long putKey(Container container, KeyData data) throws IOException {
     Preconditions.checkNotNull(data, "KeyData cannot be null for put " +
         "operation.");
     Preconditions.checkState(data.getContainerID() >= 0, "Container Id " +
@@ -87,6 +88,7 @@ public class KeyManagerImpl implements KeyManager {
 
     // Increment keycount here
     container.getContainerData().incrKeyCount();
+    return data.getSize();
   }
 
   /**

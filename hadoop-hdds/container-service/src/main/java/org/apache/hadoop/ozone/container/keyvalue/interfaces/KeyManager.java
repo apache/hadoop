@@ -35,9 +35,10 @@ public interface KeyManager {
    *
    * @param container - Container for which key need to be added.
    * @param data     - Key Data.
+   * @return length of the Key.
    * @throws IOException
    */
-  void putKey(Container container, KeyData data) throws IOException;
+  long putKey(Container container, KeyData data) throws IOException;
 
   /**
    * Gets an existing key.

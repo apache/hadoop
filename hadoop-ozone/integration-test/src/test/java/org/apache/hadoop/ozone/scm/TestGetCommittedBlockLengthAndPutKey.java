@@ -52,7 +52,7 @@ import java.util.UUID;
 /**
  * Test Container calls.
  */
-public class TestCommittedBlockLengthAPI {
+public class TestGetCommittedBlockLengthAndPutKey {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration ozoneConfig;
@@ -211,6 +211,44 @@ public class TestCommittedBlockLengthAPI {
         ContainerProtocolCalls
             .getCommittedBlockLength(client, blockID, traceID);
     Assert.assertTrue(response.getBlockLength() == 1024);
+    xceiverClientManager.releaseClient(client);
+  }
+
+  @Test
+  public void tesPutKeyResposne() throws Exception {
+    ContainerProtos.PutKeyResponseProto response;
+    String traceID = UUID.randomUUID().toString();
+    ContainerWithPipeline container = storageContainerLocationClient
+        .allocateContainer(xceiverClientManager.getType(),
+            HddsProtos.ReplicationFactor.ONE, containerOwner);
+    long containerID = container.getContainerInfo().getContainerID();
+    Pipeline pipeline = container.getPipeline();
+    XceiverClientSpi client =
+        xceiverClientManager.acquireClient(pipeline, containerID);
+    //create the container
+    ContainerProtocolCalls.createContainer(client, containerID, traceID);
+
+    BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
+    byte[] data =
+        RandomStringUtils.random(RandomUtils.nextInt(0, 1024)).getBytes();
+    ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
+        ContainerTestHelper
+            .getWriteChunkRequest(container.getPipeline(), blockID,
+                data.length);
+    client.sendCommand(writeChunkRequest);
+    // Now, explicitly make a putKey request for the block.
+    ContainerProtos.ContainerCommandRequestProto putKeyRequest =
+        ContainerTestHelper
+            .getPutKeyRequest(pipeline, writeChunkRequest.getWriteChunk());
+    response = client.sendCommand(putKeyRequest).getPutKey();
+    // make sure the block ids in the request and response are same.
+    // This will also ensure that closing the container committed the block
+    // on the Datanodes.
+    Assert.assertEquals(BlockID
+        .getFromProtobuf(response.getCommittedBlockLength().getBlockID()),
+        blockID);
+    Assert.assertEquals(
+        response.getCommittedBlockLength().getBlockLength(), data.length);
     xceiverClientManager.releaseClient(client);
   }
 }

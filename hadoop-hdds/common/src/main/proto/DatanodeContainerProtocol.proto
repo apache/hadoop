@@ -308,6 +308,7 @@ message  PutKeyRequestProto {
 }
 
 message  PutKeyResponseProto {
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
 message  GetKeyRequestProto  {
