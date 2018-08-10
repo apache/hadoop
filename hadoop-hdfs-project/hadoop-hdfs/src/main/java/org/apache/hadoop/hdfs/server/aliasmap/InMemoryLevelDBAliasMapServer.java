@@ -150,11 +150,15 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   public void close() {
     LOG.info("Stopping InMemoryLevelDBAliasMapServer");
     try {
-      aliasMap.close();
+      if (aliasMap != null) {
+        aliasMap.close();
+      }
     } catch (IOException e) {
       LOG.error(e.getMessage());
     }
-    aliasMapServer.stop();
+    if (aliasMapServer != null) {
+      aliasMapServer.stop();
+    }
   }
 
 }
