@@ -387,8 +387,8 @@ public class KeyValueHandler extends Handler {
 
     try {
       if (containerState == ContainerLifeCycleState.CLOSED) {
-        throw new StorageContainerException("Container already closed. " +
-            "ContainerID: " + containerID, CLOSED_CONTAINER_RETRY);
+        LOG.debug("Container {} is already closed.", containerID);
+        return ContainerUtils.getSuccessResponse(request);
       } else if (containerState == ContainerLifeCycleState.INVALID) {
         LOG.debug("Invalid container data. ContainerID: {}", containerID);
         throw new StorageContainerException("Invalid container data. " +
