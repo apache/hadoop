@@ -36,6 +36,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +91,6 @@ public class AzureBlobFileSystem extends FileSystem {
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.user = userGroupInformation.getUserName();
-    this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
     this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecure(), configuration, userGroupInformation);
 
     LOG.debug("Initializing NativeAzureFileSystem for {}", uri);
@@ -98,7 +98,16 @@ public class AzureBlobFileSystem extends FileSystem {
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsStore.getAbfsConfiguration().getCreateRemoteFileSystemDuringInitialization()) {
-      this.createFileSystem();
+      if (!this.fileSystemExists()) {
+        this.createFileSystem();
+      }
+    }
+
+    if (!abfsStore.getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
+      this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
+    } else {
+      //Provide a default group name
+      this.primaryUserGroup = this.user;
     }
   }
 
@@ -375,7 +384,7 @@ public class AzureBlobFileSystem extends FileSystem {
     if (file.getLen() < start) {
       return new BlockLocation[0];
     }
-    final String blobLocationHost = this.abfsStore.getAbfsConfiguration().getAzureBlockLocationHost();
+    final String blobLocationHost = abfsStore.getAbfsConfiguration().getAzureBlockLocationHost();
 
     final String[] name = { blobLocationHost };
     final String[] host = { blobLocationHost };
@@ -395,6 +404,13 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     return locations;
+  }
+
+  @Override
+  protected void finalize() throws Throwable {
+    LOG.debug("finalize() called.");
+    close();
+    super.finalize();
   }
 
   public String getOwnerUser() {
@@ -450,13 +466,31 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  private boolean fileSystemExists() throws IOException {
+    LOG.debug(
+            "AzureBlobFileSystem.fileSystemExists uri: {}", uri);
+    try {
+      abfsStore.getFilesystemProperties();
+    } catch (AzureBlobFileSystemException ex) {
+      try {
+        checkException(null, ex);
+        // Because HEAD request won't contain message body,
+        // there is not way to get the storage error code
+        // workaround here is to check its status code.
+      } catch (FileNotFoundException e) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private void createFileSystem() throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
     try {
-      this.abfsStore.createFilesystem();
+      abfsStore.createFilesystem();
     } catch (AzureBlobFileSystemException ex) {
-      checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+      checkException(null, ex);
     }
   }
 
@@ -556,10 +590,10 @@ public class AzureBlobFileSystem extends FileSystem {
 
       //AbfsRestOperationException.getMessage() contains full error info including path/uri.
       if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw (IOException)new FileNotFoundException(ere.getMessage())
+        throw (IOException) new FileNotFoundException(ere.getMessage())
             .initCause(exception);
       } else if (statusCode == HttpURLConnection.HTTP_CONFLICT) {
-        throw (IOException)new FileAlreadyExistsException(ere.getMessage())
+        throw (IOException) new FileAlreadyExistsException(ere.getMessage())
             .initCause(exception);
       } else {
         throw ere;
@@ -615,6 +649,11 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @VisibleForTesting
   AzureBlobFileSystemStore getAbfsStore() {
-    return this.abfsStore;
+    return abfsStore;
+  }
+
+  @VisibleForTesting
+  AbfsClient getAbfsClient() {
+    return abfsStore.getClient();
   }
 }

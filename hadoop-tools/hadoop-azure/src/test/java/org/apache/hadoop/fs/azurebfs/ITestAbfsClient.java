@@ -18,36 +18,28 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.FileNotFoundException;
-
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-
 /**
- * Test filesystem initialization and creation.
+ * Test continuation token which has equal sign.
  */
-public class ITestAzureBlobFileSystemInitAndCreate extends
-    AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemInitAndCreate() {
-
-    this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
-  }
-
-  @Override
-  public void setup() {
-  }
-
-  @Override
-  public void teardown() {
-  }
-
-  @Test (expected = FileNotFoundException.class)
-  public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
-    super.setup();
+public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
+  private static final int LIST_MAX_RESULTS = 5000;
+  @Test
+  public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+    AbfsClient abfsClient =  fs.getAbfsClient();
+
+    try {
+      AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS, "===========");
+      Assert.assertTrue(false);
+    } catch (AbfsRestOperationException ex) {
+      Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
+    }
   }
 }

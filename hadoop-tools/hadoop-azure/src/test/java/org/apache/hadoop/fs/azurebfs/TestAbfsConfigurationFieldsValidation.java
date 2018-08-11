@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs;
 
 import java.lang.reflect.Field;
 
@@ -48,7 +48,7 @@ import org.junit.Test;
  * Test ConfigurationServiceFieldsValidation.
  */
 public class TestAbfsConfigurationFieldsValidation {
-  private final AbfsConfiguration abfsConfiguration;
+  private AbfsConfiguration abfsConfiguration;
 
   private static final String INT_KEY= "intKey";
   private static final String LONG_KEY= "longKey";
@@ -89,10 +89,12 @@ public class TestAbfsConfigurationFieldsValidation {
   private boolean boolField;
 
   public TestAbfsConfigurationFieldsValidation() throws Exception {
+    super();
     Base64 base64 = new Base64();
     this.encodedString = new String(base64.encode("base64Value".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
     this.encodedAccountKey = new String(base64.encode("someAccountKey".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
-    Configuration configuration = new Configuration(false);
+    Configuration configuration = new Configuration();
+    configuration.addResource("azure-bfs-test.xml");
     configuration.set(INT_KEY, "1234565");
     configuration.set(LONG_KEY, "4194304");
     configuration.set(STRING_KEY, "stringValue");

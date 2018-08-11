@@ -91,7 +91,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
     final FileSystem.Statistics abfsStatistics;
     int testBufferSize;
     final byte[] sourceData;
-    try(final FSDataOutputStream stream = fs.create(TEST_FILE)) {
+    try (FSDataOutputStream stream = fs.create(TEST_FILE)) {
       abfsStatistics = fs.getFsStatistics();
       abfsStatistics.reset();
 
@@ -112,7 +112,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
         remoteData.length, abfsStatistics.getBytesRead());
     assertEquals("bytes written in " + stats,
         sourceData.length, abfsStatistics.getBytesWritten());
-    assertEquals("bytesRead from read() call", testBufferSize, bytesRead );
+    assertEquals("bytesRead from read() call", testBufferSize, bytesRead);
     assertArrayEquals("round tripped data", sourceData, remoteData);
 
   }

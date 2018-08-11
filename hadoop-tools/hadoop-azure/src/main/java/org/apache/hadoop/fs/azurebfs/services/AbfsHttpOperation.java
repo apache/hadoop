@@ -26,10 +26,11 @@ import java.net.URL;
 import java.util.List;
 import java.util.UUID;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
+import org.codehaus.jackson.map.ObjectMapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,7 +168,7 @@ public class AbfsHttpOperation {
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
-    this.isTraceEnabled = this.LOG.isTraceEnabled();
+    this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
     this.clientRequestId = UUID.randomUUID().toString();
@@ -303,7 +304,7 @@ public class AbfsHttpOperation {
           }
         }
       } catch (IOException ex) {
-        this.LOG.error("UnexpectedError: ", ex);
+        LOG.error("UnexpectedError: ", ex);
         throw ex;
       } finally {
         if (this.isTraceEnabled) {
@@ -355,7 +356,7 @@ public class AbfsHttpOperation {
         return;
       }
       JsonFactory jf = new JsonFactory();
-      try (JsonParser jp = jf.createParser(stream)) {
+      try (JsonParser jp = jf.createJsonParser(stream)) {
         String fieldName, fieldValue;
         jp.nextToken();  // START_OBJECT - {
         jp.nextToken();  // FIELD_NAME - "error":
@@ -384,7 +385,7 @@ public class AbfsHttpOperation {
       // Ignore errors that occur while attempting to parse the storage
       // error, since the response may have been handled by the HTTP driver
       // or for other reasons have an unexpected
-      this.LOG.debug("ExpectedError: ", ex);
+      LOG.debug("ExpectedError: ", ex);
     }
   }
 
@@ -415,7 +416,7 @@ public class AbfsHttpOperation {
       final ObjectMapper objectMapper = new ObjectMapper();
       this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
     } catch (IOException ex) {
-      this.LOG.error("Unable to deserialize list results", ex);
+      LOG.error("Unable to deserialize list results", ex);
       throw ex;
     }
   }

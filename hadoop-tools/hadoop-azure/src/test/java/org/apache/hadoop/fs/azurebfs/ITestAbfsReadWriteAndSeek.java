@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -28,8 +28,6 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
@@ -72,13 +70,13 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
-    try(final FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       stream.write(b);
     }
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
-    try(final FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);

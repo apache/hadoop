@@ -27,10 +27,6 @@ import java.util.concurrent.Callable;
 import com.google.common.base.Preconditions;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AbstractWasbTestWithTimeout;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
@@ -173,6 +167,17 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AzureBlobFileSystem getFileSystem() throws IOException {
     return abfs;
+  }
+
+  public AzureBlobFileSystem getFileSystem(Configuration configuration) throws Exception{
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
+    return fs;
+  }
+
+  public AzureBlobFileSystem getFileSystem(String abfsUri) throws Exception {
+    configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, abfsUri);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
+    return fs;
   }
 
   /**

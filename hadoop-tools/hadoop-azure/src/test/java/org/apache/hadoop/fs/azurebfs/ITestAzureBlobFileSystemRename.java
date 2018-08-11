@@ -30,7 +30,6 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
@@ -86,7 +85,7 @@ public class ITestAzureBlobFileSystemRename extends
 
     assertRenameOutcome(fs, test1,
         new Path("testDir/test10"), true);
-    assertPathDoesNotExist(fs, "rename source dir", test1 );
+    assertPathDoesNotExist(fs, "rename source dir", test1);
   }
 
   @Test

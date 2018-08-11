@@ -26,12 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
@@ -44,7 +45,7 @@ public class AbfsClient {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2018-03-28";
+  private final String xMsVersion = "2018-06-17";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -59,7 +60,7 @@ public class AbfsClient {
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = exponentialRetryPolicy;
-    this.userAgent = initializeUserAgent();
+    this.userAgent = initializeUserAgent(abfsConfiguration);
   }
 
   public String getFileSystem() {
@@ -137,7 +138,7 @@ public class AbfsClient {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_DIRECTORY, relativePath == null ? "" : urlEncode(relativePath));
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_DIRECTORY, relativePath == null ? "" : relativePath);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
@@ -380,8 +381,8 @@ public class AbfsClient {
     return url;
   }
 
-  private static String urlEncode(final String value) throws AzureBlobFileSystemException {
-    String encodedString = null;
+  public static String urlEncode(final String value) throws AzureBlobFileSystemException {
+    String encodedString;
     try {
       encodedString =  URLEncoder.encode(value, UTF_8)
           .replace(PLUS, PLUS_ENCODE)
@@ -393,14 +394,23 @@ public class AbfsClient {
     return encodedString;
   }
 
-  private String initializeUserAgent() {
+  @VisibleForTesting
+  String initializeUserAgent(final AbfsConfiguration abfsConfiguration) {
     final String userAgentComment = String.format(Locale.ROOT,
             "(JavaJRE %s; %s %s)",
             System.getProperty(JAVA_VERSION),
             System.getProperty(OS_NAME)
                     .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING),
             System.getProperty(OS_VERSION));
-
+    String customUserAgentId = abfsConfiguration.getCustomUserAgentPrefix();
+    if (customUserAgentId != null && !customUserAgentId.isEmpty()) {
+      return String.format(Locale.ROOT, CLIENT_VERSION + " %s %s", userAgentComment, customUserAgentId);
+    }
     return String.format(CLIENT_VERSION + " %s", userAgentComment);
+  }
+
+  @VisibleForTesting
+  URL getBaseUrl() {
+    return baseUrl;
   }
 }

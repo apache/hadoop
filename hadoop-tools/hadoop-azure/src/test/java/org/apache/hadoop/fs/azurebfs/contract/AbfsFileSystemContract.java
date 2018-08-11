@@ -43,9 +43,8 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
 
   @Override
   public String getScheme() {
-    return isSecure ?
-        FileSystemUriSchemes.ABFS_SECURE_SCHEME
-        : FileSystemUriSchemes.ABFS_SCHEME;
+    return isSecure ? FileSystemUriSchemes.ABFS_SECURE_SCHEME
+            : FileSystemUriSchemes.ABFS_SCHEME;
   }
 
   @Override

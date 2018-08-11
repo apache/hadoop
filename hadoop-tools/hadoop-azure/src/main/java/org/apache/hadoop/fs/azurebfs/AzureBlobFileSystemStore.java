@@ -31,8 +31,11 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
@@ -65,7 +68,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -75,8 +77,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -223,7 +223,7 @@ public class AzureBlobFileSystemStore {
     final OutputStream outputStream;
     outputStream = new FSDataOutputStream(
             new AbfsOutputStream(client, AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), 0,
-                    abfsConfiguration.getWriteBufferSize()), null);
+                    abfsConfiguration.getWriteBufferSize(), abfsConfiguration.isFlushEnabled()), null);
     return outputStream;
   }
 
@@ -287,7 +287,7 @@ public class AzureBlobFileSystemStore {
     final OutputStream outputStream;
     outputStream = new FSDataOutputStream(
             new AbfsOutputStream(client, AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
-                    offset, abfsConfiguration.getWriteBufferSize()), null);
+                    offset, abfsConfiguration.getWriteBufferSize(), abfsConfiguration.isFlushEnabled()), null);
     return outputStream;
   }
 
@@ -366,7 +366,7 @@ public class AzureBlobFileSystemStore {
               true,
               1,
               blockSize,
-              parseLastModifiedTime(lastModified).getMillis(),
+              parseLastModifiedTime(lastModified),
               path,
               eTag);
     } else {
@@ -385,7 +385,7 @@ public class AzureBlobFileSystemStore {
               parseIsDirectory(resourceType),
               1,
               blockSize,
-              parseLastModifiedTime(lastModified).getMillis(),
+              parseLastModifiedTime(lastModified),
               path,
               eTag);
     }
@@ -419,10 +419,7 @@ public class AzureBlobFileSystemStore {
         long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
         boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
         if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
-          final DateTime dateTime = DateTime.parse(
-                  entry.lastModified(),
-                  DateTimeFormat.forPattern(DATE_TIME_PATTERN).withZoneUTC());
-          lastModifiedMillis = dateTime.getMillis();
+          lastModifiedMillis = parseLastModifiedTime(entry.lastModified());
         }
 
         Path entryPath = new Path(File.separator + entry.name());
@@ -534,10 +531,16 @@ public class AzureBlobFileSystemStore {
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
-  private DateTime parseLastModifiedTime(final String lastModifiedTime) {
-    return DateTime.parse(
-            lastModifiedTime,
-            DateTimeFormat.forPattern(DATE_TIME_PATTERN).withZoneUTC());
+  private long parseLastModifiedTime(final String lastModifiedTime) {
+    long parsedTime = 0;
+    try {
+      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN).parse(lastModifiedTime);
+      parsedTime = utcDate.getTime();
+    } catch (ParseException e) {
+      LOG.error("Failed to parse the date {0}", lastModifiedTime);
+    } finally {
+      return parsedTime;
+    }
   }
 
   private String convertXmsPropertiesToCommaSeparatedString(final Hashtable<String, String> properties) throws
@@ -663,7 +666,7 @@ public class AzureBlobFileSystemStore {
       }
 
       if (other instanceof VersionedFileStatus) {
-        return this.version.equals(((VersionedFileStatus)other).version);
+        return this.version.equals(((VersionedFileStatus) other).version);
       }
 
       return true;
@@ -702,5 +705,9 @@ public class AzureBlobFileSystemStore {
     }
   }
 
+  @VisibleForTesting
+  AbfsClient getClient() {
+    return this.client;
+  }
 
 }

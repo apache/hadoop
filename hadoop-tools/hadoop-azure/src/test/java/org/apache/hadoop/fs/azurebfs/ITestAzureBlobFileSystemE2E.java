@@ -108,7 +108,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     final byte[] b = new byte[1024 * 1000];
     new Random().nextBytes(b);
-    try(final FSDataOutputStream stream = fs.create(TEST_FILE)) {
+    try (FSDataOutputStream stream = fs.create(TEST_FILE)) {
       stream.write(b, TEST_OFFSET, b.length - TEST_OFFSET);
     }
 

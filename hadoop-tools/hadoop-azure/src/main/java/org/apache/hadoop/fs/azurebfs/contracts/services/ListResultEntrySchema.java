@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 import org.apache.hadoop.classification.InterfaceStability;
 

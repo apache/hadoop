@@ -43,6 +43,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
   private final String path;
   private long position;
   private boolean closed;
+  private boolean supportFlush;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -61,11 +62,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
       final AbfsClient client,
       final String path,
       final long position,
-      final int bufferSize) {
+      final int bufferSize,
+      final boolean supportFlush) {
     this.client = client;
     this.path = path;
     this.position = position;
     this.closed = false;
+    this.supportFlush = supportFlush;
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = bufferSize;
@@ -162,7 +165,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void flush() throws IOException {
-    flushInternalAsync();
+    if (supportFlush) {
+      flushInternalAsync();
+    }
   }
 
   /** Similar to posix fsync, flush out the data in client's user buffer
@@ -171,7 +176,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void hsync() throws IOException {
-    flushInternal();
+    if (supportFlush) {
+      flushInternal();
+    }
   }
 
   /** Flush out the data in client's user buffer. After the return of
@@ -180,7 +187,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
    */
   @Override
   public void hflush() throws IOException {
-    flushInternal();
+    if (supportFlush) {
+      flushInternal();
+    }
   }
 
   /**
@@ -262,7 +271,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
         writeOperation.task.get();
       } catch (Exception ex) {
         if (ex.getCause() instanceof AzureBlobFileSystemException) {
-          ex = (AzureBlobFileSystemException)ex.getCause();
+          ex = (AzureBlobFileSystemException) ex.getCause();
         }
         lastError = new IOException(ex);
         throw lastError;
@@ -277,8 +286,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
     if (this.lastTotalAppendOffset > this.lastFlushOffset) {
       this.flushWrittenBytesToServiceInternal(this.lastTotalAppendOffset, true);
     }
-
-    this.lastTotalAppendOffset = 0;
   }
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
@@ -304,7 +311,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
       }
     } catch (Exception e) {
       if (e.getCause() instanceof AzureBlobFileSystemException) {
-        lastError = (AzureBlobFileSystemException)e.getCause();
+        lastError = (AzureBlobFileSystemException) e.getCause();
       } else {
         lastError = new IOException(e);
       }
@@ -322,7 +329,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
       try {
         completionService.take();
       } catch (InterruptedException e) {
-        lastError = (IOException)new InterruptedIOException(e.toString()).initCause(e);
+        lastError = (IOException) new InterruptedIOException(e.toString()).initCause(e);
         throw lastError;
       }
     }

@@ -20,15 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test FileSystemProperties.
@@ -62,7 +59,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  @Ignore("JDK7 doesn't support PATCH, so PUT is used. Fix is applied in latest test tenant")
   public void testBase64FileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs;
 
 import java.lang.reflect.Field;
 import java.util.Map;
@@ -33,13 +33,17 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.BooleanConfigurationValidatorAnnotation;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
+import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
+import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 
 /**
  * Configuration for Azure Blob FileSystem.
@@ -111,9 +115,22 @@ public class AbfsConfiguration{
       DefaultValue = FileSystemConfigurations.DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = ConfigurationKeys.AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION,
+          DefaultValue = FileSystemConfigurations.DEFAULT_AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION)
+  private boolean skipUserGroupMetadataDuringInitialization;
+
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH,
       DefaultValue = FileSystemConfigurations.DEFAULT_READ_AHEAD_QUEUE_DEPTH)
   private int readAheadQueueDepth;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = ConfigurationKeys.FS_AZURE_ENABLE_FLUSH,
+          DefaultValue = FileSystemConfigurations.DEFAULT_ENABLE_FLUSH)
+  private boolean enableFlush;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY,
+          DefaultValue = "")
+  private String userAgentId;
 
   private Map<String, String> storageAccountKeys;
 
@@ -147,13 +164,38 @@ public class AbfsConfiguration{
     return this.isSecure;
   }
 
-  public String getStorageAccountKey(final String accountName) throws ConfigurationPropertyNotFoundException {
-    String accountKey = this.storageAccountKeys.get(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + accountName);
-    if (accountKey == null) {
+  public String getStorageAccountKey(final String accountName) throws AzureBlobFileSystemException {
+    String key;
+    String keyProviderClass =
+            configuration.get(ConfigurationKeys.AZURE_KEY_ACCOUNT_KEYPROVIDER_PREFIX + accountName);
+    KeyProvider keyProvider;
+
+    if (keyProviderClass == null) {
+      // No key provider was provided so use the provided key as is.
+      keyProvider = new SimpleKeyProvider();
+    } else {
+      // create an instance of the key provider class and verify it
+      // implements KeyProvider
+      Object keyProviderObject;
+      try {
+        Class<?> clazz = configuration.getClassByName(keyProviderClass);
+        keyProviderObject = clazz.newInstance();
+      } catch (Exception e) {
+        throw new KeyProviderException("Unable to load key provider class.", e);
+      }
+      if (!(keyProviderObject instanceof KeyProvider)) {
+        throw new KeyProviderException(keyProviderClass
+                + " specified in config is not a valid KeyProvider class.");
+      }
+      keyProvider = (KeyProvider) keyProviderObject;
+    }
+    key = keyProvider.getStorageAccountKey(accountName, configuration);
+
+    if (key == null) {
       throw new ConfigurationPropertyNotFoundException(accountName);
     }
 
-    return accountKey;
+    return key;
   }
 
   public Configuration getConfiguration() {
@@ -212,8 +254,20 @@ public class AbfsConfiguration{
     return this.createRemoteFileSystemDuringInitialization;
   }
 
+  public boolean getSkipUserGroupMetadataDuringInitialization() {
+    return this.skipUserGroupMetadataDuringInitialization;
+  }
+
   public int getReadAheadQueueDepth() {
     return this.readAheadQueueDepth;
+  }
+
+  public boolean isFlushEnabled() {
+    return this.enableFlush;
+  }
+
+  public String getCustomUserAgentPrefix() {
+    return this.userAgentId;
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {
@@ -293,5 +347,10 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setWriteBufferSize(int bufferSize) {
     this.writeBufferSize = bufferSize;
+  }
+
+  @VisibleForTesting
+  void setEnableFlush(boolean enableFlush) {
+    this.enableFlush = enableFlush;
   }
 }
