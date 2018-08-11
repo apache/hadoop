@@ -64,7 +64,7 @@ public class AbfsInputStream extends FSInputStream {
     this.path = path;
     this.contentLength = contentLength;
     this.bufferSize = bufferSize;
-    this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : 2 * Runtime.getRuntime().availableProcessors();
+    this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
     this.eTag = eTag;
     this.tolerateOobAppends = false;
     this.readAheadEnabled = true;
