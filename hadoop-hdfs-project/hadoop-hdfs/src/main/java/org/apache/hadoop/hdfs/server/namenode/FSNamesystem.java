@@ -3139,29 +3139,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
-   * @param needLocation if blockLocations need to be returned
-   *
-   * @throws AccessControlException
-   *           if access is denied
-   * @throws UnresolvedLinkException
-   *           if a symlink is encountered.
-   *
-   * @return object containing information regarding the file or null if file
-   *         not found
-   * @throws StandbyException
-   */
-  @Override
-  public HdfsFileStatus getFileInfo(final String src, boolean resolveLink,
-      boolean needLocation) throws IOException {
-    return getFileInfo(src, resolveLink, needLocation, false);
-  }
-
-  /**
-   * Get the file info for a specific file.
-   *
-   * @param src The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException
-   *        if src refers to a symlink
    *
    * @param needLocation Include {@link LocatedBlocks} in result.
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}
@@ -3601,21 +3578,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @VisibleForTesting
   BlockInfo getStoredBlock(Block block) {
     return blockManager.getStoredBlock(block);
-  }
-
-  @Override
-  public boolean isFileOpenedForWrite(String path) {
-    readLock();
-    try {
-      INode inode = dir.getINode(path, FSDirectory.DirOp.READ);
-      INodeFile iNodeFile = INodeFile.valueOf(inode, path);
-      LeaseManager.Lease lease = leaseManager.getLease(iNodeFile);
-      return lease != null;
-    } catch (IOException e) {
-      return false;
-    } finally {
-      readUnlock();
-    }
   }
 
   @Override

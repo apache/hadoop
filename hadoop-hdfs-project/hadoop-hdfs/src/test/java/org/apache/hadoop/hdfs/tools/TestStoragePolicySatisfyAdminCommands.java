@@ -71,7 +71,7 @@ public class TestStoragePolicySatisfyAdminCommands {
     Context externalCtxt = new ExternalSPSContext(externalSps, nnc);
 
     externalSps.init(externalCtxt);
-    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
   @After

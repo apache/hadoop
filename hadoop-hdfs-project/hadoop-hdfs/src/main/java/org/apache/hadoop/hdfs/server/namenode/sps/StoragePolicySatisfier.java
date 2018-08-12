@@ -150,21 +150,14 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
    * movements monitor for retry the attempts if needed.
    */
   @Override
-  public synchronized void start(boolean reconfigStart,
-      StoragePolicySatisfierMode serviceMode) {
+  public synchronized void start(StoragePolicySatisfierMode serviceMode) {
     if (serviceMode == StoragePolicySatisfierMode.NONE) {
       LOG.error("Can't start StoragePolicySatisfier for the given mode:{}",
           serviceMode);
       return;
     }
-    if (reconfigStart) {
-      LOG.info("Starting {} StoragePolicySatisfier, as admin requested to "
-          + "start it.", StringUtils.toLowerCase(serviceMode.toString()));
-    } else {
-      LOG.info("Starting {} StoragePolicySatisfier.",
-          StringUtils.toLowerCase(serviceMode.toString()));
-    }
-
+    LOG.info("Starting {} StoragePolicySatisfier.",
+        StringUtils.toLowerCase(serviceMode.toString()));
     isRunning = true;
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
@@ -229,8 +222,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
         }
         continue;
       }
+      ItemInfo itemInfo = null;
       try {
-        ItemInfo itemInfo = null;
         boolean retryItem = false;
         if (!ctxt.isInSafeMode()) {
           itemInfo = storageMovementNeeded.get();
@@ -324,12 +317,14 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
           blockCount = 0L;
         }
         if (retryItem) {
-          // itemInfo.increRetryCount();
           this.storageMovementNeeded.add(itemInfo);
         }
       } catch (IOException e) {
         LOG.error("Exception during StoragePolicySatisfier execution - "
             + "will continue next cycle", e);
+        // Since it could not finish this item in previous iteration due to IOE,
+        // just try again.
+        this.storageMovementNeeded.add(itemInfo);
       } catch (Throwable t) {
         synchronized (this) {
           if (isRunning) {

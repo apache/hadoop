@@ -22,8 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -31,7 +29,6 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.Datanod
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.AccessControlException;
 
 /**
  * An interface for the communication between SPS and Namenode module.
@@ -49,21 +46,6 @@ public interface Context {
    * Returns true if the Namenode in safe mode, false otherwise.
    */
   boolean isInSafeMode();
-
-  /**
-   * Returns true if Mover tool is already running, false otherwise.
-   */
-  boolean isMoverRunning();
-
-  /**
-   * Gets the Inode ID number for the given path.
-   *
-   * @param path
-   *          - file/dir path
-   * @return Inode id number
-   */
-  long getFileID(String path) throws UnresolvedLinkException,
-      AccessControlException, ParentNotDirectoryException;
 
   /**
    * Gets the network topology.
@@ -130,16 +112,6 @@ public interface Context {
    * @return next SPS path info to process.
    */
   Long getNextSPSPath();
-
-  /**
-   * Removes the SPS path id.
-   */
-  void removeSPSPathId(long pathId);
-
-  /**
-   * Removes all SPS path ids.
-   */
-  void removeAllSPSPathIds();
 
   /**
    * Do scan and collects the files under that directory and adds to the given

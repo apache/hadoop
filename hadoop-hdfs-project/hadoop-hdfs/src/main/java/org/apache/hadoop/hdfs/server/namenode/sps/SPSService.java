@@ -47,12 +47,9 @@ public interface SPSService {
    * Starts the SPS service. Make sure to initialize the helper services before
    * invoking this method.
    *
-   * @param reconfigStart
-   *          - to indicate whether the SPS startup requested from
-   *          reconfiguration service
    * @param spsMode sps service mode
    */
-  void start(boolean reconfigStart, StoragePolicySatisfierMode spsMode);
+  void start(StoragePolicySatisfierMode spsMode);
 
   /**
    * Stops the SPS service gracefully. Timed wait to stop storage policy

@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -532,20 +530,6 @@ class BPServiceActor implements Runnable {
     }
 
     return response;
-  }
-
-  private BlocksStorageMoveAttemptFinished getStorageMoveAttemptFinishedBlocks(
-      List<Block> finishedBlks) {
-
-    if (finishedBlks.isEmpty()) {
-      return null;
-    }
-
-    // Create BlocksStorageMoveAttemptFinished with currently finished
-    // blocks
-    Block[] blockList = new Block[finishedBlks.size()];
-    finishedBlks.toArray(blockList);
-    return new BlocksStorageMoveAttemptFinished(blockList);
   }
 
   @VisibleForTesting

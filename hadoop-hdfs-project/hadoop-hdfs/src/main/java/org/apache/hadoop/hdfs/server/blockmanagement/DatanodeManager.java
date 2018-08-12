@@ -1988,22 +1988,5 @@ public class DatanodeManager {
     }
     return reports;
   }
-
-  public boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
-      StorageType type, long estimatedSize) {
-    namesystem.readLock();
-    try {
-      DatanodeDescriptor datanode =
-          blockManager.getDatanodeManager().getDatanode(dn.getDatanodeUuid());
-      if (datanode == null) {
-        LOG.debug("Target datanode: " + dn + " doesn't exists");
-        return false;
-      }
-      return null != datanode.chooseStorage4Block(type, estimatedSize);
-    } finally {
-      namesystem.readUnlock();
-    }
-  }
-
 }
 

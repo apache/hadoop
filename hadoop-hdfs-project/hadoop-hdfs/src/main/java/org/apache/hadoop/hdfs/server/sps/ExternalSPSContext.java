@@ -24,10 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -47,7 +44,6 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.Datanod
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,35 +89,6 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public boolean isMoverRunning() {
-    try {
-      FSDataOutputStream out = nnc.getDistributedFileSystem()
-          .append(HdfsServerConstants.MOVER_ID_PATH);
-      out.close();
-      return false;
-    } catch (IOException ioe) {
-      LOG.warn("Exception while checking mover is running..", ioe);
-      return true;
-    }
-
-  }
-
-  @Override
-  public long getFileID(String path) throws UnresolvedLinkException,
-      AccessControlException, ParentNotDirectoryException {
-    HdfsFileStatus fs = null;
-    try {
-      fs = (HdfsFileStatus) nnc.getDistributedFileSystem().getFileStatus(
-          new Path(path));
-      LOG.info("Fetched the fileID:{} for the path:{}", fs.getFileId(), path);
-    } catch (IllegalArgumentException | IOException e) {
-      LOG.warn("Exception while getting file is for the given path:{}.", path,
-          e);
-    }
-    return fs != null ? fs.getFileId() : 0;
-  }
-
-  @Override
   public NetworkTopology getNetworkTopology(DatanodeMap datanodeMap) {
     // create network topology.
     NetworkTopology cluster = NetworkTopology.getInstance(service.getConf());
@@ -152,8 +119,18 @@ public class ExternalSPSContext implements Context {
   @Override
   public void removeSPSHint(long inodeId) throws IOException {
     Path filePath = DFSUtilClient.makePathFromFileId(inodeId);
-    nnc.getDistributedFileSystem().removeXAttr(filePath,
-        HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
+    try {
+      nnc.getDistributedFileSystem().removeXAttr(filePath,
+          HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
+    } catch (IOException e) {
+      List<String> listXAttrs = nnc.getDistributedFileSystem()
+          .listXAttrs(filePath);
+      if (!listXAttrs
+          .contains(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY)) {
+        LOG.info("SPS hint already removed for the inodeId:{}."
+            + " Ignoring exception:{}", inodeId, e.getMessage());
+      }
+    }
   }
 
   @Override
@@ -194,16 +171,6 @@ public class ExternalSPSContext implements Context {
       LOG.warn("Exception while getting next sps path id from Namenode.", e);
       return null;
     }
-  }
-
-  @Override
-  public void removeSPSPathId(long pathId) {
-    // We need not specifically implement for external.
-  }
-
-  @Override
-  public void removeAllSPSPathIds() {
-    // We need not specifically implement for external.
   }
 
   @Override

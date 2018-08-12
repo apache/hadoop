@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +78,9 @@ public class BlockStorageMovementNeeded {
    *          - track info for satisfy the policy
    */
   public synchronized void add(ItemInfo trackInfo) {
-    storageMovementNeeded.add(trackInfo);
+    if (trackInfo != null) {
+      storageMovementNeeded.add(trackInfo);
+    }
   }
 
   /**
@@ -153,7 +154,6 @@ public class BlockStorageMovementNeeded {
   }
 
   public synchronized void clearAll() {
-    ctxt.removeAllSPSPathIds();
     storageMovementNeeded.clear();
     pendingWorkForDirectory.clear();
   }
@@ -186,18 +186,6 @@ public class BlockStorageMovementNeeded {
       // storageMovementAttemptedItems or file policy satisfied.
       ctxt.removeSPSHint(trackInfo.getFile());
     }
-  }
-
-  public synchronized void clearQueue(long trackId) {
-    ctxt.removeSPSPathId(trackId);
-    Iterator<ItemInfo> iterator = storageMovementNeeded.iterator();
-    while (iterator.hasNext()) {
-      ItemInfo next = iterator.next();
-      if (next.getFile() == trackId) {
-        iterator.remove();
-      }
-    }
-    pendingWorkForDirectory.remove(trackId);
   }
 
   /**

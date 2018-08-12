@@ -219,7 +219,7 @@ public class TestExternalStoragePolicySatisfier {
     externalCtxt = new ExternalSPSContext(externalSps, nnc);
 
     externalSps.init(externalCtxt);
-    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
     return cluster;
   }
 
@@ -234,7 +234,7 @@ public class TestExternalStoragePolicySatisfier {
 
     externalCtxt = new ExternalSPSContext(externalSps, nnc);
     externalSps.init(externalCtxt);
-    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
   private void initSecureConf(Configuration conf) throws Exception {

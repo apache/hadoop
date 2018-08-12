@@ -4300,21 +4300,6 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Check file has low redundancy blocks.
-   */
-  public boolean hasLowRedundancyBlocks(BlockCollection bc) {
-    boolean result = false;
-    for (BlockInfo block : bc.getBlocks()) {
-      short expected = getExpectedRedundancyNum(block);
-      final NumberReplicas n = countNodes(block);
-      if (expected > n.liveReplicas()) {
-        result = true;
-      }
-    }
-    return result;
-  }
-
-  /**
    * Check sufficient redundancy of the blocks in the collection. If any block
    * is needed reconstruction, insert it into the reconstruction queue.
    * Otherwise, if the block is more than the expected replication factor,
@@ -5008,25 +4993,6 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public ProvidedStorageMap getProvidedStorageMap() {
     return providedStorageMap;
-  }
-
-  /**
-   * Check whether file id has low redundancy blocks.
-   *
-   * @param inodeID
-   *          - inode id
-   */
-  public boolean hasLowRedundancyBlocks(long inodeID) {
-    namesystem.readLock();
-    try {
-      BlockCollection bc = namesystem.getBlockCollection(inodeID);
-      if (bc == null) {
-        return false;
-      }
-      return hasLowRedundancyBlocks(bc);
-    } finally {
-      namesystem.readUnlock();
-    }
   }
 
   /**

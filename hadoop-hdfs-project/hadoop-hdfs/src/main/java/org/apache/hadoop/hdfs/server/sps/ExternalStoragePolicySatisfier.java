@@ -70,7 +70,7 @@ public final class ExternalStoragePolicySatisfier {
 
       ExternalSPSContext context = new ExternalSPSContext(sps, nnc);
       sps.init(context);
-      sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+      sps.start(StoragePolicySatisfierMode.EXTERNAL);
       if (sps != null) {
         sps.join();
       }

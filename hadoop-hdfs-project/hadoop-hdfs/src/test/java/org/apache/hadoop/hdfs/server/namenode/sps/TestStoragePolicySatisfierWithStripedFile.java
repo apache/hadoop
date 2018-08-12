@@ -510,7 +510,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     sps = new StoragePolicySatisfier(conf);
     ctxt = new ExternalSPSContext(sps, nnc);
     sps.init(ctxt);
-    sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    sps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
   private static void initConfWithStripe(Configuration conf,

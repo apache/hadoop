@@ -154,7 +154,7 @@ Note that, when both -p and -f options are omitted, the default path is the root
 
 ####Administrator notes:
 
-`StoragePolicySatisfier` and `Mover tool` cannot run simultaneously. If a Mover instance is already triggered and running, SPS will be disabled while starting. In that case, administrator should make sure, Mover execution finished and then enable(internal service inside NN or external service outside NN) SPS again. Similarly when SPS enabled already, Mover cannot be run. If administrator is looking to run Mover tool explicitly, then he/she should make sure to disable SPS first and then run Mover. Please look at the commands section to know how to enable(internal service inside NN or external service outside NN) or disable SPS dynamically.
+`StoragePolicySatisfier` and `Mover tool` cannot run simultaneously. If a Mover instance is already triggered and running, SPS will be disabled while starting. In that case, administrator should make sure, Mover execution finished and then enable external SPS service again. Similarly when SPS enabled already, Mover cannot be run. If administrator is looking to run Mover tool explicitly, then he/she should make sure to disable SPS first and then run Mover. Please look at the commands section to know how to enable external service outside NN or disable SPS dynamically.
 
 Storage Policy Commands
 -----------------------

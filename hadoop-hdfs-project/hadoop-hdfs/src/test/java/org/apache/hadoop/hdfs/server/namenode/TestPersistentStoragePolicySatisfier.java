@@ -113,6 +113,8 @@ public class TestPersistentStoragePolicySatisfier {
     // Reduced refresh cycle to update latest datanodes.
     conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
         1000);
+    conf.setInt(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY, 20);
     final int dnNumber = storageTypes.length;
     final short replication = 3;
     MiniDFSCluster.Builder clusterBuilder = new MiniDFSCluster.Builder(conf)
@@ -136,7 +138,7 @@ public class TestPersistentStoragePolicySatisfier {
     ctxt = new ExternalSPSContext(sps, nnc);
 
     sps.init(ctxt);
-    sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    sps.start(StoragePolicySatisfierMode.EXTERNAL);
 
     createTestFiles(fs, replication);
   }
@@ -188,6 +190,7 @@ public class TestPersistentStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testWithCheckpoint() throws Exception {
+    SecondaryNameNode secondary = null;
     try {
       clusterSetUp();
       fs.setStoragePolicy(testFile, WARM);
@@ -196,7 +199,7 @@ public class TestPersistentStoragePolicySatisfier {
       // Start the checkpoint.
       conf.set(
           DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      SecondaryNameNode secondary = new SecondaryNameNode(conf);
+      secondary = new SecondaryNameNode(conf);
       secondary.doCheckpoint();
       restartCluster();
 
@@ -214,6 +217,9 @@ public class TestPersistentStoragePolicySatisfier {
           childFileName, StorageType.ARCHIVE, 3, timeout, fs);
 
     } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
       clusterShutdown();
     }
   }
