@@ -281,42 +281,6 @@ public class TestStateAlignmentContextWithHA {
   }
 
   /**
-   * This test mocks an AlignmentContext to send stateIds greater than
-   * server's stateId in RPC requests.
-   */
-  @Test
-  public void testClientSendsGreaterState() throws Exception {
-    ClientGSIContext alignmentContext = new ClientGSIContext();
-    ClientGSIContext spiedAlignContext = Mockito.spy(alignmentContext);
-    spy = spiedAlignContext;
-
-    try (DistributedFileSystem clearDfs =
-             (DistributedFileSystem) FileSystem.get(CONF)) {
-
-      // Make every client call have a stateId > server's stateId.
-      Mockito.doAnswer(a -> {
-        Object[] arguments = a.getArguments();
-        RpcHeaderProtos.RpcRequestHeaderProto.Builder header =
-            (RpcHeaderProtos.RpcRequestHeaderProto.Builder) arguments[0];
-        try {
-          return a.callRealMethod();
-        } finally {
-          header.setStateId(Long.MAX_VALUE);
-        }
-      }).when(spiedAlignContext).updateRequestState(Mockito.any());
-
-      GenericTestUtils.LogCapturer logCapturer =
-          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.LOG);
-
-      DFSTestUtil.writeFile(clearDfs, new Path("/testFile4"), "shv");
-      logCapturer.stopCapturing();
-
-      String output = logCapturer.getOutput();
-      assertThat(output, containsString("A client sent stateId: "));
-    }
-  }
-
-  /**
    * This test checks if after a client writes we can see the state id in
    * updated via the response.
    */

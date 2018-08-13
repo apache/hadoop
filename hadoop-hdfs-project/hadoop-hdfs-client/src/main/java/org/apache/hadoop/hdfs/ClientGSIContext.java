@@ -39,7 +39,8 @@ public class ClientGSIContext implements AlignmentContext {
   private final LongAccumulator lastSeenStateId =
       new LongAccumulator(Math::max, Long.MIN_VALUE);
 
-  long getLastSeenStateId() {
+  @Override
+  public long getLastSeenStateId() {
     return lastSeenStateId.get();
   }
 
@@ -73,7 +74,8 @@ public class ClientGSIContext implements AlignmentContext {
    * Client does not receive RPC requests therefore this does nothing.
    */
   @Override
-  public void receiveRequestState(RpcRequestHeaderProto header) {
+  public long receiveRequestState(RpcRequestHeaderProto header) {
     // Do nothing.
+    return 0;
   }
 }
