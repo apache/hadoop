@@ -4531,6 +4531,24 @@
 </property>
 
 <property>
+  <name>dfs.qjournal.http.open.timeout.ms</name>
+  <value>60000</value>
+  <description>
+    Timeout in milliseconds when open a new HTTP connection to remote
+    journals.
+  </description>
+</property>
+
+<property>
+  <name>dfs.qjournal.http.read.timeout.ms</name>
+  <value>60000</value>
+  <description>
+    Timeout in milliseconds when reading from a HTTP connection from remote
+    journals.
+  </description>
+</property>
+
+<property>
   <name>dfs.quota.by.storage.type.enabled</name>
   <value>true</value>
   <description>
