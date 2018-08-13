@@ -26,6 +26,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -1013,7 +1014,7 @@ public class AggregatedLogFormat {
   }
 
   @Private
-  public static class ContainerLogsReader {
+  public static class ContainerLogsReader extends InputStream {
     private DataInputStream valueStream;
     private String currentLogType = null;
     private long currentLogLength = 0;
