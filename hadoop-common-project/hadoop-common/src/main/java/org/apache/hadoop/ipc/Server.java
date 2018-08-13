@@ -706,6 +706,7 @@ public abstract class Server {
     private boolean deferredResponse = false;
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
+    private long clientStateId;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -736,6 +737,7 @@ public abstract class Server {
       this.clientId = clientId;
       this.traceScope = traceScope;
       this.callerContext = callerContext;
+      this.clientStateId = Long.MIN_VALUE;
     }
 
     @Override
@@ -811,6 +813,14 @@ public abstract class Server {
 
     public void setPriorityLevel(int priorityLevel) {
       this.priorityLevel = priorityLevel;
+    }
+
+    public long getClientStateId() {
+      return this.clientStateId;
+    }
+
+    public void setClientStateId(long stateId) {
+      this.clientStateId = stateId;
     }
 
     @InterfaceStability.Unstable
@@ -2501,11 +2511,6 @@ public abstract class Server {
         }
       }
 
-      if (alignmentContext != null) {
-        // Check incoming RPC request's state.
-        alignmentContext.receiveRequestState(header);
-      }
-
       CallerContext callerContext = null;
       if (header.hasCallerContext()) {
         callerContext =
@@ -2522,6 +2527,10 @@ public abstract class Server {
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
+      if(alignmentContext != null) {
+        long stateId = alignmentContext.receiveRequestState(header);
+        call.setClientStateId(stateId);
+      }
 
       try {
         internalQueueCall(call);
@@ -2703,6 +2712,24 @@ public abstract class Server {
         TraceScope traceScope = null;
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
+          if (alignmentContext != null && call.getClientStateId() >
+              alignmentContext.getLastSeenStateId()) {
+            /*
+             * The call processing should be postponed until the client call's
+             * state id is aligned (>=) with the server state id.
+
+             * NOTE:
+             * Inserting the call back to the queue can change the order of call
+             * execution comparing to their original placement into the queue.
+             * This is not a problem, because Hadoop RPC does not have any
+             * constraints on ordering the incoming rpc requests.
+             * In case of Observer, it handles only reads, which are
+             * commutative.
+             */
+            //Re-queue the call and continue
+            internalQueueCall(call);
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
