@@ -208,7 +208,7 @@
             processData: false,
             crossDomain: true
           }).always(function(data) {
-            $('#file-info-preview-body').val(data.responseText);
+            $('#file-info-preview-body').val(data);
             $('#file-info-tail').show();
           }).fail(function(jqXHR, textStatus, errorThrown) {
             show_err_msg("Couldn't preview the file. " + errorThrown);
