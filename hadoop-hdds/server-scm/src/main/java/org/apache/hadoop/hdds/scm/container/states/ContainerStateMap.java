@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -96,7 +97,7 @@ public class ContainerStateMap {
   //1. Dead datanode.
   //2. Datanode out of space.
   //3. Volume loss or volume out of space.
-  private final ContainerAttribute<String> openPipelineMap;
+  private final ContainerAttribute<PipelineID> openPipelineMap;
 
   private final Map<ContainerID, ContainerInfo> containerMap;
   // Map to hold replicas of given container.
@@ -153,7 +154,7 @@ public class ContainerStateMap {
       factorMap.insert(info.getReplicationFactor(), id);
       typeMap.insert(info.getReplicationType(), id);
       if (info.isContainerOpen()) {
-        openPipelineMap.insert(info.getPipelineName(), id);
+        openPipelineMap.insert(info.getPipelineID(), id);
       }
       LOG.trace("Created container with {} successfully.", id);
     }
@@ -347,7 +348,7 @@ public class ContainerStateMap {
     // In case the container is set to closed state, it needs to be removed from
     // the pipeline Map.
     if (!info.isContainerOpen()) {
-      openPipelineMap.remove(info.getPipelineName(), id);
+      openPipelineMap.remove(info.getPipelineID(), id);
     }
   }
 
@@ -382,14 +383,15 @@ public class ContainerStateMap {
   /**
    * Returns Open containers in the SCM by the Pipeline
    *
-   * @param pipeline - Pipeline name.
+   * @param pipelineID - Pipeline id.
    * @return NavigableSet<ContainerID>
    */
-  public NavigableSet<ContainerID> getOpenContainerIDsByPipeline(String pipeline) {
-    Preconditions.checkNotNull(pipeline);
+  public NavigableSet<ContainerID> getOpenContainerIDsByPipeline(
+      PipelineID pipelineID) {
+    Preconditions.checkNotNull(pipelineID);
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
-      return openPipelineMap.getCollection(pipeline);
+      return openPipelineMap.getCollection(pipelineID);
     }
   }
 

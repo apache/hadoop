@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
@@ -132,7 +133,8 @@ public class ContainerCloser {
     for (DatanodeDetails datanodeDetails : pipeline.getMachines()) {
       nodeManager.addDatanodeCommand(datanodeDetails.getUuid(),
           new CloseContainerCommand(info.getContainerID(),
-              info.getReplicationType()));
+              info.getReplicationType(),
+              PipelineID.getFromProtobuf(info.getPipelineID())));
     }
     if (!commandIssued.containsKey(info.getContainerID())) {
       commandIssued.put(info.getContainerID(),

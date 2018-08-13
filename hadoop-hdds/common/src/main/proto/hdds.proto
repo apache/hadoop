@@ -40,13 +40,17 @@ message Port {
     required uint32 value = 2;
 }
 
+message PipelineID {
+  required string id = 1;
+}
+
 message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
     optional LifeCycleState state = 3 [default = OPEN];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
-    optional string name = 6;
+    required PipelineID id = 6;
 }
 
 message KeyValue {
@@ -129,7 +133,7 @@ enum LifeCycleEvent {
 message SCMContainerInfo {
     required int64 containerID = 1;
     required LifeCycleState state = 2;
-    optional string pipelineName = 3;
+    optional PipelineID pipelineID = 3;
     // This is not total size of container, but space allocated by SCM for
     // clients to write blocks
     required uint64 allocatedBytes = 4;

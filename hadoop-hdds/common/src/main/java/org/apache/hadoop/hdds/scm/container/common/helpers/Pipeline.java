@@ -64,9 +64,7 @@ public class Pipeline {
   private HddsProtos.LifeCycleState lifeCycleState;
   private HddsProtos.ReplicationType type;
   private HddsProtos.ReplicationFactor factor;
-  private String name;
-  // TODO: change to long based id
-  //private long id;
+  private PipelineID id;
 
   /**
    * Constructs a new pipeline data structure.
@@ -75,16 +73,16 @@ public class Pipeline {
    * @param lifeCycleState  - Pipeline State
    * @param replicationType - Replication protocol
    * @param replicationFactor - replication count on datanodes
-   * @param name  - pipelineName
+   * @param id  - pipeline ID
    */
   public Pipeline(String leaderID, HddsProtos.LifeCycleState lifeCycleState,
       HddsProtos.ReplicationType replicationType,
-      HddsProtos.ReplicationFactor replicationFactor, String name) {
+      HddsProtos.ReplicationFactor replicationFactor, PipelineID id) {
     this.leaderID = leaderID;
     this.lifeCycleState = lifeCycleState;
     this.type = replicationType;
     this.factor = replicationFactor;
-    this.name = name;
+    this.id = id;
     datanodes = new TreeMap<>();
   }
 
@@ -102,7 +100,7 @@ public class Pipeline {
             pipelineProto.getState(),
             pipelineProto.getType(),
             pipelineProto.getFactor(),
-            pipelineProto.getName());
+            PipelineID.getFromProtobuf(pipelineProto.getId()));
 
     for (HddsProtos.DatanodeDetailsProto dataID :
         pipelineProto.getMembersList()) {
@@ -191,15 +189,19 @@ public class Pipeline {
     }
     builder.setLeaderID(leaderID);
 
-    if (this.getLifeCycleState() != null) {
-      builder.setState(this.getLifeCycleState());
+    if (lifeCycleState != null) {
+      builder.setState(lifeCycleState);
     }
-    if (this.getType() != null) {
-      builder.setType(this.getType());
+    if (type != null) {
+      builder.setType(type);
     }
 
-    if (this.getFactor() != null) {
-      builder.setFactor(this.getFactor());
+    if (factor != null) {
+      builder.setFactor(factor);
+    }
+
+    if (id != null) {
+      builder.setId(id.getProtobuf());
     }
     return builder.build();
   }
@@ -221,12 +223,12 @@ public class Pipeline {
   }
 
   /**
-   * Gets the pipeline Name.
+   * Gets the pipeline id.
    *
-   * @return - Name of the pipeline
+   * @return - Id of the pipeline
    */
-  public String getPipelineName() {
-    return name;
+  public PipelineID getId() {
+    return id;
   }
 
   /**
@@ -245,7 +247,7 @@ public class Pipeline {
     getDatanodes().keySet().stream()
         .forEach(id -> b.
             append(id.endsWith(getLeaderID()) ? "*" + id : id));
-    b.append(" name:").append(getPipelineName());
+    b.append(" id:").append(id);
     if (getType() != null) {
       b.append(" type:").append(getType().toString());
     }

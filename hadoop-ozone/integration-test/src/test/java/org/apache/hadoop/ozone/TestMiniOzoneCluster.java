@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -95,7 +96,7 @@ public class TestMiniOzoneCluster {
           new Pipeline(datanodeDetails.getUuidString(),
               HddsProtos.LifeCycleState.OPEN,
               HddsProtos.ReplicationType.STAND_ALONE,
-              HddsProtos.ReplicationFactor.ONE, "test");
+              HddsProtos.ReplicationFactor.ONE, PipelineID.randomId());
       pipeline.addMember(datanodeDetails);
 
       // Verify client is able to connect to the container

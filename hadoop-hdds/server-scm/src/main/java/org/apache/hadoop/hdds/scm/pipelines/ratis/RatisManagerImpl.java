@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -38,7 +39,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Implementation of {@link PipelineManager}.
@@ -48,7 +48,6 @@ import java.util.UUID;
 public class RatisManagerImpl extends PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(RatisManagerImpl.class);
-  private static final String PREFIX = "Ratis-";
   private final Configuration conf;
   private final NodeManager nodeManager;
   private final Set<DatanodeDetails> ratisMembers;
@@ -87,12 +86,11 @@ public class RatisManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           ratisMembers.addAll(newNodesList);
-          LOG.info("Allocating a new ratis pipeline of size: {}", count);
-          // Start all pipeline names with "Ratis", easy to grep the logs.
-          String pipelineName = PREFIX +
-              UUID.randomUUID().toString().substring(PREFIX.length());
+          PipelineID pipelineID = PipelineID.randomId();
+          LOG.info("Allocating a new ratis pipeline of size: {} id: {}",
+              count, pipelineID);
           return PipelineSelector.newPipelineFromNodes(newNodesList,
-              ReplicationType.RATIS, factor, pipelineName);
+              ReplicationType.RATIS, factor, pipelineID);
         }
       }
     }
@@ -103,7 +101,7 @@ public class RatisManagerImpl extends PipelineManager {
     //TODO:move the initialization from SCM to client
     try (XceiverClientRatis client =
         XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.createPipeline(pipeline.getPipelineName(), pipeline.getMachines());
+      client.createPipeline(pipeline);
     }
   }
 
@@ -126,7 +124,7 @@ public class RatisManagerImpl extends PipelineManager {
    * @return the datanode
    */
   @Override
-  public List<DatanodeDetails> getMembers(String pipelineID)
+  public List<DatanodeDetails> getMembers(PipelineID pipelineID)
       throws IOException {
     return null;
   }
@@ -138,7 +136,7 @@ public class RatisManagerImpl extends PipelineManager {
    * @param newDatanodes
    */
   @Override
-  public void updatePipeline(String pipelineID,
+  public void updatePipeline(PipelineID pipelineID,
                              List<DatanodeDetails> newDatanodes)
       throws IOException {
 

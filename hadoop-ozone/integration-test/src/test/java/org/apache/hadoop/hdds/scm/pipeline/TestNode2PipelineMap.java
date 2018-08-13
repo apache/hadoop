@@ -87,7 +87,7 @@ public class TestNode2PipelineMap {
   public void testPipelineMap() throws IOException {
 
     NavigableSet<ContainerID> set = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer.getPipeline().getPipelineName());
+        ratisContainer.getPipeline().getId());
 
     long cId = ratisContainer.getContainerInfo().getContainerID();
     Assert.assertEquals(1, set.size());
@@ -100,8 +100,8 @@ public class TestNode2PipelineMap {
     Set<Pipeline> pipelines = mapping.getPipelineSelector()
         .getNode2PipelineMap().getPipelines(dns.get(0).getUuid());
     Assert.assertEquals(1, pipelines.size());
-    pipelines.forEach(p -> Assert.assertEquals(p.getPipelineName(),
-        ratisContainer.getPipeline().getPipelineName()));
+    pipelines.forEach(p -> Assert.assertEquals(p.getId(),
+        ratisContainer.getPipeline().getId()));
 
 
     // Now close the container and it should not show up while fetching
@@ -115,7 +115,7 @@ public class TestNode2PipelineMap {
     mapping
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
     NavigableSet<ContainerID> set2 = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer.getPipeline().getPipelineName());
+        ratisContainer.getPipeline().getId());
     Assert.assertEquals(0, set2.size());
 
     try {

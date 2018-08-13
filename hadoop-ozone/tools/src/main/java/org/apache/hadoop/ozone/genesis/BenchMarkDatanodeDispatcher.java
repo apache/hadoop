@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.genesis;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -92,7 +93,7 @@ public class BenchMarkDatanodeDispatcher {
     datanodeUuid = UUID.randomUUID().toString();
     pipeline = new Pipeline("127.0.0.1",
         LifeCycleState.OPEN, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE, "SA-" + UUID.randomUUID());
+        ReplicationFactor.ONE, PipelineID.randomId());
 
     // 1 MB of data
     data = ByteString.copyFromUtf8(RandomStringUtils.randomAscii(1048576));

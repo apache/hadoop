@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -299,7 +300,7 @@ public class ContainerStateManager implements Closeable {
 
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(HddsProtos.LifeCycleState.ALLOCATED)
-        .setPipelineName(pipeline.getPipelineName())
+        .setPipelineID(pipeline.getId())
         // This is bytes allocated for blocks inside container, not the
         // container size
         .setAllocatedBytes(0)
@@ -467,12 +468,12 @@ public class ContainerStateManager implements Closeable {
   /**
    * Returns a set of open ContainerIDs that reside on a pipeline.
    *
-   * @param pipeline Pipeline of the Containers.
+   * @param pipelineID PipelineID of the Containers.
    * @return Set of containers that match the specific query parameters.
    */
-  public NavigableSet<ContainerID> getMatchingContainerIDsByPipeline(String
-      pipeline) {
-    return containers.getOpenContainerIDsByPipeline(pipeline);
+  public NavigableSet<ContainerID> getMatchingContainerIDsByPipeline(PipelineID
+      pipelineID) {
+    return containers.getOpenContainerIDsByPipeline(pipelineID);
   }
 
   /**
@@ -485,7 +486,8 @@ public class ContainerStateManager implements Closeable {
   public ContainerWithPipeline getContainer(PipelineSelector selector,
       ContainerID containerID) throws IOException {
     ContainerInfo info = containers.getContainerInfo(containerID.getId());
-    Pipeline pipeline = selector.getPipeline(info.getPipelineName(), info.getReplicationType());
+    Pipeline pipeline = selector.getPipeline(info.getPipelineID(),
+        info.getReplicationType());
     return new ContainerWithPipeline(info, pipeline);
   }
 

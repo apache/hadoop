@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -136,10 +137,10 @@ public final class ContainerTestHelper {
     final Iterator<DatanodeDetails> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
     final DatanodeDetails leader = i.next();
-    String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(3);
     final Pipeline pipeline =
         new Pipeline(leader.getUuidString(), LifeCycleState.OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+            PipelineID.randomId());
     pipeline.addMember(leader);
     for(; i.hasNext();) {
       pipeline.addMember(i.next());

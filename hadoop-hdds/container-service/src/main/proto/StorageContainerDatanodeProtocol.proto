@@ -247,6 +247,7 @@ message CloseContainerCommandProto {
   required int64 containerID = 1;
   required hadoop.hdds.ReplicationType replicationType = 2;
   required int64 cmdId = 3;
+  required PipelineID pipelineID = 4;
 }
 
 /**

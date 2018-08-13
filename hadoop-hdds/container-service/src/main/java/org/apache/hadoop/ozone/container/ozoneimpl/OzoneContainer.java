@@ -168,23 +168,25 @@ public class OzoneContainer {
    * Submit ContainerRequest.
    * @param request
    * @param replicationType
+   * @param pipelineID
    * @throws IOException
    */
   public void submitContainerRequest(
       ContainerProtos.ContainerCommandRequestProto request,
-      HddsProtos.ReplicationType replicationType) throws IOException {
+      HddsProtos.ReplicationType replicationType,
+      HddsProtos.PipelineID pipelineID) throws IOException {
     XceiverServerSpi serverInstance;
     long containerId = getContainerIdForCmd(request);
     if (replicationType == HddsProtos.ReplicationType.RATIS) {
       serverInstance = getRatisSerer();
       Preconditions.checkNotNull(serverInstance);
-      serverInstance.submitRequest(request);
+      serverInstance.submitRequest(request, pipelineID);
       LOG.info("submitting {} request over RATIS server for container {}",
           request.getCmdType(), containerId);
     } else {
       serverInstance = getStandaAloneSerer();
       Preconditions.checkNotNull(serverInstance);
-      getStandaAloneSerer().submitRequest(request);
+      getStandaAloneSerer().submitRequest(request, pipelineID);
       LOG.info(
           "submitting {} request over STAND_ALONE server for container {}",
           request.getCmdType(), containerId);

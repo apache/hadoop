@@ -93,7 +93,7 @@ public class TestPipelineClose {
   @Test
   public void testPipelineCloseWithClosedContainer() throws IOException {
     NavigableSet<ContainerID> set = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getPipelineName());
+        ratisContainer1.getPipeline().getId());
 
     long cId = ratisContainer1.getContainerInfo().getContainerID();
     Assert.assertEquals(1, set.size());
@@ -111,12 +111,12 @@ public class TestPipelineClose {
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
 
     NavigableSet<ContainerID> setClosed = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getPipelineName());
+        ratisContainer1.getPipeline().getId());
     Assert.assertEquals(0, setClosed.size());
 
     pipelineSelector.finalizePipeline(ratisContainer1.getPipeline());
     Pipeline pipeline1 = pipelineSelector
-        .getPipeline(ratisContainer1.getPipeline().getPipelineName(),
+        .getPipeline(ratisContainer1.getPipeline().getId(),
             ratisContainer1.getContainerInfo().getReplicationType());
     Assert.assertNull(pipeline1);
     Assert.assertEquals(ratisContainer1.getPipeline().getLifeCycleState(),
@@ -132,7 +132,7 @@ public class TestPipelineClose {
   public void testPipelineCloseWithOpenContainer() throws IOException,
       TimeoutException, InterruptedException {
     NavigableSet<ContainerID> setOpen = stateMap.getOpenContainerIDsByPipeline(
-        ratisContainer2.getPipeline().getPipelineName());
+        ratisContainer2.getPipeline().getId());
     Assert.assertEquals(1, setOpen.size());
 
     long cId2 = ratisContainer2.getContainerInfo().getContainerID();
@@ -144,7 +144,7 @@ public class TestPipelineClose {
     Assert.assertEquals(ratisContainer2.getPipeline().getLifeCycleState(),
         HddsProtos.LifeCycleState.CLOSING);
     Pipeline pipeline2 = pipelineSelector
-        .getPipeline(ratisContainer2.getPipeline().getPipelineName(),
+        .getPipeline(ratisContainer2.getPipeline().getId(),
             ratisContainer2.getContainerInfo().getReplicationType());
     Assert.assertEquals(pipeline2.getLifeCycleState(),
         HddsProtos.LifeCycleState.CLOSING);

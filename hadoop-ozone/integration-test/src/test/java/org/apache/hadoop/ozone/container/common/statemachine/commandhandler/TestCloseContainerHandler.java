@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -33,7 +34,6 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -80,6 +80,9 @@ public class TestCloseContainerHandler {
             .get(0).getBlocksLatestVersionOnly().get(0);
 
     long containerID = omKeyLocationInfo.getContainerID();
+    Pipeline pipeline = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline();
 
     Assert.assertFalse(isContainerClosed(cluster, containerID));
 
@@ -89,7 +92,7 @@ public class TestCloseContainerHandler {
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
             new CloseContainerCommand(containerID,
-                HddsProtos.ReplicationType.STAND_ALONE));
+                HddsProtos.ReplicationType.STAND_ALONE, pipeline.getId()));
 
     GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerID),
             500,

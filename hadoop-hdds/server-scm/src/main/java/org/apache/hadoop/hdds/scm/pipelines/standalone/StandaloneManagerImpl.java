@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.pipelines.standalone;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -36,7 +37,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Standalone Manager Impl to prove that pluggable interface
@@ -85,11 +85,11 @@ public class StandaloneManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           standAloneMembers.addAll(newNodesList);
-          LOG.info("Allocating a new standalone pipeline of size: {}", count);
-          String pipelineName =
-              "SA-" + UUID.randomUUID().toString().substring(3);
+          PipelineID pipelineID = PipelineID.randomId();
+          LOG.info("Allocating a new standalone pipeline of size: {} id: {}",
+              count, pipelineID);
           return PipelineSelector.newPipelineFromNodes(newNodesList,
-              ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
+              ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineID);
         }
       }
     }
@@ -118,7 +118,7 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @return the datanode
    */
   @Override
-  public List<DatanodeDetails> getMembers(String pipelineID)
+  public List<DatanodeDetails> getMembers(PipelineID pipelineID)
       throws IOException {
     return null;
   }
@@ -130,7 +130,7 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @param newDatanodes
    */
   @Override
-  public void updatePipeline(String pipelineID, List<DatanodeDetails>
+  public void updatePipeline(PipelineID pipelineID, List<DatanodeDetails>
       newDatanodes) throws IOException {
 
   }

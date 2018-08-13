@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -201,7 +202,7 @@ public class ContainerMapping implements Mapping {
           .parseFrom(containerBytes);
       contInfo = ContainerInfo.fromProtobuf(temp);
       Pipeline pipeline = pipelineSelector
-          .getPipeline(contInfo.getPipelineName(),
+          .getPipeline(contInfo.getPipelineID(),
               contInfo.getReplicationType());
 
       if(pipeline == null) {
@@ -381,7 +382,7 @@ public class ContainerMapping implements Mapping {
           .updateContainerState(containerInfo, event);
       if (!updatedContainer.isContainerOpen()) {
         Pipeline pipeline = pipelineSelector
-            .getPipeline(containerInfo.getPipelineName(),
+            .getPipeline(containerInfo.getPipelineID(),
                 containerInfo.getReplicationType());
         pipelineSelector.closePipelineIfNoOpenContainers(pipeline);
       }
@@ -462,7 +463,7 @@ public class ContainerMapping implements Mapping {
       return null;
     }
     Pipeline pipeline = pipelineSelector
-        .getPipeline(containerInfo.getPipelineName(),
+        .getPipeline(containerInfo.getPipelineID(),
             containerInfo.getReplicationType());
     if (pipeline == null) {
       pipeline = pipelineSelector
@@ -527,7 +528,8 @@ public class ContainerMapping implements Mapping {
 
           // If the container is closed, then state is already written to SCM
           Pipeline pipeline =
-              pipelineSelector.getPipeline(newState.getPipelineName(),
+              pipelineSelector.getPipeline(
+                  PipelineID.getFromProtobuf(newState.getPipelineID()),
                   newState.getReplicationType());
           if(pipeline == null) {
             pipeline = pipelineSelector
@@ -570,7 +572,7 @@ public class ContainerMapping implements Mapping {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
     builder.setContainerID(knownState.getContainerID())
-        .setPipelineName(knownState.getPipelineName())
+        .setPipelineID(knownState.getPipelineID())
         .setReplicationType(knownState.getReplicationType())
         .setReplicationFactor(knownState.getReplicationFactor());
 
@@ -725,7 +727,7 @@ public class ContainerMapping implements Mapping {
               .setAllocatedBytes(info.getAllocatedBytes())
               .setNumberOfKeys(oldInfo.getNumberOfKeys())
               .setOwner(oldInfo.getOwner())
-              .setPipelineName(oldInfo.getPipelineName())
+              .setPipelineID(oldInfo.getPipelineID())
               .setState(oldInfo.getState())
               .setUsedBytes(oldInfo.getUsedBytes())
               .setDeleteTransactionId(oldInfo.getDeleteTransactionId())

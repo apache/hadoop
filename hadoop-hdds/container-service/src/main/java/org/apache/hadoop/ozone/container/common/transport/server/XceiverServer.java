@@ -19,7 +19,8 @@
 package org.apache.hadoop.ozone.container.common.transport.server;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
 import org.apache.ratis.shaded.io.netty.bootstrap.ServerBootstrap;
 import org.apache.ratis.shaded.io.netty.channel.Channel;
 import org.apache.ratis.shaded.io.netty.channel.EventLoopGroup;
@@ -132,8 +133,8 @@ public final class XceiverServer implements XceiverServerSpi {
   }
 
   @Override
-  public void submitRequest(
-      ContainerProtos.ContainerCommandRequestProto request) throws IOException {
+  public void submitRequest(ContainerCommandRequestProto request,
+      HddsProtos.PipelineID pipelineID) {
     storageContainer.dispatch(request);
   }
 }

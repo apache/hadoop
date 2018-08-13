@@ -107,6 +107,14 @@ public class DatanodeInfo extends DatanodeDetails {
     }
   }
 
+  /**
+   * Returns the last updated time of datanode info.
+   * @return the last updated time of datanode info.
+   */
+  public long getLastStatsUpdatedTime() {
+    return lastStatsUpdatedTime;
+  }
+
   @Override
   public int hashCode() {
     return super.hashCode();

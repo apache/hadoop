@@ -114,11 +114,9 @@ public abstract class XceiverClientSpi implements Closeable {
   /**
    * Create a pipeline.
    *
-   * @param pipelineID - Name of the pipeline.
-   * @param datanodes - Datanodes
+   * @param pipeline -  pipeline to be created.
    */
-  public abstract void createPipeline(String pipelineID,
-      List<DatanodeDetails> datanodes) throws IOException;
+  public abstract void createPipeline(Pipeline pipeline) throws IOException;
 
   /**
    * Returns pipeline Type.

@@ -35,6 +35,7 @@ import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
 import org.apache.ratis.protocol.RaftGroup;
+import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -87,12 +88,13 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * {@inheritDoc}
    */
-  public void createPipeline(String clusterId, List<DatanodeDetails> datanodes)
+  public void createPipeline(Pipeline pipeline)
       throws IOException {
-    RaftGroup group = RatisHelper.newRaftGroup(datanodes);
-    LOG.debug("initializing pipeline:{} with nodes:{}", clusterId,
-        group.getPeers());
-    reinitialize(datanodes, group);
+    RaftGroupId groupId = pipeline.getId().getRaftGroupID();
+    RaftGroup group = RatisHelper.newRaftGroup(groupId, pipeline.getMachines());
+    LOG.debug("initializing pipeline:{} with nodes:{}",
+        pipeline.getId(), group.getPeers());
+    reinitialize(pipeline.getMachines(), group);
   }
 
   /**
@@ -157,7 +159,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   @Override
   public void connect() throws Exception {
     LOG.debug("Connecting to pipeline:{} leader:{}",
-        getPipeline().getPipelineName(),
+        getPipeline().getId(),
         RatisHelper.toRaftPeerId(pipeline.getLeader()));
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async

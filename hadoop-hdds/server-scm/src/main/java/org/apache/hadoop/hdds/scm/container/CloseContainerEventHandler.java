@@ -78,7 +78,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
         CommandForDatanode closeContainerCommand = new CommandForDatanode<>(
             datanode.getUuid(),
             new CloseContainerCommand(containerID.getId(),
-                info.getReplicationType()));
+                info.getReplicationType(), info.getPipelineID()));
         publisher.fireEvent(DATANODE_COMMAND, closeContainerCommand);
       }
       try {

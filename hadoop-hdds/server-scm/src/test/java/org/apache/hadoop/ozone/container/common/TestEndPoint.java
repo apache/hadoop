@@ -51,6 +51,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -430,6 +431,7 @@ public class TestEndPoint {
             CloseContainerCommandProto.newBuilder().setCmdId(1)
         .setContainerID(1)
         .setReplicationType(ReplicationType.RATIS)
+        .setPipelineID(PipelineID.randomId().getProtobuf())
         .build())
         .setCommandType(Type.closeContainerCommand)
         .build();

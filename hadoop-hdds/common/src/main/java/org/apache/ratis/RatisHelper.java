@@ -88,16 +88,18 @@ public interface RatisHelper {
     return EMPTY_GROUP;
   }
 
-  static RaftGroup newRaftGroup(List<DatanodeDetails> datanodes) {
-    final List<RaftPeer> newPeers = datanodes.stream()
-        .map(RatisHelper::toRaftPeer)
-        .collect(Collectors.toList());
-    return RatisHelper.newRaftGroup(newPeers);
-  }
-
   static RaftGroup newRaftGroup(Collection<RaftPeer> peers) {
     return peers.isEmpty()? emptyRaftGroup()
         : new RaftGroup(DUMMY_GROUP_ID, peers);
+  }
+
+  static RaftGroup newRaftGroup(RaftGroupId groupId,
+      Collection<DatanodeDetails> peers) {
+    final List<RaftPeer> newPeers = peers.stream()
+        .map(RatisHelper::toRaftPeer)
+        .collect(Collectors.toList());
+    return peers.isEmpty() ? new RaftGroup(groupId, Collections.emptyList())
+        : new RaftGroup(groupId, newPeers);
   }
 
   static RaftGroup newRaftGroup(Pipeline pipeline) {
@@ -106,7 +108,8 @@ public interface RatisHelper {
 
   static RaftClient newRaftClient(RpcType rpcType, Pipeline pipeline) {
     return newRaftClient(rpcType, toRaftPeerId(pipeline.getLeader()),
-        newRaftGroup(pipeline));
+        newRaftGroup(pipeline.getId().getRaftGroupID(),
+            pipeline.getMachines()));
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader) {

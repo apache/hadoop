@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -1123,7 +1124,8 @@ public class TestNodeManager {
           .register(datanodeDetails, TestUtils.createNodeReport(report));
       eq.fireEvent(DATANODE_COMMAND,
           new CommandForDatanode<>(datanodeDetails.getUuid(),
-              new CloseContainerCommand(1L, ReplicationType.STAND_ALONE)));
+              new CloseContainerCommand(1L, ReplicationType.STAND_ALONE,
+                  PipelineID.randomId())));
 
       eq.processAll(1000L);
       List<SCMCommand> command =

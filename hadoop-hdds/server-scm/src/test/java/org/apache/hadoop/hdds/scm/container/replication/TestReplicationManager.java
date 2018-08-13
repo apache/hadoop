@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
@@ -206,10 +207,10 @@ public class TestReplicationManager {
     final Iterator<DatanodeDetails> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
     final DatanodeDetails leader = i.next();
-    String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(3);
     final Pipeline pipeline =
         new Pipeline(leader.getUuidString(), LifeCycleState.OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+            PipelineID.randomId());
     pipeline.addMember(leader);
     for (; i.hasNext(); ) {
       pipeline.addMember(i.next());

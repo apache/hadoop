@@ -188,11 +188,10 @@ public class XceiverClient extends XceiverClientSpi {
   /**
    * Create a pipeline.
    *
-   * @param pipelineID - Name of the pipeline.
-   * @param datanodes - Datanodes
+   * @param pipeline -  pipeline to be created.
    */
   @Override
-  public void createPipeline(String pipelineID, List<DatanodeDetails> datanodes)
+  public void createPipeline(Pipeline pipeline)
       throws IOException {
     // For stand alone pipeline, there is no notion called setup pipeline.
     return;

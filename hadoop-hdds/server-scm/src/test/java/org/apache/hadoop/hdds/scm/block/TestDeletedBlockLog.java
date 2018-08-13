@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -381,11 +382,12 @@ public class TestDeletedBlockLog {
   private void mockContainerInfo(long containerID, DatanodeDetails dd) throws IOException {
     Pipeline pipeline =
         new Pipeline("fake", LifeCycleState.OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "fake");
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+            PipelineID.randomId());
     pipeline.addMember(dd);
 
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
-    builder.setPipelineName(pipeline.getPipelineName())
+    builder.setPipelineID(pipeline.getId())
         .setReplicationType(pipeline.getType())
         .setReplicationFactor(pipeline.getFactor());
 

@@ -158,7 +158,7 @@ public class ContainerOperationClient implements ScmClient {
   private void createPipeline(XceiverClientSpi client, Pipeline pipeline)
       throws IOException {
 
-    Preconditions.checkNotNull(pipeline.getPipelineName(), "Pipeline " +
+    Preconditions.checkNotNull(pipeline.getId(), "Pipeline " +
         "name cannot be null when client create flag is set.");
 
     // Pipeline creation is a three step process.
@@ -180,8 +180,7 @@ public class ContainerOperationClient implements ScmClient {
     //    ObjectStageChangeRequestProto.Op.create,
     //    ObjectStageChangeRequestProto.Stage.begin);
 
-    client.createPipeline(pipeline.getPipelineName(),
-        pipeline.getMachines());
+    client.createPipeline(pipeline);
 
     //storageContainerLocationClient.notifyObjectStageChange(
     //    ObjectStageChangeRequestProto.Type.pipeline,

@@ -73,6 +73,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
           CloseContainerCommandProto
               .parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
+      HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
       HddsProtos.ReplicationType replicationType =
           closeContainerProto.getReplicationType();
 
@@ -87,7 +88,7 @@ public class CloseContainerCommandHandler implements CommandHandler {
           context.getParent().getDatanodeDetails().getUuidString());
       // submit the close container request for the XceiverServer to handle
       container.submitContainerRequest(
-          request.build(), replicationType);
+          request.build(), replicationType, pipelineID);
       cmdExecuted = true;
     } catch (Exception e) {
       LOG.error("Can't close container " + containerID, e);

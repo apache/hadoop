@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo
     .Builder;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
@@ -109,7 +110,8 @@ public class TestContainerReportHandler implements EventPublisher {
     PipelineSelector pipelineSelector = Mockito.mock(PipelineSelector.class);
 
     Pipeline pipeline = new Pipeline("leader", LifeCycleState.CLOSED,
-        ReplicationType.STAND_ALONE, ReplicationFactor.THREE, "pipeline1");
+        ReplicationType.STAND_ALONE, ReplicationFactor.THREE,
+        PipelineID.randomId());
 
     when(pipelineSelector.getReplicationPipeline(ReplicationType.STAND_ALONE,
         ReplicationFactor.THREE)).thenReturn(pipeline);
