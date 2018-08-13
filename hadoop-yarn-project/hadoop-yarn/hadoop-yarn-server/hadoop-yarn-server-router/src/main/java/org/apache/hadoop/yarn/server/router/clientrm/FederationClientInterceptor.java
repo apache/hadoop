@@ -247,7 +247,7 @@ public class FederationClientInterceptor
       try {
         response = clientRMProxy.getNewApplication(request);
       } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster "
+        LOG.warn("Unable to get a new ApplicationId in SubCluster "
             + subClusterId.getId(), e);
       }
 

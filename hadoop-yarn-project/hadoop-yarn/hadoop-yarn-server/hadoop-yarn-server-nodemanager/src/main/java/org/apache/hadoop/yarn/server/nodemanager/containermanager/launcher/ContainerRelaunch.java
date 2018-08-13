@@ -126,7 +126,7 @@ public class ContainerRelaunch extends ContainerLaunch {
           .setApplicationLocalDirs(applicationLocalDirs)
           .build());
     } catch (ConfigurationException e) {
-      LOG.error("Failed to launch container due to configuration error.", e);
+      LOG.error("Failed to relaunch container due to configuration error.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
           containerId, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
           e.getMessage()));
