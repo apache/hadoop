@@ -56,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -142,12 +143,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     S3ATestUtils.assumeS3GuardState(true, getConfiguration());
-    ms = getFileSystem().getMetadataStore();
+    S3AFileSystem fs = getFileSystem();
+    ms = fs.getMetadataStore();
 
     // Also create a "raw" fs without any MetadataStore configured
     Configuration conf = new Configuration(getConfiguration());
-    URI fsUri = getFileSystem().getUri();
+    clearBucketOption(conf, fs.getBucket(), S3_METADATA_STORE_IMPL);
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+    URI fsUri = fs.getUri();
     S3AUtils.setBucketOption(conf,fsUri.getHost(),
         METADATASTORE_AUTHORITATIVE,
         S3GUARD_METASTORE_NULL);
@@ -394,13 +397,17 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testDiffCommand() throws Exception {
+  public void
+  testDiffCommand() throws Exception {
     S3AFileSystem fs = getFileSystem();
     ms = getMetadataStore();
     Set<Path> filesOnS3 = new HashSet<>(); // files on S3.
     Set<Path> filesOnMS = new HashSet<>(); // files on metadata store.
 
     Path testPath = path("test-diff");
+    // clean up through the store and behind it.
+    fs.delete(testPath, true);
+    rawFs.delete(testPath, true);
     mkdirs(testPath, true, true);
 
     Path msOnlyPath = new Path(testPath, "ms_only");

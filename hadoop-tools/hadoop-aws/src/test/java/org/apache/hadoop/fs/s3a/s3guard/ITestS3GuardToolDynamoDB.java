@@ -50,9 +50,10 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   @Override
   public void setup() throws Exception {
     super.setup();
-    Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard",
-        getConfiguration().get(Constants.S3_METADATA_STORE_IMPL).equals(
-            Constants.S3GUARD_METASTORE_DYNAMO));
+    MetadataStore ms = getMetadataStore();
+    Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard;"
+        + "Store is " + (ms == null ? "none" : ms.toString()),
+        ms instanceof DynamoDBMetadataStore);
   }
 
   // Check the existence of a given DynamoDB table.
