@@ -21,10 +21,12 @@ package org.apache.hadoop.ozone.web.ozShell.volume;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -80,5 +82,8 @@ public class UpdateVolumeHandler extends Handler {
     if (ownerName != null && !ownerName.isEmpty()) {
       volume.setOwner(ownerName);
     }
+
+    System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(volume))));
   }
 }
