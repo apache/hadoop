@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -360,13 +361,14 @@ public class ContainerStateManager implements Closeable {
   /**
    * Update deleteTransactionId for a container.
    *
-   * @param containerID ContainerID of the container whose delete
-   *                    transactionId needs to be updated.
-   * @param transactionId latest transactionId to be updated for the container
+   * @param deleteTransactionMap maps containerId to its new
+   *                             deleteTransactionID
    */
-  public void updateDeleteTransactionId(Long containerID, long transactionId) {
-    containers.getContainerMap().get(ContainerID.valueof(containerID))
-        .updateDeleteTransactionId(transactionId);
+  public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap) {
+    for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
+      containers.getContainerMap().get(ContainerID.valueof(entry.getKey()))
+          .updateDeleteTransactionId(entry.getValue());
+    }
   }
 
   /**

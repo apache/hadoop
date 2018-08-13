@@ -42,9 +42,10 @@ public interface DeletedBlockLog extends Closeable {
    * Once DatanodeDeletedBlockTransactions is full, the scan behavior will
    * stop.
    * @param transactions a list of TXs will be set into.
+   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
-  void getTransactions(DatanodeDeletedBlockTransactions transactions)
+  Map<Long, Long> getTransactions(DatanodeDeletedBlockTransactions transactions)
       throws IOException;
 
   /**
@@ -101,10 +102,9 @@ public interface DeletedBlockLog extends Closeable {
    * number of containers) together (on success) or non (on failure).
    *
    * @param containerBlocksMap a map of containerBlocks.
-   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
-  Map<Long, Long> addTransactions(Map<Long, List<Long>> containerBlocksMap)
+  void addTransactions(Map<Long, List<Long>> containerBlocksMap)
       throws IOException;
 
   /**

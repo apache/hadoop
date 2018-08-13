@@ -23,11 +23,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
+import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
@@ -43,6 +45,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
+import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
@@ -86,6 +89,7 @@ public class ContainerMapping implements Mapping {
   private final LeaseManager<ContainerInfo> containerLeaseManager;
   private final float containerCloseThreshold;
   private final ContainerCloser closer;
+  private final EventPublisher eventPublisher;
   private final long size;
 
   /**
@@ -128,6 +132,7 @@ public class ContainerMapping implements Mapping {
         OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024 * 1024 * 1024;
     this.containerStateManager =
         new ContainerStateManager(conf, this);
+    LOG.trace("Container State Manager created.");
 
     this.pipelineSelector = new PipelineSelector(nodeManager,
         containerStateManager, conf, eventPublisher);
@@ -135,7 +140,7 @@ public class ContainerMapping implements Mapping {
     this.containerCloseThreshold = conf.getFloat(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
-    LOG.trace("Container State Manager created.");
+    this.eventPublisher = eventPublisher;
 
     long containerCreationLeaseTimeout = conf.getTimeDuration(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
@@ -398,8 +403,13 @@ public class ContainerMapping implements Mapping {
    */
   public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
       throws IOException {
+    if (deleteTransactionMap == null) {
+      return;
+    }
+
     lock.lock();
     try {
+      BatchOperation batch = new BatchOperation();
       for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
         long containerID = entry.getKey();
         byte[] dbKey = Longs.toByteArray(containerID);
@@ -413,10 +423,11 @@ public class ContainerMapping implements Mapping {
         ContainerInfo containerInfo = ContainerInfo.fromProtobuf(
             HddsProtos.SCMContainerInfo.parseFrom(containerBytes));
         containerInfo.updateDeleteTransactionId(entry.getValue());
-        containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
-        containerStateManager
-            .updateDeleteTransactionId(containerID, entry.getValue());
+        batch.put(dbKey, containerInfo.getProtobuf().toByteArray());
       }
+      containerStore.writeBatch(batch);
+      containerStateManager
+          .updateDeleteTransactionId(deleteTransactionMap);
     } finally {
       lock.unlock();
     }
@@ -484,7 +495,8 @@ public class ContainerMapping implements Mapping {
       throws IOException {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
-
+    PendingDeleteStatusList pendingDeleteStatusList =
+        new PendingDeleteStatusList(datanodeDetails);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
       byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
@@ -497,6 +509,14 @@ public class ContainerMapping implements Mapping {
 
           HddsProtos.SCMContainerInfo newState =
               reconcileState(datanodeState, knownState, datanodeDetails);
+
+          if (knownState.getDeleteTransactionId() > datanodeState
+              .getDeleteTransactionId()) {
+            pendingDeleteStatusList
+                .addPendingDeleteStatus(datanodeState.getDeleteTransactionId(),
+                    knownState.getDeleteTransactionId(),
+                    knownState.getContainerID());
+          }
 
           // FIX ME: This can be optimized, we write twice to memory, where a
           // single write would work well.
@@ -529,6 +549,11 @@ public class ContainerMapping implements Mapping {
         lock.unlock();
       }
     }
+    if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
+      eventPublisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
+          pendingDeleteStatusList);
+    }
+
   }
 
   /**

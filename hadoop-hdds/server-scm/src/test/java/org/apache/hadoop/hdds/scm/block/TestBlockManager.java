@@ -107,31 +107,6 @@ public class TestBlockManager {
   }
 
   @Test
-  public void testDeleteBlock() throws Exception {
-    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
-    Assert.assertNotNull(block);
-    long transactionId =
-        mapping.getContainer(block.getBlockID().getContainerID())
-            .getDeleteTransactionId();
-    Assert.assertEquals(0, transactionId);
-    blockManager.deleteBlocks(Collections.singletonList(
-        block.getBlockID()));
-    Assert.assertEquals(++transactionId,
-        mapping.getContainer(block.getBlockID().getContainerID())
-            .getDeleteTransactionId());
-
-    block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
-    Assert.assertNotNull(block);
-    blockManager.deleteBlocks(Collections.singletonList(
-        block.getBlockID()));
-    Assert.assertEquals(++transactionId,
-        mapping.getContainer(block.getBlockID().getContainerID())
-            .getDeleteTransactionId());
-  }
-
-  @Test
   public void testAllocateOversizedBlock() throws IOException {
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");

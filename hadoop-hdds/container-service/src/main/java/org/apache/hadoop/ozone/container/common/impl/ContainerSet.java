@@ -215,7 +215,8 @@ public class ContainerSet {
           .setReadBytes(containerData.getReadBytes())
           .setWriteBytes(containerData.getWriteBytes())
           .setUsed(containerData.getBytesUsed())
-          .setState(getState(containerData));
+          .setState(getState(containerData))
+          .setDeleteTransactionId(containerData.getDeleteTransactionId());
 
       crBuilder.addReports(ciBuilder.build());
     }

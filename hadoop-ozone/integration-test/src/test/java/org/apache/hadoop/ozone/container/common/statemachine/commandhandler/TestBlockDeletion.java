@@ -23,6 +23,11 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -43,6 +48,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.ozShell.TestOzoneShell;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -101,7 +107,7 @@ public class TestBlockDeletion {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
-    String value = RandomStringUtils.random(1000000);
+    String value = RandomStringUtils.random(10000000);
     store.createVolume(volumeName);
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
@@ -111,7 +117,9 @@ public class TestBlockDeletion {
 
     OzoneOutputStream out = bucket.createKey(keyName, value.getBytes().length,
         ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
-    out.write(value.getBytes());
+    for (int i = 0; i < 100; i++) {
+      out.write(value.getBytes());
+    }
     out.close();
 
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
@@ -144,6 +152,49 @@ public class TestBlockDeletion {
     Assert.assertTrue(!containerIdsWithDeletedBlocks.isEmpty());
     // Containers in the DN and SCM should have same delete transactionIds
     matchContainerTransactionIds();
+    // Containers in the DN and SCM should have same delete transactionIds
+    // after DN restart. The assertion is just to verify that the state of
+    // containerInfos in dn and scm is consistent after dn restart.
+    cluster.restartHddsDatanode(0);
+    matchContainerTransactionIds();
+
+    // verify PENDING_DELETE_STATUS event is fired
+    verifyBlockDeletionEvent();
+  }
+
+  private void verifyBlockDeletionEvent()
+      throws IOException, InterruptedException {
+    LogCapturer logCapturer =
+        LogCapturer.captureLogs(SCMBlockDeletingService.LOG);
+    // Create dummy container reports with deleteTransactionId set as 0
+    ContainerReportsProto containerReport = dnContainerSet.getContainerReport();
+    ContainerReportsProto.Builder dummyReportsBuilder =
+        ContainerReportsProto.newBuilder();
+    for (ContainerInfo containerInfo : containerReport.getReportsList()) {
+      dummyReportsBuilder.addReports(
+          ContainerInfo.newBuilder(containerInfo).setDeleteTransactionId(0)
+              .build());
+    }
+    ContainerReportsProto dummyReport = dummyReportsBuilder.build();
+
+    logCapturer.clearOutput();
+    scm.getScmContainerManager().processContainerReports(
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), dummyReport);
+    // wait for event to be handled by event handler
+    Thread.sleep(1000);
+    String output = logCapturer.getOutput();
+    for (ContainerInfo containerInfo : dummyReport.getReportsList()) {
+      long containerId = containerInfo.getContainerID();
+      // Event should be triggered only for containers which have deleted blocks
+      if (containerIdsWithDeletedBlocks.contains(containerId)) {
+        Assert.assertTrue(output.contains(
+            "for containerID " + containerId + ". Datanode delete txnID"));
+      } else {
+        Assert.assertTrue(!output.contains(
+            "for containerID " + containerId + ". Datanode delete txnID"));
+      }
+    }
+    logCapturer.clearOutput();
   }
 
   private void matchContainerTransactionIds() throws IOException {

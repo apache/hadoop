@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .CloseContainerStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
@@ -145,6 +146,14 @@ public final class SCMEvents {
       DELETE_BLOCK_STATUS =
       new TypedEvent(DeleteBlockCommandStatus.class,
           "DeleteBlockCommandStatus");
+
+  /**
+   * This event will be triggered while processing container reports from DN
+   * when deleteTransactionID of container in report mismatches with the
+   * deleteTransactionID on SCM.
+   */
+  public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
+      new TypedEvent(PendingDeleteStatusList.class, "PendingDeleteStatus");
 
   /**
    * This is the command for ReplicationManager to handle under/over

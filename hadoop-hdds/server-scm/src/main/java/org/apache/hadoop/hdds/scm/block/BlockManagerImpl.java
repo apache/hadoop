@@ -372,9 +372,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       }
 
       try {
-        Map<Long, Long> deleteTransactionsMap =
-            deletedBlockLog.addTransactions(containerBlocks);
-        containerManager.updateDeleteTransactionId(deleteTransactionsMap);
+        deletedBlockLog.addTransactions(containerBlocks);
       } catch (IOException e) {
         throw new IOException(
             "Skip writing the deleted blocks info to"
