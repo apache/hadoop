@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -46,7 +47,11 @@ class GlobalStateIdContext implements AlignmentContext {
    */
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
-    header.setStateId(namesystem.getLastWrittenTransactionId());
+    // Using getCorrectLastAppliedOrWrittenTxId will acquire the lock on
+    // FSEditLog. This is needed so that ANN will return the correct state id
+    // it currently has. But this may not be necessary for Observer, may want
+    // revisit for optimization. Same goes to receiveRequestState.
+    header.setStateId(getLastSeenStateId());
   }
 
   /**
@@ -71,13 +76,20 @@ class GlobalStateIdContext implements AlignmentContext {
    * Server side implementation for processing state alignment info in requests.
    */
   @Override
-  public void receiveRequestState(RpcRequestHeaderProto header) {
-    long serverStateId = namesystem.getLastWrittenTransactionId();
+  public long receiveRequestState(RpcRequestHeaderProto header) {
+    long serverStateId =
+        namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
     long clientStateId = header.getStateId();
-    if (clientStateId > serverStateId) {
+    if (clientStateId > serverStateId &&
+        HAServiceProtocol.HAServiceState.ACTIVE.equals(namesystem.getState())) {
       FSNamesystem.LOG.warn("A client sent stateId: " + clientStateId +
           ", but server state is: " + serverStateId);
     }
+    return clientStateId;
   }
 
+  @Override
+  public long getLastSeenStateId() {
+    return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+  }
 }
