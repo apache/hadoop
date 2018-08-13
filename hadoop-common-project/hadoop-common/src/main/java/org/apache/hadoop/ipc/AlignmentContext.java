@@ -60,6 +60,13 @@ public interface AlignmentContext {
    * This is the intended server method call to implement to receive
    * client state info during RPC response header processing.
    * @param header The RPC request header.
+   * @return state id of in the request header.
    */
-  void receiveRequestState(RpcRequestHeaderProto header);
+  long receiveRequestState(RpcRequestHeaderProto header);
+
+  /**
+   * Returns the last seen state id of the alignment context instance.
+   * @return the value of the last seen state id.
+   */
+  long getLastSeenStateId();
 }

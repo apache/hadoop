@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.ClientGSIContext;
@@ -76,7 +77,12 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
    * Thread-local index to record the current index in the observer list.
    */
   private static final ThreadLocal<Integer> currentIndex =
-      ThreadLocal.withInitial(() -> 0);
+      ThreadLocal.withInitial(new Supplier<Integer>() {
+        @Override
+        public Integer get() {
+          return 0;
+        }
+      });
 
   /** The last proxy that has been used. Only used for testing */
   private volatile ProxyInfo<T> lastProxy = null;
