@@ -93,6 +93,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.http.socket.backlog.size</name>
+    <value>500</value>
+    <description>
+      KMS Server accept queue size.
+    </description>
+  </property>
+
   <!-- KMS Backend KeyProvider -->
 
   <property>
