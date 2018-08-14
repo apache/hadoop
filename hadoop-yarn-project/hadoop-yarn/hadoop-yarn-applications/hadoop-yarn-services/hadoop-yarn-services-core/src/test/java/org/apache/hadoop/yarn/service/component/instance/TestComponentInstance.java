@@ -101,8 +101,8 @@ public class TestComponentInstance {
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
     Assert.assertEquals("instance not ready", ContainerState.READY,
-        instance.getCompSpec().getContainer(
-            instance.getContainer().getId().toString()).getState());
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
   }
 
   private void upgradeComponent(Component component) {

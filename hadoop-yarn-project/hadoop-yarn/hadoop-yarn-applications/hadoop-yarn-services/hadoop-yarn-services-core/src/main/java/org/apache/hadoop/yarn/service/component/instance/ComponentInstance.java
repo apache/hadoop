@@ -509,7 +509,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     return this.container.getNodeId();
   }
 
-  public org.apache.hadoop.yarn.service.api.records.Component getCompSpec() {
+  private org.apache.hadoop.yarn.service.api.records.Component getCompSpec() {
     return component.getComponentSpec();
   }
 
