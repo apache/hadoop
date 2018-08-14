@@ -18,6 +18,8 @@ package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -30,10 +32,12 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -147,6 +151,52 @@ public class TestContainerMapping {
     Pipeline newPipeline = containerInfo.getPipeline();
     Assert.assertEquals(pipeline.getLeader().getUuid(),
         newPipeline.getLeader().getUuid());
+  }
+
+  @Test
+  public void testGetContainerWithPipeline() throws Exception {
+    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(),
+        containerOwner);
+    ContainerInfo contInfo = containerWithPipeline.getContainerInfo();
+    // Add dummy replicas for container.
+    DatanodeDetails dn1 = DatanodeDetails.newBuilder()
+        .setHostName("host1")
+        .setIpAddress("1.1.1.1")
+        .setUuid(UUID.randomUUID().toString()).build();
+    DatanodeDetails dn2 = DatanodeDetails.newBuilder()
+        .setHostName("host2")
+        .setIpAddress("2.2.2.2")
+        .setUuid(UUID.randomUUID().toString()).build();
+    mapping
+        .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CREATE);
+    mapping.updateContainerState(contInfo.getContainerID(),
+        LifeCycleEvent.CREATED);
+    mapping.updateContainerState(contInfo.getContainerID(),
+        LifeCycleEvent.FINALIZE);
+    mapping
+        .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CLOSE);
+    ContainerInfo finalContInfo = contInfo;
+    LambdaTestUtils.intercept(SCMException.class,"No entry exist for "
+        + "containerId:" , () -> mapping.getContainerWithPipeline(
+        finalContInfo.getContainerID()));
+
+    mapping.getStateManager().getContainerStateMap()
+        .addContainerReplica(contInfo.containerID(), dn1, dn2);
+
+    contInfo = mapping.getContainer(contInfo.getContainerID());
+    Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
+    Pipeline pipeline = containerWithPipeline.getPipeline();
+    mapping.getPipelineSelector().finalizePipeline(pipeline);
+
+    ContainerWithPipeline containerWithPipeline2 = mapping
+        .getContainerWithPipeline(contInfo.getContainerID());
+    pipeline = containerWithPipeline2.getPipeline();
+    Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
+    Assert.assertNotNull("Pipeline should not be null", pipeline);
+    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn1.getHostName()));
+    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn2.getHostName()));
   }
 
   @Test

@@ -199,7 +199,7 @@ public class ContainerStateMap {
     }
     throw new SCMException(
         "No entry exist for containerId: " + containerID + " in replica map.",
-        ResultCodes.FAILED_TO_FIND_CONTAINER);
+        ResultCodes.NO_REPLICA_FOUND);
   }
 
   /**

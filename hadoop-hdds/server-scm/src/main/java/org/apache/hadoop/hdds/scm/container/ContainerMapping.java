@@ -58,6 +58,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -201,14 +202,25 @@ public class ContainerMapping implements Mapping {
       HddsProtos.SCMContainerInfo temp = HddsProtos.SCMContainerInfo.PARSER
           .parseFrom(containerBytes);
       contInfo = ContainerInfo.fromProtobuf(temp);
-      Pipeline pipeline = pipelineSelector
-          .getPipeline(contInfo.getPipelineID(),
-              contInfo.getReplicationType());
 
-      if(pipeline == null) {
-        pipeline = pipelineSelector
-            .getReplicationPipeline(contInfo.getReplicationType(),
-                contInfo.getReplicationFactor());
+      Pipeline pipeline;
+      if (contInfo.isContainerOpen()) {
+        // If pipeline with given pipeline Id already exist return it
+        pipeline = pipelineSelector.getPipeline(contInfo.getPipelineID(),
+            contInfo.getReplicationType());
+        if (pipeline == null) {
+          pipeline = pipelineSelector
+              .getReplicationPipeline(contInfo.getReplicationType(),
+                  contInfo.getReplicationFactor());
+        }
+      } else {
+        // For close containers create pipeline from datanodes with replicas
+        Set<DatanodeDetails> dnWithReplicas = containerStateManager
+            .getContainerReplicas(contInfo.containerID());
+        pipeline = new Pipeline(dnWithReplicas.iterator().next().getHostName(),
+            contInfo.getState(), ReplicationType.STAND_ALONE,
+            contInfo.getReplicationFactor(), PipelineID.randomId());
+        dnWithReplicas.forEach(pipeline::addMember);
       }
       return new ContainerWithPipeline(contInfo, pipeline);
     } finally {
