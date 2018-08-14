@@ -103,10 +103,10 @@ Deployment
   This means that when reading and writing striped files, most operations are off-rack.
   Network bisection bandwidth is thus very important.
 
-  For rack fault-tolerance, it is also important to have at least as many racks as the configured EC stripe width.
-  For EC policy RS (6,3), this means minimally 9 racks, and ideally 10 or 11 to handle planned and unplanned outages.
-  For clusters with fewer racks than the stripe width, HDFS cannot maintain rack fault-tolerance, but will still attempt
-  to spread a striped file across multiple nodes to preserve node-level fault-tolerance.
+  For rack fault-tolerance, it is also important to have enough number of racks, so that on average, each rack holds number of blocks no more than the number of EC parity blocks. A formula to calculate this would be (data blocks + parity blocks) / parity blocks, rounding up.
+  For EC policy RS (6,3), this means minimally 3 racks (calculated by (6 + 3) / 3 = 3), and ideally 9 or more to handle planned and unplanned outages.
+  For clusters with fewer racks than the number of the parity cells, HDFS cannot maintain rack fault-tolerance, but will still attempt
+  to spread a striped file across multiple nodes to preserve node-level fault-tolerance. For this reason, it is recommended to setup racks with similar number of DataNodes.
 
 ### Configuration keys
 
