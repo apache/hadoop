@@ -2488,4 +2488,22 @@ public class TestFsck {
       runFsck(cluster.getConfiguration(0), 0, true, "/");
     }
   }
+
+  @Test
+  public void testFsckNonPrivilegedListCorrupt() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("systest", new String[]{""});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+       @Override
+        public Void run() throws Exception {
+         String path = "/";
+         String outStr = runFsck(conf, -1, true, path, "-list-corruptfileblocks");
+
+         assertFalse(outStr.contains("The list of corrupt files under path '" + path + "' are:"));
+         assertFalse(outStr.contains("The filesystem under path '" + path + "' has "));
+         assertTrue(outStr.contains("Failed to open path '" + path + "': Permission denied"));
+         return null;
+       }
+      });
+  }
 }

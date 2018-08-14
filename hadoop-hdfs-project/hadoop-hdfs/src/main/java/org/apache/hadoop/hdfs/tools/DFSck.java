@@ -210,8 +210,14 @@ public class DFSck extends Configured implements Tool {
             allDone = true;
             break;
           }
+          if (line.startsWith("Access denied for user")) {
+            out.println("Failed to open path '" + dir + "': Permission denied");
+            errCode = -1;
+            return errCode;
+          }
           if ((line.isEmpty())
               || (line.startsWith("FSCK started by"))
+              || (line.startsWith("FSCK ended at"))
               || (line.startsWith("The filesystem under path")))
             continue;
           numCorrupt++;
