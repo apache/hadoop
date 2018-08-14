@@ -598,7 +598,7 @@ function hadoop_bootstrap
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
   HDDS_DIR=${HDDS_DIR:-"share/hadoop/hdds"}
   HDDS_LIB_JARS_DIR=${HDDS_LIB_JARS_DIR:-"share/hadoop/hdds/lib"}
-  OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}q
+  OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}
   OZONE_LIB_JARS_DIR=${OZONE_LIB_JARS_DIR:-"share/hadoop/ozone/lib"}
   OZONEFS_DIR=${OZONEFS_DIR:-"share/hadoop/ozonefs"}
 
