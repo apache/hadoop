@@ -22,14 +22,14 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Echos the UGI offered.
  */
 public class EchoUserResolver implements UserResolver {
-  public static final Log LOG = LogFactory.getLog(Gridmix.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Gridmix.class);
 
   public EchoUserResolver() {
     LOG.info(" Current user resolver is EchoUserResolver ");

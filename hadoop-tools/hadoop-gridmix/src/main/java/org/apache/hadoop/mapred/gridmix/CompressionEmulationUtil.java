@@ -25,8 +25,8 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -58,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
  * This is a utility class for all the compression related modules.
  */
 class CompressionEmulationUtil {
-  static final Log LOG = LogFactory.getLog(CompressionEmulationUtil.class);
+  static final Logger LOG = LoggerFactory.getLogger(CompressionEmulationUtil.class);
   
   /**
    * Enable compression usage in GridMix runs.

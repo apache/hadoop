@@ -27,8 +27,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.output.FileWriterWithEncoding;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,7 +70,7 @@ import java.util.Set;
  * {@link HadoopArchiveLogsRunner}.
  */
 public class HadoopArchiveLogs implements Tool {
-  private static final Log LOG = LogFactory.getLog(HadoopArchiveLogs.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HadoopArchiveLogs.class);
 
   private static final String HELP_OPTION = "help";
   private static final String MAX_ELIGIBLE_APPS_OPTION = "maxEligibleApps";

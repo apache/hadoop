@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
@@ -51,8 +51,8 @@ import static org.junit.Assert.assertTrue;
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
 
-  private static final Log LOG = 
-    LogFactory.getLog(TestStreamingBadRecords.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestStreamingBadRecords.class);
   
   private static final List<String> MAPPER_BAD_RECORDS = 
     Arrays.asList("hey022","hey023","hey099");

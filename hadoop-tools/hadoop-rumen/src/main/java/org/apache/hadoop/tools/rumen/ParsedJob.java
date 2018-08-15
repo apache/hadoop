@@ -25,8 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
@@ -37,7 +37,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
  */
 public class ParsedJob extends LoggedJob {
 
-  private static final Log LOG = LogFactory.getLog(ParsedJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParsedJob.class);
 
   private Map<String, Long> totalCountersMap = new HashMap<String, Long>();
   private Map<String, Long> mapCountersMap = new HashMap<String, Long>();

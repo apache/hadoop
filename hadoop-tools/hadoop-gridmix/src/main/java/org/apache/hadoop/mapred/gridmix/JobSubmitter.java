@@ -26,8 +26,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 
 /**
@@ -39,7 +39,7 @@ import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
  */
 class JobSubmitter implements Gridmix.Component<GridmixJob> {
 
-  public static final Log LOG = LogFactory.getLog(JobSubmitter.class);
+  public static final Logger LOG = LoggerFactory.getLogger(JobSubmitter.class);
 
   private final Semaphore sem;
   private final Statistics statistics;

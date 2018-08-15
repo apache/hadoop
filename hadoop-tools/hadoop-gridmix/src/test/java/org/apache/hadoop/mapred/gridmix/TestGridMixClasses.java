@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -85,7 +85,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
 public class TestGridMixClasses {
-  private static final Log LOG = LogFactory.getLog(TestGridMixClasses.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGridMixClasses.class);
 
   /*
    * simple test LoadSplit (getters,copy, write, read...)

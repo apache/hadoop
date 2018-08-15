@@ -23,15 +23,15 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
  class ReplayJobFactory extends JobFactory<Statistics.ClusterStats> {
-  public static final Log LOG = LogFactory.getLog(ReplayJobFactory.class);
+  public static final Logger LOG = LoggerFactory.getLogger(ReplayJobFactory.class);
 
   /**
    * Creating a new instance does not start the thread.

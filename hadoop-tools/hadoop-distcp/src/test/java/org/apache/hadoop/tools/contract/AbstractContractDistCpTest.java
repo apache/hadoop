@@ -523,7 +523,7 @@ public abstract class AbstractContractDistCpTest
     int fileSizeKb = conf.getInt(SCALE_TEST_DISTCP_FILE_SIZE_KB,
         DEFAULT_DISTCP_SIZE_KB);
     int fileSizeMb = fileSizeKb / 1024;
-    getLog().info("{} with file size {}", testName.getMethodName(), fileSizeMb);
+    getLogger().info("{} with file size {}", testName.getMethodName(), fileSizeMb);
     byte[] data1 = dataset((fileSizeMb + 1) * MB, 33, 43);
     createFile(srcFS, largeFile1, true, data1);
     byte[] data2 = dataset((fileSizeMb + 2) * MB, 43, 53);

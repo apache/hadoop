@@ -26,8 +26,8 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -69,7 +69,7 @@ public class JobBuilder {
   private static final long BYTES_IN_MEG =
       StringUtils.TraditionalBinaryPrefix.string2long("1m");
 
-  static final private Log LOG = LogFactory.getLog(JobBuilder.class);
+  static final private Logger LOG = LoggerFactory.getLogger(JobBuilder.class);
   
   private String jobID;
 
