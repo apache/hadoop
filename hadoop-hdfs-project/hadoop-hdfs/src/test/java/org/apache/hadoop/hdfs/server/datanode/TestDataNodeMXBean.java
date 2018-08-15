@@ -38,6 +38,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,7 +51,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Class for testing {@link DataNodeMXBean} implementation
  */
-public class TestDataNodeMXBean {
+public class TestDataNodeMXBean extends SaslDataTransferTestCase {
 
   public static final Log LOG = LogFactory.getLog(TestDataNodeMXBean.class);
 
@@ -116,6 +118,49 @@ public class TestDataNodeMXBean {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testDataNodeMXBeanSecurityEnabled() throws Exception {
+    Configuration simpleConf = new Configuration();
+    Configuration secureConf = createSecureConfig("authentication");
+
+    // get attribute "SecurityEnabled" with simple configuration
+    try (MiniDFSCluster cluster =
+                 new MiniDFSCluster.Builder(simpleConf).build()) {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      Assert.assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+              "Hadoop:service=DataNode,name=DataNodeInfo");
+
+      boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
+              "SecurityEnabled");
+      Assert.assertFalse(securityEnabled);
+      Assert.assertEquals(datanode.isSecurityEnabled(), securityEnabled);
+    }
+
+    // get attribute "SecurityEnabled" with secure configuration
+    try (MiniDFSCluster cluster =
+                 new MiniDFSCluster.Builder(secureConf).build()) {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      Assert.assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+              "Hadoop:service=DataNode,name=DataNodeInfo");
+
+      boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
+              "SecurityEnabled");
+      Assert.assertTrue(securityEnabled);
+      Assert.assertEquals(datanode.isSecurityEnabled(), securityEnabled);
+    }
+
+    // setting back the authentication method
+    UserGroupInformation.setConfiguration(simpleConf);
   }
   
   private static String replaceDigits(final String s) {
