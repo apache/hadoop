@@ -51,7 +51,7 @@ public abstract class GlobalPolicy implements Configurable {
    * duplicate calls to the same * endpoints as the GlobalPolicy is invoked
    * once per queue.
    */
-  protected Map<Class, String> registerPaths() {
+  protected Map<Class<?>, String> registerPaths() {
     // Default register nothing
     return Collections.emptyMap();
   }
