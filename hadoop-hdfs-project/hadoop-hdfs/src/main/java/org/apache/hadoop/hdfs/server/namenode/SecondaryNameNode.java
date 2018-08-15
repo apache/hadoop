@@ -722,6 +722,11 @@ public class SecondaryNameNode implements Runnable,
     return NetUtils.getHostPortString(nameNodeAddr);
   }
 
+  @Override
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
+  }
+
   @Override // SecondaryNameNodeInfoMXBean
   public long getStartTime() {
     return starttime;
