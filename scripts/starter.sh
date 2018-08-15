@@ -24,12 +24,43 @@ sudo chmod o+rwx /data
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 $DIR/envtoconf.py --destination /opt/hadoop/etc/hadoop
+echo "Setting up environment!"
 
 if [ -n "$SLEEP_SECONDS" ]; then
    echo "Sleeping for $SLEEP_SECONDS seconds"
    sleep $SLEEP_SECONDS
 fi
 
+if [ -n "$KERBEROS_ENABLED" ]; then
+	echo "Setting up kerberos!!"
+	KERBEROS_SERVER=${KERBEROS_SERVER:-krb5}
+	ISSUER_SERVER=${ISSUER_SERVER:-$KERBEROS_SERVER\:8081}
+	echo "KDC ISSUER_SERVER => $ISSUER_SERVER"
+
+	while true
+	do
+	  STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://$ISSUER_SERVER/keytab/test/test)
+	  if [ $STATUS -eq 200 ]; then
+		echo "Got 200, KDC service ready!!"
+		break
+	  else
+		echo "Got $STATUS :( KDC service not ready yet..."
+	  fi
+	  sleep 5
+	done
+
+	export HOST_NAME=`hostname -f`
+	for NAME in ${KERBEROS_KEYTABS}; do
+	   echo "Download $NAME/$HOSTNAME@EXAMPLE.COM keytab file to $CONF_DIR/$NAME.keytab"
+	   wget http://$ISSUER_SERVER/keytab/$HOST_NAME/$NAME -O $CONF_DIR/$NAME.keytab
+	   KERBEROS_ENABLED=true
+	done
+
+	cat $DIR/krb5.conf |  sed "s/SERVER/$KERBEROS_SERVER/g" | sudo tee /etc/krb5.conf
+fi
+
+#To avoid docker volume permission problems
+sudo chmod o+rwx /data
 
 if [ -n "$ENSURE_NAMENODE_DIR" ]; then
    CLUSTERID_OPTS=""
@@ -41,13 +72,11 @@ if [ -n "$ENSURE_NAMENODE_DIR" ]; then
         fi
 fi
 
-
 if [ -n "$ENSURE_STANDBY_NAMENODE_DIR" ]; then
    if [ ! -d "$ENSURE_STANDBY_NAMENODE_DIR" ]; then
       /opt/hadoop/bin/hdfs namenode -bootstrapStandby
     fi
 fi
-
 
 if [ -n "$ENSURE_SCM_INITIALIZED" ]; then
    if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
@@ -79,6 +108,5 @@ if [ -n "$ENSURE_KSM_INITIALIZED" ]; then
       /opt/hadoop/bin/ozone ksm -createObjectStore
    fi
 fi
-
 
 $@
