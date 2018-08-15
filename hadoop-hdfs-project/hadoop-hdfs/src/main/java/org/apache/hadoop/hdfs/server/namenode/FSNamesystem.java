@@ -7538,9 +7538,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       ErasureCodingPolicy[] policies, final boolean logRetryCache)
       throws IOException {
     final String operationName = "addErasureCodingPolicies";
-    String addECPolicyName = "";
+    List<String> addECPolicyNames = new ArrayList<>(policies.length);
     checkOperation(OperationCategory.WRITE);
-    List<AddErasureCodingPolicyResponse> responses = new ArrayList<>();
+    List<AddErasureCodingPolicyResponse> responses =
+        new ArrayList<>(policies.length);
     boolean success = false;
     writeLock();
     try {
@@ -7551,7 +7552,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           ErasureCodingPolicy newPolicy =
               FSDirErasureCodingOp.addErasureCodingPolicy(this, policy,
                   logRetryCache);
-          addECPolicyName = newPolicy.getName();
+          addECPolicyNames.add(newPolicy.getName());
           responses.add(new AddErasureCodingPolicyResponse(newPolicy));
         } catch (HadoopIllegalArgumentException e) {
           responses.add(new AddErasureCodingPolicyResponse(policy, e));
@@ -7564,7 +7565,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (success) {
         getEditLog().logSync();
       }
-      logAuditEvent(success, operationName, addECPolicyName, null, null);
+      logAuditEvent(success, operationName, addECPolicyNames.toString(),
+          null, null);
     }
   }
 
