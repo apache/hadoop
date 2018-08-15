@@ -167,7 +167,7 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_IPC_SERVER_FACTORY_CLASS = 
       "org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl";
 
-  /** Factory to create serializeable records.*/
+  /** Factory to create serializable records.*/
   public static final String IPC_RECORD_FACTORY_CLASS = 
     IPC_PREFIX + "record.factory.class";
   public static final String DEFAULT_IPC_RECORD_FACTORY_CLASS = 
@@ -1151,7 +1151,7 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_PORT;
   
-  /** The actual bind address or the NM.*/
+  /** The actual bind address for the NM.*/
   public static final String NM_BIND_HOST =
     NM_PREFIX + "bind-host";
 
