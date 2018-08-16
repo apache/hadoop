@@ -26,6 +26,10 @@ import java.net.URL;
 import java.util.List;
 import java.util.UUID;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -174,6 +178,13 @@ public class AbfsHttpOperation {
     this.clientRequestId = UUID.randomUUID().toString();
 
     this.connection = openConnection();
+    if (this.connection instanceof HttpsURLConnection) {
+      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
+      SSLSocketFactory sslSocketFactory = SSLSocketFactoryEx.getDefaultFactory();
+      if (sslSocketFactory != null) {
+        secureConn.setSSLSocketFactory(sslSocketFactory);
+      }
+    }
 
     this.connection.setConnectTimeout(CONNECT_TIMEOUT);
     this.connection.setReadTimeout(READ_TIMEOUT);

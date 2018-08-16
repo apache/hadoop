@@ -44,6 +44,10 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_SSL_CHANNEL_MODE;
 
 /**
  * Configuration for Azure Blob FileSystem.
@@ -268,6 +272,10 @@ public class AbfsConfiguration{
 
   public String getCustomUserAgentPrefix() {
     return this.userAgentId;
+  }
+
+  public SSLSocketFactoryEx.SSLChannelMode getPreferredSSLFactoryOption() {
+    return configuration.getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {

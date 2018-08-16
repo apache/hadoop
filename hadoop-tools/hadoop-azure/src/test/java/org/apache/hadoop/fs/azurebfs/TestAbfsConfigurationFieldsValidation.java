@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_MAX_RETRY_ATTEMPTS;
@@ -41,7 +42,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.A
 
 import org.apache.commons.codec.binary.Base64;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.junit.Test;
 
 /**
@@ -50,11 +54,11 @@ import org.junit.Test;
 public class TestAbfsConfigurationFieldsValidation {
   private AbfsConfiguration abfsConfiguration;
 
-  private static final String INT_KEY= "intKey";
-  private static final String LONG_KEY= "longKey";
-  private static final String STRING_KEY= "stringKey";
-  private static final String BASE64_KEY= "base64Key";
-  private static final String BOOLEAN_KEY= "booleanKey";
+  private static final String INT_KEY = "intKey";
+  private static final String LONG_KEY = "longKey";
+  private static final String STRING_KEY = "stringKey";
+  private static final String BASE64_KEY = "base64Key";
+  private static final String BOOLEAN_KEY = "booleanKey";
   private static final int DEFAULT_INT = 4194304;
   private static final int DEFAULT_LONG = 4194304;
 
@@ -77,15 +81,15 @@ public class TestAbfsConfigurationFieldsValidation {
   private int longField;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = STRING_KEY,
-  DefaultValue = "default")
+      DefaultValue = "default")
   private String stringField;
 
   @Base64StringConfigurationValidatorAnnotation(ConfigurationKey = BASE64_KEY,
-  DefaultValue = "base64")
+      DefaultValue = "base64")
   private String base64Field;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = BOOLEAN_KEY,
-  DefaultValue = false)
+      DefaultValue = false)
   private boolean boolField;
 
   public TestAbfsConfigurationFieldsValidation() throws Exception {
@@ -142,8 +146,26 @@ public class TestAbfsConfigurationFieldsValidation {
     assertEquals(this.encodedAccountKey, accountKey);
   }
 
-  @Test (expected = ConfigurationPropertyNotFoundException.class)
+  @Test(expected = ConfigurationPropertyNotFoundException.class)
   public void testGetAccountKeyWithNonExistingAccountName() throws Exception {
     abfsConfiguration.getStorageAccountKey("bogusAccountName");
   }
+
+  @Test
+  public void testSSLSocketFactoryConfiguration() throws InvalidConfigurationValueException, IllegalAccessException {
+    assertEquals(SSLSocketFactoryEx.SSLChannelMode.Default, abfsConfiguration.getPreferredSSLFactoryOption());
+    assertNotEquals(SSLSocketFactoryEx.SSLChannelMode.Default_JSSE, abfsConfiguration.getPreferredSSLFactoryOption());
+    assertNotEquals(SSLSocketFactoryEx.SSLChannelMode.OpenSSL, abfsConfiguration.getPreferredSSLFactoryOption());
+
+    Configuration configuration = new Configuration();
+    configuration.setEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, SSLSocketFactoryEx.SSLChannelMode.Default_JSSE);
+    AbfsConfiguration localAbfsConfiguration = new AbfsConfiguration(configuration);
+    assertEquals(SSLSocketFactoryEx.SSLChannelMode.Default_JSSE, localAbfsConfiguration.getPreferredSSLFactoryOption());
+
+    configuration = new Configuration();
+    configuration.setEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, SSLSocketFactoryEx.SSLChannelMode.OpenSSL);
+    localAbfsConfiguration = new AbfsConfiguration(configuration);
+    assertEquals(SSLSocketFactoryEx.SSLChannelMode.OpenSSL, localAbfsConfiguration.getPreferredSSLFactoryOption());
+  }
+
 }
