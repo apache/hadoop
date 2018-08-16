@@ -1874,6 +1874,13 @@ public class ContainerLaunch implements Callable<Integer> {
     deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
     // delete TokensPath
     deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+
+    // delete symlinks because launch script will create symlinks again
+    try {
+      exec.cleanupBeforeRelaunch(container);
+    } catch (IOException | InterruptedException e) {
+      LOG.warn("{} exec failed to cleanup", container.getContainerId(), e);
+    }
   }
 
   private void deleteAsUser(Path path) {
