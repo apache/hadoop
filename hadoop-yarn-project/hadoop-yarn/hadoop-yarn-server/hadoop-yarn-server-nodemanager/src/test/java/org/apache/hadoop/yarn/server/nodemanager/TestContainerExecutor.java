@@ -18,9 +18,17 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.Lists;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -28,13 +36,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
 public class TestContainerExecutor {
@@ -167,5 +175,26 @@ public class TestContainerExecutor {
     ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
     builder.setContainer(container).setUser("foo");
     assertTrue(containerExecutor.reapContainer(builder.build()));
+  }
+
+  @Test
+  public void testCleanupBeforeLaunch() throws Exception {
+    Container container = mock(Container.class);
+    java.nio.file.Path linkName = Paths.get("target/linkName");
+    java.nio.file.Path target = Paths.get("target");
+    //deletes the link if it already exists because of previous test failures
+    FileUtils.deleteQuietly(linkName.toFile());
+    Files.createSymbolicLink(linkName.toAbsolutePath(),
+        target.toAbsolutePath());
+
+    Map<Path, List<String>> localResources = new HashMap<>();
+    localResources.put(new Path(target.toFile().getAbsolutePath()),
+        Lists.newArrayList(linkName.toFile().getAbsolutePath()));
+
+    when(container.getLocalizedResources())
+        .thenReturn(localResources);
+    when(container.getUser()).thenReturn(System.getProperty("user.name"));
+    containerExecutor.cleanupBeforeRelaunch(container);
+    Assert.assertTrue(!Files.exists(linkName));
   }
 }
