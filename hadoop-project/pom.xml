@@ -1349,6 +1349,13 @@
         <version>7.0.0</version>
      </dependency>
 
+      <!--Wildfly openssl dependency is introduced by HADOOP-15669-->
+      <dependency>
+        <groupId>org.wildfly.openssl</groupId>
+        <artifactId>wildfly-openssl</artifactId>
+        <version>1.0.4.Final</version>
+      </dependency>
+
       <dependency>
         <groupId>org.threadly</groupId>
         <artifactId>threadly</artifactId>

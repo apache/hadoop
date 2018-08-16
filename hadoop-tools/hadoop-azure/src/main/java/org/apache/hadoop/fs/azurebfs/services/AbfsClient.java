@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 
@@ -60,7 +63,19 @@ public class AbfsClient {
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = exponentialRetryPolicy;
-    this.userAgent = initializeUserAgent(abfsConfiguration);
+
+    String sslProviderName = null;
+
+    if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
+      try {
+        SSLSocketFactoryEx.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
+        sslProviderName = SSLSocketFactoryEx.getDefaultFactory().getProviderName();
+      } catch (IOException e) {
+        // Suppress exception. Failure to init SSLSocketFactoryEx would have only performance impact.
+      }
+    }
+
+    this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
   }
 
   public String getFileSystem() {
@@ -395,16 +410,26 @@ public class AbfsClient {
   }
 
   @VisibleForTesting
-  String initializeUserAgent(final AbfsConfiguration abfsConfiguration) {
-    final String userAgentComment = String.format(Locale.ROOT,
-            "(JavaJRE %s; %s %s)",
-            System.getProperty(JAVA_VERSION),
-            System.getProperty(OS_NAME)
-                    .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING),
-            System.getProperty(OS_VERSION));
+  String initializeUserAgent(final AbfsConfiguration abfsConfiguration,
+                             final String sslProviderName) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("(JavaJRE ");
+    sb.append(System.getProperty(JAVA_VERSION));
+    sb.append("; ");
+    sb.append(
+        System.getProperty(OS_NAME).replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    sb.append(" ");
+    sb.append(System.getProperty(OS_VERSION));
+    if (sslProviderName != null && !sslProviderName.isEmpty()) {
+      sb.append("; ");
+      sb.append(sslProviderName);
+    }
+    sb.append(")");
+    final String userAgentComment = sb.toString();
     String customUserAgentId = abfsConfiguration.getCustomUserAgentPrefix();
     if (customUserAgentId != null && !customUserAgentId.isEmpty()) {
-      return String.format(Locale.ROOT, CLIENT_VERSION + " %s %s", userAgentComment, customUserAgentId);
+      return String.format(Locale.ROOT, CLIENT_VERSION + " %s %s",
+          userAgentComment, customUserAgentId);
     }
     return String.format(CLIENT_VERSION + " %s", userAgentComment);
   }

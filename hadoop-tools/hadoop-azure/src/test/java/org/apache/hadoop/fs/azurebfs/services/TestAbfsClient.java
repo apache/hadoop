@@ -22,6 +22,7 @@ import java.net.URL;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,16 +35,29 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
  */
 public final class TestAbfsClient {
 
+  private void validateUserAgent(String expectedPattern,
+                                 URL baseUrl,
+                                 AbfsConfiguration config,
+                                 boolean includeSSLProvider) {
+    AbfsClient client = new AbfsClient(baseUrl, null,
+        config, null);
+    String sslProviderName = null;
+    if (includeSSLProvider) {
+      sslProviderName = SSLSocketFactoryEx.getDefaultFactory().getProviderName();
+    }
+    String userAgent = client.initializeUserAgent(config, sslProviderName);
+    Pattern pattern = Pattern.compile(expectedPattern);
+    Assert.assertTrue(pattern.matcher(userAgent).matches());
+  }
+
   @Test
   public void verifyUnknownUserAgent() throws Exception {
     String expectedUserAgentPattern = "Azure Blob FS\\/1.0 \\(JavaJRE ([^\\)]+)\\)";
     final Configuration configuration = new Configuration();
     configuration.unset(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
-    AbfsClient abfsClient = new AbfsClient(new URL("http://azure.com"), null, abfsConfiguration, null);
-    String userAgent = abfsClient.initializeUserAgent(abfsConfiguration);
-    Pattern pattern = Pattern.compile(expectedUserAgentPattern);
-    Assert.assertTrue(pattern.matcher(userAgent).matches());
+    validateUserAgent(expectedUserAgentPattern, new URL("http://azure.com"),
+        abfsConfiguration, false);
   }
 
   @Test
@@ -52,9 +66,19 @@ public final class TestAbfsClient {
     final Configuration configuration = new Configuration();
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, "Partner Service");
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
-    AbfsClient abfsClient = new AbfsClient(new URL("http://azure.com"), null, abfsConfiguration, null);
-    String userAgent = abfsClient.initializeUserAgent(abfsConfiguration);
-    Pattern pattern = Pattern.compile(expectedUserAgentPattern);
-    Assert.assertTrue(pattern.matcher(userAgent).matches());
+    validateUserAgent(expectedUserAgentPattern, new URL("http://azure.com"),
+        abfsConfiguration, false);
+  }
+
+  @Test
+  public void verifyUserAgentWithSSLProvider() throws Exception {
+    String expectedUserAgentPattern = "Azure Blob FS\\/1.0 \\(JavaJRE ([^\\)]+) SunJSSE-1.8\\) Partner Service";
+    final Configuration configuration = new Configuration();
+    configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, "Partner Service");
+    configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
+        SSLSocketFactoryEx.SSLChannelMode.Default_JSSE.name());
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
+    validateUserAgent(expectedUserAgentPattern, new URL("https://azure.com"),
+        abfsConfiguration, true);
   }
 }

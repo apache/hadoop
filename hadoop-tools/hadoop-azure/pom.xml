@@ -197,13 +197,18 @@
       <artifactId>jackson-mapper-asl</artifactId>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
       <scope>compile</scope>
     </dependency>
 
-
+    <dependency>
+      <groupId>org.wildfly.openssl</groupId>
+      <artifactId>wildfly-openssl</artifactId>
+      <scope>compile</scope>
+    </dependency>
 
     <!-- dependencies use for test only -->
     <dependency>

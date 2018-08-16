@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 
 /**
  * Responsible to keep all the Azure Blob File System related configurations.
@@ -56,6 +57,9 @@ public final class FileSystemConfigurations {
 
   public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = -1;
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
+
+  public static final SSLSocketFactoryEx.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
+      = SSLSocketFactoryEx.SSLChannelMode.Default;
 
   private FileSystemConfigurations() {}
 }
