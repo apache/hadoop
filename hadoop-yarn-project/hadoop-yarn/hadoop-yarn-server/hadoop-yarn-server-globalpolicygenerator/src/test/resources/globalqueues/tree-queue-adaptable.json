@@ -1,0 +1,96 @@
+{
+  "queueName": "root",
+  "scope" : {"id" : "sc1"},
+  "totCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "guarCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "maxCap": {
+    "memory": "100000",
+    "vCores": "1000"
+  },
+  "usedCap": {
+    "memory": "50000",
+    "vCores": "500"
+  },
+  "demandCap": {
+    "memory": "1000",
+    "vCores": "10"
+  },
+  "children": [
+    {
+      "queueName": "A",
+      "scope" : {"id" : "sc1"},
+      "guarCap": {
+        "memory": "50000",
+        "vCores": "500"
+      },
+      "maxCap": {
+        "memory": "100000",
+        "vCores": "1000"
+      },
+      "usedCap": {
+        "memory": "25000",
+        "vCores": "250"
+      },
+      "demandCap": {
+        "memory": "0",
+        "vCores": "0"
+      },
+      "children": [
+        {
+          "queueName": "%s",
+          "guarCap": %s,
+          "maxCap": %s,
+          "usedCap": %s,
+          "demandCap": %s,
+          "scope" : {"id" : "sc1"}
+        },
+        {
+          "queueName": "A2",
+          "scope" : {"id" : "sc1"},
+          "guarCap": {
+            "memory": "0",
+            "vCores": "0"
+          },
+          "maxCap": {
+            "memory": "100000",
+            "vCores": "1000"
+          },
+          "usedCap": {
+            "memory": "0",
+            "vCores": "0"
+          },
+          "demandCap": {
+            "memory": "0",
+            "vCores": "0"
+          }
+        }
+      ]
+    },
+    {
+      "queueName": "B",
+      "scope" : {"id" : "sc1"},
+      "guarCap": {
+        "memory": "50000",
+        "vCores": "500"
+      },
+      "maxCap": {
+        "memory": "100000",
+        "vCores": "1000"
+      },
+      "usedCap": {
+        "memory": "50000",
+        "vCores": "500"
+      },
+      "demandCap": {
+        "memory": "1000",
+        "vCores": "10"
+      }
+    }
+  ]
+}
