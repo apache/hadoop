@@ -1160,7 +1160,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
     @SuppressWarnings("unchecked")
     List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
-    String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
 
     PrivilegedOperation launchOp = new PrivilegedOperation(
             PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
@@ -1178,8 +1177,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
                     localDirs),
             StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
                     logDirs),
-            commandFile,
-            resourcesOpts);
+            commandFile);
 
     String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
 

@@ -350,9 +350,9 @@ public class TestDockerContainerRuntime {
 
     List<String> args = op.getArguments();
 
-    //This invocation of container-executor should use 13 arguments in a
+    //This invocation of container-executor should use 12 arguments in a
     // specific order
-    int expected = 13;
+    int expected = 12;
     int counter = 1;
     Assert.assertEquals(expected, args.size());
     Assert.assertEquals(user, args.get(counter++));
@@ -368,7 +368,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(pidFilePath.toString(), args.get(counter++));
     Assert.assertEquals(localDirs.get(0), args.get(counter++));
     Assert.assertEquals(logDirs.get(0), args.get(counter++));
-    Assert.assertEquals(resourcesOptions, args.get(++counter));
 
     return op;
   }
@@ -2109,7 +2108,7 @@ public class TestDockerContainerRuntime {
 
     List<String> args = op.getArguments();
 
-    int expectedArgs = 13;
+    int expectedArgs = 12;
     int argsCounter = 0;
     Assert.assertEquals(expectedArgs, args.size());
     Assert.assertEquals(runAsUser, args.get(argsCounter++));
@@ -2127,7 +2126,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(localDirs.get(0), args.get(argsCounter++));
     Assert.assertEquals(logDirs.get(0), args.get(argsCounter++));
     String dockerCommandFile = args.get(argsCounter++);
-    Assert.assertEquals(resourcesOptions, args.get(argsCounter));
 
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
