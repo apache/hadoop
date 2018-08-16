@@ -84,4 +84,9 @@ public final class OnFailureRestartPolicy implements ComponentRestartPolicy {
     }
     return true;
   }
+
+  @Override public boolean allowContainerRetriesForInstance(
+      ComponentInstance componentInstance) {
+    return true;
+  }
 }

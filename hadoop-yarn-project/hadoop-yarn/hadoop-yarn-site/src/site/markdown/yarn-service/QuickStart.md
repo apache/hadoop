@@ -40,6 +40,7 @@ Below is a simple service definition that launches sleep containers on YARN by w
 ```
 {
   "name": "sleeper-service",
+  "version": "1.0",
   "components" : 
     [
       {

@@ -154,7 +154,7 @@ public class ECAdmin extends Configured implements Tool {
       listing.addRow("<file>",
           "The path of the xml file which defines the EC policies to add");
       return getShortUsage() + "\n" +
-          "Add a list of erasure coding policies.\n" +
+          "Add a list of user defined erasure coding policies.\n" +
           listing.toString();
     }
 
@@ -268,7 +268,7 @@ public class ECAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<policy>", "The name of the erasure coding policy");
       return getShortUsage() + "\n" +
-          "Remove an erasure coding policy.\n" +
+          "Remove an user defined erasure coding policy.\n" +
           listing.toString();
     }
 
@@ -357,16 +357,16 @@ public class ECAdmin extends Configured implements Tool {
       final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), conf);
       try {
         dfs.setErasureCodingPolicy(p, ecPolicyName);
-        if (ecPolicyName == null){
-          ecPolicyName = "default";
-        }
-        System.out.println("Set " + ecPolicyName + " erasure coding policy on" +
-            " " + path);
+
+        String actualECPolicyName = dfs.getErasureCodingPolicy(p).getName();
+
+        System.out.println("Set " + actualECPolicyName +
+            " erasure coding policy on "+ path);
         RemoteIterator<FileStatus> dirIt = dfs.listStatusIterator(p);
         if (dirIt.hasNext()) {
           System.out.println("Warning: setting erasure coding policy on a " +
               "non-empty directory will not automatically convert existing " +
-              "files to " + ecPolicyName + " erasure coding policy");
+              "files to " + actualECPolicyName + " erasure coding policy");
         }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));

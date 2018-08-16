@@ -68,7 +68,7 @@ public class TestDockerClient {
     doReturn(conf).when(mockContext).getConf();
     doReturn(dirsHandler).when(mockContext).getLocalDirsHandler();
 
-    DockerClient dockerClient = new DockerClient(conf);
+    DockerClient dockerClient = new DockerClient();
     dirsHandler.init(conf);
     dirsHandler.start();
     String tmpPath = dockerClient.writeCommandToTempFile(dockerCmd, cid,

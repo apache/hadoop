@@ -275,7 +275,7 @@ public class LogAggregationTFileController
     RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
         .getRemoteNodeFileDir(conf, appId, appOwner);
     if (nodeFiles == null) {
-      throw new IOException("There is no available log fils for "
+      throw new IOException("There is no available log file for "
           + "application:" + appId);
     }
     while (nodeFiles.hasNext()) {

@@ -42,4 +42,6 @@ public interface ComponentRestartPolicy {
 
   boolean shouldTerminate(Component component);
 
+  boolean allowContainerRetriesForInstance(ComponentInstance componentInstance);
+
 }

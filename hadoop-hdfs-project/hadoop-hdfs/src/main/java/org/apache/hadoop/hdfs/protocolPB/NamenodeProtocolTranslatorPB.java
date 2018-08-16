@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeys
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeResponseProto;
@@ -259,6 +261,19 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       IsRollingUpgradeResponseProto response = rpcProxy.isRollingUpgrade(
           NULL_CONTROLLER, req);
       return response.getIsRollingUpgrade();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public Long getNextSPSPath() throws IOException {
+    GetNextSPSPathRequestProto req =
+        GetNextSPSPathRequestProto.newBuilder().build();
+    try {
+      GetNextSPSPathResponseProto nextSPSPath =
+          rpcProxy.getNextSPSPath(NULL_CONTROLLER, req);
+      return nextSPSPath.hasSpsPath() ? nextSPSPath.getSpsPath() : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

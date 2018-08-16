@@ -97,7 +97,7 @@
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.1.1-alpha-d7d7061-SNAPSHOT</ratis.version>
+    <ratis.version>0.3.0-e4a016f-SNAPSHOT</ratis.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
@@ -142,7 +142,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.11.271</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.375</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
     <frontend-maven-plugin.version>1.5</frontend-maven-plugin.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden

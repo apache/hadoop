@@ -1066,4 +1066,3 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return false;
   }
 }
-

@@ -20,10 +20,14 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.beans.IntrospectionException;
@@ -59,9 +63,13 @@ import static org.apache.hadoop.ozone.container.keyvalue
 
 public final class ContainerDataYaml {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerDataYaml.class);
+
   private ContainerDataYaml() {
 
   }
+
   /**
    * Creates a .container file in yaml format.
    *
@@ -69,38 +77,29 @@ public final class ContainerDataYaml {
    * @param containerData
    * @throws IOException
    */
-  public static void createContainerFile(ContainerProtos.ContainerType
-                                             containerType, File containerFile,
-                                         ContainerData containerData) throws
-      IOException {
+  public static void createContainerFile(ContainerType containerType,
+      ContainerData containerData, File containerFile) throws IOException {
+    Writer writer = null;
+    try {
+      // Create Yaml for given container type
+      Yaml yaml = getYamlForContainerType(containerType);
+      // Compute Checksum and update ContainerData
+      containerData.computeAndSetChecksum(yaml);
 
-    Preconditions.checkNotNull(containerFile, "yamlFile cannot be null");
-    Preconditions.checkNotNull(containerData, "containerData cannot be null");
-    Preconditions.checkNotNull(containerType, "containerType cannot be null");
-
-    PropertyUtils propertyUtils = new PropertyUtils();
-    propertyUtils.setBeanAccess(BeanAccess.FIELD);
-    propertyUtils.setAllowReadOnlyProperties(true);
-
-    switch(containerType) {
-    case KeyValueContainer:
-      Representer representer = new ContainerDataRepresenter();
-      representer.setPropertyUtils(propertyUtils);
-      representer.addClassTag(KeyValueContainerData.class,
-          KeyValueContainerData.KEYVALUE_YAML_TAG);
-
-      Constructor keyValueDataConstructor = new ContainerDataConstructor();
-
-      Yaml yaml = new Yaml(keyValueDataConstructor, representer);
-      Writer writer = new OutputStreamWriter(new FileOutputStream(
+      // Write the ContainerData with checksum to Yaml file.
+      writer = new OutputStreamWriter(new FileOutputStream(
           containerFile), "UTF-8");
       yaml.dump(containerData, writer);
-      writer.close();
-      break;
-    default:
-      throw new StorageContainerException("Unrecognized container Type " +
-          "format " + containerType, ContainerProtos.Result
-          .UNKNOWN_CONTAINER_TYPE);
+
+    } finally {
+      try {
+        if (writer != null) {
+          writer.close();
+        }
+      } catch (IOException ex) {
+        LOG.warn("Error occurred during closing the writer. ContainerID: " +
+            containerData.getContainerID());
+      }
     }
   }
 
@@ -138,6 +137,39 @@ public final class ContainerDataYaml {
       }
     }
     return containerData;
+  }
+
+  /**
+   * Given a ContainerType this method returns a Yaml representation of
+   * the container properties.
+   *
+   * @param containerType type of container
+   * @return Yamal representation of container properties
+   *
+   * @throws StorageContainerException if the type is unrecognized
+   */
+  public static Yaml getYamlForContainerType(ContainerType containerType)
+      throws StorageContainerException {
+    PropertyUtils propertyUtils = new PropertyUtils();
+    propertyUtils.setBeanAccess(BeanAccess.FIELD);
+    propertyUtils.setAllowReadOnlyProperties(true);
+
+    switch (containerType) {
+    case KeyValueContainer:
+      Representer representer = new ContainerDataRepresenter();
+      representer.setPropertyUtils(propertyUtils);
+      representer.addClassTag(
+          KeyValueContainerData.class,
+          KeyValueContainerData.KEYVALUE_YAML_TAG);
+
+      Constructor keyValueDataConstructor = new ContainerDataConstructor();
+
+      return new Yaml(keyValueDataConstructor, representer);
+    default:
+      throw new StorageContainerException("Unrecognized container Type " +
+          "format " + containerType, ContainerProtos.Result
+          .UNKNOWN_CONTAINER_TYPE);
+    }
   }
 
   /**
@@ -192,8 +224,9 @@ public final class ContainerDataYaml {
         int maxSize = (int) size;
 
         //When a new field is added, it needs to be added here.
-        KeyValueContainerData kvData = new KeyValueContainerData((long) nodes
-            .get(OzoneConsts.CONTAINER_ID), lv, maxSize);
+        KeyValueContainerData kvData = new KeyValueContainerData(
+            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, maxSize);
+
         kvData.setContainerDBType((String)nodes.get(
             OzoneConsts.CONTAINER_DB_TYPE));
         kvData.setMetadataPath((String) nodes.get(
@@ -201,6 +234,7 @@ public final class ContainerDataYaml {
         kvData.setChunksPath((String) nodes.get(OzoneConsts.CHUNKS_PATH));
         Map<String, String> meta = (Map) nodes.get(OzoneConsts.METADATA);
         kvData.setMetadata(meta);
+        kvData.setChecksum((String) nodes.get(OzoneConsts.CHECKSUM));
         String state = (String) nodes.get(OzoneConsts.STATE);
         switch (state) {
         case "OPEN":
@@ -215,7 +249,7 @@ public final class ContainerDataYaml {
         default:
           throw new IllegalStateException("Unexpected " +
               "ContainerLifeCycleState " + state + " for the containerId " +
-              (long) nodes.get(OzoneConsts.CONTAINER_ID));
+              nodes.get(OzoneConsts.CONTAINER_ID));
         }
         return kvData;
       }

@@ -113,8 +113,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         DeleteBlockTransactionResult.Builder txResultBuilder =
             DeleteBlockTransactionResult.newBuilder();
         txResultBuilder.setTxID(entry.getTxID());
+        long containerId = entry.getContainerID();
         try {
-          long containerId = entry.getContainerID();
           Container cont = containerSet.getContainer(containerId);
           if (cont == null) {
             throw new StorageContainerException("Unable to find the container "
@@ -126,7 +126,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
             KeyValueContainerData containerData = (KeyValueContainerData)
                 cont.getContainerData();
             deleteKeyValueContainerBlocks(containerData, entry);
-            txResultBuilder.setSuccess(true);
+            txResultBuilder.setContainerID(containerId)
+                .setSuccess(true);
             break;
           default:
             LOG.error(
@@ -136,9 +137,12 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         } catch (IOException e) {
           LOG.warn("Failed to delete blocks for container={}, TXID={}",
               entry.getContainerID(), entry.getTxID(), e);
-          txResultBuilder.setSuccess(false);
+          txResultBuilder.setContainerID(containerId)
+              .setSuccess(false);
         }
-        resultBuilder.addResults(txResultBuilder.build());
+        resultBuilder.addResults(txResultBuilder.build())
+            .setDnId(context.getParent().getDatanodeDetails()
+                .getUuid().toString());
       });
       ContainerBlocksDeletionACKProto blockDeletionACK = resultBuilder.build();
 

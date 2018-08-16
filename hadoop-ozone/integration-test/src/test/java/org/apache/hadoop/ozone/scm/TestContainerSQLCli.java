@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -115,7 +116,8 @@ public class TestContainerSQLCli {
     cluster.getStorageContainerManager().stop();
 
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
-    mapping = new ContainerMapping(conf, nodeManager, 128);
+    mapping = new ContainerMapping(conf, nodeManager, 128,
+        new EventQueue());
     blockManager = new BlockManagerImpl(conf, nodeManager, mapping, null);
 
     // blockManager.allocateBlock() will create containers if there is none

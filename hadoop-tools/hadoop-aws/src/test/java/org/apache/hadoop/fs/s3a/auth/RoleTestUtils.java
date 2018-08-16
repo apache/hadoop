@@ -58,14 +58,23 @@ public final class RoleTestUtils {
 
 
   /** Deny GET requests to all buckets. */
-  public static final Statement DENY_GET_ALL =
+  public static final Statement DENY_S3_GET_OBJECT =
       statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT);
 
-  /**
-   * This is AWS policy removes read access.
-   */
-  public static final Policy RESTRICTED_POLICY = policy(DENY_GET_ALL);
+  public static final Statement ALLOW_S3_GET_BUCKET_LOCATION
+      =  statement(true, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION);
 
+  /**
+   * This is AWS policy removes read access from S3, leaves S3Guard access up.
+   * This will allow clients to use S3Guard list/HEAD operations, even
+   * the ability to write records, but not actually access the underlying
+   * data.
+   * The client does need {@link RolePolicies#S3_GET_BUCKET_LOCATION} to
+   * get the bucket location.
+   */
+  public static final Policy RESTRICTED_POLICY = policy(
+      DENY_S3_GET_OBJECT, STATEMENT_ALL_DDB, ALLOW_S3_GET_BUCKET_LOCATION
+      );
 
   /**
    * Error message to get from the AWS SDK if you can't assume the role.
@@ -145,7 +154,7 @@ public final class RoleTestUtils {
     Configuration conf = new Configuration(srcConf);
     conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
     conf.set(ASSUMED_ROLE_ARN, roleARN);
-    conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
+    conf.set(ASSUMED_ROLE_SESSION_NAME, "test");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "15m");
     disableFilesystemCaching(conf);
     return conf;
@@ -163,9 +172,8 @@ public final class RoleTestUtils {
       String contained,
       Callable<T> eval)
       throws Exception {
-    AccessDeniedException ex = intercept(AccessDeniedException.class, eval);
-    GenericTestUtils.assertExceptionContains(contained, ex);
-    return ex;
+    return intercept(AccessDeniedException.class,
+        contained, eval);
   }
 
 }

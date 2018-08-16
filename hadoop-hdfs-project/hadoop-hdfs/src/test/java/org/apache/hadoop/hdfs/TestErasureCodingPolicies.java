@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -151,6 +152,19 @@ public class TestErasureCodingPolicies {
     assertNotNull(files[0].getErasureCodingPolicy());
     assertEquals(ecFile.getName(), files[1].getLocalName());
     assertNotNull(files[1].getErasureCodingPolicy());
+  }
+
+  @Test
+  public void testContentSummaryOfECSubdir() throws IOException {
+    final Path testDir = new Path("/ec");
+    fs.mkdir(testDir, FsPermission.getDirDefault());
+    fs.setErasureCodingPolicy(testDir, ecPolicy.getName());
+    final Path fPath = new Path("ec/file");
+    fs.create(fPath).close();
+    final Path subdir = new Path("/ec/sub");
+    fs.mkdir(subdir, FsPermission.getDirDefault());
+    ContentSummary contentSummary = fs.getContentSummary(subdir);
+    assertEquals(ecPolicy.getName(),contentSummary.getErasureCodingPolicy());
   }
 
   @Test

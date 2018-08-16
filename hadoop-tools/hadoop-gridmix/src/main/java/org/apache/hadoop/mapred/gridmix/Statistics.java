@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
@@ -50,7 +50,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * notified either on every job completion event or some fixed time interval.
  */
 public class Statistics implements Component<Statistics.JobStats> {
-  public static final Log LOG = LogFactory.getLog(Statistics.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Statistics.class);
 
   private final StatCollector statistics = new StatCollector();
   private JobClient cluster;

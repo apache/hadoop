@@ -184,4 +184,11 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
     rpcServer.checkOperation(OperationCategory.READ, false);
     return false;
   }
+
+  @Override
+  public Long getNextSPSPath() throws IOException {
+    rpcServer.checkOperation(OperationCategory.READ, false);
+    // not supported
+    return null;
+  }
 }

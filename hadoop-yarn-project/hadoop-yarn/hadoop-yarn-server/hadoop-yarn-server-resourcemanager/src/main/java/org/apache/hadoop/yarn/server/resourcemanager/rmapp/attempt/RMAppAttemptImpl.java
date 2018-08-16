@@ -1823,6 +1823,26 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Update progress
       appAttempt.progress = statusUpdateEvent.getProgress();
 
+      // Update tracking url if changed and save it to state store
+      String newTrackingUrl = statusUpdateEvent.getTrackingUrl();
+      if (newTrackingUrl != null &&
+          !newTrackingUrl.equals(appAttempt.originalTrackingUrl)) {
+        appAttempt.originalTrackingUrl = newTrackingUrl;
+        ApplicationAttemptStateData attemptState = ApplicationAttemptStateData
+            .newInstance(appAttempt.applicationAttemptId,
+                appAttempt.getMasterContainer(),
+                appAttempt.rmContext.getStateStore()
+                    .getCredentialsFromAppAttempt(appAttempt),
+                appAttempt.startTime, appAttempt.recoveredFinalState,
+                newTrackingUrl, appAttempt.getDiagnostics(), null,
+                ContainerExitStatus.INVALID, appAttempt.getFinishTime(),
+                appAttempt.attemptMetrics.getAggregateAppResourceUsage()
+                    .getResourceUsageSecondsMap(),
+                appAttempt.attemptMetrics.getPreemptedResourceSecondsMap());
+        appAttempt.rmContext.getStateStore()
+            .updateApplicationAttemptState(attemptState);
+      }
+
       // Ping to AMLivelinessMonitor
       appAttempt.rmContext.getAMLivelinessMonitor().receivedPing(
           statusUpdateEvent.getApplicationAttemptId());

@@ -88,6 +88,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private int responseId = 0;
   // user name
   private String user;
+  // nodelabel expression
+  private String nodeLabelExpression;
   // queue name
   protected String queue;
   // am type
@@ -123,7 +125,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
       String simQueue, boolean tracked, String oldApp, long baseTimeMS,
-      Resource amResource, Map<String, String> params) {
+      Resource amResource, String nodeLabelExpr,
+      Map<String, String> params) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -136,6 +139,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
     this.amContainerResource = amResource;
+    this.nodeLabelExpression = nodeLabelExpr;
   }
 
   /**
@@ -327,6 +331,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
     conLauContext.setServiceData(new HashMap<>());
     appSubContext.setAMContainerSpec(conLauContext);
     appSubContext.setResource(amContainerResource);
+    if (nodeLabelExpression != null) {
+      appSubContext.setNodeLabelExpression(nodeLabelExpression);
+    }
 
     if(reservationId != null) {
       appSubContext.setReservationID(reservationId);

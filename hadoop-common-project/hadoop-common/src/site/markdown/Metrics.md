@@ -244,6 +244,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
 | `NumStaleStorages` | Number of storages marked as content stale (after NameNode restart/failover before first block report is received) |
 | `MissingReplOneBlocks` | Current number of missing blocks with replication factor 1 |
+| `HighestPriorityLowRedundancyReplicatedBlocks` | Current number of non-corrupt, low redundancy replicated blocks with the highest risk of loss (have 0 or 1 replica). Will be recovered with the highest priority. |
+| `HighestPriorityLowRedundancyECBlocks` | Current number of non-corrupt, low redundancy EC blocks with the highest risk of loss. Will be recovered with the highest priority. |
 | `NumFilesUnderConstruction` | Current number of files under construction |
 | `NumActiveClients` | Current number of active clients holding lease |
 | `HAState` | (HA-only) Current state of the NameNode: initializing or active or standby or stopping state |
@@ -256,8 +258,10 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
 | `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
-| `FSN(Read/Write)Lock`*OperationName*`NumOps` | Total number of acquiring lock by operations |
-| `FSN(Read/Write)Lock`*OperationName*`AvgTime` | Average time of holding the lock by operations in milliseconds |
+| `FSN(Read/Write)Lock`*OperationName*`NanosNumOps` | Total number of acquiring lock by operations |
+| `FSN(Read/Write)Lock`*OperationName*`NanosAvgTime` | Average time of holding the lock by operations in nanoseconds |
+| `FSN(Read/Write)LockOverallNanosNumOps`  | Total number of acquiring lock by all operations |
+| `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
 
 JournalNode
 -----------

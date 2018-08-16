@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.client.rpc;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -432,6 +433,40 @@ public class TestOzoneRpcClient {
       Assert.assertTrue(key.getModificationTime() >= currentTime);
     }
   }
+
+  @Test
+  public void testValidateBlockLengthWithCommitKey() throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    String value = RandomStringUtils.random(RandomUtils.nextInt(0,1024));
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    String keyName = UUID.randomUUID().toString();
+
+    // create the initial key with size 0, write will allocate the first block.
+    OzoneOutputStream out = bucket.createKey(keyName, 0,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE);
+    out.write(value.getBytes());
+    out.close();
+    OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
+    builder.setVolumeName(volumeName).setBucketName(bucketName)
+        .setKeyName(keyName);
+    OmKeyInfo keyInfo = ozoneManager.lookupKey(builder.build());
+
+    List<OmKeyLocationInfo> locationInfoList =
+        keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly();
+    // LocationList should have only 1 block
+    Assert.assertEquals(1, locationInfoList.size());
+    // make sure the data block size is updated
+    Assert.assertEquals(value.getBytes().length,
+        locationInfoList.get(0).getLength());
+    // make sure the total data size is set correctly
+    Assert.assertEquals(value.getBytes().length, keyInfo.getDataSize());
+  }
+
 
   @Test
   public void testPutKeyRatisOneNode()

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,11 +35,15 @@ import org.junit.rules.ExpectedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
 /**
@@ -221,14 +226,13 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   private void expectProviderInstantiationFailure(String option,
-      String expectedErrorText) throws IOException {
+      String expectedErrorText) throws Exception {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER, option);
     Path testFile = new Path(
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    expectException(IOException.class, expectedErrorText);
-    URI uri = testFile.toUri();
-    S3AUtils.createAWSCredentialProviderSet(uri, conf);
+    intercept(IOException.class, expectedErrorText,
+        () -> S3AUtils.createAWSCredentialProviderSet(testFile.toUri(), conf));
   }
 
   /**
@@ -287,5 +291,69 @@ public class TestS3AAWSCredentialsProvider {
     assertTrue("didn't find AssumedRoleCredentialProvider",
         authenticationContains(conf, AssumedRoleCredentialProvider.NAME));
   }
+
+  @Test
+  public void testExceptionLogic() throws Throwable {
+    AWSCredentialProviderList providers
+        = new AWSCredentialProviderList();
+    // verify you can't get credentials from it
+    NoAuthWithAWSException noAuth = intercept(NoAuthWithAWSException.class,
+        AWSCredentialProviderList.NO_AWS_CREDENTIAL_PROVIDERS,
+        () -> providers.getCredentials());
+    // but that it closes safely
+    providers.close();
+
+    S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration());
+    assertEquals("Expected no retry on auth failure",
+        RetryPolicy.RetryAction.FAIL.action,
+        retryPolicy.shouldRetry(noAuth, 0, 0, true).action);
+
+    try {
+      throw S3AUtils.translateException("login", "", noAuth);
+    } catch (AccessDeniedException expected) {
+      // this is what we want; other exceptions will be passed up
+      assertEquals("Expected no retry on AccessDeniedException",
+          RetryPolicy.RetryAction.FAIL.action,
+          retryPolicy.shouldRetry(expected, 0, 0, true).action);
+    }
+
+  }
+
+  @Test
+  public void testRefCounting() throws Throwable {
+    AWSCredentialProviderList providers
+        = new AWSCredentialProviderList();
+    assertEquals("Ref count for " + providers,
+        1, providers.getRefCount());
+    AWSCredentialProviderList replicate = providers.share();
+    assertEquals(providers, replicate);
+    assertEquals("Ref count after replication for " + providers,
+        2, providers.getRefCount());
+    assertFalse("Was closed " + providers, providers.isClosed());
+    providers.close();
+    assertFalse("Was closed " + providers, providers.isClosed());
+    assertEquals("Ref count after close() for " + providers,
+        1, providers.getRefCount());
+
+    // this should now close it
+    providers.close();
+    assertTrue("Was not closed " + providers, providers.isClosed());
+    assertEquals("Ref count after close() for " + providers,
+        0, providers.getRefCount());
+    assertEquals("Ref count after second close() for " + providers,
+        0, providers.getRefCount());
+    intercept(IllegalStateException.class, "closed",
+        () -> providers.share());
+    // final call harmless
+    providers.close();
+    assertEquals("Ref count after close() for " + providers,
+        0, providers.getRefCount());
+    providers.refresh();
+
+    intercept(NoAuthWithAWSException.class,
+        AWSCredentialProviderList.CREDENTIALS_REQUESTED_WHEN_CLOSED,
+        () -> providers.getCredentials());
+  }
+
 
 }

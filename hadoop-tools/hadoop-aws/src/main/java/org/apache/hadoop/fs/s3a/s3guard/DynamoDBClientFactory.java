@@ -34,10 +34,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
-import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 
 /**
  * Interface to create a DynamoDB client.
@@ -58,10 +57,14 @@ public interface DynamoDBClientFactory extends Configurable {
    * it will indicate an error.
    *
    * @param defaultRegion the default region of the AmazonDynamoDB client
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param credentials credentials to use for authentication.
    * @return a new DynamoDB client
    * @throws IOException if any IO error happens
    */
-  AmazonDynamoDB createDynamoDBClient(String defaultRegion) throws IOException;
+  AmazonDynamoDB createDynamoDBClient(final String defaultRegion,
+      final String bucket,
+      final AWSCredentialsProvider credentials) throws IOException;
 
   /**
    * The default implementation for creating an AmazonDynamoDB.
@@ -69,16 +72,15 @@ public interface DynamoDBClientFactory extends Configurable {
   class DefaultDynamoDBClientFactory extends Configured
       implements DynamoDBClientFactory {
     @Override
-    public AmazonDynamoDB createDynamoDBClient(String defaultRegion)
+    public AmazonDynamoDB createDynamoDBClient(String defaultRegion,
+        final String bucket,
+        final AWSCredentialsProvider credentials)
         throws IOException {
       Preconditions.checkNotNull(getConf(),
           "Should have been configured before usage");
 
       final Configuration conf = getConf();
-      final AWSCredentialsProvider credentials =
-          createAWSCredentialProviderSet(null, conf);
-      final ClientConfiguration awsConf =
-          DefaultS3ClientFactory.createAwsConf(conf);
+      final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
 
       final String region = getRegion(conf, defaultRegion);
       LOG.debug("Creating DynamoDB client in region {}", region);

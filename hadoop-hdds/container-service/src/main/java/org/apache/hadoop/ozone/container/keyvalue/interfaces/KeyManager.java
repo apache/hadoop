@@ -35,9 +35,10 @@ public interface KeyManager {
    *
    * @param container - Container for which key need to be added.
    * @param data     - Key Data.
+   * @return length of the Key.
    * @throws IOException
    */
-  void putKey(Container container, KeyData data) throws IOException;
+  long putKey(Container container, KeyData data) throws IOException;
 
   /**
    * Gets an existing key.
@@ -68,6 +69,13 @@ public interface KeyManager {
    */
   List<KeyData> listKey(Container container, long startLocalID, int count) throws
       IOException;
+
+  /**
+   * Returns the last committed block length for the block.
+   * @param blockID blockId
+   */
+  long getCommittedBlockLength(Container container, BlockID blockID)
+      throws IOException;
 
   /**
    * Shutdown ContainerManager.

@@ -147,7 +147,12 @@ public class EventQueue implements EventPublisher, AutoCloseable {
 
         for (EventHandler handler : executorAndHandlers.getValue()) {
           queuedCount.incrementAndGet();
-
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Delivering event {} to executor/handler {}: {}",
+                event.getName(),
+                executorAndHandlers.getKey().getName(),
+                payload);
+          }
           executorAndHandlers.getKey()
               .onMessage(handler, payload, this);
 
@@ -155,8 +160,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
 
     } else {
-      throw new IllegalArgumentException(
-          "No event handler registered for event " + event);
+      LOG.warn("No event handler registered for event " + event);
     }
 
   }

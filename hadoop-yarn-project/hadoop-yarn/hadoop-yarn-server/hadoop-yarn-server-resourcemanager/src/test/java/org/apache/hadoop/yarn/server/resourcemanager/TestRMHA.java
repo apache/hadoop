@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.base.Supplier;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -656,6 +660,46 @@ public class TestRMHA {
     assertEquals(HAServiceState.ACTIVE, rm.getRMContext().getHAServiceState());
     rm.adminService.transitionToStandby(requestInfo);
     assertEquals(HAServiceState.STANDBY, rm.getRMContext().getHAServiceState());
+  }
+
+  @Test
+  public void testOpportunisticAllocatorAfterFailover() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    Configuration conf = new YarnConfiguration(configuration);
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    conf.setBoolean(
+        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
+    // 1. start RM
+    rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    // 2. Transition to active
+    rm.adminService.transitionToActive(requestInfo);
+    // 3. Transition to standby
+    rm.adminService.transitionToStandby(requestInfo);
+    // 4. Transition to active
+    rm.adminService.transitionToActive(requestInfo);
+
+    MockNM nm1 = rm.registerNode("h1:1234", 8 * 1024);
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    rmNode1.getRMContext().getDispatcher().getEventHandler()
+        .handle(new NodeUpdateSchedulerEvent(rmNode1));
+    OpportunisticContainerAllocatorAMService appMaster =
+        (OpportunisticContainerAllocatorAMService) rm.getRMContext()
+            .getApplicationMasterService();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return appMaster.getLeastLoadedNodes().size() == 1;
+      }
+    }, 100, 3000);
+    rm.stop();
+    Assert.assertEquals(1, appMaster.getLeastLoadedNodes().size());
+
   }
 
   @Test

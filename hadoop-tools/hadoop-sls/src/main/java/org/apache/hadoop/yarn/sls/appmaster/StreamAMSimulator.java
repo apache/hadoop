@@ -96,10 +96,11 @@ public class StreamAMSimulator extends AMSimulator {
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
       long traceStartTime, long traceFinishTime, String user, String queue,
       boolean isTracked, String oldAppId, long baselineStartTimeMS,
-      Resource amContainerResource, Map<String, String> params) {
+      Resource amContainerResource, String nodeLabelExpr,
+      Map<String, String> params) {
     super.init(heartbeatInterval, containerList, rm, se, traceStartTime,
         traceFinishTime, user, queue, isTracked, oldAppId, baselineStartTimeMS,
-        amContainerResource, params);
+        amContainerResource, nodeLabelExpr, params);
     amtype = "stream";
 
     allStreams.addAll(containerList);

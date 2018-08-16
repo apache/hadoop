@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -153,10 +154,11 @@ public class DatasetVolumeChecker {
 
     lastAllVolumesCheck = timer.monotonicNow() - minDiskCheckGapMs;
 
-    if (maxVolumeFailuresTolerated < 0) {
+    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " (should be non-negative)");
+          + maxVolumeFailuresTolerated + " "
+          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
     }
 
     delegateChecker = new ThrottledAsyncChecker<>(

@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
+        .InvalidResourceType;
 import org.apache.hadoop.yarn.exceptions
         .SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -60,6 +62,15 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import static org.apache.hadoop.yarn.exceptions
+        .InvalidResourceRequestException
+        .GREATER_THAN_MAX_RESOURCE_MESSAGE_TEMPLATE;
+import static org.apache.hadoop.yarn.exceptions
+        .InvalidResourceRequestException
+        .LESS_THAN_ZERO_RESOURCE_MESSAGE_TEMPLATE;
+import static org.apache.hadoop.yarn.exceptions
+        .InvalidResourceRequestException.UNKNOWN_REASON_MESSAGE_TEMPLATE;
 
 /**
  * Utilities shared by schedulers. 
@@ -257,9 +268,9 @@ public class SchedulerUtils {
   }
 
 
-  public static void normalizeAndValidateRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
-      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
+  private static void normalizeAndValidateRequest(ResourceRequest resReq,
+          Resource maximumResource, String queueName, YarnScheduler scheduler,
+          boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
       throws InvalidResourceRequestException {
     Configuration conf = rmContext.getYarnConfiguration();
     // If Node label is not enabled throw exception
@@ -384,13 +395,13 @@ public class SchedulerUtils {
 
       if (requestedRI.getValue() < 0) {
         throwInvalidResourceException(reqResource, availableResource,
-            reqResourceName);
+            reqResourceName, InvalidResourceType.LESS_THAN_ZERO);
       }
 
       boolean valid = checkResource(requestedRI, availableResource);
       if (!valid) {
         throwInvalidResourceException(reqResource, availableResource,
-            reqResourceName);
+            reqResourceName, InvalidResourceType.GREATER_THEN_MAX_ALLOCATION);
       }
     }
   }
@@ -470,18 +481,30 @@ public class SchedulerUtils {
   }
 
   private static void throwInvalidResourceException(Resource reqResource,
-      Resource availableResource, String reqResourceName)
+          Resource maxAllowedAllocation, String reqResourceName,
+          InvalidResourceType invalidResourceType)
       throws InvalidResourceRequestException {
-    throw new InvalidResourceRequestException(
-        "Invalid resource request, requested resource type=[" + reqResourceName
-            + "] < 0 or greater than maximum allowed allocation. Requested "
-            + "resource=" + reqResource + ", maximum allowed allocation="
-            + availableResource
-            + ", please note that maximum allowed allocation is calculated "
-            + "by scheduler based on maximum resource of registered "
-            + "NodeManagers, which might be less than configured "
-            + "maximum allocation="
-            + ResourceUtils.getResourceTypesMaximumAllocation());
+    final String message;
+
+    if (invalidResourceType == InvalidResourceType.LESS_THAN_ZERO) {
+      message = String.format(LESS_THAN_ZERO_RESOURCE_MESSAGE_TEMPLATE,
+          reqResourceName, reqResource);
+    } else if (invalidResourceType ==
+            InvalidResourceType.GREATER_THEN_MAX_ALLOCATION) {
+      message = String.format(GREATER_THAN_MAX_RESOURCE_MESSAGE_TEMPLATE,
+          reqResourceName, reqResource, maxAllowedAllocation,
+          ResourceUtils.getResourceTypesMaximumAllocation());
+    } else if (invalidResourceType == InvalidResourceType.UNKNOWN) {
+      message = String.format(UNKNOWN_REASON_MESSAGE_TEMPLATE, reqResourceName,
+          reqResource);
+    } else {
+      throw new IllegalArgumentException(String.format(
+          "InvalidResourceType argument should be either " + "%s, %s or %s",
+          InvalidResourceType.LESS_THAN_ZERO,
+          InvalidResourceType.GREATER_THEN_MAX_ALLOCATION,
+          InvalidResourceType.UNKNOWN));
+    }
+    throw new InvalidResourceRequestException(message, invalidResourceType);
   }
 
   private static void checkQueueLabelInLabelManager(String labelExpression,

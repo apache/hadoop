@@ -212,6 +212,10 @@ public class TestStorageContainerManager {
       TestStorageContainerManagerHelper helper =
           new TestStorageContainerManagerHelper(cluster, conf);
       Map<String, OmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
+      for (OmKeyInfo keyInfo : keyLocations.values()) {
+        OzoneTestUtils.closeContainers(keyInfo.getKeyLocationVersions(),
+            cluster.getStorageContainerManager());
+      }
 
       Map<Long, List<Long>> containerBlocks = createDeleteTXLog(delLog,
           keyLocations, helper);
@@ -294,6 +298,10 @@ public class TestStorageContainerManager {
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
+    for (OmKeyInfo keyInfo : keyLocations.values()) {
+      OzoneTestUtils.closeContainers(keyInfo.getKeyLocationVersions(),
+          cluster.getStorageContainerManager());
+    }
 
     createDeleteTXLog(delLog, keyLocations, helper);
     // Verify a few TX gets created in the TX log.

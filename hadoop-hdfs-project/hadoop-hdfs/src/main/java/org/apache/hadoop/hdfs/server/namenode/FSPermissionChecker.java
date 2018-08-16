@@ -409,7 +409,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
     final FsPermission mode = inode.getFsPermission();
     final AclFeature aclFeature = inode.getAclFeature();
-    if (aclFeature != null) {
+    if (aclFeature != null && aclFeature.getEntriesSize() > 0) {
       // It's possible that the inode has a default ACL but no access ACL.
       int firstEntry = aclFeature.getEntryAt(0);
       if (AclEntryStatusFormat.getScope(firstEntry) == AclEntryScope.ACCESS) {

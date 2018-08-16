@@ -19,12 +19,14 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.ArrayList;
 
 /**
  * Helper class to convert Protobuf to Java classes.
@@ -34,11 +36,22 @@ public class KeyData {
   private final Map<String, String> metadata;
 
   /**
+   * Represent a list of chunks.
+   * In order to reduce memory usage, chunkList is declared as an {@link Object}.
+   * When #elements == 0, chunkList is null.
+   * When #elements == 1, chunkList refers to the only element.
+   * When #elements > 1, chunkList refers to the list.
+   *
    * Please note : when we are working with keys, we don't care what they point
    * to. So we We don't read chunkinfo nor validate them. It is responsibility
    * of higher layer like ozone. We just read and write data from network.
    */
-  private List<ContainerProtos.ChunkInfo> chunks;
+  private Object chunkList;
+
+  /**
+   * total size of the key.
+   */
+  private long size;
 
   /**
    * Constructs a KeyData Object.
@@ -48,6 +61,7 @@ public class KeyData {
   public KeyData(BlockID blockID) {
     this.blockID = blockID;
     this.metadata = new TreeMap<>();
+    this.size = 0;
   }
 
   /**
@@ -65,6 +79,9 @@ public class KeyData {
           data.getMetadata(x).getValue());
     }
     keyData.setChunks(data.getChunksList());
+    if (data.hasSize()) {
+      Preconditions.checkArgument(data.getSize() == keyData.getSize());
+    }
     return keyData;
   }
 
@@ -76,13 +93,14 @@ public class KeyData {
     ContainerProtos.KeyData.Builder builder =
         ContainerProtos.KeyData.newBuilder();
     builder.setBlockID(this.blockID.getDatanodeBlockIDProtobuf());
-    builder.addAllChunks(this.chunks);
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       ContainerProtos.KeyValue.Builder keyValBuilder =
           ContainerProtos.KeyValue.newBuilder();
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }
+    builder.addAllChunks(getChunks());
+    builder.setSize(size);
     return builder.build();
   }
 
@@ -121,17 +139,70 @@ public class KeyData {
     metadata.remove(key);
   }
 
+  @SuppressWarnings("unchecked")
+  private List<ContainerProtos.ChunkInfo> castChunkList() {
+    return (List<ContainerProtos.ChunkInfo>)chunkList;
+  }
+
   /**
    * Returns chunks list.
    *
    * @return list of chunkinfo.
    */
   public List<ContainerProtos.ChunkInfo> getChunks() {
-    return chunks;
+    return chunkList == null? Collections.emptyList()
+        : chunkList instanceof ContainerProtos.ChunkInfo?
+            Collections.singletonList((ContainerProtos.ChunkInfo)chunkList)
+        : Collections.unmodifiableList(castChunkList());
+  }
+
+  /**
+   * Adds chinkInfo to the list
+   */
+  public void addChunk(ContainerProtos.ChunkInfo chunkInfo) {
+    if (chunkList == null) {
+      chunkList = chunkInfo;
+    } else {
+      final List<ContainerProtos.ChunkInfo> list;
+      if (chunkList instanceof ContainerProtos.ChunkInfo) {
+        list = new ArrayList<>(2);
+        list.add((ContainerProtos.ChunkInfo)chunkList);
+        chunkList = list;
+      } else {
+        list = castChunkList();
+      }
+      list.add(chunkInfo);
+    }
+    size += chunkInfo.getLen();
+  }
+
+  /**
+   * removes the chunk.
+   */
+  public boolean removeChunk(ContainerProtos.ChunkInfo chunkInfo) {
+    final boolean removed;
+    if (chunkList instanceof List) {
+      final List<ContainerProtos.ChunkInfo> list = castChunkList();
+      removed = list.remove(chunkInfo);
+      if (list.size() == 1) {
+        chunkList = list.get(0);
+      }
+    } else if (chunkInfo.equals(chunkList)) {
+      chunkList = null;
+      removed = true;
+    } else {
+      removed = false;
+    }
+
+    if (removed) {
+      size -= chunkInfo.getLen();
+    }
+    return removed;
   }
 
   /**
    * Returns container ID.
+   *
    * @return long.
    */
   public long getContainerID() {
@@ -160,7 +231,14 @@ public class KeyData {
    * @param chunks - List of chunks.
    */
   public void setChunks(List<ContainerProtos.ChunkInfo> chunks) {
-    this.chunks = chunks;
+    if (chunks == null) {
+      chunkList = null;
+      size = 0L;
+    } else {
+      final int n = chunks.size();
+      chunkList = n == 0? null: n == 1? chunks.get(0): chunks;
+      size = chunks.parallelStream().mapToLong(ContainerProtos.ChunkInfo::getLen).sum();
+    }
   }
 
   /**
@@ -168,7 +246,6 @@ public class KeyData {
    * @return total size of the key.
    */
   public long getSize() {
-    return chunks.parallelStream().mapToLong(e->e.getLen()).sum();
+    return size;
   }
-
 }

@@ -18,11 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_OWNER;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 
 import com.google.inject.Inject;
 import java.io.IOException;
@@ -53,7 +49,6 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregation
 import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController.IndexedPerAggregationLogMeta;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.PRE;
 
 /**
  * The Aggregated Logs Block implementation for Indexed File.
@@ -179,88 +174,8 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           continue;
         }
 
-        Algorithm compressName = Compression.getCompressionAlgorithmByName(
-            compressAlgo);
-        Decompressor decompressor = compressName.getDecompressor();
-        FileContext fileContext = FileContext.getFileContext(
-            thisNodeFile.getPath().toUri(), conf);
-        FSDataInputStream fsin = fileContext.open(thisNodeFile.getPath());
-        int bufferSize = 65536;
-        for (IndexedFileLogMeta candidate : candidates) {
-          if (candidate.getLastModificatedTime() < startTime
-              || candidate.getLastModificatedTime() > endTime) {
-            continue;
-          }
-          byte[] cbuf = new byte[bufferSize];
-          InputStream in = null;
-          try {
-            in = compressName.createDecompressionStream(
-                new BoundedRangeFileInputStream(fsin,
-                    candidate.getStartIndex(),
-                    candidate.getFileCompressedSize()),
-                    decompressor,
-                    LogAggregationIndexedFileController.getFSInputBufferSize(
-                        conf));
-            long logLength = candidate.getFileSize();
-            html.pre().__("\n\n").__();
-            html.p().__("Log Type: " + candidate.getFileName()).__();
-            html.p().__("Log Upload Time: " + Times.format(
-                candidate.getLastModificatedTime())).__();
-            html.p().__("Log Length: " + Long.toString(
-                logLength)).__();
-            long startIndex = start < 0
-                ? logLength + start : start;
-            startIndex = startIndex < 0 ? 0 : startIndex;
-            startIndex = startIndex > logLength ? logLength : startIndex;
-            long endLogIndex = end < 0
-                ? logLength + end : end;
-            endLogIndex = endLogIndex < 0 ? 0 : endLogIndex;
-            endLogIndex = endLogIndex > logLength ? logLength : endLogIndex;
-            endLogIndex = endLogIndex < startIndex ?
-                startIndex : endLogIndex;
-            long toRead = endLogIndex - startIndex;
-            if (toRead < logLength) {
-              html.p().__("Showing " + toRead + " bytes of " + logLength
-                  + " total. Click ").a(url("logs", $(NM_NODENAME),
-                      $(CONTAINER_ID), $(ENTITY_STRING), $(APP_OWNER),
-                      candidate.getFileName(), "?start=0&start.time="
-                      + startTime + "&end.time=" + endTime), "here").
-                      __(" for the full log.").__();
-            }
-            long totalSkipped = 0;
-            while (totalSkipped < startIndex) {
-              long ret = in.skip(startIndex - totalSkipped);
-              if (ret == 0) {
-                //Read one byte
-                int nextByte = in.read();
-                // Check if we have reached EOF
-                if (nextByte == -1) {
-                  throw new IOException("Premature EOF from container log");
-                }
-                ret = 1;
-              }
-              totalSkipped += ret;
-            }
-            int len = 0;
-            int currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-            PRE<Hamlet> pre = html.pre();
-
-            while (toRead > 0
-                && (len = in.read(cbuf, 0, currentToRead)) > 0) {
-              pre.__(new String(cbuf, 0, len, Charset.forName("UTF-8")));
-              toRead = toRead - len;
-              currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-            }
-
-            pre.__();
-            foundLog = true;
-          } catch (Exception ex) {
-            LOG.error("Error getting logs for " + logEntity, ex);
-            continue;
-          } finally {
-            IOUtils.closeQuietly(in);
-          }
-        }
+        foundLog = readContainerLog(compressAlgo, html, thisNodeFile, start,
+            end, candidates, startTime, endTime, foundLog, logEntity);
       }
       if (!foundLog) {
         if (desiredLogType.isEmpty()) {
@@ -277,4 +192,51 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
       LOG.error("Error getting logs for " + logEntity, ex);
     }
   }
+
+  private boolean readContainerLog(String compressAlgo, Block html,
+      FileStatus thisNodeFile, long start, long end,
+      List<IndexedFileLogMeta> candidates, long startTime, long endTime,
+      boolean foundLog, String logEntity) throws IOException {
+    Algorithm compressName = Compression.getCompressionAlgorithmByName(
+        compressAlgo);
+    Decompressor decompressor = compressName.getDecompressor();
+    FileContext fileContext = FileContext.getFileContext(
+        thisNodeFile.getPath().toUri(), conf);
+    FSDataInputStream fsin = fileContext.open(thisNodeFile.getPath());
+    int bufferSize = 65536;
+    for (IndexedFileLogMeta candidate : candidates) {
+      if (candidate.getLastModifiedTime() < startTime
+          || candidate.getLastModifiedTime() > endTime) {
+        continue;
+      }
+      byte[] cbuf = new byte[bufferSize];
+      InputStream in = null;
+      try {
+        in = compressName.createDecompressionStream(
+            new BoundedRangeFileInputStream(fsin, candidate.getStartIndex(),
+                candidate.getFileCompressedSize()), decompressor,
+            LogAggregationIndexedFileController.getFSInputBufferSize(conf));
+        long logLength = candidate.getFileSize();
+        html.pre().__("\n\n").__();
+        html.p().__("Log Type: " + candidate.getFileName()).__();
+        html.p().__(
+            "Log Upload Time: " + Times.format(candidate.getLastModifiedTime()))
+            .__();
+        html.p().__("Log Length: " + Long.toString(logLength)).__();
+
+        long[] range = checkParseRange(html, start, end, startTime, endTime,
+            logLength, candidate.getFileName());
+        processContainerLog(html, range, in, bufferSize, cbuf);
+
+        foundLog = true;
+      } catch (Exception ex) {
+        LOG.error("Error getting logs for " + logEntity, ex);
+        continue;
+      } finally {
+        IOUtils.closeQuietly(in);
+      }
+    }
+    return foundLog;
+  }
+
 }

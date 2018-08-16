@@ -89,7 +89,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
+
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -425,7 +427,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public static final Log auditLog = LogFactory.getLog(
       FSNamesystem.class.getName() + ".audit");
 
-  static final int DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED = 100;
+  private final int maxCorruptFileBlocksReturn;
   static int BLOCK_DELETION_INCREMENT = 1000;
   private final boolean isPermissionEnabled;
   private final UserGroupInformation fsOwner;
@@ -830,6 +832,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.numCommittedAllowed = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY,
           DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_DEFAULT);
+
+      this.maxCorruptFileBlocksReturn = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_DEFAULT);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
       
@@ -1283,6 +1289,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
             edekCacheLoaderDelay, edekCacheLoaderInterval);
       }
+      if (blockManager.getSPSManager() != null) {
+        blockManager.getSPSManager().start();
+      }
     } finally {
       startingActiveService = false;
       blockManager.checkSafeMode();
@@ -1312,6 +1321,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LOG.info("Stopping services started for active state");
     writeLock();
     try {
+      if (blockManager != null && blockManager.getSPSManager() != null) {
+        blockManager.getSPSManager().stop();
+      }
       stopSecretManager();
       leaseManager.stopMonitor();
       if (nnrmthread != null) {
@@ -2219,6 +2231,56 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  /**
+   * Satisfy the storage policy for a file or a directory.
+   *
+   * @param src file/directory path
+   */
+  void satisfyStoragePolicy(String src, boolean logRetryCache)
+      throws IOException {
+    final String operationName = "satisfyStoragePolicy";
+    FileStatus auditStat;
+    validateStoragePolicySatisfy();
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot satisfy storage policy for " + src);
+      auditStat = FSDirSatisfyStoragePolicyOp.satisfyStoragePolicy(
+          dir, blockManager, src, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName, src);
+      throw e;
+    } finally {
+      writeUnlock(operationName);
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  private void validateStoragePolicySatisfy()
+      throws UnsupportedActionException, IOException {
+    // make sure storage policy is enabled, otherwise
+    // there is no need to satisfy storage policy.
+    if (!dir.isStoragePolicyEnabled()) {
+      throw new IOException(String.format(
+          "Failed to satisfy storage policy since %s is set to false.",
+          DFS_STORAGE_POLICY_ENABLED_KEY));
+    }
+    // checks sps status
+    boolean disabled = (blockManager.getSPSManager() == null);
+    if (disabled) {
+      throw new UnsupportedActionException(
+          "Cannot request to satisfy storage policy "
+              + "when storage policy satisfier feature has been disabled"
+              + " by admin. Seek for an admin help to enable it "
+              + "or use Mover tool.");
+    }
+    // checks SPS Q has many outstanding requests. It will throw IOException if
+    // the limit exceeds.
+    blockManager.getSPSManager().verifyOutstandingPathQLimit();
   }
 
   /**
@@ -3517,7 +3579,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   BlockInfo getStoredBlock(Block block) {
     return blockManager.getStoredBlock(block);
   }
-  
+
   @Override
   public boolean isInSnapshot(long blockCollectionID) {
     assert hasReadLock();
@@ -3856,7 +3918,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks) throws IOException {
+      @Nonnull SlowDiskReports slowDisks)
+          throws IOException {
     readLock();
     try {
       //get datanode commands
@@ -3870,6 +3933,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (requestFullBlockReportLease) {
         blockReportLeaseId =  blockManager.requestBlockReportLeaseId(nodeReg);
       }
+
       //create ha status
       final NNHAStatusHeartbeat haState = new NNHAStatusHeartbeat(
           haContext.getState().getServiceState(),
@@ -4214,7 +4278,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks(),
         getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
         getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
-        getPendingDeletionReplicatedBlocks());
+        getPendingDeletionReplicatedBlocks(),
+        getHighestPriorityLowRedundancyReplicatedBlocks());
   }
 
   /**
@@ -4226,7 +4291,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   ECBlockGroupStats getECBlockGroupStats() {
     return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
-        getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks());
+        getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks(),
+        getHighestPriorityLowRedundancyECBlocks());
   }
 
   @Override // FSNamesystemMBean
@@ -4371,15 +4437,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();      
-      final List<DatanodeDescriptor> datanodes = dm.getDatanodeListForReport(type);
-
-      reports = new DatanodeStorageReport[datanodes.size()];
-      for (int i = 0; i < reports.length; i++) {
-        final DatanodeDescriptor d = datanodes.get(i);
-        reports[i] = new DatanodeStorageReport(
-            new DatanodeInfoBuilder().setFrom(d).build(),
-            d.getStorageReports());
-      }
+      reports = dm.getDatanodeStorageReport(type);
     } finally {
       readUnlock("getDatanodeStorageReport");
     }
@@ -4831,6 +4889,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "blocks with replication factor 1"})
   public long getMissingReplicationOneBlocks() {
     return blockManager.getMissingReplicationOneBlocks();
+  }
+
+  @Override // ReplicatedBlocksMBean
+  @Metric({"HighestPriorityLowRedundancyReplicatedBlocks", "Number of " +
+      "replicated blocks which have the highest risk of loss."})
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return blockManager.getHighestPriorityReplicatedBlockCount();
+  }
+
+  @Override // ReplicatedBlocksMBean
+  @Metric({"HighestPriorityLowRedundancyECBlocks", "Number of erasure coded " +
+      "blocks which have the highest risk of loss."})
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return blockManager.getHighestPriorityECBlockCount();
   }
 
   @Override // ReplicatedBlocksMBean
@@ -5508,7 +5580,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           if (src.startsWith(path)){
             corruptFiles.add(new CorruptFileBlockInfo(src, blk));
             count++;
-            if (count >= DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED)
+            if (count >= maxCorruptFileBlocksReturn)
               break;
           }
         }
@@ -7466,9 +7538,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       ErasureCodingPolicy[] policies, final boolean logRetryCache)
       throws IOException {
     final String operationName = "addErasureCodingPolicies";
-    String addECPolicyName = "";
+    List<String> addECPolicyNames = new ArrayList<>(policies.length);
     checkOperation(OperationCategory.WRITE);
-    List<AddErasureCodingPolicyResponse> responses = new ArrayList<>();
+    List<AddErasureCodingPolicyResponse> responses =
+        new ArrayList<>(policies.length);
     boolean success = false;
     writeLock();
     try {
@@ -7479,7 +7552,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           ErasureCodingPolicy newPolicy =
               FSDirErasureCodingOp.addErasureCodingPolicy(this, policy,
                   logRetryCache);
-          addECPolicyName = newPolicy.getName();
+          addECPolicyNames.add(newPolicy.getName());
           responses.add(new AddErasureCodingPolicyResponse(newPolicy));
         } catch (HadoopIllegalArgumentException e) {
           responses.add(new AddErasureCodingPolicyResponse(policy, e));
@@ -7492,7 +7565,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (success) {
         getEditLog().logSync();
       }
-      logAuditEvent(success, operationName, addECPolicyName, null, null);
+      logAuditEvent(success, operationName, addECPolicyNames.toString(),
+          null, null);
     }
   }
 
@@ -7759,6 +7833,29 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  @Override
+  public void removeXattr(long id, String xattrName) throws IOException {
+    writeLock();
+    try {
+      final INode inode = dir.getInode(id);
+      if (inode == null) {
+        return;
+      }
+      final XAttrFeature xaf = inode.getXAttrFeature();
+      if (xaf == null) {
+        return;
+      }
+      final XAttr spsXAttr = xaf.getXAttr(xattrName);
+
+      if (spsXAttr != null) {
+        FSDirSatisfyStoragePolicyOp.removeSPSXattr(dir, inode, spsXAttr);
+      }
+    } finally {
+      writeUnlock("removeXAttr");
+    }
+    getEditLog().logSync();
   }
 
   void checkAccess(String src, FsAction mode) throws IOException {

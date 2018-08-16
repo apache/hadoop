@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -47,6 +48,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -298,7 +300,7 @@ public class ContainerStateManager implements Closeable {
 
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(HddsProtos.LifeCycleState.ALLOCATED)
-        .setPipelineName(pipeline.getPipelineName())
+        .setPipelineID(pipeline.getId())
         // This is bytes allocated for blocks inside container, not the
         // container size
         .setAllocatedBytes(0)
@@ -360,13 +362,14 @@ public class ContainerStateManager implements Closeable {
   /**
    * Update deleteTransactionId for a container.
    *
-   * @param containerID ContainerID of the container whose delete
-   *                    transactionId needs to be updated.
-   * @param transactionId latest transactionId to be updated for the container
+   * @param deleteTransactionMap maps containerId to its new
+   *                             deleteTransactionID
    */
-  public void updateDeleteTransactionId(Long containerID, long transactionId) {
-    containers.getContainerMap().get(ContainerID.valueof(containerID))
-        .updateDeleteTransactionId(transactionId);
+  public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap) {
+    for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
+      containers.getContainerMap().get(ContainerID.valueof(entry.getKey()))
+          .updateDeleteTransactionId(entry.getValue());
+    }
   }
 
   /**
@@ -463,6 +466,17 @@ public class ContainerStateManager implements Closeable {
   }
 
   /**
+   * Returns a set of open ContainerIDs that reside on a pipeline.
+   *
+   * @param pipelineID PipelineID of the Containers.
+   * @return Set of containers that match the specific query parameters.
+   */
+  public NavigableSet<ContainerID> getMatchingContainerIDsByPipeline(PipelineID
+      pipelineID) {
+    return containers.getOpenContainerIDsByPipeline(pipelineID);
+  }
+
+  /**
    * Returns the containerInfo with pipeline for the given container id.
    * @param selector -- Pipeline selector class.
    * @param containerID id of the container
@@ -472,7 +486,8 @@ public class ContainerStateManager implements Closeable {
   public ContainerWithPipeline getContainer(PipelineSelector selector,
       ContainerID containerID) throws IOException {
     ContainerInfo info = containers.getContainerInfo(containerID.getId());
-    Pipeline pipeline = selector.getPipeline(info.getPipelineName(), info.getReplicationType());
+    Pipeline pipeline = selector.getPipeline(info.getPipelineID(),
+        info.getReplicationType());
     return new ContainerWithPipeline(info, pipeline);
   }
 

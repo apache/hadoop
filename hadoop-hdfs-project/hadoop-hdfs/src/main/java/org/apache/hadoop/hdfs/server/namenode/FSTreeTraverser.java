@@ -289,7 +289,7 @@ public abstract class FSTreeTraverser {
   /**
    * Check whether current batch can be submitted for the processing.
    *
-   * @return true if batch size meets meet the condition, otherwise false.
+   * @return true if batch size meets the condition, otherwise false.
    */
   protected abstract boolean shouldSubmitCurrentBatch();
 
@@ -310,7 +310,7 @@ public abstract class FSTreeTraverser {
    * @throws IOException
    * @throws InterruptedException
    */
-  protected abstract void submitCurrentBatch(long startId)
+  protected abstract void submitCurrentBatch(Long startId)
       throws IOException, InterruptedException;
 
   /**

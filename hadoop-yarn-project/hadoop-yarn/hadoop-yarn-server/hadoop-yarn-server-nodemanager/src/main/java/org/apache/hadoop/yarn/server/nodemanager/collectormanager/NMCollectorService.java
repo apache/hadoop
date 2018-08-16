@@ -87,7 +87,7 @@ public class NMCollectorService extends CompositeService implements
 
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
-      server.refreshServiceAcl(conf, new NMPolicyProvider());
+      server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
     }
 
     server.start();

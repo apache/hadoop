@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -94,6 +95,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
@@ -467,8 +469,8 @@ public class FairScheduler extends
       return;
     }
 
+    writeLock.lock();
     try {
-      writeLock.lock();
       RMApp rmApp = rmContext.getRMApps().get(applicationId);
       FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
       if (queue == null) {
@@ -550,8 +552,8 @@ public class FairScheduler extends
       ApplicationAttemptId applicationAttemptId,
       boolean transferStateFromPreviousAttempt,
       boolean isAttemptRecovering) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FSAppAttempt> application = applications.get(
           applicationAttemptId.getApplicationId());
       String user = application.getUser();
@@ -653,8 +655,8 @@ public class FairScheduler extends
   private void removeApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState, boolean keepContainers) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       LOG.info("Application " + applicationAttemptId + " is done. finalState="
               + rmAppAttemptFinalState);
       FSAppAttempt attempt = getApplicationAttempt(applicationAttemptId);
@@ -720,8 +722,8 @@ public class FairScheduler extends
   protected void completedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Container container = rmContainer.getContainer();
 
       // Get the application for the finished container
@@ -768,8 +770,8 @@ public class FairScheduler extends
 
   private void addNode(List<NMContainerStatus> containerReports,
       RMNode node) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       FSSchedulerNode schedulerNode = new FSSchedulerNode(node,
           usePortForNodeName);
       nodeTracker.addNode(schedulerNode);
@@ -790,8 +792,8 @@ public class FairScheduler extends
   }
 
   private void removeNode(RMNode rmNode) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       NodeId nodeId = rmNode.getNodeID();
       FSSchedulerNode node = nodeTracker.getNode(nodeId);
       if (node == null) {
@@ -950,12 +952,15 @@ public class FairScheduler extends
     Resource headroom = application.getHeadroom();
     application.setApplicationHeadroomForMetrics(headroom);
 
+    List<Container> previousAttemptContainers = application
+        .pullPreviousAttemptContainers();
+    List<NMToken> updatedNMTokens = application.pullUpdatedNMTokens();
     return new Allocation(newlyAllocatedContainers, headroom,
         preemptionContainerIds, null, null,
-        application.pullUpdatedNMTokens(), null, null,
+        updatedNMTokens, null, null,
         application.pullNewlyPromotedContainers(),
         application.pullNewlyDemotedContainers(),
-        application.pullPreviousAttemptContainers());
+        previousAttemptContainers);
   }
 
   private List<MaxResourceValidationResult> validateResourceRequests(
@@ -988,8 +993,8 @@ public class FairScheduler extends
 
   @Override
   protected void nodeUpdate(RMNode nm) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       long start = getClock().getTime();
       super.nodeUpdate(nm);
 
@@ -1089,8 +1094,8 @@ public class FairScheduler extends
 
   @VisibleForTesting
   void attemptScheduling(FSSchedulerNode node) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (rmContext.isWorkPreservingRecoveryEnabled() && !rmContext
           .isSchedulerReadyForAllocatingContainers()) {
         return;
@@ -1305,8 +1310,8 @@ public class FairScheduler extends
   private String resolveReservationQueueName(String queueName,
       ApplicationId applicationId, ReservationId reservationID,
       boolean isRecovering) {
+    readLock.lock();
     try {
-      readLock.lock();
       FSQueue queue = queueMgr.getQueue(queueName);
       if ((queue == null) || !allocConf.isReservable(queue.getQueueName())) {
         return queueName;
@@ -1372,8 +1377,8 @@ public class FairScheduler extends
 
   @SuppressWarnings("deprecation")
   private void initScheduler(Configuration conf) throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.conf = new FairSchedulerConfiguration(conf);
       validateConf(this.conf);
       authorizer = YarnAuthorizationProvider.getInstance(conf);
@@ -1417,7 +1422,7 @@ public class FairScheduler extends
       }
 
       if (continuousSchedulingEnabled) {
-        // Contiuous scheduling is deprecated log it on startup
+        // Continuous scheduling is deprecated log it on startup
         LOG.warn("Continuous scheduling is turned ON. It is deprecated " +
             "because it can cause scheduler slowness due to locking issues. " +
             "Schedulers should use assignmultiple as a replacement.");
@@ -1464,8 +1469,8 @@ public class FairScheduler extends
   }
 
   private void startSchedulerThreads() {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Preconditions.checkNotNull(allocsLoader, "allocsLoader is null");
       if (continuousSchedulingEnabled) {
         Preconditions.checkNotNull(schedulingThread,
@@ -1499,8 +1504,8 @@ public class FairScheduler extends
   @SuppressWarnings("deprecation")
   @Override
   public void serviceStop() throws Exception {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (continuousSchedulingEnabled) {
         if (schedulingThread != null) {
           schedulingThread.interrupt();
@@ -1529,6 +1534,12 @@ public class FairScheduler extends
       super.reinitialize(conf, rmContext);
     } catch (Exception e) {
       LOG.error("Failed to reload allocations file", e);
+    }
+    try {
+      refreshMaximumAllocation(
+          ResourceUtils.fetchMaximumAllocationFromConfig(conf));
+    } catch (Exception e) {
+      LOG.error("Failed to refresh maximum allocation", e);
     }
   }
 
@@ -1562,8 +1573,8 @@ public class FairScheduler extends
   @Override
   public boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
+    readLock.lock();
     try {
-      readLock.lock();
       FSQueue queue = getQueueManager().getQueue(queueName);
       if (queue == null) {
         if (LOG.isDebugEnabled()) {
@@ -1691,8 +1702,8 @@ public class FairScheduler extends
   @Override
   public String moveApplication(ApplicationId appId,
       String queueName) throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FSAppAttempt> app = applications.get(appId);
       if (app == null) {
         throw new YarnException("App to be moved " + appId + " not found.");
@@ -1700,8 +1711,8 @@ public class FairScheduler extends
       FSAppAttempt attempt = (FSAppAttempt) app.getCurrentAppAttempt();
       // To serialize with FairScheduler#allocate, synchronize on app attempt
 
+      attempt.getWriteLock().lock();
       try {
-        attempt.getWriteLock().lock();
         FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
         // Check if the attempt is already stopped: don't move stopped app
         // attempt. The attempt has already been removed from all queues.
@@ -1737,8 +1748,8 @@ public class FairScheduler extends
   @Override
   public void preValidateMoveApplication(ApplicationId appId, String newQueue)
       throws YarnException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       SchedulerApplication<FSAppAttempt> app = applications.get(appId);
       if (app == null) {
         throw new YarnException("App to be moved " + appId + " not found.");
@@ -1747,8 +1758,8 @@ public class FairScheduler extends
       FSAppAttempt attempt = app.getCurrentAppAttempt();
       // To serialize with FairScheduler#allocate, synchronize on app attempt
 
+      attempt.getWriteLock().lock();
       try {
-        attempt.getWriteLock().lock();
         FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
         String destQueueName = handleMoveToPlanQueue(newQueue);
         FSLeafQueue targetQueue = queueMgr.getLeafQueue(destQueueName, false);
@@ -1869,8 +1880,8 @@ public class FairScheduler extends
   @Override
   public void updateNodeResource(RMNode nm,
       ResourceOption resourceOption) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       super.updateNodeResource(nm, resourceOption);
       updateRootQueueMetrics();
       queueMgr.getRootQueue().setSteadyFairShare(getClusterResource());

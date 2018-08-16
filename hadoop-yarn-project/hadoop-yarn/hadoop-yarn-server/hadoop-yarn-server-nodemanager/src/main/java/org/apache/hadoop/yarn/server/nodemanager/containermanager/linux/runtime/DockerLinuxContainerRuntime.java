@@ -154,9 +154,13 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS} allows users to specify
  +     additional volume mounts for the Docker container. The value of the
  *     environment variable should be a comma-separated list of mounts.
- *     All such mounts must be given as {@code source:dest:mode}, and the mode
+ *     All such mounts must be given as {@code source:dest[:mode]} and the mode
  *     must be "ro" (read-only) or "rw" (read-write) to specify the type of
- *     access being requested. The requested mounts will be validated by
+ *     access being requested. If neither is specified, read-write will be
+ *     assumed. The mode may include a bind propagation option. In that case,
+ *     the mode should either be of the form [option], rw+[option], or
+ *     ro+[option]. Valid bind propagation options are shared, rshared, slave,
+ *     rslave, private, and rprivate. The requested mounts will be validated by
  *     container-executor based on the values set in container-executor.cfg for
  *     {@code docker.allowed.ro-mounts} and {@code docker.allowed.rw-mounts}.
  *   </li>
@@ -189,7 +193,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Pattern hostnamePattern = Pattern.compile(
       HOSTNAME_PATTERN);
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
-      "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
+      "(?<=^|,)([^:\\x00]+):([^:\\x00]+)" +
+          "(:(r[ow]|(r[ow][+])?(r?shared|r?slave|r?private)))?(?:,|$)");
   private static final int HOST_NAME_LENGTH = 64;
   private static final String DEFAULT_PROCFS = "/proc";
 
@@ -293,7 +298,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     this.nmContext = nmContext;
     this.conf = conf;
-    dockerClient = new DockerClient(conf);
+    dockerClient = new DockerClient();
     allowedNetworks.clear();
     defaultROMounts.clear();
     defaultRWMounts.clear();
@@ -840,24 +845,30 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
                 + environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
       }
       parsedMounts.reset();
+      long mountCount = 0;
       while (parsedMounts.find()) {
+        mountCount++;
         String src = parsedMounts.group(1);
         java.nio.file.Path srcPath = java.nio.file.Paths.get(src);
         if (!srcPath.isAbsolute()) {
           src = mountReadOnlyPath(src, localizedResources);
         }
         String dst = parsedMounts.group(2);
-        String mode = parsedMounts.group(3);
-        if (!mode.equals("ro") && !mode.equals("rw")) {
-          throw new ContainerExecutionException(
-              "Invalid mount mode requested for mount: "
-                  + parsedMounts.group());
+        String mode = parsedMounts.group(4);
+        if (mode == null) {
+          mode = "rw";
+        } else if (!mode.startsWith("ro") && !mode.startsWith("rw")) {
+          mode = "rw+" + mode;
         }
-        if (mode.equals("ro")) {
-          runCommand.addReadOnlyMountLocation(src, dst);
-        } else {
-          runCommand.addReadWriteMountLocation(src, dst);
-        }
+        runCommand.addMountLocation(src, dst, mode);
+      }
+      long commaCount = environment.get(ENV_DOCKER_CONTAINER_MOUNTS).chars()
+          .filter(c -> c == ',').count();
+      if (mountCount != commaCount + 1) {
+        // this means the matcher skipped an improperly formatted mount
+        throw new ContainerExecutionException(
+            "Unable to parse some mounts in user supplied mount list: "
+                + environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
       }
     }
 
@@ -962,7 +973,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String containerIdStr = containerId.toString();
     // Check to see if the container already exists for relaunch
     DockerCommandExecutor.DockerContainerStatus containerStatus =
-        DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
+        DockerCommandExecutor.getContainerStatus(containerIdStr,
             privilegedOperationExecutor, nmContext);
     if (containerStatus != null &&
         DockerCommandExecutor.isStartable(containerStatus)) {
@@ -1145,7 +1156,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
     @SuppressWarnings("unchecked")
     List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
-    String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
 
     PrivilegedOperation launchOp = new PrivilegedOperation(
             PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
@@ -1163,8 +1173,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
                     localDirs),
             StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
                     logDirs),
-            commandFile,
-            resourcesOpts);
+            commandFile);
 
     String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
 
@@ -1208,13 +1217,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private void handleContainerStop(String containerId, Map<String, String> env)
       throws ContainerExecutionException {
     DockerCommandExecutor.DockerContainerStatus containerStatus =
-        DockerCommandExecutor.getContainerStatus(containerId, conf,
+        DockerCommandExecutor.getContainerStatus(containerId,
             privilegedOperationExecutor, nmContext);
     if (DockerCommandExecutor.isStoppable(containerStatus)) {
       DockerStopCommand dockerStopCommand = new DockerStopCommand(
           containerId).setGracePeriod(dockerStopGracePeriod);
       DockerCommandExecutor.executeDockerCommand(dockerStopCommand, containerId,
-          env, conf, privilegedOperationExecutor, false, nmContext);
+          env, privilegedOperationExecutor, false, nmContext);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -1236,14 +1245,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (isContainerRequestedAsPrivileged(container)) {
       String containerId = container.getContainerId().toString();
       DockerCommandExecutor.DockerContainerStatus containerStatus =
-          DockerCommandExecutor.getContainerStatus(containerId, conf,
+          DockerCommandExecutor.getContainerStatus(containerId,
           privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isKillable(containerStatus)) {
         DockerKillCommand dockerKillCommand =
             new DockerKillCommand(containerId).setSignal(signal.name());
         DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
-            containerId, env, conf, privilegedOperationExecutor, false,
-            nmContext);
+            containerId, env, privilegedOperationExecutor, false, nmContext);
       } else {
         LOG.debug(
             "Container status is {}, skipping kill - {}",
@@ -1281,12 +1289,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           + containerId);
     } else {
       DockerCommandExecutor.DockerContainerStatus containerStatus =
-          DockerCommandExecutor.getContainerStatus(containerId, conf,
+          DockerCommandExecutor.getContainerStatus(containerId,
               privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isRemovable(containerStatus)) {
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            env, conf, privilegedOperationExecutor, false, nmContext);
+            env, privilegedOperationExecutor, false, nmContext);
       }
     }
   }

@@ -265,8 +265,7 @@ public class KeyShell extends CommandShell {
           }
         }
       } catch (IOException e) {
-        getOut().println("Cannot list keys for KeyProvider: " + provider
-            + ": " + e.toString());
+        getOut().println("Cannot list keys for KeyProvider: " + provider);
         throw e;
       }
     }
@@ -318,12 +317,12 @@ public class KeyShell extends CommandShell {
           printProviderWritten();
         } catch (NoSuchAlgorithmException e) {
           getOut().println("Cannot roll key: " + keyName +
-              " within KeyProvider: " + provider + ". " + e.toString());
+              " within KeyProvider: " + provider + ".");
           throw e;
         }
       } catch (IOException e1) {
         getOut().println("Cannot roll key: " + keyName + " within KeyProvider: "
-            + provider + ". " + e1.toString());
+            + provider + ".");
         throw e1;
       }
     }
@@ -374,8 +373,8 @@ public class KeyShell extends CommandShell {
           }
           return cont;
         } catch (IOException e) {
-          getOut().println(keyName + " will not be deleted.");
-          e.printStackTrace(getErr());
+          getOut().println(keyName + " will not be deleted. "
+              + prettifyException(e));
         }
       }
       return true;
@@ -392,7 +391,7 @@ public class KeyShell extends CommandShell {
           getOut().println(keyName + " has been successfully deleted.");
           printProviderWritten();
         } catch (IOException e) {
-          getOut().println(keyName + " has not been deleted. " + e.toString());
+          getOut().println(keyName + " has not been deleted.");
           throw e;
         }
       }
@@ -463,13 +462,13 @@ public class KeyShell extends CommandShell {
             "with options " + options.toString() + ".");
         printProviderWritten();
       } catch (InvalidParameterException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       } catch (IOException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       } catch (NoSuchAlgorithmException e) {
-        getOut().println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created.");
         throw e;
       }
     }
@@ -520,7 +519,7 @@ public class KeyShell extends CommandShell {
         printProviderWritten();
       } catch (IOException e) {
         getOut().println("Cannot invalidate cache for key: " + keyName +
-            " within KeyProvider: " + provider + ". " + e.toString());
+            " within KeyProvider: " + provider + ".");
         throw e;
       }
     }
@@ -529,6 +528,17 @@ public class KeyShell extends CommandShell {
     public String getUsage() {
       return USAGE + ":\n\n" + DESC;
     }
+  }
+
+  @Override
+  protected void printException(Exception e){
+    getErr().println("Executing command failed with " +
+        "the following exception: " + prettifyException(e));
+  }
+
+  private String prettifyException(Exception e) {
+    return e.getClass().getSimpleName() + ": " +
+        e.getLocalizedMessage().split("\n")[0];
   }
 
   /**

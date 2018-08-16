@@ -27,8 +27,10 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.common.utils.HddsVolumeUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 import static org.apache.hadoop.ozone.container.common.volume.HddsVolume
     .HDDS_VOLUME_DIR;
 import static org.junit.Assert.assertEquals;
@@ -82,14 +84,16 @@ public class TestVolumeSet {
   @After
   public void shutdown() throws IOException {
     // Delete the hdds volume root dir
-    List<HddsVolume> volumes = new ArrayList<>();
-    volumes.addAll(volumeSet.getVolumesList());
-    volumes.addAll(volumeSet.getFailedVolumesList());
+    List<HddsVolume> hddsVolumes = new ArrayList<>();
+    hddsVolumes.addAll(volumeSet.getVolumesList());
+    hddsVolumes.addAll(volumeSet.getFailedVolumesList());
 
-    for (HddsVolume volume : volumes) {
+    for (HddsVolume volume : hddsVolumes) {
       FileUtils.deleteDirectory(volume.getHddsRootDir());
     }
     volumeSet.shutdown();
+
+    FileUtil.fullyDelete(new File(baseDir));
   }
 
   private boolean checkVolumeExistsInVolumeSet(String volume) {
@@ -221,6 +225,29 @@ public class TestVolumeSet {
       } catch (NullPointerException ex) {
         // Do Nothing. Exception is expected.
       }
+    }
+  }
+
+  @Test
+  public void testFailVolumes() throws  Exception{
+    VolumeSet volSet = null;
+    File readOnlyVolumePath = new File(baseDir);
+    //Set to readonly, so that this volume will be failed
+    readOnlyVolumePath.setReadOnly();
+    File volumePath = GenericTestUtils.getRandomizedTestDir();
+    OzoneConfiguration ozoneConfig = new OzoneConfiguration();
+    ozoneConfig.set(HDDS_DATANODE_DIR_KEY, readOnlyVolumePath.getAbsolutePath()
+        + "," + volumePath.getAbsolutePath());
+    volSet = new VolumeSet(UUID.randomUUID().toString(), ozoneConfig);
+    assertTrue(volSet.getFailedVolumesList().size() == 1);
+    assertEquals(readOnlyVolumePath, volSet.getFailedVolumesList().get(0)
+        .getHddsRootDir());
+
+    //Set back to writable
+    try {
+      readOnlyVolumePath.setWritable(true);
+    } finally {
+      FileUtil.fullyDelete(volumePath);
     }
 
   }

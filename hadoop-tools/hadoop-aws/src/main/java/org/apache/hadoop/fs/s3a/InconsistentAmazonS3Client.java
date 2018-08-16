@@ -114,6 +114,16 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   /** Map of key to delay -> time it was created. */
   private Map<String, Long> delayedPutKeys = new HashMap<>();
 
+  /**
+   * Instantiate.
+   * This subclasses a deprecated constructor of the parent
+   * {@code AmazonS3Client} class; we can't use the builder API because,
+   * that only creates the consistent client.
+   * @param credentials credentials to auth.
+   * @param clientConfiguration connection settings
+   * @param conf hadoop configuration.
+   */
+  @SuppressWarnings("deprecation")
   public InconsistentAmazonS3Client(AWSCredentialsProvider credentials,
       ClientConfiguration clientConfiguration, Configuration conf) {
     super(credentials, clientConfiguration);

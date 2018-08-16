@@ -124,8 +124,6 @@ public class QuorumJournalManager implements JournalManager {
     this.nsInfo = nsInfo;
     this.nameServiceId = nameServiceId;
     this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
-    this.connectionFactory = URLConnectionFactory
-        .newDefaultURLConnectionFactory(conf);
 
     // Configure timeouts.
     this.startSegmentTimeoutMs = conf.getInt(
@@ -156,6 +154,15 @@ public class QuorumJournalManager implements JournalManager {
             .DFS_QJM_OPERATIONS_TIMEOUT,
         DFSConfigKeys.DFS_QJM_OPERATIONS_TIMEOUT_DEFAULT, TimeUnit
             .MILLISECONDS);
+
+    int connectTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_OPEN_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_OPEN_TIMEOUT_DEFAULT);
+    int readTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_READ_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_QJOURNAL_HTTP_READ_TIMEOUT_DEFAULT);
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(connectTimeoutMs, readTimeoutMs, conf);
   }
   
   protected List<AsyncLogger> createLoggers(

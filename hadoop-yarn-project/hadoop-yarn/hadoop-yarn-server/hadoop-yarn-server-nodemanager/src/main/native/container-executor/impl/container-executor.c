@@ -213,10 +213,12 @@ static int change_effective_user(uid_t user, gid_t group) {
  * cgroup_file: Path to cgroup file where pid needs to be written to.
  */
 static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
+  int rc = 0;
   uid_t user = geteuid();
   gid_t group = getegid();
   if (change_effective_user(0, 0) != 0) {
-    return -1;
+    rc =  -1;
+    goto cleanup;
   }
 
   // open
@@ -224,7 +226,8 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
   if (cgroup_fd == -1) {
     fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", cgroup_file,
            strerror(errno));
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // write pid
@@ -235,15 +238,17 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
   if (written == -1) {
     fprintf(LOGFILE, "Failed to write pid to file %s - %s\n",
        cgroup_file, strerror(errno));
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
+cleanup:
   // Revert back to the calling user.
   if (change_effective_user(user, group)) {
-    return -1;
+    rc = -1;
   }
 
-  return 0;
+  return rc;
 }
 #endif
 
@@ -252,15 +257,18 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
  * pid_file: Path to pid file where pid needs to be written to
  */
 static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
+  int rc = 0;
+  char *temp_pid_file = NULL;
   uid_t user = geteuid();
   gid_t group = getegid();
   if (change_effective_user(nm_uid, nm_gid) != 0) {
     fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", nm_uid, nm_gid);
     fflush(ERRORFILE);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
-  char *temp_pid_file = concatenate("%s.tmp", "pid_file_path", 1, pid_file);
+  temp_pid_file = concatenate("%s.tmp", "pid_file_path", 1, pid_file);
   fprintf(LOGFILE, "Writing to tmp file %s\n", temp_pid_file);
   fflush(LOGFILE);
   // create with 700
@@ -269,8 +277,8 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
     fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", temp_pid_file,
            strerror(errno));
     fflush(LOGFILE);
-    free(temp_pid_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // write pid to temp file
@@ -282,8 +290,8 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
     fprintf(LOGFILE, "Failed to write pid to file %s as node manager - %s\n",
        temp_pid_file, strerror(errno));
     fflush(LOGFILE);
-    free(temp_pid_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // rename temp file to actual pid file
@@ -293,36 +301,41 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
         temp_pid_file, pid_file, strerror(errno));
     fflush(LOGFILE);
     unlink(temp_pid_file);
-    free(temp_pid_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
+cleanup:
   // Revert back to the calling user.
   if (change_effective_user(user, group)) {
-	free(temp_pid_file);
-    return -1;
+    rc = -1;
   }
 
   free(temp_pid_file);
-  return 0;
+  return rc;
 }
 
 /**
  * Write the exit code of the container into the exit code file
  * exit_code_file: Path to exit code file where exit code needs to be written
  */
-static int write_exit_code_file_as_nm(const char* exit_code_file, int exit_code) {
+static int write_exit_code_file_as_nm(const char* exit_code_file,
+    int exit_code) {
+  char *tmp_ecode_file = NULL;
+  int rc = 0;
   uid_t user = geteuid();
   gid_t group = getegid();
   if (change_effective_user(nm_uid, nm_gid) != 0) {
     fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", nm_uid, nm_gid);
     fflush(ERRORFILE);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
-  char *tmp_ecode_file = concatenate("%s.tmp", "exit_code_path", 1,
+  tmp_ecode_file = concatenate("%s.tmp", "exit_code_path", 1,
       exit_code_file);
   if (tmp_ecode_file == NULL) {
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // create with 700
@@ -330,8 +343,8 @@ static int write_exit_code_file_as_nm(const char* exit_code_file, int exit_code)
   if (ecode_fd == -1) {
     fprintf(LOGFILE, "Can't open file %s - %s\n", tmp_ecode_file,
            strerror(errno));
-    free(tmp_ecode_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   char ecode_buf[21];
@@ -341,8 +354,8 @@ static int write_exit_code_file_as_nm(const char* exit_code_file, int exit_code)
   if (written == -1) {
     fprintf(LOGFILE, "Failed to write exit code to file %s - %s\n",
        tmp_ecode_file, strerror(errno));
-    free(tmp_ecode_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // rename temp file to actual exit code file
@@ -351,19 +364,21 @@ static int write_exit_code_file_as_nm(const char* exit_code_file, int exit_code)
     fprintf(LOGFILE, "Can't move exit code file from %s to %s - %s\n",
         tmp_ecode_file, exit_code_file, strerror(errno));
     unlink(tmp_ecode_file);
-    free(tmp_ecode_file);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
+cleanup:
   // always change back
   if (change_effective_user(user, group) != 0) {
     fprintf(ERRORFILE,
        "Could not change to effective users %d, %d\n", user, group);
     fflush(ERRORFILE);
-    return -1;
+    rc = -1;
   }
+
   free(tmp_ecode_file);
-  return 0;
+  return rc;
 }
 
 static int wait_and_get_exit_code(pid_t pid) {
@@ -1532,9 +1547,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
-                              char* const* log_dirs, const char *command_file,
-                              const char *resources_key,
-                              char* const* resources_values) {
+                              char* const* log_dirs, const char *command_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -1717,23 +1730,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   if (pid != 0) {
-#ifdef __linux
-    fprintf(LOGFILE, "Writing to cgroup task files...\n");
-    // cgroups-based resource enforcement
-    if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
-      // write pid to cgroups
-      char* const* cgroup_ptr;
-      for (cgroup_ptr = resources_values; cgroup_ptr != NULL &&
-          *cgroup_ptr != NULL; ++cgroup_ptr) {
-        if (strcmp(*cgroup_ptr, "none") != 0 &&
-             write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
-          exit_code = WRITE_CGROUP_FAILED;
-          goto cleanup;
-        }
-      }
-    }
-#endif
-
     // write pid to pidfile
     fprintf(LOGFILE, "Writing pid file...\n");
     if (pid_file == NULL

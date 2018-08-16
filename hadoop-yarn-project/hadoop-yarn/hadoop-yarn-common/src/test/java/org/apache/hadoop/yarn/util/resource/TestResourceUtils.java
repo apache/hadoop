@@ -377,6 +377,46 @@ public class TestResourceUtils {
     }
   }
 
+  @Test
+  public void testGetResourceInformationWithDiffUnits() throws Exception {
+
+    Configuration conf = new YarnConfiguration();
+    Map<String, Resource> testRun = new HashMap<>();
+    setupResourceTypes(conf, "resource-types-4.xml");
+    Resource test3Resources = Resource.newInstance(0, 0);
+
+    //Resource 'resource1' has been passed as 5T
+    //5T should be converted to 5000G
+    test3Resources.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "T", 5L));
+
+    //Resource 'resource2' has been passed as 2M
+    //2M should be converted to 2000000000m
+    test3Resources.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "M", 2L));
+    test3Resources.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 1));
+    testRun.put("node-resources-3.xml", test3Resources);
+
+    for (Map.Entry<String, Resource> entry : testRun.entrySet()) {
+      String resourceFile = entry.getKey();
+      ResourceUtils.resetNodeResources();
+      File dest;
+      File source = new File(
+          conf.getClassLoader().getResource(resourceFile).getFile());
+      dest = new File(source.getParent(), "node-resources.xml");
+      FileUtils.copyFile(source, dest);
+      Map<String, ResourceInformation> actual = ResourceUtils
+          .getNodeResourceInformation(conf);
+      Assert.assertEquals(actual.size(),
+          entry.getValue().getResources().length);
+      for (ResourceInformation resInfo : entry.getValue().getResources()) {
+        Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
+      }
+      dest.delete();
+    }
+  }
+
   public static String setupResourceTypes(Configuration conf, String filename)
       throws Exception {
     File source = new File(

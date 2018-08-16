@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
@@ -363,6 +364,10 @@ public interface HdfsServerConstants {
       "security.hdfs.unreadable.by.superuser";
   String XATTR_ERASURECODING_POLICY =
       "system.hdfs.erasurecoding.policy";
+
+  String XATTR_SATISFY_STORAGE_POLICY = "user.hdfs.sps";
+
+  Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   long BLOCK_GROUP_INDEX_MASK = 15;
   byte MAX_BLOCKS_IN_GROUP = 16;

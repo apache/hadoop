@@ -616,6 +616,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.max-corrupt-file-blocks-returned</name>
+  <value>100</value>
+  <description>
+      The maximum number of corrupt file blocks listed by NameNode Web UI,
+      JMX and other client request.
+  </description>
+</property>
+
+<property>
   <name>dfs.blocksize</name>
   <value>134217728</value>
   <description>
@@ -1267,6 +1276,8 @@
   <description>The number of volumes that are allowed to
   fail before a datanode stops offering service. By default
   any volume failure will cause a datanode to shutdown.
+  The range of the value is -1 now, -1 represents the minimum
+  of volume valids is 1.
   </description>
 </property>
 
@@ -4485,6 +4496,131 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.enabled</name>
+  <value>false</value>
+  <name>dfs.storage.policy.satisfier.mode</name>
+  <value>none</value>
+  <description>
+    Following values are supported - external, none.
+    If external, StoragePolicySatisfier will be enabled and started as an independent service outside namenode.
+    If none, StoragePolicySatisfier is disabled.
+    By default, StoragePolicySatisfier is disabled.
+    Administrator can dynamically change StoragePolicySatisfier mode by using reconfiguration option.
+    Dynamic mode change can be achieved in the following way.
+    1. Edit/update this configuration property values in hdfs-site.xml
+    2. Execute the reconfig command on hadoop command line prompt.
+       For example:$hdfs -reconfig namenode nn_host:port start
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.queue.limit</name>
+  <value>1000</value>
+  <description>
+    Storage policy satisfier queue size. This queue contains the currently
+    scheduled file's inode ID for statisfy the policy.
+    Default value is 1000.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.work.multiplier.per.iteration</name>
+  <value>1</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the total amount of block transfers to begin in
+    one iteration, for satisfy the policy. The actual number is obtained by
+    multiplying this multiplier with the total number of live nodes in the
+    cluster. The result number is the number of blocks to begin transfers
+    immediately. This number can be any positive, non-zero integer.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.recheck.timeout.millis</name>
+  <value>60000</value>
+  <description>
+    Blocks storage movements monitor re-check interval in milliseconds.
+    This check will verify whether any blocks storage movement results arrived from DN
+    and also verify if any of file blocks movements not at all reported to DN
+    since dfs.storage.policy.satisfier.self.retry.timeout.
+    The default value is 1 * 60 * 1000 (1 mins)
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.self.retry.timeout.millis</name>
+  <value>300000</value>
+  <description>
+    If any of file related block movements not at all reported by datanode,
+    then after this timeout(in milliseconds), the item will be added back to movement needed list
+    at namenode which will be retried for block movements.
+    The default value is 5 * 60 * 1000 (5 mins)
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.retry.max.attempts</name>
+  <value>3</value>
+  <description>
+    Max retry to satisfy the block storage policy. After this retry block will be removed
+    from the movement needed queue.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.datanode.cache.refresh.interval.ms</name>
+  <value>300000</value>
+  <description>
+    How often to refresh the datanode storages cache in milliseconds. This cache
+    keeps live datanode storage reports fetched from namenode. After elapsed time,
+    it will again fetch latest datanodes from namenode.
+    By default, this parameter is set to 5 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.max.outstanding.paths</name>
+  <value>10000</value>
+  <description>
+    Defines the maximum number of paths to satisfy that can be queued up in the
+    Satisfier call queue in a period of time. Default value is 10000.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.address</name>
+  <value>0.0.0.0:0</value>
+  <description>
+    The hostname used for a keytab based Kerberos login. Keytab based login
+    is required when dfs.storage.policy.satisfier.mode is external.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by external StoragePolicySatisfier to login as its
+    service principal. The principal name is configured with
+    dfs.storage.policy.satisfier.kerberos.principal. Keytab based login
+    is required when dfs.storage.policy.satisfier.mode is external.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.kerberos.principal</name>
+  <value></value>
+  <description>
+    The StoragePolicySatisfier principal. This is typically set to
+    satisfier/_HOST@REALM.TLD. The StoragePolicySatisfier will substitute
+    _HOST with its own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on different servers. Keytab
+    based login is required when dfs.storage.policy.satisfier.mode is external.
+  </description>
+</property>
+
+<property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
   <description>
@@ -4567,6 +4703,24 @@
   <value>20000</value>
   <description>
     Write timeout in milliseconds when writing to a quorum of remote
+    journals.
+  </description>
+</property>
+
+<property>
+  <name>dfs.qjournal.http.open.timeout.ms</name>
+  <value>60000</value>
+  <description>
+    Timeout in milliseconds when open a new HTTP connection to remote
+    journals.
+  </description>
+</property>
+
+<property>
+  <name>dfs.qjournal.http.read.timeout.ms</name>
+  <value>60000</value>
+  <description>
+    Timeout in milliseconds when reading from a HTTP connection from remote
     journals.
   </description>
 </property>
@@ -4853,6 +5007,15 @@
       Don't use the aliasmap by default. Some tests will fail
       because they try to start the namenode twice with the
       same parameters if you turn it on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.server.log</name>
+    <value>false</value>
+    <description>
+      Ensures that InMemoryAliasMap server logs every call to it.
+      Set to false by default.
     </description>
   </property>
 

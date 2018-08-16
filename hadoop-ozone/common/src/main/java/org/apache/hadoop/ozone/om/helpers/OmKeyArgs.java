@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.om.helpers;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
+import java.util.List;
+
 /**
  * Args for key. Client use this to specify key's attributes on  key creation
  * (putKey()).
@@ -30,15 +32,18 @@ public final class OmKeyArgs {
   private long dataSize;
   private final ReplicationType type;
   private final ReplicationFactor factor;
+  private List<OmKeyLocationInfo> locationInfoList;
 
   private OmKeyArgs(String volumeName, String bucketName, String keyName,
-                    long dataSize, ReplicationType type, ReplicationFactor factor) {
+      long dataSize, ReplicationType type, ReplicationFactor factor,
+      List<OmKeyLocationInfo> locationInfoList) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
     this.dataSize = dataSize;
     this.type = type;
     this.factor = factor;
+    this.locationInfoList = locationInfoList;
   }
 
   public ReplicationType getType() {
@@ -69,6 +74,14 @@ public final class OmKeyArgs {
     dataSize = size;
   }
 
+  public void setLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
+    this.locationInfoList = locationInfoList;
+  }
+
+  public List<OmKeyLocationInfo> getLocationInfoList() {
+    return locationInfoList;
+  }
+
   /**
    * Builder class of OmKeyArgs.
    */
@@ -79,7 +92,7 @@ public final class OmKeyArgs {
     private long dataSize;
     private ReplicationType type;
     private ReplicationFactor factor;
-
+    private List<OmKeyLocationInfo> locationInfoList;
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -111,9 +124,14 @@ public final class OmKeyArgs {
       return this;
     }
 
+    public Builder setLocationInfoList(List<OmKeyLocationInfo> locationInfos) {
+      this.locationInfoList = locationInfos;
+      return this;
+    }
+
     public OmKeyArgs build() {
-      return new OmKeyArgs(volumeName, bucketName, keyName, dataSize,
-          type, factor);
+      return new OmKeyArgs(volumeName, bucketName, keyName, dataSize, type,
+          factor, locationInfoList);
     }
   }
 }

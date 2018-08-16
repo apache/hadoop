@@ -64,6 +64,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * The administrator interface of the {@link Router} implemented by
@@ -101,6 +103,12 @@ public class TestRouterAdmin {
     membership.registerNamenode(
         createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
     stateStore.refreshCaches(true);
+
+    RouterRpcServer spyRpcServer =
+        Mockito.spy(routerContext.getRouter().createRpcServer());
+    Whitebox
+        .setInternalState(routerContext.getRouter(), "rpcServer", spyRpcServer);
+    Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
   }
 
   @AfterClass

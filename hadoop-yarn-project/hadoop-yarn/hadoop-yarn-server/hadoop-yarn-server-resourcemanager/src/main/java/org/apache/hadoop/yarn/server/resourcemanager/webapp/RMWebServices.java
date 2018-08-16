@@ -160,6 +160,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -187,6 +188,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -333,6 +335,17 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterInfo getClusterInfo() {
     initForReadableEndpoints();
     return new ClusterInfo(this.rm);
+  }
+
+  @GET
+  @Path(RMWSConsts.CLUSTER_USER_INFO)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public ClusterUserInfo getClusterUserInfo(@Context HttpServletRequest hsr) {
+    initForReadableEndpoints();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    return new ClusterUserInfo(this.rm, callerUGI);
   }
 
   @GET
@@ -2356,6 +2369,39 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.BAD_REQUEST)
           .entity("Configuration change only supported by " +
               "MutableConfScheduler.")
+          .build();
+    }
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response getSchedulerConfiguration(@Context HttpServletRequest hsr)
+      throws AuthorizationException {
+    // Only admin user is allowed to read scheduler conf,
+    // in order to avoid leaking sensitive info, such as ACLs
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      MutableConfigurationProvider mutableConfigurationProvider =
+          ((MutableConfScheduler) scheduler).getMutableConfProvider();
+      // We load the cached configuration from configuration store,
+      // this should be the conf properties used by the scheduler.
+      Configuration schedulerConf = mutableConfigurationProvider
+          .getConfiguration();
+      return Response.status(Status.OK)
+          .entity(new ConfInfo(schedulerConf))
+          .build();
+    } else {
+      return Response.status(Status.BAD_REQUEST).entity(
+          "This API only supports to retrieve scheduler configuration"
+              + " from a mutable-conf scheduler, underneath scheduler "
+              + scheduler.getClass().getSimpleName()
+              + " is not an instance of MutableConfScheduler")
           .build();
     }
   }

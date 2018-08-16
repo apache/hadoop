@@ -97,8 +97,45 @@ The effective storage policy can be retrieved by the "[`storagepolicies -getStor
 
     The default storage type of a datanode storage location will be DISK if it does not have a storage type tagged explicitly.
 
-Mover - A New Data Migration Tool
----------------------------------
+Storage Policy Based Data Movement
+----------------------------------
+
+Setting a new storage policy on already existing file/dir will change the policy in Namespace, but it will not move the blocks physically across storage medias.
+Following 2 options will allow users to move the blocks based on new policy set. So, once user change/set to a new policy on file/directory, user should also perform one of the following options to achieve the desired data movement. Note that both options cannot be allowed to run simultaneously.
+
+### <u>S</u>torage <u>P</u>olicy <u>S</u>atisfier (SPS)
+
+When user changes the storage policy on a file/directory, user can call `HdfsAdmin` API `satisfyStoragePolicy()` to move the blocks as per the new policy set.
+The SPS tool running external to namenode periodically scans for the storage mismatches between new policy set and the physical blocks placed. This will only track the files/directories for which user invoked satisfyStoragePolicy. If SPS identifies some blocks to be moved for a file, then it will schedule block movement tasks to datanodes. If there are any failures in movement, the SPS will re-attempt by sending new block movement tasks.
+
+SPS can be enabled as an external service outside Namenode or disabled dynamically without restarting the Namenode.
+
+Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HDFS-10285)](https://issues.apache.org/jira/browse/HDFS-10285)
+
+* **Note**: When user invokes `satisfyStoragePolicy()` API on a directory, SPS will scan all sub-directories and consider all the files for satisfy the policy..
+
+* HdfsAdmin API :
+        `public void satisfyStoragePolicy(final Path path) throws IOException`
+
+* Arguments :
+
+| | |
+|:---- |:---- |
+| `path` | A path which requires blocks storage movement. |
+
+####Configurations:
+
+*   **dfs.storage.policy.satisfier.mode** - Used to enable external service outside NN or disable SPS.
+   Following string values are supported - `external`, `none`. Configuring `external` value represents SPS is enable and `none` to disable.
+   The default value is `none`.
+
+*   **dfs.storage.policy.satisfier.recheck.timeout.millis** - A timeout to re-check the processed block storage movement
+   command results from Datanodes.
+
+*   **dfs.storage.policy.satisfier.self.retry.timeout.millis** - A timeout to retry if no block movement results reported from
+   Datanode in this configured timeout.
+
+### Mover - A New Data Migration Tool
 
 A new data migration tool is added for archiving data. The tool is similar to Balancer. It periodically scans the files in HDFS to check if the block placement satisfies the storage policy. For the blocks violating the storage policy, it moves the replicas to a different storage type in order to fulfill the storage policy requirement. Note that it always tries to move block replicas within the same node whenever possible. If that is not possible (e.g. when a node doesn’t have the target storage type) then it will copy the block replicas to another node over the network.
 
@@ -114,6 +151,10 @@ A new data migration tool is added for archiving data. The tool is similar to Ba
 | `-f <local file>` | Specify a local file containing a list of HDFS files/dirs to migrate. |
 
 Note that, when both -p and -f options are omitted, the default path is the root directory.
+
+####Administrator notes:
+
+`StoragePolicySatisfier` and `Mover tool` cannot run simultaneously. If a Mover instance is already triggered and running, SPS will be disabled while starting. In that case, administrator should make sure, Mover execution finished and then enable external SPS service again. Similarly when SPS enabled already, Mover cannot be run. If administrator is looking to run Mover tool explicitly, then he/she should make sure to disable SPS first and then run Mover. Please look at the commands section to know how to enable external service outside NN or disable SPS dynamically.
 
 Storage Policy Commands
 -----------------------
@@ -171,5 +212,31 @@ Get the storage policy of a file or a directory.
 |:---- |:---- |
 | `-path <path>` | The path referring to either a directory or a file. |
 
+### Satisfy Storage Policy
+
+Schedule blocks to move based on file's/directory's current storage policy.
+
+* Command:
+
+        hdfs storagepolicies -satisfyStoragePolicy -path <path>
+
+* Arguments:
+
+| | |
+|:---- |:---- |
+| `-path <path>` | The path referring to either a directory or a file. |
 
 
+### Enable external service outside NN or Disable SPS without restarting Namenode
+If administrator wants to switch modes of SPS feature while Namenode is running, first he/she needs to update the desired value(external or none) for the configuration item `dfs.storage.policy.satisfier.mode` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
+
+* Command:
+
+       hdfs dfsadmin -reconfig namenode <host:ipc_port> start
+
+### Start External SPS Service.
+If administrator wants to start external sps, first he/she needs to configure property `dfs.storage.policy.satisfier.mode` with `external` value in configuration file (`hdfs-site.xml`) and then run Namenode reconfig command. Please ensure that network topology configurations in the configuration file are same as namenode, this cluster will be used for matching target nodes. After this, start external sps service using following command
+
+* Command:
+
+      hdfs --daemon start sps

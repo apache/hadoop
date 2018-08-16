@@ -88,11 +88,10 @@ public class BlockDeletingService extends BackgroundService{
   // Core pool size for container tasks
   private final static int BLOCK_DELETING_SERVICE_CORE_POOL_SIZE = 10;
 
-  public BlockDeletingService(ContainerSet containerSet,
-      long serviceInterval, long serviceTimeout, Configuration conf) {
-    super("BlockDeletingService", serviceInterval,
-        TimeUnit.MILLISECONDS, BLOCK_DELETING_SERVICE_CORE_POOL_SIZE,
-        serviceTimeout);
+  public BlockDeletingService(ContainerSet containerSet, long serviceInterval,
+      long serviceTimeout, TimeUnit timeUnit, Configuration conf) {
+    super("BlockDeletingService", serviceInterval, timeUnit,
+        BLOCK_DELETING_SERVICE_CORE_POOL_SIZE, serviceTimeout);
     this.containerSet = containerSet;
     containerDeletionPolicy = ReflectionUtils.newInstance(conf.getClass(
         ScmConfigKeys.OZONE_SCM_KEY_VALUE_CONTAINER_DELETION_CHOOSING_POLICY,
@@ -120,9 +119,11 @@ public class BlockDeletingService extends BackgroundService{
       // configured.
       containers = containerSet.chooseContainerForBlockDeletion(
           containerLimitPerInterval, containerDeletionPolicy);
-      LOG.info("Plan to choose {} containers for block deletion, "
-          + "actually returns {} valid containers.",
-          containerLimitPerInterval, containers.size());
+      if (containers.size() > 0) {
+        LOG.info("Plan to choose {} containers for block deletion, "
+                + "actually returns {} valid containers.",
+            containerLimitPerInterval, containers.size());
+      }
 
       for(ContainerData container : containers) {
         BlockDeletingTask containerTask =

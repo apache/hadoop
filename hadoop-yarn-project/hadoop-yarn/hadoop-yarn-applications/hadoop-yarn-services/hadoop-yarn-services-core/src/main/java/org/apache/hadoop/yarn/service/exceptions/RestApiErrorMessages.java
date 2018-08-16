@@ -50,6 +50,10 @@ public interface RestApiErrorMessages {
       "Artifact id (like docker image name) is either empty or not provided";
   String ERROR_ARTIFACT_ID_FOR_COMP_INVALID =
       ERROR_ARTIFACT_ID_INVALID + ERROR_SUFFIX_FOR_COMPONENT;
+  String ERROR_ARTIFACT_PATH_FOR_COMP_INVALID = "For component %s with %s "
+      + "artifact, path does not exist: %s";
+  String ERROR_CONFIGFILE_DEST_FILE_FOR_COMP_NOT_ABSOLUTE = "For component %s "
+      + "with %s artifact, dest_file must be a relative path: %s";
 
   String ERROR_RESOURCE_INVALID = "Resource is not provided";
   String ERROR_RESOURCE_FOR_COMP_INVALID =
@@ -89,7 +93,7 @@ public interface RestApiErrorMessages {
   String ERROR_ABSENT_NUM_OF_INSTANCE =
       "Num of instances should appear either globally or per component";
   String ERROR_ABSENT_LAUNCH_COMMAND =
-      "Launch_command is required when type is not DOCKER";
+      "launch_command is required when type is not DOCKER";
 
   String ERROR_QUICKLINKS_FOR_COMP_INVALID = "Quicklinks specified at"
       + " component level, needs corresponding values set at service level";
@@ -121,4 +125,8 @@ public interface RestApiErrorMessages {
 
   String ERROR_COMP_DOES_NOT_NEED_UPGRADE = "The component (%s) does not need" +
       " an upgrade.";
+  String ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT = "Kerberos principal (%s) does " +
+      " not contain a hostname.";
+  String ERROR_KERBEROS_PRINCIPAL_MISSING = "Kerberos principal or keytab is" +
+      " missing.";
 }

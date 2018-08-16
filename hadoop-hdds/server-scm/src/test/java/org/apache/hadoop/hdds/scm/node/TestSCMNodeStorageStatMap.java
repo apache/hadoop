@@ -139,18 +139,17 @@ public class TestSCMNodeStorageStatMap {
     SCMNodeStorageStatMap map = new SCMNodeStorageStatMap(conf);
     map.insertNewDatanode(key, reportSet);
     Assert.assertTrue(map.isKnownDatanode(key));
-    String storageId = UUID.randomUUID().toString();
+    UUID storageId = UUID.randomUUID();
     String path =
         GenericTestUtils.getRandomizedTempPath().concat("/" + storageId);
     StorageLocationReport report = reportSet.iterator().next();
     long reportCapacity = report.getCapacity();
     long reportScmUsed = report.getScmUsed();
     long reportRemaining = report.getRemaining();
-    List<StorageReportProto> reports = TestUtils
-        .createStorageReport(reportCapacity, reportScmUsed, reportRemaining,
-            path, null, storageId, 1);
+    StorageReportProto storageReport = TestUtils.createStorageReport(storageId,
+        path, reportCapacity, reportScmUsed, reportRemaining, null);
     StorageReportResult result =
-        map.processNodeReport(key, TestUtils.createNodeReport(reports));
+        map.processNodeReport(key, TestUtils.createNodeReport(storageReport));
     Assert.assertEquals(result.getStatus(),
         SCMNodeStorageStatMap.ReportStatus.ALL_IS_WELL);
     StorageContainerDatanodeProtocolProtos.NodeReportProto.Builder nrb =
@@ -162,8 +161,8 @@ public class TestSCMNodeStorageStatMap {
         SCMNodeStorageStatMap.ReportStatus.ALL_IS_WELL);
 
     reportList.add(TestUtils
-        .createStorageReport(reportCapacity, reportCapacity, 0, path, null,
-            UUID.randomUUID().toString(), 1).get(0));
+        .createStorageReport(UUID.randomUUID(), path, reportCapacity,
+            reportCapacity, 0, null));
     result = map.processNodeReport(key, TestUtils.createNodeReport(reportList));
     Assert.assertEquals(result.getStatus(),
         SCMNodeStorageStatMap.ReportStatus.STORAGE_OUT_OF_SPACE);

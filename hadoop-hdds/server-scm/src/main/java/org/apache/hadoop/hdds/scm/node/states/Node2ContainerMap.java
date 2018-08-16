@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -68,7 +69,8 @@ public class Node2ContainerMap {
       throws SCMException {
     Preconditions.checkNotNull(containerIDs);
     Preconditions.checkNotNull(datanodeID);
-    if(dn2ContainerMap.putIfAbsent(datanodeID, containerIDs) != null) {
+    if (dn2ContainerMap.putIfAbsent(datanodeID, new HashSet<>(containerIDs))
+        != null) {
       throw new SCMException("Node already exists in the map",
                   DUPLICATE_DATANODE);
     }
@@ -82,11 +84,13 @@ public class Node2ContainerMap {
    * @throws SCMException - if we don't know about this datanode, for new DN
    *                      use insertNewDatanode.
    */
-  public void updateDatanodeMap(UUID datanodeID, Set<ContainerID> containers)
+  public void setContainersForDatanode(UUID datanodeID, Set<ContainerID> containers)
       throws SCMException {
     Preconditions.checkNotNull(datanodeID);
     Preconditions.checkNotNull(containers);
-    if(dn2ContainerMap.computeIfPresent(datanodeID, (k, v) -> v) == null){
+    if (dn2ContainerMap
+        .computeIfPresent(datanodeID, (k, v) -> new HashSet<>(containers))
+        == null) {
       throw new SCMException("No such datanode", NO_SUCH_DATANODE);
     }
   }

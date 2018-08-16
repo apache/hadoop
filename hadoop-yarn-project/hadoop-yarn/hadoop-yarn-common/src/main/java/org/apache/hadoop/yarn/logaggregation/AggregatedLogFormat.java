@@ -26,6 +26,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -178,7 +179,7 @@ public class AggregatedLogFormat {
      * The set of log files that are older than retention policy that will
      * not be uploaded but ready for deletion.
      */
-    private final Set<File> obseleteRetentionLogFiles = new HashSet<File>();
+    private final Set<File> obsoleteRetentionLogFiles = new HashSet<File>();
 
     // TODO Maybe add a version string here. Instead of changing the version of
     // the entire k-v format
@@ -324,7 +325,7 @@ public class AggregatedLogFormat {
       // if log files are older than retention policy, do not upload them.
       // but schedule them for deletion.
       if(logRetentionContext != null && !logRetentionContext.shouldRetainLog()){
-        obseleteRetentionLogFiles.addAll(candidates);
+        obsoleteRetentionLogFiles.addAll(candidates);
         candidates.clear();
         return candidates;
       }
@@ -396,9 +397,9 @@ public class AggregatedLogFormat {
       return info;
     }
 
-    public Set<Path> getObseleteRetentionLogFiles() {
+    public Set<Path> getObsoleteRetentionLogFiles() {
       Set<Path> path = new HashSet<Path>();
-      for(File file: this.obseleteRetentionLogFiles) {
+      for(File file: this.obsoleteRetentionLogFiles) {
         path.add(new Path(file.getAbsolutePath()));
       }
       return path;
@@ -1013,7 +1014,7 @@ public class AggregatedLogFormat {
   }
 
   @Private
-  public static class ContainerLogsReader {
+  public static class ContainerLogsReader extends InputStream {
     private DataInputStream valueStream;
     private String currentLogType = null;
     private long currentLogLength = 0;

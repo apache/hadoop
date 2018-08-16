@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -142,9 +143,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       NM_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
   private static final String CONTAINER_TOKENS_KEY_PREFIX =
       "ContainerTokens/";
-  private static final String CONTAINER_TOKENS_CURRENT_MASTER_KEY =
+  private static final String CONTAINER_TOKEN_SECRETMANAGER_CURRENT_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
-  private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
+  private static final String CONTAINER_TOKEN_SECRETMANAGER_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
@@ -237,7 +238,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       iter.seek(bytes(CONTAINERS_KEY_PREFIX));
 
       while (iter.hasNext()) {
-        Entry<byte[],byte[]> entry = iter.peekNext();
+        Entry<byte[], byte[]> entry = iter.peekNext();
         String key = asString(entry.getKey());
         if (!key.startsWith(CONTAINERS_KEY_PREFIX)) {
           break;
@@ -299,6 +300,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       if (suffix.equals(CONTAINER_REQUEST_KEY_SUFFIX)) {
         rcs.startRequest = new StartContainerRequestPBImpl(
             StartContainerRequestProto.parseFrom(entry.getValue()));
+        ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
+            .newContainerTokenIdentifier(rcs.startRequest.getContainerToken());
+        rcs.capability = new ResourcePBImpl(
+            containerTokenIdentifier.getProto().getResource());
       } else if (suffix.equals(CONTAINER_VERSION_KEY_SUFFIX)) {
         rcs.version = Integer.parseInt(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_START_TIME_KEY_SUFFIX)) {
@@ -382,24 +387,25 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       LOG.debug("storeContainer: containerId= " + idStr
           + ", startRequest= " + startRequest);
     }
-    String keyRequest = getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
-    String keyVersion = getContainerVersionKey(idStr);
-    String keyStartTime =
+    final String keyVersion = getContainerVersionKey(idStr);
+    final String keyRequest =
+        getContainerKey(idStr, CONTAINER_REQUEST_KEY_SUFFIX);
+    final StartContainerRequestProto startContainerRequest =
+        ((StartContainerRequestPBImpl) startRequest).getProto();
+
+    final String keyStartTime =
         getContainerKey(idStr, CONTAINER_START_TIME_KEY_SUFFIX);
+    final String startTimeValue = Long.toString(startTime);
+
     try {
-      WriteBatch batch = db.createWriteBatch();
-      try {
-        batch.put(bytes(keyRequest),
-            ((StartContainerRequestPBImpl) startRequest).getProto().
-                toByteArray());
-        batch.put(bytes(keyStartTime), bytes(Long.toString(startTime)));
+      try (WriteBatch batch = db.createWriteBatch()) {
+        batch.put(bytes(keyRequest), startContainerRequest.toByteArray());
+        batch.put(bytes(keyStartTime), bytes(startTimeValue));
         if (containerVersion != 0) {
           batch.put(bytes(keyVersion),
-              bytes(Integer.toString(containerVersion)));
+                  bytes(Integer.toString(containerVersion)));
         }
         db.write(batch);
-      } finally {
-        batch.close();
       }
     } catch (DBException e) {
       markStoreUnHealthy(e);
@@ -652,6 +658,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_UPDATE_TOKEN_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_START_TIME_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_LOG_DIR_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_VERSION_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_REMAIN_RETRIES_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_RESTART_TIMES_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_WORK_DIR_KEY_SUFFIX));
         List<String> unknownKeysForContainer = containerUnknownKeySuffixes
             .removeAll(containerId);
         for (String unknownKeySuffix : unknownKeysForContainer) {
@@ -1163,13 +1175,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainerTokenCurrentMasterKey(MasterKey key)
       throws IOException {
-    storeMasterKey(CONTAINER_TOKENS_CURRENT_MASTER_KEY, key);
+    storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_CURRENT_MASTER_KEY, key);
   }
 
   @Override
   public void storeContainerTokenPreviousMasterKey(MasterKey key)
       throws IOException {
-    storeMasterKey(CONTAINER_TOKENS_PREV_MASTER_KEY, key);
+    storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_PREV_MASTER_KEY, key);
   }
 
   @Override

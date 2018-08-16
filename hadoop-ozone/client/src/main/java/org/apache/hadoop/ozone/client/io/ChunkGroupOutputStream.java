@@ -76,7 +76,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final int chunkSize;
   private final String requestID;
   private boolean closed;
-
+  private List<OmKeyLocationInfo> locationInfoList;
   /**
    * A constructor for testing purpose only.
    */
@@ -91,6 +91,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     chunkSize = 0;
     requestID = null;
     closed = false;
+    locationInfoList = null;
   }
 
   /**
@@ -133,6 +134,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.xceiverClientManager = xceiverClientManager;
     this.chunkSize = chunkSize;
     this.requestID = requestId;
+    this.locationInfoList = new ArrayList<>();
     LOG.debug("Expecting open key with one block, but got" +
         info.getKeyLocationVersions().size());
   }
@@ -196,8 +198,19 @@ public class ChunkGroupOutputStream extends OutputStream {
     streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
         chunkSize, subKeyInfo.getLength()));
+    // reset the original length to zero here. It will be updated as and when
+    // the data gets written.
+    subKeyInfo.setLength(0);
+    locationInfoList.add(subKeyInfo);
   }
 
+  private void incrementBlockLength(int index, long length) {
+    if (locationInfoList != null) {
+      OmKeyLocationInfo locationInfo = locationInfoList.get(index);
+      long originalLength = locationInfo.getLength();
+      locationInfo.setLength(originalLength + length);
+    }
+  }
 
   @VisibleForTesting
   public long getByteOffset() {
@@ -222,6 +235,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
     ChunkOutputStreamEntry entry = streamEntries.get(currentStreamIndex);
     entry.write(b);
+    incrementBlockLength(currentStreamIndex, 1);
     if (entry.getRemaining() <= 0) {
       currentStreamIndex += 1;
     }
@@ -276,6 +290,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       ChunkOutputStreamEntry current = streamEntries.get(currentStreamIndex);
       int writeLen = Math.min(len, (int)current.getRemaining());
       current.write(b, off, writeLen);
+      incrementBlockLength(currentStreamIndex, writeLen);
       if (current.getRemaining() <= 0) {
         currentStreamIndex += 1;
       }
@@ -328,8 +343,13 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
     if (keyArgs != null) {
       // in test, this could be null
+      long length =
+          locationInfoList.parallelStream().mapToLong(e -> e.getLength()).sum();
+      Preconditions.checkState(byteOffset == length);
       keyArgs.setDataSize(byteOffset);
+      keyArgs.setLocationInfoList(locationInfoList);
       omClient.commitKey(keyArgs, openID);
+      locationInfoList = null;
     } else {
       LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
     }

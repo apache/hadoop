@@ -102,7 +102,7 @@ public class TestContainerServer {
 
   @Test
   public void testClientServer() throws Exception {
-    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     runTestClientServer(1,
         (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
             pipeline.getLeader()
@@ -214,9 +214,9 @@ public class TestContainerServer {
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       HddsDispatcher dispatcher = new HddsDispatcher(
-          conf, mock(ContainerSet.class), mock(VolumeSet.class));
+          conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
       dispatcher.init();
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       server = new XceiverServer(datanodeDetails, conf, dispatcher);
       client = new XceiverClient(pipeline, conf);
 

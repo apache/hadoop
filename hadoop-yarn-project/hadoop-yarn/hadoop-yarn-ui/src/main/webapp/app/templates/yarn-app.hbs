@@ -19,10 +19,12 @@
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
 {{#if actionResponse}}
-  <div class="col-md-12">
-    <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
-      <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
-      <strong>{{actionResponse.msg}}</strong>
+  <div class="row">
+    <div class="col-md-12">
+      <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
+        <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
+        <strong>{{actionResponse.msg}}</strong>
+      </div>
     </div>
   </div>
 {{/if}}
@@ -75,8 +77,9 @@
           <div class="links">
               {{#if (or isRunningService isKillable)}}
               <div class="btn-group">
-                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="glyphicon glyphicon-cog" />
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings"
+                  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="margin-left: -5px;">
+                  <i class="glyphicon glyphicon-cog"/> Settings
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
                   {{#if isRunningService}}
@@ -113,9 +116,11 @@
             {{/if}}
           </div>
           <div>
-            <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
+            <span title="Queue" class="yarn-tooltip">
+              <i class="glyphicon glyphicon-tasks glyphicon-gray" /> {{model.app.queue}}
+            </span>
           </div>
-          <div>Priority {{model.app.priority}}</div>
+          <div>Priority: {{model.app.priority}}</div>
           {{#if model.app.trackingUrl}}
             <div><a href="{{model.app.trackingUrl}}" target="_blank">{{model.app.trackingUI}}</a></div>
           {{/if}}

@@ -56,6 +56,8 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
   /**
    * Choose datanodes called by the SCM to choose the datanode.
    *
+   *
+   * @param excludedNodes - list of the datanodes to exclude.
    * @param nodesRequired - number of datanodes required.
    * @param sizeRequired - size required for the container or block.
    * @return List of Datanodes.
@@ -63,9 +65,10 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    */
   @Override
   public List<DatanodeDetails> chooseDatanodes(
-      final int nodesRequired, final long sizeRequired) throws SCMException {
+      List<DatanodeDetails> excludedNodes, final int nodesRequired,
+      final long sizeRequired) throws SCMException {
     List<DatanodeDetails> healthyNodes =
-        super.chooseDatanodes(nodesRequired, sizeRequired);
+        super.chooseDatanodes(excludedNodes, nodesRequired, sizeRequired);
 
     if (healthyNodes.size() == nodesRequired) {
       return healthyNodes;

@@ -19,10 +19,8 @@ Launching Applications Using Docker Containers
 
 Security Warning
 ---------------
-**IMPORTANT** This feature is experimental and is not complete. **IMPORTANT**
-Enabling this feature and running Docker containers in your cluster has security
-implications. With this feature enabled, it may be possible to gain root access
-to the YARN NodeManager hosts. Given Docker's integration with many powerful
+**IMPORTANT** Enabling this feature and running Docker containers in your
+cluster has security implications. Given Docker's integration with many powerful
 kernel features, it is imperative that administrators understand
 [Docker security](https://docs.docker.com/engine/security/security/) before
 enabling this feature.
@@ -55,10 +53,6 @@ NodeManager.
 Docker for YARN provides both consistency (all YARN containers will have the
 same software environment) and isolation (no interference with whatever is
 installed on the physical machine).
-
-Docker support in the LCE is still evolving. To track progress, follow
-[YARN-3611](https://issues.apache.org/jira/browse/YARN-3611), the umbrella JIRA
-for Docker support improvements.
 
 Cluster Configuration
 ---------------------
@@ -153,7 +147,30 @@ The following properties should be set in yarn-site.xml:
     <value>false</value>
     <description>
       Optional. Whether applications are allowed to run in privileged
-      containers.
+      containers. Privileged containers are granted the complete set of
+      capabilities and are not subject to the limitations imposed by the device
+      cgroup controller. In other words, privileged containers can do almost
+      everything that the host can do. Use with extreme care.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
+    <value>false</value>
+    <description>
+      Optional. Whether or not users are allowed to request that Docker
+      containers honor the debug deletion delay. This is useful for
+      troubleshooting Docker container related launch failures.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.stop.grace-period</name>
+    <value>10</value>
+    <description>
+      Optional. A configurable value to pass to the Docker Stop command. This
+      value defines the number of seconds between the docker stop command sending
+      a SIGTERM and a SIGKILL.
     </description>
   </property>
 
@@ -177,6 +194,36 @@ The following properties should be set in yarn-site.xml:
       "none" or "NONE"
     </description>
   </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
+    <value>true</value>
+    <description>
+      Optional. Whether docker containers are run with the UID and GID of the
+      calling user.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-uid-threshold</name>
+    <value>1</value>
+    <description>
+      Optional. The minimum acceptable UID for a remapped user. Users with UIDs
+      lower than this value will not be allowed to launch containers when user
+      remapping is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
+    <value>1</value>
+    <description>
+      Optional. The minimum acceptable GID for a remapped user. Users belonging
+      to any group with a GID lower than this value will not be allowed to
+      launch containers when user remapping is enabled.
+    </description>
+  </property>
+
 </configuration>
 ```
 
@@ -204,6 +251,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.networks` | Comma separated networks that containers are allowed to use. If no network is specified when launching the container, the default Docker network will be used. |
 | `docker.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
 | `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
+| `docker.allowed.volume-drivers` | Comma separated list of volume drivers which are allowed to be used. By default, no volume drivers are allowed. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
 | `docker.trusted.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
@@ -248,7 +296,8 @@ owner as the container user.  If the application owner is not a valid user
 in the Docker image, the application will fail. The container user is specified
 by the user's UID. If the user's UID is different between the NodeManager host
 and the Docker image, the container may be launched as the wrong user or may
-fail to launch because the UID does not exist.
+fail to launch because the UID does not exist.  See
+[User Management in Docker Container](#user-management) section for more details.
 
 Second, the Docker image must have whatever is expected by the application
 in order to execute.  In the case of Hadoop (MapReduce or Spark), the Docker
@@ -268,15 +317,11 @@ set, the behavior will depend on whether the
 the command will be overridden when LCE launches the image with YARN's
 container launch script.
 
-If a Docker image has an
-[entry point](https://docs.docker.com/engine/reference/builder/#entrypoint)
-set, the entry point will be honored, but the default command may be
-overridden, as just mentioned above. Unless the entry point is
-something similar to `sh -c` or
-`YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE` is set to true, the net
-result will likely be undesirable. Because the YARN container launch script
-is required to correctly launch the YARN task, use of entry points is
-discouraged.
+If a Docker image has an entry point set and
+YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE is set to true,
+launch_command will be passed to ENTRYPOINT program as CMD parameters in
+Docker.  The format of launch_command looks like: param1,param2 and this
+translates to CMD [ "param1","param2" ] in Docker.
 
 If an application requests a Docker image that has not already been loaded by
 the Docker daemon on the host where it is to execute, the Docker daemon will
@@ -304,7 +349,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK` | Sets the network type to be used by the Docker container. It must be a valid value as determined by the yarn.nodemanager.runtime.linux.docker.allowed-container-networks property. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE` | Controls which PID namespace will be used by the Docker container. By default, each Docker container has its own PID namespace. To share the namespace of the host, the yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed property must be set to true. If the host PID namespace is allowed and this environment variable is set to host, the Docker container will share the host's PID namespace. No other value is allowed. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER` | Controls whether the Docker container is a privileged container. In order to use privileged containers, the yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed property must be set to true, and the application owner must appear in the value of the yarn.nodemanager.runtime.linux.docker.privileged-containers.acl property. If this environment variable is set to true, a privileged Docker container will be used if allowed. No other value is allowed, so the environment variable should be left unset rather than setting it to false. |
-| `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as "source:dest:mode" and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for docker.allowed.ro-mounts and docker.allowed.rw-mounts. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as `source:dest[:mode]` and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. If neither is specified, read-write will be  assumed. The mode may include a bind propagation option. In that case, the mode should either be of the form `[option]`, `rw+[option]`, or `ro+[option]`. Valid bind propagation options are shared, rshared, slave, rslave, private, and rprivate. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for `docker.allowed.ro-mounts` and `docker.allowed.rw-mounts`. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
 
 The first two are required. The remainder can be set as needed. While
@@ -347,10 +392,13 @@ supplied by the user must either match or be a child of the specified
 directory.
 
 The user supplied mount list is defined as a comma separated list in the form
-*source*:*destination*:*mode*. The source is the file or directory on the host.
-The destination is the path within the contatiner where the source will be bind
-mounted. The mode defines the mode the user expects for the mount, which can be
-ro (read-only) or rw (read-write).
+*source*:*destination* or *source*:*destination*:*mode*. The source is the file
+or directory on the host. The destination is the path within the container
+where the source will be bind mounted. The mode defines the mode the user
+expects for the mount, which can be ro (read-only) or rw (read-write). If not
+specified, rw is assumed. The mode may also include a bind propagation option
+ (shared, rshared, slave, rslave, private, or rprivate). In that case, the
+ mode should be of the form *option*, rw+*option*, or ro+*option*.
 
 The following example outlines how to use this feature to mount the commonly
 needed /sys/fs/cgroup directory into the container running on YARN.
@@ -364,6 +412,197 @@ environment variable can then be set to request this mount. In this example,
 the environment variable would be set to "/sys/fs/cgroup:/sys/fs/cgroup:ro".
 The destination path is not restricted, "/sys/fs/cgroup:/cgroup:ro" would also
 be valid given the example admin whitelist.
+
+<a href="#user-management"></a>User Management in Docker Container
+-----------------------------------
+
+YARN's Docker container support launches container processes using the uid:gid
+identity of the user, as defined on the NodeManager host. User and group name
+mismatches between the NodeManager host and container can lead to permission
+issues, failed container launches, or even security holes. Centralizing user and
+group management for both hosts and containers greatly reduces these risks. When
+running containerized applications on YARN, it is necessary to understand which
+uid:gid pair will be used to launch the container's process.
+
+As an example of what is meant by uid:gid pair, consider the following. By
+default, in non-secure mode, YARN will launch processes as the user `nobody`
+(see the table at the bottom of
+[Using CGroups with YARN](./NodeManagerCgroups.html) for how the run as user is
+determined in non-secure mode). On CentOS based systems, the `nobody` user's uid
+is `99` and the `nobody` group is `99`. As a result, YARN will call `docker run`
+with `--user 99:99`. If the `nobody` user does not have the uid `99` in the
+container, the launch may fail or have unexpected results.
+
+One exception to this rule is the use of Privileged Docker containers.
+Privileged containers will not set the uid:gid pair when launching the container
+and will honor the USER or GROUP entries in the Dockerfile. This allows running
+privileged containers as any user which has security implications. Please
+understand these implications before enabling Privileged Docker containers.
+
+There are many ways to address user and group management. Docker, by default,
+will authenticate users against `/etc/passwd` (and `/etc/shadow`) within the
+container. Using the default `/etc/passwd` supplied in the Docker image is
+unlikely to contain the appropriate user entries and will result in launch
+failures. It is highly recommended to centralize user and group management.
+Several approaches to user and group management are outlined below.
+
+### Static user management
+
+The most basic approach to managing user and groups is to modify the user and
+group within the Docker image. This approach is only viable in non-secure mode
+where all container processes will be launched as a single known user, for
+instance `nobody`. In this case, the only requirement is that the uid:gid pair
+of the nobody user and group must match between the host and container. On a
+CentOS based system, this means that the nobody user in the container needs the
+UID `99` and the nobody group in the container needs GID `99`.
+
+One approach to change the UID and GID is by leveraging `usermod` and
+`groupmod`. The following sets the correct UID and GID for the nobody
+user/group.
+```
+usermod -u 99 nobody
+groupmod -g 99 nobody
+```
+
+This approach is not recommended beyond testing given the inflexibility to add
+users.
+
+### Bind mounting
+
+When organizations already have automation in place to create local users on
+each system, it may be appropriate to bind mount /etc/passwd and /etc/group
+into the container as an alternative to modifying the container image directly.
+To enable the ability to bind mount /etc/passwd and /etc/group, update
+`docker.allowed.ro-mounts` in `container-executor.cfg` to include those paths.
+When submitting the application, `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` will
+need to include `/etc/passwd:/etc/passwd:ro` and `/etc/group:/etc/group:ro`.
+
+There are several challenges with this bind mount approach that need to be
+considered.
+
+1. Any users and groups defined in the image will be overwritten by the host's users and groups
+2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutible in the container. Do not mount these read-write as it can render the host inoperable.
+
+This approach is not recommended beyond testing given the inflexibility to
+modify running containers.
+
+### SSSD
+
+An alternative approach that allows for centrally managing users and groups is
+SSSD. System Security Services Daemon (SSSD) provides access to different
+identity and authentication providers, such as LDAP or Active Directory.
+
+The traditional schema for Linux authentication is as follows:
+```
+application -> libpam -> pam_authenticate -> pam_unix.so -> /etc/passwd
+```
+
+If we use SSSD for user lookup, it becomes:
+```
+application -> libpam -> pam_authenticate -> pam_sss.so -> SSSD -> pam_unix.so -> /etc/passwd
+```
+
+We can bind-mount the UNIX sockets SSSD communicates over into the container.
+This will allow the SSSD client side libraries to authenticate against the SSSD
+running on the host. As a result, user information does not need to exist in
+/etc/passwd of the docker image and will instead be serviced by SSSD.
+
+Step by step configuration for host and container:
+
+1. Host config
+
+   - Install packages
+     ```
+     # yum -y install sssd-common sssd-proxy
+     ```
+   - create a PAM service for the container.
+     ```
+     # cat /etc/pam.d/sss_proxy
+     auth required pam_unix.so
+     account required pam_unix.so
+     password required pam_unix.so
+     session required pam_unix.so
+     ```
+   - create SSSD config file, /etc/sssd/sssd.conf
+     Please note that the permissions must be 0600 and the file must be owned by root:root.
+     ```
+     # cat /etc/sssd/sssd/conf
+     [sssd]
+     services = nss,pam
+     config_file_version = 2
+     domains = proxy
+     [nss]
+     [pam]
+     [domain/proxy]
+     id_provider = proxy
+     proxy_lib_name = files
+     proxy_pam_target = sss_proxy
+     ```
+   - start sssd
+     ```
+     # systemctl start sssd
+     ```
+   - verify a user can be retrieved with sssd
+     ```
+     # getent passwd -s sss localuser
+     ```
+
+2. Container setup
+
+   It's important to bind-mount the /var/lib/sss/pipes directory from the host to the container since SSSD UNIX sockets are located there.
+   ```
+   -v /var/lib/sss/pipes:/var/lib/sss/pipes:rw
+   ```
+
+3. Container config
+
+   All the steps below should be executed on the container itself.
+
+   - Install only the sss client libraries
+     ```
+     # yum -y install sssd-client
+     ```
+
+   - make sure sss is configured for passwd and group databases in
+     ```
+     /etc/nsswitch.conf
+     ```
+
+   - configure the PAM service that the application uses to call into SSSD
+     ```
+     # cat /etc/pam.d/system-auth
+     #%PAM-1.0
+     # This file is auto-generated.
+     # User changes will be destroyed the next time authconfig is run.
+     auth        required      pam_env.so
+     auth        sufficient    pam_unix.so try_first_pass nullok
+     auth        sufficient    pam_sss.so forward_pass
+     auth        required      pam_deny.so
+
+     account     required      pam_unix.so
+     account     [default=bad success=ok user_unknown=ignore] pam_sss.so
+     account     required      pam_permit.so
+
+     password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
+     password    sufficient    pam_unix.so try_first_pass use_authtok nullok sha512 shadow
+     password    sufficient    pam_sss.so use_authtok
+     password    required      pam_deny.so
+
+     session     optional      pam_keyinit.so revoke
+     session     required      pam_limits.so
+     -session     optional      pam_systemd.so
+     session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+     session     required      pam_unix.so
+     session     optional      pam_sss.so
+     ```
+
+   - Save the docker image and use the docker image as base image for your applications.
+
+   - test the docker image launched in YARN environment.
+     ```
+     $ id
+     uid=5000(localuser) gid=5000(localuser) groups=5000(localuser),1337(hadoop)
+     ```
 
 Privileged Container Security Consideration
 -------------------------------------------

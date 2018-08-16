@@ -28,7 +28,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
-
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.FileNotFoundException;
@@ -111,6 +110,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -155,6 +155,7 @@ import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -1405,6 +1406,23 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void satisfyStoragePolicy(String src) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.satisfyStoragePolicy(src, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)
       throws IOException {
@@ -1498,7 +1516,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       int failedVolumes, VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks) throws IOException {
+      @Nonnull SlowDiskReports slowDisks)
+          throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
@@ -2511,5 +2530,29 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     List<String> result = Lists.newArrayList(nn.getReconfigurableProperties());
     namesystem.logAuditEvent(true, operationName, null);
     return result;
+  }
+
+  @Override
+  public Long getNextSPSPath() throws IOException {
+    checkNNStartup();
+    String operationName = "getNextSPSPath";
+    namesystem.checkSuperuserPrivilege(operationName);
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    // Check that SPS is enabled externally
+    StoragePolicySatisfyManager spsMgr =
+        namesystem.getBlockManager().getSPSManager();
+    StoragePolicySatisfierMode spsMode = (spsMgr != null ? spsMgr.getMode()
+        : StoragePolicySatisfierMode.NONE);
+    if (spsMode != StoragePolicySatisfierMode.EXTERNAL) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("SPS service mode is {}, so external SPS service is "
+            + "not allowed to fetch the path Ids", spsMode);
+      }
+      throw new IOException("SPS service mode is " + spsMode + ", so "
+          + "external SPS service is not allowed to fetch the path Ids");
+    }
+    return namesystem.getBlockManager().getSPSManager().getNextPathId();
   }
 }

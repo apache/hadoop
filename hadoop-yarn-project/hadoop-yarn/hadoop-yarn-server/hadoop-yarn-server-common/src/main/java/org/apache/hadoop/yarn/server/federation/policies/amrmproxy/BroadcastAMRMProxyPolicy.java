@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -63,12 +62,6 @@ public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     }
 
     return answer;
-  }
-
-  @Override
-  public void notifyOfResponse(SubClusterId subClusterId,
-      AllocateResponse response) throws YarnException {
-    // stateless policy does not care about responses
   }
 
 }

@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -84,6 +85,24 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * A role FS; if non-null it is closed in teardown.
    */
   private S3AFileSystem roleFS;
+
+  /**
+   * Duration range exception text on SDKs which check client-side.
+   */
+  protected static final String E_DURATION_RANGE_1
+      = "Assume Role session duration should be in the range of 15min - 1Hr";
+
+  /**
+   * Duration range too high text on SDKs which check on the server.
+   */
+  protected static final String E_DURATION_RANGE_2
+      = "Member must have value less than or equal to 43200";
+
+  /**
+   * Duration range too low text on SDKs which check on the server.
+   */
+  protected static final String E_DURATION_RANGE_3
+      = "Member must have value greater than or equal to 900";
 
   @Override
   public void setup() throws Exception {
@@ -112,13 +131,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * @param clazz class of exception to expect
    * @param text text in exception
    * @param <E> type of exception as inferred from clazz
+   * @return the caught exception if it was of the expected type and contents
    * @throws Exception if the exception was the wrong class
    */
-  private <E extends Throwable> void expectFileSystemCreateFailure(
+  private <E extends Throwable> E expectFileSystemCreateFailure(
       Configuration conf,
       Class<E> clazz,
       String text) throws Exception {
-    interceptClosing(clazz,
+    return interceptClosing(clazz,
         text,
         () -> new Path(getFileSystem().getUri()).getFileSystem(conf));
   }
@@ -246,6 +266,60 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         "Member must satisfy regular expression pattern");
   }
 
+  /**
+   * A duration >1h is forbidden client-side in AWS SDK 1.11.271;
+   * with the ability to extend durations deployed in March 2018,
+   * duration checks will need to go server-side, and, presumably,
+   * later SDKs will remove the client side checks.
+   * This code exists to see when this happens.
+   */
+  @Test
+  public void testAssumeRoleThreeHourSessionDuration() throws Exception {
+    describe("Try to authenticate with a long session duration");
+
+    Configuration conf = createAssumedRoleConfig();
+    // add a duration of three hours
+    conf.setInt(ASSUMED_ROLE_SESSION_DURATION, 3 * 60 * 60);
+    try {
+      new Path(getFileSystem().getUri()).getFileSystem(conf).close();
+      LOG.info("Successfully created token of a duration >3h");
+    } catch (IOException ioe) {
+      assertExceptionContains(E_DURATION_RANGE_1, ioe);
+    }
+  }
+
+  /**
+   * A duration >1h is forbidden client-side in AWS SDK 1.11.271;
+   * with the ability to extend durations deployed in March 2018.
+   * with the later SDKs, the checks go server-side and
+   * later SDKs will remove the client side checks.
+   * This test asks for a duration which will still be rejected, and
+   * looks for either of the error messages raised.
+   */
+  @Test
+  public void testAssumeRoleThirtySixHourSessionDuration() throws Exception {
+    describe("Try to authenticate with a long session duration");
+
+    Configuration conf = createAssumedRoleConfig();
+    conf.setInt(ASSUMED_ROLE_SESSION_DURATION, 36 * 60 * 60);
+    IOException ioe = expectFileSystemCreateFailure(conf,
+        IOException.class, null);
+    assertIsRangeException(ioe);
+  }
+
+  /**
+   * Look for either the client-side or STS-side range exception
+   * @param e exception
+   * @throws Exception the exception, if its text doesn't match
+   */
+  private void assertIsRangeException(final Exception e) throws Exception {
+    String message = e.toString();
+    if (!message.contains(E_DURATION_RANGE_1)
+        && !message.contains(E_DURATION_RANGE_2)
+        && !message.contains(E_DURATION_RANGE_3)) {
+      throw e;
+    }
+  }
 
   /**
    * Create the assumed role configuration.
@@ -280,10 +354,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "30s");
-    interceptClosing(IllegalArgumentException.class, "",
+    Exception ex = interceptClosing(Exception.class, "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
+    assertIsRangeException(ex);
   }
-
 
   @Test
   public void testAssumeRoleCreateFS() throws IOException {
@@ -296,24 +370,32 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         conf.get(ACCESS_KEY), roleARN);
 
     try (FileSystem fs = path.getFileSystem(conf)) {
-      fs.getFileStatus(new Path("/"));
+      fs.getFileStatus(ROOT);
       fs.mkdirs(path("testAssumeRoleFS"));
     }
   }
 
   @Test
   public void testAssumeRoleRestrictedPolicyFS() throws Exception {
-    describe("Restrict the policy for this session; verify that reads fail");
+    describe("Restrict the policy for this session; verify that reads fail.");
 
+    // there's some special handling of S3Guard here as operations
+    // which only go to DDB don't fail the way S3 would reject them.
     Configuration conf = createAssumedRoleConfig();
     bindRolePolicy(conf, RESTRICTED_POLICY);
     Path path = new Path(getFileSystem().getUri());
+    boolean guarded = getFileSystem().hasMetadataStore();
     try (FileSystem fs = path.getFileSystem(conf)) {
-      forbidden("getFileStatus",
-          () -> fs.getFileStatus(new Path("/")));
-      forbidden("getFileStatus",
-          () -> fs.listStatus(new Path("/")));
-      forbidden("getFileStatus",
+      if (!guarded) {
+        // when S3Guard is enabled, the restricted policy still
+        // permits S3Guard record lookup, so getFileStatus calls
+        // will work iff the record is in the database.
+        forbidden("getFileStatus",
+            () -> fs.getFileStatus(ROOT));
+      }
+      forbidden("",
+          () -> fs.listStatus(ROOT));
+      forbidden("",
           () -> fs.mkdirs(path("testAssumeRoleFS")));
     }
   }
@@ -333,7 +415,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicy(conf,
-        policy(statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT_TORRENT)));
+        policy(
+            statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT_TORRENT),
+            ALLOW_S3_GET_BUCKET_LOCATION,
+            STATEMENT_S3GUARD_CLIENT,
+            STATEMENT_ALLOW_SSE_KMS_RW));
     Path path = path("testAssumeRoleStillIncludesRolePerms");
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     assertTouchForbidden(roleFS, path);
@@ -342,6 +428,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   /**
    * After blocking all write verbs used by S3A, try to write data (fail)
    * and read data (succeed).
+   * For S3Guard: full DDB RW access is retained.
+   * SSE-KMS key access is set to decrypt only.
    */
   @Test
   public void testReadOnlyOperations() throws Throwable {
@@ -352,7 +440,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3, STATEMENT_ALL_DDB));
+            STATEMENT_ALL_S3,
+            STATEMENT_S3GUARD_CLIENT,
+            STATEMENT_ALLOW_SSE_KMS_READ));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -399,8 +489,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
+        STATEMENT_S3GUARD_CLIENT,
         statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALLOW_SSE_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
           .addResources(directory(restrictedDir)));
@@ -447,7 +538,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   /**
-   * Execute a sequence of rename operations.
+   * Execute a sequence of rename operations with access locked down.
    * @param conf FS configuration
    */
   public void executeRestrictedRename(final Configuration conf)
@@ -461,7 +552,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.delete(basePath, true);
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
         new Statement(Effects.Allow)
           .addActions(S3_PATH_RW_OPERATIONS)
@@ -503,6 +595,25 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   /**
+   * Without simulation of STS failures, and with STS overload likely to
+   * be very rare, there'll be no implicit test coverage of
+   * {@link AssumedRoleCredentialProvider#operationRetried(String, Exception, int, boolean)}.
+   * This test simply invokes the callback for both the first and second retry event.
+   *
+   * If the handler ever adds more than logging, this test ensures that things
+   * don't break.
+   */
+  @Test
+  public void testAssumedRoleRetryHandler() throws Throwable {
+    try(AssumedRoleCredentialProvider provider
+            = new AssumedRoleCredentialProvider(getFileSystem().getUri(),
+        createAssumedRoleConfig())) {
+      provider.operationRetried("retry", new IOException("failure"), 0, true);
+      provider.operationRetried("retry", new IOException("failure"), 1, true);
+    }
+  }
+
+  /**
    * Execute a sequence of rename operations where the source
    * data is read only to the client calling rename().
    * This will cause the inner delete() operations to fail, whose outcomes
@@ -534,7 +645,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     touch(fs, readOnlyFile);
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
+        STATEMENT_S3GUARD_CLIENT,
         statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
           new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -614,7 +725,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.mkdirs(readOnlyDir);
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -752,7 +864,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.delete(destDir, true);
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_DDB,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)

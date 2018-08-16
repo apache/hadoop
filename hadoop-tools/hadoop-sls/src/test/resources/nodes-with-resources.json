@@ -10,10 +10,14 @@
       "node": "node2"
     },
     {
-      "node": "node3"
+      "node": "node3",
+      "labels": "label1, label2(exclusive=false)"
     },
     {
-      "node": "node4"
+      "node": "node4",
+      "labels": "label1, label2(exclusive=false)",
+      "memory-mb" : 6144,
+      "vcores" : 12
     }
   ]
 }

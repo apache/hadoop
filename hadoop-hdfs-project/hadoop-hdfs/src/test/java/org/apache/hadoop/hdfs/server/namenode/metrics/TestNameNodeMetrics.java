@@ -412,10 +412,12 @@ public class TestNameNodeMetrics {
     // Verify replica metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
 
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
   }
 
   /**
@@ -492,9 +494,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 1L, rb);
     assertGauge("CorruptReplicatedBlocks", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 1L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -517,9 +521,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -580,9 +586,11 @@ public class TestNameNodeMetrics {
     // Verify replica metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped block groups metrics
     assertGauge("LowRedundancyECBlockGroups", 1L, rb);
     assertGauge("CorruptECBlockGroups", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 1L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -602,9 +610,11 @@ public class TestNameNodeMetrics {
     // Verify replicated blocks metrics
     assertGauge("LowRedundancyReplicatedBlocks", 0L, rb);
     assertGauge("CorruptReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
     // Verify striped blocks metrics
     assertGauge("LowRedundancyECBlockGroups", 0L, rb);
     assertGauge("CorruptECBlockGroups", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
 
     verifyAggregatedMetricsTally();
 
@@ -666,6 +676,8 @@ public class TestNameNodeMetrics {
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
     assertGauge("MissingReplOneBlocks", 1L, rb);
+    assertGauge("HighestPriorityLowRedundancyReplicatedBlocks", 0L, rb);
+    assertGauge("HighestPriorityLowRedundancyECBlocks", 0L, rb);
     fs.delete(file, true);
     waitForDnMetricValue(NS_METRICS, "UnderReplicatedBlocks", 0L);
   }

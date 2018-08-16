@@ -163,6 +163,24 @@ public interface NameNodeMXBean {
   public long getNumberOfMissingBlocksWithReplicationFactorOne();
 
   /**
+   * Gets the total number of replicated low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   */
+  public long getHighestPriorityLowRedundancyReplicatedBlocks();
+
+  /**
+   * Gets the total number of erasure coded low redundancy blocks on the cluster
+   * with the highest risk of loss
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss
+   */
+  public long getHighestPriorityLowRedundancyECBlocks();
+
+  /**
    * Gets the total number of snapshottable dirs in the system.
    *
    * @return the total number of snapshottable dirs in the system

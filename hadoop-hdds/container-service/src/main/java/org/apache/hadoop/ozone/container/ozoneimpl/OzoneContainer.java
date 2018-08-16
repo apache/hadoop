@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
@@ -70,7 +71,7 @@ public class OzoneContainer {
    * @throws IOException
    */
   public OzoneContainer(DatanodeDetails datanodeDetails, OzoneConfiguration
-      conf) throws IOException {
+      conf, StateContext context) throws IOException {
     this.dnDetails = datanodeDetails;
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
@@ -79,7 +80,8 @@ public class OzoneContainer {
         ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     buildContainerSet();
-    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet);
+    hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
+        context);
     server = new XceiverServerSpi[]{
         useGrpc ? new XceiverServerGrpc(datanodeDetails, this.config, this
             .hddsDispatcher) :
@@ -106,7 +108,7 @@ public class OzoneContainer {
     while (volumeSetIterator.hasNext()) {
       HddsVolume volume = volumeSetIterator.next();
       File hddsVolumeRootDir = volume.getHddsRootDir();
-      Thread thread = new Thread(new ContainerReader(volume,
+      Thread thread = new Thread(new ContainerReader(volumeSet, volume,
           containerSet, config));
       thread.start();
       volumeThreads.add(thread);
@@ -166,23 +168,25 @@ public class OzoneContainer {
    * Submit ContainerRequest.
    * @param request
    * @param replicationType
+   * @param pipelineID
    * @throws IOException
    */
   public void submitContainerRequest(
       ContainerProtos.ContainerCommandRequestProto request,
-      HddsProtos.ReplicationType replicationType) throws IOException {
+      HddsProtos.ReplicationType replicationType,
+      HddsProtos.PipelineID pipelineID) throws IOException {
     XceiverServerSpi serverInstance;
     long containerId = getContainerIdForCmd(request);
     if (replicationType == HddsProtos.ReplicationType.RATIS) {
       serverInstance = getRatisSerer();
       Preconditions.checkNotNull(serverInstance);
-      serverInstance.submitRequest(request);
+      serverInstance.submitRequest(request, pipelineID);
       LOG.info("submitting {} request over RATIS server for container {}",
           request.getCmdType(), containerId);
     } else {
       serverInstance = getStandaAloneSerer();
       Preconditions.checkNotNull(serverInstance);
-      getStandaAloneSerer().submitRequest(request);
+      getStandaAloneSerer().submitRequest(request, pipelineID);
       LOG.info(
           "submitting {} request over STAND_ALONE server for container {}",
           request.getCmdType(), containerId);
@@ -196,7 +200,7 @@ public class OzoneContainer {
     ContainerProtos.Type type = request.getCmdType();
     switch (type) {
     case CloseContainer:
-      return request.getCloseContainer().getContainerID();
+      return request.getContainerID();
       // Right now, we handle only closeContainer via queuing it over the
       // over the XceiVerServer. For all other commands we throw Illegal
       // argument exception here. Will need to extend the switch cases

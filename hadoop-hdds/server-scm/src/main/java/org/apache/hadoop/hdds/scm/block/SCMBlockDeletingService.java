@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -56,7 +57,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
  */
 public class SCMBlockDeletingService extends BackgroundService {
 
-  static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(SCMBlockDeletingService.class);
 
   // ThreadPoolSize=2, 1 for scheduler and the other for the scanner.
@@ -106,6 +107,19 @@ public class SCMBlockDeletingService extends BackgroundService {
     return queue;
   }
 
+  public void handlePendingDeletes(PendingDeleteStatusList deletionStatusList) {
+    DatanodeDetails dnDetails = deletionStatusList.getDatanodeDetails();
+    for (PendingDeleteStatusList.PendingDeleteStatus deletionStatus : deletionStatusList
+        .getPendingDeleteStatuses()) {
+      LOG.info(
+          "Block deletion txnID mismatch in datanode {} for containerID {}."
+              + " Datanode delete txnID: {}, SCM txnID: {}",
+          dnDetails.getUuid(), deletionStatus.getContainerId(),
+          deletionStatus.getDnDeleteTransactionId(),
+          deletionStatus.getScmDeleteTransactionId());
+    }
+  }
+
   private class DeletedBlockTransactionScanner
       implements BackgroundTask<EmptyTaskResult> {
 
@@ -123,11 +137,12 @@ public class SCMBlockDeletingService extends BackgroundService {
       LOG.debug("Running DeletedBlockTransactionScanner");
       DatanodeDeletedBlockTransactions transactions = null;
       List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+      Map<Long, Long> transactionMap = null;
       if (datanodes != null) {
         transactions = new DatanodeDeletedBlockTransactions(mappingService,
             blockDeleteLimitSize, datanodes.size());
         try {
-          deletedBlockLog.getTransactions(transactions);
+          transactionMap = deletedBlockLog.getTransactions(transactions);
         } catch (IOException e) {
           // We may tolerant a number of failures for sometime
           // but if it continues to fail, at some point we need to raise
@@ -159,6 +174,7 @@ public class SCMBlockDeletingService extends BackgroundService {
                     transactions.getTransactionIDList(dnId)));
           }
         }
+        mappingService.updateDeleteTransactionId(transactionMap);
       }
 
       if (dnTxCount > 0) {

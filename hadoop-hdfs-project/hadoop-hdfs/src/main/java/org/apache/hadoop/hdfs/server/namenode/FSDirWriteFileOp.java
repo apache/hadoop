@@ -269,19 +269,27 @@ class FSDirWriteFileOp {
       BlockManager bm, String src, DatanodeInfo[] excludedNodes,
       String[] favoredNodes, EnumSet<AddBlockFlag> flags,
       ValidateAddBlockResult r) throws IOException {
-    Node clientNode = bm.getDatanodeManager()
-        .getDatanodeByHost(r.clientMachine);
-    if (clientNode == null) {
-      clientNode = getClientNode(bm, r.clientMachine);
+    Node clientNode = null;
+
+    boolean ignoreClientLocality = (flags != null
+            && flags.contains(AddBlockFlag.IGNORE_CLIENT_LOCALITY));
+
+    // If client locality is ignored, clientNode remains 'null' to indicate
+    if (!ignoreClientLocality) {
+      clientNode = bm.getDatanodeManager().getDatanodeByHost(r.clientMachine);
+      if (clientNode == null) {
+        clientNode = getClientNode(bm, r.clientMachine);
+      }
     }
 
-    Set<Node> excludedNodesSet = null;
-    if (excludedNodes != null) {
-      excludedNodesSet = new HashSet<>(excludedNodes.length);
-      Collections.addAll(excludedNodesSet, excludedNodes);
-    }
-    List<String> favoredNodesList = (favoredNodes == null) ? null
-        : Arrays.asList(favoredNodes);
+    Set<Node> excludedNodesSet =
+        (excludedNodes == null) ? new HashSet<>()
+            : new HashSet<>(Arrays.asList(excludedNodes));
+
+    List<String> favoredNodesList =
+        (favoredNodes == null) ? Collections.emptyList()
+            : Arrays.asList(favoredNodes);
+
     // choose targets for the new block to be allocated.
     return bm.chooseTarget4NewBlock(src, r.numTargets, clientNode,
                                     excludedNodesSet, r.blockSize,

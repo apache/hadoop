@@ -36,30 +36,33 @@ public class TarballClientProvider extends AbstractClientProvider
   }
 
   @Override
-  public void validateArtifact(Artifact artifact, FileSystem fs)
-      throws IOException {
+  public void validateArtifact(Artifact artifact, String compName,
+      FileSystem fs) throws IOException {
     if (artifact == null) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_INVALID);
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_ARTIFACT_FOR_COMP_INVALID, compName));
     }
     if (StringUtils.isEmpty(artifact.getId())) {
-      throw new IllegalArgumentException(
-          RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_ARTIFACT_ID_FOR_COMP_INVALID, compName));
     }
     Path p = new Path(artifact.getId());
     if (!fs.exists(p)) {
-      throw new IllegalArgumentException( "Artifact tarball does not exist "
-          + artifact.getId());
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_ARTIFACT_PATH_FOR_COMP_INVALID, compName,
+          Artifact.TypeEnum.TARBALL.name(), artifact.getId()));
     }
   }
 
   @Override
-  protected void validateConfigFile(ConfigFile configFile, FileSystem
-      fileSystem) throws IOException {
+  protected void validateConfigFile(ConfigFile configFile, String compName,
+      FileSystem fileSystem) throws IOException {
     // validate dest_file is not absolute
     if (Paths.get(configFile.getDestFile()).isAbsolute()) {
-      throw new IllegalArgumentException(
-          "Dest_file must not be absolute path: " + configFile.getDestFile());
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_CONFIGFILE_DEST_FILE_FOR_COMP_NOT_ABSOLUTE,
+          compName, Artifact.TypeEnum.TARBALL.name(),
+          configFile.getDestFile()));
     }
   }
 }

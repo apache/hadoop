@@ -83,7 +83,9 @@ public class TestStagingPartitionedJobCommit
           commit.setDestinationKey(key);
           commit.setUri("s3a://" + BUCKET + "/" + key);
           commit.setUploadId(UUID.randomUUID().toString());
-          commit.setEtags(new ArrayList<>());
+          ArrayList<String> etags = new ArrayList<>();
+          etags.add("tag1");
+          commit.setEtags(etags);
           pending.add(commit);
         }
       }

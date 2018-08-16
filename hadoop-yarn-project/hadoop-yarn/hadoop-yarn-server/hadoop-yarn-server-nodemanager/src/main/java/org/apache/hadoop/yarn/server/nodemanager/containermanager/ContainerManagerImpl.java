@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerTokenUpdatedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,7 +171,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,6 +214,7 @@ public class ContainerManagerImpl extends CompositeService implements
   protected final AsyncDispatcher dispatcher;
 
   private final DeletionService deletionService;
+  private LogHandler logHandler;
   private boolean serviceStopped = false;
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -292,7 +293,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public void serviceInit(Configuration conf) throws Exception {
 
-    LogHandler logHandler =
+    logHandler =
       createLogHandler(conf, this.context, this.deletionService);
     addIfService(logHandler);
     dispatcher.register(LogHandlerEventType.class, logHandler);
@@ -496,7 +497,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
-    containerScheduler.recoverActiveContainer(container, rcs.getStatus());
+    containerScheduler.recoverActiveContainer(container, rcs);
     app.handle(new ApplicationContainerInitEvent(container));
   }
 
@@ -610,7 +611,7 @@ public class ContainerManagerImpl extends CompositeService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(conf, new NMPolicyProvider());
+      refreshServiceAcls(conf, NMPolicyProvider.getInstance());
     }
     
     String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
@@ -1903,5 +1904,13 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public ContainerScheduler getContainerScheduler() {
     return this.containerScheduler;
+  }
+
+  @Override
+  public void handleCredentialUpdate() {
+    Set<ApplicationId> invalidApps = logHandler.getInvalidTokenApps();
+    if (!invalidApps.isEmpty()) {
+      dispatcher.getEventHandler().handle(new LogHandlerTokenUpdatedEvent());
+    }
   }
 }

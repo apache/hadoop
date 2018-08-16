@@ -97,7 +97,7 @@ public class TestCommandStatusReportHandler implements EventPublisher {
       reports) {
     CommandStatusReportsProto report = TestUtils.createCommandStatusReport
         (reports);
-    DatanodeDetails dn = TestUtils.getDatanodeDetails();
+    DatanodeDetails dn = TestUtils.randomDatanodeDetails();
     return new SCMDatanodeHeartbeatDispatcher.CommandStatusReportFromDatanode
         (dn, report);
   }

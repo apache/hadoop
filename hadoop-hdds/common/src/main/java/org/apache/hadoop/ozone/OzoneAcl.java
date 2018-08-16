@@ -25,9 +25,11 @@ import java.util.Objects;
  * OzoneACL classes define bucket ACLs used in OZONE.
  *
  * ACLs in Ozone follow this pattern.
- * • user:name:rw
- * • group:name:rw
- * • world::rw
+ * <ul>
+ * <li>user:name:rw
+ * <li>group:name:rw
+ * <li>world::rw
+ * </ul>
  */
 public class OzoneAcl {
   private OzoneACLType type;

@@ -292,6 +292,7 @@ public class TestYarnCLI {
     pw.println("\tStart-Time : 1234");
     pw.println("\tFinish-Time : 5678");
     pw.println("\tState : COMPLETE");
+    pw.println("\tExecution-Type : GUARANTEED");
     pw.println("\tLOG-URL : logURL");
     pw.println("\tHost : host:1234");
     pw.println("\tNodeHttpAddress : http://host:2345");

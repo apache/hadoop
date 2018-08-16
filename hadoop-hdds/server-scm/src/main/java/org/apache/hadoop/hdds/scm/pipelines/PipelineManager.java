@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,15 +38,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
-  private final List<Pipeline> activePipelines;
-  private final Map<String, Pipeline> activePipelineMap;
+  private final List<PipelineID> activePipelines;
+  private final Map<PipelineID, Pipeline> pipelineMap;
   private final AtomicInteger pipelineIndex;
   private final Node2PipelineMap node2PipelineMap;
 
   public PipelineManager(Node2PipelineMap map) {
     activePipelines = new LinkedList<>();
     pipelineIndex = new AtomicInteger(0);
-    activePipelineMap = new WeakHashMap<>();
+    pipelineMap = new WeakHashMap<>();
     node2PipelineMap = map;
   }
 
@@ -64,7 +65,7 @@ public abstract class PipelineManager {
     if (pipeline != null) {
       LOG.debug("re-used pipeline:{} for container with " +
               "replicationType:{} replicationFactor:{}",
-          pipeline.getPipelineName(), replicationType, replicationFactor);
+          pipeline.getId(), replicationType, replicationFactor);
     }
     if (pipeline == null) {
       LOG.error("Get pipeline call failed. We are not able to find" +
@@ -78,19 +79,19 @@ public abstract class PipelineManager {
   /**
    * This function to get pipeline with given pipeline name.
    *
-   * @param pipelineName
+   * @param id
    * @return a Pipeline.
    */
-  public synchronized final Pipeline getPipeline(String pipelineName) {
+  public synchronized final Pipeline getPipeline(PipelineID id) {
     Pipeline pipeline = null;
 
     // 1. Check if pipeline already exists
-    if (activePipelineMap.containsKey(pipelineName)) {
-      pipeline = activePipelineMap.get(pipelineName);
-      LOG.debug("Returning pipeline for pipelineName:{}", pipelineName);
+    if (pipelineMap.containsKey(id)) {
+      pipeline = pipelineMap.get(id);
+      LOG.debug("Returning pipeline for pipelineName:{}", id);
       return pipeline;
     } else {
-      LOG.debug("Unable to find pipeline for pipelineName:{}", pipelineName);
+      LOG.debug("Unable to find pipeline for pipelineName:{}", id);
     }
     return pipeline;
   }
@@ -115,11 +116,6 @@ public abstract class PipelineManager {
    */
   public abstract void initializePipeline(Pipeline pipeline) throws IOException;
 
-  public void removePipeline(Pipeline pipeline) {
-    activePipelines.remove(pipeline);
-    activePipelineMap.remove(pipeline.getPipelineName());
-  }
-
   /**
    * Find a Pipeline that is operational.
    *
@@ -137,9 +133,10 @@ public abstract class PipelineManager {
     int nextIndex = sentinal;
     for (; startIndex != nextIndex; nextIndex = getNextIndex()) {
       // Just walk the list in a circular way.
-      Pipeline temp =
+      PipelineID id =
           activePipelines
               .get(nextIndex != sentinal ? nextIndex : startIndex);
+      Pipeline temp = pipelineMap.get(id);
       // if we find an operational pipeline just return that.
       if ((temp.getLifeCycleState() == LifeCycleState.OPEN) &&
           (temp.getFactor() == factor) && (temp.getType() == type)) {
@@ -170,29 +167,41 @@ public abstract class PipelineManager {
     if (pipeline != null) {
       LOG.debug("created new pipeline:{} for container with "
               + "replicationType:{} replicationFactor:{}",
-          pipeline.getPipelineName(), replicationType, replicationFactor);
-      activePipelines.add(pipeline);
-      activePipelineMap.put(pipeline.getPipelineName(), pipeline);
+          pipeline.getId(), replicationType, replicationFactor);
+      activePipelines.add(pipeline.getId());
+      pipelineMap.put(pipeline.getId(), pipeline);
       node2PipelineMap.addPipeline(pipeline);
     }
     return pipeline;
   }
 
   /**
-   * Close the  pipeline with the given clusterId.
+   * Remove the pipeline from active allocation
+   * @param pipeline pipeline to be finalized
    */
-  public abstract void closePipeline(String pipelineID) throws IOException;
+  public synchronized void finalizePipeline(Pipeline pipeline) {
+    activePipelines.remove(pipeline.getId());
+  }
+
+  /**
+   *
+   * @param pipeline
+   */
+  public void closePipeline(Pipeline pipeline) {
+    pipelineMap.remove(pipeline.getId());
+    node2PipelineMap.removePipeline(pipeline);
+  }
 
   /**
    * list members in the pipeline .
    * @return the datanode
    */
-  public abstract List<DatanodeDetails> getMembers(String pipelineID)
+  public abstract List<DatanodeDetails> getMembers(PipelineID pipelineID)
       throws IOException;
 
   /**
    * Update the datanode list of the pipeline.
    */
-  public abstract void updatePipeline(String pipelineID,
+  public abstract void updatePipeline(PipelineID pipelineID,
       List<DatanodeDetails> newDatanodes) throws IOException;
 }

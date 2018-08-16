@@ -72,13 +72,13 @@ public class TestContainerMetrics {
       conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
           interval);
 
-      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, path);
       VolumeSet volumeSet = new VolumeSet(
           datanodeDetails.getUuidString(), conf);
       ContainerSet containerSet = new ContainerSet();
       HddsDispatcher dispatcher = new HddsDispatcher(conf, containerSet,
-          volumeSet);
+          volumeSet, null);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
       server = new XceiverServer(datanodeDetails, conf, dispatcher);

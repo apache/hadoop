@@ -58,7 +58,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   }
 
   private HddsProtos.LifeCycleState state;
-  private String pipelineName;
+  private PipelineID pipelineID;
   private ReplicationFactor replicationFactor;
   private ReplicationType replicationType;
   // Bytes allocated by SCM for clients.
@@ -82,7 +82,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,
-      String pipelineName,
+      PipelineID pipelineID,
       long allocatedBytes,
       long usedBytes,
       long numberOfKeys,
@@ -92,7 +92,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       ReplicationFactor replicationFactor,
       ReplicationType repType) {
     this.containerID = containerID;
-    this.pipelineName = pipelineName;
+    this.pipelineID = pipelineID;
     this.allocatedBytes = allocatedBytes;
     this.usedBytes = usedBytes;
     this.numberOfKeys = numberOfKeys;
@@ -113,7 +113,8 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
 
   public static ContainerInfo fromProtobuf(HddsProtos.SCMContainerInfo info) {
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
-    return builder.setPipelineName(info.getPipelineName())
+    return builder.setPipelineID(
+        PipelineID.getFromProtobuf(info.getPipelineID()))
         .setAllocatedBytes(info.getAllocatedBytes())
         .setUsedBytes(info.getUsedBytes())
         .setNumberOfKeys(info.getNumberOfKeys())
@@ -147,8 +148,8 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return replicationFactor;
   }
 
-  public String getPipelineName() {
-    return pipelineName;
+  public PipelineID getPipelineID() {
+    return pipelineID;
   }
 
   public long getAllocatedBytes() {
@@ -217,7 +218,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
         .setNumberOfKeys(getNumberOfKeys()).setState(getState())
         .setStateEnterTime(getStateEnterTime()).setContainerID(getContainerID())
         .setDeleteTransactionId(getDeleteTransactionId())
-        .setPipelineName(getPipelineName())
+        .setPipelineID(getPipelineID().getProtobuf())
         .setReplicationFactor(getReplicationFactor())
         .setReplicationType(getReplicationType())
         .setOwner(getOwner())
@@ -236,7 +237,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   public String toString() {
     return "ContainerInfo{"
         + "state=" + state
-        + ", pipelineName=" + pipelineName
+        + ", pipelineID=" + pipelineID
         + ", stateEnterTime=" + stateEnterTime
         + ", owner=" + owner
         + '}';
@@ -389,7 +390,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     private String owner;
     private long containerID;
     private long deleteTransactionId;
-    private String pipelineName;
+    private PipelineID pipelineID;
     private ReplicationFactor replicationFactor;
     private ReplicationType replicationType;
 
@@ -399,8 +400,8 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       return this;
     }
 
-    public Builder setPipelineName(String pipelineName) {
-      this.pipelineName = pipelineName;
+    public Builder setPipelineID(PipelineID pipelineID) {
+      this.pipelineID = pipelineID;
       return this;
     }
 
@@ -451,7 +452,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     }
 
     public ContainerInfo build() {
-      return new ContainerInfo(containerID, state, pipelineName, allocated,
+      return new ContainerInfo(containerID, state, pipelineID, allocated,
               used, keys, stateEnterTime, owner, deleteTransactionId,
           replicationFactor, replicationType);
     }
@@ -459,12 +460,13 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
 
   /**
    * Check if a container is in open state, this will check if the
-   * container is either open or allocated or creating. Any containers in
-   * these states is managed as an open container by SCM.
+   * container is either open, allocated, creating or creating.
+   * Any containers in these states is managed as an open container by SCM.
    */
   public boolean isContainerOpen() {
     return state == HddsProtos.LifeCycleState.ALLOCATED ||
         state == HddsProtos.LifeCycleState.CREATING ||
-        state == HddsProtos.LifeCycleState.OPEN;
+        state == HddsProtos.LifeCycleState.OPEN ||
+        state == HddsProtos.LifeCycleState.CLOSING;
   }
 }

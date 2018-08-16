@@ -342,7 +342,8 @@ public class SCMNodeManager
   public VersionResponse getVersion(SCMVersionRequestProto versionRequest) {
     return VersionResponse.newBuilder()
         .setVersion(this.version.getVersion())
-        .addValue(OzoneConsts.SCM_ID, this.scmManager.getScmStorage().getScmId())
+        .addValue(OzoneConsts.SCM_ID,
+            this.scmManager.getScmStorage().getScmId())
         .addValue(OzoneConsts.CLUSTER_ID, this.scmManager.getScmStorage()
             .getClusterID())
         .build();
@@ -364,15 +365,11 @@ public class SCMNodeManager
   public RegisteredCommand register(
       DatanodeDetails datanodeDetails, NodeReportProto nodeReport) {
 
-    String hostname = null;
-    String ip = null;
     InetAddress dnAddress = Server.getRemoteIp();
     if (dnAddress != null) {
       // Mostly called inside an RPC, update ip and peer hostname
-      hostname = dnAddress.getHostName();
-      ip = dnAddress.getHostAddress();
-      datanodeDetails.setHostName(hostname);
-      datanodeDetails.setIpAddress(ip);
+      datanodeDetails.setHostName(dnAddress.getHostName());
+      datanodeDetails.setIpAddress(dnAddress.getHostAddress());
     }
     UUID dnId = datanodeDetails.getUuid();
     try {
@@ -390,14 +387,12 @@ public class SCMNodeManager
       LOG.trace("Datanode is already registered. Datanode: {}",
           datanodeDetails.toString());
     }
-    RegisteredCommand.Builder builder =
-        RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
-            .setDatanodeUUID(datanodeDetails.getUuidString())
-            .setClusterID(this.clusterID);
-    if (hostname != null && ip != null) {
-      builder.setHostname(hostname).setIpAddress(ip);
-    }
-    return builder.build();
+    return RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
+        .setDatanodeUUID(datanodeDetails.getUuidString())
+        .setClusterID(this.clusterID)
+        .setHostname(datanodeDetails.getHostName())
+        .setIpAddress(datanodeDetails.getIpAddress())
+        .build();
   }
 
   /**
@@ -430,7 +425,7 @@ public class SCMNodeManager
    */
   @Override
   public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
-      this.updateNodeStat(dnUuid, nodeReport);
+    this.updateNodeStat(dnUuid, nodeReport);
   }
 
   /**

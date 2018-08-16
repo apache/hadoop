@@ -42,6 +42,7 @@ public class LeaseManager<T> {
   private static final Logger LOG =
       LoggerFactory.getLogger(LeaseManager.class);
 
+  private final String name;
   private final long defaultTimeout;
   private Map<T, Lease<T>> activeLeases;
   private LeaseMonitor leaseMonitor;
@@ -51,10 +52,13 @@ public class LeaseManager<T> {
   /**
    * Creates an instance of lease manager.
    *
+   * @param name
+   *        Name for the LeaseManager instance.
    * @param defaultTimeout
    *        Default timeout in milliseconds to be used for lease creation.
    */
-  public LeaseManager(long defaultTimeout) {
+  public LeaseManager(String name, long defaultTimeout) {
+    this.name = name;
     this.defaultTimeout = defaultTimeout;
   }
 
@@ -62,11 +66,11 @@ public class LeaseManager<T> {
    * Starts the lease manager service.
    */
   public void start() {
-    LOG.debug("Starting LeaseManager service");
+    LOG.debug("Starting {} LeaseManager service", name);
     activeLeases = new ConcurrentHashMap<>();
     leaseMonitor = new LeaseMonitor();
     leaseMonitorThread = new Thread(leaseMonitor);
-    leaseMonitorThread.setName("LeaseManager#LeaseMonitor");
+    leaseMonitorThread.setName(name + "-LeaseManager#LeaseMonitor");
     leaseMonitorThread.setDaemon(true);
     leaseMonitorThread.setUncaughtExceptionHandler((thread, throwable) -> {
       // Let us just restart this thread after logging an error.
@@ -75,7 +79,7 @@ public class LeaseManager<T> {
           thread.toString(), throwable);
       leaseMonitorThread.start();
     });
-    LOG.debug("Starting LeaseManager#LeaseMonitor Thread");
+    LOG.debug("Starting {}-LeaseManager#LeaseMonitor Thread", name);
     leaseMonitorThread.start();
     isRunning = true;
   }
@@ -203,7 +207,7 @@ public class LeaseManager<T> {
     @Override
     public void run() {
       while(monitor) {
-        LOG.debug("LeaseMonitor: checking for lease expiry");
+        LOG.debug("{}-LeaseMonitor: checking for lease expiry", name);
         long sleepTime = Long.MAX_VALUE;
 
         for (T resource : activeLeases.keySet()) {

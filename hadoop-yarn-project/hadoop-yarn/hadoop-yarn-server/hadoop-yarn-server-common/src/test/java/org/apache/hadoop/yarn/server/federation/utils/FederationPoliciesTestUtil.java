@@ -140,11 +140,21 @@ public final class FederationPoliciesTestUtil {
 
   public static void initializePolicyContext(
       ConfigurableFederationPolicy policy,
-      WeightedPolicyInfo policyInfo, Map<SubClusterId,
-      SubClusterInfo> activeSubclusters) throws YarnException {
+      WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubclusters)
+          throws YarnException {
+    initializePolicyContext(
+        policy, policyInfo, activeSubclusters, "homesubcluster");
+  }
+
+  public static void initializePolicyContext(
+      ConfigurableFederationPolicy policy,
+      WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubclusters,
+      String subclusterId) throws YarnException {
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(null, initResolver(),
-            initFacade(), SubClusterId.newInstance("homesubcluster"));
+            initFacade(), SubClusterId.newInstance(subclusterId));
     initializePolicyContext(context, policy, policyInfo, activeSubclusters);
   }
 

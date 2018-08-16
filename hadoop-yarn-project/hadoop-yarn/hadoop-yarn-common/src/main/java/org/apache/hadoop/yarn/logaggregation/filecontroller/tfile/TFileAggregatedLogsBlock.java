@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.tfile;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_OWNER;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 
 import com.google.inject.Inject;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -173,7 +170,7 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
       long endIndex, String desiredLogType, long logUpLoadTime,
       long startTime, long endTime) throws IOException {
     int bufferSize = 65536;
-    char[] cbuf = new char[bufferSize];
+    byte[] cbuf = new byte[bufferSize];
 
     boolean foundLog = false;
     String logType = logReader.nextLog();
@@ -189,53 +186,10 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
         html.p().__("Log Upload Time: " + Times.format(logUpLoadTime)).__();
         html.p().__("Log Length: " + Long.toString(logLength)).__();
 
-        long start = startIndex < 0
-            ? logLength + startIndex : startIndex;
-        start = start < 0 ? 0 : start;
-        start = start > logLength ? logLength : start;
-        long end = endIndex < 0
-            ? logLength + endIndex : endIndex;
-        end = end < 0 ? 0 : end;
-        end = end > logLength ? logLength : end;
-        end = end < start ? start : end;
+        long[] range = checkParseRange(html, startIndex, endIndex, startTime,
+            endTime, logLength, logType);
 
-        long toRead = end - start;
-        if (toRead < logLength) {
-          html.p().__("Showing " + toRead + " bytes of " + logLength
-            + " total. Click ").a(url("logs", $(NM_NODENAME), $(CONTAINER_ID),
-                $(ENTITY_STRING), $(APP_OWNER),
-                logType, "?start=0&start.time=" + startTime
-                + "&end.time=" + endTime), "here").
-            __(" for the full log.").__();
-        }
-
-        long totalSkipped = 0;
-        while (totalSkipped < start) {
-          long ret = logReader.skip(start - totalSkipped);
-          if (ret == 0) {
-            //Read one byte
-            int nextByte = logReader.read();
-            // Check if we have reached EOF
-            if (nextByte == -1) {
-              throw new IOException("Premature EOF from container log");
-            }
-            ret = 1;
-          }
-          totalSkipped += ret;
-        }
-
-        int len = 0;
-        int currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-        PRE<Hamlet> pre = html.pre();
-
-        while (toRead > 0
-            && (len = logReader.read(cbuf, 0, currentToRead)) > 0) {
-          pre.__(new String(cbuf, 0, len));
-          toRead = toRead - len;
-          currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-        }
-
-        pre.__();
+        processContainerLog(html, range, logReader, bufferSize, cbuf);
         foundLog = true;
       }
 

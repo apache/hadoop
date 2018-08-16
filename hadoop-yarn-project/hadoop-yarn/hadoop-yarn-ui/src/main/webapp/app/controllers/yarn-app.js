@@ -50,7 +50,10 @@ export default Ember.Controller.extend({
           this.send("refresh");
         }, 5000);
       }, function (errr) {
-        let messg = errr.diagnostics || 'Error: Stop service failed!';
+        let messg = 'Error: Stop service failed!';
+        if (errr.errors && errr.errors[0] && errr.errors[0].diagnostics) {
+          messg = 'Error: ' + errr.errors[0].diagnostics;
+        }
         self.set('actionResponse', { msg: messg, type: 'error' });
       }).finally(function () {
         self.set('isLoading', false);
@@ -74,7 +77,10 @@ export default Ember.Controller.extend({
           this.transitionToRoute("yarn-services");
         }, 5000);
       }, function (errr) {
-        let messg = errr.diagnostics || 'Error: Delete service failed!';
+        let messg = 'Error: Delete service failed!';
+        if (errr.errors && errr.errors[0] && errr.errors[0].diagnostics) {
+          messg = 'Error: ' + errr.errors[0].diagnostics;
+        }
         self.set('actionResponse', { msg: messg, type: 'error' });
       }).finally(function () {
         self.set('isLoading', false);

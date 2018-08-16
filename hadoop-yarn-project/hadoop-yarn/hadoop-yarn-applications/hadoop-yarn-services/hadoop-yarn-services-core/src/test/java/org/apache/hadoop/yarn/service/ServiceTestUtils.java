@@ -115,7 +115,7 @@ public class ServiceTestUtils {
     exampleApp.setName(serviceName);
     exampleApp.setVersion("v1");
     exampleApp.addComponent(
-        createComponent("terminating-comp1", 2, "sleep " + "1000",
+        createComponent("terminating-comp1", 2, "sleep 1000",
             Component.RestartPolicyEnum.NEVER, null));
     exampleApp.addComponent(
         createComponent("terminating-comp2", 2, "sleep 1000",

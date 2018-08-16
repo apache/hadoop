@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -361,6 +362,21 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         .isEmpty()) {
       for (SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode>
           releaseContainer : allocation.getToRelease()) {
+        // Make sure to-release reserved containers are not outdated
+        if (releaseContainer.getRmContainer().getState()
+            == RMContainerState.RESERVED
+            && releaseContainer.getRmContainer() != releaseContainer
+            .getSchedulerNode().getReservedContainer()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Failed to accept this proposal because "
+                + "it tries to release an outdated reserved container "
+                + releaseContainer.getRmContainer().getContainerId()
+                + " on node " + releaseContainer.getSchedulerNode().getNodeID()
+                + " whose reserved container is "
+                + releaseContainer.getSchedulerNode().getReservedContainer());
+          }
+          return false;
+        }
         // Only consider non-reserved container (reserved container will
         // not affect available resource of node) on the same node
         if (releaseContainer.getRmContainer().getState()
@@ -414,6 +430,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode>
             schedulerContainer = allocation.getAllocatedOrReservedContainer();
 
+        // Make sure node is in RUNNING state
+        if (schedulerContainer.getSchedulerNode().getRMNode().getState()
+            != NodeState.RUNNING) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Failed to accept this proposal because node "
+                + schedulerContainer.getSchedulerNode().getNodeID() + " is in "
+                + schedulerContainer.getSchedulerNode().getRMNode().getState()
+                + " state (not RUNNING)");
+          }
+          return false;
+        }
         if (schedulerContainer.isAllocated()) {
           // When allocate a new container
           containerRequest =

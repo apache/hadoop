@@ -79,4 +79,9 @@ public final class NeverRestartPolicy implements ComponentRestartPolicy {
     }
     return true;
   }
+
+  @Override public boolean allowContainerRetriesForInstance(
+      ComponentInstance componentInstance) {
+    return false;
+  }
 }

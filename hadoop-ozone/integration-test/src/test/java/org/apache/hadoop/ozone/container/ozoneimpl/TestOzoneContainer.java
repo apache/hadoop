@@ -33,10 +33,13 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_DATANODE_DIR_KEY;
 
 /**
  * Tests ozone containers.
@@ -47,6 +50,9 @@ public class TestOzoneContainer {
    */
   @Rule
   public Timeout testTimeout = new Timeout(300000);
+
+  @Rule
+  public TemporaryFolder tempFolder = new TemporaryFolder();
 
   @Test
   public void testCreateOzoneContainer() throws Exception {
@@ -60,12 +66,13 @@ public class TestOzoneContainer {
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      conf.set(HDDS_DATANODE_DIR_KEY, tempFolder.getRoot().getPath());
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT, pipeline.getLeader()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
 
-      container = new OzoneContainer(TestUtils.getDatanodeDetails(),
-          conf);
+      container = new OzoneContainer(TestUtils.randomDatanodeDetails(),
+          conf, null);
       //Setting scmId, as we start manually ozone container.
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();

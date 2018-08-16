@@ -107,10 +107,10 @@ Deployment
   This means that when reading and writing striped files, most operations are off-rack.
   Network bisection bandwidth is thus very important.
 
-  For rack fault-tolerance, it is also important to have at least as many racks as the configured EC stripe width.
-  For EC policy RS (6,3), this means minimally 9 racks, and ideally 10 or 11 to handle planned and unplanned outages.
-  For clusters with fewer racks than the stripe width, HDFS cannot maintain rack fault-tolerance, but will still attempt
-  to spread a striped file across multiple nodes to preserve node-level fault-tolerance.
+  For rack fault-tolerance, it is also important to have enough number of racks, so that on average, each rack holds number of blocks no more than the number of EC parity blocks. A formula to calculate this would be (data blocks + parity blocks) / parity blocks, rounding up.
+  For EC policy RS (6,3), this means minimally 3 racks (calculated by (6 + 3) / 3 = 3), and ideally 9 or more to handle planned and unplanned outages.
+  For clusters with fewer racks than the number of the parity cells, HDFS cannot maintain rack fault-tolerance, but will still attempt
+  to spread a striped file across multiple nodes to preserve node-level fault-tolerance. For this reason, it is recommended to setup racks with similar number of DataNodes.
 
 ### Configuration keys
 
@@ -203,7 +203,7 @@ Below are the details about each command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
+     Add a list of user defined erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
 
  *  `[-listCodecs]`
 
@@ -211,7 +211,7 @@ Below are the details about each command.
 
 *  `[-removePolicy -policy <policyName>]`
 
-     Remove an erasure coding policy.
+     Remove an user defined erasure coding policy.
 
 *  `[-enablePolicy -policy <policyName>]`
 

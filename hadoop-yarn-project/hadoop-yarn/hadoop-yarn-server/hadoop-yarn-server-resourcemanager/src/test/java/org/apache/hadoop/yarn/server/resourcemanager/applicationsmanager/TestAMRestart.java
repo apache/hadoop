@@ -1048,12 +1048,12 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     rm1.start();
     YarnScheduler scheduler = rm1.getResourceScheduler();
 
-    MockNM nm1 = new MockNM("127.0.0.1:1234", 10240,
-        rm1.getResourceTrackerService());
+    String nm1Address = "127.0.0.1:1234";
+    MockNM nm1 = new MockNM(nm1Address, 10240, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    MockNM nm2 = new MockNM("127.0.0.1:2351", 4089,
-        rm1.getResourceTrackerService());
+    String nm2Address = "127.0.0.1:2351";
+    MockNM nm2 = new MockNM(nm2Address, 4089, rm1.getResourceTrackerService());
     nm2.registerNode();
 
     RMApp app1 = rm1.submitApp(200, "name", "user",
@@ -1120,6 +1120,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
         registerResponse.getContainersFromPreviousAttempts().size());
     Assert.assertEquals("container 2", containerId2,
         registerResponse.getContainersFromPreviousAttempts().get(0).getId());
+    List<NMToken> prevNMTokens = registerResponse
+        .getNMTokensFromPreviousAttempts();
+    Assert.assertEquals(1, prevNMTokens.size());
+    // container 2 is running on node 1
+    Assert.assertEquals(nm1Address, prevNMTokens.get(0).getNodeId().toString());
 
     rm2.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
 
@@ -1145,6 +1150,11 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
               allocateResponse.getContainersFromPreviousAttempts());
           Assert.assertEquals("new containers should not be allocated",
               0, allocateResponse.getAllocatedContainers().size());
+          List<NMToken> nmTokens = allocateResponse.getNMTokens();
+          Assert.assertEquals(1, nmTokens.size());
+          // container 3 is running on node 2
+          Assert.assertEquals(nm2Address,
+              nmTokens.get(0).getNodeId().toString());
           return true;
         }
       } catch (Exception e) {

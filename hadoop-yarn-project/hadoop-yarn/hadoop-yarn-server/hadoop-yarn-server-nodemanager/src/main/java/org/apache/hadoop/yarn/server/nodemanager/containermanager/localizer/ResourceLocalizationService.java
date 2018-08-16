@@ -406,7 +406,7 @@ public class ResourceLocalizationService extends CompositeService
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      server.refreshServiceAcl(conf, new NMPolicyProvider());
+      server.refreshServiceAcl(conf, NMPolicyProvider.getInstance());
     }
     
     return server;
@@ -969,11 +969,17 @@ public class ResourceLocalizationService extends CompositeService
                 .getDU(new File(local.toUri()))));
               assoc.getResource().unlock();
             } catch (ExecutionException e) {
-              LOG.info("Failed to download resource " + assoc.getResource(),
-                  e.getCause());
-              LocalResourceRequest req = assoc.getResource().getRequest();
-              publicRsrc.handle(new ResourceFailedLocalizationEvent(req,
-                  e.getMessage()));
+              String user = assoc.getContext().getUser();
+              ApplicationId applicationId = assoc.getContext().getContainerId().getApplicationAttemptId().getApplicationId();
+              LocalResourcesTracker tracker =
+                getLocalResourcesTracker(LocalResourceVisibility.APPLICATION, user, applicationId);
+              final String diagnostics = "Failed to download resource " +
+                  assoc.getResource() + " " + e.getCause();
+              tracker.handle(new ResourceFailedLocalizationEvent(
+                  assoc.getResource().getRequest(), diagnostics));
+              publicRsrc.handle(new ResourceFailedLocalizationEvent(
+                  assoc.getResource().getRequest(), diagnostics));
+              LOG.error(diagnostics);
               assoc.getResource().unlock();
             } catch (CancellationException e) {
               // ignore; shutting down

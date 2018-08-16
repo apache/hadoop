@@ -99,7 +99,7 @@ enum Type {
   PutSmallFile = 15;
   GetSmallFile = 16;
   CloseContainer = 17;
-
+  GetCommittedBlockLength = 18;
 }
 
 
@@ -138,6 +138,7 @@ enum Result {
   CONTAINER_FILES_CREATE_ERROR = 32;
   CONTAINER_CHECKSUM_ERROR = 33;
   UNKNOWN_CONTAINER_TYPE = 34;
+  BLOCK_NOT_COMMITTED = 35;
 }
 
 /**
@@ -164,79 +165,81 @@ enum ContainerLifeCycleState {
 }
 
 message ContainerCommandRequestProto {
-  required Type cmdType = 1; // Type of the command
+  required   Type cmdType = 1; // Type of the command
 
   // A string that identifies this command, we generate  Trace ID in Ozone
   // frontend and this allows us to trace that command all over ozone.
-  optional string traceID = 2;
+  optional   string traceID = 2;
+
+  required   int64 containerID = 3;
+  required   string datanodeUuid = 4;
 
   // One of the following command is available when the corresponding
   // cmdType is set. At the protocol level we allow only
   // one command in each packet.
   // TODO : Upgrade to Protobuf 2.6 or later.
-  optional   CreateContainerRequestProto createContainer = 3;
-  optional   ReadContainerRequestProto readContainer = 4;
-  optional   UpdateContainerRequestProto updateContainer = 5;
-  optional   DeleteContainerRequestProto deleteContainer = 6;
-  optional   ListContainerRequestProto listContainer = 7;
+  optional   CreateContainerRequestProto createContainer = 5;
+  optional   ReadContainerRequestProto readContainer = 6;
+  optional   UpdateContainerRequestProto updateContainer = 7;
+  optional   DeleteContainerRequestProto deleteContainer = 8;
+  optional   ListContainerRequestProto listContainer = 9;
+  optional   CloseContainerRequestProto closeContainer = 10;
 
-  optional   PutKeyRequestProto putKey = 8;
-  optional   GetKeyRequestProto getKey = 9;
-  optional   DeleteKeyRequestProto deleteKey = 10;
-  optional   ListKeyRequestProto listKey = 11;
+  optional   PutKeyRequestProto putKey = 11;
+  optional   GetKeyRequestProto getKey = 12;
+  optional   DeleteKeyRequestProto deleteKey = 13;
+  optional   ListKeyRequestProto listKey = 14;
 
-  optional   ReadChunkRequestProto readChunk = 12;
-  optional   WriteChunkRequestProto writeChunk = 13;
-  optional   DeleteChunkRequestProto deleteChunk = 14;
-  optional   ListChunkRequestProto listChunk = 15;
+  optional   ReadChunkRequestProto readChunk = 15;
+  optional   WriteChunkRequestProto writeChunk = 16;
+  optional   DeleteChunkRequestProto deleteChunk = 17;
+  optional   ListChunkRequestProto listChunk = 18;
 
-  optional   PutSmallFileRequestProto putSmallFile = 16;
-  optional   GetSmallFileRequestProto getSmallFile = 17;
-  optional   CloseContainerRequestProto closeContainer = 18;
+  optional   PutSmallFileRequestProto putSmallFile = 19;
+  optional   GetSmallFileRequestProto getSmallFile = 20;
 
-  required   string datanodeUuid = 19;
+  optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 21;
 }
 
 message ContainerCommandResponseProto {
-  required Type cmdType = 1;
-  optional string traceID = 2;
+  required   Type cmdType = 1;
+  optional   string traceID = 2;
 
-  optional   CreateContainerResponseProto createContainer = 3;
-  optional   ReadContainerResponseProto readContainer = 4;
-  optional   UpdateContainerResponseProto updateContainer = 5;
-  optional   DeleteContainerResponseProto deleteContainer = 6;
-  optional   ListContainerResponseProto listContainer = 7;
+  required   Result result = 3;
+  optional   string message = 4;
 
-  optional   PutKeyResponseProto putKey = 8;
-  optional   GetKeyResponseProto getKey = 9;
-  optional   DeleteKeyResponseProto deleteKey = 10;
-  optional   ListKeyResponseProto listKey = 11;
+  optional   CreateContainerResponseProto createContainer = 5;
+  optional   ReadContainerResponseProto readContainer = 6;
+  optional   UpdateContainerResponseProto updateContainer = 7;
+  optional   DeleteContainerResponseProto deleteContainer = 8;
+  optional   ListContainerResponseProto listContainer = 9;
+  optional   CloseContainerResponseProto closeContainer = 10;
 
-  optional  WriteChunkResponseProto writeChunk = 12;
-  optional  ReadChunkResponseProto readChunk = 13;
-  optional  DeleteChunkResponseProto deleteChunk = 14;
-  optional  ListChunkResponseProto listChunk = 15;
+  optional   PutKeyResponseProto putKey = 11;
+  optional   GetKeyResponseProto getKey = 12;
+  optional   DeleteKeyResponseProto deleteKey = 13;
+  optional   ListKeyResponseProto listKey = 14;
 
-  required Result result = 17;
-  optional string message = 18;
+  optional   WriteChunkResponseProto writeChunk = 15;
+  optional   ReadChunkResponseProto readChunk = 16;
+  optional   DeleteChunkResponseProto deleteChunk = 17;
+  optional   ListChunkResponseProto listChunk = 18;
 
-  optional PutSmallFileResponseProto putSmallFile = 19;
-  optional GetSmallFileResponseProto getSmallFile = 20;
-  optional CloseContainerResponseProto closeContainer = 21;
+  optional   PutSmallFileResponseProto putSmallFile = 19;
+  optional   GetSmallFileResponseProto getSmallFile = 20;
 
+  optional GetCommittedBlockLengthResponseProto getCommittedBlockLength = 21;
 }
 
 message ContainerData {
   required int64 containerID = 1;
   repeated KeyValue metadata = 2;
-  optional string dbPath = 3;
   optional string containerPath = 4;
   optional int64 bytesUsed = 6;
   optional int64 size = 7;
-  optional int64 keyCount = 8;
+  optional int64 blockCount = 8;
   optional ContainerLifeCycleState state = 9 [default = OPEN];
   optional ContainerType containerType = 10 [default = KeyValueContainer];
-  optional string containerDBType = 11;
 }
 
 enum ContainerType {
@@ -246,7 +249,6 @@ enum ContainerType {
 
 // Container Messages.
 message  CreateContainerRequestProto {
-  required int64 containerID = 1;
   repeated KeyValue metadata = 2;
   optional ContainerType containerType = 3 [default = KeyValueContainer];
 }
@@ -255,7 +257,6 @@ message  CreateContainerResponseProto {
 }
 
 message  ReadContainerRequestProto {
-  required int64 containerID = 1;
 }
 
 message  ReadContainerResponseProto {
@@ -263,7 +264,6 @@ message  ReadContainerResponseProto {
 }
 
 message  UpdateContainerRequestProto {
-  required int64 containerID = 1;
   repeated KeyValue metadata = 2;
   optional bool forceUpdate = 3 [default = false];
 }
@@ -272,7 +272,6 @@ message  UpdateContainerResponseProto {
 }
 
 message  DeleteContainerRequestProto {
-  required int64 containerID = 1;
   optional bool forceDelete = 2 [default = false];
 }
 
@@ -280,7 +279,6 @@ message  DeleteContainerResponseProto {
 }
 
 message  ListContainerRequestProto {
-  required int64 startContainerID = 1;
   optional uint32 count = 2; // Max Results to return
 }
 
@@ -289,7 +287,6 @@ message  ListContainerResponseProto {
 }
 
 message CloseContainerRequestProto {
-  required int64 containerID = 1;
 }
 
 message CloseContainerResponseProto {
@@ -302,6 +299,7 @@ message KeyData {
   optional int64 flags = 2; // for future use.
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
+  optional int64 size = 5;
 }
 
 // Key Messages.
@@ -310,6 +308,7 @@ message  PutKeyRequestProto {
 }
 
 message  PutKeyResponseProto {
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
 message  GetKeyRequestProto  {
@@ -325,11 +324,19 @@ message  DeleteKeyRequestProto {
   required DatanodeBlockID blockID = 1;
 }
 
+message  GetCommittedBlockLengthRequestProto {
+  required DatanodeBlockID blockID = 1;
+}
+
+message  GetCommittedBlockLengthResponseProto {
+  required DatanodeBlockID blockID = 1;
+  required int64 blockLength = 2;
+}
+
 message   DeleteKeyResponseProto {
 }
 
 message  ListKeyRequestProto {
-  required int64 containerID = 1;
   optional int64 startLocalID = 2;
   required uint32 count = 3;
 

@@ -1135,6 +1135,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (systemCredentials != null && !systemCredentials.isEmpty()) {
               ((NMContext) context).setSystemCrendentialsForApps(
                   parseCredentials(systemCredentials));
+              context.getContainerManager().handleCredentialUpdate();
             }
             List<org.apache.hadoop.yarn.api.records.Container>
                 containersToUpdate = response.getContainersToUpdate();

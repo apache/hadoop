@@ -8,3 +8,4 @@ layOutVersion: 1
 maxSizeGB: 5
 metadata: {OWNER: ozone, VOLUME: hdfs}
 state: INVALID
+checksum: 08bc9d390f9183aeed3cf33c789e2a07310bba60f3cf55941caccc939db8670f

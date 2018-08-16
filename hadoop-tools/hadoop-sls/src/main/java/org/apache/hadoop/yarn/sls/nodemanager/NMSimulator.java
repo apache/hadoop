@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -78,7 +80,7 @@ public class NMSimulator extends TaskRunner.Task {
   
   public void init(String nodeIdStr, Resource nodeResource, int dispatchTime,
       int heartBeatInterval, ResourceManager pRm,
-      float pResourceUtilizationRatio)
+      float pResourceUtilizationRatio, Set<NodeLabel> labels)
       throws IOException, YarnException {
     super.init(dispatchTime, dispatchTime + 1000000L * heartBeatInterval,
         heartBeatInterval);
@@ -102,11 +104,20 @@ public class NMSimulator extends TaskRunner.Task {
             Records.newRecord(RegisterNodeManagerRequest.class);
     req.setNodeId(node.getNodeID());
     req.setResource(node.getTotalCapability());
+    req.setNodeLabels(labels);
     req.setHttpPort(80);
     RegisterNodeManagerResponse response = this.rm.getResourceTrackerService()
             .registerNodeManager(req);
     masterKey = response.getNMTokenMasterKey();
     this.resourceUtilizationRatio = pResourceUtilizationRatio;
+  }
+
+  public void init(String nodeIdStr, Resource nodeResource, int dispatchTime,
+      int heartBeatInterval, ResourceManager pRm,
+      float pResourceUtilizationRatio)
+      throws IOException, YarnException {
+    init(nodeIdStr, nodeResource, dispatchTime, heartBeatInterval, pRm,
+        pResourceUtilizationRatio, null);
   }
 
   @Override

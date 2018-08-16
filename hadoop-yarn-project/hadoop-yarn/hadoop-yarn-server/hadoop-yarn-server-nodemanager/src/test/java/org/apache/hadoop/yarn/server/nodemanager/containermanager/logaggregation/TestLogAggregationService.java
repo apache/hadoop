@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -128,6 +129,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Tes
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerTokenUpdatedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -823,7 +825,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         .getFileControllerForWrite();
     LogAggregationFileController spyLogAggregationFileFormat =
         spy(logAggregationFileFormat);
-    Exception e = new RuntimeException("KABOOM!");
+    Exception e =
+        new YarnRuntimeException(new SecretManager.InvalidToken("KABOOM!"));
     doThrow(e).when(spyLogAggregationFileFormat)
         .createAppDir(any(String.class), any(ApplicationId.class),
             any(UserGroupInformation.class));
@@ -862,29 +865,40 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
-
+    Assert.assertEquals(logAggregationService.getInvalidTokenApps().size(), 1);
     // verify trying to collect logs for containers/apps we don't know about
     // doesn't blow up and tear down the NM
     logAggregationService.handle(new LogHandlerContainerFinishedEvent(
         BuilderUtils.newContainerId(4, 1, 1, 1),
         ContainerType.APPLICATION_MASTER, 0));
     dispatcher.await();
+
+    AppLogAggregator appAgg =
+        logAggregationService.getAppLogAggregators().get(appId);
+    Assert.assertFalse("Aggregation should be disabled",
+        appAgg.isAggregationEnabled());
+
+    // Enabled aggregation
+    logAggregationService.handle(new LogHandlerTokenUpdatedEvent());
+    dispatcher.await();
+
+    appAgg =
+        logAggregationService.getAppLogAggregators().get(appId);
+    Assert.assertFalse("Aggregation should be enabled",
+        appAgg.isAggregationEnabled());
+
+    // Check disabled apps are cleared
+    Assert.assertEquals(0, logAggregationService.getInvalidTokenApps().size());
+
     logAggregationService.handle(new LogHandlerAppFinishedEvent(
         BuilderUtils.newApplicationId(1, 5)));
     dispatcher.await();
 
     logAggregationService.stop();
     assertEquals(0, logAggregationService.getNumAggregators());
-    // local log dir shouldn't be deleted given log aggregation cannot
-    // continue due to aggregated log dir creation failure on remoteFS.
-    FileDeletionTask deletionTask = new FileDeletionTask(spyDelSrvc, user,
-        null, null);
-    verify(spyDelSrvc, never()).delete(deletionTask);
+    verify(spyDelSrvc).delete(any(FileDeletionTask.class));
     verify(logAggregationService).closeFileSystems(
         any(UserGroupInformation.class));
-    // make sure local log dir is not deleted in case log aggregation
-    // service cannot be initiated.
-    assertTrue(appLogDir.exists());
   }
 
   private void writeContainerLogs(File appLogDir, ContainerId containerId,

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class RoundRobinUserResolver implements UserResolver {
-  public static final Log LOG = LogFactory.getLog(RoundRobinUserResolver.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RoundRobinUserResolver.class);
 
   private int uidx = 0;
   private List<UserGroupInformation> users = Collections.emptyList();

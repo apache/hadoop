@@ -17,7 +17,6 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -55,24 +54,22 @@ public class TestNodeReportHandler implements EventPublisher {
 
   @Test
   public void testNodeReport() throws IOException {
-    DatanodeDetails dn = TestUtils.getDatanodeDetails();
-    List<StorageReportProto> reports =
-        TestUtils.createStorageReport(100, 10, 90, storagePath, null,
-            dn.getUuid().toString(), 1);
+    DatanodeDetails dn = TestUtils.randomDatanodeDetails();
+    StorageReportProto storageOne = TestUtils
+        .createStorageReport(dn.getUuid(), storagePath, 100, 10, 90, null);
 
     nodeReportHandler.onMessage(
-        getNodeReport(dn, reports), this);
+        getNodeReport(dn, storageOne), this);
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 100);
     Assert.assertTrue(nodeMetric.get().getRemaining().get() == 90);
     Assert.assertTrue(nodeMetric.get().getScmUsed().get() == 10);
 
-    reports =
-        TestUtils.createStorageReport(100, 10, 90, storagePath, null,
-            dn.getUuid().toString(), 2);
+    StorageReportProto storageTwo = TestUtils
+        .createStorageReport(dn.getUuid(), storagePath, 100, 10, 90, null);
     nodeReportHandler.onMessage(
-        getNodeReport(dn, reports), this);
+        getNodeReport(dn, storageOne, storageTwo), this);
     nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 200);
@@ -82,7 +79,7 @@ public class TestNodeReportHandler implements EventPublisher {
   }
 
   private NodeReportFromDatanode getNodeReport(DatanodeDetails dn,
-      List<StorageReportProto> reports) {
+      StorageReportProto... reports) {
     NodeReportProto nodeReportProto = TestUtils.createNodeReport(reports);
     return new NodeReportFromDatanode(dn, nodeReportProto);
   }

@@ -44,7 +44,9 @@ import java.nio.file.Paths;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_TYPE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT;
 
 /**
  * Puts a file into an ozone bucket.
@@ -103,11 +105,17 @@ public class PutKeyHandler extends Handler {
     }
 
     Configuration conf = new OzoneConfiguration();
-    ReplicationFactor replicationFactor = ReplicationFactor.valueOf(
-        conf.getInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue()));
-    ReplicationType replicationType = ReplicationType.valueOf(
-        conf.get(OZONE_REPLICATION_TYPE, ReplicationType.RATIS.toString()));
+    ReplicationFactor replicationFactor;
+    if (cmd.hasOption(Shell.REPLICATION_FACTOR)) {
+      replicationFactor = ReplicationFactor.valueOf(Integer.parseInt(cmd
+          .getOptionValue(Shell.REPLICATION_FACTOR)));
+    } else {
+      replicationFactor = ReplicationFactor.valueOf(
+          conf.getInt(OZONE_REPLICATION, OZONE_REPLICATION_DEFAULT));
+    }
 
+    ReplicationType replicationType = ReplicationType.valueOf(
+        conf.get(OZONE_REPLICATION_TYPE, OZONE_REPLICATION_TYPE_DEFAULT));
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
     OzoneOutputStream outputStream = bucket

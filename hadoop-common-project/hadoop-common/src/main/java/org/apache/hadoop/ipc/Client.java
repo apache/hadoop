@@ -677,7 +677,8 @@ public class Client implements AutoCloseable {
                 this.socket.setReuseAddress(true);
                 localAddr = NetUtils.bindToLocalAddress(localAddr,
                     bindToWildCardAddress);
-                LOG.debug("Binding {} to {}", principal, localAddr);
+                LOG.debug("Binding {} to {}", principal,
+                    (bindToWildCardAddress) ? "0.0.0.0" : localAddr);
                 this.socket.bind(new InetSocketAddress(localAddr, 0));
               }
             }
@@ -1281,9 +1282,6 @@ public class Client implements AutoCloseable {
     this.bindToWildCardAddress = conf
         .getBoolean(CommonConfigurationKeys.IPC_CLIENT_BIND_WILDCARD_ADDR_KEY,
             CommonConfigurationKeys.IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT);
-    LOG.debug("{} set to true. Will bind client sockets to wildcard "
-            + "address.",
-        CommonConfigurationKeys.IPC_CLIENT_BIND_WILDCARD_ADDR_KEY);
 
     this.clientId = ClientId.getClientId();
     this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();

@@ -20,15 +20,18 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.ozone.common.Storage;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
+import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +40,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
-
 /**
  * Class used to read .container files from Volume and build container map.
  *
@@ -45,15 +47,19 @@ import java.io.IOException;
  *
  * ../hdds/VERSION
  * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.container
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.checksum
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/metadata/<<containerID>>.db
  * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/<<dataPath>>
+ *
+ * Some ContainerTypes will have extra metadata other than the .container
+ * file. For example, KeyValueContainer will have a .db file. This .db file
+ * will also be stored in the metadata folder along with the .container file.
+ *
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID>/metadata/<<KVcontainerID>>.db
  *
  * Note that the <<dataPath>> is dependent on the ContainerType.
  * For KeyValueContainers, the data is stored in a "chunks" folder. As such,
  * the <<dataPath>> layout for KeyValueContainers is
  *
- * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<containerID>/chunks/<<chunksFile>>
+ * ../hdds/<<scmUuid>>/current/<<containerDir>>/<<KVcontainerID>/chunks/<<chunksFile>>
  *
  */
 public class ContainerReader implements Runnable {
@@ -64,14 +70,16 @@ public class ContainerReader implements Runnable {
   private final ContainerSet containerSet;
   private final OzoneConfiguration config;
   private final File hddsVolumeDir;
+  private final VolumeSet volumeSet;
 
-  ContainerReader(HddsVolume volume, ContainerSet cset, OzoneConfiguration
-      conf) {
+  ContainerReader(VolumeSet volSet, HddsVolume volume, ContainerSet cset,
+                  OzoneConfiguration conf) {
     Preconditions.checkNotNull(volume);
     this.hddsVolume = volume;
     this.hddsVolumeDir = hddsVolume.getHddsRootDir();
     this.containerSet = cset;
     this.config = conf;
+    this.volumeSet = volSet;
   }
 
   @Override
@@ -97,13 +105,20 @@ public class ContainerReader implements Runnable {
     });
 
     if (scmDir == null) {
-      LOG.error("Volume {} is empty with out metadata and chunks",
+      LOG.error("IO error for the volume {}, skipped loading",
           hddsVolumeRootDir);
+      volumeSet.failVolume(hddsVolumeRootDir.getPath());
       return;
     }
+
+    if (scmDir.length > 1) {
+      LOG.error("Volume {} is in Inconsistent state", hddsVolumeRootDir);
+      volumeSet.failVolume(hddsVolumeRootDir.getPath());
+      return;
+    }
+
     for (File scmLoc : scmDir) {
-      File currentDir = null;
-      currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
+      File currentDir = new File(scmLoc, Storage.STORAGE_DIR_CURRENT);
       File[] containerTopDirs = currentDir.listFiles();
       if (containerTopDirs != null) {
         for (File containerTopDir : containerTopDirs) {
@@ -111,25 +126,14 @@ public class ContainerReader implements Runnable {
             File[] containerDirs = containerTopDir.listFiles();
             if (containerDirs != null) {
               for (File containerDir : containerDirs) {
-                File metadataPath = new File(containerDir + File.separator +
-                    OzoneConsts.CONTAINER_META_PATH);
-                String containerName = containerDir.getName();
-                if (metadataPath.exists()) {
-                  File containerFile = KeyValueContainerLocationUtil
-                      .getContainerFile(metadataPath, containerName);
-                  File checksumFile = KeyValueContainerLocationUtil
-                      .getContainerCheckSumFile(metadataPath, containerName);
-                  if (containerFile.exists() && checksumFile.exists()) {
-                    verifyContainerFile(containerName, containerFile,
-                        checksumFile);
-                  } else {
-                    LOG.error(
-                        "Missing container metadata files for Container: " +
-                            "{}", containerName);
-                  }
+                File containerFile = ContainerUtils.getContainerFile(
+                    containerDir);
+                long containerID = ContainerUtils.getContainerID(containerDir);
+                if (containerFile.exists()) {
+                  verifyContainerFile(containerID, containerFile);
                 } else {
-                  LOG.error("Missing container metadata directory for " +
-                      "Container: {}", containerName);
+                  LOG.error("Missing .container file for ContainerID: {}",
+                      containerDir.getName());
                 }
               }
             }
@@ -139,39 +143,46 @@ public class ContainerReader implements Runnable {
     }
   }
 
-  private void verifyContainerFile(String containerName, File containerFile,
-                                   File checksumFile) {
+  private void verifyContainerFile(long containerID, File containerFile) {
     try {
-      ContainerData containerData =  ContainerDataYaml.readContainerFile(
+      ContainerData containerData = ContainerDataYaml.readContainerFile(
           containerFile);
-
-      switch (containerData.getContainerType()) {
-      case KeyValueContainer:
-        KeyValueContainerData keyValueContainerData = (KeyValueContainerData)
-            containerData;
-        containerData.setVolume(hddsVolume);
-        File dbFile = KeyValueContainerLocationUtil
-            .getContainerDBFile(new File(containerFile.getParent()),
-                containerName);
-        if (!dbFile.exists()) {
-          LOG.error("Container DB file is missing for Container {}, skipping " +
-                  "this", containerName);
-          // Don't further process this container, as it is missing db file.
-          return;
-        }
-        KeyValueContainerUtil.parseKeyValueContainerData(keyValueContainerData,
-            containerFile, checksumFile, dbFile, config);
-        KeyValueContainer keyValueContainer = new KeyValueContainer(
-            keyValueContainerData, config);
-        containerSet.addContainer(keyValueContainer);
-        break;
-      default:
-        LOG.error("Unrecognized ContainerType {} format during verify " +
-            "ContainerFile", containerData.getContainerType());
+      if (containerID != containerData.getContainerID()) {
+        LOG.error("Invalid ContainerID in file {}. " +
+            "Skipping loading of this container.", containerFile);
+        return;
       }
+      verifyContainerData(containerData);
     } catch (IOException ex) {
-      LOG.error("Error during reading container file {}", containerFile);
+      LOG.error("Failed to parse ContainerFile for ContainerID: {}",
+          containerID, ex);
     }
   }
 
+  public void verifyContainerData(ContainerData containerData)
+      throws IOException {
+    switch (containerData.getContainerType()) {
+    case KeyValueContainer:
+      if (containerData instanceof KeyValueContainerData) {
+        KeyValueContainerData kvContainerData = (KeyValueContainerData)
+            containerData;
+        containerData.setVolume(hddsVolume);
+
+        KeyValueContainerUtil.parseKVContainerData(kvContainerData, config);
+        KeyValueContainer kvContainer = new KeyValueContainer(
+            kvContainerData, config);
+        containerSet.addContainer(kvContainer);
+      } else {
+        throw new StorageContainerException("Container File is corrupted. " +
+            "ContainerType is KeyValueContainer but cast to " +
+            "KeyValueContainerData failed. ",
+            ContainerProtos.Result.CONTAINER_METADATA_ERROR);
+      }
+      break;
+    default:
+      throw new StorageContainerException("Unrecognized ContainerType " +
+          containerData.getContainerType(),
+          ContainerProtos.Result.UNKNOWN_CONTAINER_TYPE);
+    }
+  }
 }

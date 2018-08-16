@@ -31,7 +31,8 @@ import org.apache.hadoop.security.KerberosInfo;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
- * It's used to get part of the name node state
+ * Also used by external storage policy satisfier. It's used to get part of the
+ * name node state
  *****************************************************************************/
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
@@ -202,5 +203,12 @@ public interface NamenodeProtocol {
    */
   @Idempotent
   boolean isRollingUpgrade() throws IOException;
+
+  /**
+   * @return Gets the next available sps path, otherwise null. This API used
+   *         by External SPS.
+   */
+  @AtMostOnce
+  Long getNextSPSPath() throws IOException;
 }
 

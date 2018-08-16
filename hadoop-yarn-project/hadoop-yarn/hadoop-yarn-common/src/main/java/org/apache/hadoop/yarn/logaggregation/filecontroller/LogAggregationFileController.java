@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,11 +43,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
@@ -62,7 +65,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 /**
  * Base class to implement Log Aggregation File Controller.
  */
-@Private
+@Public
 @Unstable
 public abstract class LogAggregationFileController {
 
@@ -115,16 +118,16 @@ public abstract class LogAggregationFileController {
    */
   public void initialize(Configuration conf, String controllerName) {
     this.conf = conf;
-    int configuredRentionSize = conf.getInt(
+    int configuredRetentionSize = conf.getInt(
         YarnConfiguration.NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP,
         YarnConfiguration
             .DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP);
-    if (configuredRentionSize <= 0) {
+    if (configuredRetentionSize <= 0) {
       this.retentionSize =
           YarnConfiguration
               .DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP;
     } else {
-      this.retentionSize = configuredRentionSize;
+      this.retentionSize = configuredRetentionSize;
     }
     this.fileControllerName = controllerName;
     initInternal(conf);
@@ -365,6 +368,10 @@ public abstract class LogAggregationFileController {
         }
       });
     } catch (Exception e) {
+      if (e instanceof RemoteException) {
+        throw new YarnRuntimeException(((RemoteException) e)
+            .unwrapRemoteException(SecretManager.InvalidToken.class));
+      }
       throw new YarnRuntimeException(e);
     }
   }

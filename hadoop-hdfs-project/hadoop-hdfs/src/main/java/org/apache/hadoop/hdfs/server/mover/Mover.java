@@ -41,11 +41,13 @@ import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.Matcher;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
@@ -69,8 +71,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @InterfaceAudience.Private
 public class Mover {
   static final Log LOG = LogFactory.getLog(Mover.class);
-
-  static final Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   private static class StorageMap {
     private final StorageGroupMap<Source> sources
@@ -645,7 +645,7 @@ public class Mover {
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
-          Mover.class.getSimpleName(), MOVER_ID_PATH, conf,
+          Mover.class.getSimpleName(), HdfsServerConstants.MOVER_ID_PATH, conf,
           NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
 
       while (connectors.size() > 0) {
@@ -655,6 +655,7 @@ public class Mover {
           NameNodeConnector nnc = iter.next();
           final Mover m = new Mover(nnc, conf, retryCount,
               excludedPinnedBlocks);
+
           final ExitStatus r = m.run();
 
           if (r == ExitStatus.SUCCESS) {

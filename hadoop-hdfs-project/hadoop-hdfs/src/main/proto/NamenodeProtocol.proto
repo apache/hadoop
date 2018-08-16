@@ -206,6 +206,21 @@ message IsRollingUpgradeResponseProto {
   required bool isRollingUpgrade = 1;
 }
 
+message GetFilePathRequestProto {
+  required uint64 fileId = 1;
+}
+
+message GetFilePathResponseProto {
+  required string srcPath = 1;
+}
+
+message GetNextSPSPathRequestProto {
+}
+
+message GetNextSPSPathResponseProto {
+  optional uint64 spsPath = 1;
+}
+
 /**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
@@ -287,4 +302,10 @@ service NamenodeProtocolService {
    */
   rpc isRollingUpgrade(IsRollingUpgradeRequestProto)
       returns (IsRollingUpgradeResponseProto);
+
+  /**
+   * Return the sps path from namenode
+   */
+  rpc getNextSPSPath(GetNextSPSPathRequestProto)
+      returns (GetNextSPSPathResponseProto);
 }

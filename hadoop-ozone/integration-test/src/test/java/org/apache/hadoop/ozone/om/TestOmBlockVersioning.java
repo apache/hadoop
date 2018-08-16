@@ -44,6 +44,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -122,6 +123,9 @@ public class TestOmBlockVersioning {
 
     // 1st update, version 0
     OpenKeySession openKey = ozoneManager.openKey(keyArgs);
+    // explicitly set the keyLocation list before committing the key.
+    keyArgs.setLocationInfoList(
+        openKey.getKeyInfo().getLatestVersionLocations().getLocationList());
     ozoneManager.commitKey(keyArgs, openKey.getId());
 
     OmKeyInfo keyInfo = ozoneManager.lookupKey(keyArgs);
@@ -134,6 +138,9 @@ public class TestOmBlockVersioning {
     openKey = ozoneManager.openKey(keyArgs);
     //OmKeyLocationInfo locationInfo =
     //    ozoneManager.allocateBlock(keyArgs, openKey.getId());
+    // explicitly set the keyLocation list before committing the key.
+    keyArgs.setLocationInfoList(
+        openKey.getKeyInfo().getLatestVersionLocations().getLocationList());
     ozoneManager.commitKey(keyArgs, openKey.getId());
 
     keyInfo = ozoneManager.lookupKey(keyArgs);
@@ -144,7 +151,11 @@ public class TestOmBlockVersioning {
     // 3rd update, version 2
     openKey = ozoneManager.openKey(keyArgs);
     // this block will be appended to the latest version of version 2.
-    ozoneManager.allocateBlock(keyArgs, openKey.getId());
+    OmKeyLocationInfo locationInfo =
+        ozoneManager.allocateBlock(keyArgs, openKey.getId());
+    List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
+    locationInfoList.add(locationInfo);
+    keyArgs.setLocationInfoList(locationInfoList);
     ozoneManager.commitKey(keyArgs, openKey.getId());
 
     keyInfo = ozoneManager.lookupKey(keyArgs);

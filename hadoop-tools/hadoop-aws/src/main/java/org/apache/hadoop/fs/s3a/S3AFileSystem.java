@@ -77,8 +77,9 @@ import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -123,9 +124,6 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The core S3A Filesystem implementation.
@@ -205,6 +203,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
+  private AWSCredentialProviderList credentials;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -252,8 +252,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
           S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
           S3ClientFactory.class);
+
+      credentials = createAWSCredentialProviderSet(name, conf);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-          .createS3Client(name);
+          .createS3Client(name, bucket, credentials);
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
           onRetry);
@@ -2470,12 +2472,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         transfers.shutdownNow(true);
         transfers = null;
       }
-      if (metadataStore != null) {
-        metadataStore.close();
-        metadataStore = null;
-      }
-      IOUtils.closeQuietly(instrumentation);
+      S3AUtils.closeAll(LOG, metadataStore, instrumentation);
+      metadataStore = null;
       instrumentation = null;
+      closeAutocloseables(LOG, credentials);
+      credentials = null;
     }
   }
 
@@ -2885,6 +2886,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
+    sb.append(", credentials=").append(credentials);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -3318,5 +3320,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     default:
       return false;
     }
+  }
+
+  /**
+   * Get a shared copy of the AWS credentials, with its reference
+   * counter updated.
+   * Caller is required to call {@code close()} on this after
+   * they have finished using it.
+   * @param purpose what is this for? This is initially for logging
+   * @return a reference to shared credentials.
+   */
+  public AWSCredentialProviderList shareCredentials(final String purpose) {
+    LOG.debug("Sharing credentials for: {}", purpose);
+    return credentials.share();
   }
 }

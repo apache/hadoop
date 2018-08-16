@@ -64,7 +64,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractSTestS3AHugeFiles.class);
   public static final int DEFAULT_UPLOAD_BLOCKSIZE = 64 * _1KB;
-  public static final String DEFAULT_PARTITION_SIZE = "8M";
+
   private Path scaleTestDir;
   private Path hugefile;
   private Path hugefileRenamed;
@@ -101,7 +101,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Configuration conf = super.createScaleConfiguration();
     partitionSize = (int) getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
-        DEFAULT_PARTITION_SIZE);
+        DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
         partitionSize > MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);

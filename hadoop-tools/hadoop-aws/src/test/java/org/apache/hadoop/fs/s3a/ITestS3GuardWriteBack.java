@@ -65,11 +65,12 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
     // delete the existing directory (in case of last test failure)
     noS3Guard.delete(directory, true);
     // Create a directory on S3 only
-    noS3Guard.mkdirs(new Path(directory, "OnS3"));
+    Path onS3 = new Path(directory, "OnS3");
+    noS3Guard.mkdirs(onS3);
     // Create a directory on both S3 and metadata store
-    Path p = new Path(directory, "OnS3AndMS");
-    ContractTestUtils.assertPathDoesNotExist(noWriteBack, "path", p);
-    noWriteBack.mkdirs(p);
+    Path onS3AndMS = new Path(directory, "OnS3AndMS");
+    ContractTestUtils.assertPathDoesNotExist(noWriteBack, "path", onS3AndMS);
+    noWriteBack.mkdirs(onS3AndMS);
 
     FileStatus[] fsResults;
     DirListingMetadata mdResults;
@@ -83,6 +84,8 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
     // Metadata store without write-back should still only contain /OnS3AndMS,
     // because newly discovered /OnS3 is not written back to metadata store
     mdResults = noWriteBack.getMetadataStore().listChildren(directory);
+    assertNotNull("No results from noWriteBack listChildren " + directory,
+        mdResults);
     assertEquals("Metadata store without write back should still only know "
             + "about /OnS3AndMS, but it has: " + mdResults,
         1, mdResults.numEntries());
@@ -102,8 +105,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
 
     // If we don't clean this up, the next test run will fail because it will
     // have recorded /OnS3 being deleted even after it's written to noS3Guard.
-    getFileSystem().getMetadataStore().forgetMetadata(
-        new Path(directory, "OnS3"));
+    getFileSystem().getMetadataStore().forgetMetadata(onS3);
   }
 
   /**
@@ -118,26 +120,33 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
 
     // Create a FileSystem that is S3-backed only
     conf = createConfiguration();
-    S3ATestUtils.disableFilesystemCaching(conf);
     String host = fsURI.getHost();
-    if (disableS3Guard) {
-      conf.set(Constants.S3_METADATA_STORE_IMPL,
-          Constants.S3GUARD_METASTORE_NULL);
-      S3AUtils.setBucketOption(conf, host,
-          S3_METADATA_STORE_IMPL,
-          S3GUARD_METASTORE_NULL);
-    } else {
-      S3ATestUtils.maybeEnableS3Guard(conf);
-      conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMeta);
-      S3AUtils.setBucketOption(conf, host,
-          METADATASTORE_AUTHORITATIVE,
-          Boolean.toString(authoritativeMeta));
-      S3AUtils.setBucketOption(conf, host,
-          S3_METADATA_STORE_IMPL,
-          conf.get(S3_METADATA_STORE_IMPL));
+    String metastore;
+
+    metastore = S3GUARD_METASTORE_NULL;
+    if (!disableS3Guard) {
+      // pick up the metadata store used by the main test
+      metastore = getFileSystem().getConf().get(S3_METADATA_STORE_IMPL);
+      assertNotEquals(S3GUARD_METASTORE_NULL, metastore);
     }
-    FileSystem fs = FileSystem.get(fsURI, conf);
-    return asS3AFS(fs);
+
+    conf.set(Constants.S3_METADATA_STORE_IMPL, metastore);
+    conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+    S3AUtils.setBucketOption(conf, host,
+        METADATASTORE_AUTHORITATIVE,
+        Boolean.toString(authoritativeMeta));
+    S3AUtils.setBucketOption(conf, host,
+        S3_METADATA_STORE_IMPL, metastore);
+
+    S3AFileSystem fs = asS3AFS(FileSystem.newInstance(fsURI, conf));
+    // do a check to verify that everything got through
+    assertEquals("Metadata store should have been disabled: " + fs,
+        disableS3Guard, !fs.hasMetadataStore());
+    assertEquals("metastore option did not propagate",
+        metastore, fs.getConf().get(S3_METADATA_STORE_IMPL));
+
+    return fs;
+
   }
 
   private static S3AFileSystem asS3AFS(FileSystem fs) {

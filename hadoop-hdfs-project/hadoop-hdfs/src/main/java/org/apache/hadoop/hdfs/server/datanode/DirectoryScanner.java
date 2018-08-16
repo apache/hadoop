@@ -450,7 +450,7 @@ public class DirectoryScanner implements Runnable {
           if (d < blockpoolReport.length) {
             // There may be multiple on-disk records for the same block, don't increment
             // the memory record pointer if so.
-            ScanInfo nextInfo = blockpoolReport[Math.min(d, blockpoolReport.length - 1)];
+            ScanInfo nextInfo = blockpoolReport[d];
             if (nextInfo.getBlockId() != info.getBlockId()) {
               ++m;
             }

@@ -468,6 +468,10 @@
       <Bug pattern="DC_DOUBLECHECK" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider"/>
+    <Bug pattern="DC_DOUBLECHECK" />
+  </Match>
   <!-- ApplicationClassLoader is deprecated and moved to hadoop-common; ignore
        warning on the identical name as it should be removed later -->
   <Match>

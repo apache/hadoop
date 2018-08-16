@@ -573,15 +573,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       return handleExitCode(e, container, containerId);
     } finally {
       resourcesHandler.postExecute(containerId);
-
-      try {
-        if (resourceHandlerChain != null) {
-          resourceHandlerChain.postComplete(containerId);
-        }
-      } catch (ResourceHandlerException e) {
-        LOG.warn("ResourceHandlerChain.postComplete failed for " +
-            "containerId: " + containerId + ". Exception: " + e);
-      }
+      postComplete(containerId);
     }
 
     return 0;
@@ -721,14 +713,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       return super.reacquireContainer(ctx);
     } finally {
       resourcesHandler.postExecute(containerId);
-      if (resourceHandlerChain != null) {
-        try {
-          resourceHandlerChain.postComplete(containerId);
-        } catch (ResourceHandlerException e) {
-          LOG.warn("ResourceHandlerChain.postComplete failed for " +
-              "containerId: " + containerId + " Exception: " + e);
-        }
-      }
+      postComplete(containerId);
     }
   }
 
@@ -798,6 +783,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       logOutput(e.getOutput());
       throw new IOException("Error in reaping container "
           + container.getContainerId().toString() + " exit = " + retCode, e);
+    } finally {
+      postComplete(container.getContainerId());
     }
     return true;
   }
@@ -957,15 +944,28 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       PrivilegedOperationExecutor privOpExecutor =
           PrivilegedOperationExecutor.getInstance(super.getConf());
       if (DockerCommandExecutor.isRemovable(
-          DockerCommandExecutor.getContainerStatus(containerId,
-              super.getConf(), privOpExecutor, nmContext))) {
+          DockerCommandExecutor.getContainerStatus(containerId, privOpExecutor,
+              nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            null, super.getConf(), privOpExecutor, false, nmContext);
+            null, privOpExecutor, false, nmContext);
       }
     } catch (ContainerExecutionException e) {
       LOG.warn("Unable to remove docker container: " + containerId);
+    }
+  }
+
+  @VisibleForTesting
+  void postComplete(final ContainerId containerId) {
+    try {
+      if (resourceHandlerChain != null) {
+        LOG.debug("{} post complete", containerId);
+        resourceHandlerChain.postComplete(containerId);
+      }
+    } catch (ResourceHandlerException e) {
+      LOG.warn("ResourceHandlerChain.postComplete failed for " +
+          "containerId: {}. Exception: ", containerId, e);
     }
   }
 }

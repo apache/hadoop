@@ -23,7 +23,6 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.AbstractProviderService;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
@@ -38,34 +37,38 @@ import java.util.Map;
 public class DockerProviderService extends AbstractProviderService
     implements DockerKeys {
 
+  @Override
   public void processArtifact(AbstractLauncher launcher,
       ComponentInstance compInstance, SliderFileSystem fileSystem,
-      Service service) throws IOException{
+      Service service, ContainerLaunchService.ComponentLaunchContext
+      compLaunchCtx) throws IOException{
     launcher.setYarnDockerMode(true);
-    launcher.setDockerImage(compInstance.getCompSpec().getArtifact().getId());
-    launcher.setDockerNetwork(compInstance.getCompSpec().getConfiguration()
+    launcher.setDockerImage(compLaunchCtx.getArtifact().getId());
+    launcher.setDockerNetwork(compLaunchCtx.getConfiguration()
         .getProperty(DOCKER_NETWORK));
     launcher.setDockerHostname(compInstance.getHostname());
     launcher.setRunPrivilegedContainer(
-        compInstance.getCompSpec().getRunPrivilegedContainer());
+        compLaunchCtx.isRunPrivilegedContainer());
   }
 
   /**
    * Check if system is default to disable docker override or
    * user requested a Docker container with ENTRY_POINT support.
    *
-   * @param component - YARN Service component
+   * @param compLaunchContext - launch context for the component.
    * @return true if Docker launch command override is disabled
    */
-  private boolean checkUseEntryPoint(Component component) {
+  private boolean checkUseEntryPoint(
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext) {
     boolean overrideDisable = false;
     String overrideDisableKey = Environment.
         YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.
             name();
-    String overrideDisableValue = (component
-        .getConfiguration().getEnv(overrideDisableKey) != null) ?
-            component.getConfiguration().getEnv(overrideDisableKey) :
-                System.getenv(overrideDisableKey);
+    String overrideDisableValue = (
+        compLaunchContext.getConfiguration().getEnv(overrideDisableKey)
+            != null) ?
+            compLaunchContext.getConfiguration().getEnv(
+                overrideDisableKey) : System.getenv(overrideDisableKey);
     overrideDisable = Boolean.parseBoolean(overrideDisableValue);
     return overrideDisable;
   }
@@ -77,10 +80,9 @@ public class DockerProviderService extends AbstractProviderService
       ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       Map<String, String> tokensForSubstitution)
           throws IOException, SliderException {
-    Component component = instance.getComponent().getComponentSpec();
-    boolean useEntryPoint = checkUseEntryPoint(component);
+    boolean useEntryPoint = checkUseEntryPoint(compLaunchContext);
     if (useEntryPoint) {
-      String launchCommand = component.getLaunchCommand();
+      String launchCommand = compLaunchContext.getLaunchCommand();
       if (!StringUtils.isEmpty(launchCommand)) {
         launcher.addCommand(launchCommand);
       }

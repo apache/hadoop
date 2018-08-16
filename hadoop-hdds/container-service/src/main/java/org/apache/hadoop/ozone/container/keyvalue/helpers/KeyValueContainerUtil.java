@@ -18,23 +18,16 @@
 package org.apache.hadoop.ozone.container.keyvalue.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
@@ -43,17 +36,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
-
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.*;
 
 /**
  * Class which defines utility methods for KeyValueContainer.
@@ -77,10 +64,8 @@ public final class KeyValueContainerUtil {
    * @throws IOException
    */
   public static void createContainerMetaData(File containerMetaDataPath, File
-      chunksPath, File dbFile, String containerName, Configuration conf) throws
-      IOException {
+      chunksPath, File dbFile, Configuration conf) throws IOException {
     Preconditions.checkNotNull(containerMetaDataPath);
-    Preconditions.checkNotNull(containerName);
     Preconditions.checkNotNull(conf);
 
     if (!containerMetaDataPath.mkdirs()) {
@@ -166,106 +151,31 @@ public final class KeyValueContainerUtil {
   }
 
   /**
-   * Compute checksum of the .container file.
-   * @param containerId
-   * @param containerFile
-   * @throws StorageContainerException
-   */
-  public static String computeCheckSum(long containerId, File
-      containerFile) throws StorageContainerException {
-    Preconditions.checkNotNull(containerFile, "containerFile cannot be null");
-    MessageDigest sha;
-    FileInputStream containerFileStream = null;
-    try {
-      sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
-    } catch (NoSuchAlgorithmException e) {
-      throw new StorageContainerException("Unable to create Message Digest, " +
-          "usually this is a java configuration issue.", NO_SUCH_ALGORITHM);
-    }
-    try {
-      containerFileStream = new FileInputStream(containerFile);
-      byte[] byteArray = new byte[1024];
-      int bytesCount = 0;
-      while ((bytesCount = containerFileStream.read(byteArray)) != -1) {
-        sha.update(byteArray, 0, bytesCount);
-      }
-      String checksum = DigestUtils.sha256Hex(sha.digest());
-      return checksum;
-    } catch (IOException ex) {
-      throw new StorageContainerException("Error during computing checksum: " +
-          "for container " + containerId, ex, CONTAINER_CHECKSUM_ERROR);
-    } finally {
-      IOUtils.closeStream(containerFileStream);
-    }
-  }
-
-  /**
-   * Verify checksum of the container.
-   * @param containerId
-   * @param checksumFile
-   * @param checksum
-   * @throws StorageContainerException
-   */
-  public static void verifyCheckSum(long containerId, File checksumFile,
-                                    String checksum)
-      throws StorageContainerException {
-    try {
-      Preconditions.checkNotNull(checksum);
-      Preconditions.checkNotNull(checksumFile);
-      Path path = Paths.get(checksumFile.getAbsolutePath());
-      List<String> fileCheckSum = Files.readAllLines(path);
-      Preconditions.checkState(fileCheckSum.size() == 1, "checksum " +
-          "should be 32 byte string");
-      if (!checksum.equals(fileCheckSum.get(0))) {
-        LOG.error("Checksum mismatch for the container {}", containerId);
-        throw new StorageContainerException("Checksum mismatch for " +
-            "the container " + containerId, CHECKSUM_MISMATCH);
-      }
-    } catch (StorageContainerException ex) {
-      throw ex;
-    } catch (IOException ex) {
-      LOG.error("Error during verify checksum for container {}", containerId);
-      throw new StorageContainerException("Error during verify checksum" +
-          " for container " + containerId, IO_EXCEPTION);
-    }
-  }
-
-  /**
    * Parse KeyValueContainerData and verify checksum.
-   * @param containerData
-   * @param containerFile
-   * @param checksumFile
-   * @param dbFile
+   * @param kvContainerData
    * @param config
    * @throws IOException
    */
-  public static void parseKeyValueContainerData(
-      KeyValueContainerData containerData, File containerFile, File
-      checksumFile, File dbFile, OzoneConfiguration config) throws IOException {
+  public static void parseKVContainerData(KeyValueContainerData kvContainerData,
+      OzoneConfiguration config) throws IOException {
 
-    Preconditions.checkNotNull(containerData, "containerData cannot be null");
-    Preconditions.checkNotNull(containerFile, "containerFile cannot be null");
-    Preconditions.checkNotNull(checksumFile, "checksumFile cannot be null");
-    Preconditions.checkNotNull(dbFile, "dbFile cannot be null");
-    Preconditions.checkNotNull(config, "ozone config cannot be null");
-
-    long containerId = containerData.getContainerID();
-    String containerName = String.valueOf(containerId);
-    File metadataPath = new File(containerData.getMetadataPath());
-
-    Preconditions.checkNotNull(containerName, "container Name cannot be " +
-        "null");
-    Preconditions.checkNotNull(metadataPath, "metadata path cannot be " +
-        "null");
+    long containerID = kvContainerData.getContainerID();
+    File metadataPath = new File(kvContainerData.getMetadataPath());
 
     // Verify Checksum
-    String checksum = KeyValueContainerUtil.computeCheckSum(
-        containerData.getContainerID(), containerFile);
-    KeyValueContainerUtil.verifyCheckSum(containerId, checksumFile, checksum);
+    ContainerUtils.verifyChecksum(kvContainerData);
 
-    containerData.setDbFile(dbFile);
+    File dbFile = KeyValueContainerLocationUtil.getContainerDBFile(
+        metadataPath, containerID);
+    if (!dbFile.exists()) {
+      LOG.error("Container DB file is missing for ContainerID {}. " +
+          "Skipping loading of this container.", containerID);
+      // Don't further process this container, as it is missing db file.
+      return;
+    }
+    kvContainerData.setDbFile(dbFile);
 
-    MetadataStore metadata = KeyUtils.getDB(containerData, config);
+    MetadataStore metadata = KeyUtils.getDB(kvContainerData, config);
     long bytesUsed = 0;
     List<Map.Entry<byte[], byte[]>> liveKeys = metadata
         .getRangeKVs(null, Integer.MAX_VALUE,
@@ -279,8 +189,8 @@ public final class KeyValueContainerUtil {
         return 0L;
       }
     }).sum();
-    containerData.setBytesUsed(bytesUsed);
-    containerData.setKeyCount(liveKeys.size());
+    kvContainerData.setBytesUsed(bytesUsed);
+    kvContainerData.setKeyCount(liveKeys.size());
   }
 
   /**

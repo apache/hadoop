@@ -23,11 +23,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
+import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
@@ -38,10 +41,12 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
+import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
@@ -53,6 +58,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -85,6 +91,7 @@ public class ContainerMapping implements Mapping {
   private final LeaseManager<ContainerInfo> containerLeaseManager;
   private final float containerCloseThreshold;
   private final ContainerCloser closer;
+  private final EventPublisher eventPublisher;
   private final long size;
 
   /**
@@ -104,7 +111,7 @@ public class ContainerMapping implements Mapping {
   @SuppressWarnings("unchecked")
   public ContainerMapping(
       final Configuration conf, final NodeManager nodeManager, final int
-      cacheSizeMB) throws IOException {
+      cacheSizeMB, EventPublisher eventPublisher) throws IOException {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
     this.closer = new ContainerCloser(nodeManager, conf);
@@ -122,25 +129,27 @@ public class ContainerMapping implements Mapping {
 
     this.lock = new ReentrantLock();
 
-    this.pipelineSelector = new PipelineSelector(nodeManager, conf);
-
     // To be replaced with code getStorageSize once it is committed.
     size = conf.getLong(OZONE_SCM_CONTAINER_SIZE_GB,
         OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024 * 1024 * 1024;
     this.containerStateManager =
         new ContainerStateManager(conf, this);
+    LOG.trace("Container State Manager created.");
+
+    this.pipelineSelector = new PipelineSelector(nodeManager,
+        containerStateManager, conf, eventPublisher);
 
     this.containerCloseThreshold = conf.getFloat(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
-    LOG.trace("Container State Manager created.");
+    this.eventPublisher = eventPublisher;
 
     long containerCreationLeaseTimeout = conf.getTimeDuration(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT,
         TimeUnit.MILLISECONDS);
-    LOG.trace("Starting Container Lease Manager.");
-    containerLeaseManager = new LeaseManager<>(containerCreationLeaseTimeout);
+    containerLeaseManager = new LeaseManager<>("ContainerCreation",
+        containerCreationLeaseTimeout);
     containerLeaseManager.start();
   }
 
@@ -193,14 +202,25 @@ public class ContainerMapping implements Mapping {
       HddsProtos.SCMContainerInfo temp = HddsProtos.SCMContainerInfo.PARSER
           .parseFrom(containerBytes);
       contInfo = ContainerInfo.fromProtobuf(temp);
-      Pipeline pipeline = pipelineSelector
-          .getPipeline(contInfo.getPipelineName(),
-              contInfo.getReplicationType());
 
-      if(pipeline == null) {
-        pipeline = pipelineSelector
-            .getReplicationPipeline(contInfo.getReplicationType(),
-                contInfo.getReplicationFactor());
+      Pipeline pipeline;
+      if (contInfo.isContainerOpen()) {
+        // If pipeline with given pipeline Id already exist return it
+        pipeline = pipelineSelector.getPipeline(contInfo.getPipelineID(),
+            contInfo.getReplicationType());
+        if (pipeline == null) {
+          pipeline = pipelineSelector
+              .getReplicationPipeline(contInfo.getReplicationType(),
+                  contInfo.getReplicationFactor());
+        }
+      } else {
+        // For close containers create pipeline from datanodes with replicas
+        Set<DatanodeDetails> dnWithReplicas = containerStateManager
+            .getContainerReplicas(contInfo.containerID());
+        pipeline = new Pipeline(dnWithReplicas.iterator().next().getHostName(),
+            contInfo.getState(), ReplicationType.STAND_ALONE,
+            contInfo.getReplicationFactor(), PipelineID.randomId());
+        dnWithReplicas.forEach(pipeline::addMember);
       }
       return new ContainerWithPipeline(contInfo, pipeline);
     } finally {
@@ -372,6 +392,12 @@ public class ContainerMapping implements Mapping {
       // Like releasing the lease in case of BEGIN_CREATE.
       ContainerInfo updatedContainer = containerStateManager
           .updateContainerState(containerInfo, event);
+      if (!updatedContainer.isContainerOpen()) {
+        Pipeline pipeline = pipelineSelector
+            .getPipeline(containerInfo.getPipelineID(),
+                containerInfo.getReplicationType());
+        pipelineSelector.closePipelineIfNoOpenContainers(pipeline);
+      }
       containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
       return updatedContainer.getState();
     } catch (LeaseException e) {
@@ -390,8 +416,13 @@ public class ContainerMapping implements Mapping {
    */
   public void updateDeleteTransactionId(Map<Long, Long> deleteTransactionMap)
       throws IOException {
+    if (deleteTransactionMap == null) {
+      return;
+    }
+
     lock.lock();
     try {
+      BatchOperation batch = new BatchOperation();
       for (Map.Entry<Long, Long> entry : deleteTransactionMap.entrySet()) {
         long containerID = entry.getKey();
         byte[] dbKey = Longs.toByteArray(containerID);
@@ -405,10 +436,11 @@ public class ContainerMapping implements Mapping {
         ContainerInfo containerInfo = ContainerInfo.fromProtobuf(
             HddsProtos.SCMContainerInfo.parseFrom(containerBytes));
         containerInfo.updateDeleteTransactionId(entry.getValue());
-        containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
-        containerStateManager
-            .updateDeleteTransactionId(containerID, entry.getValue());
+        batch.put(dbKey, containerInfo.getProtobuf().toByteArray());
       }
+      containerStore.writeBatch(batch);
+      containerStateManager
+          .updateDeleteTransactionId(deleteTransactionMap);
     } finally {
       lock.unlock();
     }
@@ -443,10 +475,10 @@ public class ContainerMapping implements Mapping {
       return null;
     }
     Pipeline pipeline = pipelineSelector
-        .getPipeline(containerInfo.getPipelineName(),
+        .getPipeline(containerInfo.getPipelineID(),
             containerInfo.getReplicationType());
     if (pipeline == null) {
-      pipelineSelector
+      pipeline = pipelineSelector
           .getReplicationPipeline(containerInfo.getReplicationType(),
               containerInfo.getReplicationFactor());
     }
@@ -476,7 +508,8 @@ public class ContainerMapping implements Mapping {
       throws IOException {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
-
+    PendingDeleteStatusList pendingDeleteStatusList =
+        new PendingDeleteStatusList(datanodeDetails);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
       byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
@@ -490,6 +523,14 @@ public class ContainerMapping implements Mapping {
           HddsProtos.SCMContainerInfo newState =
               reconcileState(datanodeState, knownState, datanodeDetails);
 
+          if (knownState.getDeleteTransactionId() > datanodeState
+              .getDeleteTransactionId()) {
+            pendingDeleteStatusList
+                .addPendingDeleteStatus(datanodeState.getDeleteTransactionId(),
+                    knownState.getDeleteTransactionId(),
+                    knownState.getContainerID());
+          }
+
           // FIX ME: This can be optimized, we write twice to memory, where a
           // single write would work well.
           //
@@ -499,7 +540,8 @@ public class ContainerMapping implements Mapping {
 
           // If the container is closed, then state is already written to SCM
           Pipeline pipeline =
-              pipelineSelector.getPipeline(newState.getPipelineName(),
+              pipelineSelector.getPipeline(
+                  PipelineID.getFromProtobuf(newState.getPipelineID()),
                   newState.getReplicationType());
           if(pipeline == null) {
             pipeline = pipelineSelector
@@ -521,6 +563,11 @@ public class ContainerMapping implements Mapping {
         lock.unlock();
       }
     }
+    if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
+      eventPublisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
+          pendingDeleteStatusList);
+    }
+
   }
 
   /**
@@ -537,7 +584,7 @@ public class ContainerMapping implements Mapping {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
     builder.setContainerID(knownState.getContainerID())
-        .setPipelineName(knownState.getPipelineName())
+        .setPipelineID(knownState.getPipelineID())
         .setReplicationType(knownState.getReplicationType())
         .setReplicationFactor(knownState.getReplicationFactor());
 
@@ -692,7 +739,7 @@ public class ContainerMapping implements Mapping {
               .setAllocatedBytes(info.getAllocatedBytes())
               .setNumberOfKeys(oldInfo.getNumberOfKeys())
               .setOwner(oldInfo.getOwner())
-              .setPipelineName(oldInfo.getPipelineName())
+              .setPipelineID(oldInfo.getPipelineID())
               .setState(oldInfo.getState())
               .setUsedBytes(oldInfo.getUsedBytes())
               .setDeleteTransactionId(oldInfo.getDeleteTransactionId())

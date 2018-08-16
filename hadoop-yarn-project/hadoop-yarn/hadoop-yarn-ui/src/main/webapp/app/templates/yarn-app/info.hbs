@@ -58,12 +58,20 @@
 {{#unless model.serviceName}}
   <div class="col-md-12">
     <div class="panel panel-default">
-      <div class="panel-heading">Outstanding Resource Requests</div>
+      <div class="panel-heading">
+        Outstanding Resource Requests
+        {{#if totalOutstandingResourceRequests}}
+          <span class="pull-right">
+            Total: &lt;Memory: {{totalOutstandingResourceRequests.memory}},
+              vCores: {{totalOutstandingResourceRequests.vCores}}&gt;
+          </span>
+        {{/if}}
+      </div>
       <table class="display table table-striped table-bordered"
             cellspacing="0" width="100%">
         <thead>
         <tr>
-          <th>Scheduler Key</th>
+          <th>Priority</th>
           <th>Resource Name</th>
           <th>Capability</th>
           <th># Containers</th>
@@ -76,7 +84,8 @@
           <tr>
             <td>{{request.priority}}</td>
             <td>{{request.resourceName}}</td>
-            <td>&lt;Memory:{{request.capability.memory}};vCores:{{request.capability.virtualCores}}&gt;</td>
+            <td>&lt;Memory: {{request.capability.resourceInformations.resourceInformation.[0].value}},
+              vCores: {{request.capability.resourceInformations.resourceInformation.[1].value}}&gt;</td>
             <td>{{request.numContainers}}</td>
             <td>{{request.relaxLocality}}</td>
             <td>
@@ -88,7 +97,9 @@
             </td>
           </tr>
         {{else}}
-          <div class="panel-body">No data available!</div>
+          <tr>
+            <td class="text-center" colspan="6">No data available!</td>
+          </tr>
         {{/each}}
         </tbody>
       </table>

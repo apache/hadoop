@@ -156,16 +156,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>webapps/static/angular-1.6.4.min.js</exclude>
             <exclude>webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>static/OzoneOverview.svg</exclude>
-            <exclude>themes/ozonedoc/static/js/jquery.min.js</exclude>
-            <exclude>themes/ozonedoc/static/js/bootstrap.min.js</exclude>
-            <exclude>themes/ozonedoc/static/css/bootstrap.min.css</exclude>
-            <exclude>themes/ozonedoc/static/css/bootstrap.min.css.map</exclude>
-            <exclude>themes/ozonedoc/static/css/bootstrap-theme.min.css</exclude>
-            <exclude>themes/ozonedoc/static/css/bootstrap-theme.min.css.map</exclude>
-            <exclude>themes/ozonedoc/static/fonts/glyphicons-halflings-regular.svg</exclude>
-            <exclude>themes/ozonedoc/layouts/index.html</exclude>
-            <exclude>themes/ozonedoc/theme.toml</exclude>
           </excludes>
         </configuration>
       </plugin>

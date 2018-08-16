@@ -33,7 +33,7 @@ See also:
 * [Working with IAM Assumed Roles](./assumed_roles.html)
 * [Testing](./testing.html)
 
-##<a name="overview"></a> Overview
+## <a name="overview"></a> Overview
 
 Apache Hadoop's `hadoop-aws` module provides support for AWS integration.
 applications to easily use this support.
@@ -88,7 +88,7 @@ maintain it.
    This connector is no longer available: users must migrate to the newer `s3a:` client.
 
 
-##<a name="getting_started"></a> Getting Started
+## <a name="getting_started"></a> Getting Started
 
 S3A depends upon two JARs, alongside `hadoop-common` and its dependencies.
 
@@ -1698,6 +1698,6 @@ as configured by the value `fs.s3a.multipart.size`.
 To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
 
 ```bash
-hadoop distcp -update -skipcrccheck /user/alice/datasets s3a://alice-backup/datasets
+hadoop distcp -update -skipcrccheck -numListstatusThreads 40 /user/alice/datasets s3a://alice-backup/datasets
 ```
 

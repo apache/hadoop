@@ -1081,3 +1081,160 @@ thorough test, by switching to the credentials provider.
 The usual credentials needed to log in to the bucket will be used, but now
 the credentials used to interact with S3 and DynamoDB will be temporary
 role credentials, rather than the full credentials.
+
+## <a name="qualifiying_sdk_updates"></a> Qualifying an AWS SDK Update
+
+Updating the AWS SDK is something which does need to be done regularly,
+but is rarely without complications, major or minor.
+
+Assume that the version of the SDK will remain constant for an X.Y release,
+excluding security fixes, so it's good to have an update before each release
+&mdash; as long as that update works doesn't trigger any regressions.
+
+
+1. Don't make this a last minute action.
+1. The upgrade patch should focus purely on the SDK update, so it can be cherry
+picked and reverted easily.
+1. Do not mix in an SDK update with any other piece of work, for the same reason.
+1. Plan for an afternoon's work, including before/after testing, log analysis
+and any manual tests.
+1. Make sure all the integration tests are running (including s3guard, ARN, encryption, scale)
+  *before you start the upgrade*.
+1. Create a JIRA for updating the SDK. Don't include the version (yet),
+as it may take a couple of SDK updates before it is ready.
+1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
+1. Create a private git branch of trunk for JIRA, and in
+  `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
+1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamodb` options.
+  This includes the `-Pscale` set, with a role defined for the assumed role tests.
+  in `fs.s3a.assumed.role.arn` for testing assumed roles,
+  and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
+  If you can, scale up the scale tests.
+1. Create the site with `mvn site -DskipTests`; look in `target/site` for the report.
+1. Review *every single `-output.txt` file in `hadoop-tools/hadoop-aws/target/failsafe-reports`,
+  paying particular attention to
+  `org.apache.hadoop.fs.s3a.scale.ITestS3AInputStreamPerformance-output.txt`,
+  as that is where changes in stream close/abort logic will surface.
+1. Run `mvn install` to install the artifacts, then in
+  `hadoop-cloud-storage-project/hadoop-cloud-storage` run
+  `mvn dependency:tree -Dverbose > target/dependencies.txt`.
+  Examine the `target/dependencies.txt` file to verify that no new
+  artifacts have unintentionally been declared as dependencies
+  of the shaded `aws-java-sdk-bundle` artifact.
+
+### Basic command line regression testing
+
+We need a run through of the CLI to see if there have been changes there
+which cause problems, especially whether new log messages have surfaced,
+or whether some packaging change breaks that CLI
+
+From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
+
+1. Change into the `hadoop/dist/target/hadoop-x.y.z-SNAPSHOT` dir.
+1. Copy a `core-site.xml` file into `etc/hadoop`.
+1. Set the `HADOOP_OPTIONAL_TOOLS` env var on the command line or `~/.hadoop-env`.
+
+```bash
+export HADOOP_OPTIONAL_TOOLS="hadoop-aws"
+```
+
+Run some basic s3guard commands as well as file operations.
+
+```bash
+export BUCKET=s3a://example-bucket-name
+
+bin/hadoop s3guard bucket-info $BUCKET
+bin/hadoop s3guard set-capacity $BUCKET
+bin/hadoop s3guard set-capacity -read 15 -write 15 $BUCKET
+bin/hadoop s3guard uploads $BUCKET
+bin/hadoop s3guard diff $BUCKET/
+bin/hadoop s3guard prune -minutes 10 $BUCKET/
+bin/hadoop s3guard import $BUCKET/
+bin/hadoop fs -ls $BUCKET/
+bin/hadoop fs -ls $BUCKET/file
+bin/hadoop fs -rm -R -f $BUCKET/dir-no-trailing
+bin/hadoop fs -rm -R -f $BUCKET/dir-trailing/
+bin/hadoop fs -rm $BUCKET/
+bin/hadoop fs -touchz $BUCKET/file
+# expect I/O error as root dir is not empty
+bin/hadoop fs -rm -r $BUCKET/
+bin/hadoop fs -rm -r $BUCKET/\*
+# now success
+bin/hadoop fs -rm -r $BUCKET/
+
+bin/hadoop fs -mkdir $BUCKET/dir-no-trailing
+# fails with S3Guard
+bin/hadoop fs -mkdir $BUCKET/dir-trailing/
+bin/hadoop fs -touchz $BUCKET/file
+bin/hadoop fs -ls $BUCKET/
+bin/hadoop fs -mv $BUCKET/file $BUCKET/file2
+# expect "No such file or directory"
+bin/hadoop fs -stat $BUCKET/file
+bin/hadoop fs -stat $BUCKET/file2
+bin/hadoop fs -mv $BUCKET/file2 $BUCKET/dir-no-trailing
+bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2
+# treated the same as the file stat
+bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2/
+bin/hadoop fs -ls $BUCKET/dir-no-trailing/file2/
+bin/hadoop fs -ls $BUCKET/dir-no-trailing
+# expect a "0" here:
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing && echo $?
+# expect a "1" here:
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 && echo $?
+# will return NONE unless bucket has checksums enabled
+bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
+# expect "etag" + a long string
+bin/hadoop fs -D fs.s3a.etag.checksum.enabled=true -checksum $BUCKET/dir-no-trailing/file2
+```
+
+### Other tests
+
+* Whatever applications you have which use S3A: build and run them before the upgrade,
+Then see if complete successfully in roughly the same time once the upgrade is applied.
+* Test any third-party endpoints you have access to.
+* Try different regions (especially a v4 only region), and encryption settings.
+* Any performance tests you have can identify slowdowns, which can be a sign
+  of changed behavior in the SDK (especially on stream reads and writes).
+* If you can, try to test in an environment where a proxy is needed to talk
+to AWS services.
+* Try and get other people, especially anyone with their own endpoints,
+  apps or different deployment environments, to run their own tests.
+
+### Dealing with Deprecated APIs and New Features
+
+A Jenkins run should tell you if there are new deprecations.
+If so, you should think about how to deal with them.
+
+Moving to methods and APIs which weren't in the previous SDK release makes it
+harder to roll back if there is a problem; but there may be good reasons
+for the deprecation.
+
+At the same time, there may be good reasons for staying with the old code.
+
+* AWS have embraced the builder pattern for new operations; note that objects
+constructed this way often have their (existing) setter methods disabled; this
+may break existing code.
+* New versions of S3 calls (list v2, bucket existence checks, bulk operations)
+may be better than the previous HTTP operations & APIs, but they may not work with
+third-party endpoints, so can only be adopted if made optional, which then
+adds a new configuration option (with docs, testing, ...). A change like that
+must be done in its own patch, with its new tests which compare the old
+vs new operations.
+
+### Committing the patch
+
+When the patch is committed: update the JIRA to the version number actually
+used; use that title in the commit message.
+
+Be prepared to roll-back, re-iterate or code your way out of a regression.
+
+There may be some problem which surfaces with wider use, which can get
+fixed in a new AWS release, rolling back to an older one,
+or just worked around [HADOOP-14596](https://issues.apache.org/jira/browse/HADOOP-14596).
+
+Don't be surprised if this happens, don't worry too much, and,
+while that rollback option is there to be used, ideally try to work forwards.
+
+If the problem is with the SDK, file issues with the
+ [AWS SDK Bug tracker](https://github.com/aws/aws-sdk-java/issues).
+If the problem can be fixed or worked around in the Hadoop code, do it there too.

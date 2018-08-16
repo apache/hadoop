@@ -2490,4 +2490,16 @@ public class RouterRpcServer extends AbstractService
   public FederationRPCMetrics getRPCMetrics() {
     return this.rpcMonitor.getRPCMetrics();
   }
+
+  @Override
+  public void satisfyStoragePolicy(String path) throws IOException {
+    checkOperation(OperationCategory.WRITE, false);
+  }
+
+  @Override
+  public Long getNextSPSPath() throws IOException {
+    checkOperation(OperationCategory.READ, false);
+    // not supported
+    return null;
+  }
 }

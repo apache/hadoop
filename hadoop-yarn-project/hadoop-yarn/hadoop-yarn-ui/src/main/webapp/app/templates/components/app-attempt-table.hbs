@@ -62,5 +62,11 @@
       <td><a href="{{prepend-protocol attempt.logsLink}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
+    {{#if attempt.diagnosticsInfo}}
+    <tr>
+      <td>Diagnostics Info</td>
+      <td>{{attempt.diagnosticsInfo}}</td>
+    </tr>
+    {{/if}}
   </tbody>
 </table>

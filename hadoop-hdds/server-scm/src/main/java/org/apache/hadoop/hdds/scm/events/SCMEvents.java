@@ -20,14 +20,26 @@
 package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler.*;
+import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .CloseContainerStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .DeleteBlockCommandStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
+    .ReplicationStatus;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .ContainerActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .CommandStatusReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
+    .ReplicationCompleted;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
@@ -52,6 +64,13 @@ public final class SCMEvents {
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
 
+  /**
+   * ContainerActions are sent by Datanode. This event is received by
+   * SCMDatanodeHeartbeatDispatcher and CONTAINER_ACTIONS event is generated.
+   */
+  public static final TypedEvent<ContainerActionsFromDatanode>
+      CONTAINER_ACTIONS = new TypedEvent<>(ContainerActionsFromDatanode.class,
+      "Container_Actions");
   /**
    * A Command status report will be sent by datanodes. This repoort is received
    * by SCMDatanodeHeartbeatDispatcher and CommandReport event is generated.
@@ -127,6 +146,50 @@ public final class SCMEvents {
       DELETE_BLOCK_STATUS =
       new TypedEvent(DeleteBlockCommandStatus.class,
           "DeleteBlockCommandStatus");
+
+  /**
+   * This event will be triggered while processing container reports from DN
+   * when deleteTransactionID of container in report mismatches with the
+   * deleteTransactionID on SCM.
+   */
+  public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
+      new TypedEvent(PendingDeleteStatusList.class, "PendingDeleteStatus");
+
+  /**
+   * This is the command for ReplicationManager to handle under/over
+   * replication. Sent by the ContainerReportHandler after processing the
+   * heartbeat.
+   */
+  public static final TypedEvent<ReplicationRequest> REPLICATE_CONTAINER =
+      new TypedEvent<>(ReplicationRequest.class);
+
+  /**
+   * This event is sent by the ReplicaManager to the
+   * ReplicationCommandWatcher to track the in-progress replication.
+   */
+  public static final TypedEvent<ReplicationManager.ReplicationRequestToRepeat>
+      TRACK_REPLICATE_COMMAND =
+      new TypedEvent<>(ReplicationManager.ReplicationRequestToRepeat.class);
+  /**
+   * This event comes from the Heartbeat dispatcher (in fact from the
+   * datanode) to notify the scm that the replication is done. This is
+   * received by the replicate command watcher to mark in-progress task as
+   * finished.
+    <p>
+   * TODO: Temporary event, should be replaced by specific Heartbeat
+   * ActionRequred event.
+   */
+  public static final TypedEvent<ReplicationCompleted> REPLICATION_COMPLETE =
+      new TypedEvent<>(ReplicationCompleted.class);
+
+  /**
+   * Signal for all the components (but especially for the replication
+   * manager and container report handler) that the replication could be
+   * started. Should be send only if (almost) all the container state are
+   * available from the datanodes.
+   */
+  public static final TypedEvent<Boolean> START_REPLICATION =
+      new TypedEvent<>(Boolean.class);
 
   /**
    * Private Ctor. Never Constructed.

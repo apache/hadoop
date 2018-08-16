@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doNothing;
@@ -31,6 +32,8 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService
+        .RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.junit.After;
 import org.junit.Before;
@@ -71,6 +74,13 @@ public class TestContainerSchedulerRecovery {
 
   private ContainerScheduler spy;
 
+  private RecoveredContainerState createRecoveredContainerState(
+      RecoveredContainerStatus status) {
+    RecoveredContainerState mockState = mock(RecoveredContainerState.class);
+    when(mockState.getStatus()).thenReturn(status);
+    return mockState;
+  }
+
   @Before public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     spy = spy(tempContainerScheduler);
@@ -94,7 +104,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.QUEUED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.QUEUED);
     when(token.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -113,7 +124,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.QUEUED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.QUEUED);
     when(token.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -132,7 +144,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.PAUSED;
+    RecoveredContainerState rcs =
+        createRecoveredContainerState(RecoveredContainerStatus.PAUSED);
     when(token.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -151,7 +164,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.PAUSED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.PAUSED);
     when(token.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -170,7 +184,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.LAUNCHED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.LAUNCHED);
     when(token.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -189,7 +204,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.LAUNCHED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.LAUNCHED);
     when(token.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -208,7 +224,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.REQUESTED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.REQUESTED);
     when(token.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -227,7 +244,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.REQUESTED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.REQUESTED);
     when(token.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -246,7 +264,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.COMPLETED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.COMPLETED);
     when(token.getExecutionType()).thenReturn(ExecutionType.GUARANTEED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -265,7 +284,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.COMPLETED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.COMPLETED);
     when(token.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
@@ -284,7 +304,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.QUEUED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.QUEUED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
@@ -302,7 +323,8 @@ public class TestContainerSchedulerRecovery {
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());
     assertEquals(0, spy.getNumQueuedOpportunisticContainers());
     assertEquals(0, spy.getNumRunningContainers());
-    RecoveredContainerStatus rcs = RecoveredContainerStatus.PAUSED;
+    RecoveredContainerState rcs =
+            createRecoveredContainerState(RecoveredContainerStatus.PAUSED);
     when(container.getContainerTokenIdentifier()).thenReturn(token);
     spy.recoverActiveContainer(container, rcs);
     assertEquals(0, spy.getNumQueuedGuaranteedContainers());

@@ -721,6 +721,14 @@ public class TestDFSShell {
       assertTrue(" -mkdir returned this is a file ",
           (returned.lastIndexOf("not a directory") != -1));
       out.reset();
+      argv[0] = "-mkdir";
+      argv[1] = "/testParent/testChild";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertEquals(" -mkdir returned 1", 1, ret);
+      assertTrue(" -mkdir returned there is No file or directory but has testChild in the path",
+          (returned.lastIndexOf("testChild") == -1));
+      out.reset();
       argv = new String[3];
       argv[0] = "-mv";
       argv[1] = "/testfile";

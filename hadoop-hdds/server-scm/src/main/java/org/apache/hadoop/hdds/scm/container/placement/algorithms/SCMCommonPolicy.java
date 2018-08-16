@@ -95,16 +95,20 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * 3. if a set of containers are requested, we either meet the required
    * number of nodes or we fail that request.
    *
+   *
+   * @param excludedNodes - datanodes with existing replicas
    * @param nodesRequired - number of datanodes required.
    * @param sizeRequired - size required for the container or block.
    * @return list of datanodes chosen.
    * @throws SCMException SCM exception.
    */
 
-  public List<DatanodeDetails> chooseDatanodes(int nodesRequired, final long
-      sizeRequired) throws SCMException {
+  public List<DatanodeDetails> chooseDatanodes(
+      List<DatanodeDetails> excludedNodes,
+      int nodesRequired, final long sizeRequired) throws SCMException {
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
+    healthyNodes.removeAll(excludedNodes);
     String msg;
     if (healthyNodes.size() == 0) {
       msg = "No healthy node found to allocate container.";

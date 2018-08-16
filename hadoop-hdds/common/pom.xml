@@ -29,10 +29,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>jar</packaging>
 
   <properties>
+    <hdds.version>0.2.1-SNAPSHOT</hdds.version>
     <hadoop.component>hdds</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
     <log4j2.version>2.11.0</log4j2.version>
     <disruptor.version>3.4.2</disruptor.version>
+    <declared.hdds.version>${hdds.version}</declared.hdds.version>
   </properties>
 
   <dependencies>
@@ -73,7 +75,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.rocksdb</groupId>
       <artifactId>rocksdbjni</artifactId>
-      <version>5.8.0</version>
+      <version>5.14.2</version>
     </dependency>
 
     <dependency>
@@ -102,6 +104,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <excludes>
+          <exclude>hdds-version-info.properties</exclude>
+        </excludes>
+        <filtering>false</filtering>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <includes>
+          <include>hdds-version-info.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
@@ -169,6 +187,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
+          <execution>
+            <id>version-info</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>version-info</goal>
+            </goals>
+            <configuration>
+              <source>
+                <directory>${basedir}/../</directory>
+                <includes>
+                  <include>*/src/main/java/**/*.java</include>
+                  <include>*/src/main/proto/*.proto</include>
+                </includes>
+              </source>
+            </configuration>
+          </execution>
           <execution>
             <id>compile-protoc</id>
             <goals>

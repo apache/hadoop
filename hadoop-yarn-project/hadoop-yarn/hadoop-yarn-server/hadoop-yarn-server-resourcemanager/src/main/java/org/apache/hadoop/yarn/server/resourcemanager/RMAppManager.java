@@ -86,7 +86,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private int maxCompletedAppsInMemory;
   private int maxCompletedAppsInStateStore;
   protected int completedAppsInStateStore = 0;
-  private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
+  protected LinkedList<ApplicationId> completedApps = new LinkedList<>();
 
   private final RMContext rmContext;
   private final ApplicationMasterService masterService;
@@ -284,29 +284,70 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
    * check to see if hit the limit for max # completed apps kept
    */
   protected synchronized void checkAppNumCompletedLimit() {
-    // check apps kept in state store.
-    while (completedAppsInStateStore > this.maxCompletedAppsInStateStore) {
-      ApplicationId removeId =
-          completedApps.get(completedApps.size() - completedAppsInStateStore);
-      RMApp removeApp = rmContext.getRMApps().get(removeId);
-      LOG.info("Max number of completed apps kept in state store met:"
-          + " maxCompletedAppsInStateStore = " + maxCompletedAppsInStateStore
-          + ", removing app " + removeApp.getApplicationId()
-          + " from state store.");
-      rmContext.getStateStore().removeApplication(removeApp);
-      completedAppsInStateStore--;
+    if (completedAppsInStateStore > maxCompletedAppsInStateStore) {
+      removeCompletedAppsFromStateStore();
     }
 
-    // check apps kept in memorty.
-    while (completedApps.size() > this.maxCompletedAppsInMemory) {
-      ApplicationId removeId = completedApps.remove();
-      LOG.info("Application should be expired, max number of completed apps"
-          + " kept in memory met: maxCompletedAppsInMemory = "
-          + this.maxCompletedAppsInMemory + ", removing app " + removeId
-          + " from memory: ");
-      rmContext.getRMApps().remove(removeId);
-      this.applicationACLsManager.removeApplication(removeId);
+    if (completedApps.size() > maxCompletedAppsInMemory) {
+      removeCompletedAppsFromMemory();
     }
+  }
+
+  private void removeCompletedAppsFromStateStore() {
+    int numDelete = completedAppsInStateStore - maxCompletedAppsInStateStore;
+    for (int i = 0; i < numDelete; i++) {
+      ApplicationId removeId = completedApps.get(i);
+      RMApp removeApp = rmContext.getRMApps().get(removeId);
+      boolean deleteApp = shouldDeleteApp(removeApp);
+
+      if (deleteApp) {
+        LOG.info("Max number of completed apps kept in state store met:"
+            + " maxCompletedAppsInStateStore = "
+            + maxCompletedAppsInStateStore + ", removing app " + removeId
+            + " from state store.");
+        rmContext.getStateStore().removeApplication(removeApp);
+        completedAppsInStateStore--;
+      } else {
+        LOG.info("Max number of completed apps kept in state store met:"
+            + " maxCompletedAppsInStateStore = "
+            + maxCompletedAppsInStateStore + ", but not removing app "
+            + removeId
+            + " from state store as log aggregation have not finished yet.");
+      }
+    }
+  }
+
+  private void removeCompletedAppsFromMemory() {
+    int numDelete = completedApps.size() - maxCompletedAppsInMemory;
+    int offset = 0;
+    for (int i = 0; i < numDelete; i++) {
+      int deletionIdx = i - offset;
+      ApplicationId removeId = completedApps.get(deletionIdx);
+      RMApp removeApp = rmContext.getRMApps().get(removeId);
+      boolean deleteApp = shouldDeleteApp(removeApp);
+
+      if (deleteApp) {
+        ++offset;
+        LOG.info("Application should be expired, max number of completed apps"
+                + " kept in memory met: maxCompletedAppsInMemory = "
+                + this.maxCompletedAppsInMemory + ", removing app " + removeId
+                + " from memory: ");
+        completedApps.remove(deletionIdx);
+        rmContext.getRMApps().remove(removeId);
+        this.applicationACLsManager.removeApplication(removeId);
+      } else {
+        LOG.info("Application should be expired, max number of completed apps"
+                + " kept in memory met: maxCompletedAppsInMemory = "
+                + this.maxCompletedAppsInMemory + ", but not removing app "
+                + removeId
+                + " from memory as log aggregation have not finished yet.");
+      }
+    }
+  }
+
+  private boolean shouldDeleteApp(RMApp app) {
+    return !app.isLogAggregationEnabled()
+            || app.isLogAggregationFinished();
   }
 
   @SuppressWarnings("unchecked")
@@ -364,17 +405,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       ApplicationSubmissionContext submissionContext, long submitTime,
       String user, boolean isRecovery, long startTime) throws YarnException {
 
-    ApplicationPlacementContext placementContext = null;
-    try {
-      placementContext = placeApplication(rmContext, submissionContext, user);
-    } catch (YarnException e) {
-      String msg =
-          "Failed to place application " + submissionContext.getApplicationId()
-              + " to queue and specified " + "queue is invalid : "
-              + submissionContext.getQueue();
-      LOG.error(msg, e);
-      throw e;
-    }
+    ApplicationPlacementContext placementContext =
+        placeApplication(rmContext.getQueuePlacementManager(),
+            submissionContext, user, isRecovery);
 
     // We only replace the queue when it's a new application
     if (!isRecovery) {
@@ -789,23 +822,31 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   }
 
   @VisibleForTesting
-  ApplicationPlacementContext placeApplication(RMContext rmContext,
-      ApplicationSubmissionContext context, String user) throws YarnException {
+  ApplicationPlacementContext placeApplication(
+      PlacementManager placementManager, ApplicationSubmissionContext context,
+      String user, boolean isRecovery) throws YarnException {
     ApplicationPlacementContext placementContext = null;
-    PlacementManager placementManager = rmContext.getQueuePlacementManager();
-
     if (placementManager != null) {
-      placementContext = placementManager.placeApplication(context, user);
-    } else{
-      if ( context.getQueue() == null || context.getQueue().isEmpty()) {
-        final String msg = "Queue Placement Manager is not set. Cannot place "
-            + "application : " + context.getApplicationId() + " to queue and "
-            + "specified queue is invalid " + context.getQueue();
-        LOG.error(msg);
-        throw new YarnException(msg);
+      try {
+        placementContext = placementManager.placeApplication(context, user);
+      } catch (YarnException e) {
+        // Placement could also fail if the user doesn't exist in system
+        // skip if the user is not found during recovery.
+        if (isRecovery) {
+          LOG.warn("PlaceApplication failed,skipping on recovery of rm");
+          return placementContext;
+        }
+        throw e;
       }
     }
-
+    if (placementContext == null && (context.getQueue() == null) || context
+        .getQueue().isEmpty()) {
+      String msg = "Failed to place application " + context.getApplicationId()
+          + " to queue and specified " + "queue is invalid : " + context
+          .getQueue();
+      LOG.error(msg);
+      throw new YarnException(msg);
+    }
     return placementContext;
   }
 

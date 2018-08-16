@@ -48,4 +48,11 @@ public class TypedEvent<T> implements Event<T> {
     return name;
   }
 
+  @Override
+  public String toString() {
+    return "TypedEvent{" +
+        "payloadType=" + payloadType.getSimpleName() +
+        ", name='" + name + '\'' +
+        '}';
+  }
 }

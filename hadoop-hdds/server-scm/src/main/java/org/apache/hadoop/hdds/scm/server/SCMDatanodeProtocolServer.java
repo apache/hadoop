@@ -91,9 +91,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY;
@@ -230,21 +230,8 @@ public class SCMDatanodeProtocolServer implements
       ContainerBlocksDeletionACKProto acks) throws IOException {
     if (acks.getResultsCount() > 0) {
       List<DeleteBlockTransactionResult> resultList = acks.getResultsList();
-      for (DeleteBlockTransactionResult result : resultList) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Got block deletion ACK from datanode, TXIDs={}, "
-              + "success={}", result.getTxID(), result.getSuccess());
-        }
-        if (result.getSuccess()) {
-          LOG.debug("Purging TXID={} from block deletion log",
-              result.getTxID());
-          scm.getScmBlockManager().getDeletedBlockLog()
-              .commitTransactions(Collections.singletonList(result.getTxID()));
-        } else {
-          LOG.warn("Got failed ACK for TXID={}, prepare to resend the "
-              + "TX in next interval", result.getTxID());
-        }
-      }
+      scm.getScmBlockManager().getDeletedBlockLog()
+          .commitTransactions(resultList, UUID.fromString(acks.getDnId()));
     }
     return ContainerBlocksDeletionACKResponseProto.newBuilder()
         .getDefaultInstanceForType();

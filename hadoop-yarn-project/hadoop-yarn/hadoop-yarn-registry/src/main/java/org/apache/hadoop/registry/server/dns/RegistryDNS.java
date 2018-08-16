@@ -99,9 +99,13 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -941,7 +945,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * @param port    local port.
    * @throws IOException if the UDP processing fails.
    */
-  private void serveNIOUDP(DatagramChannel channel,
+  private synchronized void serveNIOUDP(DatagramChannel channel,
       InetAddress addr, int port) throws Exception {
     SocketAddress remoteAddress = null;
     try {
@@ -1177,13 +1181,20 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * @return DNS records
    */
   protected Record[] getRecords(Name name, int type) {
+    Record[] result = null;
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<Record[]> future = executor.submit(new LookupTask(name, type));
     try {
-      return new Lookup(name, type).run();
-    } catch (NullPointerException |
+      result = future.get(1500, TimeUnit.MILLISECONDS);
+      return result;
+    } catch (InterruptedException | ExecutionException |
+        TimeoutException | NullPointerException |
         ExceptionInInitializerError e) {
-      LOG.error("Fail to lookup: " + name, e);
+      LOG.warn("Failed to lookup: {} type: {}", name, Type.string(type), e);
+      return result;
+    } finally {
+      executor.shutdown();
     }
-    return null;
   }
 
   /**

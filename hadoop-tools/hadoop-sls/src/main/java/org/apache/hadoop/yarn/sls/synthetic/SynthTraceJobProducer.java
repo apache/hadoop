@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.sls.synthetic;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.apache.hadoop.conf.Configuration;
@@ -53,7 +53,7 @@ import static org.codehaus.jackson.map.DeserializationConfig.Feature.FAIL_ON_UNK
 public class SynthTraceJobProducer implements JobStoryProducer {
 
   @SuppressWarnings("StaticVariableName")
-  private static final Log LOG = LogFactory.getLog(SynthTraceJobProducer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SynthTraceJobProducer.class);
 
   private final Configuration conf;
   private final AtomicInteger numJobs;

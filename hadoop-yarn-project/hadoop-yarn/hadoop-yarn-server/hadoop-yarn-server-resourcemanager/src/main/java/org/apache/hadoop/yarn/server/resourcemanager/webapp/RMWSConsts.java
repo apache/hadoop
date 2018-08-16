@@ -36,6 +36,9 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getClusterInfo}. */
   public static final String INFO = "/info";
 
+  /** Path for {@code RMWebServiceProtocol#getClusterUserInfo}. */
+  public static final String CLUSTER_USER_INFO = "/userinfo";
+
   /** Path for {@code RMWebServiceProtocol#getClusterMetricsInfo}. */
   public static final String METRICS = "/metrics";
 

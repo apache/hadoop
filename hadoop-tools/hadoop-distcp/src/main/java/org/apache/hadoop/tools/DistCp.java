@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -64,7 +64,7 @@ public class DistCp extends Configured implements Tool {
    */
   static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  static final Log LOG = LogFactory.getLog(DistCp.class);
+  static final Logger LOG = LoggerFactory.getLogger(DistCp.class);
 
   @VisibleForTesting
   DistCpContext context;

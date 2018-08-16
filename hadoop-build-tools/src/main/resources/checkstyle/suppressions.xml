@@ -18,5 +18,4 @@
 
 <suppressions>
   <suppress checks="JavadocPackage" files="[\\/]src[\\/]test[\\/].*"/>
-  <suppress checks="*" files="[\\/]hadoop-ozone[\\/]docs[\\/]themes[\\/]ozonedoc[\\/].*"/>
 </suppressions>

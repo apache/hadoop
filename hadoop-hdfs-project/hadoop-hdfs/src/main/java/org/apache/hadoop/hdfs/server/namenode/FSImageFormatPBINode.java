@@ -439,6 +439,8 @@ public final class FSImageFormatPBINode {
   }
 
   public final static class Saver {
+    private long numImageErrors;
+
     private static long buildPermissionStatus(INodeAttributes n,
         final SaverContext.DeduplicationMap<String> stringMap) {
       long userId = stringMap.getId(n.getUserName());
@@ -563,11 +565,13 @@ public final class FSImageFormatPBINode {
       this.summary = summary;
       this.context = parent.getContext();
       this.fsn = context.getSourceNamesystem();
+      this.numImageErrors = 0;
     }
 
     void serializeINodeDirectorySection(OutputStream out) throws IOException {
-      Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
-          .getINodeMap().getMapIterator();
+      FSDirectory dir = fsn.getFSDirectory();
+      Iterator<INodeWithAdditionalFields> iter = dir.getINodeMap()
+          .getMapIterator();
       final ArrayList<INodeReference> refList = parent.getSaverContext()
           .getRefList();
       int i = 0;
@@ -583,6 +587,17 @@ public final class FSImageFormatPBINode {
           INodeDirectorySection.DirEntry.Builder b = INodeDirectorySection.
               DirEntry.newBuilder().setParent(n.getId());
           for (INode inode : children) {
+            // Error if the child inode doesn't exist in inodeMap
+            if (dir.getInode(inode.getId()) == null) {
+              FSImage.LOG.error(
+                  "FSImageFormatPBINode#serializeINodeDirectorySection: " +
+                      "Dangling child pointer found. Missing INode in " +
+                      "inodeMap: id=" + inode.getId() +
+                      "; path=" + inode.getFullPathName() +
+                      "; parent=" + (inode.getParent() == null ? "null" :
+                      inode.getParent().getFullPathName()));
+              ++numImageErrors;
+            }
             if (!inode.isReference()) {
               b.addChildren(inode.getId());
             } else {
@@ -710,6 +725,15 @@ public final class FSImageFormatPBINode {
       return INodeSection.INode.newBuilder()
           .setId(n.getId())
           .setName(ByteString.copyFrom(n.getLocalNameBytes()));
+    }
+
+    /**
+     * Number of non-fatal errors detected while writing the
+     * INodeSection and INodeDirectorySection sections.
+     * @return the number of non-fatal errors detected.
+     */
+    public long getNumImageErrors() {
+      return numImageErrors;
     }
   }
 

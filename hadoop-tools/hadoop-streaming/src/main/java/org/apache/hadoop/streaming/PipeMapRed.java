@@ -24,7 +24,8 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Properties;
 
-import org.apache.commons.logging.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,7 +45,7 @@ import org.apache.hadoop.io.Text;
  */
 public abstract class PipeMapRed {
 
-  protected static final Log LOG = LogFactory.getLog(PipeMapRed.class.getName());
+  protected static final Logger LOG = LoggerFactory.getLogger(PipeMapRed.class.getName());
 
   /**
    * Returns the Configuration.
@@ -397,7 +398,7 @@ public abstract class PipeMapRed {
         }
       } catch (Throwable th) {
         outerrThreadsThrowable = th;
-        LOG.warn(th);
+        LOG.warn("{}", th);
       } finally {
         try {
           if (clientIn_ != null) {
@@ -405,7 +406,7 @@ public abstract class PipeMapRed {
             clientIn_ = null;
           }
         } catch (IOException io) {
-          LOG.info(io);
+          LOG.info("{}", io);
         }
       }
     }
@@ -466,7 +467,7 @@ public abstract class PipeMapRed {
         }
       } catch (Throwable th) {
         outerrThreadsThrowable = th;
-        LOG.warn(th);
+        LOG.warn("{}", th);
         try {
           if (lineReader != null) {
             lineReader.close();
@@ -476,7 +477,7 @@ public abstract class PipeMapRed {
             clientErr_ = null;
           }
         } catch (IOException io) {
-          LOG.info(io);
+          LOG.info("{}", io);
         }
       }
     }
@@ -531,13 +532,13 @@ public abstract class PipeMapRed {
           clientOut_.flush();
           clientOut_.close();
         } catch (IOException io) {
-          LOG.warn(io);
+          LOG.warn("{}", io);
         }
       }
       try {
         waitOutputThreads();
       } catch (IOException io) {
-        LOG.warn(io);
+        LOG.warn("{}", io);
       }
       if (sim != null) sim.destroy();
       LOG.info("mapRedFinished");

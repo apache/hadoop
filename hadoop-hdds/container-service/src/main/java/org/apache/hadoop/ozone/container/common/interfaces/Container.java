@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 
 
@@ -92,9 +94,21 @@ public interface Container extends RwLock {
   ContainerProtos.ContainerType getContainerType();
 
   /**
+   * Returns containerFile.
+   */
+  File getContainerFile();
+
+  /**
    * updates the DeleteTransactionId.
    * @param deleteTransactionId
    */
   void updateDeleteTransactionId(long deleteTransactionId);
+
+  /**
+   * Returns blockIterator for the container.
+   * @return BlockIterator
+   * @throws IOException
+   */
+  BlockIterator blockIterator() throws IOException;
 
 }

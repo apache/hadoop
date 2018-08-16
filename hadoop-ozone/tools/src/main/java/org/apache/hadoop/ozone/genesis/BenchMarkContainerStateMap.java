@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.util.Time;
@@ -60,7 +61,7 @@ public class BenchMarkContainerStateMap {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(CLOSED)
-            .setPipelineName(pipeline.getPipelineName())
+            .setPipelineID(pipeline.getId())
             .setReplicationType(pipeline.getType())
             .setReplicationFactor(pipeline.getFactor())
             // This is bytes allocated for blocks inside container, not the
@@ -83,7 +84,7 @@ public class BenchMarkContainerStateMap {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
             .setState(OPEN)
-            .setPipelineName(pipeline.getPipelineName())
+            .setPipelineID(pipeline.getId())
             .setReplicationType(pipeline.getType())
             .setReplicationFactor(pipeline.getFactor())
             // This is bytes allocated for blocks inside container, not the
@@ -105,7 +106,7 @@ public class BenchMarkContainerStateMap {
     try {
       ContainerInfo containerInfo = new ContainerInfo.Builder()
           .setState(OPEN)
-          .setPipelineName(pipeline.getPipelineName())
+          .setPipelineID(pipeline.getId())
           .setReplicationType(pipeline.getType())
           .setReplicationFactor(pipeline.getFactor())
           // This is bytes allocated for blocks inside container, not the
@@ -154,10 +155,10 @@ public class BenchMarkContainerStateMap {
     final Iterator<DatanodeDetails> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
     final DatanodeDetails leader = i.next();
-    String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(5);
     final Pipeline pipeline =
         new Pipeline(leader.getUuidString(), OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+            PipelineID.randomId());
     pipeline.addMember(leader);
     for (; i.hasNext();) {
       pipeline.addMember(i.next());
@@ -172,7 +173,7 @@ public class BenchMarkContainerStateMap {
     int cid = state.containerID.incrementAndGet();
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(CLOSED)
-        .setPipelineName(pipeline.getPipelineName())
+        .setPipelineID(pipeline.getId())
         .setReplicationType(pipeline.getType())
         .setReplicationFactor(pipeline.getFactor())
         // This is bytes allocated for blocks inside container, not the

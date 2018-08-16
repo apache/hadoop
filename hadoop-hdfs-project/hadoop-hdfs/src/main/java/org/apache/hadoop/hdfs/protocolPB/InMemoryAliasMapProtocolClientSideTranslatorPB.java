@@ -167,6 +167,9 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
   public Optional<ProvidedStorageLocation> read(@Nonnull Block block)
       throws IOException {
 
+    if (block == null) {
+      throw new IOException("Block cannot be null");
+    }
     ReadRequestProto request =
         ReadRequestProto
             .newBuilder()
@@ -191,6 +194,9 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
   public void write(@Nonnull Block block,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException {
+    if (block == null || providedStorageLocation == null) {
+      throw new IOException("Provided block and location cannot be null");
+    }
     WriteRequestProto request =
         WriteRequestProto
             .newBuilder()

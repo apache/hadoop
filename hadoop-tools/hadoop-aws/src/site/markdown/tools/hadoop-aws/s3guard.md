@@ -100,7 +100,51 @@ More settings will may be added in the future.
 Currently the only Metadata Store-independent setting, besides the
 implementation class above, is the *allow authoritative* flag.
 
-It is recommended that you leave the default setting here:
+The _authoritative_ expression in S3Guard is present in two different layers, for
+two different reasons:
+
+* Authoritative S3Guard
+    * S3Guard can be set as authoritative, which means that an S3A client will
+    avoid round-trips to S3 when **getting directory listings** if there is a fully
+    cached version of the directory stored in metadata store.
+    * This mode can be set as a configuration property
+    `fs.s3a.metadatastore.authoritative`
+    * All interactions with the S3 bucket(s) must be through S3A clients sharing
+    the same metadata store.
+    * This is independent from which metadata store implementation is used.
+
+* Authoritative directory listings (isAuthoritative bit)
+    * Tells if the stored directory listing metadata is complete.
+    * This is set by the FileSystem client (e.g. s3a) via the `DirListingMetadata`
+    class (`org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata`).
+    (The MetadataStore only knows what the FS client tells it.)
+    * If set to `TRUE`, we know that the directory listing
+    (`DirListingMetadata`) is full, and complete.
+    * If set to `FALSE` the listing may not be complete.
+    * Metadata store may persist the isAuthoritative bit on the metadata store.
+    * Currently only `org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore`
+    implementation supports authoritative bit.
+
+More on Authoritative S3Guard:
+
+* It is not treating the MetadataStore (e.g. dynamodb) as the source of truth
+ in general.
+* It is the ability to short-circuit S3 list objects and serve listings from
+the MetadataStore in some circumstances.
+* For S3A to skip S3's list objects on some path, and serve it directly from
+the MetadataStore, the following things must all be true:
+    1. The MetadataStore implementation persists the bit
+    `DirListingMetadata.isAuthorititative` set when calling
+    `MetadataStore#put` (`DirListingMetadata`)
+    1. The S3A client is configured to allow metadatastore to be authoritative
+    source of a directory listing (`fs.s3a.metadatastore.authoritative=true`).
+    1. The MetadataStore has a **full listing for path** stored in it.  This only
+    happens if the FS client (s3a) explicitly has stored a full directory
+    listing with `DirListingMetadata.isAuthorititative=true` before the said
+    listing request happens.
+
+This configuration only enables authoritative mode in the client layer. It is
+recommended that you leave the default setting here:
 
 ```xml
 <property>
@@ -109,9 +153,8 @@ It is recommended that you leave the default setting here:
 </property>
 ```
 
-Setting this to `true` is currently an experimental feature.  When true, the
-S3A client will avoid round-trips to S3 when getting directory listings, if
-there is a fully-cached version of the directory stored in the Metadata Store.
+Note that a MetadataStore MAY persist this bit. (Not MUST).
+Setting this to `true` is currently an experimental feature.
 
 Note that if this is set to true, it may exacerbate or persist existing race
 conditions around multiple concurrent modifications and listings of a given

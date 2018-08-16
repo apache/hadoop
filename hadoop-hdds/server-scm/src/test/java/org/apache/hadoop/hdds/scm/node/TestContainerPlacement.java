@@ -105,9 +105,10 @@ public class TestContainerPlacement {
 
   ContainerMapping createContainerManager(Configuration config,
       NodeManager scmNodeManager) throws IOException {
+    EventQueue eventQueue = new EventQueue();
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    return new ContainerMapping(config, scmNodeManager, cacheSize);
+    return new ContainerMapping(config, scmNodeManager, cacheSize, eventQueue);
 
   }
 
@@ -142,10 +143,6 @@ public class TestContainerPlacement {
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
     try {
       for (DatanodeDetails datanodeDetails : datanodes) {
-        String id = UUID.randomUUID().toString();
-        String path = testDir.getAbsolutePath() + "/" + id;
-        List<StorageReportProto> reports = TestUtils
-            .createStorageReport(capacity, used, remaining, path, null, id, 1);
         nodeManager.processHeartbeat(datanodeDetails);
       }
 

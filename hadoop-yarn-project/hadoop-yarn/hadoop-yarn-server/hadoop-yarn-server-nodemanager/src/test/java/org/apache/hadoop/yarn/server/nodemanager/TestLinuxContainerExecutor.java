@@ -25,11 +25,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -667,12 +671,15 @@ public class TestLinuxContainerExecutor {
   @Test
   public void testReapContainer() throws Exception {
     Container container = mock(Container.class);
-    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    LinuxContainerRuntime containerRuntime = mock(LinuxContainerRuntime.class);
+    LinuxContainerExecutor lce = spy(new LinuxContainerExecutor(
+        containerRuntime));
     ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
     builder.setContainer(container).setUser("foo");
     ContainerReapContext ctx = builder.build();
     lce.reapContainer(ctx);
     verify(lce, times(1)).reapContainer(ctx);
+    verify(lce, times(1)).postComplete(anyObject());
   }
 
   @Test

@@ -101,8 +101,8 @@ public class TestComponentInstance {
     instance.handle(new ComponentInstanceEvent(instance.getContainer().getId(),
         ComponentInstanceEventType.BECOME_READY));
     Assert.assertEquals("instance not ready", ContainerState.READY,
-        instance.getCompSpec().getContainer(
-            instance.getContainer().getId().toString()).getState());
+        component.getComponentSpec().getContainer(instance.getContainer()
+            .getId().toString()).getState());
   }
 
   private void upgradeComponent(Component component) {
@@ -245,7 +245,7 @@ public class TestComponentInstance {
         comp.getAllComponentInstances().iterator().next();
 
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
 
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, never()).markAsFailed(any(ComponentInstance.class));
@@ -262,7 +262,7 @@ public class TestComponentInstance {
     componentInstance = comp.getAllComponentInstances().iterator().next();
     containerStatus.setExitStatus(1);
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, never()).markAsFailed(any(ComponentInstance.class));
     verify(comp, times(1)).reInsertPendingInstance(
@@ -286,7 +286,7 @@ public class TestComponentInstance {
     when(comp.getNumSucceededInstances()).thenReturn(new Long(1));
 
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
     verify(comp, times(1)).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, never()).markAsFailed(any(ComponentInstance.class));
     verify(comp, times(0)).reInsertPendingInstance(
@@ -304,7 +304,7 @@ public class TestComponentInstance {
 
     when(comp.getNumFailedInstances()).thenReturn(new Long(1));
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
 
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, times(1)).markAsFailed(any(ComponentInstance.class));
@@ -323,7 +323,7 @@ public class TestComponentInstance {
     componentInstance = comp.getAllComponentInstances().iterator().next();
     containerStatus.setExitStatus(1);
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, never()).markAsFailed(any(ComponentInstance.class));
     verify(comp, times(1)).reInsertPendingInstance(
@@ -340,7 +340,7 @@ public class TestComponentInstance {
     componentInstance = comp.getAllComponentInstances().iterator().next();
     containerStatus.setExitStatus(1);
     ComponentInstance.handleComponentInstanceRelaunch(componentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, times(1)).markAsFailed(any(ComponentInstance.class));
     verify(comp, times(0)).reInsertPendingInstance(
@@ -363,7 +363,7 @@ public class TestComponentInstance {
     containerStatus.setExitStatus(1);
     ComponentInstance commponentInstance = iter.next();
     ComponentInstance.handleComponentInstanceRelaunch(commponentInstance,
-        componentInstanceEvent);
+        componentInstanceEvent, false);
 
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
     verify(comp, never()).markAsFailed(any(ComponentInstance.class));
@@ -404,7 +404,7 @@ public class TestComponentInstance {
       when(component2Instance.getComponent().getNumFailedInstances())
           .thenReturn(new Long(failed2Instances.size()));
       ComponentInstance.handleComponentInstanceRelaunch(component2Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     Map<String, ComponentInstance> failed1Instances = new HashMap<>();
@@ -418,7 +418,7 @@ public class TestComponentInstance {
       when(component1Instance.getComponent().getNumFailedInstances())
           .thenReturn(new Long(failed1Instances.size()));
       ComponentInstance.handleComponentInstanceRelaunch(component1Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     verify(comp, never()).markAsSucceeded(any(ComponentInstance.class));
@@ -458,7 +458,7 @@ public class TestComponentInstance {
       when(component2Instance.getComponent().getNumSucceededInstances())
           .thenReturn(new Long(succeeded2Instances.size()));
       ComponentInstance.handleComponentInstanceRelaunch(component2Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     Map<String, ComponentInstance> succeeded1Instances = new HashMap<>();
@@ -471,7 +471,7 @@ public class TestComponentInstance {
       when(component1Instance.getComponent().getNumSucceededInstances())
           .thenReturn(new Long(succeeded1Instances.size()));
       ComponentInstance.handleComponentInstanceRelaunch(component1Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     verify(comp, times(2)).markAsSucceeded(any(ComponentInstance.class));
@@ -500,7 +500,7 @@ public class TestComponentInstance {
 
     for (ComponentInstance component2Instance : component2Instances) {
       ComponentInstance.handleComponentInstanceRelaunch(component2Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     succeeded1Instances = new HashMap<>();
@@ -511,7 +511,7 @@ public class TestComponentInstance {
       when(component1Instance.getComponent().getSucceededInstances())
           .thenReturn(succeeded1Instances.values());
       ComponentInstance.handleComponentInstanceRelaunch(component1Instance,
-          componentInstanceEvent);
+          componentInstanceEvent, false);
     }
 
     verify(comp, times(2)).markAsSucceeded(any(ComponentInstance.class));

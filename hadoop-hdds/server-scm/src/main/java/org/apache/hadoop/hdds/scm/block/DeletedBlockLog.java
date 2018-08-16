@@ -18,12 +18,16 @@
 package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto
+    .DeleteBlockTransactionResult;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * The DeletedBlockLog is a persisted log in SCM to keep tracking
@@ -34,25 +38,14 @@ import java.util.Map;
 public interface DeletedBlockLog extends Closeable {
 
   /**
-   *  A limit size list of transactions. Note count is the max number
-   *  of TXs to return, we might not be able to always return this
-   *  number. and the processCount of those transactions
-   *  should be [0, MAX_RETRY).
-   *
-   * @param count - number of transactions.
-   * @return a list of BlockDeletionTransaction.
-   */
-  List<DeletedBlocksTransaction> getTransactions(int count)
-      throws IOException;
-
-  /**
    * Scan entire log once and returns TXs to DatanodeDeletedBlockTransactions.
    * Once DatanodeDeletedBlockTransactions is full, the scan behavior will
    * stop.
    * @param transactions a list of TXs will be set into.
+   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
-  void getTransactions(DatanodeDeletedBlockTransactions transactions)
+  Map<Long, Long> getTransactions(DatanodeDeletedBlockTransactions transactions)
       throws IOException;
 
   /**
@@ -81,10 +74,11 @@ public interface DeletedBlockLog extends Closeable {
    * Commits a transaction means to delete all footprints of a transaction
    * from the log. This method doesn't guarantee all transactions can be
    * successfully deleted, it tolerate failures and tries best efforts to.
-   *
-   * @param txIDs - transaction IDs.
+   *  @param transactionResults - delete block transaction results.
+   * @param dnID - ID of datanode which acknowledges the delete block command.
    */
-  void commitTransactions(List<Long> txIDs) throws IOException;
+  void commitTransactions(List<DeleteBlockTransactionResult> transactionResults,
+      UUID dnID);
 
   /**
    * Creates a block deletion transaction and adds that into the log.
@@ -108,10 +102,9 @@ public interface DeletedBlockLog extends Closeable {
    * number of containers) together (on success) or non (on failure).
    *
    * @param containerBlocksMap a map of containerBlocks.
-   * @return Mapping from containerId to latest transactionId for the container.
    * @throws IOException
    */
-  Map<Long, Long> addTransactions(Map<Long, List<Long>> containerBlocksMap)
+  void addTransactions(Map<Long, List<Long>> containerBlocksMap)
       throws IOException;
 
   /**

@@ -76,6 +76,7 @@ public class VolumeSet {
    * mutually exclusive.
    */
   private Map<String, HddsVolume> failedVolumeMap;
+
   /**
    * {@link VolumeSet#volumeStateMap} maintains a list of active volumes per
    * StorageType.
@@ -95,12 +96,12 @@ public class VolumeSet {
   private Runnable shutdownHook;
 
   public VolumeSet(String dnUuid, Configuration conf)
-      throws DiskOutOfSpaceException {
+      throws IOException {
     this(dnUuid, null, conf);
   }
 
   public VolumeSet(String dnUuid, String clusterID, Configuration conf)
-      throws DiskOutOfSpaceException {
+      throws IOException {
     this.datanodeUuid = dnUuid;
     this.clusterID = clusterID;
     this.conf = conf;
@@ -120,7 +121,7 @@ public class VolumeSet {
   }
 
   // Add DN volumes configured through ConfigKeys to volumeMap.
-  private void initializeVolumeSet() throws DiskOutOfSpaceException {
+  private void initializeVolumeSet() throws IOException {
     volumeMap = new ConcurrentHashMap<>();
     failedVolumeMap = new ConcurrentHashMap<>();
     volumeStateMap = new EnumMap<>(StorageType.class);
@@ -153,6 +154,9 @@ public class VolumeSet {
         LOG.info("Added Volume : {} to VolumeSet",
             hddsVolume.getHddsRootDir().getPath());
       } catch (IOException e) {
+        HddsVolume volume = new HddsVolume.Builder(locationString)
+            .failedVolume(true).build();
+        failedVolumeMap.put(locationString, volume);
         LOG.error("Failed to parse the storage location: " + locationString, e);
       }
     }
@@ -163,7 +167,7 @@ public class VolumeSet {
 
     // Ensure volume threads are stopped and scm df is saved during shutdown.
     shutdownHook = () -> {
-      shutdown();
+      saveVolumeSetUsed();
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
@@ -299,7 +303,11 @@ public class VolumeSet {
     return choosingPolicy.chooseVolume(getVolumesList(), containerSize);
   }
 
-  public void shutdown() {
+  /**
+   * This method, call shutdown on each volume to shutdown volume usage
+   * thread and write scmUsed on each volume.
+   */
+  private void saveVolumeSetUsed() {
     for (HddsVolume hddsVolume : volumeMap.values()) {
       try {
         hddsVolume.shutdown();
@@ -308,7 +316,14 @@ public class VolumeSet {
             ex);
       }
     }
+  }
 
+  /**
+   * Shutdown's the volumeset, if saveVolumeSetUsed is false, call's
+   * {@link VolumeSet#saveVolumeSetUsed}.
+   */
+  public void shutdown() {
+    saveVolumeSetUsed();
     if (shutdownHook != null) {
       ShutdownHookManager.get().removeShutdownHook(shutdownHook);
     }
@@ -337,11 +352,12 @@ public class VolumeSet {
   public StorageContainerDatanodeProtocolProtos.NodeReportProto getNodeReport()
       throws IOException {
     boolean failed;
-    StorageLocationReport[] reports =
-        new StorageLocationReport[volumeMap.size()];
+    StorageLocationReport[] reports = new StorageLocationReport[volumeMap
+        .size() + failedVolumeMap.size()];
     int counter = 0;
+    HddsVolume hddsVolume;
     for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
-      HddsVolume hddsVolume = entry.getValue();
+      hddsVolume = entry.getValue();
       VolumeInfo volumeInfo = hddsVolume.getVolumeInfo();
       long scmUsed = 0;
       long remaining = 0;
@@ -367,6 +383,17 @@ public class VolumeSet {
           .setRemaining(remaining)
           .setScmUsed(scmUsed)
           .setStorageType(hddsVolume.getStorageType());
+      StorageLocationReport r = builder.build();
+      reports[counter++] = r;
+    }
+    for (Map.Entry<String, HddsVolume> entry : failedVolumeMap.entrySet()) {
+      hddsVolume = entry.getValue();
+      StorageLocationReport.Builder builder = StorageLocationReport
+          .newBuilder();
+      builder.setStorageLocation(hddsVolume.getHddsRootDir()
+          .getAbsolutePath()).setId(hddsVolume.getStorageID()).setFailed(true)
+          .setCapacity(0).setRemaining(0).setScmUsed(0).setStorageType(
+              hddsVolume.getStorageType());
       StorageLocationReport r = builder.build();
       reports[counter++] = r;
     }

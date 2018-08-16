@@ -31,6 +31,8 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
+
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,6 +53,15 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   private static final String LOCAL_METADATA = "local://metadata";
   private static final String[] ABORT_FORCE_OPTIONS = new String[] {"-abort",
       "-force", "-verbose"};
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    MetadataStore ms = getMetadataStore();
+    Assume.assumeTrue("Test only applies when a local store is used for S3Guard;"
+            + "Store is " + (ms == null ? "none" : ms.toString()),
+        ms instanceof LocalMetadataStore);
+  }
 
   @Test
   public void testImportCommand() throws Exception {

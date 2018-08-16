@@ -50,7 +50,7 @@ public class ITestOzoneContractGetFileStatus
 
   @Override
   public void teardown() throws Exception {
-    getLog().info("FS details {}", getFileSystem());
+    getLogger().info("FS details {}", getFileSystem());
     super.teardown();
   }
 

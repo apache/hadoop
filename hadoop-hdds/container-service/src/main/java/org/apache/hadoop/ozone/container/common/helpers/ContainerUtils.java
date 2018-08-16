@@ -19,9 +19,11 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -31,8 +33,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +45,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.yaml.snakeyaml.Yaml;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_CHECKSUM_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.NO_SUCH_ALGORITHM;
+import static org.apache.hadoop.ozone.container.common.impl.ContainerData
+    .CHARSET_ENCODING;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
+
 
 /**
  * A set of helper functions to create proper responses.
@@ -188,20 +199,6 @@ public final class ContainerUtils {
   }
 
   /**
-   * Returns container file location.
-   *
-   * @param containerData - Data
-   * @param location - Root path
-   * @return Path
-   */
-  public static File getContainerFile(ContainerData containerData,
-      Path location) {
-    return location.resolve(Long.toString(containerData
-        .getContainerID()).concat(CONTAINER_EXTENSION))
-        .toFile();
-  }
-
-  /**
    * Persistent a {@link DatanodeDetails} to a local file.
    *
    * @throws IOException when read/write error occurs
@@ -244,5 +241,69 @@ public final class ContainerUtils {
       throw new IOException("Failed to parse DatanodeDetails from "
           + path.getAbsolutePath(), e);
     }
+  }
+
+  /**
+   * Verify that the checksum stored in containerData is equal to the
+   * computed checksum.
+   * @param containerData
+   * @throws IOException
+   */
+  public static void verifyChecksum(ContainerData containerData)
+      throws IOException {
+    String storedChecksum = containerData.getChecksum();
+
+    Yaml yaml = ContainerDataYaml.getYamlForContainerType(
+        containerData.getContainerType());
+    containerData.computeAndSetChecksum(yaml);
+    String computedChecksum = containerData.getChecksum();
+
+    if (storedChecksum == null || !storedChecksum.equals(computedChecksum)) {
+      throw new StorageContainerException("Container checksum error for " +
+          "ContainerID: " + containerData.getContainerID() + ". " +
+          "\nStored Checksum: " + storedChecksum +
+          "\nExpected Checksum: " + computedChecksum,
+          CONTAINER_CHECKSUM_ERROR);
+    }
+  }
+
+  /**
+   * Return the SHA-256 chesksum of the containerData.
+   * @param containerDataYamlStr ContainerData as a Yaml String
+   * @return Checksum of the container data
+   * @throws StorageContainerException
+   */
+  public static String getChecksum(String containerDataYamlStr)
+      throws StorageContainerException {
+    MessageDigest sha;
+    try {
+      sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
+      sha.update(containerDataYamlStr.getBytes(CHARSET_ENCODING));
+      return DigestUtils.sha256Hex(sha.digest());
+    } catch (NoSuchAlgorithmException e) {
+      throw new StorageContainerException("Unable to create Message Digest, " +
+          "usually this is a java configuration issue.", NO_SUCH_ALGORITHM);
+    }
+  }
+
+  /**
+   * Get the .container file from the containerBaseDir
+   * @param containerBaseDir container base directory. The name of this
+   *                         directory is same as the containerID
+   * @return the .container file
+   */
+  public static File getContainerFile(File containerBaseDir) {
+    // Container file layout is
+    // .../<<containerID>>/metadata/<<containerID>>.container
+    String containerFilePath = OzoneConsts.CONTAINER_META_PATH + File.separator
+        + getContainerID(containerBaseDir) + OzoneConsts.CONTAINER_EXTENSION;
+    return new File(containerBaseDir, containerFilePath);
+  }
+
+  /**
+   * ContainerID can be decoded from the container base directory name
+   */
+  public static long getContainerID(File containerBaseDir) {
+    return Long.parseLong(containerBaseDir.getName());
   }
 }

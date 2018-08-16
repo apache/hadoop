@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -67,6 +69,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -75,13 +78,14 @@ import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
@@ -207,6 +211,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       new ValueMap().withBoolean(":false", false);
 
   private DynamoDB dynamoDB;
+  private AWSCredentialProviderList credentials;
   private String region;
   private Table table;
   private String tableName;
@@ -242,10 +247,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * A utility function to create DynamoDB instance.
    * @param conf the file system configuration
    * @param s3Region region of the associated S3 bucket (if any).
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param credentials credentials.
    * @return DynamoDB instance.
    * @throws IOException I/O error.
    */
-  private static DynamoDB createDynamoDB(Configuration conf, String s3Region)
+  private static DynamoDB createDynamoDB(
+      final Configuration conf,
+      final String s3Region,
+      final String bucket,
+      final AWSCredentialsProvider credentials)
       throws IOException {
     Preconditions.checkNotNull(conf);
     final Class<? extends DynamoDBClientFactory> cls = conf.getClass(
@@ -254,10 +265,18 @@ public class DynamoDBMetadataStore implements MetadataStore {
         DynamoDBClientFactory.class);
     LOG.debug("Creating DynamoDB client {} with S3 region {}", cls, s3Region);
     final AmazonDynamoDB dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
-        .createDynamoDBClient(s3Region);
+        .createDynamoDBClient(s3Region, bucket, credentials);
     return new DynamoDB(dynamoDBClient);
   }
 
+  /**
+   * {@inheritDoc}.
+   * The credentials for authenticating with S3 are requested from the
+   * FS via {@link S3AFileSystem#shareCredentials(String)}; this will
+   * increment the reference counter of these credentials.
+   * @param fs {@code S3AFileSystem} associated with the MetadataStore
+   * @throws IOException on a failure
+   */
   @Override
   @Retries.OnceRaw
   public void initialize(FileSystem fs) throws IOException {
@@ -274,11 +293,23 @@ public class DynamoDBMetadataStore implements MetadataStore {
       LOG.debug("Overriding S3 region with configured DynamoDB region: {}",
           region);
     } else {
-      region = owner.getBucketLocation();
+      try {
+        region = owner.getBucketLocation();
+      } catch (AccessDeniedException e) {
+        // access denied here == can't call getBucket. Report meaningfully
+        URI uri = owner.getUri();
+        LOG.error("Failed to get bucket location from S3 bucket {}",
+            uri);
+        throw (IOException)new AccessDeniedException(
+            "S3 client role lacks permission "
+                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri)
+            .initCause(e);
+      }
       LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
     }
     username = owner.getUsername();
-    dynamoDB = createDynamoDB(conf, region);
+    credentials = owner.shareCredentials("s3guard");
+    dynamoDB = createDynamoDB(conf, region, bucket, credentials);
 
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
@@ -311,6 +342,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * must declare the table name and region in the
    * {@link Constants#S3GUARD_DDB_TABLE_NAME_KEY} and
    * {@link Constants#S3GUARD_DDB_REGION_KEY} respectively.
+   * It also creates a new credential provider list from the configuration,
+   * using the base fs.s3a.* options, as there is no bucket to infer per-bucket
+   * settings from.
    *
    * @see #initialize(FileSystem)
    * @throws IOException if there is an error
@@ -327,7 +361,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
     region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
     Preconditions.checkArgument(!StringUtils.isEmpty(region),
         "No DynamoDB region configured");
-    dynamoDB = createDynamoDB(conf, region);
+    credentials = createAWSCredentialProviderSet(null, conf);
+    dynamoDB = createDynamoDB(conf, region, null, credentials);
 
     username = UserGroupInformation.getCurrentUser().getShortUserName();
     initDataAccessRetries(conf);
@@ -778,12 +813,17 @@ public class DynamoDBMetadataStore implements MetadataStore {
     if (instrumentation != null) {
       instrumentation.storeClosed();
     }
-    if (dynamoDB != null) {
-      LOG.debug("Shutting down {}", this);
-      dynamoDB.shutdown();
-      dynamoDB = null;
+    try {
+      if (dynamoDB != null) {
+        LOG.debug("Shutting down {}", this);
+        dynamoDB.shutdown();
+        dynamoDB = null;
+      }
+    } finally {
+      closeAutocloseables(LOG, credentials);
+      credentials = null;
     }
-  }
+}
 
   @Override
   @Retries.OnceTranslated

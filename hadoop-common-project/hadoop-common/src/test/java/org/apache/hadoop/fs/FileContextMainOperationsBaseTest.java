@@ -369,6 +369,44 @@ public abstract class FileContextMainOperationsBaseTest  {
     pathsIterator = fc.listStatus(getTestRootPath(fc, "test/hadoop/a"));
     Assert.assertFalse(pathsIterator.hasNext());
   }
+
+  @Test
+  public void testListFiles() throws Exception {
+    Path[] testDirs = {
+        getTestRootPath(fc, "test/dir1"),
+        getTestRootPath(fc, "test/dir1/dir1"),
+        getTestRootPath(fc, "test/dir2")
+    };
+    Path[] testFiles = {
+        new Path(testDirs[0], "file1"),
+        new Path(testDirs[0], "file2"),
+        new Path(testDirs[1], "file2"),
+        new Path(testDirs[2], "file1")
+    };
+
+    for (Path path : testDirs) {
+      fc.mkdir(path, FsPermission.getDefault(), true);
+    }
+    for (Path p : testFiles) {
+      FSDataOutputStream out = fc.create(p).build();
+      out.writeByte(0);
+      out.close();
+    }
+
+    RemoteIterator<LocatedFileStatus> filesIterator =
+        fc.util().listFiles(getTestRootPath(fc, "test"), true);
+    LocatedFileStatus[] fileStats =
+        new LocatedFileStatus[testFiles.length];
+    for (int i = 0; i < fileStats.length; i++) {
+      assertTrue(filesIterator.hasNext());
+      fileStats[i] = filesIterator.next();
+    }
+    assertFalse(filesIterator.hasNext());
+
+    for (Path p : testFiles) {
+      assertTrue(containsPath(p, fileStats));
+    }
+  }
   
   @Test
   public void testListStatusFilterWithNoMatches() throws Exception {

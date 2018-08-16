@@ -125,8 +125,7 @@ public final class RegisterEndpointTask implements
       rpcEndPoint.setState(nextState);
       rpcEndPoint.zeroMissedCount();
     } catch (IOException ex) {
-      rpcEndPoint.logIfNeeded(ex
-      );
+      rpcEndPoint.logIfNeeded(ex);
     } finally {
       rpcEndPoint.unlock();
     }

@@ -20,12 +20,15 @@ package org.apache.hadoop.crypto.key.kms;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.ConnectException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.net.ssl.SSLHandshakeException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -115,7 +118,6 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     if (providers.length == 0) {
       throw new IOException("No providers configured !");
     }
-    IOException ex = null;
     int numFailovers = 0;
     for (int i = 0;; i++, numFailovers++) {
       KMSClientProvider provider = providers[(currPos + i) % providers.length];
@@ -130,8 +132,15 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       } catch (IOException ioe) {
         LOG.warn("KMS provider at [{}] threw an IOException: ",
             provider.getKMSUrl(), ioe);
-        ex = ioe;
-
+        // SSLHandshakeException can occur here because of lost connection
+        // with the KMS server, creating a ConnectException from it,
+        // so that the FailoverOnNetworkExceptionRetry policy will retry
+        if (ioe instanceof SSLHandshakeException) {
+          Exception cause = ioe;
+          ioe = new ConnectException("SSLHandshakeException: "
+              + cause.getMessage());
+          ioe.initCause(cause);
+        }
         RetryAction action = null;
         try {
           action = retryPolicy.shouldRetry(ioe, 0, numFailovers, false);
@@ -145,7 +154,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         // compatible with earlier versions of LBKMSCP
         if (action.action == RetryAction.RetryDecision.FAIL
             && numFailovers >= providers.length - 1) {
-          LOG.warn("Aborting since the Request has failed with all KMS"
+          LOG.error("Aborting since the Request has failed with all KMS"
               + " providers(depending on {}={} setting and numProviders={})"
               + " in the group OR the exception is not recoverable",
               CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY,
@@ -153,7 +162,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
                   CommonConfigurationKeysPublic.
                   KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, providers.length),
               providers.length);
-          throw ex;
+          throw ioe;
         }
         if (((numFailovers + 1) % providers.length) == 0) {
           // Sleep only after we try all the providers for every cycle.

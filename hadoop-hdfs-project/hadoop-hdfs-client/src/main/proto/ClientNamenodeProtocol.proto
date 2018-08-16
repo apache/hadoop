@@ -167,6 +167,7 @@ message AbandonBlockResponseProto { // void response
 
 enum AddBlockFlagProto {
   NO_LOCAL_WRITE = 1; // avoid writing to local node.
+  IGNORE_CLIENT_LOCALITY = 2; // write to a random node
 }
 
 message AddBlockRequestProto {
@@ -347,6 +348,8 @@ message GetFsReplicatedBlockStatsResponseProto {
   required uint64 missing_repl_one_blocks = 4;
   required uint64 blocks_in_future = 5;
   required uint64 pending_deletion_blocks = 6;
+  optional uint64 highest_prio_low_redundancy_blocks = 7;
+
 }
 
 message GetFsECBlockGroupStatsRequestProto { // no input paramters
@@ -358,6 +361,7 @@ message GetFsECBlockGroupStatsResponseProto {
   required uint64 missing_blocks = 3;
   required uint64 blocks_in_future = 4;
   required uint64 pending_deletion_blocks = 5;
+  optional uint64 highest_prio_low_redundancy_blocks = 6;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
@@ -477,7 +481,6 @@ message RollingUpgradeInfoProto {
 message RollingUpgradeResponseProto {
   optional RollingUpgradeInfoProto rollingUpgradeInfo= 1;
 }
-
 message ListCorruptFileBlocksRequestProto {
   required string path = 1;
   optional string cookie = 2;
@@ -827,6 +830,14 @@ message ListOpenFilesResponseProto {
   repeated OpenFilesTypeProto types = 3;
 }
 
+message SatisfyStoragePolicyRequestProto {
+  required string src = 1;
+}
+
+message SatisfyStoragePolicyResponseProto {
+
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -1013,4 +1024,6 @@ service ClientNamenodeProtocol {
       returns(GetQuotaUsageResponseProto);
   rpc listOpenFiles(ListOpenFilesRequestProto)
       returns(ListOpenFilesResponseProto);
+  rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
+      returns(SatisfyStoragePolicyResponseProto);
 }

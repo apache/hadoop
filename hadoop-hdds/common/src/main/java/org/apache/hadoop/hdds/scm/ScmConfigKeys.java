@@ -251,6 +251,13 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CONTAINER_CLOSE_THRESHOLD =
       "ozone.scm.container.close.threshold";
   public static final float OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
+
+  public static final String HDDS_SCM_WATCHER_TIMEOUT =
+      "hdds.scm.watcher.timeout";
+
+  public static final String HDDS_SCM_WATCHER_TIMEOUT_DEFAULT =
+      "10m";
+
   /**
    * Never constructed.
    */

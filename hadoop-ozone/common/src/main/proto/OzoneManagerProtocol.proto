@@ -234,6 +234,7 @@ message KeyArgs {
     optional uint64 dataSize = 4;
     optional hadoop.hdds.ReplicationType type = 5;
     optional hadoop.hdds.ReplicationFactor factor = 6;
+    repeated KeyLocation keyLocations = 7;
 }
 
 message KeyLocation {

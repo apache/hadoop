@@ -247,7 +247,7 @@ public class RocksDBStore implements MetadataStore {
         for (BatchOperation.SingleOperation opt : operations) {
           switch (opt.getOpt()) {
           case DELETE:
-            writeBatch.remove(opt.getKey());
+            writeBatch.delete(opt.getKey());
             break;
           case PUT:
             writeBatch.put(opt.getKey(), opt.getValue());
@@ -378,6 +378,11 @@ public class RocksDBStore implements MetadataStore {
   @VisibleForTesting
   protected ObjectName getStatMBeanName() {
     return statMBeanName;
+  }
+
+  @Override
+  public MetaStoreIterator<KeyValue> iterator() {
+    return new RocksDBStoreIterator(db.newIterator());
   }
 
 }

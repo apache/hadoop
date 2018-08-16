@@ -23,8 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.transport.server
@@ -35,12 +37,17 @@ import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.netty.NettyConfigKeys;
-import org.apache.ratis.protocol.*;
+import org.apache.ratis.protocol.RaftClientRequest;
+import org.apache.ratis.protocol.Message;
+import org.apache.ratis.protocol.RaftClientReply;
+import org.apache.ratis.protocol.ClientId;
+import org.apache.ratis.protocol.NotLeaderException;
+import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
-import org.apache.ratis.shaded.proto.RaftProtos;
+import org.apache.ratis.shaded.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -72,7 +79,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
   private final int port;
   private final RaftServer server;
-  private ThreadPoolExecutor writeChunkExecutor;
+  private ThreadPoolExecutor chunkExecutor;
+  private ClientId clientId = ClientId.randomId();
 
   private XceiverServerRatis(DatanodeDetails dd, int port, String storageDir,
       ContainerDispatcher dispatcher, Configuration conf) throws IOException {
@@ -117,13 +125,13 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     setRequestTimeout(serverProperties, clientRequestTimeout,
         serverRequestTimeout);
 
-    writeChunkExecutor =
+    chunkExecutor =
         new ThreadPoolExecutor(numWriteChunkThreads, numWriteChunkThreads,
             100, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(1024),
             new ThreadPoolExecutor.CallerRunsPolicy());
     ContainerStateMachine stateMachine =
-        new ContainerStateMachine(dispatcher, writeChunkExecutor);
+        new ContainerStateMachine(dispatcher, chunkExecutor);
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setGroup(RatisHelper.emptyRaftGroup())
@@ -225,14 +233,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public void start() throws IOException {
     LOG.info("Starting {} {} at port {}", getClass().getSimpleName(),
         server.getId(), getIPCPort());
-    writeChunkExecutor.prestartAllCoreThreads();
+    chunkExecutor.prestartAllCoreThreads();
     server.start();
   }
 
   @Override
   public void stop() {
     try {
-      writeChunkExecutor.shutdown();
+      chunkExecutor.shutdown();
       server.close();
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -282,17 +290,23 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
   @Override
   public void submitRequest(
-      ContainerProtos.ContainerCommandRequestProto request) throws IOException {
-    ClientId clientId = ClientId.randomId();
+      ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    // ReplicationLevel.ALL ensures the transactions corresponding to
+    // the request here are applied on all the raft servers.
     RaftClientRequest raftClientRequest =
-        new RaftClientRequest(clientId, server.getId(),
-            RatisHelper.emptyRaftGroup().getGroupId(), nextCallId(), 0,
-            Message.valueOf(request.toByteString()), RaftClientRequest
-            // ReplicationLevel.ALL ensures the transactions corresponding to
-            // the request here are applied on all the raft servers.
-            .writeRequestType(RaftProtos.ReplicationLevel.ALL));
+        createRaftClientRequest(request, pipelineID,
+            RaftClientRequest.writeRequestType(ReplicationLevel.ALL));
     CompletableFuture<RaftClientReply> reply =
         server.submitClientRequestAsync(raftClientRequest);
     reply.thenAccept(this::processReply);
+  }
+
+  private RaftClientRequest createRaftClientRequest(
+      ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID,
+      RaftClientRequest.Type type) {
+    return new RaftClientRequest(clientId, server.getId(),
+        PipelineID.getFromProtobuf(pipelineID).getRaftGroupID(),
+        nextCallId(),0, Message.valueOf(request.toByteString()), type);
   }
 }
