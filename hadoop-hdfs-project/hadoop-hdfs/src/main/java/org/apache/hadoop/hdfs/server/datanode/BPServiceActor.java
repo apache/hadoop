@@ -682,7 +682,8 @@ class BPServiceActor implements Runnable {
             }
           }
         }
-        if (ibrManager.sendImmediately() || sendHeartbeat) {
+        if (!dn.areIBRDisabledForTests() &&
+            (ibrManager.sendImmediately()|| sendHeartbeat)) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
               bpos.getBlockPoolId());
         }
