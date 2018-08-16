@@ -91,7 +91,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
         LOG.warn("Unable to locate pid file for container " + containerIdStr);
       }
     } catch (InterruptedException | InterruptedIOException e) {
-      LOG.warn("Interrupted while waiting for exit code from " + containerId);
+      LOG.warn("Interrupted while waiting for exit code from " + containerId, e);
       notInterrupted = false;
     } catch (IOException e) {
       LOG.error("Unable to recover container " + containerIdStr, e);

@@ -555,7 +555,7 @@ public class AliyunOSSFileSystemStore {
         deleteDirs(dir);
       }
     } catch (OSSException | ClientException e) {
-      LOG.error("Failed to purge " + prefix);
+      LOG.error("Failed to purge " + prefix, e);
     }
   }
 

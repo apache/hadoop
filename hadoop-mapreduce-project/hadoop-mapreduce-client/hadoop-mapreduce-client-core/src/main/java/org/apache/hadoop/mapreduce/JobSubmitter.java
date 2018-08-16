@@ -413,7 +413,7 @@ class JobSubmitter {
               .getBytes(Charsets.UTF_8));
         }
       } catch (JsonMappingException | JsonParseException e) {
-        LOG.warn("couldn't parse Token Cache JSON file with user secret keys");
+        LOG.warn("couldn't parse Token Cache JSON file with user secret keys", e);
       }
     }
   }
