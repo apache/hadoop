@@ -1547,9 +1547,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
-                              char* const* log_dirs, const char *command_file,
-                              const char *resources_key,
-                              char* const* resources_values) {
+                              char* const* log_dirs, const char *command_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -1732,23 +1730,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   if (pid != 0) {
-#ifdef __linux
-    fprintf(LOGFILE, "Writing to cgroup task files...\n");
-    // cgroups-based resource enforcement
-    if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
-      // write pid to cgroups
-      char* const* cgroup_ptr;
-      for (cgroup_ptr = resources_values; cgroup_ptr != NULL &&
-          *cgroup_ptr != NULL; ++cgroup_ptr) {
-        if (strcmp(*cgroup_ptr, "none") != 0 &&
-             write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
-          exit_code = WRITE_CGROUP_FAILED;
-          goto cleanup;
-        }
-      }
-    }
-#endif
-
     // write pid to pidfile
     fprintf(LOGFILE, "Writing pid file...\n");
     if (pid_file == NULL

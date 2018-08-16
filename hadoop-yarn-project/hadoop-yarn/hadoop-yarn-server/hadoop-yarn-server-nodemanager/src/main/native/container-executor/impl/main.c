@@ -430,8 +430,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
  case LAUNCH_DOCKER_CONTAINER:
    if(is_docker_support_enabled()) {
       //kill me now.
-      if (!(argc == 14 || argc == 15)) {
-        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 or 15) for"
+      if (!(argc == 13 || argc == 14)) {
+        fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14) for"
           " launch docker container\n", argc);
         fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
@@ -448,21 +448,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       // good log dirs as a comma separated list
       cmd_input.log_dirs = argv[optind++];
       cmd_input.docker_command_file = argv[optind++];
-      // key,value pair describing resources
-      resources = argv[optind++];
-      resources_key = malloc(strlen(resources));
-      resources_value = malloc(strlen(resources));
-      if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
-        get_kv_value(resources, resources_value, strlen(resources)) < 0) {
-        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
-                           resources);
-        fflush(ERRORFILE);
-        free(resources_key);
-        free(resources_value);
-        return INVALID_ARGUMENT_NUMBER;
-      }
       //network isolation through tc
-      if (argc == 15) {
+      if (argc == 14) {
         if(is_tc_support_enabled()) {
           cmd_input.traffic_control_command_file = argv[optind++];
         } else {
@@ -471,9 +458,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
         }
       }
 
-      cmd_input.resources_key = resources_key;
-      cmd_input.resources_value = resources_value;
-      cmd_input.resources_values = split(resources_value);
       *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
       return 0;
    } else {
@@ -653,9 +637,7 @@ int main(int argc, char **argv) {
                       cmd_input.pid_file,
                       split(cmd_input.local_dirs),
                       split(cmd_input.log_dirs),
-                      cmd_input.docker_command_file,
-                      cmd_input.resources_key,
-                      cmd_input.resources_values);
+                      cmd_input.docker_command_file);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
     if (cmd_input.traffic_control_command_file != NULL) {
