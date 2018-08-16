@@ -251,6 +251,10 @@ public abstract class BlockInfo extends Block
     return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
+  public boolean isUnderRecovery() {
+    return getBlockUCState().equals(BlockUCState.UNDER_RECOVERY);
+  }
+
   public final boolean isCompleteOrCommitted() {
     final BlockUCState state = getBlockUCState();
     return state.equals(BlockUCState.COMPLETE) ||
