@@ -29,10 +29,13 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.net.ssl.SSLHandshakeException;
 
@@ -355,24 +358,27 @@ public class TestLoadBalancingKMSClientProvider {
   }
 
   /**
-   * Tests whether retryPolicy fails immediately, after trying each provider
-   * once, on encountering IOException which is not SocketException.
+   * Tests whether retryPolicy fails immediately on non-idempotent operations,
+   * after trying each provider once,
+   * on encountering IOException which is not SocketException.
    * @throws Exception
    */
   @Test
-  public void testClientRetriesWithIOException() throws Exception {
+  public void testClientRetriesNonIdempotentOpWithIOExceptionFailsImmediately()
+      throws Exception {
     Configuration conf = new Configuration();
+    final String keyName = "test";
     // Setting total failover attempts to .
     conf.setInt(
         CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 10);
     KMSClientProvider p1 = mock(KMSClientProvider.class);
-    when(p1.getMetadata(Mockito.anyString()))
+    when(p1.createKey(Mockito.anyString(), Mockito.any(Options.class)))
         .thenThrow(new IOException("p1"));
     KMSClientProvider p2 = mock(KMSClientProvider.class);
-    when(p2.getMetadata(Mockito.anyString()))
+    when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
         .thenThrow(new IOException("p2"));
     KMSClientProvider p3 = mock(KMSClientProvider.class);
-    when(p3.getMetadata(Mockito.anyString()))
+    when(p3.createKey(Mockito.anyString(), Mockito.any(Options.class)))
         .thenThrow(new IOException("p3"));
 
     when(p1.getKMSUrl()).thenReturn("p1");
@@ -381,17 +387,61 @@ public class TestLoadBalancingKMSClientProvider {
     LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
         new KMSClientProvider[] {p1, p2, p3}, 0, conf);
     try {
-      kp.getMetadata("test3");
+      kp.createKey(keyName, new Options(conf));
       fail("Should fail since all providers threw an IOException");
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
     }
     verify(kp.getProviders()[0], Mockito.times(1))
-        .getMetadata(Mockito.eq("test3"));
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
     verify(kp.getProviders()[1], Mockito.times(1))
-        .getMetadata(Mockito.eq("test3"));
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
     verify(kp.getProviders()[2], Mockito.times(1))
-        .getMetadata(Mockito.eq("test3"));
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
+  }
+
+  /**
+   * Tests whether retryPolicy retries on idempotent operations
+   * when encountering IOException.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesIdempotentOpWithIOExceptionSucceedsSecondTime()
+      throws Exception {
+    Configuration conf = new Configuration();
+    final String keyName = "test";
+    final KeyProvider.KeyVersion keyVersion
+        = new KMSClientProvider.KMSKeyVersion(keyName, "v1",
+        new byte[0]);
+    // Setting total failover attempts to .
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 10);
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    when(p1.getCurrentKey(Mockito.anyString()))
+        .thenThrow(new IOException("p1"))
+        .thenReturn(keyVersion);
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.getCurrentKey(Mockito.anyString()))
+        .thenThrow(new IOException("p2"));
+    KMSClientProvider p3 = mock(KMSClientProvider.class);
+    when(p3.getCurrentKey(Mockito.anyString()))
+        .thenThrow(new IOException("p3"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+    when(p3.getKMSUrl()).thenReturn("p3");
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2, p3}, 0, conf);
+
+    KeyProvider.KeyVersion result = kp.getCurrentKey(keyName);
+
+    assertEquals(keyVersion, result);
+    verify(kp.getProviders()[0], Mockito.times(2))
+        .getCurrentKey(Mockito.eq(keyName));
+    verify(kp.getProviders()[1], Mockito.times(1))
+        .getCurrentKey(Mockito.eq(keyName));
+    verify(kp.getProviders()[2], Mockito.times(1))
+        .getCurrentKey(Mockito.eq(keyName));
   }
 
   /**
@@ -716,5 +766,116 @@ public class TestLoadBalancingKMSClientProvider {
         Mockito.any(Options.class));
     verify(p2, Mockito.times(1)).createKey(Mockito.eq(keyName),
         Mockito.any(Options.class));
+  }
+
+  /**
+   * Tests that if an idempotent operation succeeds second time after
+   * SocketTimeoutException, then the operation is successful.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesIdempotentOpWithSocketTimeoutExceptionSucceeds()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 3);
+    final List<String> keys = Arrays.asList("testKey");
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    when(p1.getKeys())
+        .thenThrow(new SocketTimeoutException("p1"))
+        .thenReturn(keys);
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.getKeys()).thenThrow(new SocketTimeoutException("p2"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+
+    List<String> result = kp.getKeys();
+    assertEquals(keys, result);
+    verify(p1, Mockito.times(2)).getKeys();
+    verify(p2, Mockito.times(1)).getKeys();
+  }
+
+  /**
+   * Tests that if a non idempotent operation fails at every attempt
+   * after SocketTimeoutException, then SocketTimeoutException is thrown.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesIdempotentOpWithSocketTimeoutExceptionFails()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 2);
+    final String keyName = "test";
+    final String exceptionMessage = "p1 exception message";
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    Exception originalEx = new SocketTimeoutException(exceptionMessage);
+    when(p1.getKeyVersions(Mockito.anyString()))
+        .thenThrow(originalEx);
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.getKeyVersions(Mockito.anyString()))
+        .thenThrow(new SocketTimeoutException("p2 exception message"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2}, 0, conf);
+
+    Exception interceptedEx = intercept(SocketTimeoutException.class,
+        "SocketTimeoutException: " + exceptionMessage,
+        ()-> kp.getKeyVersions(keyName));
+    assertEquals(originalEx, interceptedEx);
+
+    verify(p1, Mockito.times(2))
+        .getKeyVersions(Mockito.eq(keyName));
+    verify(p2, Mockito.times(1))
+        .getKeyVersions(Mockito.eq(keyName));
+  }
+
+  /**
+   * Tests whether retryPolicy fails immediately on non-idempotent operations,
+   * after trying each provider once, on encountering SocketTimeoutException.
+   * @throws Exception
+   */
+  @Test
+  public void testClientRetriesNonIdempotentOpWithSocketTimeoutExceptionFails()
+      throws Exception {
+    Configuration conf = new Configuration();
+    final String keyName = "test";
+    // Setting total failover attempts to .
+    conf.setInt(
+        CommonConfigurationKeysPublic.KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, 10);
+    KMSClientProvider p1 = mock(KMSClientProvider.class);
+    when(p1.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new SocketTimeoutException("p1"));
+    KMSClientProvider p2 = mock(KMSClientProvider.class);
+    when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new SocketTimeoutException("p2"));
+    KMSClientProvider p3 = mock(KMSClientProvider.class);
+    when(p3.createKey(Mockito.anyString(), Mockito.any(Options.class)))
+        .thenThrow(new SocketTimeoutException("p3"));
+
+    when(p1.getKMSUrl()).thenReturn("p1");
+    when(p2.getKMSUrl()).thenReturn("p2");
+    when(p3.getKMSUrl()).thenReturn("p3");
+    LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {p1, p2, p3}, 0, conf);
+    try {
+      kp.createKey(keyName, new Options(conf));
+      fail("Should fail since all providers threw a SocketTimeoutException");
+    } catch (Exception e) {
+      assertTrue(e instanceof SocketTimeoutException);
+    }
+    verify(kp.getProviders()[0], Mockito.times(1))
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
+    verify(kp.getProviders()[1], Mockito.times(1))
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
+    verify(kp.getProviders()[2], Mockito.times(1))
+        .createKey(Mockito.eq(keyName), Mockito.any(Options.class));
   }
 }
