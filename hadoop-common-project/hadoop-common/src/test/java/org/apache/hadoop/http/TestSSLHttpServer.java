@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve
- * HTTPS using the created certficates and calls an echo servlet using the
+ * HTTPS using the created certificates and calls an echo servlet using the
  * corresponding HTTPS URL.
  */
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
@@ -58,11 +58,15 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSSLHttpServer.class);
+  private static final String HTTPS_CIPHER_SUITES_KEY = "https.cipherSuites";
+  private static final String JAVAX_NET_DEBUG_KEY = "javax.net.debug";
   private static Configuration conf;
   private static HttpServer2 server;
   private static String keystoresDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
+  private static String cipherSuitesPropertyValue;
+  private static String sslDebugPropertyValue;
   private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
       + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
@@ -83,6 +87,9 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass
   public static void setup() throws Exception {
+    turnOnSSLDebugLogging();
+    storeHttpsCipherSuites();
+
     conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
 
@@ -127,6 +134,51 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     clientSslFactory.destroy();
+    restoreHttpsCipherSuites();
+    restoreSSLDebugLogging();
+  }
+
+  /**
+   * Stores the JVM property value of https.cipherSuites and sets its
+   * value to an empty string.
+   * This ensures that the value https.cipherSuites does
+   * not affect the result of tests.
+   */
+  private static void storeHttpsCipherSuites() {
+    String cipherSuites = System.getProperty(HTTPS_CIPHER_SUITES_KEY);
+    if (cipherSuites != null) {
+      LOG.info(
+          "Found value for property {}: {}", HTTPS_CIPHER_SUITES_KEY,
+          cipherSuites);
+      cipherSuitesPropertyValue = cipherSuites;
+    }
+    System.clearProperty(HTTPS_CIPHER_SUITES_KEY);
+  }
+
+  private static void restoreHttpsCipherSuites() {
+    if (cipherSuitesPropertyValue != null) {
+      LOG.info("Restoring property {} to value: {}", HTTPS_CIPHER_SUITES_KEY,
+          cipherSuitesPropertyValue);
+      System.setProperty(HTTPS_CIPHER_SUITES_KEY, cipherSuitesPropertyValue);
+      cipherSuitesPropertyValue = null;
+    }
+  }
+
+  private static void turnOnSSLDebugLogging() {
+    String sslDebug = System.getProperty(JAVAX_NET_DEBUG_KEY);
+    if (sslDebug != null) {
+      sslDebugPropertyValue = sslDebug;
+    }
+    System.setProperty(JAVAX_NET_DEBUG_KEY, "all");
+  }
+
+  private static void restoreSSLDebugLogging() {
+    if (sslDebugPropertyValue != null) {
+      System.setProperty(JAVAX_NET_DEBUG_KEY, sslDebugPropertyValue);
+      sslDebugPropertyValue = null;
+    } else {
+      System.clearProperty(JAVAX_NET_DEBUG_KEY);
+    }
   }
 
   @Test
