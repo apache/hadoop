@@ -1036,7 +1036,7 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "collector-service.address";
   public static final int DEFAULT_NM_COLLECTOR_SERVICE_PORT = 8048;
   public static final String DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS =
-      "0.0.0.0:" + DEFAULT_NM_LOCALIZER_PORT;
+      "0.0.0.0:" + DEFAULT_NM_COLLECTOR_SERVICE_PORT;
 
   /** Interval in between cache cleanups.*/
   public static final String NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS =
