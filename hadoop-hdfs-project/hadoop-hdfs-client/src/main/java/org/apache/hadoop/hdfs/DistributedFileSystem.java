@@ -1143,7 +1143,11 @@ public class DistributedFileSystem extends FileSystem
       thisListing = dfs.listPaths(src, HdfsFileStatus.EMPTY_NAME,
           needLocation);
       statistics.incrementReadOps(1);
-      storageStatistics.incrementOpCounter(OpType.LIST_LOCATED_STATUS);
+      if (needLocation) {
+        storageStatistics.incrementOpCounter(OpType.LIST_LOCATED_STATUS);
+      } else {
+        storageStatistics.incrementOpCounter(OpType.LIST_STATUS);
+      }
       if (thisListing == null) { // the directory does not exist
         throw new FileNotFoundException("File " + p + " does not exist.");
       }
