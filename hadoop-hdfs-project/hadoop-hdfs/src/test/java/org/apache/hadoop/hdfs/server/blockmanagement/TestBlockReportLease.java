@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +56,7 @@ import static org.mockito.Mockito.spy;
  * Tests that BlockReportLease in BlockManager.
  */
 public class TestBlockReportLease {
-  private static final Log LOG = LogFactory.getLog(TestBlockReportLease.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockReportLease.class);
   /**
    * Test check lease about one BlockReport with many StorageBlockReport.
    * Before HDFS-12914, when batch storage report to NameNode, it will check

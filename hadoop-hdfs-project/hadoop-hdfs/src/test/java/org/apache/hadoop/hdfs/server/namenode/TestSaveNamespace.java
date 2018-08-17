@@ -40,8 +40,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -72,6 +70,9 @@ import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Test various failure scenarios during saveNamespace() operation.
@@ -89,7 +90,7 @@ public class TestSaveNamespace {
     GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
   }
   
-  private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSaveNamespace.class);
 
   private static class FaultySaveImage implements Answer<Void> {
     private int count = 0;
@@ -332,7 +333,7 @@ public class TestSaveNamespace {
         try {
           fsn.close();
         } catch (Throwable t) {
-          LOG.fatal("Failed to shut down", t);
+          LOG.error("Failed to shut down", t);
         }
       }
     }
@@ -632,7 +633,7 @@ public class TestSaveNamespace {
       cluster.getNameNodeRpc().saveNamespace(0, 0);
       fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     } finally {
-      IOUtils.cleanup(LOG, out, fs);
+      IOUtils.cleanupWithLogger(LOG, out, fs);
       cluster.shutdown();
     }
   }
