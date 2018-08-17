@@ -840,6 +840,57 @@
     </test>
 
     <test> <!-- TESTED -->
+      <description>help: help for touch</description>
+      <test-commands>
+        <command>-help touch</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-touch \[-a\] \[-m\] \[-t TIMESTAMP \] \[-c\] &lt;path&gt; \.\.\. :( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*Updates the access and modification times of the file specified by the &lt;path&gt; to( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*the current time. If the file does not exist, then a zero length file is created( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*at &lt;path&gt; with current time as the timestamp of that &lt;path&gt;.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-a\s+Change only the access time( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-a\s+Change only the access time( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-m\s+Change only the modification time( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-t\s+TIMESTAMP\s+Use specified timestamp \(in format yyyyMMddHHmmss\) instead of</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*current time( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-c\s+Do not create any files( )*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>help: help for touchz</description>
       <test-commands>
         <command>-help touchz</command>
