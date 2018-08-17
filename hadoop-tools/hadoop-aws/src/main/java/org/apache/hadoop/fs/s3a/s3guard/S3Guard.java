@@ -235,6 +235,10 @@ public final class S3Guard {
       changed = changed || updated;
     }
 
+    // If dirMeta is not authoritative, but isAuthoritative is true the
+    // directory metadata should be updated. Treat it as a change.
+    changed = changed || (!dirMeta.isAuthoritative() && isAuthoritative);
+
     if (changed && isAuthoritative) {
       dirMeta.setAuthoritative(true); // This is the full directory contents
       ms.put(dirMeta);

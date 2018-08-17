@@ -122,8 +122,9 @@ two different reasons:
     (`DirListingMetadata`) is full, and complete.
     * If set to `FALSE` the listing may not be complete.
     * Metadata store may persist the isAuthoritative bit on the metadata store.
-    * Currently only `org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore`
-    implementation supports authoritative bit.
+    * Currently `org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore` and
+    `org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore` implementation
+    supports authoritative bit.
 
 More on Authoritative S3Guard:
 
