@@ -574,6 +574,19 @@ public abstract class FSImageTestUtil {
       }
     }
   }
+
+  public static void logStorageContents(org.slf4j.Logger LOG, NNStorage storage) {
+    LOG.info("current storages and corresponding sizes:");
+    for (StorageDirectory sd : storage.dirIterable(null)) {
+      File curDir = sd.getCurrentDir();
+      LOG.info("In directory {}", curDir);
+      File[] files = curDir.listFiles();
+      Arrays.sort(files);
+      for (File f : files) {
+        LOG.info("  file {}; len = {}",  f.getAbsolutePath(), f.length());
+      }
+    }
+  }
   
   /** get the fsImage*/
   public static FSImage getFSImage(NameNode node) {

@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -74,7 +74,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_IN
  */
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
-  private static final Log LOG = LogFactory.getLog(TestDeleteRace.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);
   private static final Configuration conf = new HdfsConfiguration();
   private MiniDFSCluster cluster;
 
@@ -171,7 +171,7 @@ public class TestDeleteRace {
         inodeMap.put(fileINode);
         LOG.info("Deleted" + path);
       } catch (Exception e) {
-        LOG.info(e);
+        LOG.info(e.toString());
       }
     }
   }
@@ -196,7 +196,7 @@ public class TestDeleteRace {
         fs.rename(from, to);
         LOG.info("Renamed " + from + " to " + to);
       } catch (Exception e) {
-        LOG.info(e);
+        LOG.info(e.toString());
       }
     }
   }

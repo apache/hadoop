@@ -24,8 +24,8 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
@@ -43,7 +43,7 @@ import org.mockito.Mockito;
 import com.google.common.base.Supplier;
 
 public class TestIPCLoggerChannel {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestIPCLoggerChannel.class);
   
   private final Configuration conf = new Configuration();

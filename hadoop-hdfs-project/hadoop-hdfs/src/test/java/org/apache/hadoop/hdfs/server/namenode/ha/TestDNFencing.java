@@ -29,8 +29,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,7 +69,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 public class TestDNFencing {
   
-  protected static final Log LOG = LogFactory.getLog(TestDNFencing.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestDNFencing.class);
   private static final String TEST_FILE = "/testStandbyIsHot";
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
   private static final int SMALL_BLOCK = 1024;

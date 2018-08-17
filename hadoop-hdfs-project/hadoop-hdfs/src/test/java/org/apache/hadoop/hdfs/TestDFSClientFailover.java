@@ -34,6 +34,8 @@ import java.util.List;
 
 import javax.net.SocketFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +69,7 @@ import sun.net.spi.nameservice.NameService;
 
 public class TestDFSClientFailover {
   
-  private static final Log LOG = LogFactory.getLog(TestDFSClientFailover.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSClientFailover.class);
   
   private static final Path TEST_FILE = new Path("/tmp/failover-test-file");
   private static final int FILE_LENGTH_TO_VERIFY = 100;
@@ -239,7 +241,7 @@ public class TestDFSClientFailover {
       List<NameService> nsList = (List<NameService>) f.get(null);
 
       NameService ns = nsList.get(0);
-      Log log = LogFactory.getLog("NameServiceSpy");
+      Logger log = LoggerFactory.getLogger("NameServiceSpy");
       
       ns = Mockito.mock(NameService.class,
           new GenericTestUtils.DelegateAnswer(log, ns));

@@ -32,8 +32,8 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +57,7 @@ import org.junit.Test;
  *  using append()/sync() to recover block information
  */
 public class TestFileAppend4 {
-  static final Log LOG = LogFactory.getLog(TestFileAppend4.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFileAppend4.class);
   static final long BLOCK_SIZE = 1024;
   static final long BBW_SIZE = 500; // don't align on bytes/checksum
 
