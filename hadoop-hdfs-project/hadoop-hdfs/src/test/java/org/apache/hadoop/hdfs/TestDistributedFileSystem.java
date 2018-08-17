@@ -706,6 +706,7 @@ public class TestDistributedFileSystem {
       // Iterative ls test
       long mkdirOp = getOpStatistics(OpType.MKDIRS);
       long listStatusOp = getOpStatistics(OpType.LIST_STATUS);
+      long locatedListStatusOP = getOpStatistics(OpType.LIST_LOCATED_STATUS);
       for (int i = 0; i < 10; i++) {
         Path p = new Path(dir, Integer.toString(i));
         fs.mkdirs(p);
@@ -729,6 +730,12 @@ public class TestDistributedFileSystem {
         checkStatistics(fs, readOps, ++writeOps, largeReadOps);
         checkOpStatistics(OpType.MKDIRS, mkdirOp);
         checkOpStatistics(OpType.LIST_STATUS, listStatusOp);
+
+        fs.listLocatedStatus(dir);
+        locatedListStatusOP++;
+        readOps++;
+        checkStatistics(fs, readOps, writeOps, largeReadOps);
+        checkOpStatistics(OpType.LIST_LOCATED_STATUS, locatedListStatusOP);
       }
       
       opCount = getOpStatistics(OpType.GET_STATUS);
