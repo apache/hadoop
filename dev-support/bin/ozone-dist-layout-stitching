@@ -151,6 +151,8 @@ cp "${ROOT}/hadoop-ozone/ozonefs/target/hadoop-ozone-filesystem-${HDDS_VERSION}.
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ozoneManager/
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
 
+#Copy docker compose files
+run cp -p -r "${ROOT}/hadoop-dist/src/main/compose" .
 
 mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn

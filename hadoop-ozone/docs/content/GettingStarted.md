@@ -81,7 +81,7 @@ Go to the directory where the docker compose files exist and tell
 `docker-compose` to start Ozone. This will start SCM, OM and a single datanode
 in the background.
 ```
-cd hadoop-dist/target/compose/ozone
+cd hadoop-dist/target/ozone/compose/ozone
 
 docker-compose up -d
 ```

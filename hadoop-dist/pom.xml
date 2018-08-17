@@ -277,23 +277,6 @@
             <artifactId>maven-resources-plugin</artifactId>
             <executions>
               <execution>
-                <id>copy-docker-compose</id>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <phase>prepare-package</phase>
-                <configuration>
-                  <outputDirectory>${project.build.directory}/compose
-                  </outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>src/main/compose</directory>
-                      <filtering>true</filtering>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-              <execution>
                 <id>copy-dockerfile</id>
                 <goals>
                   <goal>copy-resources</goal>

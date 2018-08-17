@@ -19,7 +19,7 @@ services:
    datanode:
       image: apache/hadoop-runner
       volumes:
-        - ../../ozone:/opt/hadoop
+        - ../..:/opt/hadoop
         - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
         - 9864
@@ -29,7 +29,7 @@ services:
    ozoneManager:
       image: apache/hadoop-runner
       volumes:
-        - ../../ozone:/opt/hadoop
+        - ../..:/opt/hadoop
         - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
          - 9874:9874
@@ -41,7 +41,7 @@ services:
    scm:
       image: apache/hadoop-runner
       volumes:
-         - ../../ozone:/opt/hadoop
+         - ../..:/opt/hadoop
          - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
          - 9876:9876
