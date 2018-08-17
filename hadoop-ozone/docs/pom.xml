@@ -53,6 +53,23 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           </arguments>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>themes/ozonedoc/static/js/bootstrap.min.js</exclude>
+            <exclude>themes/ozonedoc/static/js/jquery.min.js</exclude>
+            <exclude>themes/ozonedoc/static/css/bootstrap-theme.min.css</exclude>
+            <exclude>themes/ozonedoc/static/css/bootstrap.min.css.map</exclude>
+            <exclude>themes/ozonedoc/static/css/bootstrap.min.css</exclude>
+            <exclude>themes/ozonedoc/static/css/bootstrap-theme.min.css.map</exclude>
+            <exclude>themes/ozonedoc/static/fonts/glyphicons-halflings-regular.svg</exclude>
+            <exclude>themes/ozonedoc/layouts/index.html</exclude>
+            <exclude>themes/ozonedoc/theme.toml</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
