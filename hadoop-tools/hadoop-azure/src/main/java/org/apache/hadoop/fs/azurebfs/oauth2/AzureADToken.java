@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,25 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.oauth2;
+
+import java.util.Date;
+
 
 /**
- * The Http Request / Response Headers for Rest AbfsClient.
+ * Object representing the AAD access token to use when making HTTP requests to Azure Data Lake Storage.
  */
-public class AbfsHttpHeader {
-  private final String name;
-  private final String value;
+public class AzureADToken {
+  private String accessToken;
+  private Date expiry;
 
-  public AbfsHttpHeader(final String name, final String value) {
-    this.name = name;
-    this.value = value;
+  public String getAccessToken() {
+    return this.accessToken;
   }
 
-  public String getName() {
-    return name;
+  public void setAccessToken(String accessToken) {
+    this.accessToken = accessToken;
   }
 
-  public String getValue() {
-    return value;
+  public Date getExpiry() {
+    return new Date(this.expiry.getTime());
   }
+
+  public void setExpiry(Date expiry) {
+    this.expiry = new Date(expiry.getTime());
+  }
+
 }

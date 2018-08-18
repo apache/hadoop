@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -66,6 +68,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
   public ITestAzureBlobFileSystemRandomRead() throws Exception {
     super();
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Test

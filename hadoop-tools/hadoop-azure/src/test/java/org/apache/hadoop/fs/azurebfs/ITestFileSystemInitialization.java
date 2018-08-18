@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Test AzureBlobFileSystem initialization.
@@ -41,8 +42,10 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
     final String accountName = getAccountName();
     final String filesystem = getFileSystemName();
 
+    String scheme = this.getAuthType() == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
+            : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
     assertEquals(fs.getUri(),
-        new URI(FileSystemUriSchemes.ABFS_SCHEME,
+        new URI(scheme,
             filesystem + "@" + accountName,
             null,
             null,

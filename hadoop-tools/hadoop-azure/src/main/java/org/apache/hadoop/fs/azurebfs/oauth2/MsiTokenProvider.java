@@ -16,29 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.contract;
+package org.apache.hadoop.fs.azurebfs.oauth2;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+import java.io.IOException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Contract test for distCp operation.
+ * Provides tokens based on Azure VM's Managed Service Identity.
  */
-public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTest {
-  private final ABFSContractTestBinding binding;
+public class MsiTokenProvider extends AccessTokenProvider {
 
-  public ITestAbfsFileSystemContractDistCp() throws Exception {
-    binding = new ABFSContractTestBinding();
+  private final String tenantGuid;
+
+  private final String clientId;
+
+  private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
+
+  public MsiTokenProvider(final String tenantGuid, final String clientId) {
+    this.tenantGuid = tenantGuid;
+    this.clientId = clientId;
   }
 
   @Override
-  public void setup() throws Exception {
-    binding.setup();
-    super.setup();
-  }
-
-  @Override
-  protected AbfsFileSystemContract createContract(Configuration conf) {
-    return new AbfsFileSystemContract(conf, false);
+  protected AzureADToken refreshToken() throws IOException {
+    LOG.debug("AADToken: refreshing token from MSI");
+    AzureADToken token = AzureADAuthenticator.getTokenFromMsi(tenantGuid, clientId, false);
+    return token;
   }
 }

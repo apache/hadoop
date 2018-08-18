@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.junit.Assert;
@@ -30,6 +29,7 @@ import org.junit.Test;
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 5000;
+
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();

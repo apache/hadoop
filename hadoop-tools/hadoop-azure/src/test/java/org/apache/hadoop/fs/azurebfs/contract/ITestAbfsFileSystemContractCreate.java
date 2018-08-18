@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
-import java.util.Arrays;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -30,19 +25,13 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 /**
  * Contract test for create operation.
  */
-@RunWith(Parameterized.class)
 public class ITestAbfsFileSystemContractCreate extends AbstractContractCreateTest{
-  @Parameterized.Parameters(name = "SecureMode={0}")
-  public static Iterable<Object[]> secure() {
-    return Arrays.asList(new Object[][] { {true}, {false} });
-  }
-
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsFileSystemContractCreate(final boolean secure) throws Exception {
-    this.isSecure = secure;
-    binding = new ABFSContractTestBinding(this.isSecure);
+  public ITestAbfsFileSystemContractCreate() throws Exception {
+    binding = new ABFSContractTestBinding();
+    this.isSecure = binding.isSecureMode();
   }
 
   @Override

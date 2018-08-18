@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
@@ -50,6 +51,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
   public ITestWasbAbfsCompatibility() throws Exception {
     Assume.assumeFalse("Emulator is not supported", isEmulator());
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Test

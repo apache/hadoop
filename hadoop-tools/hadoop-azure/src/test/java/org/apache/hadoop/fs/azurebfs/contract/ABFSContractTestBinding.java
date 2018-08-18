@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Bind ABFS contract tests to the Azure test setup/teardown.
@@ -32,18 +33,17 @@ import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
   private final URI testUri;
 
-  public ABFSContractTestBinding(final boolean secure) throws Exception {
-    this(secure, true);
+  public ABFSContractTestBinding() throws Exception {
+    this(true);
   }
 
-  public ABFSContractTestBinding(final boolean secure,
+  public ABFSContractTestBinding(
       final boolean useExistingFileSystem) throws Exception{
-    super(secure);
     if (useExistingFileSystem) {
       Configuration configuration = getConfiguration();
       String testUrl = configuration.get(TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
 
-      if (secure) {
+      if (getAuthType() != AuthType.SharedKey) {
         testUrl = testUrl.replaceFirst(FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME);
       }
       setTestUrl(testUrl);
@@ -60,5 +60,9 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
 
   public Configuration getConfiguration() {
     return super.getConfiguration();
+  }
+
+  public boolean isSecureMode() {
+    return this.getAuthType() == AuthType.SharedKey ? false : true;
   }
 }

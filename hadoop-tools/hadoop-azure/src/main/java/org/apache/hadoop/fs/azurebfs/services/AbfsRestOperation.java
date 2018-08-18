@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -48,7 +49,7 @@ public class AbfsRestOperation {
   // request body and all the download methods have a response body.
   private final boolean hasRequestBody;
 
-  private final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
   // For uploads, this is the request entity body.  For downloads,
   // this will hold the response entity body.
@@ -139,9 +140,15 @@ public class AbfsRestOperation {
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
 
       // sign the HTTP request
-      client.getSharedKeyCredentials().signRequest(
-          httpOperation.getConnection(),
-          hasRequestBody ? bufferLength : 0);
+      if (client.getAccessToken() == null) {
+        // sign the HTTP request
+        client.getSharedKeyCredentials().signRequest(
+                httpOperation.getConnection(),
+                hasRequestBody ? bufferLength : 0);
+      } else {
+        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+                client.getAccessToken());
+      }
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
@@ -163,9 +170,7 @@ public class AbfsRestOperation {
       return false;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("HttpRequest: " + httpOperation.toString());
-    }
+    LOG.debug("HttpRequest: " + httpOperation.toString());
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       return false;

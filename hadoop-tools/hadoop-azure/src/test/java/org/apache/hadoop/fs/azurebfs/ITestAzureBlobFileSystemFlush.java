@@ -31,9 +31,9 @@ import java.io.IOException;
 import com.microsoft.azure.storage.blob.BlockEntry;
 import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -41,6 +41,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Test flush operation.
@@ -209,6 +212,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   @Test
   public void testFlushWithFlushEnabled() throws Exception {
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+
     AzureBlobStorageTestAccount testAccount = createWasbTestAccount();
     String wasbUrl = testAccount.getFileSystem().getName();
     String abfsUrl = wasbUrlToAbfsUrl(wasbUrl);
@@ -228,6 +233,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   @Test
   public void testFlushWithFlushDisabled() throws Exception {
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     AzureBlobStorageTestAccount testAccount = createWasbTestAccount();
     String wasbUrl = testAccount.getFileSystem().getName();
     String abfsUrl = wasbUrlToAbfsUrl(wasbUrl);

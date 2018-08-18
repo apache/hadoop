@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Test AzureBlobFileSystem registration.
@@ -79,8 +80,14 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(getConfiguration());
     assertNotNull("filesystem", fs);
 
-    Abfs afs = (Abfs) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
-    assertNotNull("filecontext", afs);
+    if (this.getAuthType() == AuthType.OAuth) {
+      Abfss afs = (Abfss) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+      assertNotNull("filecontext", afs);
+    } else {
+      Abfs afs = (Abfs) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+      assertNotNull("filecontext", afs);
+    }
+
   }
 
   @Test

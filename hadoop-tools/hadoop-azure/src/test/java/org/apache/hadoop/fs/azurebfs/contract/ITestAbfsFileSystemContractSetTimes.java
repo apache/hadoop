@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.fs.azurebfs.contract;
 
-import java.util.Arrays;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractSetTimesTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -29,19 +24,13 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 /**
  * Contract test for setTimes operation.
  */
-@RunWith(Parameterized.class)
 public class ITestAbfsFileSystemContractSetTimes extends AbstractContractSetTimesTest {
-  @Parameterized.Parameters(name = "SecureMode={0}")
-  public static Iterable<Object[]> secure() {
-    return Arrays.asList(new Object[][] { {true}, {false} });
-  }
-
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsFileSystemContractSetTimes(final boolean secure) throws Exception {
-    this.isSecure = secure;
-    binding = new ABFSContractTestBinding(this.isSecure);
+  public ITestAbfsFileSystemContractSetTimes() throws Exception {
+    binding = new ABFSContractTestBinding();
+    this.isSecure = binding.isSecureMode();
   }
 
   @Override

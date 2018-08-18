@@ -22,8 +22,11 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+
+import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -34,6 +37,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
     AbstractAbfsIntegrationTest {
   public ITestAzureBlobFileSystemBackCompat() {
     super();
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Test

@@ -67,10 +67,12 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -487,16 +489,22 @@ public class AzureBlobFileSystemStore {
       throw new InvalidUriException(uri.toString());
     }
 
-    int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
-    if (dotIndex <= 0) {
-      throw new InvalidUriException(
-          uri.toString() + " - account name is not fully qualified.");
-    }
-    SharedKeyCredentials creds =
-            new SharedKeyCredentials(accountName.substring(0, dotIndex),
-                    this.abfsConfiguration.getStorageAccountKey(accountName));
+    SharedKeyCredentials creds = null;
+    AccessTokenProvider tokenProvider = null;
 
-    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy());
+    if (abfsConfiguration.getAuthType(accountName) == AuthType.SharedKey) {
+      int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+      if (dotIndex <= 0) {
+        throw new InvalidUriException(
+                uri.toString() + " - account name is not fully qualified.");
+      }
+      creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
+            abfsConfiguration.getStorageAccountKey(accountName));
+    } else {
+      tokenProvider = abfsConfiguration.getTokenProvider(accountName);
+    }
+
+    this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider);
   }
 
   private String getRelativePath(final Path path) {
@@ -537,7 +545,7 @@ public class AzureBlobFileSystemStore {
       Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN).parse(lastModifiedTime);
       parsedTime = utcDate.getTime();
     } catch (ParseException e) {
-      LOG.error("Failed to parse the date {0}", lastModifiedTime);
+      LOG.error("Failed to parse the date {}", lastModifiedTime);
     } finally {
       return parsedTime;
     }

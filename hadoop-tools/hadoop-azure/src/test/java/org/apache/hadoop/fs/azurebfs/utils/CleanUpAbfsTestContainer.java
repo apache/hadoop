@@ -21,8 +21,12 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
-import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
+import org.junit.Assume;
 import org.junit.Test;
+
+import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ABFS_TEST_CONTAINER_PREFIX;
 
@@ -31,7 +35,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ABFS
  * In that case, dev can use this tool to list and delete all test containers.
  * By default, all test container used in E2E tests sharing same prefix: "abfs-testcontainer-"
  */
-public class CleanUpAbfsTestContainer {
+public class CleanUpAbfsTestContainer extends AbstractAbfsIntegrationTest{
+
+  public CleanUpAbfsTestContainer() {
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+  }
+
   @Test
   public void testEnumContainers() throws Throwable {
     int count = 0;

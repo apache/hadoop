@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AbstractWasbTestWithTimeout;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -62,7 +63,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
 
-  private final boolean isEmulator;
+  private boolean isEmulator;
   private NativeAzureFileSystem wasb;
   private AzureBlobFileSystem abfs;
   private String abfsScheme;
@@ -71,20 +72,18 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String fileSystemName;
   private String accountName;
   private String testUrl;
-
-  protected AbstractAbfsIntegrationTest(final boolean secure) {
-    this(secure ? FileSystemUriSchemes.ABFS_SECURE_SCHEME : FileSystemUriSchemes.ABFS_SCHEME);
-  }
+  private AuthType authType;
 
   protected AbstractAbfsIntegrationTest() {
-    this(FileSystemUriSchemes.ABFS_SCHEME);
-  }
-
-  private AbstractAbfsIntegrationTest(final String scheme) {
-    abfsScheme = scheme;
     fileSystemName = ABFS_TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     configuration = new Configuration();
     configuration.addResource(ABFS_TEST_RESOURCE_XML);
+    this.accountName = this.configuration.get(FS_AZURE_TEST_ACCOUNT_NAME);
+
+    authType = configuration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME
+            + accountName, AuthType.SharedKey);
+    abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
+            : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
     String accountName = configuration.get(FS_AZURE_TEST_ACCOUNT_NAME, "");
     assumeTrue("Not set: " + FS_AZURE_TEST_ACCOUNT_NAME,
@@ -94,8 +93,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         accountName, containsString("dfs.core.windows.net"));
     String fullKey = FS_AZURE_TEST_ACCOUNT_KEY_PREFIX
         + accountName;
-    assumeTrue("Not set: " + fullKey,
-        configuration.get(fullKey) != null);
+
+    if (authType == AuthType.SharedKey) {
+      assumeTrue("Not set: " + fullKey, configuration.get(fullKey) != null);
+    } else {
+      String accessTokenProviderKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountName;
+      assumeTrue("Not set: " + accessTokenProviderKey, configuration.get(accessTokenProviderKey) != null);
+    }
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
@@ -110,7 +114,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     configuration.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
     this.isEmulator = this.configuration.getBoolean(FS_AZURE_EMULATOR_ENABLED, false);
-    this.accountName = this.configuration.get(FS_AZURE_TEST_ACCOUNT_NAME);
   }
 
 
@@ -119,7 +122,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
-    if (!isEmulator) {
+    if (!isEmulator && authType == AuthType.SharedKey) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
@@ -232,6 +235,10 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   protected boolean isEmulator() {
     return isEmulator;
+  }
+
+  protected AuthType getAuthType() {
+    return this.authType;
   }
 
   /**
