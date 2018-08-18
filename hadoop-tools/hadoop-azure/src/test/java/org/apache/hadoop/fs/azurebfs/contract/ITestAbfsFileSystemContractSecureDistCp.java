@@ -28,7 +28,7 @@ public class ITestAbfsFileSystemContractSecureDistCp extends AbstractContractDis
   private final ABFSContractTestBinding binding;
 
   public ITestAbfsFileSystemContractSecureDistCp() throws Exception {
-    binding = new ABFSContractTestBinding(true);
+    binding = new ABFSContractTestBinding();
   }
 
   @Override

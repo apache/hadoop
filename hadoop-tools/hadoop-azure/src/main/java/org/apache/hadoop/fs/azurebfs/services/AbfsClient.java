@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
@@ -42,7 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 
 /**
- * AbfsClient
+ * AbfsClient.
  */
 public class AbfsClient {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
@@ -54,9 +55,13 @@ public class AbfsClient {
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
 
+  private final AccessTokenProvider tokenProvider;
+
+
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
-                    final ExponentialRetryPolicy exponentialRetryPolicy) {
+                    final ExponentialRetryPolicy exponentialRetryPolicy,
+                    final AccessTokenProvider tokenProvider) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -76,6 +81,7 @@ public class AbfsClient {
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
+    this.tokenProvider = tokenProvider;
   }
 
   public String getFileSystem() {
@@ -407,6 +413,14 @@ public class AbfsClient {
     }
 
     return encodedString;
+  }
+
+  public synchronized String getAccessToken() throws IOException {
+    if (tokenProvider != null) {
+      return "Bearer " + tokenProvider.getToken().getAccessToken();
+    } else {
+      return null;
+    }
   }
 
   @VisibleForTesting

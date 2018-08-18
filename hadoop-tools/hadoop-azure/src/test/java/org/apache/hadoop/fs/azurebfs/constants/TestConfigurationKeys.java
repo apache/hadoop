@@ -28,6 +28,12 @@ public final class TestConfigurationKeys {
   public static final String FS_AZURE_TEST_HOST_PORT = "fs.azure.test.host.port";
   public static final String FS_AZURE_CONTRACT_TEST_URI = "fs.contract.test.fs.abfs";
 
+  public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID = "fs.azure.account.oauth2.contributor.client.id";
+  public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET = "fs.azure.account.oauth2.contributor.client.secret";
+
+  public static final String FS_AZURE_BLOB_DATA_READER_CLIENT_ID = "fs.azure.account.oauth2.reader.client.id";
+  public static final String FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET = "fs.azure.account.oauth2.reader.client.secret";
+
   public static final String ABFS_TEST_RESOURCE_XML = "azure-bfs-test.xml";
 
   public static final String ABFS_TEST_CONTAINER_PREFIX = "abfs-testcontainer-";

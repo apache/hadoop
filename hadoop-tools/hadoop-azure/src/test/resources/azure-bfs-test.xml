@@ -23,6 +23,27 @@
   </property>
 
   <property>
+    <name>fs.azure.account.auth.type.{YOURACCOUNT}.dfs.core.windows.net</name>
+    <value>{AUTH TYPE}</value>
+    <description>The auth type can be : SharedKey, OAuth, Custom. By default "SharedKey" is used.</description>
+  </property>
+
+   <property>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>abfs://{CONTAINERNAME}@{ACCOUNTNAME}.dfs.core.windows.net/value>
+    <description>The name of the azure file system for testing.</description>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs.abfss</name>
+    <value>abfss://{CONTAINERNAME}@{ACCOUNTNAME}.dfs.core.windows.net/value>
+    <description>The name of the azure file system for testing.</description>
+  </property>
+  -->
+
+  <!--If auth type is "SharedKey", provide SharedKey credentials below -->
+  <!--
+  <property>
     <name>fs.azure.account.key.{YOURACCOUNT}.dfs.core.windows.net</name>
     <value>{ACCOUNTKEY}</value>
   </property>
@@ -31,14 +52,115 @@
     <name>fs.azure.test.account.key.{YOURACCOUNT}.dfs.core.windows.net</name>
     <value>{ACCOUNTKEY}</value>
   </property>
+  -->
 
+  <!--If auth type is "OAuth", set below properties, AAD client and tenant related properties can be obtained through Azure Portal-->
+  <!--
   <property>
-    <name>fs.contract.test.fs.abfs</name>
-    <value>abfs://{CONTAINERNAME}@{ACCOUNTNAME}.dfs.core.windows.net/value>
-    <description>The name of the azure file system for testing.</description>
+    <name>fs.azure.account.oauth.provider.type.{YOURACCOUNT}.dfs.core.windows.net</name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.{Token Provider Class name}</value>
+    <description>The full name of token provider class name.</description>
+  </property>
+ -->
+
+  <!--If "ClientCredsTokenProvider" is set as key provider, set auth endpoint, client id and secret below-->
+  <!--
+   <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{YOURACCOUNT}.dfs.core.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>Token end point, this can be found through Azure portal</description>
   </property>
 
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.secret.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{client secret}</value>
+   </property>
+ -->
+
+  <!--If "UserPasswordTokenProvider" is set as key provider, set auth endpoint, use name and password below-->
+  <!--
+   <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{YOURACCOUNT}.dfs.core.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>Token end point, this can be found through Azure portal</description>
+  </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.user.name.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{user name}</value>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.user.password.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{user password}</value>
+   </property>
+ -->
+
+  <!--If "MsiTokenProvider" is set as key provider, set tenantGuid and client id below-->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.msi.tenant.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{tenantGuid}</value>
+     <description>msi tenantGuid.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
   -->
+
+  <!--If "RefreshTokenBasedTokenProvider" is set as key provider, set refresh token and client id below-->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.refresh.token.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{refresh token}</value>
+     <description>refresh token.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{YOURACCOUNT}.dfs.core.windows.net</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+  -->
+
+  <!--Below four configure properties are provided for Blob Data Contributor a
+  nd Blob Data Reader OAuth access test "ITestAzureBlobFileSystemOauth",
+  using"ClientCredsTokenProvider" as key
+  provider. These are for test only.-->
+
+  <!--
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.id</name>
+    <value>{ID of client which has Data Contributor role}</value>
+  </property>
+
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.secret</name>
+    <value>{secret of client which has Data Contributor role}</value>
+  </property>
+
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.id</name>
+    <value>{ID of client which has Data Reader role}</value>
+  </property>
+
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.secret</name>
+    <value>{Secret of client which has Data Reader role}</value>
+  </property>
+  -->
+
+
+
   <!-- Save above configuration properties in a separate file named -->
   <!-- azure-bfs-auth-keys.xml in the same directory as this file. -->
   <!-- DO NOT ADD azure-bfs-auth-keys.xml TO REVISION CONTROL.  The keys to your -->

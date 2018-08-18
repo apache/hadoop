@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.net.URL;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
@@ -40,7 +40,7 @@ public final class TestAbfsClient {
                                  AbfsConfiguration config,
                                  boolean includeSSLProvider) {
     AbfsClient client = new AbfsClient(baseUrl, null,
-        config, null);
+        config, null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = SSLSocketFactoryEx.getDefaultFactory().getProviderName();

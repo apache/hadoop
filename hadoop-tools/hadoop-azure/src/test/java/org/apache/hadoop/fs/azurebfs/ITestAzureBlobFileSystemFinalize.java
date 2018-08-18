@@ -25,12 +25,14 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Test finalize() method when "fs.abfs.impl.disable.cache" is enabled.
  */
 public class ITestAzureBlobFileSystemFinalize extends AbstractAbfsScaleTest{
-  static final String DISABLE_CACHE_KEY = "fs.abfs.impl.disable.cache";
+  static final String DISABLE_ABFS_CACHE_KEY = "fs.abfs.impl.disable.cache";
+  static final String DISABLE_ABFSSS_CACHE_KEY = "fs.abfss.impl.disable.cache";
 
   public ITestAzureBlobFileSystemFinalize() throws Exception {
     super();
@@ -40,7 +42,9 @@ public class ITestAzureBlobFileSystemFinalize extends AbstractAbfsScaleTest{
   public void testFinalize() throws Exception {
     // Disable the cache for filesystem to make sure there is no reference.
     Configuration configuration = this.getConfiguration();
-    configuration.setBoolean(this.DISABLE_CACHE_KEY, true);
+    configuration.setBoolean(
+            this.getAuthType() == AuthType.SharedKey ? DISABLE_ABFS_CACHE_KEY : DISABLE_ABFSSS_CACHE_KEY,
+    true);
 
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
 

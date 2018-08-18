@@ -18,34 +18,23 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
-import java.util.Arrays;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 
 /**
  * Contract test for open operation.
  */
-@RunWith(Parameterized.class)
 public class ITestAbfsFileSystemContractAppend extends AbstractContractAppendTest {
-  @Parameterized.Parameters(name = "SecureMode={0}")
-  public static Iterable<Object[]> secure() {
-    return Arrays.asList(new Object[][] { {true}, {false} });
-  }
-
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsFileSystemContractAppend(final boolean secure) throws Exception {
-    this.isSecure = secure;
-    binding = new ABFSContractTestBinding(this.isSecure);
+  public ITestAbfsFileSystemContractAppend() throws Exception {
+    binding = new ABFSContractTestBinding();
+    this.isSecure = binding.isSecureMode();
   }
 
   @Override
