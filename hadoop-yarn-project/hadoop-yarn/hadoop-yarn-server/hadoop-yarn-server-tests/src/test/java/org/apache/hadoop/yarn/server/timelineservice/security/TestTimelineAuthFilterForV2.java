@@ -210,7 +210,7 @@ public class TestTimelineAuthFilterForV2 {
           YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, "localhost");
     }
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    auxService.addApplication(
+    auxService.addApplicationIfAbsent(
         appId, UserGroupInformation.getCurrentUser().getUserName());
     if (!withKerberosLogin) {
       AppLevelTimelineCollector collector =

@@ -125,7 +125,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * @param user Application Master container user.
    * @return whether it was added successfully
    */
-  public boolean addApplication(ApplicationId appId, String user) {
+  public boolean addApplicationIfAbsent(ApplicationId appId, String user) {
     AppLevelTimelineCollector collector =
         new AppLevelTimelineCollectorWithAgg(appId, user);
     return (collectorManager.putIfAbsent(appId, collector)
@@ -156,15 +156,15 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
-      synchronized (appIdToContainerId) {
+      synchronized (appIdToContainerId){
         Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
         if (masterContainers == null) {
           masterContainers = new HashSet<>();
           appIdToContainerId.put(appId, masterContainers);
         }
         masterContainers.add(context.getContainerId());
-        addApplication(appId, context.getUser());
       }
+      addApplicationIfAbsent(appId, context.getUser());
     }
   }
 
@@ -189,6 +189,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
         containerId.getApplicationAttemptId().getApplicationId();
     return scheduler.schedule(new Runnable() {
       public void run() {
+        boolean shouldRemoveApplication = false;
         synchronized (appIdToContainerId) {
           Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
           if (masterContainers == null) {
@@ -199,9 +200,13 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
           masterContainers.remove(containerId);
           if (masterContainers.size() == 0) {
             // remove only if it is last master container
-            removeApplication(appId);
+            shouldRemoveApplication = true;
             appIdToContainerId.remove(appId);
           }
+        }
+
+        if (shouldRemoveApplication) {
+          removeApplication(appId);
         }
       }
     }, collectorLingerPeriod, TimeUnit.MILLISECONDS);
