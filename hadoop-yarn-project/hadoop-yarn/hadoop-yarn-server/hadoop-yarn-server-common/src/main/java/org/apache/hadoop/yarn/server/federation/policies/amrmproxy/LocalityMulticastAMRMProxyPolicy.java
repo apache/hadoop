@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -126,6 +127,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
   private SubClusterResolver resolver;
 
   private Map<SubClusterId, Resource> headroom;
+  private Map<SubClusterId, Long> lastHeartbeatTimeStamp;
+  private long subClusterTimeOut;
   private float hrAlpha;
   private FederationStateStoreFacade federationFacade;
   private AllocationBookkeeper bookkeeper;
@@ -178,6 +181,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
     if (headroom == null) {
       headroom = new ConcurrentHashMap<>();
+      lastHeartbeatTimeStamp = new ConcurrentHashMap<>();
     }
     hrAlpha = policy.getHeadroomAlpha();
 
@@ -185,13 +189,29 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         policyContext.getFederationStateStoreFacade();
     this.homeSubcluster = policyContext.getHomeSubcluster();
 
+    this.subClusterTimeOut = this.federationFacade.getConf().getLong(
+        YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+        YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+    if (this.subClusterTimeOut <= 0) {
+      LOG.info(
+          "{} configured to be {}, should be positive. Using default of {}.",
+          YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+          this.subClusterTimeOut,
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT);
+      this.subClusterTimeOut =
+          YarnConfiguration.DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT;
+    }
   }
 
   @Override
   public void notifyOfResponse(SubClusterId subClusterId,
       AllocateResponse response) throws YarnException {
-    // stateless policy does not care about responses except tracking headroom
-    headroom.put(subClusterId, response.getAvailableResources());
+    if (response.getAvailableResources() != null) {
+      headroom.put(subClusterId, response.getAvailableResources());
+      LOG.info("Subcluster {} updated with {} memory headroom", subClusterId,
+          response.getAvailableResources().getMemorySize());
+    }
+    lastHeartbeatTimeStamp.put(subClusterId, System.currentTimeMillis());
   }
 
   @Override
@@ -281,6 +301,15 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // handle all non-localized requests (ANY)
     splitAnyRequests(nonLocalizedRequests, bookkeeper);
 
+    for (Map.Entry<SubClusterId, List<ResourceRequest>> entry : bookkeeper
+        .getAnswer().entrySet()) {
+      // A new-cluster here will trigger new UAM luanch, which might take a long
+      // time. We don't want too many requests stuck in this UAM before it is
+      // ready and starts heartbeating
+      if (!lastHeartbeatTimeStamp.containsKey(entry.getKey())) {
+        lastHeartbeatTimeStamp.put(entry.getKey(), System.currentTimeMillis());
+      }
+    }
     return bookkeeper.getAnswer();
   }
 
@@ -519,13 +548,10 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       policyWeights = weights;
       totPolicyWeight = 0;
 
-      // pre-compute the set of subclusters that are both active and enabled by
-      // the policy weights, and accumulate their total weight
       for (Map.Entry<SubClusterId, Float> entry : policyWeights.entrySet()) {
         if (entry.getValue() > 0
             && activeSubclusters.containsKey(entry.getKey())) {
           activeAndEnabledSC.add(entry.getKey());
-          totPolicyWeight += entry.getValue();
         }
       }
 
@@ -533,6 +559,34 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         throw new NoActiveSubclustersException(
             "None of the subclusters enabled in this policy (weight>0) are "
                 + "currently active we cannot forward the ResourceRequest(s)");
+      }
+
+      Set<SubClusterId> tmpSCSet = new HashSet<>(activeAndEnabledSC);
+      for (Map.Entry<SubClusterId, Long> entry : lastHeartbeatTimeStamp
+          .entrySet()) {
+        long duration = System.currentTimeMillis() - entry.getValue();
+        if (duration > subClusterTimeOut) {
+          LOG.warn(
+              "Subcluster {} does not have a success heartbeat for {}s, "
+                  + "skip routing asks there for this request",
+              entry.getKey(), (double) duration / 1000);
+          tmpSCSet.remove(entry.getKey());
+        }
+      }
+      if (tmpSCSet.size() < 1) {
+        LOG.warn("All active and enabled subclusters have expired last "
+            + "heartbeat time. Ignore the expiry check for this request");
+      } else {
+        activeAndEnabledSC = tmpSCSet;
+      }
+
+      LOG.info("{} subcluster active, {} subclusters active and enabled",
+          activeSubclusters.size(), activeAndEnabledSC.size());
+
+      // pre-compute the set of subclusters that are both active and enabled by
+      // the policy weights, and accumulate their total weight
+      for (SubClusterId sc : activeAndEnabledSC) {
+        totPolicyWeight += policyWeights.get(sc);
       }
 
       // pre-compute headroom-based weights for active/enabled subclusters

@@ -3209,8 +3209,14 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
 
-  public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
+  // AMRMProxy split-merge timeout for active sub-clusters. We will not route
+  // new asks to expired sub-clusters.
+  public static final String FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
+      FEDERATION_PREFIX + "amrmproxy.subcluster.timeout.ms";
+  public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
+      60000; // one minute
 
+  public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
 
