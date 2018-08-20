@@ -217,9 +217,10 @@ public class ContainerMapping implements Mapping {
         // For close containers create pipeline from datanodes with replicas
         Set<DatanodeDetails> dnWithReplicas = containerStateManager
             .getContainerReplicas(contInfo.containerID());
-        pipeline = new Pipeline(dnWithReplicas.iterator().next().getHostName(),
-            contInfo.getState(), ReplicationType.STAND_ALONE,
-            contInfo.getReplicationFactor(), PipelineID.randomId());
+        pipeline =
+            new Pipeline(dnWithReplicas.iterator().next().getUuidString(),
+                contInfo.getState(), ReplicationType.STAND_ALONE,
+                contInfo.getReplicationFactor(), PipelineID.randomId());
         dnWithReplicas.forEach(pipeline::addMember);
       }
       return new ContainerWithPipeline(contInfo, pipeline);

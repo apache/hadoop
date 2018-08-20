@@ -86,8 +86,7 @@ public class DatanodeStateMachine implements Closeable {
             .setNameFormat("Datanode State Machine Thread - %d").build());
     connectionManager = new SCMConnectionManager(conf);
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
-    heartbeatFrequency = TimeUnit.SECONDS.toMillis(
-        getScmHeartbeatInterval(conf));
+    heartbeatFrequency = getScmHeartbeatInterval(conf);
     container = new OzoneContainer(this.datanodeDetails,
         new OzoneConfiguration(conf), context);
     nextHB = new AtomicLong(Time.monotonicNow());

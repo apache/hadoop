@@ -64,7 +64,7 @@ public class ContainerReportPublisher extends
           getConf());
 
       Preconditions.checkState(
-          heartbeatFrequency < containerReportInterval,
+          heartbeatFrequency <= containerReportInterval,
           HDDS_CONTAINER_REPORT_INTERVAL +
               " cannot be configured lower than heartbeat frequency.");
     }

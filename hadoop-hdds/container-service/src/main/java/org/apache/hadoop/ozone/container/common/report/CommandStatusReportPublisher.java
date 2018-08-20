@@ -58,7 +58,7 @@ public class CommandStatusReportPublisher extends
           getConf());
 
       Preconditions.checkState(
-          heartbeatFrequency < cmdStatusReportInterval,
+          heartbeatFrequency <= cmdStatusReportInterval,
           HDDS_COMMAND_STATUS_REPORT_INTERVAL +
               " cannot be configured lower than heartbeat frequency.");
     }
