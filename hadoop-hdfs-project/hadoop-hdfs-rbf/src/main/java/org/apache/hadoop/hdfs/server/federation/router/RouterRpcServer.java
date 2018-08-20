@@ -196,6 +196,7 @@ public class RouterRpcServer extends AbstractService
    * Construct a router RPC server.
    *
    * @param configuration HDFS Configuration.
+   * @param router A router using this RPC server.
    * @param nnResolver The NN resolver instance to determine active NNs in HA.
    * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
@@ -291,7 +292,7 @@ public class RouterRpcServer extends AbstractService
     this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
 
     // Create the client
-    this.rpcClient = new RouterRpcClient(this.conf, this.router.getRouterId(),
+    this.rpcClient = new RouterRpcClient(this.conf, this.router,
         this.namenodeResolver, this.rpcMonitor);
 
     // Initialize modules
