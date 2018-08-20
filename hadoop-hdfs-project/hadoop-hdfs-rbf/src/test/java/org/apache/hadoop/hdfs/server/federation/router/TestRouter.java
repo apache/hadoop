@@ -20,7 +20,9 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -182,6 +184,26 @@ public class TestRouter {
     }
 
     dfsClient.close();
+    router.stop();
+    router.close();
+  }
+
+  @Test
+  public void testRouterIDInRouterRpcClient() throws Exception {
+
+    Router router = new Router();
+    router.init(new RouterConfigBuilder(conf).rpc().build());
+    router.setRouterId("Router-0");
+    RemoteMethod remoteMethod = mock(RemoteMethod.class);
+
+    try {
+      router.getRpcServer().getRPCClient()
+          .invokeSingle("ns0", remoteMethod);
+      fail("Exception should have been thrown");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains("Router-0"));
+    }
+
     router.stop();
     router.close();
   }
