@@ -92,8 +92,8 @@ public class RouterRpcClient {
       LoggerFactory.getLogger(RouterRpcClient.class);
 
 
-  /** Router identifier. */
-  private final String routerId;
+  /** Router using this RPC client. */
+  private final Router router;
 
   /** Interface to identify the active NN for a nameservice or blockpool ID. */
   private final ActiveNamenodeResolver namenodeResolver;
@@ -116,12 +116,13 @@ public class RouterRpcClient {
    * Create a router RPC client to manage remote procedure calls to NNs.
    *
    * @param conf Hdfs Configuation.
+   * @param router A router using this RPC client.
    * @param resolver A NN resolver to determine the currently active NN in HA.
    * @param monitor Optional performance monitor.
    */
-  public RouterRpcClient(Configuration conf, String identifier,
+  public RouterRpcClient(Configuration conf, Router router,
       ActiveNamenodeResolver resolver, RouterRpcMonitor monitor) {
-    this.routerId = identifier;
+    this.router = router;
 
     this.namenodeResolver = resolver;
 
@@ -343,7 +344,8 @@ public class RouterRpcClient {
 
     if (namenodes == null || namenodes.isEmpty()) {
       throw new IOException("No namenodes to invoke " + method.getName() +
-          " with params " + Arrays.toString(params) + " from " + this.routerId);
+          " with params " + Arrays.toString(params) + " from "
+          + router.getRouterId());
     }
 
     Object ret = null;
@@ -1126,7 +1128,7 @@ public class RouterRpcClient {
       String msg = "Not enough client threads " + active + "/" + total;
       LOG.error(msg);
       throw new StandbyException(
-          "Router " + routerId + " is overloaded: " + msg);
+          "Router " + router.getRouterId() + " is overloaded: " + msg);
     } catch (InterruptedException ex) {
       LOG.error("Unexpected error while invoking API: {}", ex.getMessage());
       throw new IOException(
@@ -1150,7 +1152,7 @@ public class RouterRpcClient {
 
     if (namenodes == null || namenodes.isEmpty()) {
       throw new IOException("Cannot locate a registered namenode for " + nsId +
-          " from " + this.routerId);
+          " from " + router.getRouterId());
     }
     return namenodes;
   }
@@ -1171,7 +1173,7 @@ public class RouterRpcClient {
 
     if (namenodes == null || namenodes.isEmpty()) {
       throw new IOException("Cannot locate a registered namenode for " + bpId +
-          " from " + this.routerId);
+          " from " + router.getRouterId());
     }
     return namenodes;
   }
