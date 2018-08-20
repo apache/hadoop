@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -73,6 +74,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -225,68 +227,119 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     return isHealthy;
   }
 
-  @Override
-  public List<RecoveredContainerState> loadContainersState()
+  // LeveldbIterator starting at startkey
+  private LeveldbIterator getLevelDBIterator(String startKey)
       throws IOException {
-    ArrayList<RecoveredContainerState> containers =
-        new ArrayList<RecoveredContainerState>();
-    ArrayList<ContainerId> containersToRemove =
-              new ArrayList<ContainerId>();
-    LeveldbIterator iter = null;
     try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(CONTAINERS_KEY_PREFIX));
+      LeveldbIterator it = new LeveldbIterator(db);
+      it.seek(bytes(startKey));
+      return it;
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
 
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.peekNext();
+  // Base Recovery Iterator
+  private abstract class BaseRecoveryIterator<T> implements
+      RecoveryIterator<T> {
+    LeveldbIterator it;
+    T nextItem;
+
+    BaseRecoveryIterator(String dbKey) throws IOException {
+      this.it = getLevelDBIterator(dbKey);
+      this.nextItem = null;
+    }
+
+    protected abstract T getNextItem(LeveldbIterator it) throws IOException;
+
+    @Override
+    public boolean hasNext() throws IOException {
+      if (nextItem == null) {
+        nextItem = getNextItem(it);
+      }
+      return (nextItem != null);
+    }
+
+    @Override
+    public T next() throws IOException, NoSuchElementException {
+      T tmp = nextItem;
+      if (tmp != null) {
+        nextItem = null;
+        return tmp;
+      } else {
+        tmp = getNextItem(it);
+        if (tmp == null) {
+          throw new NoSuchElementException();
+        }
+        return tmp;
+      }
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (it != null) {
+        it.close();
+      }
+    }
+  }
+
+  //  Container Recovery Iterator
+  private class ContainerStateIterator extends
+      BaseRecoveryIterator<RecoveredContainerState> {
+    ContainerStateIterator() throws IOException {
+      super(CONTAINERS_KEY_PREFIX);
+    }
+
+    @Override
+    protected RecoveredContainerState getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextRecoveredContainer(it);
+    }
+  }
+
+  private RecoveredContainerState getNextRecoveredContainer(LeveldbIterator it)
+      throws IOException {
+    RecoveredContainerState rcs = null;
+    try {
+      while (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.peekNext();
         String key = asString(entry.getKey());
         if (!key.startsWith(CONTAINERS_KEY_PREFIX)) {
-          break;
+          return null;
         }
 
         int idEndPos = key.indexOf('/', CONTAINERS_KEY_PREFIX.length());
         if (idEndPos < 0) {
           throw new IOException("Unable to determine container in key: " + key);
         }
-        ContainerId containerId = ContainerId.fromString(
-            key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
-        String keyPrefix = key.substring(0, idEndPos+1);
-        RecoveredContainerState rcs = loadContainerState(containerId,
-            iter, keyPrefix);
-        // Don't load container without StartContainerRequest
+        String keyPrefix = key.substring(0, idEndPos + 1);
+        rcs = loadContainerState(it, keyPrefix);
         if (rcs.startRequest != null) {
-          containers.add(rcs);
+          break;
         } else {
-          containersToRemove.add(containerId);
+          removeContainer(rcs.getContainerId());
+          rcs = null;
         }
       }
     } catch (DBException e) {
       throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
     }
-
-    // remove container without StartContainerRequest
-    for (ContainerId containerId : containersToRemove) {
-      LOG.warn("Remove container " + containerId +
-          " with incomplete records");
-      try {
-        removeContainer(containerId);
-        // TODO: kill and cleanup the leaked container
-      } catch (IOException e) {
-        LOG.error("Unable to remove container " + containerId +
-            " in store", e);
-      }
-    }
-
-    return containers;
+    return rcs;
   }
 
-  private RecoveredContainerState loadContainerState(ContainerId containerId,
-      LeveldbIterator iter, String keyPrefix) throws IOException {
-    RecoveredContainerState rcs = new RecoveredContainerState();
+
+  @Override
+  public RecoveryIterator<RecoveredContainerState> getContainerStateIterator()
+      throws IOException {
+    return new ContainerStateIterator();
+  }
+
+  private RecoveredContainerState loadContainerState(LeveldbIterator iter,
+       String keyPrefix) throws IOException {
+    ContainerId containerId = ContainerId.fromString(
+        keyPrefix.substring(CONTAINERS_KEY_PREFIX.length(),
+            keyPrefix.length()-1));
+    RecoveredContainerState rcs = new RecoveredContainerState(containerId);
     rcs.status = RecoveredContainerStatus.REQUESTED;
     while (iter.hasNext()) {
       Entry<byte[],byte[]> entry = iter.peekNext();
@@ -680,35 +733,45 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
 
+  // Application Recovery Iterator
+  private class ApplicationStateIterator extends
+      BaseRecoveryIterator<ContainerManagerApplicationProto> {
+    ApplicationStateIterator() throws IOException {
+      super(APPLICATIONS_KEY_PREFIX);
+    }
+
+    @Override
+    protected ContainerManagerApplicationProto getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextRecoveredApplication(it);
+    }
+  }
+
+  private ContainerManagerApplicationProto getNextRecoveredApplication(
+      LeveldbIterator it) throws IOException {
+    ContainerManagerApplicationProto applicationProto = null;
+    try {
+      if (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(APPLICATIONS_KEY_PREFIX)) {
+          return null;
+        }
+        applicationProto = ContainerManagerApplicationProto.parseFrom(
+            entry.getValue());
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+    return applicationProto;
+  }
+
   @Override
   public RecoveredApplicationsState loadApplicationsState()
       throws IOException {
     RecoveredApplicationsState state = new RecoveredApplicationsState();
-    state.applications = new ArrayList<ContainerManagerApplicationProto>();
-    String keyPrefix = APPLICATIONS_KEY_PREFIX;
-    LeveldbIterator iter = null;
-    try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(keyPrefix));
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.next();
-        String key = asString(entry.getKey());
-        if (!key.startsWith(keyPrefix)) {
-          break;
-        }
-        state.applications.add(
-            ContainerManagerApplicationProto.parseFrom(entry.getValue()));
-      }
-    } catch (DBException e) {
-      throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
-    }
-
+    state.it = new ApplicationStateIterator();
     cleanupDeprecatedFinishedApps();
-
     return state;
   }
 
@@ -752,24 +815,29 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
 
-  @Override
-  public RecoveredLocalizationState loadLocalizationState()
-      throws IOException {
-    RecoveredLocalizationState state = new RecoveredLocalizationState();
+  // User Resource Recovery Iterator.
+  private class UserResourcesIterator extends
+      BaseRecoveryIterator<Entry<String, RecoveredUserResources>> {
+    UserResourcesIterator() throws IOException {
+      super(LOCALIZATION_PRIVATE_KEY_PREFIX);
+    }
 
-    LeveldbIterator iter = null;
+    @Override
+    protected Entry<String, RecoveredUserResources> getNextItem(
+        LeveldbIterator it) throws IOException {
+      return getNextRecoveredPrivateLocalizationEntry(it);
+    }
+  }
+
+  private Entry<String, RecoveredUserResources> getNextRecoveredPrivateLocalizationEntry(
+      LeveldbIterator it) throws IOException {
+    Entry<String, RecoveredUserResources> localEntry = null;
     try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(LOCALIZATION_PUBLIC_KEY_PREFIX));
-      state.publicTrackerState = loadResourceTrackerState(iter,
-          LOCALIZATION_PUBLIC_KEY_PREFIX);
-
-      iter.seek(bytes(LOCALIZATION_PRIVATE_KEY_PREFIX));
-      while (iter.hasNext()) {
-        Entry<byte[],byte[]> entry = iter.peekNext();
+      if (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.peekNext();
         String key = asString(entry.getKey());
         if (!key.startsWith(LOCALIZATION_PRIVATE_KEY_PREFIX)) {
-          break;
+          return null;
         }
 
         int userEndPos = key.indexOf('/',
@@ -780,17 +848,24 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         }
         String user = key.substring(
             LOCALIZATION_PRIVATE_KEY_PREFIX.length(), userEndPos);
-        state.userResources.put(user, loadUserLocalizedResources(iter,
-            key.substring(0, userEndPos+1)));
+        RecoveredUserResources val = loadUserLocalizedResources(it,
+            key.substring(0, userEndPos+1));
+        localEntry = new AbstractMap.SimpleEntry<>(user, val);
       }
     } catch (DBException e) {
       throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
     }
+    return localEntry;
+  }
 
+  @Override
+  public RecoveredLocalizationState loadLocalizationState()
+      throws IOException {
+    RecoveredLocalizationState state = new RecoveredLocalizationState();
+    LeveldbIterator it = getLevelDBIterator(LOCALIZATION_PUBLIC_KEY_PREFIX);
+    state.publicTrackerState = loadResourceTrackerState(it,
+        LOCALIZATION_PUBLIC_KEY_PREFIX);
+    state.it = new UserResourcesIterator();
     return state;
   }
 
@@ -800,7 +875,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     final String startedPrefix = keyPrefix + LOCALIZATION_STARTED_SUFFIX;
     LocalResourceTrackerState state = new LocalResourceTrackerState();
     while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+      Entry<byte[], byte[]> entry = iter.peekNext();
       String key = asString(entry.getKey());
       if (!key.startsWith(keyPrefix)) {
         break;
@@ -981,32 +1056,44 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         + LOCALIZATION_APPCACHE_SUFFIX + appId + "/";
   }
 
+  // Deletion State Recovery Iterator.
+  private class DeletionStateIterator extends
+      BaseRecoveryIterator<DeletionServiceDeleteTaskProto> {
+    DeletionStateIterator() throws IOException {
+      super(DELETION_TASK_KEY_PREFIX);
+    }
+
+    @Override
+    protected DeletionServiceDeleteTaskProto getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextRecoveredDeletionService(it);
+    }
+  }
+
+  private DeletionServiceDeleteTaskProto getNextRecoveredDeletionService(
+      LeveldbIterator it) throws IOException {
+    DeletionServiceDeleteTaskProto deleteProto = null;
+    try {
+      if (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(DELETION_TASK_KEY_PREFIX)) {
+          return null;
+        }
+        deleteProto = DeletionServiceDeleteTaskProto.parseFrom(
+            entry.getValue());
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+    return deleteProto;
+  }
 
   @Override
   public RecoveredDeletionServiceState loadDeletionServiceState()
       throws IOException {
     RecoveredDeletionServiceState state = new RecoveredDeletionServiceState();
-    state.tasks = new ArrayList<DeletionServiceDeleteTaskProto>();
-    LeveldbIterator iter = null;
-    try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(DELETION_TASK_KEY_PREFIX));
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.next();
-        String key = asString(entry.getKey());
-        if (!key.startsWith(DELETION_TASK_KEY_PREFIX)) {
-          break;
-        }
-        state.tasks.add(
-            DeletionServiceDeleteTaskProto.parseFrom(entry.getValue()));
-      }
-    } catch (DBException e) {
-      throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
-    }
+    state.it = new DeletionStateIterator();
     return state;
   }
 
@@ -1033,29 +1120,44 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
+  private MasterKey getMasterKey(String dbKey) throws IOException {
+    try{
+      byte[] data = db.get(bytes(dbKey));
+      if (data == null || data.length == 0) {
+        return null;
+      }
+      return parseMasterKey(data);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
 
-  @Override
-  public RecoveredNMTokensState loadNMTokensState() throws IOException {
-    RecoveredNMTokensState state = new RecoveredNMTokensState();
-    state.applicationMasterKeys =
-        new HashMap<ApplicationAttemptId, MasterKey>();
-    LeveldbIterator iter = null;
+  // Recover NMTokens Iterator
+  private class NMTokensStateIterator extends
+      BaseRecoveryIterator<Entry<ApplicationAttemptId, MasterKey>> {
+    NMTokensStateIterator() throws IOException {
+      super(NM_TOKENS_KEY_PREFIX);
+    }
+
+    @Override
+    protected Entry<ApplicationAttemptId, MasterKey> getNextItem(
+        LeveldbIterator it) throws IOException {
+      return getNextMasterKeyEntry(it);
+    }
+  }
+
+  private Entry<ApplicationAttemptId, MasterKey> getNextMasterKeyEntry(
+      LeveldbIterator it) throws IOException {
+    Entry<ApplicationAttemptId, MasterKey> masterKeyentry = null;
     try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(NM_TOKENS_KEY_PREFIX));
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.next();
+      while (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.next();
         String fullKey = asString(entry.getKey());
         if (!fullKey.startsWith(NM_TOKENS_KEY_PREFIX)) {
           break;
         }
         String key = fullKey.substring(NM_TOKENS_KEY_PREFIX.length());
-        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
-          state.currentMasterKey = parseMasterKey(entry.getValue());
-        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
-          state.previousMasterKey = parseMasterKey(entry.getValue());
-        } else if (key.startsWith(
-            ApplicationAttemptId.appAttemptIdStrPrefix)) {
+        if (key.startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
           ApplicationAttemptId attempt;
           try {
             attempt = ApplicationAttemptId.fromString(key);
@@ -1063,17 +1165,25 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             throw new IOException("Bad application master key state for "
                 + fullKey, e);
           }
-          state.applicationMasterKeys.put(attempt,
+          masterKeyentry = new AbstractMap.SimpleEntry<>(attempt,
               parseMasterKey(entry.getValue()));
+          break;
         }
       }
     } catch (DBException e) {
       throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
     }
+    return masterKeyentry;
+  }
+
+  @Override
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    RecoveredNMTokensState state = new RecoveredNMTokensState();
+    state.currentMasterKey = getMasterKey(NM_TOKENS_KEY_PREFIX
+                                          + CURRENT_MASTER_KEY_SUFFIX);
+    state.previousMasterKey = getMasterKey(NM_TOKENS_KEY_PREFIX
+                                            + PREV_MASTER_KEY_SUFFIX);
+    state.it = new NMTokensStateIterator();
     return state;
   }
 
@@ -1122,45 +1232,45 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
+  // Recover ContainersToken Iterator.
+  private class ContainerTokensStateIterator extends
+      BaseRecoveryIterator<Entry<ContainerId, Long>> {
+    ContainerTokensStateIterator() throws IOException {
+      super(CONTAINER_TOKENS_KEY_PREFIX);
+    }
 
-  @Override
-  public RecoveredContainerTokensState loadContainerTokensState()
+    @Override
+    protected Entry<ContainerId, Long> getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextContainerToken(it);
+    }
+  }
+
+  private Entry<ContainerId, Long> getNextContainerToken(LeveldbIterator it)
       throws IOException {
-    RecoveredContainerTokensState state = new RecoveredContainerTokensState();
-    state.activeTokens = new HashMap<ContainerId, Long>();
-    LeveldbIterator iter = null;
+    Entry<ContainerId, Long> containerTokenEntry = null;
     try {
-      iter = new LeveldbIterator(db);
-      iter.seek(bytes(CONTAINER_TOKENS_KEY_PREFIX));
-      final int containerTokensKeyPrefixLength =
-          CONTAINER_TOKENS_KEY_PREFIX.length();
-      while (iter.hasNext()) {
-        Entry<byte[], byte[]> entry = iter.next();
+      while (it.hasNext()) {
+        Entry<byte[], byte[]> entry = it.next();
         String fullKey = asString(entry.getKey());
         if (!fullKey.startsWith(CONTAINER_TOKENS_KEY_PREFIX)) {
           break;
         }
-        String key = fullKey.substring(containerTokensKeyPrefixLength);
-        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
-          state.currentMasterKey = parseMasterKey(entry.getValue());
-        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
-          state.previousMasterKey = parseMasterKey(entry.getValue());
-        } else if (key.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
-          loadContainerToken(state, fullKey, key, entry.getValue());
+        String key = fullKey.substring(CONTAINER_TOKENS_KEY_PREFIX.length());
+        if (key.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
+          containerTokenEntry = loadContainerToken(fullKey, key,
+              entry.getValue());
+          break;
         }
       }
     } catch (DBException e) {
       throw new IOException(e);
-    } finally {
-      if (iter != null) {
-        iter.close();
-      }
     }
-    return state;
+    return containerTokenEntry;
   }
 
-  private static void loadContainerToken(RecoveredContainerTokensState state,
-      String key, String containerIdStr, byte[] value) throws IOException {
+  private static Entry<ContainerId, Long> loadContainerToken(String key,
+      String containerIdStr, byte[] value) throws IOException {
     ContainerId containerId;
     Long expTime;
     try {
@@ -1169,7 +1279,19 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (IllegalArgumentException e) {
       throw new IOException("Bad container token state for " + key, e);
     }
-    state.activeTokens.put(containerId, expTime);
+    return new AbstractMap.SimpleEntry<>(containerId, expTime);
+  }
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    RecoveredContainerTokensState state = new RecoveredContainerTokensState();
+    state.currentMasterKey = getMasterKey(CONTAINER_TOKENS_KEY_PREFIX
+        + CURRENT_MASTER_KEY_SUFFIX);
+    state.previousMasterKey = getMasterKey(CONTAINER_TOKENS_KEY_PREFIX
+        + PREV_MASTER_KEY_SUFFIX);
+    state.it = new ContainerTokensStateIterator();
+    return state;
   }
 
   @Override
