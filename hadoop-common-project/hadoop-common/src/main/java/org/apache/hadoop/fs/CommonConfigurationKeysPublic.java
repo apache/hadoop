@@ -888,5 +888,14 @@ public class CommonConfigurationKeysPublic {
           "credential$",
           "oauth.*token$",
           HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
+
+  /** Configuration option for the shutdown hook manager shutdown time:
+   *  {@value}. */
+  public static final String SERVICE_SHUTDOWN_TIMEOUT =
+      "hadoop.service.shutdown.timeout";
+
+  /** Default shutdown hook timeout: {@value} seconds. */
+  public static final long SERVICE_SHUTDOWN_TIMEOUT_DEFAULT = 30;
+
 }
 
