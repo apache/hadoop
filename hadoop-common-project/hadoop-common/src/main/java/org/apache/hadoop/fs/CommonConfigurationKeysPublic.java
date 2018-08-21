@@ -890,5 +890,14 @@ public class CommonConfigurationKeysPublic {
           HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
   public static final String HADOOP_SYSTEM_TAGS = "hadoop.system.tags";
   public static final String HADOOP_CUSTOM_TAGS = "hadoop.custom.tags";
+
+  /** Configuration option for the shutdown hook manager shutdown time:
+   *  {@value}. */
+  public static final String SERVICE_SHUTDOWN_TIMEOUT =
+      "hadoop.service.shutdown.timeout";
+
+  /** Default shutdown hook timeout: {@value} seconds. */
+  public static final long SERVICE_SHUTDOWN_TIMEOUT_DEFAULT = 30;
+
 }
 
