@@ -817,4 +817,74 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     }
     return memorySize;
   }
+
+  private long waitForNodeLabelSchedulerEventUpdate(MockRM rm, String partition,
+      long expectedNodeCount, long timeout) throws InterruptedException {
+    long start = System.currentTimeMillis();
+    long size = 0;
+    while (System.currentTimeMillis() - start < timeout) {
+      CapacityScheduler scheduler = (CapacityScheduler) rm
+          .getResourceScheduler();
+      size = scheduler.getNodeTracker().getNodesPerPartition(partition).size();
+      if (size == expectedNodeCount) {
+        return size;
+      }
+      Thread.sleep(100);
+    }
+    return size;
+  }
+
+  @Test
+  public void testNodeCountBasedOnNodeLabelsFromClusterNodeTracker()
+      throws Exception {
+    // set node -> label
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(
+        ImmutableSet.of("x", "y", "z"));
+
+    // set mapping:
+    // h1 -> x
+    // h2 -> y
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 1234), toSet("x")));
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h2", 1234), toSet("x")));
+
+    // inject node label manager
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 8000);
+    rm.registerNode("h2:1234", 8000);
+    rm.registerNode("h3:1234", 8000);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Ensure that cluster node tracker is updated with correct set of node
+    // after Node registration.
+    Assert.assertEquals(2,
+        cs.getNodeTracker().getNodesPerPartition("x").size());
+    Assert.assertEquals(1, cs.getNodeTracker().getNodesPerPartition("").size());
+
+    rm.unRegisterNode(nm1);
+    rm.registerNode("h4:1234", 8000);
+
+    // Ensure that cluster node tracker is updated with correct set of node
+    // after new Node registration and old node label change.
+    Assert.assertEquals(1,
+        cs.getNodeTracker().getNodesPerPartition("x").size());
+    Assert.assertEquals(2, cs.getNodeTracker().getNodesPerPartition("").size());
+
+    mgr.replaceLabelsOnNode(
+        ImmutableMap.of(NodeId.newInstance("h2", 1234), toSet("")));
+
+    // Last node with label x is replaced by CLI or REST.
+    Assert.assertEquals(0,
+        waitForNodeLabelSchedulerEventUpdate(rm, "x", 0, 3000L));
+  }
 }

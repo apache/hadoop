@@ -96,11 +96,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * headroom, etc.
    */
   private ContainerAllocation preCheckForNodeCandidateSet(
-      Resource clusterResource, CandidateNodeSet<FiCaSchedulerNode> candidates,
+      Resource clusterResource, FiCaSchedulerNode node,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     Priority priority = schedulerKey.getPriority();
-    FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
 
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
         ResourceRequest.ANY);
@@ -164,7 +163,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     }
 
     if (!checkHeadroom(clusterResource, resourceLimits, required,
-        candidates.getPartition())) {
+        node.getPartition())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("cannot allocate required resource=" + required
             + " because of headroom");
@@ -801,20 +800,6 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Do checks before determining which node to allocate
     // Directly return if this check fails.
     ContainerAllocation result;
-    if (reservedContainer == null) {
-      result = preCheckForNodeCandidateSet(clusterResource, candidates,
-          schedulingMode, resourceLimits, schedulerKey);
-      if (null != result) {
-        return result;
-      }
-    } else {
-      // pre-check when allocating reserved container
-      if (application.getOutstandingAsksCount(schedulerKey) == 0) {
-        // Release
-        return new ContainerAllocation(reservedContainer, null,
-            AllocationState.QUEUE_SKIPPED);
-      }
-    }
 
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
@@ -832,6 +817,22 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
         candidates);
     while (iter.hasNext()) {
       FiCaSchedulerNode node = iter.next();
+
+      if (reservedContainer == null) {
+        result = preCheckForNodeCandidateSet(clusterResource, node,
+            schedulingMode, resourceLimits, schedulerKey);
+        if (null != result) {
+          continue;
+        }
+      } else {
+        // pre-check when allocating reserved container
+        if (application.getOutstandingAsksCount(schedulerKey) == 0) {
+          // Release
+          result = new ContainerAllocation(reservedContainer, null,
+              AllocationState.QUEUE_SKIPPED);
+          continue;
+        }
+      }
 
       result = tryAllocateOnNode(clusterResource, node, schedulingMode,
           resourceLimits, schedulerKey, reservedContainer);

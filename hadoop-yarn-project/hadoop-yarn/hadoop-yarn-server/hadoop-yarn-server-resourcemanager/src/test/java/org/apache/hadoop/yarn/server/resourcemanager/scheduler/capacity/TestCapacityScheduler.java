@@ -106,8 +106,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyConta
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
-import org.apache.hadoop.yarn.server.resourcemanager.placement
-    .UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -172,7 +170,6 @@ import org.mockito.Mockito;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -4869,18 +4866,6 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
 
     return cs;
-  }
-
-  private void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,
-      int timesec) throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timesec * 1000) {
-      if (scheduler.getNumClusterNodes() < nodecount) {
-        Thread.sleep(100);
-      } else {
-        break;
-      }
-    }
   }
 
   @Test (timeout = 60000)

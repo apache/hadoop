@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCap
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ApplicationSchedulingConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
@@ -170,8 +171,30 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       rc = scheduler.getResourceCalculator();
     }
 
+    // Update multi-node sorting algorithm to scheduler envs
+    updateMultiNodeSortingPolicy(rmApp);
+
     containerAllocator = new ContainerAllocator(this, rc, rmContext,
         activitiesManager);
+  }
+
+  private void updateMultiNodeSortingPolicy(RMApp rmApp) {
+    if (rmApp == null) {
+      return;
+    }
+
+    String queueName = null;
+    if (scheduler instanceof CapacityScheduler) {
+      queueName = getCSLeafQueue().getMultiNodeSortingPolicyName();
+    }
+
+    if (!appSchedulingInfo.getApplicationSchedulingEnvs().containsKey(
+        ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS)
+        && queueName != null) {
+      appSchedulingInfo.getApplicationSchedulingEnvs().put(
+          ApplicationSchedulingConfig.ENV_MULTI_NODE_SORTING_POLICY_CLASS,
+          queueName);
+    }
   }
 
   public boolean containerCompleted(RMContainer rmContainer,
