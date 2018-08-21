@@ -476,6 +476,23 @@ public class AppSchedulingInfo {
     return ret;
   }
 
+  /**
+   * Fetch SchedulingRequests.
+   * @return All pending SchedulingRequests.
+   */
+  public List<SchedulingRequest> getAllSchedulingRequests() {
+    List<SchedulingRequest> ret = new ArrayList<>();
+    try {
+      this.readLock.lock();
+      schedulerKeyToAppPlacementAllocator.values().stream()
+          .filter(ap -> ap.getSchedulingRequest() != null)
+          .forEach(ap -> ret.add(ap.getSchedulingRequest()));
+    } finally {
+      this.readLock.unlock();
+    }
+    return ret;
+  }
+
   public PendingAsk getNextPendingAsk() {
     try {
       readLock.lock();

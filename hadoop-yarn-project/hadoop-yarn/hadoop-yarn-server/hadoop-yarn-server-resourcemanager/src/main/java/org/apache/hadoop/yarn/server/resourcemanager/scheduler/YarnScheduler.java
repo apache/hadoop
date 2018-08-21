@@ -364,6 +364,16 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
       ApplicationAttemptId attemptId);
 
   /**
+   * Get pending scheduling request for specified application attempt.
+   *
+   * @param attemptId the id of the application attempt
+   *
+   * @return pending scheduling requests
+   */
+  List<SchedulingRequest> getPendingSchedulingRequestsForAttempt(
+      ApplicationAttemptId attemptId);
+
+  /**
    * Get cluster max priority.
    * 
    * @return maximum priority of cluster
