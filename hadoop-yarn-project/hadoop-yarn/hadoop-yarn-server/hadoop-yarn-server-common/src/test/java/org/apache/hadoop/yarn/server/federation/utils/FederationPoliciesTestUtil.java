@@ -117,7 +117,7 @@ public final class FederationPoliciesTestUtil {
   public static void initializePolicyContext(
       FederationPolicyInitializationContext fpc, ConfigurableFederationPolicy
       policy, WeightedPolicyInfo policyInfo,
-      Map<SubClusterId, SubClusterInfo> activeSubclusters)
+      Map<SubClusterId, SubClusterInfo> activeSubclusters, Configuration conf)
       throws YarnException {
     ByteBuffer buf = policyInfo.toByteBuffer();
     fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
@@ -134,7 +134,7 @@ public final class FederationPoliciesTestUtil {
 
     when(fss.getSubClusters(any(GetSubClustersInfoRequest.class)))
         .thenReturn(response);
-    facade.reinitialize(fss, new Configuration());
+    facade.reinitialize(fss, conf);
     fpc.setFederationStateStoreFacade(facade);
     policy.reinitialize(fpc);
   }
@@ -146,7 +146,8 @@ public final class FederationPoliciesTestUtil {
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(null, initResolver(),
             initFacade(), SubClusterId.newInstance("homesubcluster"));
-    initializePolicyContext(context, policy, policyInfo, activeSubclusters);
+    initializePolicyContext(context, policy, policyInfo, activeSubclusters,
+        new Configuration());
   }
 
   /**
