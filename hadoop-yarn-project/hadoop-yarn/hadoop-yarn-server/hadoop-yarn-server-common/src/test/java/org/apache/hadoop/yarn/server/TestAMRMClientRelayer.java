@@ -40,7 +40,9 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSet;
 import org.apache.hadoop.yarn.util.Records;
@@ -62,6 +64,7 @@ public class TestAMRMClientRelayer {
     // Whether this mockRM will throw failover exception upon next heartbeat
     // from AM
     private boolean failover = false;
+    private int responseIdReset = -1;
     private List<ResourceRequest> lastAsk;
     private List<ContainerId> lastRelease;
     private List<String> lastBlacklistAdditions;
@@ -92,25 +95,39 @@ public class TestAMRMClientRelayer {
         this.failover = false;
         throw new ApplicationMasterNotRegisteredException("Mock RM restarted");
       }
+      if (this.responseIdReset != -1) {
+        String errorMessage =
+            AMRMClientUtils.assembleInvalidResponseIdExceptionMessage(null,
+                this.responseIdReset, request.getResponseId());
+        this.responseIdReset = -1;
+        throw new InvalidApplicationMasterRequestException(errorMessage);
+      }
+
       this.lastAsk = request.getAskList();
       this.lastRelease = request.getReleaseList();
       this.lastBlacklistAdditions =
           request.getResourceBlacklistRequest().getBlacklistAdditions();
       this.lastBlacklistRemovals =
           request.getResourceBlacklistRequest().getBlacklistRemovals();
-      return AllocateResponse.newInstance(0, null, null,
-          new ArrayList<NodeReport>(), Resource.newInstance(0, 0), null, 0,
-          null, null);
+      return AllocateResponse.newInstance(request.getResponseId() + 1, null,
+          null, new ArrayList<NodeReport>(), Resource.newInstance(0, 0), null,
+          0, null, null);
     }
 
     public void setFailoverFlag() {
       this.failover = true;
+    }
+
+    public void setResponseIdReset(int expectedResponseId) {
+      this.responseIdReset = expectedResponseId;
     }
   }
 
   private Configuration conf;
   private MockApplicationMasterService mockAMS;
   private AMRMClientRelayer relayer;
+
+  private int responseId = 0;
 
   // Buffer of asks that will be sent to RM in the next AM heartbeat
   private List<ResourceRequest> asks = new ArrayList<>();
@@ -123,7 +140,7 @@ public class TestAMRMClientRelayer {
     this.conf = new Configuration();
 
     this.mockAMS = new MockApplicationMasterService();
-    this.relayer = new AMRMClientRelayer(this.mockAMS);
+    this.relayer = new AMRMClientRelayer(this.mockAMS, null);
 
     this.relayer.init(conf);
     this.relayer.start();
@@ -150,7 +167,7 @@ public class TestAMRMClientRelayer {
   private AllocateRequest getAllocateRequest() {
     // Need to create a new one every time because rather than directly
     // referring the lists, the protobuf impl makes a copy of the lists
-    return AllocateRequest.newInstance(0, 0, asks, releases,
+    return AllocateRequest.newInstance(responseId, 0, asks, releases,
         ResourceBlacklistRequest.newInstance(blacklistAdditions,
             blacklistRemoval));
   }
@@ -272,4 +289,30 @@ public class TestAMRMClientRelayer {
     clearAllocateRequestLists();
   }
 
+  @Test
+  public void testResponseIdResync() throws YarnException, IOException {
+    this.responseId = 10;
+
+    AllocateResponse response = this.relayer.allocate(getAllocateRequest());
+    Assert.assertEquals(this.responseId + 1, response.getResponseId());
+
+    int expected = 5;
+    this.mockAMS.setResponseIdReset(expected);
+
+    try {
+      this.relayer.allocate(getAllocateRequest());
+      Assert.fail("Expecting exception from RM");
+    } catch (InvalidApplicationMasterRequestException e) {
+      // Expected exception
+    }
+
+    // Verify that the responseId is overridden
+    response = this.relayer.allocate(getAllocateRequest());
+    Assert.assertEquals(expected + 1, response.getResponseId());
+
+    // Verify it is no longer overriden
+    this.responseId = response.getResponseId();
+    response = this.relayer.allocate(getAllocateRequest());
+    Assert.assertEquals(this.responseId + 1, response.getResponseId());
+  }
 }
