@@ -253,11 +253,16 @@ final class FSDirErasureCodingOp {
    *                      rebuilding
    * @throws IOException
    */
-  static void enableErasureCodingPolicy(final FSNamesystem fsn,
+  static boolean enableErasureCodingPolicy(final FSNamesystem fsn,
       String ecPolicyName, final boolean logRetryCache) throws IOException {
     Preconditions.checkNotNull(ecPolicyName);
-    fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
-    fsn.getEditLog().logEnableErasureCodingPolicy(ecPolicyName, logRetryCache);
+    boolean success =
+        fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
+    if (success) {
+      fsn.getEditLog().logEnableErasureCodingPolicy(ecPolicyName,
+          logRetryCache);
+    }
+    return success;
   }
 
   /**
@@ -269,11 +274,16 @@ final class FSDirErasureCodingOp {
    *                      rebuilding
    * @throws IOException
    */
-  static void disableErasureCodingPolicy(final FSNamesystem fsn,
+  static boolean disableErasureCodingPolicy(final FSNamesystem fsn,
       String ecPolicyName, final boolean logRetryCache) throws IOException {
     Preconditions.checkNotNull(ecPolicyName);
-    fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
-    fsn.getEditLog().logDisableErasureCodingPolicy(ecPolicyName, logRetryCache);
+    boolean success =
+        fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
+    if (success) {
+      fsn.getEditLog().logDisableErasureCodingPolicy(ecPolicyName,
+          logRetryCache);
+    }
+    return success;
   }
 
   private static List<XAttr> removeErasureCodingPolicyXAttr(
