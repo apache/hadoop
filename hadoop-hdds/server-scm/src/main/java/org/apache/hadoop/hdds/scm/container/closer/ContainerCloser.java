@@ -77,7 +77,7 @@ public class ContainerCloser {
     this.isRunning = new AtomicBoolean(false);
     this.reportInterval = this.configuration.getTimeDuration(
         HDDS_CONTAINER_REPORT_INTERVAL,
-        HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
+        HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
     Preconditions.checkState(this.reportInterval > 0,
         "report interval has to be greater than 0");
   }
@@ -100,7 +100,7 @@ public class ContainerCloser {
     if (commandIssued.containsKey(info.getContainerID())) {
       // We check if we issued a close command in last 3 * reportInterval secs.
       long commandQueueTime = commandIssued.get(info.getContainerID());
-      long currentTime = TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow());
+      long currentTime = Time.monotonicNow();
       if (currentTime > commandQueueTime + (MULTIPLIER * reportInterval)) {
         commandIssued.remove(info.getContainerID());
         mapCount.decrementAndGet();
@@ -137,8 +137,7 @@ public class ContainerCloser {
               PipelineID.getFromProtobuf(info.getPipelineID())));
     }
     if (!commandIssued.containsKey(info.getContainerID())) {
-      commandIssued.put(info.getContainerID(),
-          TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow()));
+      commandIssued.put(info.getContainerID(), Time.monotonicNow());
       mapCount.incrementAndGet();
     }
     // run the hash map cleaner thread if needed, non-blocking call.
@@ -156,7 +155,7 @@ public class ContainerCloser {
           for (Map.Entry<Long, Long> entry : commandIssued.entrySet()) {
             long commandQueueTime = entry.getValue();
             if (commandQueueTime + (MULTIPLIER * reportInterval) >
-                TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow())) {
+                Time.monotonicNow()) {
 
               // It is possible for this remove to fail due to race conditions.
               // No big deal we will cleanup next time.

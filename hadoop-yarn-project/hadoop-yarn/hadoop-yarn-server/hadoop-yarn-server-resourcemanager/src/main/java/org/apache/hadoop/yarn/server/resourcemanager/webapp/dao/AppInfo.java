@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -227,6 +228,15 @@ public class AppInfo {
 
             if (resourceRequestsRaw != null) {
               for (ResourceRequest req : resourceRequestsRaw) {
+                resourceRequests.add(new ResourceRequestInfo(req));
+              }
+            }
+
+            List<SchedulingRequest> schedulingRequestsRaw = rm.getRMContext()
+                .getScheduler().getPendingSchedulingRequestsForAttempt(
+                    attempt.getAppAttemptId());
+            if (schedulingRequestsRaw != null) {
+              for (SchedulingRequest req : schedulingRequestsRaw) {
                 resourceRequests.add(new ResourceRequestInfo(req));
               }
             }

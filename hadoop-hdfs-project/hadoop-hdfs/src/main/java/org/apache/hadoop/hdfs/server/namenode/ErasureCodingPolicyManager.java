@@ -356,7 +356,7 @@ public final class ErasureCodingPolicyManager {
   /**
    * Disable an erasure coding policy by policyName.
    */
-  public synchronized void disablePolicy(String name) {
+  public synchronized boolean disablePolicy(String name) {
     ErasureCodingPolicyInfo info = policiesByName.get(name);
     if (info == null) {
       throw new HadoopIllegalArgumentException("The policy name " +
@@ -367,27 +367,32 @@ public final class ErasureCodingPolicyManager {
       enabledPoliciesByName.remove(name);
       enabledPolicies =
           enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
+      info.setState(ErasureCodingPolicyState.DISABLED);
+      LOG.info("Disable the erasure coding policy " + name);
+      return true;
     }
-    info.setState(ErasureCodingPolicyState.DISABLED);
-    LOG.info("Disable the erasure coding policy " + name);
+    return false;
   }
 
   /**
    * Enable an erasure coding policy by policyName.
    */
-  public synchronized void enablePolicy(String name) {
+  public synchronized boolean enablePolicy(String name) {
     final ErasureCodingPolicyInfo info = policiesByName.get(name);
     if (info == null) {
       throw new HadoopIllegalArgumentException("The policy name " +
           name + " does not exist");
     }
-
+    if (enabledPoliciesByName.containsKey(name)) {
+      return false;
+    }
     final ErasureCodingPolicy ecPolicy = info.getPolicy();
     enabledPoliciesByName.put(name, ecPolicy);
     info.setState(ErasureCodingPolicyState.ENABLED);
     enabledPolicies =
         enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
     LOG.info("Enable the erasure coding policy " + name);
+    return true;
   }
 
   /**

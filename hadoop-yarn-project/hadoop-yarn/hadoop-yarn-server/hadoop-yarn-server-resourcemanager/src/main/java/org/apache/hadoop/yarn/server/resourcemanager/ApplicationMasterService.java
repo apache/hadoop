@@ -420,12 +420,9 @@ public class ApplicationMasterService extends AbstractService implements
         // heartbeat one step old, simply return lastReponse
         return lastResponse;
       } else if (request.getResponseId() != lastResponse.getResponseId()) {
-        String message =
-            "Invalid responseId in AllocateRequest from application attempt: "
-                + appAttemptId + ", expect responseId to be "
-                + lastResponse.getResponseId() + ", but get "
-                + request.getResponseId();
-        throw new InvalidApplicationMasterRequestException(message);
+        throw new InvalidApplicationMasterRequestException(AMRMClientUtils
+            .assembleInvalidResponseIdExceptionMessage(appAttemptId,
+                lastResponse.getResponseId(), request.getResponseId()));
       }
 
       AllocateResponse response =

@@ -430,4 +430,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective max queue capacity
    */
   Resource getEffectiveMaxCapacityDown(String label, Resource factor);
+
+  /**
+   * Get Multi Node scheduling policy name.
+   * @return policy name
+   */
+  String getMultiNodeSortingPolicyName();
 }

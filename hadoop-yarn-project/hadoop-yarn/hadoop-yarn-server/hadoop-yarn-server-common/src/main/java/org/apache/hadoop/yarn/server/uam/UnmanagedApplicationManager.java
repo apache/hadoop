@@ -193,7 +193,7 @@ public class UnmanagedApplicationManager {
         this.applicationId.toString(), UserGroupInformation.getCurrentUser());
     this.rmProxyRelayer =
         new AMRMClientRelayer(createRMProxy(ApplicationMasterProtocol.class,
-            this.conf, this.userUgi, amrmToken));
+            this.conf, this.userUgi, amrmToken), this.applicationId);
   }
 
   /**

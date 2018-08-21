@@ -249,8 +249,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     this.homeSubClusterId =
         SubClusterId.newInstance(YarnConfiguration.getClusterId(conf));
-    this.homeRMRelayer = new AMRMClientRelayer(createHomeRMProxy(appContext,
-        ApplicationMasterProtocol.class, this.appOwner));
+    this.homeRMRelayer = new AMRMClientRelayer(
+        createHomeRMProxy(appContext, ApplicationMasterProtocol.class,
+            this.appOwner),
+        getApplicationContext().getApplicationAttemptId().getApplicationId());
 
     this.federationFacade = FederationStateStoreFacade.getInstance();
     this.subClusterResolver = this.federationFacade.getSubClusterResolver();

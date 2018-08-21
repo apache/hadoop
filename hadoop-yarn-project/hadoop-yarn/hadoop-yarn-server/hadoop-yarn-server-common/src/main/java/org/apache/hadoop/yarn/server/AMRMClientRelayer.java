@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSet;
@@ -111,13 +113,22 @@ public class AMRMClientRelayer extends AbstractService
       new HashMap<>();
   private List<SchedulingRequest> schedulingRequest = new ArrayList<>();
 
+  private ApplicationId appId;
+
+  // Normally -1, otherwise will override responseId with this value in the next
+  // heartbeat
+  private volatile int resetResponseId;
+
   public AMRMClientRelayer() {
     super(AMRMClientRelayer.class.getName());
+    this.resetResponseId = -1;
   }
 
-  public AMRMClientRelayer(ApplicationMasterProtocol rmClient) {
+  public AMRMClientRelayer(ApplicationMasterProtocol rmClient,
+      ApplicationId appId) {
     this();
     this.rmClient = rmClient;
+    this.appId = appId;
   }
 
   @Override
@@ -167,10 +178,53 @@ public class AMRMClientRelayer extends AbstractService
     try {
       return this.rmClient.finishApplicationMaster(request);
     } catch (ApplicationMasterNotRegisteredException e) {
-      LOG.warn("Out of sync with ResourceManager, hence resyncing.");
+      LOG.warn("Out of sync with RM for " + this.appId + ", hence resyncing.");
       // re register with RM
       registerApplicationMaster(this.amRegistrationRequest);
       return finishApplicationMaster(request);
+    }
+  }
+
+  private void addNewAllocateRequest(AllocateRequest allocateRequest)
+      throws YarnException {
+    // update the data structures first
+    addNewAsks(allocateRequest.getAskList());
+
+    if (allocateRequest.getReleaseList() != null) {
+      this.remotePendingRelease.addAll(allocateRequest.getReleaseList());
+      this.release.addAll(allocateRequest.getReleaseList());
+    }
+
+    if (allocateRequest.getResourceBlacklistRequest() != null) {
+      if (allocateRequest.getResourceBlacklistRequest()
+          .getBlacklistAdditions() != null) {
+        this.remoteBlacklistedNodes.addAll(allocateRequest
+            .getResourceBlacklistRequest().getBlacklistAdditions());
+        this.blacklistAdditions.addAll(allocateRequest
+            .getResourceBlacklistRequest().getBlacklistAdditions());
+      }
+      if (allocateRequest.getResourceBlacklistRequest()
+          .getBlacklistRemovals() != null) {
+        this.remoteBlacklistedNodes.removeAll(allocateRequest
+            .getResourceBlacklistRequest().getBlacklistRemovals());
+        this.blacklistRemovals.addAll(allocateRequest
+            .getResourceBlacklistRequest().getBlacklistRemovals());
+      }
+    }
+
+    if (allocateRequest.getUpdateRequests() != null) {
+      for (UpdateContainerRequest update : allocateRequest
+          .getUpdateRequests()) {
+        this.remotePendingChange.put(update.getContainerId(), update);
+        this.change.put(update.getContainerId(), update);
+      }
+    }
+
+    if (allocateRequest.getSchedulingRequests() != null) {
+      AMRMClientUtils.addToOutstandingSchedulingRequests(
+          allocateRequest.getSchedulingRequests(),
+          this.remotePendingSchedRequest);
+      this.schedulingRequest.addAll(allocateRequest.getSchedulingRequests());
     }
   }
 
@@ -180,46 +234,7 @@ public class AMRMClientRelayer extends AbstractService
     AllocateResponse allocateResponse = null;
     try {
       synchronized (this) {
-        // update the data structures first
-        addNewAsks(allocateRequest.getAskList());
-
-        if (allocateRequest.getReleaseList() != null) {
-          this.remotePendingRelease.addAll(allocateRequest.getReleaseList());
-          this.release.addAll(allocateRequest.getReleaseList());
-        }
-
-        if (allocateRequest.getResourceBlacklistRequest() != null) {
-          if (allocateRequest.getResourceBlacklistRequest()
-              .getBlacklistAdditions() != null) {
-            this.remoteBlacklistedNodes.addAll(allocateRequest
-                .getResourceBlacklistRequest().getBlacklistAdditions());
-            this.blacklistAdditions.addAll(allocateRequest
-                .getResourceBlacklistRequest().getBlacklistAdditions());
-          }
-          if (allocateRequest.getResourceBlacklistRequest()
-              .getBlacklistRemovals() != null) {
-            this.remoteBlacklistedNodes.removeAll(allocateRequest
-                .getResourceBlacklistRequest().getBlacklistRemovals());
-            this.blacklistRemovals.addAll(allocateRequest
-                .getResourceBlacklistRequest().getBlacklistRemovals());
-          }
-        }
-
-        if (allocateRequest.getUpdateRequests() != null) {
-          for (UpdateContainerRequest update : allocateRequest
-              .getUpdateRequests()) {
-            this.remotePendingChange.put(update.getContainerId(), update);
-            this.change.put(update.getContainerId(), update);
-          }
-        }
-
-        if (allocateRequest.getSchedulingRequests() != null) {
-          AMRMClientUtils.addToOutstandingSchedulingRequests(
-              allocateRequest.getSchedulingRequests(),
-              this.remotePendingSchedRequest);
-          this.schedulingRequest
-              .addAll(allocateRequest.getSchedulingRequests());
-        }
+        addNewAllocateRequest(allocateRequest);
 
         ArrayList<ResourceRequest> askList = new ArrayList<>(ask.size());
         for (ResourceRequest r : ask) {
@@ -238,13 +253,23 @@ public class AMRMClientRelayer extends AbstractService
             .updateRequests(new ArrayList<>(this.change.values()))
             .schedulingRequests(new ArrayList<>(this.schedulingRequest))
             .build();
+
+        if (this.resetResponseId != -1) {
+          LOG.info("Override allocate responseId from "
+              + allocateRequest.getResponseId() + " to " + this.resetResponseId
+              + " for " + this.appId);
+          allocateRequest.setResponseId(this.resetResponseId);
+        }
       }
 
       // Do the actual allocate call
       try {
         allocateResponse = this.rmClient.allocate(allocateRequest);
+
+        // Heartbeat succeeded, wipe out responseId overriding
+        this.resetResponseId = -1;
       } catch (ApplicationMasterNotRegisteredException e) {
-        LOG.warn("ApplicationMaster is out of sync with ResourceManager,"
+        LOG.warn("ApplicationMaster is out of sync with RM for " + this.appId
             + " hence resyncing.");
 
         synchronized (this) {
@@ -269,6 +294,25 @@ public class AMRMClientRelayer extends AbstractService
         // Reset responseId after re-register
         allocateRequest.setResponseId(0);
         return allocate(allocateRequest);
+      } catch (Throwable t) {
+
+        // If RM is complaining about responseId out of sync, force reset next
+        // time
+        if (t instanceof InvalidApplicationMasterRequestException) {
+          int responseId = AMRMClientUtils
+              .parseExpectedResponseIdFromException(t.getMessage());
+          if (responseId != -1) {
+            this.resetResponseId = responseId;
+            LOG.info("ResponseId out of sync with RM, expect " + responseId
+                + " but " + allocateRequest.getResponseId() + " used by "
+                + this.appId + ". Will override in the next allocate.");
+          } else {
+            LOG.warn("Failed to parse expected responseId out of exception for "
+                + this.appId);
+          }
+        }
+
+        throw t;
       }
 
       synchronized (this) {

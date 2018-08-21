@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -197,11 +198,12 @@ public class ActivitiesManager extends AbstractService {
   }
 
   // Add queue, application or container activity into specific node allocation.
-  void addSchedulingActivityForNode(NodeId nodeID, String parentName,
+  void addSchedulingActivityForNode(SchedulerNode node, String parentName,
       String childName, String priority, ActivityState state, String diagnostic,
       String type) {
-    if (shouldRecordThisNode(nodeID)) {
-      NodeAllocation nodeAllocation = getCurrentNodeAllocation(nodeID);
+    if (shouldRecordThisNode(node.getNodeID())) {
+      NodeAllocation nodeAllocation = getCurrentNodeAllocation(
+          node.getNodeID());
       nodeAllocation.addAllocationActivity(parentName, childName, priority,
           state, diagnostic, type);
     }

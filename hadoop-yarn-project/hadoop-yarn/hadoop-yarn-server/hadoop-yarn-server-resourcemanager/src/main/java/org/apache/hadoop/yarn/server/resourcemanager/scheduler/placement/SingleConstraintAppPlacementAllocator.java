@@ -505,8 +505,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     }
   }
 
-  @VisibleForTesting
-  SchedulingRequest getSchedulingRequest() {
+  @Override
+  public SchedulingRequest getSchedulingRequest() {
     return schedulingRequest;
   }
 

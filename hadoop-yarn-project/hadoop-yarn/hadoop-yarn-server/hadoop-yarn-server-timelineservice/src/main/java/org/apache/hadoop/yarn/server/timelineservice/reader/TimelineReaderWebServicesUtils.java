@@ -214,7 +214,11 @@ public final class TimelineReaderWebServicesUtils {
     String[] strs = str.split(delimiter);
     EnumSet<Field> fieldList = EnumSet.noneOf(Field.class);
     for (String s : strs) {
-      fieldList.add(Field.valueOf(s.trim().toUpperCase()));
+      try {
+        fieldList.add(Field.valueOf(s.trim().toUpperCase()));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException(s + " is not a valid field.");
+      }
     }
     return fieldList;
   }
