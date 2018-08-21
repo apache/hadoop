@@ -638,6 +638,32 @@ public class ServiceApiUtil {
     return containerNeedUpgrade;
   }
 
+  /**
+   * Validates the components that are requested are stable for upgrade.
+   * It returns the instances of the components which are in ready state.
+   */
+  public static List<Container> validateAndResolveCompsStable(
+      Service liveService, Collection<String> compNames) throws YarnException {
+    Preconditions.checkNotNull(compNames);
+    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    List<Container> containerNeedUpgrade = new ArrayList<>();
+    for (Component liveComp : liveService.getComponents()) {
+      if (requestedComps.contains(liveComp.getName())) {
+        if (!liveComp.getState().equals(ComponentState.STABLE)) {
+          // Nothing to upgrade
+          throw new YarnException(String.format(
+              ERROR_COMP_DOES_NOT_NEED_UPGRADE, liveComp.getName()));
+        }
+        liveComp.getContainers().forEach(liveContainer -> {
+          if (liveContainer.getState().equals(ContainerState.READY)) {
+            containerNeedUpgrade.add(liveContainer);
+          }
+        });
+      }
+    }
+    return containerNeedUpgrade;
+  }
+
   private static String parseComponentName(String componentInstanceName)
       throws YarnException {
     int idx = componentInstanceName.lastIndexOf('-');
@@ -650,5 +676,23 @@ public class ServiceApiUtil {
 
   public static String $(String s) {
     return "${" + s +"}";
+  }
+
+  public static List<String> resolveCompsDependency(Service service) {
+    List<String> components = new ArrayList<String>();
+    for (Component component : service.getComponents()) {
+      int depSize = component.getDependencies().size();
+      if (!components.contains(component.getName())) {
+        components.add(component.getName());
+      }
+      if (depSize != 0) {
+        for (String depComp : component.getDependencies()) {
+          if (!components.contains(depComp)) {
+            components.add(0, depComp);
+          }
+        }
+      }
+    }
+    return components;
   }
 }

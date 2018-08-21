@@ -35,6 +35,7 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
   private ContainerId containerId;
   private org.apache.hadoop.yarn.service.api.records.Component targetSpec;
   private String upgradeVersion;
+  private boolean expressUpgrade;
 
   public ContainerId getContainerId() {
     return containerId;
@@ -111,6 +112,15 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
 
   public ComponentEvent setUpgradeVersion(String upgradeVersion) {
     this.upgradeVersion = upgradeVersion;
+    return this;
+  }
+
+  public boolean isExpressUpgrade() {
+    return expressUpgrade;
+  }
+
+  public ComponentEvent setExpressUpgrade(boolean expressUpgrade) {
+    this.expressUpgrade = expressUpgrade;
     return this;
   }
 }

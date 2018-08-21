@@ -380,6 +380,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
+      if (!compInstance.containerSpec.getState().equals(
+          ContainerState.NEEDS_UPGRADE)) {
+        //nothing to upgrade. this may happen with express upgrade.
+        return;
+      }
       compInstance.containerSpec.setState(ContainerState.UPGRADING);
       compInstance.component.decContainersReady(false);
       ComponentEvent upgradeEvent = compInstance.component.getUpgradeEvent();

@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.Component;
@@ -40,8 +41,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
@@ -67,6 +71,8 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
   private final SliderFileSystem fs;
 
   private String upgradeVersion;
+  private Queue<org.apache.hadoop.yarn.service.api.records
+        .Component> compsToUpgradeInOrder;
 
   private static final StateMachineFactory<ServiceManager, State,
       ServiceEventType, ServiceEvent> STATE_MACHINE_FACTORY =
@@ -141,14 +147,20 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
     @Override
     public State transition(ServiceManager serviceManager,
         ServiceEvent event) {
+      serviceManager.upgradeVersion = event.getVersion();
       try {
-        if (!event.isAutoFinalize()) {
-          serviceManager.serviceSpec.setState(ServiceState.UPGRADING);
+        if (event.isExpressUpgrade()) {
+          serviceManager.serviceSpec.setState(ServiceState.EXPRESS_UPGRADING);
+          serviceManager.compsToUpgradeInOrder = event
+              .getCompsToUpgradeInOrder();
+          serviceManager.upgradeNextCompIfAny();
+        } else if (event.isAutoFinalize()) {
+          serviceManager.serviceSpec.setState(ServiceState
+              .UPGRADING_AUTO_FINALIZE);
         } else {
           serviceManager.serviceSpec.setState(
-              ServiceState.UPGRADING_AUTO_FINALIZE);
+              ServiceState.UPGRADING);
         }
-        serviceManager.upgradeVersion = event.getVersion();
         return State.UPGRADING;
       } catch (Throwable e) {
         LOG.error("[SERVICE]: Upgrade to version {} failed", event.getVersion(),
@@ -169,8 +181,19 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
       if (currState.equals(ServiceState.STABLE)) {
         return State.STABLE;
       }
+      if (currState.equals(ServiceState.EXPRESS_UPGRADING)) {
+        org.apache.hadoop.yarn.service.api.records.Component component =
+            serviceManager.compsToUpgradeInOrder.peek();
+        if (!component.getState().equals(ComponentState.NEEDS_UPGRADE) &&
+            !component.getState().equals(ComponentState.UPGRADING)) {
+          serviceManager.compsToUpgradeInOrder.remove();
+        }
+        serviceManager.upgradeNextCompIfAny();
+      }
       if (currState.equals(ServiceState.UPGRADING_AUTO_FINALIZE) ||
-          event.getType().equals(ServiceEventType.START)) {
+          event.getType().equals(ServiceEventType.START) ||
+          (currState.equals(ServiceState.EXPRESS_UPGRADING) &&
+              serviceManager.compsToUpgradeInOrder.isEmpty())) {
         ServiceState targetState = checkIfStable(serviceManager.serviceSpec);
         if (targetState.equals(ServiceState.STABLE)) {
           if (serviceManager.finalizeUpgrade()) {
@@ -181,6 +204,19 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
         }
       }
       return State.UPGRADING;
+    }
+  }
+
+  private void upgradeNextCompIfAny() {
+    if (!compsToUpgradeInOrder.isEmpty()) {
+      org.apache.hadoop.yarn.service.api.records.Component component =
+          compsToUpgradeInOrder.peek();
+
+      ComponentEvent needUpgradeEvent = new ComponentEvent(
+          component.getName(), ComponentEventType.UPGRADE).setTargetSpec(
+          component).setUpgradeVersion(upgradeVersion).setExpressUpgrade(true);
+      context.scheduler.getDispatcher().getEventHandler().handle(
+          needUpgradeEvent);
     }
   }
 
@@ -250,23 +286,18 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
   }
 
   void processUpgradeRequest(String upgradeVersion,
-      boolean autoFinalize) throws IOException {
+      boolean autoFinalize, boolean expressUpgrade) throws IOException {
     Service targetSpec = ServiceApiUtil.loadServiceUpgrade(
         context.fs, context.service.getName(), upgradeVersion);
 
     List<org.apache.hadoop.yarn.service.api.records.Component>
-        compsThatNeedUpgrade = componentsFinder.
+        compsNeedUpgradeList = componentsFinder.
         findTargetComponentSpecs(context.service, targetSpec);
-    ServiceEvent event = new ServiceEvent(ServiceEventType.UPGRADE)
-        .setVersion(upgradeVersion)
-        .setAutoFinalize(autoFinalize);
-    context.scheduler.getDispatcher().getEventHandler().handle(event);
 
-    if (compsThatNeedUpgrade != null && !compsThatNeedUpgrade.isEmpty()) {
-      if (autoFinalize) {
-        event.setAutoFinalize(true);
-      }
-      compsThatNeedUpgrade.forEach(component -> {
+    // remove all components from need upgrade list if there restart policy
+    // doesn't all upgrade.
+    if (compsNeedUpgradeList != null) {
+      compsNeedUpgradeList.removeIf(component -> {
         org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum
             restartPolicy = component.getRestartPolicy();
 
@@ -274,25 +305,65 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
             Component.getRestartPolicyHandler(restartPolicy);
         // Do not allow upgrades for components which have NEVER/ON_FAILURE
         // restart policy
-        if (restartPolicyHandler.allowUpgrades()) {
+        if (!restartPolicyHandler.allowUpgrades()) {
+          LOG.info("The component {} has a restart policy that doesnt " +
+                  "allow upgrades {} ", component.getName(),
+              component.getRestartPolicy().toString());
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    ServiceEvent event = new ServiceEvent(ServiceEventType.UPGRADE)
+        .setVersion(upgradeVersion)
+        .setAutoFinalize(autoFinalize)
+        .setExpressUpgrade(expressUpgrade);
+
+    if (expressUpgrade) {
+      // In case of express upgrade  components need to be upgraded in order.
+      // Once the service manager gets notified that a component finished
+      // upgrading, it then issues event to upgrade the next component.
+      Map<String, org.apache.hadoop.yarn.service.api.records.Component>
+          compsNeedUpgradeByName = new HashMap<>();
+      if (compsNeedUpgradeList != null) {
+        compsNeedUpgradeList.forEach(component ->
+            compsNeedUpgradeByName.put(component.getName(), component));
+      }
+      List<String> resolvedComps = ServiceApiUtil
+          .resolveCompsDependency(targetSpec);
+
+      Queue<org.apache.hadoop.yarn.service.api.records.Component>
+          orderedCompUpgrade = new LinkedList<>();
+      resolvedComps.forEach(compName -> {
+        org.apache.hadoop.yarn.service.api.records.Component component =
+            compsNeedUpgradeByName.get(compName);
+        if (component != null ) {
+          orderedCompUpgrade.add(component);
+        }
+      });
+      event.setCompsToUpgradeInOrder(orderedCompUpgrade);
+    }
+
+    context.scheduler.getDispatcher().getEventHandler().handle(event);
+
+    if (compsNeedUpgradeList != null && !compsNeedUpgradeList.isEmpty()) {
+      if (!expressUpgrade) {
+        compsNeedUpgradeList.forEach(component -> {
           ComponentEvent needUpgradeEvent = new ComponentEvent(
               component.getName(), ComponentEventType.UPGRADE).setTargetSpec(
               component).setUpgradeVersion(event.getVersion());
           context.scheduler.getDispatcher().getEventHandler().handle(
               needUpgradeEvent);
-        } else {
-          LOG.info("The component {} has a restart "
-              + "policy that doesnt allow upgrades {} ", component.getName(),
-              component.getRestartPolicy().toString());
-        }
-      });
-    } else {
+
+        });
+      }
+    }  else if (autoFinalize) {
       // nothing to upgrade if upgrade auto finalize is requested, trigger a
       // state check.
-      if (autoFinalize) {
-        context.scheduler.getDispatcher().getEventHandler().handle(
-            new ServiceEvent(ServiceEventType.CHECK_STABLE));
-      }
+      context.scheduler.getDispatcher().getEventHandler().handle(
+          new ServiceEvent(ServiceEventType.CHECK_STABLE));
     }
   }
 

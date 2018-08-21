@@ -601,6 +601,26 @@ public class ApiServiceClient extends AppAdminClient {
   }
 
   @Override
+  public int actionUpgradeExpress(String appName, File path)
+      throws IOException, YarnException {
+    int result;
+    try {
+      Service service =
+          loadAppJsonFromLocalFS(path.getAbsolutePath(), appName, null, null);
+      service.setState(ServiceState.EXPRESS_UPGRADING);
+      String buffer = jsonSerDeser.toJson(service);
+      LOG.info("Upgrade in progress. Please wait..");
+      ClientResponse response = getApiClient(getServicePath(appName))
+          .put(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Failed to upgrade application: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
+
+  @Override
   public int initiateUpgrade(String appName,
       String fileName, boolean autoFinalize) throws IOException, YarnException {
     int result;
