@@ -733,21 +733,7 @@ public class ContainerMapping implements Mapping {
         // return info of a deleted container. may revisit this in the future,
         // for now, just skip a not-found container
         if (containerBytes != null) {
-          HddsProtos.SCMContainerInfo oldInfoProto =
-              HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
-          ContainerInfo oldInfo = ContainerInfo.fromProtobuf(oldInfoProto);
-          ContainerInfo newInfo = new ContainerInfo.Builder()
-              .setAllocatedBytes(info.getAllocatedBytes())
-              .setNumberOfKeys(oldInfo.getNumberOfKeys())
-              .setOwner(oldInfo.getOwner())
-              .setPipelineID(oldInfo.getPipelineID())
-              .setState(oldInfo.getState())
-              .setUsedBytes(oldInfo.getUsedBytes())
-              .setDeleteTransactionId(oldInfo.getDeleteTransactionId())
-              .setReplicationFactor(oldInfo.getReplicationFactor())
-              .setReplicationType(oldInfo.getReplicationType())
-              .build();
-          containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
+          containerStore.put(dbKey, info.getProtobuf().toByteArray());
         } else {
           LOG.debug("Container state manager has container {} but not found " +
                   "in container store, a deleted container?",

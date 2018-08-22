@@ -360,4 +360,12 @@ public class TestContainerMapping {
     return containerInfo;
   }
 
+  @Test
+  public void testFlushAllContainers() throws IOException {
+    ContainerInfo info = createContainer();
+    List<ContainerInfo> containers = mapping.getStateManager().getAllContainers();
+    Assert.assertTrue(containers.size() > 0);
+    mapping.flushContainerInfo();
+  }
+
 }
