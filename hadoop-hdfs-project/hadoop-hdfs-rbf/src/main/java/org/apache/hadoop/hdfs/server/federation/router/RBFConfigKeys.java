@@ -186,6 +186,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "mount-table.max-cache-size";
   /** Remove cache entries if we have more than 10k. */
   public static final int FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT = 10000;
+  public static final String FEDERATION_MOUNT_TABLE_CACHE_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "mount-table.cache.enable";
+  public static final boolean FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT =
+      true;
 
   // HDFS Router-based federation admin
   public static final String DFS_ROUTER_ADMIN_HANDLER_COUNT_KEY =
