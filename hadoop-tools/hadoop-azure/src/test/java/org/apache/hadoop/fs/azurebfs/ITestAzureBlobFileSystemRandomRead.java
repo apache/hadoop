@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Random;
@@ -524,6 +523,9 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   private void createTestFile() throws Exception {
+    final AzureBlobFileSystem abFs = this.getFileSystem();
+    // test only valid for non-namespace enabled account
+    Assume.assumeFalse(abFs.getIsNamespaceEnabeld());
     FileSystem fs = this.getWasbFileSystem();
 
     if (fs.exists(TEST_FILE_PATH)) {

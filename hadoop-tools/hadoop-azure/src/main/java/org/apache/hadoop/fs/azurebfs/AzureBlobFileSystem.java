@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
@@ -60,6 +61,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnh
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -154,7 +157,8 @@ public class AzureBlobFileSystem extends FileSystem {
         blockSize);
 
     try {
-      OutputStream outputStream = abfsStore.createFile(makeQualified(f), overwrite);
+      OutputStream outputStream = abfsStore.createFile(makeQualified(f), overwrite,
+          permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()));
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -253,7 +257,8 @@ public class AzureBlobFileSystem extends FileSystem {
               AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
               AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
               AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND);
+              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+              AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
 
@@ -308,7 +313,8 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     try {
-      abfsStore.createDirectory(makeQualified(f));
+      abfsStore.createDirectory(makeQualified(f), permission == null ? FsPermission.getDirDefault() : permission,
+          FsPermission.getUMask(getConf()));
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS);
@@ -455,6 +461,188 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     return true;
+  }
+
+   /**
+   * Set owner of a path (i.e. a file or a directory).
+   * The parameters owner and group cannot both be null.
+   *
+   * @param path  The path
+   * @param owner If it is null, the original username remains unchanged.
+   * @param group If it is null, the original groupname remains unchanged.
+   */
+  @Override
+  public void setOwner(final Path path, final String owner, final String group)
+      throws IOException {
+    LOG.debug(
+        "AzureBlobFileSystem.setOwner path: {}", path);
+
+    if ((owner == null || owner.isEmpty()) && (group == null || group.isEmpty())) {
+      throw new IllegalArgumentException("A valid owner or group must be specified.");
+    }
+
+    try {
+      abfsStore.setOwner(makeQualified(path),
+              owner,
+              group);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Set permission of a path.
+   *
+   * @param path       The path
+   * @param permission Access permission
+   */
+  @Override
+  public void setPermission(final Path path, final FsPermission permission)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.setPermission path: {}", path);
+
+    if (permission == null) {
+      throw new IllegalArgumentException("The permission can't be null");
+    }
+
+    try {
+      abfsStore.setPermission(makeQualified(path),
+              permission);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Modifies ACL entries of files and directories.  This method can add new ACL
+   * entries or modify the permissions on existing ACL entries.  All existing
+   * ACL entries that are not specified in this call are retained without
+   * changes.  (Modifications are merged into the current ACL.)
+   *
+   * @param path    Path to modify
+   * @param aclSpec List of AbfsAclEntry describing modifications
+   * @throws IOException if an ACL could not be modified
+   */
+  @Override
+  public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path.toString());
+
+    if (aclSpec == null || aclSpec.isEmpty()) {
+      throw new IllegalArgumentException("The value of the aclSpec parameter is invalid.");
+    }
+
+    try {
+      abfsStore.modifyAclEntries(makeQualified(path),
+              aclSpec);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Removes ACL entries from files and directories.  Other ACL entries are
+   * retained.
+   *
+   * @param path    Path to modify
+   * @param aclSpec List of AclEntry describing entries to remove
+   * @throws IOException if an ACL could not be modified
+   */
+  @Override
+  public void removeAclEntries(final Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.removeAclEntries path: {}", path);
+
+    if (aclSpec == null || aclSpec.isEmpty()) {
+      throw new IllegalArgumentException("The aclSpec argument is invalid.");
+    }
+
+    try {
+      abfsStore.removeAclEntries(makeQualified(path), aclSpec);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Removes all default ACL entries from files and directories.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be modified
+   */
+  @Override
+  public void removeDefaultAcl(final Path path) throws IOException {
+    LOG.debug("AzureBlobFileSystem.removeDefaultAcl path: {}", path);
+
+    try {
+      abfsStore.removeDefaultAcl(makeQualified(path));
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Removes all but the base ACL entries of files and directories.  The entries
+   * for user, group, and others are retained for compatibility with permission
+   * bits.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be removed
+   */
+  @Override
+  public void removeAcl(final Path path) throws IOException {
+    LOG.debug("AzureBlobFileSystem.removeAcl path: {}", path);
+
+    try {
+      abfsStore.removeAcl(makeQualified(path));
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Fully replaces ACL of files and directories, discarding all existing
+   * entries.
+   *
+   * @param path    Path to modify
+   * @param aclSpec List of AclEntry describing modifications, must include
+   *                entries for user, group, and others for compatibility with
+   *                permission bits.
+   * @throws IOException if an ACL could not be modified
+   */
+  @Override
+  public void setAcl(final Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.setAcl path: {}", path);
+
+    if (aclSpec == null || aclSpec.size() == 0) {
+      throw new IllegalArgumentException("The aclSpec argument is invalid.");
+    }
+
+    try {
+      abfsStore.setAcl(makeQualified(path), aclSpec);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Gets the ACL of a file or directory.
+   *
+   * @param path Path to get
+   * @return AbfsAclStatus describing the ACL of the file or directory
+   * @throws IOException if an ACL could not be read
+   */
+  @Override
+  public AclStatus getAclStatus(final Path path) throws IOException {
+    LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path.toString());
+
+    try {
+      return abfsStore.getAclStatus(makeQualified(path));
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+      return null;
+    }
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
@@ -655,5 +843,10 @@ public class AzureBlobFileSystem extends FileSystem {
   @VisibleForTesting
   AbfsClient getAbfsClient() {
     return abfsStore.getClient();
+  }
+
+  @VisibleForTesting
+  boolean getIsNamespaceEnabeld() throws AzureBlobFileSystemException {
+    return abfsStore.getIsNamespaceEnabled();
   }
 }

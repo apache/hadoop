@@ -36,8 +36,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.xml.bind.DatatypeConverter;
@@ -68,13 +70,18 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -85,7 +92,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.util.Time.now;
 
 /**
- * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage
+ * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -103,7 +110,8 @@ public class AzureBlobFileSystemStore {
 
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
-
+  private boolean isNamespaceEnabledSet;
+  private boolean isNamespaceEnabled;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecure, Configuration configuration, UserGroupInformation userGroupInformation)
           throws AzureBlobFileSystemException {
@@ -119,6 +127,20 @@ public class AzureBlobFileSystemStore {
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
 
     initializeClient(uri, isSecure);
+  }
+
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
+    if (!isNamespaceEnabledSet) {
+      LOG.debug("getFilesystemProperties for filesystem: {}",
+          client.getFileSystem());
+
+      final AbfsRestOperation op = client.getFilesystemProperties();
+      isNamespaceEnabled = Boolean.parseBoolean(
+          op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_NAMESPACE_ENABLED));
+      isNamespaceEnabledSet = true;
+    }
+
+    return isNamespaceEnabled;
   }
 
   @VisibleForTesting
@@ -197,7 +219,7 @@ public class AzureBlobFileSystemStore {
     } catch (CharacterCodingException ex) {
       throw new InvalidAbfsRestOperationException(ex);
     }
-    client.setPathProperties("/" + getRelativePath(path), commaSeparatedProperties);
+    client.setPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), commaSeparatedProperties);
   }
 
   public void createFilesystem() throws AzureBlobFileSystemException {
@@ -214,13 +236,20 @@ public class AzureBlobFileSystemStore {
     client.deleteFilesystem();
   }
 
-  public OutputStream createFile(final Path path, final boolean overwrite) throws AzureBlobFileSystemException {
-    LOG.debug("createFile filesystem: {} path: {} overwrite: {}",
+  public OutputStream createFile(final Path path, final boolean overwrite, final FsPermission permission,
+                                 final FsPermission umask) throws AzureBlobFileSystemException {
+    boolean isNamespaceEnabled = getIsNamespaceEnabled();
+    LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
             client.getFileSystem(),
             path,
-            overwrite);
+            overwrite,
+            permission.toString(),
+            umask.toString(),
+            isNamespaceEnabled);
 
-    client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite);
+    client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), true, overwrite,
+        isNamespaceEnabled ? getOctalNotation(permission) : null,
+        isNamespaceEnabled ? getOctalNotation(umask) : null);
 
     final OutputStream outputStream;
     outputStream = new FSDataOutputStream(
@@ -229,16 +258,23 @@ public class AzureBlobFileSystemStore {
     return outputStream;
   }
 
-  public void createDirectory(final Path path) throws AzureBlobFileSystemException {
-    LOG.debug("createDirectory filesystem: {} path: {}",
+  public void createDirectory(final Path path, final FsPermission permission, final FsPermission umask)
+      throws AzureBlobFileSystemException {
+    boolean isNamespaceEnabled = getIsNamespaceEnabled();
+    LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
             client.getFileSystem(),
-            path);
+            path,
+            permission,
+            umask,
+            isNamespaceEnabled);
 
-    client.createPath("/" + getRelativePath(path), false, true);
+    client.createPath(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), false, true,
+        isNamespaceEnabled ? getOctalNotation(permission) : null,
+        isNamespaceEnabled ? getOctalNotation(umask) : null);
   }
 
-  public InputStream openFileForRead(final Path path, final FileSystem.Statistics statistics) throws AzureBlobFileSystemException {
-
+  public InputStream openFileForRead(final Path path, final FileSystem.Statistics statistics)
+      throws AzureBlobFileSystemException {
     LOG.debug("openFileForRead filesystem: {} path: {}",
             client.getFileSystem(),
             path);
@@ -327,7 +363,6 @@ public class AzureBlobFileSystemStore {
 
   public void delete(final Path path, final boolean recursive)
       throws AzureBlobFileSystemException {
-
     LOG.debug("delete filesystem: {} path: {} recursive: {}",
             client.getFileSystem(),
             path,
@@ -351,19 +386,31 @@ public class AzureBlobFileSystemStore {
   }
 
   public FileStatus getFileStatus(final Path path) throws IOException {
-
-    LOG.debug("getFileStatus filesystem: {} path: {}",
+    boolean isNamespaceEnabled = getIsNamespaceEnabled();
+    LOG.debug("getFileStatus filesystem: {} path: {} isNamespaceEnabled: {}",
             client.getFileSystem(),
-           path);
+            path,
+            isNamespaceEnabled);
 
     if (path.isRoot()) {
-      AbfsRestOperation op = client.getFilesystemProperties();
+      final AbfsRestOperation op = isNamespaceEnabled
+          ? client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + AbfsHttpConstants.ROOT_PATH)
+          : client.getFilesystemProperties();
+
       final long blockSize = abfsConfiguration.getAzureBlockSize();
+      final String owner = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER);
+      final String group = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP);
+      final String permissions = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
       final String lastModified = op.getResult().getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
+      final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
+
       return new VersionedFileStatus(
-              userGroupInformation.getUserName(),
-              userGroupInformation.getPrimaryGroupName(),
+              owner == null ? userGroupInformation.getUserName() : owner,
+              group == null ? userGroupInformation.getPrimaryGroupName() : group,
+              permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+                      : AbfsPermission.valueOf(permissions),
+              hasAcl,
               0,
               true,
               1,
@@ -375,14 +422,22 @@ public class AzureBlobFileSystemStore {
       AbfsRestOperation op = client.getPathProperties(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path));
 
       final long blockSize = abfsConfiguration.getAzureBlockSize();
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      final String lastModified = op.getResult().getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
-      final String contentLength = op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH);
-      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      final AbfsHttpOperation result = op.getResult();
+      final String eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+      final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
+      final String contentLength = result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH);
+      final String resourceType = result.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+      final String owner = result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER);
+      final String group = result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP);
+      final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
+      final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
 
       return new VersionedFileStatus(
-              userGroupInformation.getUserName(),
-              userGroupInformation.getPrimaryGroupName(),
+              owner == null ? userGroupInformation.getUserName() : owner,
+              group == null ? userGroupInformation.getPrimaryGroupName() : group,
+              permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+                      : AbfsPermission.valueOf(permissions),
+              hasAcl,
               parseContentLength(contentLength),
               parseIsDirectory(resourceType),
               1,
@@ -417,6 +472,13 @@ public class AzureBlobFileSystemStore {
       long blockSize = abfsConfiguration.getAzureBlockSize();
 
       for (ListResultEntrySchema entry : retrievedSchema.paths()) {
+        final String owner = entry.owner() == null ? userGroupInformation.getUserName() : entry.owner();
+        final String group = entry.group() == null ? userGroupInformation.getPrimaryGroupName() : entry.group();
+        final FsPermission fsPermission = entry.permissions() == null
+                ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+                : AbfsPermission.valueOf(entry.permissions());
+        final boolean hasAcl = AbfsPermission.isExtendedAcl(entry.permissions());
+
         long lastModifiedMillis = 0;
         long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
         boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
@@ -429,8 +491,10 @@ public class AzureBlobFileSystemStore {
 
         fileStatuses.add(
                 new VersionedFileStatus(
-                        userGroupInformation.getUserName(),
-                        userGroupInformation.getPrimaryGroupName(),
+                        owner,
+                        group,
+                        fsPermission,
+                        hasAcl,
                         contentLength,
                         isDirectory,
                         1,
@@ -443,6 +507,211 @@ public class AzureBlobFileSystemStore {
     } while (continuation != null && !continuation.isEmpty());
 
     return fileStatuses.toArray(new FileStatus[0]);
+  }
+
+  public void setOwner(final Path path, final String owner, final String group) throws
+          AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "setOwner filesystem: {} path: {} owner: {} group: {}",
+            client.getFileSystem(),
+            path.toString(),
+            owner,
+            group);
+    client.setOwner(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true), owner, group);
+  }
+
+  public void setPermission(final Path path, final FsPermission permission) throws
+          AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "setPermission filesystem: {} path: {} permission: {}",
+            client.getFileSystem(),
+            path.toString(),
+            permission.toString());
+    client.setPermission(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+            String.format(AbfsHttpConstants.PERMISSION_FORMAT, permission.toOctal()));
+  }
+
+  public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec) throws
+          AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "modifyAclEntries filesystem: {} path: {} aclSpec: {}",
+            client.getFileSystem(),
+            path.toString(),
+            AclEntry.aclSpecToString(aclSpec));
+
+    final Map<String, String> modifyAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+
+    for (Map.Entry<String, String> modifyAclEntry : modifyAclEntries.entrySet()) {
+      aclEntries.put(modifyAclEntry.getKey(), modifyAclEntry.getValue());
+    }
+
+    if (!modifyAclEntries.containsKey(AbfsHttpConstants.ACCESS_MASK)) {
+      aclEntries.remove(AbfsHttpConstants.ACCESS_MASK);
+    }
+
+    if (!modifyAclEntries.containsKey(AbfsHttpConstants.DEFAULT_MASK)) {
+      aclEntries.remove(AbfsHttpConstants.DEFAULT_MASK);
+    }
+
+    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+  }
+
+  public void removeAclEntries(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "removeAclEntries filesystem: {} path: {} aclSpec: {}",
+            client.getFileSystem(),
+            path.toString(),
+            AclEntry.aclSpecToString(aclSpec));
+
+    final Map<String, String> removeAclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+
+    AbfsAclHelper.removeAclEntriesInternal(aclEntries, removeAclEntries);
+
+    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+            AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+  }
+
+  public void removeDefaultAcl(final Path path) throws AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "removeDefaultAcl filesystem: {} path: {}",
+            client.getFileSystem(),
+            path.toString());
+
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+    final Map<String, String> defaultAclEntries = new HashMap<>();
+
+    for (Map.Entry<String, String> aclEntry : aclEntries.entrySet()) {
+      if (aclEntry.getKey().startsWith("default:")) {
+        defaultAclEntries.put(aclEntry.getKey(), aclEntry.getValue());
+      }
+    }
+
+    for (Map.Entry<String, String> defaultAclEntry : defaultAclEntries.entrySet()) {
+      aclEntries.remove(defaultAclEntry.getKey());
+    }
+
+    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+  }
+
+  public void removeAcl(final Path path) throws AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "removeAcl filesystem: {} path: {}",
+            client.getFileSystem(),
+            path.toString());
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+    final Map<String, String> newAclEntries = new HashMap<>();
+
+    newAclEntries.put(AbfsHttpConstants.ACCESS_USER, aclEntries.get(AbfsHttpConstants.ACCESS_USER));
+    newAclEntries.put(AbfsHttpConstants.ACCESS_GROUP, aclEntries.get(AbfsHttpConstants.ACCESS_GROUP));
+    newAclEntries.put(AbfsHttpConstants.ACCESS_OTHER, aclEntries.get(AbfsHttpConstants.ACCESS_OTHER));
+
+    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        AbfsAclHelper.serializeAclSpec(newAclEntries), eTag);
+  }
+
+  public void setAcl(final Path path, final List<AclEntry> aclSpec) throws AzureBlobFileSystemException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "setAcl filesystem: {} path: {} aclspec: {}",
+            client.getFileSystem(),
+            path.toString(),
+            AclEntry.aclSpecToString(aclSpec));
+    final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
+    final AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+    final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
+    for (Map.Entry<String, String> ace : getAclEntries.entrySet()) {
+      if (ace.getKey().startsWith("default:") && (ace.getKey() != AbfsHttpConstants.DEFAULT_MASK)
+              && !aclEntries.containsKey(ace.getKey())) {
+        aclEntries.put(ace.getKey(), ace.getValue());
+      }
+    }
+
+    client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
+        AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+  }
+
+  public AclStatus getAclStatus(final Path path) throws IOException {
+    if (!getIsNamespaceEnabled()) {
+      throw new UnsupportedOperationException(
+          "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
+    }
+
+    LOG.debug(
+            "getAclStatus filesystem: {} path: {}",
+            client.getFileSystem(),
+            path.toString());
+    AbfsRestOperation op = client.getAclStatus(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true));
+    AbfsHttpOperation result = op.getResult();
+
+    final String owner = result.getResponseHeader(HttpHeaderConfigurations.X_MS_OWNER);
+    final String group = result.getResponseHeader(HttpHeaderConfigurations.X_MS_GROUP);
+    final String permissions = result.getResponseHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS);
+    final String aclSpecString = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL);
+
+    final List<AclEntry> processedAclEntries = AclEntry.parseAclSpec(AbfsAclHelper.processAclString(aclSpecString), true);
+    final FsPermission fsPermission = permissions == null ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
+            : AbfsPermission.valueOf(permissions);
+
+    final AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
+    aclStatusBuilder.owner(owner == null ? userGroupInformation.getUserName() : owner);
+    aclStatusBuilder.group(group == null ? userGroupInformation.getPrimaryGroupName() : group);
+
+    aclStatusBuilder.setPermission(fsPermission);
+    aclStatusBuilder.stickyBit(fsPermission.getStickyBit());
+    aclStatusBuilder.addEntries(processedAclEntries);
+    return aclStatusBuilder.build();
   }
 
   public boolean isAtomicRenameKey(String key) {
@@ -507,19 +776,24 @@ public class AzureBlobFileSystemStore {
     this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider);
   }
 
+  private String getOctalNotation(FsPermission fsPermission) {
+    Preconditions.checkNotNull(fsPermission, "fsPermission");
+    return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
+  }
+
   private String getRelativePath(final Path path) {
+    return getRelativePath(path, false);
+  }
+
+  private String getRelativePath(final Path path, final boolean allowRootPath) {
     Preconditions.checkNotNull(path, "path");
     final String relativePath = path.toUri().getPath();
 
-    if (relativePath.isEmpty()) {
-      return relativePath;
+    if (relativePath.length() == 0 || (relativePath.length() == 1 && relativePath.charAt(0) == Path.SEPARATOR_CHAR)) {
+      return allowRootPath ? AbfsHttpConstants.ROOT_PATH : AbfsHttpConstants.EMPTY_STRING;
     }
 
     if (relativePath.charAt(0) == Path.SEPARATOR_CHAR) {
-      if (relativePath.length() == 1) {
-        return AbfsHttpConstants.EMPTY_STRING;
-      }
-
       return relativePath.substring(1);
     }
 
@@ -644,15 +918,17 @@ public class AzureBlobFileSystemStore {
     private final String version;
 
     VersionedFileStatus(
-            final String owner, final String group,
+            final String owner, final String group, final FsPermission fsPermission, final boolean hasAcl,
             final long length, final boolean isdir, final int blockReplication,
             final long blocksize, final long modificationTime, final Path path,
             String version) {
       super(length, isdir, blockReplication, blocksize, modificationTime, 0,
-              new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL),
+              fsPermission,
               owner,
               group,
-              path);
+              null,
+              path,
+              hasAcl, false, false);
 
       this.version = version;
     }
@@ -717,5 +993,4 @@ public class AzureBlobFileSystemStore {
   AbfsClient getClient() {
     return this.client;
   }
-
 }
