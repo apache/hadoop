@@ -394,6 +394,15 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.mount-table.cache.enable</name>
+    <value>true</value>
+    <description>
+      Set to true to enable mount table cache (Path to Remote Location cache).
+      Disabling the cache is recommended when a large amount of unique paths are queried.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.client.thread-size</name>
     <value>32</value>
     <description>
