@@ -22,6 +22,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DeprecatedKeys.
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
 
 import java.io.IOException;
@@ -124,12 +126,19 @@ public class MountTableResolver
       this.stateStore = null;
     }
 
-    int maxCacheSize = conf.getInt(
-        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE,
-        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT);
-    this.locationCache = CacheBuilder.newBuilder()
-        .maximumSize(maxCacheSize)
-        .build();
+    boolean mountTableCacheEnable = conf.getBoolean(
+        FEDERATION_MOUNT_TABLE_CACHE_ENABLE,
+        FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT);
+    if (mountTableCacheEnable) {
+      int maxCacheSize = conf.getInt(
+          FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE,
+          FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT);
+      this.locationCache = CacheBuilder.newBuilder()
+          .maximumSize(maxCacheSize)
+          .build();
+    } else {
+      this.locationCache = null;
+    }
 
     registerCacheExternal();
     initDefaultNameService(conf);
@@ -239,7 +248,7 @@ public class MountTableResolver
    */
   private void invalidateLocationCache(final String path) {
     LOG.debug("Invalidating {} from {}", path, locationCache);
-    if (locationCache.size() == 0) {
+    if (locationCache == null || locationCache.size() == 0) {
       return;
     }
 
@@ -359,7 +368,9 @@ public class MountTableResolver
     LOG.info("Clearing all mount location caches");
     writeLock.lock();
     try {
-      this.locationCache.invalidateAll();
+      if (this.locationCache != null) {
+        this.locationCache.invalidateAll();
+      }
       this.tree.clear();
     } finally {
       writeLock.unlock();
@@ -372,6 +383,9 @@ public class MountTableResolver
     verifyMountTable();
     readLock.lock();
     try {
+      if (this.locationCache == null) {
+        return lookupLocation(path);
+      }
       Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
         @Override
         public PathLocation call() throws Exception {
@@ -603,7 +617,10 @@ public class MountTableResolver
    * Get the size of the cache.
    * @return Size of the cache.
    */
-  protected long getCacheSize() {
-    return this.locationCache.size();
+  protected long getCacheSize() throws IOException{
+    if (this.locationCache != null) {
+      return this.locationCache.size();
+    }
+    throw new IOException("localCache is null");
   }
 }
