@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.container.common.interfaces
     .ContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ public class RandomContainerDeletionChoosingPolicy
         LOG.debug("Select container {} for block deletion, "
             + "pending deletion blocks num: {}.",
             entry.getContainerID(),
-            entry.getNumPendingDeletionBlocks());
+            ((KeyValueContainerData)entry).getNumPendingDeletionBlocks());
       } else {
         break;
       }

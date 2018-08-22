@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common.helpers;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
 
-import static java.lang.Math.max;
 
 /**
  * Container Report iterates the closed containers and sends a container report
@@ -37,7 +36,6 @@ public class ContainerReport {
   private long readBytes;
   private long writeBytes;
   private long containerID;
-  private long deleteTransactionId;
 
   public long getContainerID() {
     return containerID;
@@ -46,9 +44,6 @@ public class ContainerReport {
   public void setContainerID(long containerID) {
     this.containerID = containerID;
   }
-
-
-
 
   /**
    * Constructs the ContainerReport.
@@ -66,7 +61,6 @@ public class ContainerReport {
     this.readBytes = 0L;
     this.writeCount = 0L;
     this.writeBytes = 0L;
-    this.deleteTransactionId = 0;
   }
 
   /**
@@ -99,9 +93,6 @@ public class ContainerReport {
     }
     if (info.hasWriteBytes()) {
       report.setWriteBytes(info.getWriteBytes());
-    }
-    if (info.hasDeleteTransactionId()) {
-      report.updateDeleteTransactionId(info.getDeleteTransactionId());
     }
 
     report.setContainerID(info.getContainerID());
@@ -193,10 +184,6 @@ public class ContainerReport {
     this.bytesUsed = bytesUsed;
   }
 
-  public void updateDeleteTransactionId(long transactionId) {
-    this.deleteTransactionId = max(transactionId, deleteTransactionId);
-  }
-
   /**
    * Gets a containerInfo protobuf message from ContainerReports.
    *
@@ -213,7 +200,6 @@ public class ContainerReport {
         .setWriteBytes(this.getWriteBytes())
         .setFinalhash(this.getFinalhash())
         .setContainerID(this.getContainerID())
-        .setDeleteTransactionId(this.deleteTransactionId)
         .build();
   }
 }

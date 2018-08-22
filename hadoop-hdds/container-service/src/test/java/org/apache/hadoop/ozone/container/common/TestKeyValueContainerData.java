@@ -57,6 +57,7 @@ public class TestKeyValueContainerData {
     assertEquals(val.get(), kvData.getReadCount());
     assertEquals(val.get(), kvData.getWriteCount());
     assertEquals(val.get(), kvData.getKeyCount());
+    assertEquals(val.get(), kvData.getNumPendingDeletionBlocks());
     assertEquals(MAXSIZE, kvData.getMaxSizeGB());
 
     kvData.setState(state);
@@ -68,6 +69,7 @@ public class TestKeyValueContainerData {
     kvData.incrReadCount();
     kvData.incrWriteCount();
     kvData.incrKeyCount();
+    kvData.incrPendingDeletionBlocks(1);
 
     assertEquals(state, kvData.getState());
     assertEquals(containerDBType, kvData.getContainerDBType());
@@ -79,7 +81,7 @@ public class TestKeyValueContainerData {
     assertEquals(1, kvData.getReadCount());
     assertEquals(1, kvData.getWriteCount());
     assertEquals(1, kvData.getKeyCount());
-
+    assertEquals(1, kvData.getNumPendingDeletionBlocks());
   }
 
 }

@@ -28,6 +28,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -403,6 +405,50 @@ public class KeyValueContainer implements Container {
   public File getContainerFile() {
     return new File(containerData.getMetadataPath(), containerData
         .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
+  }
+
+  /**
+   * Returns KeyValueContainerReport for the KeyValueContainer.
+   */
+  @Override
+  public StorageContainerDatanodeProtocolProtos.ContainerInfo
+      getContainerReport() throws StorageContainerException{
+    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
+        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+    ciBuilder.setContainerID(containerData.getContainerID())
+        .setReadCount(containerData.getReadCount())
+        .setWriteCount(containerData.getWriteCount())
+        .setReadBytes(containerData.getReadBytes())
+        .setWriteBytes(containerData.getWriteBytes())
+        .setUsed(containerData.getBytesUsed())
+        .setState(getHddsState())
+        .setDeleteTransactionId(containerData.getDeleteTransactionId());
+    return ciBuilder.build();
+  }
+
+  /**
+   * Returns LifeCycle State of the container.
+   * @return LifeCycle State of the container in HddsProtos format
+   * @throws StorageContainerException
+   */
+  private HddsProtos.LifeCycleState getHddsState()
+      throws StorageContainerException {
+    HddsProtos.LifeCycleState state;
+    switch (containerData.getState()) {
+    case OPEN:
+      state = HddsProtos.LifeCycleState.OPEN;
+      break;
+    case CLOSING:
+      state = HddsProtos.LifeCycleState.CLOSING;
+      break;
+    case CLOSED:
+      state = HddsProtos.LifeCycleState.CLOSED;
+      break;
+    default:
+      throw new StorageContainerException("Invalid Container state found: " +
+          containerData.getContainerID(), INVALID_CONTAINER_STATE);
+    }
+    return state;
   }
 
   /**

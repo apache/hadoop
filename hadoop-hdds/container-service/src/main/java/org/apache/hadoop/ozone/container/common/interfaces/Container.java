@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
 
@@ -111,4 +112,9 @@ public interface Container extends RwLock {
    */
   BlockIterator blockIterator() throws IOException;
 
+  /**
+   * Returns containerReport for the container.
+   */
+  StorageContainerDatanodeProtocolProtos.ContainerInfo getContainerReport()
+      throws StorageContainerException;
 }

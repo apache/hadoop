@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces
     .ContainerDeletionChoosingPolicy;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,14 +42,11 @@ public class TopNOrderedContainerDeletionChoosingPolicy
       LoggerFactory.getLogger(TopNOrderedContainerDeletionChoosingPolicy.class);
 
   /** customized comparator used to compare differentiate container data. **/
-  private static final Comparator<ContainerData> CONTAINER_DATA_COMPARATOR
-      = new Comparator<ContainerData>() {
-        @Override
-        public int compare(ContainerData c1, ContainerData c2) {
-          return Integer.compare(c2.getNumPendingDeletionBlocks(),
-              c1.getNumPendingDeletionBlocks());
-        }
-      };
+  private static final Comparator<KeyValueContainerData>
+        KEY_VALUE_CONTAINER_DATA_COMPARATOR = (KeyValueContainerData c1,
+                                               KeyValueContainerData c2) ->
+              Integer.compare(c2.getNumPendingDeletionBlocks(),
+                  c1.getNumPendingDeletionBlocks());
 
   @Override
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
@@ -58,13 +56,15 @@ public class TopNOrderedContainerDeletionChoosingPolicy
         "Internal assertion: candidate containers cannot be null");
 
     List<ContainerData> result = new LinkedList<>();
-    List<ContainerData> orderedList = new LinkedList<>();
-    orderedList.addAll(candidateContainers.values());
-    Collections.sort(orderedList, CONTAINER_DATA_COMPARATOR);
+    List<KeyValueContainerData> orderedList = new LinkedList<>();
+    for (ContainerData entry : candidateContainers.values()) {
+      orderedList.add((KeyValueContainerData)entry);
+    }
+    Collections.sort(orderedList, KEY_VALUE_CONTAINER_DATA_COMPARATOR);
 
     // get top N list ordered by pending deletion blocks' number
     int currentCount = 0;
-    for (ContainerData entry : orderedList) {
+    for (KeyValueContainerData entry : orderedList) {
       if (currentCount < count) {
         if (entry.getNumPendingDeletionBlocks() > 0) {
           result.add(entry);

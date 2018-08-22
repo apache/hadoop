@@ -32,7 +32,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.lang.Math.max;
 import static org.apache.hadoop.ozone.OzoneConsts.CHUNKS_PATH;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA_PATH;
@@ -61,6 +63,13 @@ public class KeyValueContainerData extends ContainerData {
 
   private File dbFile = null;
 
+  /**
+   * Number of pending deletion blocks in KeyValueContainer.
+   */
+  private final AtomicInteger numPendingDeletionBlocks;
+
+  private long deleteTransactionId;
+
   static {
     // Initialize YAML fields
     KV_YAML_FIELDS = Lists.newArrayList();
@@ -77,6 +86,8 @@ public class KeyValueContainerData extends ContainerData {
    */
   public KeyValueContainerData(long id, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
+    this.numPendingDeletionBlocks = new AtomicInteger(0);
+    this.deleteTransactionId = 0;
   }
 
   /**
@@ -88,6 +99,8 @@ public class KeyValueContainerData extends ContainerData {
   public KeyValueContainerData(long id, int layOutVersion, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
         size);
+    this.numPendingDeletionBlocks = new AtomicInteger(0);
+    this.deleteTransactionId = 0;
   }
 
 
@@ -166,6 +179,47 @@ public class KeyValueContainerData extends ContainerData {
    */
   public void setContainerDBType(String containerDBType) {
     this.containerDBType = containerDBType;
+  }
+
+  /**
+   * Increase the count of pending deletion blocks.
+   *
+   * @param numBlocks increment number
+   */
+  public void incrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(numBlocks);
+  }
+
+  /**
+   * Decrease the count of pending deletion blocks.
+   *
+   * @param numBlocks decrement number
+   */
+  public void decrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(-1 * numBlocks);
+  }
+
+  /**
+   * Get the number of pending deletion blocks.
+   */
+  public int getNumPendingDeletionBlocks() {
+    return this.numPendingDeletionBlocks.get();
+  }
+
+  /**
+   * Sets deleteTransactionId to latest delete transactionId for the container.
+   *
+   * @param transactionId latest transactionId of the container.
+   */
+  public void updateDeleteTransactionId(long transactionId) {
+    deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
+  /**
+   * Return the latest deleteTransactionId of the container.
+   */
+  public long getDeleteTransactionId() {
+    return deleteTransactionId;
   }
 
   /**

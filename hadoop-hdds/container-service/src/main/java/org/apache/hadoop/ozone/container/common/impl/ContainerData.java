@@ -33,11 +33,9 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.yaml.snakeyaml.Yaml;
 
-import static java.lang.Math.max;
 import static org.apache.hadoop.ozone.OzoneConsts.CHECKSUM;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_TYPE;
@@ -81,8 +79,6 @@ public abstract class ContainerData {
 
   private HddsVolume volume;
 
-  private long deleteTransactionId;
-
   private String checksum;
   public static final Charset CHARSET_ENCODING = Charset.forName("UTF-8");
   private static final String DUMMY_CHECKSUM = new String(new byte[64],
@@ -98,12 +94,6 @@ public abstract class ContainerData {
       METADATA,
       MAX_SIZE_GB,
       CHECKSUM));
-
-
-  /**
-   * Number of pending deletion blocks in container.
-   */
-  private final AtomicInteger numPendingDeletionBlocks;
 
   /**
    * Creates a ContainerData Object, which holds metadata of the container.
@@ -139,8 +129,6 @@ public abstract class ContainerData {
     this.bytesUsed = new AtomicLong(0L);
     this.keyCount = new AtomicLong(0L);
     this.maxSizeGB = size;
-    this.numPendingDeletionBlocks = new AtomicInteger(0);
-    this.deleteTransactionId = 0;
     setChecksumTo0ByteArray();
   }
 
@@ -403,31 +391,6 @@ public abstract class ContainerData {
     this.keyCount.set(count);
   }
 
-  /**
-   * Increase the count of pending deletion blocks.
-   *
-   * @param numBlocks increment number
-   */
-  public void incrPendingDeletionBlocks(int numBlocks) {
-    this.numPendingDeletionBlocks.addAndGet(numBlocks);
-  }
-
-  /**
-   * Decrease the count of pending deletion blocks.
-   *
-   * @param numBlocks decrement number
-   */
-  public void decrPendingDeletionBlocks(int numBlocks) {
-    this.numPendingDeletionBlocks.addAndGet(-1 * numBlocks);
-  }
-
-  /**
-   * Get the number of pending deletion blocks.
-   */
-  public int getNumPendingDeletionBlocks() {
-    return this.numPendingDeletionBlocks.get();
-  }
-
   public void setChecksumTo0ByteArray() {
     this.checksum = DUMMY_CHECKSUM;
   }
@@ -469,20 +432,4 @@ public abstract class ContainerData {
    * @return Protocol Buffer Message
    */
   public abstract ContainerProtos.ContainerData getProtoBufMessage();
-
-  /**
-   * Sets deleteTransactionId to latest delete transactionId for the container.
-   *
-   * @param transactionId latest transactionId of the container.
-   */
-  public void updateDeleteTransactionId(long transactionId) {
-    deleteTransactionId = max(transactionId, deleteTransactionId);
-  }
-
-  /**
-   * Return the latest deleteTransactionId of the container.
-   */
-  public long getDeleteTransactionId() {
-    return deleteTransactionId;
-  }
 }
