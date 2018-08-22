@@ -218,6 +218,9 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     String wasbUrl = testAccount.getFileSystem().getName();
     String abfsUrl = wasbUrlToAbfsUrl(wasbUrl);
     final AzureBlobFileSystem fs = this.getFileSystem(abfsUrl);
+    // test only valid for non-namespace enabled account
+    Assume.assumeFalse(fs.getIsNamespaceEnabeld());
+
     byte[] buffer = getRandomBytesArray();
     CloudBlockBlob blob = testAccount.getBlobReference(TEST_FILE_PATH.toString().substring(1));
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, TEST_FILE_PATH, buffer, true)) {
@@ -238,6 +241,9 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     String wasbUrl = testAccount.getFileSystem().getName();
     String abfsUrl = wasbUrlToAbfsUrl(wasbUrl);
     final AzureBlobFileSystem fs = this.getFileSystem(abfsUrl);
+    // test only valid for non-namespace enabled account
+    Assume.assumeFalse(fs.getIsNamespaceEnabeld());
+
     byte[] buffer = getRandomBytesArray();
     CloudBlockBlob blob = testAccount.getBlobReference(TEST_FILE_PATH.toString().substring(1));
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, TEST_FILE_PATH, buffer, false)) {

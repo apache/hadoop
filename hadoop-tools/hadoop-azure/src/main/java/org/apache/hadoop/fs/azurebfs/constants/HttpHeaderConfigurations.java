@@ -52,6 +52,12 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_PROPERTIES = "x-ms-properties";
   public static final String X_MS_RENAME_SOURCE = "x-ms-rename-source";
   public static final String LAST_MODIFIED = "Last-Modified";
+  public static final String X_MS_OWNER = "x-ms-owner";
+  public static final String X_MS_GROUP = "x-ms-group";
+  public static final String X_MS_ACL = "x-ms-acl";
+  public static final String X_MS_PERMISSIONS = "x-ms-permissions";
+  public static final String X_MS_UMASK = "x-ms-umask";
+  public static final String X_MS_NAMESPACE_ENABLED = "x-ms-namespace-enabled";
 
   private HttpHeaderConfigurations() {}
 }

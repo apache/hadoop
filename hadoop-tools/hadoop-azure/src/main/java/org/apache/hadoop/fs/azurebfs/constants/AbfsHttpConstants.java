@@ -34,6 +34,8 @@ public final class AbfsHttpConstants {
   public static final String APPEND_ACTION = "append";
   public static final String FLUSH_ACTION = "flush";
   public static final String SET_PROPERTIES_ACTION = "setProperties";
+  public static final String SET_ACCESS_CONTROL = "setAccessControl";
+  public static final String GET_ACCESS_CONTROL = "getAccessControl";
   public static final String DEFAULT_TIMEOUT = "90";
 
   public static final String JAVA_VERSION = "java.version";
@@ -58,6 +60,7 @@ public final class AbfsHttpConstants {
   public static final String PLUS = "+";
   public static final String STAR = "*";
   public static final String COMMA = ",";
+  public static final String COLON = ":";
   public static final String EQUAL = "=";
   public static final String QUESTION_MARK = "?";
   public static final String AND_MARK = "&";
@@ -71,6 +74,18 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+
+  public static final String ROOT_PATH = "/";
+  public static final String ACCESS_MASK = "mask:";
+  public static final String ACCESS_USER = "user:";
+  public static final String ACCESS_GROUP = "group:";
+  public static final String ACCESS_OTHER = "other:";
+  public static final String DEFAULT_MASK = "default:mask:";
+  public static final String DEFAULT_USER = "default:user:";
+  public static final String DEFAULT_GROUP = "default:group:";
+  public static final String DEFAULT_OTHER = "default:other:";
+  public static final String DEFAULT_SCOPE = "default:";
+  public static final String PERMISSION_FORMAT = "%04d";
 
   private AbfsHttpConstants() {}
 }

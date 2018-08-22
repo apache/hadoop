@@ -20,11 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
@@ -32,8 +33,16 @@ import org.apache.hadoop.fs.permission.FsPermission;
  */
 public class ITestAzureBlobFileSystemFileStatus extends
     AbstractAbfsIntegrationTest {
+  private static final String DEFAULT_FILE_PERMISSION_VALUE = "640";
+  private static final String DEFAULT_DIR_PERMISSION_VALUE = "750";
+  private static final String DEFAULT_UMASK_VALUE = "027";
+
   private static final Path TEST_FILE = new Path("testFile");
   private static final Path TEST_FOLDER = new Path("testDir");
+
+  public ITestAzureBlobFileSystemFileStatus() {
+    super();
+  }
 
   @Test
   public void testEnsureStatusWorksForRoot() throws Exception {
@@ -48,20 +57,32 @@ public class ITestAzureBlobFileSystemFileStatus extends
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     touch(TEST_FILE);
-    validateStatus(fs, TEST_FILE);
+    validateStatus(fs, TEST_FILE, false);
   }
 
-  private FileStatus validateStatus(final AzureBlobFileSystem fs, final Path name)
+  private FileStatus validateStatus(final AzureBlobFileSystem fs, final Path name, final boolean isDir)
       throws IOException {
     FileStatus fileStatus = fs.getFileStatus(name);
+    fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
+
     String errorInStatus = "error in " + fileStatus + " from " + fs;
-    assertEquals(errorInStatus + ": permission",
-        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL),
-        fileStatus.getPermission());
-    assertEquals(errorInStatus + ": owner",
-        fs.getOwnerUser(), fileStatus.getOwner());
-    assertEquals(errorInStatus + ": group",
-        fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup());
+
+    // When running with Oauth, the owner and group info retrieved from server will be digit ids.
+    if (this.getAuthType() != AuthType.OAuth && !fs.isSecure()) {
+      assertEquals(errorInStatus + ": owner",
+              fs.getOwnerUser(), fileStatus.getOwner());
+      assertEquals(errorInStatus + ": group",
+              fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup());
+    } else {
+      if (isDir) {
+        assertEquals(errorInStatus + ": permission",
+                new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission());
+      } else {
+        assertEquals(errorInStatus + ": permission",
+                new FsPermission(DEFAULT_FILE_PERMISSION_VALUE), fileStatus.getPermission());
+      }
+    }
+
     return fileStatus;
   }
 
@@ -70,7 +91,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.mkdirs(TEST_FOLDER);
 
-    validateStatus(fs, TEST_FOLDER);
+    validateStatus(fs, TEST_FOLDER, true);
   }
 
 }
