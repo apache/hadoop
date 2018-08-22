@@ -8,6 +8,7 @@
 *.sdf
 *.suo
 *.vcxproj.user
+*.patch
 .idea
 .svn
 .classpath
