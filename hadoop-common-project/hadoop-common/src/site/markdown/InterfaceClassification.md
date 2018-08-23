@@ -35,10 +35,9 @@ Interface Classification
 ------------------------
 
 Hadoop adopts the following interface classification,
-this classification was derived from the
-[OpenSolaris taxonomy](http://www.opensolaris.org/os/community/arc/policies/interface-taxonomy/#Advice)
-and, to some extent, from taxonomy used inside Yahoo.
-Interfaces have two main attributes: Audience and Stability
+this classification was derived from the OpenSolaris taxonomy and, to some extent,
+from taxonomy used inside Yahoo.
+Interfaces have two main attributes: Audience and Stability.
 
 ### Audience
 
