@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.container.keyvalue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import java.util.Collections;
+
+import org.apache.hadoop.conf.StorageSize;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -82,7 +84,7 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
-   * @param size - maximum size of the container
+   * @param size - maximum size in GB of the container
    */
   public KeyValueContainerData(long id, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
@@ -94,7 +96,7 @@ public class KeyValueContainerData extends ContainerData {
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
    * @param layOutVersion
-   * @param size - maximum size of the container
+   * @param size - maximum size in GB of the container
    */
   public KeyValueContainerData(long id, int layOutVersion, int size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
@@ -266,9 +268,11 @@ public class KeyValueContainerData extends ContainerData {
   public static KeyValueContainerData getFromProtoBuf(
       ContainerProtos.ContainerData protoData) throws IOException {
     // TODO: Add containerMaxSize to ContainerProtos.ContainerData
+    StorageSize storageSize = StorageSize.parse(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
     KeyValueContainerData data = new KeyValueContainerData(
         protoData.getContainerID(),
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+        (int)storageSize.getUnit().toBytes(storageSize.getValue()));
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
           protoData.getMetadata(x).getValue());

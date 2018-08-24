@@ -215,9 +215,9 @@ public final class ScmConfigKeys {
       "ozone.scm.db.cache.size.mb";
   public static final int OZONE_SCM_DB_CACHE_SIZE_DEFAULT = 128;
 
-  public static final String OZONE_SCM_CONTAINER_SIZE_GB =
-      "ozone.scm.container.size.gb";
-  public static final int OZONE_SCM_CONTAINER_SIZE_DEFAULT = 5;
+  public static final String OZONE_SCM_CONTAINER_SIZE =
+      "ozone.scm.container.size";
+  public static final String OZONE_SCM_CONTAINER_SIZE_DEFAULT = "5GB";
 
   public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY =
       "ozone.scm.container.placement.impl";

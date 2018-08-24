@@ -111,7 +111,7 @@ public abstract class ContainerData {
    * @param type - ContainerType
    * @param containerId - ContainerId
    * @param layOutVersion - Container layOutVersion
-   * @param size - Container maximum size
+   * @param size - Container maximum size in GB
    */
   protected ContainerData(ContainerType type, long containerId,
     int layOutVersion, int size) {

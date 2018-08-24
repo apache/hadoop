@@ -611,12 +611,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.size.gb</name>
-    <value>5</value>
+    <name>ozone.scm.container.size</name>
+    <value>5GB</value>
     <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
     <description>
-      Default container size used by Ozone. This value is specified
-      in GB.
+      Default container size used by Ozone.
       There are two considerations while picking this number. The speed at which
       a container can be replicated, determined by the network speed and the
       metadata that each container generates. So selecting a large number
