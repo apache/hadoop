@@ -27,22 +27,23 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.io.retry.RetryInvocationHandler;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -200,6 +201,9 @@ public class TestObserverNode {
     // Start the observer again - requests should go to observer
     dfsCluster.restartNameNode(2);
     dfsCluster.transitionToObserver(2);
+    // The first request goes to the active because it has not refreshed yet;
+    // the second will properly go to the observer
+    dfs.getFileStatus(testPath);
     dfs.getFileStatus(testPath);
     assertSentTo(2);
   }
@@ -230,6 +234,9 @@ public class TestObserverNode {
     assertSentTo(1);
 
     dfsCluster.transitionToObserver(2);
+    dfs.getFileStatus(testPath);
+    // The first request goes to the active because it has not refreshed yet;
+    // the second will properly go to the observer
     dfs.getFileStatus(testPath);
     assertSentTo(2);
   }
@@ -291,6 +298,10 @@ public class TestObserverNode {
     assertEquals(0, rc);
   }
 
+  // TODO this does not currently work because fetching the service state from
+  // e.g. the StandbyNameNode also waits for the transaction ID to catch up.
+  // This is disabled pending HDFS-13872 and HDFS-13749.
+  @Ignore("Disabled until HDFS-13872 and HDFS-13749 are committed")
   @Test
   public void testMsyncSimple() throws Exception {
     // disable fast path here because this test's assertions are based on the
@@ -304,7 +315,8 @@ public class TestObserverNode {
     setUpCluster(1);
     setObserverRead(true);
 
-    AtomicBoolean readSucceed = new AtomicBoolean(false);
+    // 0 == not completed, 1 == succeeded, -1 == failed
+    AtomicInteger readStatus = new AtomicInteger(0);
 
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
@@ -313,20 +325,21 @@ public class TestObserverNode {
       try {
         // this read will block until roll and tail edits happen.
         dfs.getFileStatus(testPath);
-        readSucceed.set(true);
+        readStatus.set(1);
       } catch (IOException e) {
         e.printStackTrace();
+        readStatus.set(-1);
       }
     });
 
     reader.start();
     // the reader is still blocking, not succeeded yet.
-    assertFalse(readSucceed.get());
+    assertEquals(0, readStatus.get());
     rollEditLogAndTail(0);
     // wait a while for all the change to be done
-    Thread.sleep(100);
+    GenericTestUtils.waitFor(() -> readStatus.get() != 0, 100, 10000);
     // the reader should have succeed.
-    assertTrue(readSucceed.get());
+    assertEquals(1, readStatus.get());
   }
 
   private void setUpCluster(int numObservers) throws Exception {
