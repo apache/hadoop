@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.Locale;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.Lock;
@@ -48,6 +47,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
@@ -169,7 +169,7 @@ public abstract class SchedulerMetrics {
     web.start();
 
     // a thread to update histogram timer
-    pool = new ScheduledThreadPoolExecutor(2);
+    pool = new HadoopScheduledThreadPoolExecutor(2);
     pool.scheduleAtFixedRate(new HistogramsRunnable(), 0, 1000,
         TimeUnit.MILLISECONDS);
 
@@ -518,7 +518,8 @@ public abstract class SchedulerMetrics {
 
     @Override
     public void run() {
-      if(running) {
+      SchedulerWrapper wrapper = (SchedulerWrapper) scheduler;
+      if(running && wrapper.getTracker().getQueueSet() != null) {
         // all WebApp to get real tracking json
         String trackingMetrics = web.generateRealTimeTrackingMetrics();
         // output
