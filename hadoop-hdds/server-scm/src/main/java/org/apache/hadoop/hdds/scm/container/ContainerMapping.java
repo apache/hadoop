@@ -505,15 +505,26 @@ public class ContainerMapping implements Mapping {
    */
   @Override
   public void processContainerReports(DatanodeDetails datanodeDetails,
-                                      ContainerReportsProto reports)
+      ContainerReportsProto reports, boolean isRegisterCall)
       throws IOException {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
     PendingDeleteStatusList pendingDeleteStatusList =
         new PendingDeleteStatusList(datanodeDetails);
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo contInfo :
         containerInfos) {
-      byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
+      // Update replica info during registration process.
+      if (isRegisterCall) {
+        try {
+          getStateManager().addContainerReplica(ContainerID.
+              valueof(contInfo.getContainerID()), datanodeDetails);
+        } catch (Exception ex) {
+          // Continue to next one after logging the error.
+          LOG.error("Error while adding replica for containerId {}.",
+              contInfo.getContainerID(), ex);
+        }
+      }
+      byte[] dbKey = Longs.toByteArray(contInfo.getContainerID());
       lock.lock();
       try {
         byte[] containerBytes = containerStore.get(dbKey);
@@ -522,12 +533,12 @@ public class ContainerMapping implements Mapping {
               HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
 
           HddsProtos.SCMContainerInfo newState =
-              reconcileState(datanodeState, knownState, datanodeDetails);
+              reconcileState(contInfo, knownState, datanodeDetails);
 
-          if (knownState.getDeleteTransactionId() > datanodeState
+          if (knownState.getDeleteTransactionId() > contInfo
               .getDeleteTransactionId()) {
             pendingDeleteStatusList
-                .addPendingDeleteStatus(datanodeState.getDeleteTransactionId(),
+                .addPendingDeleteStatus(contInfo.getDeleteTransactionId(),
                     knownState.getDeleteTransactionId(),
                     knownState.getContainerID());
           }
@@ -558,7 +569,7 @@ public class ContainerMapping implements Mapping {
           LOG.error("Error while processing container report from datanode :" +
                   " {}, for container: {}, reason: container doesn't exist in" +
                   "container database.", datanodeDetails,
-              datanodeState.getContainerID());
+              contInfo.getContainerID());
         }
       } finally {
         lock.unlock();

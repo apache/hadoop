@@ -84,7 +84,8 @@ public class ContainerReportHandler implements
     try {
 
       //update state in container db and trigger close container events
-      containerMapping.processContainerReports(datanodeOrigin, containerReport);
+      containerMapping
+          .processContainerReports(datanodeOrigin, containerReport, false);
 
       Set<ContainerID> containerIds = containerReport.getReportsList().stream()
           .map(containerProto -> containerProto.getContainerID())

@@ -223,6 +223,6 @@ public class TestContainerCloser {
         .setDeleteTransactionId(0);
     reports.addReports(ciBuilder);
     mapping.processContainerReports(TestUtils.randomDatanodeDetails(),
-        reports.build());
+        reports.build(), false);
   }
 }

@@ -115,7 +115,7 @@ public interface Mapping extends Closeable {
    * @param reports Container report
    */
   void processContainerReports(DatanodeDetails datanodeDetails,
-                               ContainerReportsProto reports)
+      ContainerReportsProto reports, boolean isRegisterCall)
       throws IOException;
 
   /**
