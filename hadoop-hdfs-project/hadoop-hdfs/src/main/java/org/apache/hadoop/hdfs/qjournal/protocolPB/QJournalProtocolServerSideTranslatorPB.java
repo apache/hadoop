@@ -238,7 +238,6 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       throws ServiceException {
     try {
       return impl.getJournaledEdits(request.getJid().getIdentifier(),
-          request.hasNameServiceId() ? request.getNameServiceId() : null,
           request.getSinceTxId(), request.getMaxTxns());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

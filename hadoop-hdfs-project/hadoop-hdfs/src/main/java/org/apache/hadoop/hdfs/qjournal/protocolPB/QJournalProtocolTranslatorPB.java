@@ -258,16 +258,13 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
   @Override
   public GetJournaledEditsResponseProto getJournaledEdits(String jid,
-      String nameServiceId, long sinceTxId, int maxTxns) throws IOException {
+      long sinceTxId, int maxTxns) throws IOException {
     try {
       GetJournaledEditsRequestProto.Builder req =
           GetJournaledEditsRequestProto.newBuilder()
               .setJid(convertJournalId(jid))
               .setSinceTxId(sinceTxId)
               .setMaxTxns(maxTxns);
-      if (nameServiceId != null) {
-        req.setNameServiceId(nameServiceId);
-      }
       return rpcProxy.getJournaledEdits(NULL_CONTROLLER, req.build());
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);

@@ -550,7 +550,7 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public ListenableFuture<GetJournaledEditsResponseProto> getJournaledEdits(
-      long fromTxnId, int maxTransactions) {
+      final long fromTxnId, final int maxTransactions) {
     return parallelExecutor.submit(
         new Callable<GetJournaledEditsResponseProto>() {
           @Override
