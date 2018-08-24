@@ -119,7 +119,6 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     }
   }
 
-  @Override
   public synchronized AlignmentContext getAlignmentContext() {
     return alignmentContext;
   }
