@@ -28,8 +28,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationVa
 @InterfaceStability.Evolving
 public interface ConfigurationValidator<T> {
   /**
-   * Validates the configValue.
+   * Validates a configuration value.
+   * @param configValue the configuration value to be validated.
    * @return validated value of type T
+   * @throws InvalidConfigurationValueException if the configuration value is invalid.
    */
   T validate(String configValue) throws InvalidConfigurationValueException;
 }

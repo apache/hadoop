@@ -40,7 +40,7 @@ import org.wildfly.openssl.OpenSSLProvider;
  * performance.
  *
  */
-public class SSLSocketFactoryEx extends SSLSocketFactory {
+public final class SSLSocketFactoryEx extends SSLSocketFactory {
 
   /**
    * Default indicates Ordered, preferred OpenSSL, if failed to load then fall
@@ -64,9 +64,9 @@ public class SSLSocketFactoryEx extends SSLSocketFactory {
    * Initialize a singleton SSL socket factory.
    *
    * @param preferredMode applicable only if the instance is not initialized.
-   * @throws IOException
+   * @throws IOException if an error occurs.
    */
-  public synchronized static void initializeDefaultFactory(
+  public static synchronized void initializeDefaultFactory(
       SSLChannelMode preferredMode) throws IOException {
     if (instance == null) {
       instance = new SSLSocketFactoryEx(preferredMode);

@@ -198,7 +198,7 @@ public class AbfsHttpOperation {
     this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
   }
 
-  /**
+   /**
    * Sends the HTTP request.  Note that HttpUrlConnection requires that an
    * empty buffer be sent in order to set the "Content-Length: 0" header, which
    * is required by our endpoint.
@@ -241,6 +241,10 @@ public class AbfsHttpOperation {
 
   /**
    * Gets and processes the HTTP response.
+   *
+   * @param buffer a buffer to hold the response entity body
+   * @param offset an offset in the buffer where the data will being.
+   * @param length the number of bytes to be written to the buffer.
    *
    * @throws IOException if an error occurs.
    */

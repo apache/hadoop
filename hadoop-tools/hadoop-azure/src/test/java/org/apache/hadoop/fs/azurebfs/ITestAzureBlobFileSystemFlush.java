@@ -31,6 +31,7 @@ import java.io.IOException;
 import com.microsoft.azure.storage.blob.BlockEntry;
 import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Assume;
@@ -284,6 +285,32 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, TEST_FILE_PATH, buffer, true)) {
       stream.hsync();
       validate(fs, TEST_FILE_PATH, buffer, true);
+    }
+  }
+
+  @Test
+  public void testStreamCapabilitiesWithFlushDisabled() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    byte[] buffer = getRandomBytesArray();
+    try (FSDataOutputStream stream = getStreamAfterWrite(fs, TEST_FILE_PATH, buffer, false)) {
+      assertFalse(stream.hasCapability(StreamCapabilities.HFLUSH));
+      assertFalse(stream.hasCapability(StreamCapabilities.HSYNC));
+      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
+      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
+      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+    }
+  }
+
+  @Test
+  public void testStreamCapabilitiesWithFlushEnabled() throws Exception {
+    final AzureBlobFileSystem fs = this.getFileSystem();
+    byte[] buffer = getRandomBytesArray();
+    try (FSDataOutputStream stream = getStreamAfterWrite(fs, TEST_FILE_PATH, buffer, true)) {
+      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
+      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
+      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
+      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
+      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
     }
   }
 

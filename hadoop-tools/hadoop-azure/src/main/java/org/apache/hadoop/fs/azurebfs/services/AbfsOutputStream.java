@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorCompletionService;
@@ -32,13 +33,14 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
-public class AbfsOutputStream extends OutputStream implements Syncable {
+public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   private final AbfsClient client;
   private final String path;
   private long position;
@@ -85,6 +87,23 @@ public class AbfsOutputStream extends OutputStream implements Syncable {
         TimeUnit.SECONDS,
         new LinkedBlockingQueue<>());
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
+  }
+
+  /**
+   * Query the stream for a specific capability.
+   *
+   * @param capability string to query the stream support for.
+   * @return true for hsync and hflush.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.HSYNC:
+      case StreamCapabilities.HFLUSH:
+        return supportFlush;
+      default:
+        return false;
+    }
   }
 
   /**
