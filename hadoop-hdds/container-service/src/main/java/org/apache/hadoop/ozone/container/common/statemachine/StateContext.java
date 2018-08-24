@@ -33,6 +33,8 @@ import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus
     .CommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+
+import static org.apache.hadoop.hdds.scm.HddsServerUtil.getScmHeartbeatInterval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +67,13 @@ public class StateContext {
   private final Queue<GeneratedMessage> reports;
   private final Queue<ContainerAction> containerActions;
   private DatanodeStateMachine.DatanodeStates state;
+
+  /**
+   * Starting with a 2 sec heartbeat frequency which will be updated to the
+   * real HB frequency after scm registration. With this method the
+   * initial registration could be significant faster.
+   */
+  private AtomicLong heartbeatFrequency = new AtomicLong(2000);
 
   /**
    * Constructs a StateContext.
@@ -397,5 +406,16 @@ public class StateContext {
       return true;
     }
     return false;
+  }
+
+  public void configureHeartbeatFrequency(){
+    heartbeatFrequency.set(getScmHeartbeatInterval(conf));
+  }
+
+  /**
+   * Return current heartbeat frequency in ms.
+   */
+  public long getHeartbeatFrequency() {
+    return heartbeatFrequency.get();
   }
 }

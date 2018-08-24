@@ -309,7 +309,8 @@ public class TestEndPoint {
     when(ozoneContainer.getContainerReport()).thenReturn(
         TestUtils.getRandomContainerReports(10));
     RegisterEndpointTask endpointTask =
-        new RegisterEndpointTask(rpcEndPoint, conf, ozoneContainer);
+        new RegisterEndpointTask(rpcEndPoint, conf, ozoneContainer,
+            mock(StateContext.class));
     if (!clearDatanodeDetails) {
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
       endpointTask.setDatanodeDetails(datanodeDetails);

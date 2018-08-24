@@ -101,6 +101,7 @@ public class RunningDatanodeState implements DatanodeState {
       return  RegisterEndpointTask.newBuilder()
           .setConfig(conf)
           .setEndpointStateMachine(endpoint)
+          .setContext(context)
           .setDatanodeDetails(context.getParent().getDatanodeDetails())
           .setOzoneContainer(context.getParent().getContainer())
           .build();
