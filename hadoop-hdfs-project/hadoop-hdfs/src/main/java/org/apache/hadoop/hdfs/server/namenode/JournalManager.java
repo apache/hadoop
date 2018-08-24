@@ -43,7 +43,7 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * Format the underlying storage, removing any previously
    * stored data.
    */
-  void format(NamespaceInfo ns) throws IOException;
+  void format(NamespaceInfo ns, boolean force) throws IOException;
 
   /**
    * Begin writing to a new segment of the log stream, which starts at

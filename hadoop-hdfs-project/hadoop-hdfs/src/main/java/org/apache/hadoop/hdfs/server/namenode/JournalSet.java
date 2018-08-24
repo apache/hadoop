@@ -188,7 +188,7 @@ public class JournalSet implements JournalManager {
   }
   
   @Override
-  public void format(NamespaceInfo nsInfo) throws IOException {
+  public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
     // The operation is done by FSEditLog itself
     throw new UnsupportedOperationException();
   }

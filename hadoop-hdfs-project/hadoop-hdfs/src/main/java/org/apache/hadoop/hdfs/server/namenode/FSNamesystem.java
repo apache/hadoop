@@ -1078,8 +1078,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {
-      
-      fsImage.format(this, fsImage.getStorage().determineClusterId());// reuse current id
+      // reuse current id
+      fsImage.format(this, fsImage.getStorage().determineClusterId(), false);
 
       startOpt = StartupOption.REGULAR;
     }

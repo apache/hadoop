@@ -68,7 +68,7 @@ public interface QJournalProtocol {
    * Format the underlying storage for the given namespace.
    */
   void format(String journalId, String nameServiceId,
-      NamespaceInfo nsInfo) throws IOException;
+      NamespaceInfo nsInfo, boolean force) throws IOException;
 
   /**
    * Begin a new epoch. See the HDFS-3077 design doc for details.

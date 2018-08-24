@@ -100,7 +100,7 @@ public class TestQuorumJournalManager {
     qjm = createSpyingQJM();
     spies = qjm.getLoggerSetForTests().getLoggersForTests();
 
-    qjm.format(QJMTestUtil.FAKE_NSINFO);
+    qjm.format(QJMTestUtil.FAKE_NSINFO, false);
     qjm.recoverUnfinalizedSegments();
     assertEquals(1, qjm.getLoggerSetForTests().getEpoch());
   }
@@ -149,7 +149,7 @@ public class TestQuorumJournalManager {
     QuorumJournalManager qjm = closeLater(new QuorumJournalManager(
         conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO));
     assertFalse(qjm.hasSomeData());
-    qjm.format(FAKE_NSINFO);
+    qjm.format(FAKE_NSINFO, false);
     assertTrue(qjm.hasSomeData());
   }
   

@@ -502,11 +502,12 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public ListenableFuture<Void> format(final NamespaceInfo nsInfo) {
+  public ListenableFuture<Void> format(final NamespaceInfo nsInfo,
+      final boolean force) {
     return singleThreadExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        getProxy().format(journalId, nameServiceId, nsInfo);
+        getProxy().format(journalId, nameServiceId, nsInfo, force);
         return null;
       }
     });

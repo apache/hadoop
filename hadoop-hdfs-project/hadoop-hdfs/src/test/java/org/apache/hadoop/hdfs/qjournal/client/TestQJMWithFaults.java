@@ -105,7 +105,7 @@ public class TestQJMWithFaults {
     long ret;
     try {
       qjm = createInjectableQJM(cluster);
-      qjm.format(FAKE_NSINFO);
+      qjm.format(FAKE_NSINFO, false);
       doWorkload(cluster, qjm);
       
       SortedSet<Integer> ipcCounts = Sets.newTreeSet();
@@ -156,7 +156,7 @@ public class TestQJMWithFaults {
         QuorumJournalManager qjm = null;
         try {
           qjm = createInjectableQJM(cluster);
-          qjm.format(FAKE_NSINFO);
+          qjm.format(FAKE_NSINFO, false);
           List<AsyncLogger> loggers = qjm.getLoggerSetForTests().getLoggersForTests();
           failIpcNumber(loggers.get(0), failA);
           failIpcNumber(loggers.get(1), failB);
@@ -240,7 +240,7 @@ public class TestQJMWithFaults {
     // Format the cluster using a non-faulty QJM.
     QuorumJournalManager qjmForInitialFormat =
         createInjectableQJM(cluster);
-    qjmForInitialFormat.format(FAKE_NSINFO);
+    qjmForInitialFormat.format(FAKE_NSINFO, false);
     qjmForInitialFormat.close();
     
     try {

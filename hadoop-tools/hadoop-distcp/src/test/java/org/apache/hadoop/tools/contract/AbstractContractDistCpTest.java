@@ -249,7 +249,7 @@ public abstract class AbstractContractDistCpTest
     Counter c = job.getCounters().findCounter(counter);
     long value = c.getValue();
     String description =
-        String.format("%s value %s", c.getDisplayName(), value);
+        String.format("%s value %s", c.getDisplayName(), value, false);
 
     if (min >= 0) {
       assertTrue(description + " too below minimum " + min,

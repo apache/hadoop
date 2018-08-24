@@ -136,11 +136,13 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   @Override
   public void format(String jid,
                      String nameServiceId,
-                     NamespaceInfo nsInfo) throws IOException {
+                     NamespaceInfo nsInfo,
+                     boolean force) throws IOException {
     try {
       FormatRequestProto.Builder req = FormatRequestProto.newBuilder()
           .setJid(convertJournalId(jid))
-          .setNsInfo(PBHelper.convert(nsInfo));
+          .setNsInfo(PBHelper.convert(nsInfo))
+          .setForce(force);
       if(nameServiceId != null) {
         req.setNameServiceId(nameServiceId);
       }

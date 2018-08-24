@@ -242,6 +242,7 @@ message FormatRequestProto {
   required JournalIdProto jid = 1;
   required NamespaceInfoProto nsInfo = 2;
   optional string nameServiceId = 3;
+  optional bool force = 4 [ default = false ];
 }
 
 message FormatResponseProto {

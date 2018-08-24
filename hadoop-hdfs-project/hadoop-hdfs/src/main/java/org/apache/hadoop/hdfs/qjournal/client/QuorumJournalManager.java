@@ -220,8 +220,8 @@ public class QuorumJournalManager implements JournalManager {
   }
   
   @Override
-  public void format(NamespaceInfo nsInfo) throws IOException {
-    QuorumCall<AsyncLogger,Void> call = loggers.format(nsInfo);
+  public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.format(nsInfo, force);
     try {
       call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
           "format");

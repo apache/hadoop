@@ -89,8 +89,9 @@ interface AsyncLogger {
   /**
    * Format the log directory.
    * @param nsInfo the namespace info to format with
+   * @param force the force option to format
    */
-  public ListenableFuture<Void> format(NamespaceInfo nsInfo);
+  public ListenableFuture<Void> format(NamespaceInfo nsInfo, boolean force);
 
   /**
    * @return whether or not the remote node has any valid data.

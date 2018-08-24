@@ -299,12 +299,12 @@ class AsyncLoggerSet {
     return QuorumCall.create(calls);
   }
 
-  QuorumCall<AsyncLogger,Void> format(NamespaceInfo nsInfo) {
+  QuorumCall<AsyncLogger, Void> format(NamespaceInfo nsInfo, boolean force) {
     Map<AsyncLogger, ListenableFuture<Void>> calls =
         Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
       ListenableFuture<Void> future =
-          logger.format(nsInfo);
+          logger.format(nsInfo, force);
       calls.put(logger, future);
     }
     return QuorumCall.create(calls);

@@ -100,7 +100,7 @@ public class FileJournalManager implements JournalManager {
   public void close() throws IOException {}
   
   @Override
-  public void format(NamespaceInfo ns) throws IOException {
+  public void format(NamespaceInfo ns, boolean force) throws IOException {
     // Formatting file journals is done by the StorageDirectory
     // format code, since they may share their directory with
     // checkpoints, etc.
