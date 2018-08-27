@@ -4476,4 +4476,14 @@
       will throw NameNodeFormatException.
     </description>
   </property>
+
+  <property>
+    <name>dfs.namenode.block.deletion.increment</name>
+    <value>1000</value>
+    <description>
+      The number of block deletion increment.
+      This setting will control the block increment deletion rate to
+      ensure that other waiters on the lock can get in.
+    </description>
+  </property>
 </configuration>
