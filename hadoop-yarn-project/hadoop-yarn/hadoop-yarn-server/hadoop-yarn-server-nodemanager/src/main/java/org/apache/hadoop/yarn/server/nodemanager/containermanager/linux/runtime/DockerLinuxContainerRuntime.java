@@ -137,8 +137,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME} sets the
  *     hostname to be used by the Docker container. If not specified, a
- *     hostname will be derived from the container ID.  This variable is
- *     ignored if the network is 'host' and Registry DNS is not enabled.
+ *     hostname will be derived from the container ID and set as default
+ *     hostname for networks other than 'host'.
  *   </li>
  *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER}
@@ -553,22 +553,34 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
   }
 
-  /** Set a DNS friendly hostname. */
-  private void setHostname(DockerRunCommand runCommand, String
-      containerIdStr, String name)
+  /** Set a DNS friendly hostname.
+   *  Only add hostname if network is not host or if hostname is
+   *  specified via YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME
+   *  in host network mode
+   */
+  private void setHostname(DockerRunCommand runCommand,
+      String containerIdStr, String network, String name)
       throws ContainerExecutionException {
-    if (name == null || name.isEmpty()) {
-      name = RegistryPathUtils.encodeYarnID(containerIdStr);
 
-      String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
-      if (domain != null) {
-        name += ("." + domain);
+    if (network.equalsIgnoreCase("host")) {
+      if (name != null && !name.isEmpty()) {
+        LOG.info("setting hostname in container to: " + name);
+        runCommand.setHostname(name);
       }
-      validateHostname(name);
-    }
+    } else {
+      //get default hostname
+      if (name == null || name.isEmpty()) {
+        name = RegistryPathUtils.encodeYarnID(containerIdStr);
 
-    LOG.info("setting hostname in container to: " + name);
-    runCommand.setHostname(name);
+        String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+        if (domain != null) {
+          name += ("." + domain);
+        }
+        validateHostname(name);
+      }
+      LOG.info("setting hostname in container to: " + name);
+      runCommand.setHostname(name);
+    }
   }
 
   /**
@@ -827,12 +839,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
         dockerRunAsUser, imageName)
         .setNetworkType(network);
-    // Only add hostname if network is not host or if Registry DNS is enabled.
-    if (!network.equalsIgnoreCase("host") ||
-        conf.getBoolean(RegistryConstants.KEY_DNS_ENABLED,
-            RegistryConstants.DEFAULT_DNS_ENABLED)) {
-      setHostname(runCommand, containerIdStr, hostname);
-    }
+
+    setHostname(runCommand, containerIdStr, network, hostname);
+
     runCommand.setCapabilities(capabilities);
 
     runCommand.addAllReadWriteMountLocations(containerLogDirs);
