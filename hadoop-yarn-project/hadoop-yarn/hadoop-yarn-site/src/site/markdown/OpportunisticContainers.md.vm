@@ -60,7 +60,7 @@ In order to submit jobs to a cluster that has AMRMProxy turned on, one must crea
 
 | Property | Value | Description |
 |:-------- |:----- |:----- |
-| `yarn.resourcemanger.scheduler.address` | `localhost:8049` | Redirects jobs to the Node Manager's AMRMProxy port.|
+| `yarn.resourcemanager.scheduler.address` | `localhost:8049` | Redirects jobs to the Node Manager's AMRMProxy port.|
 
 
 $H3 Running a Sample Job
