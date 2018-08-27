@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class AbstractFileSystem {
+public abstract class AbstractFileSystem implements PathCapabilities {
   static final Logger LOG = LoggerFactory.getLogger(AbstractFileSystem.class);
 
   /** Recording statistics per a file system class. */
@@ -1365,12 +1365,13 @@ public abstract class AbstractFileSystem {
   /**
    * Return the base capabilities of the filesystems
    * may override to declare different behavior.
-   * @param capability string to query the stream support for.
    * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
    * @return true if the capability is supported under that part of the FS.
    * @throws IOException on failure
    */
-  public boolean hasCapability(String capability, Path path)
+  public boolean hasPathCapability(final Path path,
+      final String capability)
       throws IOException {
     return false;
   }

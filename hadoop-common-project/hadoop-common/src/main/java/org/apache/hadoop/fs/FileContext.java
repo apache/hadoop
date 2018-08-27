@@ -171,7 +171,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileContext {
+public class FileContext implements PathCapabilities {
   
   public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
@@ -836,7 +836,7 @@ public class FileContext {
     Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       @Override
-      public Boolean next(final AbstractFileSystem fs, final Path p) 
+      public Boolean next(final AbstractFileSystem fs, final Path p)
         throws IOException, UnresolvedLinkException {
         return fs.delete(p, recursive);
       }
@@ -2936,23 +2936,17 @@ public class FileContext {
   }
 
   /**
-   * Return the base capabilities of all filesystems; subclasses
-   * may override to declare different behavior.
-   * @param capability string to query the stream support for.
+   * Return the path capabilities of the bonded {@code AbstractFileSystem}.
    * @param path path to query the capability of.
-   * @return true if the capability is supported under that part of the FS.
-   * @throws IOException path resolution failure
+   * @param capability string to query the stream support for.
+   * @return true iff the capability is supported under that FS.
+   * @throws IOException path resolution or other IO failure
    */
-  public boolean hasCapability(String capability, Path path)
+  public boolean hasPathCapability(Path path, String capability)
       throws IOException {
-    return new FSLinkResolver<Boolean>() {
-      @Override
-      public Boolean next(final AbstractFileSystem fs,
-          final Path p)
-          throws IOException {
-        return fs.hasCapability(capability, p);
-      }
-    }.resolve(this, fixRelativePart(path));
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.hasPathCapability(p, capability));
   }
 
 }

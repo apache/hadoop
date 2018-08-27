@@ -2018,22 +2018,27 @@ public class WebHdfsFileSystem extends FileSystem
 
   /**
    * This filesystem's capabilities must be in sync with that of HDFS.
+   * @param path path to query the capability of.
    * @param capability string to query the stream support for.
-   * @param path
    * @return true if a capability is supported.
    */
   @Override
-  public boolean hasCapability(String capability,
-      Path path) {
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    Path p = makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
     case StreamCapabilities.FS_ACLS:
     case StreamCapabilities.FS_APPEND:
     case StreamCapabilities.FS_CONCAT:
     case StreamCapabilities.FS_PERMISSIONS:
+    case StreamCapabilities.FS_SNAPSHOTS:
+    case StreamCapabilities.FS_STORAGEPOLICY:
+    case StreamCapabilities.FS_SYMLINKS:
     case StreamCapabilities.FS_XATTRS:
       return true;
     default:
-      return super.hasCapability(capability, path);
+      return super.hasPathCapability(p, capability);
     }
   }
 

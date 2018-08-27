@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -134,7 +135,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer {
+    implements Closeable, DelegationTokenIssuer, PathCapabilities {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -3214,17 +3215,28 @@ public abstract class FileSystem extends Configured
   }
 
   /**
-   * Return the base capabilities of all filesystems; subclasses
-   * may override to declare different behavior.
-   * @param capability string to query the stream support for.
+   * The base FileSystem implementation generally has no knowledge
+   * of the capabilities of actual implementations.
+   * Unless it has a way to explicitly determine the capabilities,
+   * this method returns false.
    * @param path path to query the capability of.
-   * @return true if the capability is supported under that part of the FS.
+   * @param capability string to query the stream support for.
+   * @return false
    * @throws IOException this should not be raised, except on problems
    * resolving paths or relaying the call.
    */
-  public boolean hasCapability(String capability, Path path)
+  public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    return false;
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_SYMLINKS:
+      // delegate to the existing supportsSymlinks() call.
+      return supportsSymlinks();
+    default:
+      // the feature is not implemented.
+      return false;
+    }
   }
 
   // making it volatile to be able to do a double checked locking

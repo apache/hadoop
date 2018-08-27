@@ -3868,13 +3868,15 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean hasCapability(String capability,
-      Path path) {
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    Path p = makeQualified(path);
     switch (capability) {
     case StreamCapabilities.FS_PERMISSIONS:
       return true;
     default:
-      return super.hasCapability(capability, path);
+      return super.hasPathCapability(p, capability);
     }
   }
 }

@@ -1033,7 +1033,10 @@ public class AdlFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean hasCapability(String capability, Path path) {
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    Path p = makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
     case StreamCapabilities.FS_ACLS:
     case StreamCapabilities.FS_APPEND:
@@ -1041,7 +1044,7 @@ public class AdlFileSystem extends FileSystem {
     case StreamCapabilities.FS_PERMISSIONS:
       return true;
     default:
-      return super.hasCapability(capability, path);
+      return super.hasPathCapability(p, capability);
     }
   }
 }

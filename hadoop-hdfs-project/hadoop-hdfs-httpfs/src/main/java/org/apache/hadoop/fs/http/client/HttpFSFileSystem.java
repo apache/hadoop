@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -84,6 +85,7 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -1496,4 +1498,29 @@ public class HttpFSFileSystem extends FileSystem
     return JsonUtilClient.toSnapshottableDirectoryList(json);
   }
 
+  /**
+   * This filesystem's capabilities must be in sync with that of HDFS.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return true if a capability is supported.
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    Path p = makeQualified(path);
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_ACLS:
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_CONCAT:
+    case StreamCapabilities.FS_PERMISSIONS:
+    case StreamCapabilities.FS_SNAPSHOTS:
+    case StreamCapabilities.FS_STORAGEPOLICY:
+    case StreamCapabilities.FS_SYMLINKS:
+    case StreamCapabilities.FS_XATTRS:
+      return true;
+    default:
+      return super.hasPathCapability(p, capability);
+    }
+  }
 }

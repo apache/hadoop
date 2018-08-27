@@ -1471,7 +1471,7 @@ public interface StreamCapabilities {
 
 ### `boolean hasCapability(capability)`
 
-Return true if the `OutputStream`, `InputStream`, or other FileSystem class
+Return true iff the `OutputStream`, `InputStream`, or other FileSystem class
 has the desired capability.
 
 The caller can query the capabilities of a stream using a string value.
@@ -1484,3 +1484,93 @@ hsync        | HSYNC      | Syncable         | Flush out the data in client's us
 in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
 dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
 in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
+
+## <a name="PathCapabilities"></a> interface `PathCapabilities`
+
+The `PathCapabilities` provides a way to programmatically query the operations
+offered by a FileSystem or FileContext instance under a given path.
+
+```java
+public interface PathCapabilities {
+  boolean hasPathCapability(Path path, String capability)
+      throws IOException;
+}
+```
+
+### `boolean hasPathCapability(path, capability)`
+
+Probe for a filesystem instance offering a specific capability under the
+given path.
+
+There are a numbe of goals here goals here:
+
+1. Allow callers to probe for optional filesystem operations without actually
+having to invoke them.
+1. Allow filesystems with their own optional per-instance features to declare
+whether or not they are active for the specific instance.
+1. Allow for fileystem connectors which work with object stores to expose the
+fundamental difference in semantics of these stores (e.g: files not visible
+until closed, file rename being O(data)), directory rename being non-atomic, 
+etc.
+
+All custom filesystem-specific capabilities MUST be given the prefix of that
+filesystem schema. The standard schemas are:
+
+* `fs` : File system capabilities
+* `object` : Object capabilities.
+
+The exact set of operations and their names are evolving.
+
+#### Postconditions
+
+```python
+if fs_supports_the_feature(capability):
+  return True
+else:
+  return False
+```
+
+Return: `True`, iff the specific capability is known to be available.
+
+A filesystem instance *MUST NOT* return `True` for any capability unless it is
+known to be supported by that specific instance. As a result, if a caller
+probes for a capability then it can assume that the specific feature/semantics
+are available.
+
+If the probe returns `False` then it can mean one of:
+
+1. The capability is unknown.
+1. The capability is known, but not available on this instance.
+1. The capability is known but the connector does not know if it is supported by
+this specific instance.
+
+This predicate is intended to be low cost. If it requires remote calls other
+than path/link resolution, it SHOULD conclude that the availability
+of the feature is unknown and return `False`.
+The predicate MUST also be side-effect
+
+
+*Note*: There is no requirement that the existence of the path must be checked;
+the parameter exists so that any filesystem which relays operations to other
+filesystems (e.g viewfs) can resolve and relay it to the nested filesystem.
+
+/**
+ * .
+ * If the function returns {@code true}, the filesystem is explicitly
+ * declaring that the capability is available.
+ * If the function returns {@code false}, it can mean one of:
+ * <ul>
+ *   <li>The capability is not known.</li>
+ *   <li>The capability is known but it is not supported.</li>
+ *   <li>The capability is known but the filesystem does not know if it
+ *   is supported under the supplied path it.</li>
+ * </ul>
+ * The core guarantee which a caller can rely on is: if the predicate
+ * returns true, then the specific operation/behavior can be expected to be
+ * supported.
+ * @param path path to query the capability of.
+ * @param capability string to query the stream support for.
+ * @return true if the capability is supported under that part of the FS.
+ * @throws IOException this should not be raised, except on problems
+ * resolving paths or relaying the call.
+ */

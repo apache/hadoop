@@ -285,8 +285,9 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
-  public boolean hasCapability(final String capability, final Path path)
+  public boolean hasPathCapability(final Path path,
+      final String capability)
       throws IOException {
-    return fsImpl.hasCapability(capability, path);
+    return fsImpl.hasPathCapability(path, capability);
   }
 }

@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * Interface to query streams for supported capabilities.
@@ -63,32 +60,54 @@ public interface StreamCapabilities {
   String UNBUFFER = "in:unbuffer";
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#setAcl(Path, List)} and related methods?
+   * Does the Filesystem support get/set ACLs and related methods?
    */
   String FS_ACLS = "fs:acls";
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#append(Path)} and related methods?
+   * Does the Filesystem support append operations?
    */
   String FS_APPEND = "fs:append";
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#concat(Path, Path[])}?
+   * Does the FS support {@code concat()}?
    */
   String FS_CONCAT = "fs:concat";
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#setPermission(Path, FsPermission)} and related methods?
+   * Does the FS support {@code setPermission(Path, FsPermission)}
+   * and related methods?
    */
   String FS_PERMISSIONS = "fs:permissions";
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#setXAttr(Path, String, byte[])} and related methods?
+   * Does the FS support path handles??
+   */
+  String FS_PATHHANDLES = "fs:pathhandles";
+
+  /**
+   * Does the FS support snapshot?
+   */
+  String FS_SNAPSHOTS = "fs:snapshots";
+
+  /**
+   * Does the FS support storage policies?
+   */
+  String FS_STORAGEPOLICY = "fs:storagepolicy";
+
+  /**
+   * Does the FS support symlinks?
+   */
+  String FS_SYMLINKS = "fs:symlinks";
+
+  /**
+   * Does the FS support truncate()?
+   */
+  String FS_TRUNCATE = "fs:truncate";
+
+  /**
+   * Does the Filesystem support XAttributes
+   * {@code setXAttr(Path, String, byte[])} and related methods?
    */
   String FS_XATTRS = "fs:xattrs";
 

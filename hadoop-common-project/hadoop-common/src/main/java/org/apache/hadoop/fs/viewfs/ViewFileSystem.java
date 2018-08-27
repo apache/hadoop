@@ -936,31 +936,32 @@ public class ViewFileSystem extends FileSystem {
   /**
    * Fail fast on known write capabilities (append, concat),
    * forward the rest to the viewed FS.
-   * @param capability string to query the stream support for.
    * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
    * @return the capability
    * @throws IOException if there is no resolved FS, or it raises an IOE.
    */
   @Override
-  public boolean hasCapability(String capability, Path path)
+  public boolean hasPathCapability(Path path, String capability)
       throws IOException {
+    // qualify the path to make sure that it refers to the current FS.
+    Path p = makeQualified(path);
 
-    // fail fast on capabilities whose operations are all write access
-    // (so will always fail later on)
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_APPEND:
     case StreamCapabilities.FS_CONCAT:
+      // concat is not supported, as it may be invoked across filesystems.
       return false;
     default:
     }
     // otherwise, check capabilities of mounted FS.
     try {
       InodeTree.ResolveResult<FileSystem> res
-          = fsState.resolve(getUriPath(path), true);
-      return res.targetFileSystem.hasCapability(capability, res.remainingPath);
+          = fsState.resolve(getUriPath(p), true);
+      return res.targetFileSystem.hasPathCapability(res.remainingPath,
+          capability);
     } catch (FileNotFoundException e) {
       // no mount point, nothing will work.
-      throw new NotInMountpointException(path, "hasCapability");
+      throw new NotInMountpointException(path, "hasPathCapability");
     }
   }
 

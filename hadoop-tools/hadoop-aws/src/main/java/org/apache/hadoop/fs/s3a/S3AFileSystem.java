@@ -3603,7 +3603,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
-  public boolean hasCapability(String capability, Path path) {
+  public boolean hasPathCapability(final Path path, final String capability) {
+    // qualify the path to make sure that it refers to the current FS.
+    makeQualified(path);
     return hasCapability(capability);
   }
 
