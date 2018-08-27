@@ -515,31 +515,6 @@ on the filesystem.
    `getFileStatus(P).getBlockSize()`.
 1. By inference, it MUST be > 0 for any file of length > 0.
 
-
-### `boolean hasCapability(String capability, Path path)`
-
-
-#### Preconditions
-
-`capability` is a string in the list defined in 
-<a href="#StreamCapability">StreamCapability</a>, for all filesystems,
-or a specific option which a filesystem may have enabled.
-For the latter, the URI scheme of the filesystem must be used as a prefix
-of the capability, such as "s3a:magic.committer". 
-
-#### Postconditions
-
-If and only if the filesystem at the specified path has the named
-capability, may the predicate return `true`. 
-
-If the capability is unknown, or the capability is not known to be supported,
-the predicate MUST return `false`.
-
-This is an extension of the <a href="#StreamCapability">StreamCapability</a>,
-extended to take a path, and so work with filesystems which can mount
-other filesystems too.
-
-
 ## <a name="state_changing_operations"></a> State Changing Operations
 
 ### `boolean mkdirs(Path p, FsPermission permission)`

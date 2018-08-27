@@ -836,7 +836,7 @@ public class FileContext implements PathCapabilities {
     Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       @Override
-      public Boolean next(final AbstractFileSystem fs, final Path p)
+      public Boolean next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.delete(p, recursive);
       }
