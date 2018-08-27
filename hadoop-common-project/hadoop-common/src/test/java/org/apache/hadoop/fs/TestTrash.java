@@ -518,6 +518,60 @@ public class TestTrash {
   }
 
   @Test
+  public void testExistingFileTrash() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.set("fs.defaultFS", fs.getUri().toString());
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 0); // disabled
+    assertFalse(new Trash(conf).isEnabled());
+
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 minute
+    assertTrue(new Trash(conf).isEnabled());
+
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+
+    // First create a new directory with mkdirs
+    Path myPath = new Path(TEST_DIR, "test/mkdirs");
+    mkdir(fs, myPath);
+
+    // Second, create a file in that directory.
+    Path myFile = new Path(TEST_DIR, "test/mkdirs/myExistingFile");
+    writeFile(fs, myFile, 10);
+    // First rm a file
+    mkdir(fs, myPath);
+    writeFile(fs, myFile, 10);
+
+    String[] args1 = new String[2];
+    args1[0] = "-rm";
+    args1[1] = myFile.toString();
+    int val1 = -1;
+    try {
+      val1 = shell.run(args1);
+    } catch (Exception e) {
+      System.err.println("Exception raised from Trash.run " +
+          e.getLocalizedMessage());
+    }
+    assertTrue(val1 == 0);
+
+    // Second  rm a file which parent path is the same as above
+    mkdir(fs, myFile);
+    writeFile(fs, new Path(myFile, "mySubFile"), 10);
+    String[] args2 = new String[2];
+    args2[0] = "-rm";
+    args2[1] = new Path(myFile, "mySubFile").toString();
+    int val2 = -1;
+    try {
+      val2 = shell.run(args2);
+    } catch (Exception e) {
+      System.err.println("Exception raised from Trash.run " +
+          e.getLocalizedMessage());
+    }
+    assertTrue(val2 == 0);
+  }
+
+  @Test
   public void testNonDefaultFS() throws IOException {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
