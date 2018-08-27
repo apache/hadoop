@@ -84,6 +84,7 @@ public class TestContainerReportHandler implements EventPublisher {
                 new Builder()
                     .setReplicationFactor(ReplicationFactor.THREE)
                     .setContainerID((Long) invocation.getArguments()[0])
+                    .setState(LifeCycleState.CLOSED)
                     .build()
         );
 
@@ -116,26 +117,45 @@ public class TestContainerReportHandler implements EventPublisher {
     when(pipelineSelector.getReplicationPipeline(ReplicationType.STAND_ALONE,
         ReplicationFactor.THREE)).thenReturn(pipeline);
 
-    long c1 = containerStateManager
+    ContainerInfo cont1 = containerStateManager
         .allocateContainer(pipelineSelector, ReplicationType.STAND_ALONE,
-            ReplicationFactor.THREE, "root").getContainerInfo()
-        .getContainerID();
-
-    long c2 = containerStateManager
+            ReplicationFactor.THREE, "root").getContainerInfo();
+    ContainerInfo cont2 = containerStateManager
         .allocateContainer(pipelineSelector, ReplicationType.STAND_ALONE,
-            ReplicationFactor.THREE, "root").getContainerInfo()
-        .getContainerID();
+            ReplicationFactor.THREE, "root").getContainerInfo();
+    // Open Container
+    ContainerInfo cont3 = containerStateManager
+        .allocateContainer(pipelineSelector, ReplicationType.STAND_ALONE,
+            ReplicationFactor.THREE, "root").getContainerInfo();
 
+    long c1 = cont1.getContainerID();
+    long c2 = cont2.getContainerID();
+    long c3 = cont3.getContainerID();
+
+    // Close remaining containers
+    try {
+      containerStateManager.getContainerStateMap()
+          .updateState(cont1, cont1.getState(), LifeCycleState.CLOSING);
+      containerStateManager.getContainerStateMap()
+          .updateState(cont1, cont1.getState(), LifeCycleState.CLOSED);
+      containerStateManager.getContainerStateMap()
+          .updateState(cont2, cont2.getState(), LifeCycleState.CLOSING);
+      containerStateManager.getContainerStateMap()
+          .updateState(cont2, cont2.getState(), LifeCycleState.CLOSED);
+
+    } catch (IOException e) {
+      LOG.info("Failed to change state of open containers.", e);
+    }
     //when
 
     //initial reports before replication is enabled. 2 containers w 3 replicas.
     reportHandler.onMessage(
         new ContainerReportFromDatanode(dn1,
-            createContainerReport(new long[] {c1, c2})), this);
+            createContainerReport(new long[] {c1, c2, c3})), this);
 
     reportHandler.onMessage(
         new ContainerReportFromDatanode(dn2,
-            createContainerReport(new long[] {c1, c2})), this);
+            createContainerReport(new long[] {c1, c2, c3})), this);
 
     reportHandler.onMessage(
         new ContainerReportFromDatanode(dn3,

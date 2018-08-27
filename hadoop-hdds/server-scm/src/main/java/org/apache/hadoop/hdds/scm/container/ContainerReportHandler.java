@@ -129,6 +129,10 @@ public class ContainerReportHandler implements
           "Container is missing from containerStateManager. Can't request "
               + "replication. {}",
           containerID);
+      return;
+    }
+    if (container.isContainerOpen()) {
+      return;
     }
     if (replicationStatus.isReplicationEnabled()) {
 
