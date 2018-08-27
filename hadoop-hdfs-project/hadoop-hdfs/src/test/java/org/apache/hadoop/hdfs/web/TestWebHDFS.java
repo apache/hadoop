@@ -482,6 +482,9 @@ public class TestWebHDFS {
 
       // allow snapshots on /bar using webhdfs
       webHdfs.allowSnapshot(bar);
+      // check if snapshot status is enabled
+      assertTrue(dfs.getFileStatus(bar).isSnapshotEnabled());
+      assertTrue(webHdfs.getFileStatus(bar).isSnapshotEnabled());
       webHdfs.createSnapshot(bar, "s1");
       final Path s1path = SnapshotTestHelper.getSnapshotRoot(bar, "s1");
       Assert.assertTrue(webHdfs.exists(s1path));
@@ -491,15 +494,24 @@ public class TestWebHDFS {
       assertEquals(bar, snapshottableDirs[0].getFullPath());
       dfs.deleteSnapshot(bar, "s1");
       dfs.disallowSnapshot(bar);
+      // check if snapshot status is disabled
+      assertFalse(dfs.getFileStatus(bar).isSnapshotEnabled());
+      assertFalse(webHdfs.getFileStatus(bar).isSnapshotEnabled());
       snapshottableDirs = dfs.getSnapshottableDirListing();
       assertNull(snapshottableDirs);
 
       // disallow snapshots on /bar using webhdfs
       dfs.allowSnapshot(bar);
+      // check if snapshot status is enabled, again
+      assertTrue(dfs.getFileStatus(bar).isSnapshotEnabled());
+      assertTrue(webHdfs.getFileStatus(bar).isSnapshotEnabled());
       snapshottableDirs = dfs.getSnapshottableDirListing();
       assertEquals(1, snapshottableDirs.length);
       assertEquals(bar, snapshottableDirs[0].getFullPath());
       webHdfs.disallowSnapshot(bar);
+      // check if snapshot status is disabled, again
+      assertFalse(dfs.getFileStatus(bar).isSnapshotEnabled());
+      assertFalse(webHdfs.getFileStatus(bar).isSnapshotEnabled());
       snapshottableDirs = dfs.getSnapshottableDirListing();
       assertNull(snapshottableDirs);
       try {
