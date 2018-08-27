@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.nfs;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3Utils;
@@ -51,7 +51,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 
 public class TestOutOfOrderWrite {
-  public final static Log LOG = LogFactory.getLog(TestOutOfOrderWrite.class);
+  public final static Logger LOG =
+      LoggerFactory.getLogger(TestOutOfOrderWrite.class);
 
   static FileHandle handle = null;
   static Channel channel;
