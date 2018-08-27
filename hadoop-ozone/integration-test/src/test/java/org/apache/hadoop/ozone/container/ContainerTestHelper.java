@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
@@ -59,7 +60,8 @@ public final class ContainerTestHelper {
       ContainerTestHelper.class);
   private static Random r = new Random();
 
-  public static final int CONTAINER_MAX_SIZE_GB = 1;
+  public static final long CONTAINER_MAX_SIZE =
+      (long) StorageUnit.GB.toBytes(1);
 
   /**
    * Never constructed.

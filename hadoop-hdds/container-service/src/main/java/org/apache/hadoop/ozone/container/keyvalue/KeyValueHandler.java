@@ -81,8 +81,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CLOSED_CONTAINER_RETRY;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CLOSED_CONTAINER_IO;
@@ -124,8 +122,8 @@ public class KeyValueHandler extends Handler {
   private final KeyManager keyManager;
   private final ChunkManager chunkManager;
   private final BlockDeletingService blockDeletingService;
-  private VolumeChoosingPolicy volumeChoosingPolicy;
-  private final int maxContainerSizeGB;
+  private final VolumeChoosingPolicy volumeChoosingPolicy;
+  private final long maxContainerSize;
   private final AutoCloseableLock handlerLock;
   private final OpenContainerBlockMap openContainerBlockMap;
 
@@ -150,9 +148,9 @@ public class KeyValueHandler extends Handler {
     volumeChoosingPolicy = ReflectionUtils.newInstance(conf.getClass(
         HDDS_DATANODE_VOLUME_CHOOSING_POLICY, RoundRobinVolumeChoosingPolicy
             .class, VolumeChoosingPolicy.class), conf);
-    maxContainerSizeGB = (int)config.getStorageSize(
+    maxContainerSize = (long)config.getStorageSize(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
-            ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT, StorageUnit.GB);
+            ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT, StorageUnit.BYTES);
     // this handler lock is used for synchronizing createContainer Requests,
     // so using a fair lock here.
     handlerLock = new AutoCloseableLock(new ReentrantLock(true));
@@ -215,8 +213,9 @@ public class KeyValueHandler extends Handler {
       return handleGetSmallFile(request, kvContainer);
     case GetCommittedBlockLength:
       return handleGetCommittedBlockLength(request, kvContainer);
+    default:
+      return null;
     }
-    return null;
   }
 
   @VisibleForTesting
@@ -247,7 +246,7 @@ public class KeyValueHandler extends Handler {
     long containerID = request.getContainerID();
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
-        containerID, maxContainerSizeGB);
+        containerID, maxContainerSize);
     // TODO: Add support to add metadataList to ContainerData. Add metadata
     // to container during creation.
     KeyValueContainer newContainer = new KeyValueContainer(

@@ -84,9 +84,9 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
-   * @param size - maximum size in GB of the container
+   * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, int size) {
+  public KeyValueContainerData(long id, long size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
     this.numPendingDeletionBlocks = new AtomicInteger(0);
     this.deleteTransactionId = 0;
@@ -96,9 +96,9 @@ public class KeyValueContainerData extends ContainerData {
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
    * @param layOutVersion
-   * @param size - maximum size in GB of the container
+   * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, int layOutVersion, int size) {
+  public KeyValueContainerData(long id, int layOutVersion, long size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
         size);
     this.numPendingDeletionBlocks = new AtomicInteger(0);
@@ -272,7 +272,7 @@ public class KeyValueContainerData extends ContainerData {
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
     KeyValueContainerData data = new KeyValueContainerData(
         protoData.getContainerID(),
-        (int)storageSize.getUnit().toBytes(storageSize.getValue()));
+        (long)storageSize.getUnit().toBytes(storageSize.getValue()));
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
           protoData.getMetadata(x).getValue());

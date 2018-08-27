@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.collect.Maps;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -193,7 +192,7 @@ public class TestContainerPersistence {
   private Container addContainer(ContainerSet containerSet, long containerID)
       throws IOException {
     KeyValueContainerData data = new KeyValueContainerData(containerID,
-        ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+        ContainerTestHelper.CONTAINER_MAX_SIZE);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     KeyValueContainer container = new KeyValueContainer(data, conf);

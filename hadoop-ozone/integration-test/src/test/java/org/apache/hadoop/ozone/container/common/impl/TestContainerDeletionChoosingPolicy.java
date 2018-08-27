@@ -75,8 +75,8 @@ public class TestContainerDeletionChoosingPolicy {
 
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
-      KeyValueContainerData data = new KeyValueContainerData(new Long(i),
-          ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+      KeyValueContainerData data = new KeyValueContainerData(i,
+          ContainerTestHelper.CONTAINER_MAX_SIZE);
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
@@ -128,8 +128,8 @@ public class TestContainerDeletionChoosingPolicy {
     for (int i = 0; i <= numContainers; i++) {
       long containerId = RandomUtils.nextLong();
       KeyValueContainerData data =
-          new KeyValueContainerData(new Long(containerId),
-              ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+          new KeyValueContainerData(containerId,
+              ContainerTestHelper.CONTAINER_MAX_SIZE);
       if (i != numContainers) {
         int deletionBlocks = random.nextInt(numContainers) + 1;
         data.incrPendingDeletionBlocks(deletionBlocks);

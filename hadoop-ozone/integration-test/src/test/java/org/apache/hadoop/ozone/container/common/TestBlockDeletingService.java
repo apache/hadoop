@@ -110,7 +110,7 @@ public class TestBlockDeletingService {
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testRoot.getAbsolutePath());
       long containerID = ContainerTestHelper.getTestContainerID();
       KeyValueContainerData data = new KeyValueContainerData(containerID,
-          ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+          ContainerTestHelper.CONTAINER_MAX_SIZE);
       Container container = new KeyValueContainer(data, conf);
       container.create(new VolumeSet(scmId, clusterID, conf),
           new RoundRobinVolumeChoosingPolicy(), scmId);

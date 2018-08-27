@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common;
 
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.junit.Test;
@@ -31,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestKeyValueContainerData {
 
-  private static final int MAXSIZE = 5;
+  private static final long MAXSIZE = (long) StorageUnit.GB.toBytes(5);
   @Test
   public void testKeyValueData() {
     long containerId = 1L;
@@ -58,7 +59,7 @@ public class TestKeyValueContainerData {
     assertEquals(val.get(), kvData.getWriteCount());
     assertEquals(val.get(), kvData.getKeyCount());
     assertEquals(val.get(), kvData.getNumPendingDeletionBlocks());
-    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
+    assertEquals(MAXSIZE, kvData.getMaxSize());
 
     kvData.setState(state);
     kvData.setContainerDBType(containerDBType);

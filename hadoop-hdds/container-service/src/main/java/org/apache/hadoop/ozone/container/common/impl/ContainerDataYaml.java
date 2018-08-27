@@ -236,12 +236,11 @@ public final class ContainerDataYaml {
         long layOutVersion = (long) nodes.get(OzoneConsts.LAYOUTVERSION);
         int lv = (int) layOutVersion;
 
-        long size = (long) nodes.get(OzoneConsts.MAX_SIZE_GB);
-        int maxSize = (int) size;
+        long size = (long) nodes.get(OzoneConsts.MAX_SIZE);
 
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData(
-            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, maxSize);
+            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size);
 
         kvData.setContainerDBType((String)nodes.get(
             OzoneConsts.CONTAINER_DB_TYPE));

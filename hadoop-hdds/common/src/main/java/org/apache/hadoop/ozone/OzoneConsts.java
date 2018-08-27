@@ -185,7 +185,7 @@ public final class OzoneConsts {
   public static final String CONTAINER_TYPE = "containerType";
   public static final String STATE = "state";
   public static final String METADATA = "metadata";
-  public static final String MAX_SIZE_GB = "maxSizeGB";
+  public static final String MAX_SIZE = "maxSize";
   public static final String METADATA_PATH = "metadataPath";
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";

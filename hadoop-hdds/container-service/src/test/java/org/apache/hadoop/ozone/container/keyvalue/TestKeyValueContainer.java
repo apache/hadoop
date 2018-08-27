@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.primitives.Longs;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -94,7 +95,8 @@ public class TestKeyValueContainer {
     Mockito.when(volumeChoosingPolicy.chooseVolume(anyList(), anyLong()))
         .thenReturn(hddsVolume);
 
-    keyValueContainerData = new KeyValueContainerData(1L, 5);
+    keyValueContainerData = new KeyValueContainerData(1L,
+        (long) StorageUnit.GB.toBytes(5));
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -103,7 +105,8 @@ public class TestKeyValueContainer {
 
   @Test
   public void testBlockIterator() throws Exception{
-    keyValueContainerData = new KeyValueContainerData(100L, 1);
+    keyValueContainerData = new KeyValueContainerData(100L,
+        (long) StorageUnit.GB.toBytes(1));
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
@@ -213,7 +216,7 @@ public class TestKeyValueContainer {
     //create a new one
     KeyValueContainerData containerData =
         new KeyValueContainerData(containerId, 1,
-            keyValueContainerData.getMaxSizeGB());
+            keyValueContainerData.getMaxSize());
     KeyValueContainer container = new KeyValueContainer(containerData, conf);
 
     HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
@@ -234,8 +237,8 @@ public class TestKeyValueContainer {
         containerData.getKeyCount());
     Assert.assertEquals(keyValueContainerData.getLayOutVersion(),
         containerData.getLayOutVersion());
-    Assert.assertEquals(keyValueContainerData.getMaxSizeGB(),
-        containerData.getMaxSizeGB());
+    Assert.assertEquals(keyValueContainerData.getMaxSize(),
+        containerData.getMaxSize());
     Assert.assertEquals(keyValueContainerData.getBytesUsed(),
         containerData.getBytesUsed());
 

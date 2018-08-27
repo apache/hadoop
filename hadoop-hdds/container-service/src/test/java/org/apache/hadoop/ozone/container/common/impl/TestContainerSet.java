@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -53,7 +54,8 @@ public class TestContainerSet {
     ContainerProtos.ContainerLifeCycleState state = ContainerProtos
         .ContainerLifeCycleState.CLOSED;
 
-    KeyValueContainerData kvData = new KeyValueContainerData(containerId, 5);
+    KeyValueContainerData kvData = new KeyValueContainerData(containerId,
+        (long) StorageUnit.GB.toBytes(5));
     kvData.setState(state);
     KeyValueContainer keyValueContainer = new KeyValueContainer(kvData, new
         OzoneConfiguration());
@@ -163,7 +165,8 @@ public class TestContainerSet {
   private ContainerSet createContainerSet() throws StorageContainerException {
     ContainerSet containerSet = new ContainerSet();
     for (int i=0; i<10; i++) {
-      KeyValueContainerData kvData = new KeyValueContainerData(i, 5);
+      KeyValueContainerData kvData = new KeyValueContainerData(i,
+          (long) StorageUnit.GB.toBytes(5));
       if (i%2 == 0) {
         kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
       } else {

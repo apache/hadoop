@@ -70,7 +70,8 @@ public class TestHddsDispatcher {
       ContainerSet containerSet = new ContainerSet();
       VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
       StateContext context = Mockito.mock(StateContext.class);
-      KeyValueContainerData containerData = new KeyValueContainerData(1L, 1);
+      KeyValueContainerData containerData = new KeyValueContainerData(1L,
+          (long) StorageUnit.GB.toBytes(1));
       Container container = new KeyValueContainer(containerData, conf);
       container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(),
           scmId.toString());

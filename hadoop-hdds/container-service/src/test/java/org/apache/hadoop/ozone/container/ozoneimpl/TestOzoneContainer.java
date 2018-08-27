@@ -19,9 +19,9 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
@@ -77,7 +77,8 @@ public class TestOzoneContainer {
 
     // Add containers to disk
     for (int i=0; i<10; i++) {
-      keyValueContainerData = new KeyValueContainerData(i, 1);
+      keyValueContainerData = new KeyValueContainerData(i,
+          (long) StorageUnit.GB.toBytes(1));
       keyValueContainer = new KeyValueContainer(
           keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);

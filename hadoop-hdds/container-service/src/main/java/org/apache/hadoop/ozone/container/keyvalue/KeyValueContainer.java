@@ -109,7 +109,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     File containerMetaDataPath = null;
     //acquiring volumeset lock and container lock
     volumeSet.acquireLock();
-    long maxSize = (containerData.getMaxSizeGB() * 1024L * 1024L * 1024L);
+    long maxSize = containerData.getMaxSize();
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
           .getVolumesList(), maxSize);
