@@ -49,10 +49,6 @@ public final class ScmConfigKeys {
       = "dfs.container.ratis.enabled";
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
       = false;
-  public static final String DFS_CONTAINER_GRPC_ENABLED_KEY
-      = "dfs.container.grpc.enabled";
-  public static final boolean DFS_CONTAINER_GRPC_ENABLED_DEFAULT
-      = false;
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_KEY
       = "dfs.container.ratis.rpc.type";
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT

@@ -25,12 +25,10 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
@@ -76,17 +74,12 @@ public class OzoneContainer {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
-    boolean useGrpc = this.config.getBoolean(
-        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     buildContainerSet();
     hddsDispatcher = new HddsDispatcher(config, containerSet, volumeSet,
         context);
     server = new XceiverServerSpi[]{
-        useGrpc ? new XceiverServerGrpc(datanodeDetails, this.config, this
-            .hddsDispatcher) :
-            new XceiverServer(datanodeDetails,
-                this.config, this.hddsDispatcher),
+        new XceiverServerGrpc(datanodeDetails, this.config, this
+            .hddsDispatcher),
         XceiverServerRatis.newXceiverServerRatis(datanodeDetails, this
             .config, hddsDispatcher)
     };

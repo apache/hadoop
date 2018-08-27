@@ -60,7 +60,6 @@ public class XceiverClientManager implements Closeable {
   private final Configuration conf;
   private final Cache<Long, XceiverClientSpi> clientCache;
   private final boolean useRatis;
-  private final boolean useGrpc;
 
   private static XceiverClientMetrics metrics;
   /**
@@ -78,8 +77,6 @@ public class XceiverClientManager implements Closeable {
     this.useRatis = conf.getBoolean(
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    this.useGrpc = conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_DEFAULT);
     this.conf = conf;
     this.clientCache = CacheBuilder.newBuilder()
         .expireAfterAccess(staleThresholdMs, TimeUnit.MILLISECONDS)
@@ -153,8 +150,7 @@ public class XceiverClientManager implements Closeable {
               client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf);
               break;
             case STAND_ALONE:
-              client = useGrpc ? new XceiverClientGrpc(pipeline, conf) :
-                  new XceiverClient(pipeline, conf);
+              client = new XceiverClientGrpc(pipeline, conf);
               break;
             case CHAINED:
             default:

@@ -29,7 +29,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -72,8 +71,6 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -83,7 +80,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +98,6 @@ import static org.junit.Assert.fail;
 /**
  * Test Ozone Key Lifecycle.
  */
-@RunWith(Parameterized.class)
 public class TestKeys {
   /**
    * Set the timeout for every test.
@@ -117,16 +112,7 @@ public class TestKeys {
   private static long currentTime;
   private static ReplicationFactor replicationFactor = ReplicationFactor.ONE;
   private static ReplicationType replicationType = ReplicationType.STAND_ALONE;
-  private static boolean shouldUseGrpc;
 
-  @Parameterized.Parameters
-  public static Collection<Object[]> withGrpc() {
-    return Arrays.asList(new Object[][] {{false}, {true}});
-  }
-
-  public TestKeys(boolean useGrpc) {
-    shouldUseGrpc = useGrpc;
-  }
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -141,8 +127,6 @@ public class TestKeys {
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         1000, TimeUnit.MILLISECONDS);
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1, TimeUnit.SECONDS);
-    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        shouldUseGrpc);
 
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);

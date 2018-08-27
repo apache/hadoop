@@ -26,10 +26,9 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,7 +76,7 @@ public class TestOzoneContainer {
       container.getDispatcher().setScmId(UUID.randomUUID().toString());
       container.start();
 
-      XceiverClient client = new XceiverClient(pipeline, conf);
+      XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
       client.connect();
       createContainerForTesting(client, containerID);
     } finally {
@@ -119,7 +118,7 @@ public class TestOzoneContainer {
       cluster.waitForClusterToBeReady();
 
       // This client talks to ozone container via datanode.
-      XceiverClient client = new XceiverClient(pipeline, conf);
+      XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf);
 
       runTestOzoneContainerViaDataNode(containerID, client);
     } finally {
@@ -215,7 +214,7 @@ public class TestOzoneContainer {
   @Test
   public void testBothGetandPutSmallFile() throws Exception {
     MiniOzoneCluster cluster = null;
-    XceiverClient client = null;
+    XceiverClientGrpc client = null;
     try {
       OzoneConfiguration conf = newOzoneConfiguration();
 
@@ -269,7 +268,7 @@ public class TestOzoneContainer {
   @Test
   public void testCloseContainer() throws Exception {
     MiniOzoneCluster cluster = null;
-    XceiverClient client = null;
+    XceiverClientGrpc client = null;
     ContainerProtos.ContainerCommandResponseProto response;
     ContainerProtos.ContainerCommandRequestProto
         writeChunkRequest, putKeyRequest, request;
@@ -365,7 +364,7 @@ public class TestOzoneContainer {
   @Test
   public void testDeleteContainer() throws Exception {
     MiniOzoneCluster cluster = null;
-    XceiverClient client = null;
+    XceiverClientGrpc client = null;
     ContainerProtos.ContainerCommandResponseProto response;
     ContainerProtos.ContainerCommandRequestProto request,
         writeChunkRequest, putKeyRequest;
@@ -485,7 +484,7 @@ public class TestOzoneContainer {
   @Test
   public void testXcieverClientAsync() throws Exception {
     MiniOzoneCluster cluster = null;
-    XceiverClient client = null;
+    XceiverClientGrpc client = null;
     try {
       OzoneConfiguration conf = newOzoneConfiguration();
 
@@ -503,38 +502,8 @@ public class TestOzoneContainer {
     }
   }
 
-  @Test
-  public void testInvalidRequest() throws Exception {
-    MiniOzoneCluster cluster = null;
-    XceiverClient client;
-    ContainerProtos.ContainerCommandRequestProto request;
-    try {
-      OzoneConfiguration conf = newOzoneConfiguration();
-
-      client = createClientForTesting(conf);
-      cluster = MiniOzoneCluster.newBuilder(conf)
-              .setRandomContainerPort(false)
-              .build();
-      cluster.waitForClusterToBeReady();
-      client.connect();
-
-      // Send a request without traceId.
-      long containerID = ContainerTestHelper.getTestContainerID();
-      request = ContainerTestHelper
-          .getRequestWithoutTraceId(client.getPipeline(), containerID);
-      client.sendCommand(request);
-      Assert.fail("IllegalArgumentException expected");
-    } catch(IllegalArgumentException iae){
-      GenericTestUtils.assertExceptionContains("Invalid trace ID", iae);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  private static XceiverClient createClientForTesting(OzoneConfiguration conf)
-      throws Exception {
+  private static XceiverClientGrpc createClientForTesting(
+      OzoneConfiguration conf) throws Exception {
     // Start ozone container Via Datanode create.
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline();
@@ -543,7 +512,7 @@ public class TestOzoneContainer {
             .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
     // This client talks to ozone container via datanode.
-    return new XceiverClient(pipeline, conf);
+    return new XceiverClientGrpc(pipeline, conf);
   }
 
   private static void createContainerForTesting(XceiverClientSpi client,
