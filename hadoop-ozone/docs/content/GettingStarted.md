@@ -127,9 +127,16 @@ be activated as part of the normal HDFS Datanode bootstrap.
 ```
 
 
-#### Create ozone-site.xml
+#### Create/Generate ozone-site.xml
 
 Ozone relies on its own configuration file called `ozone-site.xml`.
+
+The following command will generate a template ozone-site.xml at the specified
+path
+```
+ozone genconf -output <path>
+```
+
 The following are the most important settings.
 
  1. _*ozone.enabled*_  This is the most important setting for ozone.
