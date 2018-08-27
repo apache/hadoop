@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.nodelabels.RMNodeAttribute;
 import org.apache.hadoop.yarn.nodelabels.StringAttributeValue;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAttributesUpdateSchedulerEvent;
 
 import com.google.common.base.Strings;
 
@@ -92,6 +94,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
   private final ReadLock readLock;
   private final WriteLock writeLock;
+  private RMContext rmContext = null;
 
   public NodeAttributesManagerImpl() {
     super("NodeAttributesManagerImpl");
@@ -131,7 +134,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   protected void initNodeAttributeStore(Configuration conf) throws Exception {
-    this.store =getAttributeStoreClass(conf);
+    this.store = getAttributeStoreClass(conf);
     this.store.init(conf, this);
     this.store.recover();
   }
@@ -206,6 +209,21 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
             .handle(new NodeAttributesStoreEvent(nodeAttributeMapping, op));
       }
 
+      // Map used to notify RM
+      Map<String, Set<NodeAttribute>> newNodeToAttributesMap =
+          new HashMap<String, Set<NodeAttribute>>();
+      nodeAttributeMapping.forEach((k, v) -> {
+        Host node = nodeCollections.get(k);
+        newNodeToAttributesMap.put(k, node.attributes.keySet());
+      });
+
+      // Notify RM
+      if (rmContext != null && rmContext.getDispatcher() != null) {
+        LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
+            .values());
+        rmContext.getDispatcher().getEventHandler().handle(
+            new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
+      }
     } finally {
       writeLock.unlock();
     }
@@ -702,5 +720,9 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     if (null != store) {
       store.close();
     }
+  }
+
+  public void setRMContext(RMContext context) {
+    this.rmContext  = context;
   }
 }

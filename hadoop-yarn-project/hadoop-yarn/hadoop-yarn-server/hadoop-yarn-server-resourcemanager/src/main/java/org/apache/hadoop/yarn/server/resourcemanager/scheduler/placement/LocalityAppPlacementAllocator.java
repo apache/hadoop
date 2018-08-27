@@ -396,6 +396,10 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
       SchedulingMode schedulingMode) {
     // We will only look at node label = nodeLabelToLookAt according to
     // schedulingMode and partition of node.
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("precheckNode is invoked for " + schedulerNode.getNodeID() + ","
+          + schedulingMode);
+    }
     String nodePartitionToLookAt;
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
       nodePartitionToLookAt = schedulerNode.getPartition();

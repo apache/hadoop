@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementConstraint;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.CompositePlacementConstraintProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeOpCodeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PlacementConstraintTargetProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SimplePlacementConstraintProto;
@@ -73,7 +75,8 @@ public class PlacementConstraintFromProtoConverter {
     }
 
     return new SingleConstraint(proto.getScope(), proto.getMinCardinality(),
-        proto.getMaxCardinality(), targets);
+        proto.getMaxCardinality(),
+        convertFromProtoFormat(proto.getAttributeOpCode()), targets);
   }
 
   private TargetExpression convert(PlacementConstraintTargetProto proto) {
@@ -112,5 +115,10 @@ public class PlacementConstraintFromProtoConverter {
 
     return new TimedPlacementConstraint(pConstraint, proto.getSchedulingDelay(),
         ProtoUtils.convertFromProtoFormat(proto.getDelayUnit()));
+  }
+
+  private static NodeAttributeOpCode convertFromProtoFormat(
+      NodeAttributeOpCodeProto p) {
+    return NodeAttributeOpCode.valueOf(p.name());
   }
 }

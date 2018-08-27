@@ -519,9 +519,10 @@ public class ResourceManager extends CompositeService
     return new RMNodeLabelsManager();
   }
 
-  protected NodeAttributesManager createNodeAttributesManager()
-      throws InstantiationException, IllegalAccessException {
-    return new NodeAttributesManagerImpl();
+  protected NodeAttributesManager createNodeAttributesManager() {
+    NodeAttributesManagerImpl namImpl = new NodeAttributesManagerImpl();
+    namImpl.setRMContext(rmContext);
+    return namImpl;
   }
 
   protected AllocationTagsManager createAllocationTagsManager() {

@@ -18,42 +18,24 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import java.util.Map;
+import java.util.Set;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
-  NODE_LABELS_UPDATE,
-  NODE_ATTRIBUTES_UPDATE,
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+/**
+ * Event handler class for Node Attributes which sends events to Scheduler.
+ */
+public class NodeAttributesUpdateSchedulerEvent extends SchedulerEvent {
+  private Map<String, Set<NodeAttribute>> nodeToAttributes;
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  public NodeAttributesUpdateSchedulerEvent(
+      Map<String, Set<NodeAttribute>> newNodeToAttributesMap) {
+    super(SchedulerEventType.NODE_ATTRIBUTES_UPDATE);
+    this.nodeToAttributes = newNodeToAttributesMap;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED,
-
-  // Source: SchedulerAppAttempt::pullNewlyUpdatedContainer.
-  RELEASE_CONTAINER,
-
-  /* Source: SchedulingEditPolicy */
-  KILL_RESERVED_CONTAINER,
-
-  // Mark a container for preemption
-  MARK_CONTAINER_FOR_PREEMPTION,
-
-  // Mark a for-preemption container killable
-  MARK_CONTAINER_FOR_KILLABLE,
-
-  // Cancel a killable container
-  MARK_CONTAINER_FOR_NONKILLABLE,
-
-  //Queue Management Change
-  MANAGE_QUEUE
+  public Map<String, Set<NodeAttribute>> getUpdatedNodeToAttributes() {
+    return nodeToAttributes;
+  }
 }
