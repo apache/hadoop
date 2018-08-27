@@ -19,11 +19,8 @@
 package org.apache.hadoop.yarn.server.uam;
 
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -63,9 +60,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
@@ -89,8 +86,7 @@ public class UnmanagedApplicationManager {
   public static final String APP_NAME = "UnmanagedAM";
   private static final String DEFAULT_QUEUE_CONFIG = "uam.default.queue.name";
 
-  private BlockingQueue<AsyncAllocateRequestInfo> requestQueue;
-  private AMRequestHandlerThread handlerThread;
+  private AMHeartbeatRequestHandler heartbeatHandler;
   private AMRMClientRelayer rmProxyRelayer;
   private ApplicationId applicationId;
   private String submitter;
@@ -99,7 +95,6 @@ public class UnmanagedApplicationManager {
   private String queueName;
   private UserGroupInformation userUgi;
   private RegisterApplicationMasterRequest registerRequest;
-  private int lastResponseId;
   private ApplicationClientProtocol rmClient;
   private long asyncApiPollIntervalMillis;
   private RecordFactory recordFactory;
@@ -137,8 +132,8 @@ public class UnmanagedApplicationManager {
     this.queueName = queueName;
     this.submitter = submitter;
     this.appNameSuffix = appNameSuffix;
-    this.handlerThread = new AMRequestHandlerThread();
-    this.requestQueue = new LinkedBlockingQueue<>();
+    this.heartbeatHandler =
+        new AMHeartbeatRequestHandler(this.conf, this.applicationId);
     this.rmProxyRelayer = null;
     this.connectionInitiated = false;
     this.registerRequest = null;
@@ -194,6 +189,9 @@ public class UnmanagedApplicationManager {
     this.rmProxyRelayer =
         new AMRMClientRelayer(createRMProxy(ApplicationMasterProtocol.class,
             this.conf, this.userUgi, amrmToken), this.applicationId);
+
+    this.heartbeatHandler.setAMRMClientRelayer(this.rmProxyRelayer);
+    this.heartbeatHandler.setUGI(this.userUgi);
   }
 
   /**
@@ -215,7 +213,7 @@ public class UnmanagedApplicationManager {
         this.applicationId);
     RegisterApplicationMasterResponse response =
         this.rmProxyRelayer.registerApplicationMaster(this.registerRequest);
-    this.lastResponseId = 0;
+    this.heartbeatHandler.resetLastResponseId();
 
     for (Container container : response.getContainersFromPreviousAttempts()) {
       LOG.debug("RegisterUAM returned existing running container "
@@ -227,12 +225,9 @@ public class UnmanagedApplicationManager {
     }
 
     // Only when register succeed that we start the heartbeat thread
-    this.handlerThread.setUncaughtExceptionHandler(
-        new HeartBeatThreadUncaughtExceptionHandler());
-    this.handlerThread.setDaemon(true);
-    this.handlerThread.start();
+    this.heartbeatHandler.setDaemon(true);
+    this.heartbeatHandler.start();
 
-    this.lastResponseId = 0;
     return response;
   }
 
@@ -248,7 +243,7 @@ public class UnmanagedApplicationManager {
       FinishApplicationMasterRequest request)
       throws YarnException, IOException {
 
-    this.handlerThread.shutdown();
+    this.heartbeatHandler.shutdown();
 
     if (this.rmProxyRelayer == null) {
       if (this.connectionInitiated) {
@@ -277,7 +272,7 @@ public class UnmanagedApplicationManager {
     KillApplicationRequest request =
         KillApplicationRequest.newInstance(this.applicationId);
 
-    this.handlerThread.shutdown();
+    this.heartbeatHandler.shutdown();
 
     if (this.rmClient == null) {
       this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
@@ -296,12 +291,8 @@ public class UnmanagedApplicationManager {
    */
   public void allocateAsync(AllocateRequest request,
       AsyncCallback<AllocateResponse> callback) throws YarnException {
-    try {
-      this.requestQueue.put(new AsyncAllocateRequestInfo(request, callback));
-    } catch (InterruptedException ex) {
-      // Should not happen as we have MAX_INT queue length
-      LOG.debug("Interrupted while waiting to put on response queue", ex);
-    }
+    this.heartbeatHandler.allocateAsync(request, callback);
+
     // Two possible cases why the UAM is not successfully registered yet:
     // 1. launchUAM is not called at all. Should throw here.
     // 2. launchUAM is called but hasn't successfully returned.
@@ -519,139 +510,8 @@ public class UnmanagedApplicationManager {
     return this.rmClient.getApplicationReport(request).getApplicationReport();
   }
 
-  /**
-   * Data structure that encapsulates AllocateRequest and AsyncCallback
-   * instance.
-   */
-  public static class AsyncAllocateRequestInfo {
-    private AllocateRequest request;
-    private AsyncCallback<AllocateResponse> callback;
-
-    public AsyncAllocateRequestInfo(AllocateRequest request,
-        AsyncCallback<AllocateResponse> callback) {
-      Preconditions.checkArgument(request != null,
-          "AllocateRequest cannot be null");
-      Preconditions.checkArgument(callback != null, "Callback cannot be null");
-
-      this.request = request;
-      this.callback = callback;
-    }
-
-    public AsyncCallback<AllocateResponse> getCallback() {
-      return this.callback;
-    }
-
-    public AllocateRequest getRequest() {
-      return this.request;
-    }
-  }
-
   @VisibleForTesting
   public int getRequestQueueSize() {
-    return this.requestQueue.size();
-  }
-
-  /**
-   * Extends Thread and provides an implementation that is used for processing
-   * the AM heart beat request asynchronously and sending back the response
-   * using the callback method registered with the system.
-   */
-  public class AMRequestHandlerThread extends Thread {
-
-    // Indication flag for the thread to keep running
-    private volatile boolean keepRunning;
-
-    public AMRequestHandlerThread() {
-      super("UnmanagedApplicationManager Heartbeat Handler Thread");
-      this.keepRunning = true;
-    }
-
-    /**
-     * Shutdown the thread.
-     */
-    public void shutdown() {
-      this.keepRunning = false;
-      this.interrupt();
-    }
-
-    @Override
-    public void run() {
-      while (keepRunning) {
-        AsyncAllocateRequestInfo requestInfo;
-        try {
-          requestInfo = requestQueue.take();
-          if (requestInfo == null) {
-            throw new YarnException(
-                "Null requestInfo taken from request queue");
-          }
-          if (!keepRunning) {
-            break;
-          }
-
-          // change the response id before forwarding the allocate request as we
-          // could have different values for each UAM
-          AllocateRequest request = requestInfo.getRequest();
-          if (request == null) {
-            throw new YarnException("Null allocateRequest from requestInfo");
-          }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending Heartbeat to Unmanaged AM. AskList:"
-                + ((request.getAskList() == null) ? " empty"
-                    : request.getAskList().size()));
-          }
-
-          request.setResponseId(lastResponseId);
-          AllocateResponse response = rmProxyRelayer.allocate(request);
-          if (response == null) {
-            throw new YarnException("Null allocateResponse from allocate");
-          }
-
-          lastResponseId = response.getResponseId();
-          // update token if RM has reissued/renewed
-          if (response.getAMRMToken() != null) {
-            LOG.debug("Received new AMRMToken");
-            YarnServerSecurityUtils.updateAMRMToken(response.getAMRMToken(),
-                userUgi, conf);
-          }
-
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Received Heartbeat reply from RM. Allocated Containers:"
-                + ((response.getAllocatedContainers() == null) ? " empty"
-                    : response.getAllocatedContainers().size()));
-          }
-
-          if (requestInfo.getCallback() == null) {
-            throw new YarnException("Null callback from requestInfo");
-          }
-          requestInfo.getCallback().callback(response);
-        } catch (InterruptedException ex) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Interrupted while waiting for queue", ex);
-          }
-        } catch (IOException ex) {
-          LOG.warn("IO Error occurred while processing heart beat for "
-              + applicationId, ex);
-        } catch (Throwable ex) {
-          LOG.warn(
-              "Error occurred while processing heart beat for " + applicationId,
-              ex);
-        }
-      }
-
-      LOG.info("UnmanagedApplicationManager has been stopped for {}. "
-          + "AMRequestHandlerThread thread is exiting", applicationId);
-    }
-  }
-
-  /**
-   * Uncaught exception handler for the background heartbeat thread.
-   */
-  protected class HeartBeatThreadUncaughtExceptionHandler
-      implements UncaughtExceptionHandler {
-    @Override
-    public void uncaughtException(Thread t, Throwable e) {
-      LOG.error("Heartbeat thread {} for application {} crashed!",
-          t.getName(), applicationId, e);
-    }
+    return this.heartbeatHandler.getRequestQueueSize();
   }
 }
