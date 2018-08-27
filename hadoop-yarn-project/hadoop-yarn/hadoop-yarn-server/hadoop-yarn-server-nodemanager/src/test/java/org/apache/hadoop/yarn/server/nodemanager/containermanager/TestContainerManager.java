@@ -320,9 +320,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test (timeout = 10000L)
   public void testAuxPathHandler() throws Exception {
-    File testDir = GenericTestUtils.getTestDir(GenericTestUtils.getTestDir(
-        TestContainerManager.class.getSimpleName() + "LocDir").
-        getAbsolutePath());
+    File testDir = GenericTestUtils
+        .getTestDir(TestContainerManager.class.getSimpleName() + "LocDir");
     testDir.mkdirs();
     File testFile = new File(testDir, "test");
     testFile.createNewFile();
@@ -1977,15 +1976,11 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Signal signal = ContainerLaunch.translateCommandToSignal(command);
     containerManager.start();
 
-    File scriptFile = new File(tmpDir, "scriptFile.sh");
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
     PrintWriter fileWriter = new PrintWriter(scriptFile);
     File processStartFile =
         new File(tmpDir, "start_file.txt").getAbsoluteFile();
-    fileWriter.write("\numask 0"); // So that start file is readable by the test
-    fileWriter.write("\necho Hello World! > " + processStartFile);
-    fileWriter.write("\necho $$ >> " + processStartFile);
-    fileWriter.write("\nexec sleep 1000s");
-    fileWriter.close();
+    writeScriptFile(fileWriter, "Hello world!", processStartFile, null, false);
 
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -2008,9 +2003,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    List<String> commands = new ArrayList<>();
-    commands.add("/bin/bash");
-    commands.add(scriptFile.getAbsolutePath());
+    List<String> commands =
+        Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     StartContainerRequest scRequest =
         StartContainerRequest.newInstance(
