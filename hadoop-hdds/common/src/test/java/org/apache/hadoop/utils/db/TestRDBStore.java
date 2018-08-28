@@ -28,6 +28,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
@@ -39,8 +40,10 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * RDBStore Tests.
@@ -57,6 +60,7 @@ public class TestRDBStore {
   public ExpectedException thrown = ExpectedException.none();
   private RDBStore rdbStore = null;
   private DBOptions options = null;
+  private Set<TableConfig> configSet;
 
   @Before
   public void setUp() throws Exception {
@@ -67,7 +71,12 @@ public class TestRDBStore {
     Statistics statistics = new Statistics();
     statistics.setStatsLevel(StatsLevel.ALL);
     options = options.setStatistics(statistics);
-    rdbStore = new RDBStore(folder.newFolder(), options, families);
+    configSet = new HashSet<>();
+    for(String name : families) {
+      TableConfig newConfig = new TableConfig(name, new ColumnFamilyOptions());
+      configSet.add(newConfig);
+    }
+    rdbStore = new RDBStore(folder.newFolder(), options, configSet);
   }
 
   @After
@@ -80,7 +89,7 @@ public class TestRDBStore {
   @Test
   public void compactDB() throws Exception {
     try (RDBStore newStore =
-             new RDBStore(folder.newFolder(), options, families)) {
+             new RDBStore(folder.newFolder(), options, configSet)) {
       Assert.assertNotNull("DB Store cannot be null", newStore);
       try (Table firstTable = newStore.getTable(families.get(1))) {
         Assert.assertNotNull("Table cannot be null", firstTable);
@@ -101,7 +110,7 @@ public class TestRDBStore {
   @Test
   public void close() throws Exception {
     RDBStore newStore =
-        new RDBStore(folder.newFolder(), options, families);
+        new RDBStore(folder.newFolder(), options, configSet);
     Assert.assertNotNull("DBStore cannot be null", newStore);
     // This test does not assert anything if there is any error this test
     // will throw and fail.
@@ -157,7 +166,7 @@ public class TestRDBStore {
   @Test
   public void getEstimatedKeyCount() throws Exception {
     try (RDBStore newStore =
-             new RDBStore(folder.newFolder(), options, families)) {
+             new RDBStore(folder.newFolder(), options, configSet)) {
       Assert.assertNotNull("DB Store cannot be null", newStore);
       // Write 100 keys to the first table.
       try (Table firstTable = newStore.getTable(families.get(1))) {

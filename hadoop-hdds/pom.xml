@@ -105,6 +105,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
             <exclude>src/test/resources/incorrect.checksum.container</exclude>
+            <exclude>src/test/resources/test.db.ini</exclude>
           </excludes>
         </configuration>
       </plugin>

@@ -26,7 +26,7 @@ import org.apache.hadoop.utils.RocksDBStoreMBean;
 import org.apache.ratis.shaded.com.google.common.annotations.VisibleForTesting;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.ColumnFamilyOptions;
+
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -38,12 +38,12 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * RocksDB Store that supports creating Tables in DB.
@@ -58,7 +58,7 @@ public class RDBStore implements DBStore {
   private final Hashtable<String, ColumnFamilyHandle> handleTable;
   private ObjectName statMBeanName;
 
-  public RDBStore(File dbFile, DBOptions options, List<String> families)
+  public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
@@ -69,10 +69,8 @@ public class RDBStore implements DBStore {
         new ArrayList<>();
     final List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
 
-    for (String family : families) {
-      columnFamilyDescriptors.add(
-          new ColumnFamilyDescriptor(family.getBytes(StandardCharsets.UTF_8),
-              new ColumnFamilyOptions()));
+    for (TableConfig family : families) {
+      columnFamilyDescriptors.add(family.getDescriptor());
     }
 
     dbOptions = options;
@@ -141,18 +139,22 @@ public class RDBStore implements DBStore {
     for (final ColumnFamilyHandle handle : handleTable.values()) {
       handle.close();
     }
-    if (dbOptions != null) {
-      dbOptions.close();
-    }
-    if (writeOptions != null) {
-      writeOptions.close();
-    }
+
     if (statMBeanName != null) {
       MBeans.unregister(statMBeanName);
       statMBeanName = null;
     }
+
     if (db != null) {
       db.close();
+    }
+
+    if (dbOptions != null) {
+      dbOptions.close();
+    }
+
+    if (writeOptions != null) {
+      writeOptions.close();
     }
   }
 
@@ -221,7 +223,7 @@ public class RDBStore implements DBStore {
   @Override
   public long getEstimatedKeyCount() throws IOException {
     try {
-      return Long.parseLong(db.getProperty("rocksdb.estimate-num-keys"));
+      return db.getLongProperty("rocksdb.estimate-num-keys");
     } catch (RocksDBException e) {
       throw toIOException("Unable to get the estimated count.", e);
     }
@@ -244,7 +246,7 @@ public class RDBStore implements DBStore {
   @Override
   public ArrayList<Table> listTables() throws IOException {
     ArrayList<Table> returnList = new ArrayList<>();
-    for (ColumnFamilyHandle handle: handleTable.values())  {
+    for (ColumnFamilyHandle handle : handleTable.values()) {
       returnList.add(new RDBTable(db, handle, writeOptions));
     }
     return returnList;

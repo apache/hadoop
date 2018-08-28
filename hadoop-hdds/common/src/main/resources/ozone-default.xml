@@ -1098,4 +1098,14 @@
       datanode unless the datanode confirms the completion.
     </description>
   </property>
+
+  <property>
+    <name>ozone.db.profile</name>
+    <value>DBProfile.SSD</value>
+    <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
+    <description>This property allows user to pick a configuration
+    that tunes the RocksDB settings for the hardware it is running
+    on. Right now, we have SSD and DISK as profile options.</description>
+  </property>
+
 </configuration>

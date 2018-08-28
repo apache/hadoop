@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
@@ -35,8 +36,10 @@ import org.rocksdb.WriteBatch;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Tests for RocksDBTable Store.
@@ -62,7 +65,13 @@ public class TestRDBTableStore {
     Statistics statistics = new Statistics();
     statistics.setStatsLevel(StatsLevel.ALL);
     options = options.setStatistics(statistics);
-    rdbStore = new RDBStore(folder.newFolder(), options, families);
+
+    Set<TableConfig> configSet = new HashSet<>();
+    for(String name : families) {
+      TableConfig newConfig = new TableConfig(name, new ColumnFamilyOptions());
+      configSet.add(newConfig);
+    }
+    rdbStore = new RDBStore(folder.newFolder(), options, configSet);
   }
 
   @After
