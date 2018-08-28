@@ -69,12 +69,12 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
   @Before
   public void setUp() throws Exception {
-    setPolicy(new LocalityMulticastAMRMProxyPolicy());
+    setPolicy(new TestableLocalityMulticastAMRMProxyPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
-    // simulate 20 subclusters with a 5% chance of being inactive
+    // Six sub-clusters with one inactive and one disabled
     for (int i = 0; i < 6; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // sub-cluster 3 is not active
@@ -207,6 +207,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     getPolicyInfo().setHeadroomAlpha(1.0f);
 
     initializePolicy();
+    addHomeSubClusterAsActive();
 
     int numRR = 1000;
     List<ResourceRequest> resourceRequests = createLargeRandomList(numRR);
@@ -324,14 +325,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
         null, Collections.<NMToken> emptyList());
   }
 
-  @Test
-  public void testSplitAllocateRequest() throws Exception {
-
-    // Test a complex List<ResourceRequest> is split correctly
-    initializePolicy();
-
-    // modify default initialization to include a "homesubcluster"
-    // which we will use as the default for when nodes or racks are unknown
+  /**
+   * modify default initialization to include a "homesubcluster" which we will
+   * use as the default for when nodes or racks are unknown.
+   */
+  private void addHomeSubClusterAsActive() {
     SubClusterInfo sci = mock(SubClusterInfo.class);
     when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
     when(sci.getSubClusterId()).thenReturn(getHomeSubCluster());
@@ -340,6 +338,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     getPolicyInfo().getRouterPolicyWeights().put(sc, 0.1f);
     getPolicyInfo().getAMRMPolicyWeights().put(sc, 0.1f);
+  }
+
+  @Test
+  public void testSplitAllocateRequest() throws Exception {
+
+    // Test a complex List<ResourceRequest> is split correctly
+    initializePolicy();
+    addHomeSubClusterAsActive();
 
     FederationPoliciesTestUtil.initializePolicyContext(
         getFederationPolicyContext(), getPolicy(), getPolicyInfo(),
@@ -502,7 +508,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     // Test target Ids
     for (SubClusterId targetId : split.keySet()) {
-      Assert.assertTrue("Target subclusters should be in the active set",
+      Assert.assertTrue(
+          "Target subcluster " + targetId + " should be in the active set",
           getActiveSubclusters().containsKey(targetId));
       Assert.assertTrue(
           "Target subclusters (" + targetId + ") should have weight >0 in "
@@ -787,4 +794,28 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkTotalContainerAllocation(response, 100);
   }
 
+  /**
+   * A testable version of LocalityMulticastAMRMProxyPolicy that
+   * deterministically falls back to home sub-cluster for unresolved requests.
+   */
+  private class TestableLocalityMulticastAMRMProxyPolicy
+      extends LocalityMulticastAMRMProxyPolicy {
+    @Override
+    protected SubClusterId getSubClusterForUnResolvedRequest(
+        AllocationBookkeeper bookkeeper, long allocationId) {
+      SubClusterId originalResult =
+          super.getSubClusterForUnResolvedRequest(bookkeeper, allocationId);
+      Map<SubClusterId, SubClusterInfo> activeClusters = null;
+      try {
+        activeClusters = getActiveSubclusters();
+      } catch (YarnException e) {
+        throw new RuntimeException(e);
+      }
+      // The randomly selected sub-cluster should at least be active
+      Assert.assertTrue(activeClusters.containsKey(originalResult));
+
+      // Alwasy use home sub-cluster so that unit test is deterministic
+      return getHomeSubCluster();
+    }
+  }
 }
