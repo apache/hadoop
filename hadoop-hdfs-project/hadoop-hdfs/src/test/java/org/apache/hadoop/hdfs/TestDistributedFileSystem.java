@@ -100,12 +100,12 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -113,7 +113,8 @@ public class TestDistributedFileSystem {
       TestDistributedFileSystem.class);
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LeaseRenewer.LOG, Level.DEBUG);
   }
 
   private boolean dualPortTesting = false;
