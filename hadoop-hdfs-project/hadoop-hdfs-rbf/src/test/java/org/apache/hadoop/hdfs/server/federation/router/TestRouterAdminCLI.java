@@ -519,6 +519,7 @@ public class TestRouterAdminCLI {
     assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
 
     System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "get"}));
     assertTrue(out.toString().contains("true"));
@@ -534,6 +535,19 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "get"}));
     assertTrue(out.toString().contains("false"));
+
+    out.reset();
+    assertEquals(-1, ToolRunner.run(admin,
+        new String[] {"-safemode", "get", "-random", "check" }));
+    assertTrue(err.toString(), err.toString()
+        .contains("safemode: Too many arguments, Max=1 argument allowed only"));
+    err.reset();
+
+    assertEquals(-1,
+        ToolRunner.run(admin, new String[] {"-safemode", "check" }));
+    assertTrue(err.toString(),
+        err.toString().contains("safemode: Invalid argument: check"));
+    err.reset();
   }
 
   @Test
