@@ -49,6 +49,7 @@ public class TestLargeDirectoryDelete {
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY, 1);
   }
   
   /** create a file with a length of <code>filelen</code> */
@@ -137,7 +138,6 @@ public class TestLargeDirectoryDelete {
     threads[1].start();
     
     final long start = Time.now();
-    FSNamesystem.BLOCK_DELETION_INCREMENT = 1;
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
     final long end = Time.now();
     threads[0].endThread();
