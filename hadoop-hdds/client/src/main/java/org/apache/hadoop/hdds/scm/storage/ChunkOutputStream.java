@@ -94,6 +94,10 @@ public class ChunkOutputStream extends OutputStream {
     this.chunkIndex = 0;
   }
 
+  public ByteBuffer getBuffer() {
+    return buffer;
+  }
+
   @Override
   public synchronized void write(int b) throws IOException {
     checkOpen();
@@ -106,7 +110,8 @@ public class ChunkOutputStream extends OutputStream {
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public synchronized void write(byte[] b, int off, int len)
+      throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
@@ -143,24 +148,27 @@ public class ChunkOutputStream extends OutputStream {
 
   @Override
   public synchronized void close() throws IOException {
-    if (xceiverClientManager != null && xceiverClient != null &&
-        buffer != null) {
+    if (xceiverClientManager != null && xceiverClient != null
+        && buffer != null) {
+      if (buffer.position() > 0) {
+        writeChunkToContainer();
+      }
       try {
-        if (buffer.position() > 0) {
-          writeChunkToContainer();
-        }
         putKey(xceiverClient, containerKeyData.build(), traceID);
       } catch (IOException e) {
         throw new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
       } finally {
-        xceiverClientManager.releaseClient(xceiverClient);
-        xceiverClientManager = null;
-        xceiverClient = null;
-        buffer = null;
+        cleanup();
       }
     }
+  }
 
+  public synchronized void cleanup() {
+    xceiverClientManager.releaseClient(xceiverClient);
+    xceiverClientManager = null;
+    xceiverClient = null;
+    buffer = null;
   }
 
   /**

@@ -125,19 +125,16 @@ public final class OmKeyInfo {
     OmKeyLocationInfoGroup keyLocationInfoGroup = getLatestVersionLocations();
     List<OmKeyLocationInfo> currentList =
         keyLocationInfoGroup.getLocationList();
-    Preconditions.checkNotNull(keyLocationInfoGroup);
-    Preconditions.checkState(locationInfoList.size() <= currentList.size());
-    for (OmKeyLocationInfo current : currentList) {
-      // For Versioning, while committing the key for the newer version,
-      // we just need to update the lengths for new blocks. Need to iterate over
-      // and find the new blocks added in the latest version.
-      for (OmKeyLocationInfo info : locationInfoList) {
-        if (info.getBlockID().equals(current.getBlockID())) {
-          current.setLength(info.getLength());
-          break;
-        }
-      }
-    }
+    List<OmKeyLocationInfo> latestVersionList =
+        keyLocationInfoGroup.getBlocksLatestVersionOnly();
+    // Updates the latest locationList in the latest version only with
+    // given locationInfoList here.
+    // TODO : The original allocated list and the updated list here may vary
+    // as the containers on the Datanode on which the blocks were pre allocated
+    // might get closed. The diff of blocks between these two lists here
+    // need to be garbage collected in case the ozone client dies.
+    currentList.removeAll(latestVersionList);
+    currentList.addAll(locationInfoList);
   }
 
   /**

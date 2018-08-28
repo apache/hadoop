@@ -21,6 +21,10 @@ package org.apache.hadoop.ozone.container;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -603,5 +607,22 @@ public final class ContainerTestHelper {
 
   public static long getTestContainerID() {
     return Time.getUtcTime();
+  }
+
+  public static boolean isContainerClosed(MiniOzoneCluster cluster,
+      long containerID, DatanodeDetails datanode) {
+    ContainerData containerData;
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+      if (datanode.equals(datanodeService.getDatanodeDetails())) {
+        Container container =
+            datanodeService.getDatanodeStateMachine().getContainer()
+                .getContainerSet().getContainer(containerID);
+        if (container != null) {
+          containerData = container.getContainerData();
+          return containerData.isClosed();
+        }
+      }
+    }
+    return false;
   }
 }
