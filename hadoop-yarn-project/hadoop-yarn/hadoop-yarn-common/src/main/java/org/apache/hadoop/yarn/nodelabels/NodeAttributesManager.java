@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 
 /**
@@ -126,4 +127,10 @@ public abstract class NodeAttributesManager extends AbstractService {
 
   // futuristic
   // public set<NodeId> getNodesMatchingExpression(String nodeLabelExp);
+
+  /**
+   * Refresh node attributes on a given node during RM recovery.
+   * @param nodeId Node Id
+   */
+  public abstract void refreshNodeAttributesToScheduler(NodeId nodeId);
 }

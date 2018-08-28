@@ -725,4 +725,27 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   public void setRMContext(RMContext context) {
     this.rmContext  = context;
   }
+
+  /**
+   * Refresh node attributes on a given node during RM recovery.
+   * @param nodeId Node Id
+   */
+  public void refreshNodeAttributesToScheduler(NodeId nodeId) {
+    String hostName = nodeId.getHost();
+    Map<String, Set<NodeAttribute>> newNodeToAttributesMap =
+        new HashMap<>();
+    Host host = nodeCollections.get(hostName);
+    if (host == null || host.attributes == null) {
+      return;
+    }
+    newNodeToAttributesMap.put(hostName, host.attributes.keySet());
+
+    // Notify RM
+    if (rmContext != null && rmContext.getDispatcher() != null) {
+      LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
+          .values());
+      rmContext.getDispatcher().getEventHandler().handle(
+          new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
+    }
+  }
 }

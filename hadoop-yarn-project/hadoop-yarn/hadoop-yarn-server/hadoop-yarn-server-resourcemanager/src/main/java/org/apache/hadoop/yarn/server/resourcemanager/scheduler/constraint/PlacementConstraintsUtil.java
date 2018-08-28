@@ -113,7 +113,7 @@ public final class PlacementConstraintsUtil {
             || maxScopeCardinality <= desiredMaxCardinality);
   }
 
-  private static boolean canSatisfyNodeConstraintExpresssion(
+  private static boolean canSatisfyNodeConstraintExpression(
       SingleConstraint sc, TargetExpression targetExpression,
       SchedulerNode schedulerNode) {
     Set<String> values = targetExpression.getTargetValues();
@@ -138,45 +138,67 @@ public final class PlacementConstraintsUtil {
         return true;
       }
 
-      if (schedulerNode.getNodeAttributes() == null ||
-          !schedulerNode.getNodeAttributes().contains(requestAttribute)) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Incoming requestAttribute:" + requestAttribute
-              + "is not present in " + schedulerNode.getNodeID());
-        }
-        return false;
-      }
-      boolean found = false;
-      for (Iterator<NodeAttribute> it = schedulerNode.getNodeAttributes()
-          .iterator(); it.hasNext();) {
-        NodeAttribute nodeAttribute = it.next();
+      return getNodeConstraintEvaluatedResult(schedulerNode, opCode,
+          requestAttribute);
+    }
+    return true;
+  }
+
+  private static boolean getNodeConstraintEvaluatedResult(
+      SchedulerNode schedulerNode,
+      NodeAttributeOpCode opCode, NodeAttribute requestAttribute) {
+    // In case, attributes in a node is empty or incoming attributes doesn't
+    // exist on given node, accept such nodes for scheduling if opCode is
+    // equals to NE. (for eg. java != 1.8 could be scheduled on a node
+    // where java is not configured.)
+    if (schedulerNode.getNodeAttributes() == null ||
+        !schedulerNode.getNodeAttributes().contains(requestAttribute)) {
+      if (opCode == NodeAttributeOpCode.NE) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Starting to compare Incoming requestAttribute :"
-              + requestAttribute
-              + " with requestAttribute value= " + requestAttribute
-              .getAttributeValue()
-              + ", stored nodeAttribute value=" + nodeAttribute
-              .getAttributeValue());
+          LOG.debug("Incoming requestAttribute:" + requestAttribute
+              + "is not present in " + schedulerNode.getNodeID()
+              + ", however opcode is NE. Hence accept this node.");
         }
-        if (requestAttribute.equals(nodeAttribute)) {
-          if (isOpCodeMatches(requestAttribute, nodeAttribute, opCode)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(
-                  "Incoming requestAttribute:" + requestAttribute
-                      + " matches with node:" + schedulerNode.getNodeID());
-            }
-            found = true;
-            return found;
+        return true;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Incoming requestAttribute:" + requestAttribute
+            + "is not present in " + schedulerNode.getNodeID()
+            + ", skip such node.");
+      }
+      return false;
+    }
+
+    boolean found = false;
+    for (Iterator<NodeAttribute> it = schedulerNode.getNodeAttributes()
+        .iterator(); it.hasNext();) {
+      NodeAttribute nodeAttribute = it.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Starting to compare Incoming requestAttribute :"
+            + requestAttribute
+            + " with requestAttribute value= " + requestAttribute
+            .getAttributeValue()
+            + ", stored nodeAttribute value=" + nodeAttribute
+            .getAttributeValue());
+      }
+      if (requestAttribute.equals(nodeAttribute)) {
+        if (isOpCodeMatches(requestAttribute, nodeAttribute, opCode)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Incoming requestAttribute:" + requestAttribute
+                    + " matches with node:" + schedulerNode.getNodeID());
           }
+          found = true;
+          return found;
         }
       }
-      if (!found) {
-        if(LOG.isDebugEnabled()) {
-          LOG.info("skip this node:" + schedulerNode.getNodeID()
-              + " for requestAttribute:" + requestAttribute);
-        }
-        return false;
+    }
+    if (!found) {
+      if (LOG.isDebugEnabled()) {
+        LOG.info("skip this node:" + schedulerNode.getNodeID()
+            + " for requestAttribute:" + requestAttribute);
       }
+      return false;
     }
     return true;
   }
@@ -217,7 +239,7 @@ public final class PlacementConstraintsUtil {
         }
       } else if (currentExp.getTargetType().equals(TargetType.NODE_ATTRIBUTE)) {
         // This is a node attribute expression, check it.
-        if (!canSatisfyNodeConstraintExpresssion(singleConstraint, currentExp,
+        if (!canSatisfyNodeConstraintExpression(singleConstraint, currentExp,
             schedulerNode)) {
           return false;
         }

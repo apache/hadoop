@@ -1989,6 +1989,12 @@ public class CapacityScheduler extends
             schedulerNode.getTotalResource());
       }
 
+      // recover attributes from store if any.
+      if (rmContext.getNodeAttributesManager() != null) {
+        rmContext.getNodeAttributesManager()
+            .refreshNodeAttributesToScheduler(schedulerNode.getNodeID());
+      }
+
       Resource clusterResource = getClusterResource();
       getRootQueue().updateClusterResource(clusterResource,
           new ResourceLimits(clusterResource));
