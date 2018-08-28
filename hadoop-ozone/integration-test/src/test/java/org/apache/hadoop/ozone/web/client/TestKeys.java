@@ -77,7 +77,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -90,6 +89,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds
     .HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -127,6 +128,7 @@ public class TestKeys {
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         1000, TimeUnit.MILLISECONDS);
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 30, TimeUnit.SECONDS);
 
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
@@ -322,7 +324,7 @@ public class TestKeys {
   }
 
   private static void restartDatanode(MiniOzoneCluster cluster, int datanodeIdx)
-      throws OzoneException, URISyntaxException {
+      throws Exception {
     cluster.restartHddsDatanode(datanodeIdx);
   }
 
@@ -344,11 +346,6 @@ public class TestKeys {
 
     // restart the datanode
     restartDatanode(cluster, 0);
-    // TODO: Try removing sleep and adding a join for the MiniOzoneCluster start
-    // The ozoneContainer is not started and its metrics are not initialized
-    // which leads to NullPointerException in Dispatcher.
-    Thread.sleep(1000);
-    ozoneCluster.waitForClusterToBeReady();
     // verify getKey after the datanode restart
     String newFileName = helper.dir + "/"
         + OzoneUtils.getRequestID().toLowerCase();

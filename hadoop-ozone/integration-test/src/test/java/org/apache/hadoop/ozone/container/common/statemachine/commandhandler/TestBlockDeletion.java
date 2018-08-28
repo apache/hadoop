@@ -57,8 +57,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Set;
+import java.util.List;
+import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdds
     .HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
@@ -109,7 +114,7 @@ public class TestBlockDeletion {
   @Test(timeout = 60000)
   @Ignore("Until delete background service is fixed.")
   public void testBlockDeletion()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
