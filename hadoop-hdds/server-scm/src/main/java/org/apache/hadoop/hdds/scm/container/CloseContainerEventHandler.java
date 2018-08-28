@@ -62,8 +62,8 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
           containerManager.getContainerWithPipeline(containerID.getId());
       info = containerWithPipeline.getContainerInfo();
       if (info == null) {
-        LOG.error("Failed to update the container state. Container with id : {} "
-            + "does not exist", containerID.getId());
+        LOG.error("Failed to update the container state. Container with id : {}"
+            + " does not exist", containerID.getId());
         return;
       }
     } catch (IOException e) {

@@ -43,8 +43,8 @@ public final class AllocatedBlock {
       return this;
     }
 
-    public Builder setBlockID(BlockID blockID) {
-      this.blockID = blockID;
+    public Builder setBlockID(BlockID blockId) {
+      this.blockID = blockId;
       return this;
     }
 

@@ -92,8 +92,8 @@ public class TestReplicationQueue {
         1, replicationQueue.size());
     Assert.assertEquals(temp, msg5);
 
-    // Message 2 should be ordered before message 5 as both have same replication
-    // number but message 2 has earlier timestamp.
+    // Message 2 should be ordered before message 5 as both have same
+    // replication number but message 2 has earlier timestamp.
     temp = replicationQueue.take();
     Assert.assertEquals("Should have 0 objects",
         replicationQueue.size(), 0);

@@ -161,11 +161,11 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     lock.lock();
     try {
       for (int i = 0; i < count; i++) {
-        ContainerWithPipeline containerWithPipeline = null;
+        ContainerWithPipeline containerWithPipeline;
         try {
           // TODO: Fix this later when Ratis is made the Default.
-          containerWithPipeline = containerManager.allocateContainer(type, factor,
-              owner);
+          containerWithPipeline = containerManager.allocateContainer(
+              type, factor, owner);
 
           if (containerWithPipeline == null) {
             LOG.warn("Unable to allocate container.");
@@ -293,12 +293,12 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
   private String getChannelName(ReplicationType type) {
     switch (type) {
-      case RATIS:
-        return "RA" + UUID.randomUUID().toString().substring(3);
-      case STAND_ALONE:
-        return "SA" + UUID.randomUUID().toString().substring(3);
-      default:
-        return "RA" + UUID.randomUUID().toString().substring(3);
+    case RATIS:
+      return "RA" + UUID.randomUUID().toString().substring(3);
+    case STAND_ALONE:
+      return "SA" + UUID.randomUUID().toString().substring(3);
+    default:
+      return "RA" + UUID.randomUUID().toString().substring(3);
     }
   }
 

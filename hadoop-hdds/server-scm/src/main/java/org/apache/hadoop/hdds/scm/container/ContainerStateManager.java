@@ -288,9 +288,10 @@ public class ContainerStateManager implements Closeable {
    * @return ContainerWithPipeline
    * @throws IOException  on Failure.
    */
-  public ContainerWithPipeline allocateContainer(PipelineSelector selector, HddsProtos
-      .ReplicationType type, HddsProtos.ReplicationFactor replicationFactor,
-      String owner) throws IOException {
+  public ContainerWithPipeline allocateContainer(PipelineSelector selector,
+      HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor replicationFactor, String owner)
+      throws IOException {
 
     Pipeline pipeline = selector.getReplicationPipeline(type,
         replicationFactor);

@@ -424,7 +424,8 @@ public class TestNodeManager {
       List<DatanodeDetails> nodeList = createNodeSet(nodeManager, nodeCount);
 
 
-      DatanodeDetails staleNode = TestUtils.createRandomDatanodeAndRegister(nodeManager);
+      DatanodeDetails staleNode = TestUtils.createRandomDatanodeAndRegister(
+          nodeManager);
 
       // Heartbeat once
       nodeManager.processHeartbeat(staleNode);

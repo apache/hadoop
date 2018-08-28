@@ -232,7 +232,8 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     lock.lock();
     try {
       Set<UUID> dnsWithCommittedTxn;
-      for (DeleteBlockTransactionResult transactionResult : transactionResults) {
+      for (DeleteBlockTransactionResult transactionResult :
+          transactionResults) {
         if (isTransactionFailed(transactionResult)) {
           continue;
         }

@@ -86,7 +86,7 @@ public class TestContainerReportHandler implements EventPublisher {
                     .setContainerID((Long) invocation.getArguments()[0])
                     .setState(LifeCycleState.CLOSED)
                     .build()
-        );
+      );
 
     ContainerStateManager containerStateManager =
         new ContainerStateManager(conf, mapping);

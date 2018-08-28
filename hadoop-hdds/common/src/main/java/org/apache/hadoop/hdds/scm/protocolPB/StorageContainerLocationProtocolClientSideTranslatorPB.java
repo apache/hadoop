@@ -97,8 +97,9 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor factor, String owner) throws IOException {
+  public ContainerWithPipeline allocateContainer(
+      HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
+      String owner) throws IOException {
 
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
         .setReplicationFactor(factor)
@@ -116,7 +117,8 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       throw new IOException(response.hasErrorMessage() ?
           response.getErrorMessage() : "Allocate container failed.");
     }
-    return ContainerWithPipeline.fromProtobuf(response.getContainerWithPipeline());
+    return ContainerWithPipeline.fromProtobuf(
+        response.getContainerWithPipeline());
   }
 
   public ContainerInfo getContainer(long containerID) throws IOException {
@@ -138,17 +140,18 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   /**
    * {@inheritDoc}
    */
-  public ContainerWithPipeline getContainerWithPipeline(long containerID) throws IOException {
+  public ContainerWithPipeline getContainerWithPipeline(long containerID)
+      throws IOException {
     Preconditions.checkState(containerID >= 0,
         "Container ID cannot be negative");
-    GetContainerWithPipelineRequestProto request = GetContainerWithPipelineRequestProto
-        .newBuilder()
-        .setContainerID(containerID)
-        .build();
+    GetContainerWithPipelineRequestProto request =
+        GetContainerWithPipelineRequestProto.newBuilder()
+            .setContainerID(containerID).build();
     try {
       GetContainerWithPipelineResponseProto response =
           rpcProxy.getContainerWithPipeline(NULL_RPC_CONTROLLER, request);
-      return ContainerWithPipeline.fromProtobuf(response.getContainerWithPipeline());
+      return ContainerWithPipeline.fromProtobuf(
+          response.getContainerWithPipeline());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

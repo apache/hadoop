@@ -132,7 +132,7 @@ public class ContainerSet {
   }
 
   /**
-   * Return a copy of the containerMap
+   * Return a copy of the containerMap.
    * @return containerMap
    */
   public Map<Long, Container> getContainerMap() {

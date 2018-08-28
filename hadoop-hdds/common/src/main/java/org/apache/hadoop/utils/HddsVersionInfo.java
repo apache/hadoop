@@ -36,7 +36,8 @@ import java.util.Properties;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class HddsVersionInfo {
-  private static final Logger LOG = LoggerFactory.getLogger(HddsVersionInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      HddsVersionInfo.class);
 
   private Properties info;
 
@@ -95,7 +96,8 @@ public class HddsVersionInfo {
     return info.getProperty("protocVersion", "Unknown");
   }
 
-  private static HddsVersionInfo HDDS_VERSION_INFO = new HddsVersionInfo("hdds");
+  private static final HddsVersionInfo HDDS_VERSION_INFO =
+      new HddsVersionInfo("hdds");
   /**
    * Get the HDDS version.
    * @return the Hdds version string, eg. "0.6.3-dev"

@@ -37,13 +37,12 @@ import org.slf4j.LoggerFactory;
 
 public class TestNodeReportHandler implements EventPublisher {
 
-  private static Logger LOG = LoggerFactory
+  private static final Logger LOG = LoggerFactory
       .getLogger(TestNodeReportHandler.class);
   private NodeReportHandler nodeReportHandler;
   private SCMNodeManager nodeManager;
   private String storagePath = GenericTestUtils.getRandomizedTempPath()
       .concat("/" + UUID.randomUUID().toString());
-  ;
 
   @Before
   public void resetEventCollector() throws IOException {

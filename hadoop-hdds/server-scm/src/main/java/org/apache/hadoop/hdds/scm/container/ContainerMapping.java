@@ -600,8 +600,8 @@ public class ContainerMapping implements Mapping {
         .setReplicationType(knownState.getReplicationType())
         .setReplicationFactor(knownState.getReplicationFactor());
 
-    // TODO: If current state doesn't have this DN in list of DataNodes with replica
-    // then add it in list of replicas.
+    // TODO: If current state doesn't have this DN in list of DataNodes with
+    // replica then add it in list of replicas.
 
     // If used size is greater than allocated size, we will be updating
     // allocated size with used size. This update is done as a fallback

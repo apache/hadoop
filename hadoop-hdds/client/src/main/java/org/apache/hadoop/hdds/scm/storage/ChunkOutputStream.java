@@ -76,8 +76,8 @@ public class ChunkOutputStream extends OutputStream {
    * @param chunkSize chunk size
    */
   public ChunkOutputStream(BlockID blockID, String key,
-       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
-       String traceID, int chunkSize) {
+       XceiverClientManager xceiverClientManager,
+       XceiverClientSpi xceiverClient, String traceID, int chunkSize) {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;

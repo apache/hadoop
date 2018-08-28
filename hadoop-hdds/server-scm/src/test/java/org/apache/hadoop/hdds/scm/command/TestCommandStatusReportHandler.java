@@ -48,12 +48,11 @@ import static org.junit.Assert.assertFalse;
 
 public class TestCommandStatusReportHandler implements EventPublisher {
 
-  private static Logger LOG = LoggerFactory
+  private static final Logger LOG = LoggerFactory
       .getLogger(TestCommandStatusReportHandler.class);
   private CommandStatusReportHandler cmdStatusReportHandler;
   private String storagePath = GenericTestUtils.getRandomizedTempPath()
       .concat("/" + UUID.randomUUID().toString());
-  ;
 
   @Before
   public void setup() {
@@ -69,10 +68,9 @@ public class TestCommandStatusReportHandler implements EventPublisher {
         .emptyList());
     cmdStatusReportHandler.onMessage(report, this);
     assertFalse(logCapturer.getOutput().contains("DeleteBlockCommandStatus"));
-    assertFalse(logCapturer.getOutput().contains
-        ("CloseContainerCommandStatus"));
-    assertFalse(logCapturer.getOutput().contains
-        ("ReplicateCommandStatus"));
+    assertFalse(logCapturer.getOutput().contains(
+        "CloseContainerCommandStatus"));
+    assertFalse(logCapturer.getOutput().contains("ReplicateCommandStatus"));
 
 
     report = this.getStatusReport(this.getCommandStatusList());
@@ -93,13 +91,13 @@ public class TestCommandStatusReportHandler implements EventPublisher {
 
   }
 
-  private CommandStatusReportFromDatanode getStatusReport(List<CommandStatus>
-      reports) {
-    CommandStatusReportsProto report = TestUtils.createCommandStatusReport
-        (reports);
+  private CommandStatusReportFromDatanode getStatusReport(
+      List<CommandStatus> reports) {
+    CommandStatusReportsProto report = TestUtils.createCommandStatusReport(
+        reports);
     DatanodeDetails dn = TestUtils.randomDatanodeDetails();
-    return new SCMDatanodeHeartbeatDispatcher.CommandStatusReportFromDatanode
-        (dn, report);
+    return new SCMDatanodeHeartbeatDispatcher.CommandStatusReportFromDatanode(
+        dn, report);
   }
 
   @Override

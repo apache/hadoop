@@ -32,8 +32,6 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -158,7 +156,8 @@ public class TestContainerPlacement {
 
       assertTrue(nodeManager.isOutOfChillMode());
 
-      ContainerWithPipeline containerWithPipeline = containerManager.allocateContainer(
+      ContainerWithPipeline containerWithPipeline = containerManager
+          .allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), "OZONE");
       assertEquals(xceiverClientManager.getFactor().getNumber(),

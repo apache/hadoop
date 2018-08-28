@@ -52,13 +52,13 @@ public class TestSCMContainerPlacementCapacity {
         .thenReturn(new ArrayList<>(datanodes));
 
     when(mockNodeManager.getNodeStat(anyObject()))
-        .thenReturn(new SCMNodeMetric(100l, 0L, 100L));
+        .thenReturn(new SCMNodeMetric(100L, 0L, 100L));
     when(mockNodeManager.getNodeStat(datanodes.get(2)))
-        .thenReturn(new SCMNodeMetric(100l, 90L, 10L));
+        .thenReturn(new SCMNodeMetric(100L, 90L, 10L));
     when(mockNodeManager.getNodeStat(datanodes.get(3)))
-        .thenReturn(new SCMNodeMetric(100l, 80L, 20L));
+        .thenReturn(new SCMNodeMetric(100L, 80L, 20L));
     when(mockNodeManager.getNodeStat(datanodes.get(4)))
-        .thenReturn(new SCMNodeMetric(100l, 70L, 30L));
+        .thenReturn(new SCMNodeMetric(100L, 70L, 30L));
 
     SCMContainerPlacementCapacity scmContainerPlacementRandom =
         new SCMContainerPlacementCapacity(mockNodeManager, conf);

@@ -154,7 +154,7 @@ public class XceiverClientManager implements Closeable {
               break;
             case CHAINED:
             default:
-              throw new IOException ("not implemented" + pipeline.getType());
+              throw new IOException("not implemented" + pipeline.getType());
             }
             client.connect();
             return client;

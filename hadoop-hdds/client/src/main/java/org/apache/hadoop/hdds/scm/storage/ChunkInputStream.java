@@ -65,7 +65,8 @@ public class ChunkInputStream extends InputStream implements Seekable {
    * @param chunks list of chunks to read
    * @param traceID container protocol call traceID
    */
-  public ChunkInputStream(BlockID blockID, XceiverClientManager xceiverClientManager,
+  public ChunkInputStream(
+      BlockID blockID, XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID) {
     this.blockID = blockID;
     this.traceID = traceID;
@@ -211,8 +212,8 @@ public class ChunkInputStream extends InputStream implements Seekable {
     if (pos < 0 || (chunks.size() == 0 && pos > 0)
         || pos >= chunkOffset[chunks.size() - 1] + chunks.get(chunks.size() - 1)
         .getLen()) {
-      throw new EOFException(
-          "EOF encountered pos: " + pos + " container key: " + blockID.getLocalID());
+      throw new EOFException("EOF encountered pos: " + pos + " container key: "
+          + blockID.getLocalID());
     }
     if (chunkIndex == -1) {
       chunkIndex = Arrays.binarySearch(chunkOffset, pos);

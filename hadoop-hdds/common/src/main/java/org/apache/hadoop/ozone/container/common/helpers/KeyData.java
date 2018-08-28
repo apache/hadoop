@@ -37,7 +37,8 @@ public class KeyData {
 
   /**
    * Represent a list of chunks.
-   * In order to reduce memory usage, chunkList is declared as an {@link Object}.
+   * In order to reduce memory usage, chunkList is declared as an
+   * {@link Object}.
    * When #elements == 0, chunkList is null.
    * When #elements == 1, chunkList refers to the only element.
    * When #elements > 1, chunkList refers to the list.
@@ -157,7 +158,7 @@ public class KeyData {
   }
 
   /**
-   * Adds chinkInfo to the list
+   * Adds chinkInfo to the list.
    */
   public void addChunk(ContainerProtos.ChunkInfo chunkInfo) {
     if (chunkList == null) {
@@ -237,7 +238,8 @@ public class KeyData {
     } else {
       final int n = chunks.size();
       chunkList = n == 0? null: n == 1? chunks.get(0): chunks;
-      size = chunks.parallelStream().mapToLong(ContainerProtos.ChunkInfo::getLen).sum();
+      size = chunks.parallelStream().mapToLong(
+          ContainerProtos.ChunkInfo::getLen).sum();
     }
   }
 

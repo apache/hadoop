@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
@@ -188,13 +187,12 @@ public class XceiverClient extends XceiverClientSpi {
   /**
    * Create a pipeline.
    *
-   * @param pipeline -  pipeline to be created.
+   * @param ignored -  pipeline to be created.
    */
   @Override
-  public void createPipeline(Pipeline pipeline)
+  public void createPipeline(Pipeline ignored)
       throws IOException {
     // For stand alone pipeline, there is no notion called setup pipeline.
-    return;
   }
 
   /**

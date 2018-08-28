@@ -53,8 +53,7 @@ public class TestOzoneContainerRatis {
   public Timeout testTimeout = new Timeout(300000);
 
   static OzoneConfiguration newOzoneConfiguration() {
-    final OzoneConfiguration conf = new OzoneConfiguration();
-    return conf;
+    return new OzoneConfiguration();
   }
 
   private static void runTestOzoneContainerViaDataNodeRatis(

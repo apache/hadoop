@@ -62,7 +62,8 @@ public class TestOzoneContainer {
     conf = new OzoneConfiguration();
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, folder.getRoot()
         .getAbsolutePath());
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, folder.newFolder().getAbsolutePath());
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
+        folder.newFolder().getAbsolutePath());
   }
 
   @Test

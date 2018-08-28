@@ -45,10 +45,12 @@ public class OpenContainerBlockMap {
   /**
    * Map: localId -> KeyData.
    *
-   * In order to support {@link #getAll()}, the update operations are synchronized.
+   * In order to support {@link #getAll()}, the update operations are
+   * synchronized.
    */
   static class KeyDataMap {
-    private final ConcurrentMap<Long, KeyData> blocks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, KeyData> blocks =
+        new ConcurrentHashMap<>();
 
     KeyData get(long localId) {
       return blocks.get(localId);
@@ -59,7 +61,8 @@ public class OpenContainerBlockMap {
       return blocks.size();
     }
 
-    synchronized KeyData computeIfAbsent(long localId, Function<Long, KeyData> f) {
+    synchronized KeyData computeIfAbsent(
+        long localId, Function<Long, KeyData> f) {
       return blocks.computeIfAbsent(localId, f);
     }
 
@@ -76,7 +79,8 @@ public class OpenContainerBlockMap {
    *
    * For now, we will track all open blocks of a container in the blockMap.
    */
-  private final ConcurrentMap<Long, KeyDataMap> containers = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Long, KeyDataMap> containers =
+      new ConcurrentHashMap<>();
 
   /**
    * Removes the Container matching with specified containerId.
@@ -109,7 +113,7 @@ public class OpenContainerBlockMap {
   }
 
   /**
-   * returns the list of open to the openContainerBlockMap
+   * Returns the list of open to the openContainerBlockMap.
    * @param containerId container id
    * @return List of open Keys(blocks)
    */
@@ -130,15 +134,14 @@ public class OpenContainerBlockMap {
   }
 
   /**
-   * Returns true if the block exists in the map, false otherwise
+   * Returns true if the block exists in the map, false otherwise.
    *
    * @param blockID
    * @return True, if it exists, false otherwise
    */
   public boolean checkIfBlockExists(BlockID blockID) {
     KeyDataMap keyDataMap = containers.get(blockID.getContainerID());
-    return keyDataMap == null ? false :
-        keyDataMap.get(blockID.getLocalID()) != null;
+    return keyDataMap != null && keyDataMap.get(blockID.getLocalID()) != null;
   }
 
   @VisibleForTesting

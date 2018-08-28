@@ -111,7 +111,7 @@ public abstract class PipelineManager {
       ReplicationFactor replicationFactor);
 
   /**
-   * Initialize the pipeline
+   * Initialize the pipeline.
    * TODO: move the initialization to Ozone Client later
    */
   public abstract void initializePipeline(Pipeline pipeline) throws IOException;
@@ -176,7 +176,7 @@ public abstract class PipelineManager {
   }
 
   /**
-   * Remove the pipeline from active allocation
+   * Remove the pipeline from active allocation.
    * @param pipeline pipeline to be finalized
    */
   public synchronized void finalizePipeline(Pipeline pipeline) {
@@ -193,7 +193,7 @@ public abstract class PipelineManager {
   }
 
   /**
-   * list members in the pipeline .
+   * list members in the pipeline.
    * @return the datanode
    */
   public abstract List<DatanodeDetails> getMembers(PipelineID pipelineID)

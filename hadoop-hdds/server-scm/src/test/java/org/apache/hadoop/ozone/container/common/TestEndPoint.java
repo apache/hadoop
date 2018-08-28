@@ -121,7 +121,7 @@ public class TestEndPoint {
     config.set(OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     config
         .setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
-    config.set(HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL,"1s");
+    config.set(HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL, "1s");
   }
 
   @Test
@@ -228,8 +228,8 @@ public class TestEndPoint {
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         nonExistentServerAddress, 1000)) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
-      OzoneContainer ozoneContainer = new OzoneContainer(TestUtils.randomDatanodeDetails(),
-          conf, null);
+      OzoneContainer ozoneContainer = new OzoneContainer(
+          TestUtils.randomDatanodeDetails(), conf, null);
       VersionEndpointTask versionTask = new VersionEndpointTask(rpcEndPoint,
           conf, ozoneContainer);
       EndpointStateMachine.EndPointStates newState = versionTask.call();
@@ -405,7 +405,8 @@ public class TestEndPoint {
       assertEquals(0, scmServerImpl.getCommandStatusReportCount());
 
       // Send heartbeat again from heartbeat endpoint task
-      final StateContext stateContext = heartbeatTaskHelper(serverAddress, 3000);
+      final StateContext stateContext = heartbeatTaskHelper(
+          serverAddress, 3000);
       Map<Long, CommandStatus> map = stateContext.getCommandStatusMap();
       assertNotNull(map);
       assertEquals("Should have 3 objects", 3, map.size());

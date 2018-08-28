@@ -61,7 +61,7 @@ public class TestBucketsRatis {
 
   @BeforeClass
   public static void init() throws Exception {
-    suite = new RatisTestHelper.RatisTestSuite(TestBucketsRatis.class);
+    suite = new RatisTestHelper.RatisTestSuite();
     conf = suite.getConf();
   }
 

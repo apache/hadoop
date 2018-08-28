@@ -178,8 +178,8 @@ public class TestContainerMapping {
     mapping
         .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CLOSE);
     ContainerInfo finalContInfo = contInfo;
-    LambdaTestUtils.intercept(SCMException.class,"No entry exist for "
-        + "containerId:" , () -> mapping.getContainerWithPipeline(
+    LambdaTestUtils.intercept(SCMException.class, "No entry exist for "
+        + "containerId:", () -> mapping.getContainerWithPipeline(
         finalContInfo.getContainerID()));
 
     mapping.getStateManager().getContainerStateMap()
@@ -376,7 +376,8 @@ public class TestContainerMapping {
   @Test
   public void testFlushAllContainers() throws IOException {
     ContainerInfo info = createContainer();
-    List<ContainerInfo> containers = mapping.getStateManager().getAllContainers();
+    List<ContainerInfo> containers = mapping.getStateManager()
+        .getAllContainers();
     Assert.assertTrue(containers.size() > 0);
     mapping.flushContainerInfo();
   }

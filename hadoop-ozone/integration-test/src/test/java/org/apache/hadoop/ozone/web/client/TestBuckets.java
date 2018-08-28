@@ -30,7 +30,6 @@ import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -95,8 +94,6 @@ public class TestBuckets {
       InterruptedException {
     conf = new OzoneConfiguration();
 
-    String path = GenericTestUtils
-        .getTempPath(TestBuckets.class.getSimpleName());
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
         .build();
@@ -128,7 +125,7 @@ public class TestBuckets {
   }
 
   static void runTestCreateBucket(ClientProtocol client)
-      throws OzoneException, IOException, ParseException {
+      throws IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
     VolumeArgs volumeArgs = VolumeArgs.newBuilder()
         .setOwner("bilbo")

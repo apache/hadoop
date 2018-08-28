@@ -84,8 +84,8 @@ public class Node2ContainerMap {
    * @throws SCMException - if we don't know about this datanode, for new DN
    *                      use insertNewDatanode.
    */
-  public void setContainersForDatanode(UUID datanodeID, Set<ContainerID> containers)
-      throws SCMException {
+  public void setContainersForDatanode(UUID datanodeID,
+      Set<ContainerID> containers) throws SCMException {
     Preconditions.checkNotNull(datanodeID);
     Preconditions.checkNotNull(containers);
     if (dn2ContainerMap

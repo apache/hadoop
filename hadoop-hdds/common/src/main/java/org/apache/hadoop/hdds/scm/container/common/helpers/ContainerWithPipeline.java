@@ -26,8 +26,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 /**
  * Class wraps ozone container info.
  */
-public class ContainerWithPipeline
-    implements Comparator<ContainerWithPipeline>, Comparable<ContainerWithPipeline> {
+public class ContainerWithPipeline implements Comparator<ContainerWithPipeline>,
+    Comparable<ContainerWithPipeline> {
 
   private final ContainerInfo containerInfo;
   private final Pipeline pipeline;
@@ -45,7 +45,8 @@ public class ContainerWithPipeline
     return pipeline;
   }
 
-  public static ContainerWithPipeline fromProtobuf(HddsProtos.ContainerWithPipeline allocatedContainer) {
+  public static ContainerWithPipeline fromProtobuf(
+      HddsProtos.ContainerWithPipeline allocatedContainer) {
     return new ContainerWithPipeline(
         ContainerInfo.fromProtobuf(allocatedContainer.getContainerInfo()),
         Pipeline.getFromProtoBuf(allocatedContainer.getPipeline()));

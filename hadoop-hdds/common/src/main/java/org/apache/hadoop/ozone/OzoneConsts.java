@@ -110,11 +110,6 @@ public final class OzoneConsts {
     }
   }
 
-  /**
-   * Ozone handler types.
-   */
-  public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
-
   public static final String DELETING_KEY_PREFIX = "#deleting#";
   public static final String DELETED_KEY_PREFIX = "#deleted#";
   public static final String DELETE_TRANSACTION_KEY_PREFIX = "#delTX#";

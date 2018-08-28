@@ -182,7 +182,7 @@ public class ReplicationManager implements Runnable {
   }
 
   /**
-   * Event for the ReplicationCommandWatcher to repeate the embedded request
+   * Event for the ReplicationCommandWatcher to repeate the embedded request.
    * in case fof timeout.
    */
   public static class ReplicationRequestToRepeat

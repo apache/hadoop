@@ -67,8 +67,8 @@ public interface KeyManager {
    * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
-  List<KeyData> listKey(Container container, long startLocalID, int count) throws
-      IOException;
+  List<KeyData> listKey(Container container, long startLocalID, int count)
+      throws IOException;
 
   /**
    * Returns the last committed block length for the block.

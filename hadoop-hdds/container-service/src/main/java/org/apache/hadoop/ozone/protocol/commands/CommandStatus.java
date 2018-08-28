@@ -109,23 +109,23 @@ public class CommandStatus {
       return new CommandStatusBuilder();
     }
 
-    public CommandStatusBuilder setType(Type type) {
-      this.type = type;
+    public CommandStatusBuilder setType(Type commandType) {
+      this.type = commandType;
       return this;
     }
 
-    public CommandStatusBuilder setCmdId(Long cmdId) {
-      this.cmdId = cmdId;
+    public CommandStatusBuilder setCmdId(Long commandId) {
+      this.cmdId = commandId;
       return this;
     }
 
-    public CommandStatusBuilder setStatus(Status status) {
-      this.status = status;
+    public CommandStatusBuilder setStatus(Status commandStatus) {
+      this.status = commandStatus;
       return this;
     }
 
-    public CommandStatusBuilder setMsg(String msg) {
-      this.msg = msg;
+    public CommandStatusBuilder setMsg(String message) {
+      this.msg = message;
       return this;
     }
 

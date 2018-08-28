@@ -126,7 +126,7 @@ public class PipelineSelector {
   }
 
   /**
-   * Event and State Transition Mapping:
+   * Event and State Transition Mapping.
    *
    * State: ALLOCATED ---------------> CREATING
    * Event:                CREATE
@@ -293,7 +293,7 @@ public class PipelineSelector {
       pipeline = manager.getPipeline(replicationFactor, replicationType);
     } else {
       // if a new pipeline is created, initialize its state machine
-      updatePipelineState(pipeline,HddsProtos.LifeCycleEvent.CREATE);
+      updatePipelineState(pipeline, HddsProtos.LifeCycleEvent.CREATE);
 
       //TODO: move the initialization of pipeline to Ozone Client
       manager.initializePipeline(pipeline);
@@ -334,7 +334,8 @@ public class PipelineSelector {
   /**
    * Close a given pipeline.
    */
-  public void closePipelineIfNoOpenContainers(Pipeline pipeline) throws IOException {
+  public void closePipelineIfNoOpenContainers(Pipeline pipeline)
+      throws IOException {
     if (pipeline.getLifeCycleState() != LifeCycleState.CLOSING) {
       return;
     }

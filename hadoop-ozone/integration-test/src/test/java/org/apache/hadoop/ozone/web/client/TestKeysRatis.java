@@ -57,7 +57,7 @@ public class TestKeysRatis {
 
   @BeforeClass
   public static void init() throws Exception {
-    suite = new RatisTestHelper.RatisTestSuite(TestBucketsRatis.class);
+    suite = new RatisTestHelper.RatisTestSuite();
     path = GenericTestUtils.getTempPath(TestKeysRatis.class.getSimpleName());
     ozoneCluster = suite.getCluster();
     ozoneCluster.waitForClusterToBeReady();
