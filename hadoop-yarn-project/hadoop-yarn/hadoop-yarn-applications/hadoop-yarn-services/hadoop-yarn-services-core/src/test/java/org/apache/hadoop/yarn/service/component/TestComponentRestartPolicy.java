@@ -110,7 +110,6 @@ public class TestComponentRestartPolicy {
 
     assertEquals(true, restartPolicy.isReadyForDownStream(component));
 
-
     when(component.getNumSucceededInstances()).thenReturn(new Long(2));
     when(component.getNumFailedInstances()).thenReturn(new Long(1));
     when(component.getNumDesiredInstances()).thenReturn(3);
