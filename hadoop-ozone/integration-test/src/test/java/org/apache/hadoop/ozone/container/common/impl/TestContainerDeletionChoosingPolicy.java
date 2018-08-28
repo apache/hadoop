@@ -28,7 +28,6 @@ import java.util.Random;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -45,17 +44,14 @@ import org.junit.Test;
  */
 public class TestContainerDeletionChoosingPolicy {
   private static String path;
-  private static ContainerSet containerSet;
-  private static OzoneConfiguration conf;
+  private  ContainerSet containerSet;
+  private OzoneConfiguration conf;
 
   @Before
   public void init() throws Throwable {
     conf = new OzoneConfiguration();
     path = GenericTestUtils
         .getTempPath(TestContainerDeletionChoosingPolicy.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
   }
 
   @Test

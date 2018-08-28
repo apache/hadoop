@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
@@ -62,19 +61,12 @@ public class TestOzoneWebAccess {
   /**
    * Create a MiniDFSCluster for testing.
    *
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
-   * emulate Ozone backend.
-   *
+   * Ozone is made active by setting OZONE_ENABLED = true
    * @throws IOException
    */
   @BeforeClass
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
-
-    String path = GenericTestUtils
-        .getTempPath(TestOzoneWebAccess.class.getSimpleName());
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();

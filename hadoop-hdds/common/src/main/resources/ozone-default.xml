@@ -278,17 +278,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.handler.type</name>
-    <value>distributed</value>
-    <tag>OZONE, REST</tag>
-    <description>
-      Tells ozone which storage handler to use. The possible values are:
-      distributed - The Ozone distributed storage handler, which speaks to
-      OM/SCM on the backend and provides REST services to clients.
-      local - Local Storage handler strictly for testing - To be removed.
-    </description>
-  </property>
-  <property>
     <name>ozone.key.deleting.limit.per.task</name>
     <value>1000</value>
     <tag>OM, PERFORMANCE</tag>
@@ -414,16 +403,6 @@
     <tag>OM, SECURITY</tag>
     <description>
       Default user permissions used in OM.
-    </description>
-  </property>
-  <property>
-    <name>ozone.localstorage.root</name>
-    <value>${hadoop.tmp.dir}/ozone</value>
-    <tag>OZONE, DEBUG</tag>
-    <description>
-      This is used only for testing purposes. This value is used by the local
-      storage handler to simulate a REST backend. This is useful only when
-      debugging the REST front end independent of OM and SCM. To be removed.
     </description>
   </property>
   <property>

@@ -19,10 +19,11 @@
 package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.localstorage.LocalStorageHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 /**
  * This class is responsible for providing a {@link StorageHandler}
@@ -31,6 +32,9 @@ import org.apache.hadoop.ozone.web.localstorage.LocalStorageHandler;
 @InterfaceAudience.Private
 public final class StorageHandlerBuilder {
 
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StorageHandlerBuilder.class);
   private static final ThreadLocal<StorageHandler>
       STORAGE_HANDLER_THREAD_LOCAL = new ThreadLocal<>();
 
@@ -40,15 +44,15 @@ public final class StorageHandlerBuilder {
    *
    * @return StorageHandler from thread-local storage
    */
-  public static StorageHandler getStorageHandler() {
+  public static StorageHandler getStorageHandler() throws IOException {
     StorageHandler storageHandler = STORAGE_HANDLER_THREAD_LOCAL.get();
     if (storageHandler != null) {
       return storageHandler;
     } else {
-      // This only happens while using mvn jetty:run for testing.
-      Configuration conf = new OzoneConfiguration();
-      return new LocalStorageHandler(conf);
+      LOG.error("No Storage Handler Configured.");
+      throw new IOException("Invalid Handler Configuration");
     }
+
   }
 
   /**

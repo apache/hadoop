@@ -19,9 +19,9 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -58,7 +58,7 @@ public class TestKeysRatis {
   @BeforeClass
   public static void init() throws Exception {
     suite = new RatisTestHelper.RatisTestSuite(TestBucketsRatis.class);
-    path = suite.getConf().get(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT);
+    path = GenericTestUtils.getTempPath(TestKeysRatis.class.getSimpleName());
     ozoneCluster = suite.getCluster();
     ozoneCluster.waitForClusterToBeReady();
     client = suite.newOzoneClient();

@@ -47,8 +47,6 @@ public class TestRatisManager {
 
   static OzoneConfiguration newOzoneConfiguration() {
     final OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerTestHelper.setOzoneLocalStorageRoot(
-        TestRatisManager.class, conf);
     return conf;
   }
 

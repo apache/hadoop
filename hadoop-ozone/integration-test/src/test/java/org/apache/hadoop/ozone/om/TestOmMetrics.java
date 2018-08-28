@@ -23,9 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,8 +50,6 @@ public class TestOmMetrics {
   @Before
   public void setup() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
-        OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     ozoneManager = cluster.getOzoneManager();
@@ -104,7 +100,8 @@ public class TestOmMetrics {
     Mockito.doThrow(exception).when(mockVm).setOwner(null, null);
     Mockito.doThrow(exception).when(mockVm).listVolumes(null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(ozoneManager, "volumeManager", mockVm);
+    org.apache.hadoop.test.Whitebox.setInternalState(ozoneManager,
+        "volumeManager", mockVm);
     doVolumeOps();
 
     omMetrics = getMetrics("OMMetrics");

@@ -50,10 +50,9 @@ public interface RatisTestHelper {
     private final MiniOzoneCluster cluster;
 
     /**
-     * Create a {@link MiniOzoneCluster} for testing by setting
-     *   OZONE_ENABLED = true,
-     *   RATIS_ENABLED = true, and
-     *   OZONE_HANDLER_TYPE_KEY = "distributed".
+     * Create a {@link MiniOzoneCluster} for testing by setting.
+     *   OZONE_ENABLED = true
+     *   RATIS_ENABLED = true
      */
     public RatisTestSuite(final Class<?> clazz)
         throws IOException, TimeoutException, InterruptedException {
@@ -88,7 +87,6 @@ public interface RatisTestHelper {
   static OzoneConfiguration newOzoneConfiguration(
       Class<?> clazz, RpcType rpc) {
     final OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerTestHelper.setOzoneLocalStorageRoot(clazz, conf);
     initRatisConf(rpc, conf);
     return conf;
   }

@@ -38,7 +38,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -71,15 +70,6 @@ public final class ContainerTestHelper {
    * Never constructed.
    */
   private ContainerTestHelper() {
-  }
-
-  public static void setOzoneLocalStorageRoot(
-      Class<?> clazz, OzoneConfiguration conf) {
-    String path = GenericTestUtils.getTempPath(clazz.getSimpleName());
-    path += conf.getTrimmed(
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
   }
 
   // TODO: mock multi-node pipeline

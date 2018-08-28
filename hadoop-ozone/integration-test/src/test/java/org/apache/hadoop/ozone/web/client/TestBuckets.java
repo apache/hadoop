@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.VolumeArgs;
@@ -86,9 +85,7 @@ public class TestBuckets {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
-   * emulate Ozone backend.
+   * Ozone is made active by setting OZONE_ENABLED = true
    *
    * @throws IOException
    */
@@ -100,10 +97,6 @@ public class TestBuckets {
 
     String path = GenericTestUtils
         .getTempPath(TestBuckets.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
         .build();
