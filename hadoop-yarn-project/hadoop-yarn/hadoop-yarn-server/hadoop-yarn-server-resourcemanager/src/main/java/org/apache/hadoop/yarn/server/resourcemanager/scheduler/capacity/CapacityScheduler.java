@@ -348,7 +348,7 @@ public class CapacityScheduler extends
         throw new YarnRuntimeException("RM uses DefaultResourceCalculator which"
             + " used only memory as resource-type but invalid resource-types"
             + " specified " + ResourceUtils.getResourceTypes() + ". Use"
-            + " DomainantResourceCalculator instead to make effective use of"
+            + " DominantResourceCalculator instead to make effective use of"
             + " these resource-types");
       }
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
