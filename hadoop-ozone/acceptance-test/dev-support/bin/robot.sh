@@ -18,7 +18,7 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [ ! "$(which robot)" ] ; then
+if [ ! "$(command -v robot)" ] ; then
     echo ""
     echo "robot is not on your PATH."
     echo ""
@@ -28,10 +28,11 @@ if [ ! "$(which robot)" ] ; then
     exit -1
 fi
 
-OZONEDISTDIR="$DIR/../../../../hadoop-dist/target/ozone"
+MARKERFILE=$(find "$DIR/../../../../hadoop-dist/target" -name hadoop-ozone.sh)
+OZONEDISTDIR="$(dirname "$(dirname "$(dirname "$MARKERFILE")")")"
 if [ ! -d "$OZONEDISTDIR" ]; then
    echo "Ozone can't be found in the $OZONEDISTDIR."
    echo "You may need a full build with -Phdds and -Pdist profiles"
    exit -1
 fi
-robot -x junit-results.xml "$@"
+robot --variable "OZONEDIR:$OZONEDISTDIR" -x junit-results.xml "$@"

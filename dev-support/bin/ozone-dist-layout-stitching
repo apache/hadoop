@@ -117,9 +117,9 @@ ROOT=$(cd "${BASEDIR}"/../..;pwd)
 echo
 echo "Current directory $(pwd)"
 echo
-run rm -rf "ozone"
-run mkdir "ozone"
-run cd "ozone"
+run rm -rf "ozone-${HDDS_VERSION}"
+run mkdir "ozone-${HDDS_VERSION}"
+run cd "ozone-${HDDS_VERSION}"
 run cp -p "${ROOT}/LICENSE.txt" .
 run cp -p "${ROOT}/NOTICE.txt" .
 run cp -p "${ROOT}/README.txt" .

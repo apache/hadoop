@@ -19,9 +19,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
-    <relativePath>../../hadoop-project</relativePath>
+    <artifactId>hadoop-ozone</artifactId>
+    <version>0.2.1-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-acceptance-test</artifactId>
   <version>3.2.0-SNAPSHOT</version>
@@ -45,7 +44,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <configuration>
                   <testCasesDirectory>src/test/acceptance</testCasesDirectory>
                   <variables>
-                    <variable>basedir:${project.basedir}/../..</variable>
+                    <variable>OZONEDIR:${project.basedir}/../../hadoop-dist/target/ozone-${ozone.version}</variable>
                   </variables>
                   <skip>false</skip>
                   <skipTests>false</skipTests>

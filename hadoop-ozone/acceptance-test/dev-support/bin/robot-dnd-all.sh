@@ -18,14 +18,8 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-#Dir od the definition of the dind based test exeucution container
-DOCKERDIR="$DIR/../docker"
-
 #Dir to save the results
 TARGETDIR="$DIR/../../target/dnd"
-
-#Dir to mount the distribution from
-OZONEDIST="$DIR/../../../../hadoop-dist/target/ozone"
 
 #Name and imagename of the temporary, dind based test containers
 DOCKER_IMAGE_NAME=ozoneacceptance
@@ -47,10 +41,10 @@ chmod o+w "$OZONEDIST" || true
 
 rm "$TARGETDIR/docker-compose.log"
 docker rm "$DOCKER_INSTANCE_NAME" || true
-docker build -t "$DOCKER_IMAGE_NAME" $DIR/../docker
+docker build -t "$DOCKER_IMAGE_NAME" "$DIR/../docker"
 
 #Starting the dind based environment
-docker run --rm -v $DIR/../../../..:/opt/hadoop --privileged -d --name "$DOCKER_INSTANCE_NAME" $DOCKER_IMAGE_NAME
+docker run --rm -v "$DIR/../../../..:/opt/hadoop" --privileged -d --name "$DOCKER_INSTANCE_NAME" $DOCKER_IMAGE_NAME
 sleep 5
 
 #Starting the tests

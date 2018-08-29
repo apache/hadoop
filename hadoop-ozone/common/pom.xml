@@ -29,11 +29,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>jar</packaging>
 
   <properties>
-    <ozone.version>0.2.1-SNAPSHOT</ozone.version>
-    <ozone.release>Acadia</ozone.release>
     <hadoop.component>ozone</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
-    <declared.ozone.version>${ozone.version}</declared.ozone.version>
   </properties>
 
   <dependencies>
