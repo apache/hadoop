@@ -58,6 +58,7 @@ public class TestDockerRunCommand {
     commands.add("launch_command");
     dockerRunCommand.setOverrideCommandWithArgs(commands);
     dockerRunCommand.removeContainerOnExit();
+    dockerRunCommand.addTmpfsMount("/run");
 
     assertEquals("run", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments()
@@ -76,7 +77,9 @@ public class TestDockerRunCommand {
     assertEquals("launch_command", StringUtils.join(",",
         dockerRunCommand.getDockerCommandWithArguments()
             .get("launch-command")));
-    assertEquals(7, dockerRunCommand.getDockerCommandWithArguments().size());
+    assertEquals("/run", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("tmpfs")));
+    assertEquals(8, dockerRunCommand.getDockerCommandWithArguments().size());
   }
 
   @Test

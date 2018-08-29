@@ -1804,6 +1804,13 @@
   </property>
 
   <property>
+    <description>The default list of tmpfs mounts to be mounted into all Docker
+      containers that use DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-tmpfs-mounts</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>

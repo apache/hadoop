@@ -1959,6 +1959,11 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DOCKER_DEFAULT_RW_MOUNTS =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "default-rw-mounts";
 
+  /** The default list of tmpfs mounts to be mounted into all
+   *  Docker containers that use DockerContainerRuntime. */
+  public static final String NM_DOCKER_DEFAULT_TMPFS_MOUNTS =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "default-tmpfs-mounts";
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =
