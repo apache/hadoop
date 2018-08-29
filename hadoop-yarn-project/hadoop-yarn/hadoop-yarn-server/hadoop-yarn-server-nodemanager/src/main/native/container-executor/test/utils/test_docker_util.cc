@@ -1185,6 +1185,70 @@ namespace ContainerExecutor {
     free_configuration(&container_cfg);
   }
 
+  TEST_F(TestDockerUtil, test_add_tmpfs_mounts) {
+    struct configuration cmd_cfg;
+    struct args buff = ARGS_INITIAL_VALUE;
+    int ret = 0;
+    std::string container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n";
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n  tmpfs=/run",
+        "--tmpfs /run"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/run,/run2",
+        "--tmpfs /run --tmpfs /run2"));
+    write_container_executor_cfg(container_executor_cfg_contents);
+
+    ret = create_ce_file();
+    if (ret != 0) {
+      std::cerr << "Could not create ce file, skipping test" << std::endl;
+      return;
+    }
+
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+      write_command_file(itr->first);
+      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = add_tmpfs_mounts(&cmd_cfg, &buff);
+      char *actual = flatten(&buff);
+      ASSERT_EQ(0, ret);
+      ASSERT_STREQ(itr->second.c_str(), actual);
+      reset_args(&buff);
+      free(actual);
+      free_configuration(&cmd_cfg);
+    }
+
+    std::vector<std::pair<std::string, int> > bad_file_cmds_vec;
+    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=run",
+        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
+    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/ru:n",
+        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
+    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/run:",
+        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
+
+    std::vector<std::pair<std::string, int> >::const_iterator itr2;
+    for (itr2 = bad_file_cmds_vec.begin(); itr2 != bad_file_cmds_vec.end(); ++itr2) {
+      write_command_file(itr2->first);
+      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      ret = add_tmpfs_mounts(&cmd_cfg, &buff);
+      char *actual = flatten(&buff);
+      ASSERT_EQ(itr2->second, ret);
+      ASSERT_STREQ("", actual);
+      reset_args(&buff);
+      free(actual);
+      free_configuration(&cmd_cfg);
+    }
+  }
+
   TEST_F(TestDockerUtil, test_docker_run_privileged) {
 
     std::string container_executor_contents = "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"

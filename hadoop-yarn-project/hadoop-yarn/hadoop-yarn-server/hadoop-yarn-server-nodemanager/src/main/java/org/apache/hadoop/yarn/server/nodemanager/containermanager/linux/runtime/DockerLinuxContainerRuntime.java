@@ -165,6 +165,11 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     {@code docker.allowed.ro-mounts} and {@code docker.allowed.rw-mounts}.
  *   </li>
  *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS} allows users to
+ *     specify additional tmpfs mounts for the Docker container. The value of
+ *     the environment variable should be a comma-separated list of mounts.
+ *   </li>
+ *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL} allows a user
  *     to request delayed deletion of the Docker containers on a per
  *     container basis. If true, Docker containers will not be removed until
@@ -195,6 +200,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
       "(?<=^|,)([^:\\x00]+):([^:\\x00]+)" +
           "(:(r[ow]|(r[ow][+])?(r?shared|r?slave|r?private)))?(?:,|$)");
+  private static final Pattern TMPFS_MOUNT_PATTERN = Pattern.compile(
+      "^/[^:\\x00]+$");
   private static final int HOST_NAME_LENGTH = 64;
   private static final String DEFAULT_PROCFS = "/proc";
 
@@ -220,6 +227,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
   @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_TMPFS_MOUNTS =
+      "YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS";
+  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_DELAYED_REMOVAL =
       "YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL";
   private Configuration conf;
@@ -238,6 +248,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private int dockerStopGracePeriod;
   private Set<String> defaultROMounts = new HashSet<>();
   private Set<String> defaultRWMounts = new HashSet<>();
+  private Set<String> defaultTmpfsMounts = new HashSet<>();
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -302,6 +313,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     allowedNetworks.clear();
     defaultROMounts.clear();
     defaultRWMounts.clear();
+    defaultTmpfsMounts.clear();
     allowedNetworks.addAll(Arrays.asList(
         conf.getTrimmedStrings(
             YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_NETWORKS,
@@ -355,6 +367,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     defaultRWMounts.addAll(Arrays.asList(
         conf.getTrimmedStrings(
         YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS)));
+
+    defaultTmpfsMounts.addAll(Arrays.asList(
+        conf.getTrimmedStrings(
+        YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS)));
   }
 
   private Set<String> getDockerCapabilitiesFromConf() throws
@@ -904,6 +920,28 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         String src = dir[0];
         String dst = dir[1];
         runCommand.addReadWriteMountLocation(src, dst);
+      }
+    }
+
+    if (environment.containsKey(ENV_DOCKER_CONTAINER_TMPFS_MOUNTS)) {
+      String[] tmpfsMounts = environment.get(ENV_DOCKER_CONTAINER_TMPFS_MOUNTS)
+          .split(",");
+      for (String mount : tmpfsMounts) {
+        if (!TMPFS_MOUNT_PATTERN.matcher(mount).matches()) {
+          throw new ContainerExecutionException("Invalid tmpfs mount : " +
+              mount);
+        }
+        runCommand.addTmpfsMount(mount);
+      }
+    }
+
+    if (defaultTmpfsMounts != null && !defaultTmpfsMounts.isEmpty()) {
+      for (String mount : defaultTmpfsMounts) {
+        if (!TMPFS_MOUNT_PATTERN.matcher(mount).matches()) {
+          throw new ContainerExecutionException("Invalid tmpfs mount : " +
+              mount);
+        }
+        runCommand.addTmpfsMount(mount);
       }
     }
 

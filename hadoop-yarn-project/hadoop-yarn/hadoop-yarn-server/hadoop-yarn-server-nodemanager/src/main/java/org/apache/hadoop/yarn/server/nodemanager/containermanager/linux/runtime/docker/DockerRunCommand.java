@@ -104,6 +104,11 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand addTmpfsMount(String mount) {
+    super.addCommandArguments("tmpfs", mount);
+    return this;
+  }
+
   public DockerRunCommand setVolumeDriver(String volumeDriver) {
     super.addCommandArguments("volume-driver", volumeDriver);
     return this;
