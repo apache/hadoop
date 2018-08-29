@@ -94,6 +94,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.connection.creator.queue-size</name>
+    <value>100</value>
+    <description>
+      Size of async connection creator queue.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.pool-size</name>
     <value>1</value>
     <description>
