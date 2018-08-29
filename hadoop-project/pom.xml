@@ -112,6 +112,7 @@
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
+    <traute.version>1.0.10</traute.version>
 
     <!-- The java version enforced by the maven enforcer -->
     <!-- more complex patterns can be used here, such as
@@ -1529,11 +1530,17 @@
           <artifactId>snakeyaml</artifactId>
           <version>${snakeyaml.version}</version>
         </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.8.0</version>
+        <scope>test</scope>
+      </dependency>
         <dependency>
-          <groupId>org.assertj</groupId>
-          <artifactId>assertj-core</artifactId>
-          <version>3.8.0</version>
-          <scope>test</scope>
+          <groupId>tech.harmonysoft</groupId>
+          <artifactId>traute-javac</artifactId>
+          <version>${traute.version}</version>
+          <scope>provided</scope> <!-- make the jar eligible for compilation only -->
         </dependency>
       <dependency>
         <groupId>org.jruby.jcodings</groupId>
@@ -1592,6 +1599,9 @@
             <source>${javac.version}</source>
             <target>${javac.version}</target>
             <useIncrementalCompilation>false</useIncrementalCompilation>
+            <compilerArgs>
+              <arg>-Xplugin:Traute</arg>
+            </compilerArgs>
           </configuration>
         </plugin>
         <plugin>
