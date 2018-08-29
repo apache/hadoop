@@ -56,6 +56,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
     touch(TEST_FILE);
     validateStatus(fs, TEST_FILE, false);
   }
@@ -63,7 +64,6 @@ public class ITestAzureBlobFileSystemFileStatus extends
   private FileStatus validateStatus(final AzureBlobFileSystem fs, final Path name, final boolean isDir)
       throws IOException {
     FileStatus fileStatus = fs.getFileStatus(name);
-    fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
 
     String errorInStatus = "error in " + fileStatus + " from " + fs;
 
@@ -89,6 +89,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
     fs.mkdirs(TEST_FOLDER);
 
     validateStatus(fs, TEST_FOLDER, true);
