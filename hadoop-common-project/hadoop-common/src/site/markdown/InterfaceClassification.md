@@ -124,7 +124,7 @@ hence serves as a safe development target. A Stable interface may evolve
 compatibly between minor releases.
 
 Incompatible changes allowed: major (X.0.0)
-Compatible changes allowed: maintenance (x.Y.0)
+Compatible changes allowed: maintenance (x.y.Z)
 
 #### Evolving
 
