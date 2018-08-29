@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 /** A {@link org.apache.ratis.statemachine.StateMachine} for containers.
  *
@@ -316,6 +317,23 @@ public class ContainerStateMachine extends BaseStateMachine {
     return LogEntryProto.newBuilder().setSmLogEntry(log).build();
   }
 
+  /**
+   * Returns the combined future of all the writeChunks till the given log
+   * index. The Raft log worker will wait for the stateMachineData to complete
+   * flush as well.
+   *
+   * @param index log index till which the stateMachine data needs to be flushed
+   * @return Combined future of all writeChunks till the log index given.
+   */
+  @Override
+  public CompletableFuture<Void> flushStateMachineData(long index) {
+    List<CompletableFuture<Message>> futureList =
+        writeChunkFutureMap.entrySet().stream().filter(x -> x.getKey() <= index)
+            .map(x -> x.getValue()).collect(Collectors.toList());
+    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(
+        futureList.toArray(new CompletableFuture[futureList.size()]));
+    return combinedFuture;
+  }
   /*
    * This api is used by the leader while appending logs to the follower
    * This allows the leader to read the state machine data from the

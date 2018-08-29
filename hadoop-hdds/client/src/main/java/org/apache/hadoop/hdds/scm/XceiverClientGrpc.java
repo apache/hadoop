@@ -87,7 +87,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     }
     LOG.debug("Connecting to server Port : " + leader.getIpAddress());
     channel = NettyChannelBuilder.forAddress(leader.getIpAddress(), port)
-        .usePlaintext(true)
+        .usePlaintext()
         .maxInboundMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
         .build();
     asyncStub = XceiverClientProtocolServiceGrpc.newStub(channel);
