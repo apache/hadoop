@@ -61,9 +61,11 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnh
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
@@ -81,6 +83,9 @@ public class AzureBlobFileSystem extends FileSystem {
   private String primaryUserGroup;
   private AzureBlobFileSystemStore abfsStore;
   private boolean isClosed;
+
+  private boolean delegationTokenEnabled = false;
+  private AbfsDelegationTokenManager delegationTokenManager;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -111,6 +116,15 @@ public class AzureBlobFileSystem extends FileSystem {
     } else {
       //Provide a default group name
       this.primaryUserGroup = this.user;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      this.delegationTokenEnabled = abfsStore.getAbfsConfiguration().isDelegationTokenManagerEnabled();
+
+      if(this.delegationTokenEnabled) {
+        LOG.debug("Initializing DelegationTokenManager for {}", uri);
+        this.delegationTokenManager = abfsStore.getAbfsConfiguration().getDelegationTokenManager();
+      }
     }
   }
 
@@ -813,6 +827,20 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     return result;
+  }
+
+  /**
+   * Get a delegation token from remote service endpoint if
+   * 'fs.azure.enable.kerberos.support' is set to 'true', and
+   * 'fs.azure.enable.delegation.token' is set to 'true'.
+   * @param renewer the account name that is allowed to renew the token.
+   * @return delegation token
+   * @throws IOException thrown when getting the current user.
+   */
+  @Override
+  public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
+    return this.delegationTokenEnabled ? this.delegationTokenManager.getDelegationToken(renewer)
+        : super.getDelegationToken(renewer);
   }
 
   @VisibleForTesting

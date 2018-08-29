@@ -61,5 +61,6 @@ public final class FileSystemConfigurations {
   public static final SSLSocketFactoryEx.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
       = SSLSocketFactoryEx.SSLChannelMode.Default;
 
+  public static final boolean DEFAULT_ENABLE_DELEGATION_TOKEN = false;
   private FileSystemConfigurations() {}
 }

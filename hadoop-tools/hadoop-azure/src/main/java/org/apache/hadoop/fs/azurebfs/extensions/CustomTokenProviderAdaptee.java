@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.oauth2;
+package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 import java.util.Date;
@@ -47,8 +47,8 @@ public interface CustomTokenProviderAdaptee {
    * @param accountName Account Name
    * @throws IOException if instance can not be configured.
    */
-  void initialize(Configuration configuration, String accountName)
-      throws IOException;
+  void initialize(Configuration configuration, final String accountName)
+          throws IOException;
 
   /**
    * Obtain the access token that should be added to https connection's header.
