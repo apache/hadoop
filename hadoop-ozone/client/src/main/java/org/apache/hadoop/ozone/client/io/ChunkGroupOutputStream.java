@@ -105,7 +105,7 @@ public class ChunkGroupOutputStream extends OutputStream {
    * @param length
    */
   @VisibleForTesting
-  public synchronized void addStream(OutputStream outputStream, long length) {
+  public void addStream(OutputStream outputStream, long length) {
     streamEntries.add(new ChunkOutputStreamEntry(outputStream, length));
   }
 
@@ -227,7 +227,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
 
   @Override
-  public synchronized void write(int b) throws IOException {
+  public void write(int b) throws IOException {
     byte[] buf = new byte[1];
     buf[0] = (byte) b;
     write(buf, 0, 1);
@@ -246,7 +246,7 @@ public class ChunkGroupOutputStream extends OutputStream {
    * @throws IOException
    */
   @Override
-  public synchronized void write(byte[] b, int off, int len)
+  public void write(byte[] b, int off, int len)
       throws IOException {
     checkNotClosed();
     handleWrite(b, off, len);
@@ -404,7 +404,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   @Override
-  public synchronized void flush() throws IOException {
+  public void flush() throws IOException {
     checkNotClosed();
     handleFlushOrClose(false);
   }
@@ -450,7 +450,7 @@ public class ChunkGroupOutputStream extends OutputStream {
    * @throws IOException
    */
   @Override
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
     if (closed) {
       return;
     }
@@ -585,7 +585,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       return length - currentPosition;
     }
 
-    private synchronized void checkStream() {
+    private void checkStream() {
       if (this.outputStream == null) {
         this.outputStream = new ChunkOutputStream(blockID,
             key, xceiverClientManager, xceiverClient,
