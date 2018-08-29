@@ -264,12 +264,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return;
     }
 
+    namenode.getNamesystem().readLock();
     try {
       //get blockInfo
       Block block = new Block(Block.getBlockId(blockId));
       //find which file this block belongs to
       BlockInfo blockInfo = blockManager.getStoredBlock(block);
-      if(blockInfo == null) {
+      if (blockInfo == null || blockInfo.isDeleted()) {
         out.println("Block "+ blockId +" " + NONEXISTENT_STATUS);
         LOG.warn("Block "+ blockId + " " + NONEXISTENT_STATUS);
         return;
@@ -329,6 +330,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.println(e.getMessage());
       out.print("\n\n" + errMsg);
       LOG.warn("Error in looking up block", e);
+    } finally {
+      namenode.getNamesystem().readUnlock("fsck");
     }
   }
 

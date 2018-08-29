@@ -4032,7 +4032,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfo blockInfo = blockManager.getStoredBlock(b);
-          if (blockInfo == null) {
+          if (blockInfo == null || blockInfo.isDeleted()) {
             LOG.info("Cannot find block info for block " + b);
           } else {
             BlockCollection bc = getBlockCollection(blockInfo);

@@ -51,7 +51,7 @@ public abstract class BlockInfo extends Block
   /**
    * Block collection ID.
    */
-  private long bcId;
+  private volatile long bcId;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface. */
   private LightWeightGSet.LinkedElement nextLinkedElement;
