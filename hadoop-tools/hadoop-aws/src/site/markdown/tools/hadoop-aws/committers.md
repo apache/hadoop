@@ -371,7 +371,7 @@ Put differently: start with the Directory Committer.
 
 To use an S3A committer, the property `mapreduce.outputcommitter.factory.scheme.s3a`
 must be set to the S3A committer factory, `org.apache.hadoop.fs.s3a.commit.staging.S3ACommitterFactory`.
-This is done in `core-default.xml`
+This is done in `mapred-default.xml`
 
 ```xml
 <property>

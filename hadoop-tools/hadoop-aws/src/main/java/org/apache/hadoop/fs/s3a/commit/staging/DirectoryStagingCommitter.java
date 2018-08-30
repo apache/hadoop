@@ -27,13 +27,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
 /**
  * This commits to a directory.
@@ -70,10 +68,8 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     if (getConflictResolutionMode(context, fs.getConf())
         == ConflictResolution.FAIL
         && fs.exists(outputPath)) {
-      LOG.debug("Failing commit by task attempt {} to write"
-              + " to existing output path {}",
-          context.getJobID(), getOutputPath());
-      throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
+      throw failDestinationExists(outputPath,
+          "Setting job as " + getRole());
     }
   }
 
