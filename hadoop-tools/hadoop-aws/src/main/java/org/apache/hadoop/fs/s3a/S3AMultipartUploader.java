@@ -84,9 +84,10 @@ public class S3AMultipartUploader extends MultipartUploader {
   public PartHandle putPart(Path filePath, InputStream inputStream,
       int partNumber, UploadHandle uploadId, long lengthInBytes)
       throws IOException {
-    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
-    String key = s3a.pathToKey(filePath);
     byte[] uploadIdBytes = uploadId.toByteArray();
+    checkUploadId(uploadIdBytes);
+    String key = s3a.pathToKey(filePath);
+    final WriteOperationHelper writeHelper = s3a.getWriteOperationHelper();
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
     UploadPartRequest request = writeHelper.newUploadPartRequest(key,
@@ -153,11 +154,6 @@ public class S3AMultipartUploader extends MultipartUploader {
       }
       return null;
     }
-  }
-
-  private void checkUploadId(byte[] uploadId) throws IllegalArgumentException {
-    Preconditions.checkArgument(uploadId.length > 0,
-        "Empty UploadId is not valid");
   }
 
   /**

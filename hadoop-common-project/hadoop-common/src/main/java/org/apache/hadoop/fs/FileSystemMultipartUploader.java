@@ -68,6 +68,7 @@ public class FileSystemMultipartUploader extends MultipartUploader {
       throws IOException {
 
     byte[] uploadIdByteArray = uploadId.toByteArray();
+    checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
         uploadIdByteArray.length, Charsets.UTF_8));
     Path partPath =
@@ -101,6 +102,8 @@ public class FileSystemMultipartUploader extends MultipartUploader {
       List<Pair<Integer, PartHandle>> handles, UploadHandle multipartUploadId)
       throws IOException {
 
+    checkUploadId(multipartUploadId.toByteArray());
+
     if (handles.isEmpty()) {
       throw new IOException("Empty upload");
     }
@@ -133,8 +136,7 @@ public class FileSystemMultipartUploader extends MultipartUploader {
   @Override
   public void abort(Path filePath, UploadHandle uploadId) throws IOException {
     byte[] uploadIdByteArray = uploadId.toByteArray();
-    Preconditions.checkArgument(uploadIdByteArray.length != 0,
-        "UploadId is empty");
+    checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
         uploadIdByteArray.length, Charsets.UTF_8));
 

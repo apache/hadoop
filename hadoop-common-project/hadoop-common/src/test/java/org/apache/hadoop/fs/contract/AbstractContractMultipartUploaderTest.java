@@ -297,4 +297,47 @@ public abstract class AbstractContractMultipartUploaderTest extends
         () -> mpu.complete(dest, new ArrayList<>(), handle));
     mpu.abort(dest, handle);
   }
+
+  /**
+   * When we pass empty uploadID, putPart throws IllegalArgumentException.
+   * @throws Exception
+   */
+  @Test
+  public void testPutPartEmptyUploadID() throws Exception {
+    describe("Expect IllegalArgumentException when putPart uploadID is empty");
+    FileSystem fs = getFileSystem();
+    Path dest = path("testCompleteEmptyUpload");
+    MultipartUploader mpu = MultipartUploaderFactory.get(fs, null);
+    mpu.initialize(dest);
+    UploadHandle emptyHandle =
+        BBUploadHandle.from(ByteBuffer.wrap(new byte[0]));
+    byte[] payload = generatePayload(1);
+    InputStream is = new ByteArrayInputStream(payload);
+    intercept(IllegalArgumentException.class,
+        () -> mpu.putPart(dest, is, 1, emptyHandle, payload.length));
+  }
+
+  /**
+   * When we pass empty uploadID, complete throws IllegalArgumentException.
+   * @throws Exception
+   */
+  @Test
+  public void testCompleteEmptyUploadID() throws Exception {
+    describe("Expect IllegalArgumentException when complete uploadID is empty");
+    FileSystem fs = getFileSystem();
+    Path dest = path("testCompleteEmptyUpload");
+    MultipartUploader mpu = MultipartUploaderFactory.get(fs, null);
+    UploadHandle realHandle = mpu.initialize(dest);
+    UploadHandle emptyHandle =
+        BBUploadHandle.from(ByteBuffer.wrap(new byte[0]));
+    List<Pair<Integer, PartHandle>> partHandles = new ArrayList<>();
+    byte[] payload = generatePayload(1);
+    InputStream is = new ByteArrayInputStream(payload);
+    PartHandle partHandle = mpu.putPart(dest, is, 1, realHandle,
+        payload.length);
+    partHandles.add(Pair.of(1, partHandle));
+
+    intercept(IllegalArgumentException.class,
+        () -> mpu.complete(dest, partHandles, emptyHandle));
+  }
 }
