@@ -133,7 +133,6 @@ class JsonUtilClient {
     Boolean aclBit = (Boolean) m.get("aclBit");
     Boolean encBit = (Boolean) m.get("encBit");
     Boolean erasureBit  = (Boolean) m.get("ecBit");
-    Boolean snapshotEnabledBit  = (Boolean) m.get("snapshotEnabled");
     EnumSet<HdfsFileStatus.Flags> f =
         EnumSet.noneOf(HdfsFileStatus.Flags.class);
     if (aclBit != null && aclBit) {
@@ -144,9 +143,6 @@ class JsonUtilClient {
     }
     if (erasureBit != null && erasureBit) {
       f.add(HdfsFileStatus.Flags.HAS_EC);
-    }
-    if (snapshotEnabledBit != null && snapshotEnabledBit) {
-      f.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
     }
 
     Map<String, Object> ecPolicyObj = (Map) m.get("ecPolicyObj");
