@@ -193,11 +193,13 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
     if(heartbeat.hasCommandStatusReport()){
-      cmdStatusList.addAll(heartbeat.getCommandStatusReport().getCmdStatusList());
+      cmdStatusList.addAll(heartbeat.getCommandStatusReport()
+          .getCmdStatusList());
       commandStatusReport.incrementAndGet();
     }
     sleepIfNeeded();
-    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(scmCommandRequests)
+    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(
+        scmCommandRequests)
         .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
         .build();
   }

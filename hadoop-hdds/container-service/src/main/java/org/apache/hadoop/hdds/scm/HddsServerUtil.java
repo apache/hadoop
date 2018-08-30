@@ -180,11 +180,11 @@ public final class HddsServerUtil {
    * SCM.
    *
    * @param conf - Ozone Config
-   * @return - HB interval in seconds.
+   * @return - HB interval in milli seconds.
    */
   public static long getScmHeartbeatInterval(Configuration conf) {
     return conf.getTimeDuration(HDDS_HEARTBEAT_INTERVAL,
-        HDDS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
+        HDDS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -202,7 +202,7 @@ public final class HddsServerUtil {
 
     long heartbeatThreadFrequencyMs = getScmheartbeatCheckerInterval(conf);
 
-    long heartbeatIntervalMs = getScmHeartbeatInterval(conf) * 1000;
+    long heartbeatIntervalMs = getScmHeartbeatInterval(conf);
 
 
     // Make sure that StaleNodeInterval is configured way above the frequency

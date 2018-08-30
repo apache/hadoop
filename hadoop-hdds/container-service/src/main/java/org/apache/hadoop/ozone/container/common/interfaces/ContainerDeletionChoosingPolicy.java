@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -42,4 +43,16 @@ public interface ContainerDeletionChoosingPolicy {
   List<ContainerData> chooseContainerForBlockDeletion(int count,
       Map<Long, ContainerData> candidateContainers)
       throws StorageContainerException;
+
+  /**
+   * Determine if the container has suitable type for this policy.
+   * @param type  type of the container
+   * @return whether the container type suitable for this policy.
+   */
+  default boolean isValidContainerType(ContainerProtos.ContainerType type) {
+    if (type == ContainerProtos.ContainerType.KeyValueContainer) {
+      return true;
+    }
+    return false;
+  }
 }

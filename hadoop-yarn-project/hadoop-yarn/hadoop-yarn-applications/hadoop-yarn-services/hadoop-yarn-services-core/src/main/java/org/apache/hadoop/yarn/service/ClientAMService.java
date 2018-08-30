@@ -166,7 +166,7 @@ public class ClientAMService extends AbstractService
       LOG.info("Upgrading service to version {} by {}", request.getVersion(),
           UserGroupInformation.getCurrentUser());
       context.getServiceManager().processUpgradeRequest(request.getVersion(),
-          request.getAutoFinalize());
+          request.getAutoFinalize(), request.getExpressUpgrade());
       return UpgradeServiceResponseProto.newBuilder().build();
     } catch (Exception ex) {
       return UpgradeServiceResponseProto.newBuilder().setError(ex.getMessage())

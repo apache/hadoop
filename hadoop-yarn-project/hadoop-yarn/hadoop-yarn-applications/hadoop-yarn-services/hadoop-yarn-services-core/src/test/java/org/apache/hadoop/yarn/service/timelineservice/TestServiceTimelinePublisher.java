@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.timelineservice;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -122,7 +123,8 @@ public class TestServiceTimelinePublisher {
     context.attemptId = ApplicationAttemptId
         .newInstance(ApplicationId.fromString(service.getId()), 1);
     String exitDiags = "service killed";
-    serviceTimelinePublisher.serviceAttemptUnregistered(context, exitDiags);
+    serviceTimelinePublisher.serviceAttemptUnregistered(context,
+        FinalApplicationStatus.ENDED, exitDiags);
     lastPublishedEntities =
         ((DummyTimelineClient) timelineClient).getLastPublishedEntities();
     for (TimelineEntity timelineEntity : lastPublishedEntities) {

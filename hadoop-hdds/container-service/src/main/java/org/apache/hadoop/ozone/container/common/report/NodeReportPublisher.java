@@ -52,7 +52,7 @@ public class NodeReportPublisher extends ReportPublisher<NodeReportProto> {
           getConf());
 
       Preconditions.checkState(
-          heartbeatFrequency < nodeReportInterval,
+          heartbeatFrequency <= nodeReportInterval,
           HDDS_NODE_REPORT_INTERVAL +
               " cannot be configured lower than heartbeat frequency.");
     }

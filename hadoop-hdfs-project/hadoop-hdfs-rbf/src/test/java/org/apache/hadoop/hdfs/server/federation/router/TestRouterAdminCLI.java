@@ -437,6 +437,74 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testInvalidArgumentMessage() throws Exception {
+    String nsId = "ns0";
+    String src = "/testSource";
+    System.setOut(new PrintStream(out));
+    String[] argv = new String[] {"-add", src, nsId};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(
+        "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+            + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+            + "-owner <owner> -group <group> -mode <mode>]"));
+    out.reset();
+
+    argv = new String[] {"-update", src, nsId};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(
+        "\t[-update <source> <nameservice1, nameservice2, ...> <destination> "
+            + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+            + "-owner <owner> -group <group> -mode <mode>]"));
+    out.reset();
+
+    argv = new String[] {"-rm"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-rm <source>]"));
+    out.reset();
+
+    argv = new String[] {"-setQuota", src};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString()
+        .contains("\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+            + "<quota in bytes or quota size string>]"));
+    out.reset();
+
+    argv = new String[] {"-clrQuota"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-clrQuota <path>]"));
+    out.reset();
+
+    argv = new String[] {"-safemode"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-safemode enter | leave | get]"));
+    out.reset();
+
+    argv = new String[] {"-nameservice", nsId};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString()
+        .contains("\t[-nameservice enable | disable <nameservice>]"));
+    out.reset();
+
+    argv = new String[] {"-Random"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    String expected = "Usage: hdfs routeradmin :\n"
+        + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+        + "-owner <owner> -group <group> -mode <mode>]\n"
+        + "\t[-update <source> <nameservice1, nameservice2, ...> "
+        + "<destination> " + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+        + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
+        + "\t[-ls <path>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+        + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"
+        + "\t[-safemode enter | leave | get]\n"
+        + "\t[-nameservice enable | disable <nameservice>]\n"
+        + "\t[-getDisabledNameservices]";
+    assertTrue(out.toString(), out.toString().contains(expected));
+    out.reset();
+  }
+
+  @Test
   public void testSetAndClearQuota() throws Exception {
     String nsId = "ns0";
     String src = "/test-QuotaMounttable";
@@ -519,6 +587,7 @@ public class TestRouterAdminCLI {
     assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
 
     System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "get"}));
     assertTrue(out.toString().contains("true"));
@@ -534,6 +603,19 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "get"}));
     assertTrue(out.toString().contains("false"));
+
+    out.reset();
+    assertEquals(-1, ToolRunner.run(admin,
+        new String[] {"-safemode", "get", "-random", "check" }));
+    assertTrue(err.toString(), err.toString()
+        .contains("safemode: Too many arguments, Max=1 argument allowed only"));
+    err.reset();
+
+    assertEquals(-1,
+        ToolRunner.run(admin, new String[] {"-safemode", "check" }));
+    assertTrue(err.toString(),
+        err.toString().contains("safemode: Invalid argument: check"));
+    err.reset();
   }
 
   @Test

@@ -110,7 +110,7 @@ public class TestBlockDeletingService {
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testRoot.getAbsolutePath());
       long containerID = ContainerTestHelper.getTestContainerID();
       KeyValueContainerData data = new KeyValueContainerData(containerID,
-          ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+          ContainerTestHelper.CONTAINER_MAX_SIZE);
       Container container = new KeyValueContainer(data, conf);
       container.create(new VolumeSet(scmId, clusterID, conf),
           new RoundRobinVolumeChoosingPolicy(), scmId);
@@ -203,8 +203,12 @@ public class TestBlockDeletingService {
     MetadataStore meta = KeyUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf);
     Map<Long, Container> containerMap = containerSet.getContainerMap();
-    long transactionId = containerMap.get(containerData.get(0).getContainerID())
-        .getContainerData().getDeleteTransactionId();
+    // NOTE: this test assumes that all the container is KetValueContainer and
+    // have DeleteTransactionId in KetValueContainerData. If other
+    // types is going to be added, this test should be checked.
+    long transactionId = ((KeyValueContainerData)containerMap
+        .get(containerData.get(0).getContainerID()).getContainerData())
+        .getDeleteTransactionId();
 
 
     // Number of deleted blocks in container should be equal to 0 before

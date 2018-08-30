@@ -76,8 +76,8 @@ public class ChunkOutputStream extends OutputStream {
    * @param chunkSize chunk size
    */
   public ChunkOutputStream(BlockID blockID, String key,
-       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
-       String traceID, int chunkSize) {
+       XceiverClientManager xceiverClientManager,
+       XceiverClientSpi xceiverClient, String traceID, int chunkSize) {
     this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
@@ -94,8 +94,12 @@ public class ChunkOutputStream extends OutputStream {
     this.chunkIndex = 0;
   }
 
+  public ByteBuffer getBuffer() {
+    return buffer;
+  }
+
   @Override
-  public synchronized void write(int b) throws IOException {
+  public void write(int b) throws IOException {
     checkOpen();
     int rollbackPosition = buffer.position();
     int rollbackLimit = buffer.limit();
@@ -106,7 +110,8 @@ public class ChunkOutputStream extends OutputStream {
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public void write(byte[] b, int off, int len)
+      throws IOException {
     if (b == null) {
       throw new NullPointerException();
     }
@@ -132,7 +137,7 @@ public class ChunkOutputStream extends OutputStream {
   }
 
   @Override
-  public synchronized void flush() throws IOException {
+  public void flush() throws IOException {
     checkOpen();
     if (buffer.position() > 0) {
       int rollbackPosition = buffer.position();
@@ -142,25 +147,28 @@ public class ChunkOutputStream extends OutputStream {
   }
 
   @Override
-  public synchronized void close() throws IOException {
-    if (xceiverClientManager != null && xceiverClient != null &&
-        buffer != null) {
+  public void close() throws IOException {
+    if (xceiverClientManager != null && xceiverClient != null
+        && buffer != null) {
+      if (buffer.position() > 0) {
+        writeChunkToContainer();
+      }
       try {
-        if (buffer.position() > 0) {
-          writeChunkToContainer();
-        }
         putKey(xceiverClient, containerKeyData.build(), traceID);
       } catch (IOException e) {
         throw new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
       } finally {
-        xceiverClientManager.releaseClient(xceiverClient);
-        xceiverClientManager = null;
-        xceiverClient = null;
-        buffer = null;
+        cleanup();
       }
     }
+  }
 
+  public void cleanup() {
+    xceiverClientManager.releaseClient(xceiverClient);
+    xceiverClientManager = null;
+    xceiverClient = null;
+    buffer = null;
   }
 
   /**
@@ -168,7 +176,7 @@ public class ChunkOutputStream extends OutputStream {
    *
    * @throws IOException if stream is closed
    */
-  private synchronized void checkOpen() throws IOException {
+  private void checkOpen() throws IOException {
     if (xceiverClient == null) {
       throw new IOException("ChunkOutputStream has been closed.");
     }
@@ -183,7 +191,7 @@ public class ChunkOutputStream extends OutputStream {
    * @param rollbackLimit limit to restore in buffer if write fails
    * @throws IOException if there is an I/O error while performing the call
    */
-  private synchronized void flushBufferToChunk(int rollbackPosition,
+  private void flushBufferToChunk(int rollbackPosition,
       int rollbackLimit) throws IOException {
     boolean success = false;
     try {
@@ -205,7 +213,7 @@ public class ChunkOutputStream extends OutputStream {
    *
    * @throws IOException if there is an I/O error while performing the call
    */
-  private synchronized void writeChunkToContainer() throws IOException {
+  private void writeChunkToContainer() throws IOException {
     buffer.flip();
     ByteString data = ByteString.copyFrom(buffer);
     ChunkInfo chunk = ChunkInfo

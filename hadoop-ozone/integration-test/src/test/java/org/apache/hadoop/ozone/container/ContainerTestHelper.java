@@ -19,7 +19,12 @@
 package org.apache.hadoop.ozone.container;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -33,13 +38,10 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -59,21 +61,13 @@ public final class ContainerTestHelper {
       ContainerTestHelper.class);
   private static Random r = new Random();
 
-  public static final int CONTAINER_MAX_SIZE_GB = 1;
+  public static final long CONTAINER_MAX_SIZE =
+      (long) StorageUnit.GB.toBytes(1);
 
   /**
    * Never constructed.
    */
   private ContainerTestHelper() {
-  }
-
-  public static void setOzoneLocalStorageRoot(
-      Class<?> clazz, OzoneConfiguration conf) {
-    String path = GenericTestUtils.getTempPath(clazz.getSimpleName());
-    path += conf.getTrimmed(
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
   }
 
   // TODO: mock multi-node pipeline
@@ -601,5 +595,22 @@ public final class ContainerTestHelper {
 
   public static long getTestContainerID() {
     return Time.getUtcTime();
+  }
+
+  public static boolean isContainerClosed(MiniOzoneCluster cluster,
+      long containerID, DatanodeDetails datanode) {
+    ContainerData containerData;
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+      if (datanode.equals(datanodeService.getDatanodeDetails())) {
+        Container container =
+            datanodeService.getDatanodeStateMachine().getContainer()
+                .getContainerSet().getContainer(containerID);
+        if (container != null) {
+          containerData = container.getContainerData();
+          return containerData.isClosed();
+        }
+      }
+    }
+    return false;
   }
 }

@@ -36,12 +36,7 @@ function run()
   fi
 }
 
-#To make the final dist directory easily mountable from docker we don't use
-#version name in the directory name.
-#To include the version name in the root directory of the tar file
-# we create a symbolic link and dereference it during the tar creation
-ln -s -f ozone ozone-${VERSION}
-run tar -c --dereference -f "ozone-${VERSION}.tar" "ozone-${VERSION}"
+run tar -c -f "ozone-${VERSION}.tar" "ozone-${VERSION}"
 run gzip -f "ozone-${VERSION}.tar"
 echo
 echo "Ozone dist tar available at: ${BASEDIR}/ozone-${VERSION}.tar.gz"

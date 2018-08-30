@@ -727,6 +727,13 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
         Tristate.FALSE, false));
 
+    // set parent dir as authoritative
+    if (!allowMissing()) {
+      DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
+      parentDirMd.setAuthoritative(true);
+      ms.put(parentDirMd);
+    }
+
     ms.prune(time);
     DirListingMetadata listing;
     for (String directory : directories) {
@@ -735,6 +742,48 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         listing = ms.listChildren(path);
         assertFalse(listing.isAuthoritative());
       }
+    }
+  }
+
+  @Test
+  public void testPrunePreservesAuthoritative() throws Exception {
+    String rootDir = "/unpruned-root-dir";
+    String grandparentDir = rootDir + "/pruned-grandparent-dir";
+    String parentDir = grandparentDir + "/pruned-parent-dir";
+    String staleFile = parentDir + "/stale-file";
+    String freshFile = rootDir + "/fresh-file";
+    String[] directories = {rootDir, grandparentDir, parentDir};
+
+    // create dirs
+    createNewDirs(rootDir, grandparentDir, parentDir);
+    long time = System.currentTimeMillis();
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time + 1, strToPath(staleFile)),
+        Tristate.FALSE, false));
+    ms.put(new PathMetadata(
+        new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
+        Tristate.FALSE, false));
+
+    if (!allowMissing()) {
+      // set parent dir as authoritative
+      DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
+      parentDirMd.setAuthoritative(true);
+      ms.put(parentDirMd);
+
+      // prune the ms
+      ms.prune(time);
+
+      // get the directory listings
+      DirListingMetadata rootDirMd = ms.listChildren(strToPath(rootDir));
+      DirListingMetadata grandParentDirMd =
+          ms.listChildren(strToPath(grandparentDir));
+      parentDirMd = ms.listChildren(strToPath(parentDir));
+
+      // assert that parent dir is still authoritative (no removed elements
+      // during prune)
+      assertFalse(rootDirMd.isAuthoritative());
+      assertFalse(grandParentDirMd.isAuthoritative());
+      assertTrue(parentDirMd.isAuthoritative());
     }
   }
 

@@ -102,8 +102,8 @@ public class TestDeletedBlockLog {
     ContainerInfo containerInfo =
         new ContainerInfo.Builder().setContainerID(1).build();
     Pipeline pipeline =
-        new Pipeline(null, LifeCycleState.CLOSED, ReplicationType.RATIS,
-            ReplicationFactor.THREE, null);
+        new Pipeline(null, LifeCycleState.CLOSED,
+            ReplicationType.RATIS, ReplicationFactor.THREE, null);
     pipeline.addMember(dnList.get(0));
     pipeline.addMember(dnList.get(1));
     pipeline.addMember(dnList.get(2));
@@ -379,7 +379,8 @@ public class TestDeletedBlockLog {
     Assert.assertTrue(transactions.isFull());
   }
 
-  private void mockContainerInfo(long containerID, DatanodeDetails dd) throws IOException {
+  private void mockContainerInfo(long containerID, DatanodeDetails dd)
+      throws IOException {
     Pipeline pipeline =
         new Pipeline("fake", LifeCycleState.OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE,

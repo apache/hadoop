@@ -22,7 +22,6 @@ Resource            ../commonlib.robot
 Test Timeout        2 minute
 
 *** Variables ***
-${basedir}
 ${COMPOSEFILE}          ${CURDIR}/docker-compose.yaml
 ${PROJECTDIR}           ${CURDIR}/../../../../../..
 

@@ -74,7 +74,7 @@ public final class TestUtils {
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256);
-   return createDatanodeDetails(uuid.toString(), "localhost", ipAddress);
+    return createDatanodeDetails(uuid.toString(), "localhost", ipAddress);
   }
 
   /**
@@ -259,12 +259,12 @@ public final class TestUtils {
     StorageTypeProto storageTypeProto =
         type == null ? StorageTypeProto.DISK : type;
     srb.setStorageType(storageTypeProto);
-   return srb.build();
+    return srb.build();
   }
 
 
   /**
-   * Generates random container reports
+   * Generates random container reports.
    *
    * @return ContainerReportsProto
    */
@@ -281,7 +281,7 @@ public final class TestUtils {
    */
   public static ContainerReportsProto getRandomContainerReports(
       int numberOfContainers) {
-   List<ContainerInfo> containerInfos = new ArrayList<>();
+    List<ContainerInfo> containerInfos = new ArrayList<>();
     for (int i = 0; i < numberOfContainers; i++) {
       containerInfos.add(getRandomContainerInfo(i));
     }

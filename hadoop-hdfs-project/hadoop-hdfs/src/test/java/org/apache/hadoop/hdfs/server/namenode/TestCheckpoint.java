@@ -45,6 +45,8 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -110,7 +112,7 @@ public class TestCheckpoint {
     GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
   }
 
-  static final Log LOG = LogFactory.getLog(TestCheckpoint.class); 
+  static final Logger LOG = LoggerFactory.getLogger(TestCheckpoint.class);
   static final String NN_METRICS = "NameNodeActivity";
   
   static final long seed = 0xDEADBEEFL;

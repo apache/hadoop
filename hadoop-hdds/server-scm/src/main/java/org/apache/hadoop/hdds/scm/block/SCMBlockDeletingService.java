@@ -109,8 +109,8 @@ public class SCMBlockDeletingService extends BackgroundService {
 
   public void handlePendingDeletes(PendingDeleteStatusList deletionStatusList) {
     DatanodeDetails dnDetails = deletionStatusList.getDatanodeDetails();
-    for (PendingDeleteStatusList.PendingDeleteStatus deletionStatus : deletionStatusList
-        .getPendingDeleteStatuses()) {
+    for (PendingDeleteStatusList.PendingDeleteStatus deletionStatus :
+        deletionStatusList.getPendingDeleteStatuses()) {
       LOG.info(
           "Block deletion txnID mismatch in datanode {} for containerID {}."
               + " Datanode delete txnID: {}, SCM txnID: {}",

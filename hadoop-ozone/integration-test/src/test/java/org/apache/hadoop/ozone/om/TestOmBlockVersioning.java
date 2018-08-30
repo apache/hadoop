@@ -22,8 +22,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -39,12 +37,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Assert;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -67,16 +65,13 @@ public class TestOmBlockVersioning {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "distributed"
+   * Ozone is made active by setting OZONE_ENABLED = true
    *
    * @throws IOException
    */
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
-        OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
@@ -124,8 +119,8 @@ public class TestOmBlockVersioning {
     // 1st update, version 0
     OpenKeySession openKey = ozoneManager.openKey(keyArgs);
     // explicitly set the keyLocation list before committing the key.
-    keyArgs.setLocationInfoList(
-        openKey.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyArgs.setLocationInfoList(openKey.getKeyInfo().getLatestVersionLocations()
+        .getBlocksLatestVersionOnly());
     ozoneManager.commitKey(keyArgs, openKey.getId());
 
     OmKeyInfo keyInfo = ozoneManager.lookupKey(keyArgs);
@@ -139,8 +134,8 @@ public class TestOmBlockVersioning {
     //OmKeyLocationInfo locationInfo =
     //    ozoneManager.allocateBlock(keyArgs, openKey.getId());
     // explicitly set the keyLocation list before committing the key.
-    keyArgs.setLocationInfoList(
-        openKey.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyArgs.setLocationInfoList(openKey.getKeyInfo().getLatestVersionLocations()
+        .getBlocksLatestVersionOnly());
     ozoneManager.commitKey(keyArgs, openKey.getId());
 
     keyInfo = ozoneManager.lookupKey(keyArgs);
@@ -150,10 +145,14 @@ public class TestOmBlockVersioning {
 
     // 3rd update, version 2
     openKey = ozoneManager.openKey(keyArgs);
+
     // this block will be appended to the latest version of version 2.
     OmKeyLocationInfo locationInfo =
         ozoneManager.allocateBlock(keyArgs, openKey.getId());
-    List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
+    List<OmKeyLocationInfo> locationInfoList =
+        openKey.getKeyInfo().getLatestVersionLocations()
+            .getBlocksLatestVersionOnly();
+    Assert.assertTrue(locationInfoList.size() == 1);
     locationInfoList.add(locationInfo);
     keyArgs.setLocationInfoList(locationInfoList);
     ozoneManager.commitKey(keyArgs, openKey.getId());

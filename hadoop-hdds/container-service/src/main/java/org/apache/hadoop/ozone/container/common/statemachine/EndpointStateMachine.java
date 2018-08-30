@@ -27,6 +27,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.ZonedDateTime;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -203,11 +204,11 @@ public class EndpointStateMachine
     this.incMissed();
     if (this.getMissedCount() % getLogWarnInterval(conf) ==
         0) {
-      LOG.error("Unable to communicate to SCM server at {}. We have not been " +
-              "able to communicate to this SCM server for past {} seconds.",
+      LOG.error(
+          "Unable to communicate to SCM server at {} for past {} seconds.",
           this.getAddress().getHostString() + ":" + this.getAddress().getPort(),
-          this.getMissedCount() * getScmHeartbeatInterval(
-              this.conf), ex);
+          TimeUnit.MILLISECONDS.toSeconds(
+              this.getMissedCount() * getScmHeartbeatInterval(this.conf)), ex);
     }
   }
 

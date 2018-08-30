@@ -43,7 +43,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.yaml.snakeyaml.Yaml;
 
@@ -54,8 +53,6 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.NO_SUCH_ALGORITHM;
 import static org.apache.hadoop.ozone.container.common.impl.ContainerData
     .CHARSET_ENCODING;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
-
 
 /**
  * A set of helper functions to create proper responses.
@@ -75,14 +72,13 @@ public final class ContainerUtils {
    * @return ContainerCommand Response Builder.
    */
   public static ContainerCommandResponseProto.Builder
-  getContainerCommandResponse(
-      ContainerCommandRequestProto request, Result result, String message) {
-    return
-        ContainerCommandResponseProto.newBuilder()
-            .setCmdType(request.getCmdType())
-            .setTraceID(request.getTraceID())
-            .setResult(result)
-            .setMessage(message);
+      getContainerCommandResponse(
+          ContainerCommandRequestProto request, Result result, String message) {
+    return ContainerCommandResponseProto.newBuilder()
+        .setCmdType(request.getCmdType())
+        .setTraceID(request.getTraceID())
+        .setResult(result)
+        .setMessage(message);
   }
 
   /**
@@ -287,7 +283,7 @@ public final class ContainerUtils {
   }
 
   /**
-   * Get the .container file from the containerBaseDir
+   * Get the .container file from the containerBaseDir.
    * @param containerBaseDir container base directory. The name of this
    *                         directory is same as the containerID
    * @return the .container file
@@ -301,7 +297,7 @@ public final class ContainerUtils {
   }
 
   /**
-   * ContainerID can be decoded from the container base directory name
+   * ContainerID can be decoded from the container base directory name.
    */
   public static long getContainerID(File containerBaseDir) {
     return Long.parseLong(containerBaseDir.getName());

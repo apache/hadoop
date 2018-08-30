@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdds;
 
+import org.apache.hadoop.utils.db.DBProfile;
+
 /**
  * This class contains constants for configuration keys and default values
  * used in hdds.
@@ -57,5 +59,9 @@ public final class HddsConfigKeys {
   // Configuration to allow volume choosing policy.
   public static final String HDDS_DATANODE_VOLUME_CHOOSING_POLICY =
       "hdds.datanode.volume.choosing.policy";
+
+  // DB Profiles used by ROCKDB instances.
+  public static final String HDDS_DB_PROFILE = "hdds.db.profile";
+  public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.SSD;
 
 }

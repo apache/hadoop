@@ -165,7 +165,8 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
-  public ContainerWithPipeline getContainerWithPipeline(long containerID) throws IOException {
+  public ContainerWithPipeline getContainerWithPipeline(long containerID)
+      throws IOException {
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
     return scm.getScmContainerManager()

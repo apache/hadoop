@@ -232,7 +232,8 @@ public class HddsDatanodeService implements ServicePlugin {
 
   public static void main(String[] args) {
     try {
-      if (DFSUtil.parseHelpArgument(args, "Starts HDDS Datanode", System.out, false)) {
+      if (DFSUtil.parseHelpArgument(
+          args, "Starts HDDS Datanode", System.out, false)) {
         System.exit(0);
       }
       Configuration conf = new OzoneConfiguration();

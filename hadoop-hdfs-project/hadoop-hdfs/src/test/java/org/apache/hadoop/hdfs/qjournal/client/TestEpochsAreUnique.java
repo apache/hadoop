@@ -56,7 +56,7 @@ public class TestEpochsAreUnique {
     QuorumJournalManager qjm = new QuorumJournalManager(
         conf, uri, FAKE_NSINFO);
     try {
-      qjm.format(FAKE_NSINFO);
+      qjm.format(FAKE_NSINFO, false);
     } finally {
       qjm.close();
     }

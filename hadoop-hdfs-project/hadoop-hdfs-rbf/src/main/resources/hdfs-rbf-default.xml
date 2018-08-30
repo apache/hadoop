@@ -94,6 +94,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.connection.creator.queue-size</name>
+    <value>100</value>
+    <description>
+      Size of async connection creator queue.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.pool-size</name>
     <value>1</value>
     <description>
@@ -390,6 +398,15 @@
     <description>
       Maximum number of mount table cache entries to have.
       By default, remove cache entries if we have more than 10k.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.cache.enable</name>
+    <value>true</value>
+    <description>
+      Set to true to enable mount table cache (Path to Remote Location cache).
+      Disabling the cache is recommended when a large amount of unique paths are queried.
     </description>
   </property>
 

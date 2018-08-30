@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -47,6 +48,7 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.OpenContainerBlockMap;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.SmallFileUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
@@ -78,8 +80,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CLOSED_CONTAINER_RETRY;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_INTERNAL_ERROR;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -122,8 +122,8 @@ public class KeyValueHandler extends Handler {
   private final KeyManager keyManager;
   private final ChunkManager chunkManager;
   private final BlockDeletingService blockDeletingService;
-  private VolumeChoosingPolicy volumeChoosingPolicy;
-  private final int maxContainerSizeGB;
+  private final VolumeChoosingPolicy volumeChoosingPolicy;
+  private final long maxContainerSize;
   private final AutoCloseableLock handlerLock;
   private final OpenContainerBlockMap openContainerBlockMap;
 
@@ -148,9 +148,9 @@ public class KeyValueHandler extends Handler {
     volumeChoosingPolicy = ReflectionUtils.newInstance(conf.getClass(
         HDDS_DATANODE_VOLUME_CHOOSING_POLICY, RoundRobinVolumeChoosingPolicy
             .class, VolumeChoosingPolicy.class), conf);
-    maxContainerSizeGB = config.getInt(ScmConfigKeys
-            .OZONE_SCM_CONTAINER_SIZE_GB, ScmConfigKeys
-        .OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    maxContainerSize = (long)config.getStorageSize(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
+            ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT, StorageUnit.BYTES);
     // this handler lock is used for synchronizing createContainer Requests,
     // so using a fair lock here.
     handlerLock = new AutoCloseableLock(new ReentrantLock(true));
@@ -162,7 +162,8 @@ public class KeyValueHandler extends Handler {
     return volumeChoosingPolicy;
   }
   /**
-   * Returns OpenContainerBlockMap instance
+   * Returns OpenContainerBlockMap instance.
+   *
    * @return OpenContainerBlockMap
    */
   public OpenContainerBlockMap getOpenContainerBlockMap() {
@@ -212,8 +213,9 @@ public class KeyValueHandler extends Handler {
       return handleGetSmallFile(request, kvContainer);
     case GetCommittedBlockLength:
       return handleGetCommittedBlockLength(request, kvContainer);
+    default:
+      return null;
     }
-    return null;
   }
 
   @VisibleForTesting
@@ -244,7 +246,7 @@ public class KeyValueHandler extends Handler {
     long containerID = request.getContainerID();
 
     KeyValueContainerData newContainerData = new KeyValueContainerData(
-        containerID, maxContainerSizeGB);
+        containerID, maxContainerSize);
     // TODO: Add support to add metadataList to ContainerData. Add metadata
     // to container during creation.
     KeyValueContainer newContainer = new KeyValueContainer(
@@ -267,6 +269,19 @@ public class KeyValueHandler extends Handler {
     }
 
     return ContainerUtils.getSuccessResponse(request);
+  }
+
+  public void populateContainerPathFields(KeyValueContainer container,
+      long maxSize) throws IOException {
+    volumeSet.acquireLock();
+    try {
+      HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
+          .getVolumesList(), maxSize);
+      String hddsVolumeDir = containerVolume.getHddsRootDir().toString();
+      container.populatePathFields(scmID, containerVolume, hddsVolumeDir);
+    } finally {
+      volumeSet.releaseLock();
+    }
   }
 
   /**
@@ -322,7 +337,7 @@ public class KeyValueHandler extends Handler {
    * Open containers cannot be deleted.
    * Holds writeLock on ContainerSet till the container is removed from
    * containerMap. On disk deletion of container files will happen
-   * asynchornously without the lock.
+   * asynchronously without the lock.
    */
   ContainerCommandResponseProto handleDeleteContainer(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {

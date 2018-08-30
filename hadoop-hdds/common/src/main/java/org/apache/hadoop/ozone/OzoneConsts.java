@@ -110,12 +110,6 @@ public final class OzoneConsts {
     }
   }
 
-  /**
-   * Ozone handler types.
-   */
-  public static final String OZONE_HANDLER_DISTRIBUTED = "distributed";
-  public static final String OZONE_HANDLER_LOCAL = "local";
-
   public static final String DELETING_KEY_PREFIX = "#deleting#";
   public static final String DELETED_KEY_PREFIX = "#deleted#";
   public static final String DELETE_TRANSACTION_KEY_PREFIX = "#delTX#";
@@ -185,7 +179,7 @@ public final class OzoneConsts {
   public static final String CONTAINER_TYPE = "containerType";
   public static final String STATE = "state";
   public static final String METADATA = "metadata";
-  public static final String MAX_SIZE_GB = "maxSizeGB";
+  public static final String MAX_SIZE = "maxSize";
   public static final String METADATA_PATH = "metadataPath";
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";

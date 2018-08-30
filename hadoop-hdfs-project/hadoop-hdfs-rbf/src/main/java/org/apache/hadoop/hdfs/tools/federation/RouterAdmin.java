@@ -94,23 +94,56 @@ public class RouterAdmin extends Configured implements Tool {
    * Print the usage message.
    */
   public void printUsage() {
-    String usage = "Federation Admin Tools:\n"
-        + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
-        + "-owner <owner> -group <group> -mode <mode>]\n"
-        + "\t[-update <source> <nameservice1, nameservice2, ...> <destination> "
-        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
-        + "-owner <owner> -group <group> -mode <mode>]\n"
-        + "\t[-rm <source>]\n"
-        + "\t[-ls <path>]\n"
-        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-        + "<quota in bytes or quota size string>]\n"
-        + "\t[-clrQuota <path>]\n"
-        + "\t[-safemode enter | leave | get]\n"
-        + "\t[-nameservice enable | disable <nameservice>]\n"
-        + "\t[-getDisabledNameservices]\n";
-
+    String usage = getUsage(null);
     System.out.println(usage);
+  }
+
+  private void printUsage(String cmd) {
+    String usage = getUsage(cmd);
+    System.out.println(usage);
+  }
+
+  private String getUsage(String cmd) {
+    if (cmd == null) {
+      String[] commands =
+          {"-add", "-update", "-rm", "-ls", "-setQuota", "-clrQuota",
+              "-safemode", "-nameservice", "-getDisabledNameservices"};
+      StringBuilder usage = new StringBuilder();
+      usage.append("Usage: hdfs routeradmin :\n");
+      for (int i = 0; i < commands.length; i++) {
+        usage.append(getUsage(commands[i]));
+        if (i + 1 < commands.length) {
+          usage.append("\n");
+        }
+      }
+      return usage.toString();
+    }
+    if (cmd.equals("-add")) {
+      return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+          + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+          + "-owner <owner> -group <group> -mode <mode>]";
+    } else if (cmd.equals("-update")) {
+      return "\t[-update <source> <nameservice1, nameservice2, ...> "
+          + "<destination> "
+          + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+          + "-owner <owner> -group <group> -mode <mode>]";
+    } else if (cmd.equals("-rm")) {
+      return "\t[-rm <source>]";
+    } else if (cmd.equals("-ls")) {
+      return "\t[-ls <path>]";
+    } else if (cmd.equals("-setQuota")) {
+      return "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+          + "<quota in bytes or quota size string>]";
+    } else if (cmd.equals("-clrQuota")) {
+      return "\t[-clrQuota <path>]";
+    } else if (cmd.equals("-safemode")) {
+      return "\t[-safemode enter | leave | get]";
+    } else if (cmd.equals("-nameservice")) {
+      return "\t[-nameservice enable | disable <nameservice>]";
+    } else if (cmd.equals("-getDisabledNameservices")) {
+      return "\t[-getDisabledNameservices]";
+    }
+    return getUsage(null);
   }
 
   @Override
@@ -129,43 +162,43 @@ public class RouterAdmin extends Configured implements Tool {
     if ("-add".equals(cmd)) {
       if (argv.length < 4) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
     } else if ("-update".equals(cmd)) {
       if (argv.length < 4) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
-    } else if ("-rm".equalsIgnoreCase(cmd)) {
+    } else if ("-rm".equals(cmd)) {
       if (argv.length < 2) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
-    } else if ("-setQuota".equalsIgnoreCase(cmd)) {
+    } else if ("-setQuota".equals(cmd)) {
       if (argv.length < 4) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
-    } else if ("-clrQuota".equalsIgnoreCase(cmd)) {
+    } else if ("-clrQuota".equals(cmd)) {
       if (argv.length < 2) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
-    } else if ("-safemode".equalsIgnoreCase(cmd)) {
+    } else if ("-safemode".equals(cmd)) {
       if (argv.length < 2) {
         System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
-    } else if ("-nameservice".equalsIgnoreCase(cmd)) {
+    } else if ("-nameservice".equals(cmd)) {
       if (argv.length < 3) {
         System.err.println("Not enough parameters specificed for cmd " + cmd);
-        printUsage();
+        printUsage(cmd);
         return exitCode;
       }
     }
@@ -218,6 +251,10 @@ public class RouterAdmin extends Configured implements Tool {
               "Successfully clear quota for mount point " + argv[i]);
         }
       } else if ("-safemode".equals(cmd)) {
+        if (argv.length > 2) {
+          throw new IllegalArgumentException(
+              "Too many arguments, Max=1 argument allowed only");
+        }
         manageSafeMode(argv[i]);
       } else if ("-nameservice".equals(cmd)) {
         String subcmd = argv[i];
@@ -226,14 +263,13 @@ public class RouterAdmin extends Configured implements Tool {
       } else if ("-getDisabledNameservices".equals(cmd)) {
         getDisabledNameservices();
       } else {
-        printUsage();
-        return exitCode;
+        throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
     } catch (IllegalArgumentException arge) {
       debugException = arge;
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
-      printUsage();
+      printUsage(cmd);
     } catch (RemoteException e) {
       // This is a error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
@@ -712,6 +748,8 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (cmd.equals("get")) {
       boolean result = getSafeMode();
       System.out.println("Safe Mode: " + result);
+    } else {
+      throw new IllegalArgumentException("Invalid argument: " + cmd);
     }
   }
 

@@ -42,7 +42,7 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public void format(NamespaceInfo nsInfo) {
+  public void format(NamespaceInfo nsInfo, boolean force) {
     // format() should only get called at startup, before any BNs
     // can register with the NN.
     throw new UnsupportedOperationException(

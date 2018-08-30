@@ -23,7 +23,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import java.util.Objects;
 
 /**
- * BlockID of ozone (containerID  localID)
+ * BlockID of ozone (containerID  localID).
  */
 public class BlockID {
   private long containerID;
@@ -65,7 +65,8 @@ public class BlockID {
         setContainerID(containerID).setLocalID(localID).build();
   }
 
-  public static BlockID getFromProtobuf(ContainerProtos.DatanodeBlockID blockID) {
+  public static BlockID getFromProtobuf(
+      ContainerProtos.DatanodeBlockID blockID) {
     return new BlockID(blockID.getContainerID(),
         blockID.getLocalID());
   }

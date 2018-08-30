@@ -155,6 +155,12 @@ static int is_regex(const char *str) {
   return (strncmp(str, "regex:", 6) == 0);
 }
 
+static int is_valid_tmpfs_mount(const char *mount) {
+  const char *regex_str = "^/[^:]+$";
+  // execute_regex_match return 0 is matched success
+  return execute_regex_match(regex_str, mount) == 0;
+}
+
 static int is_volume_name(const char *volume_name) {
   const char *regex_str = "^[a-zA-Z0-9]([a-zA-Z0-9_.-]*)$";
   // execute_regex_match return 0 is matched success
@@ -334,6 +340,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Invalid pid namespace";
     case INVALID_DOCKER_IMAGE_TRUST:
       return "Docker image is not trusted";
+    case INVALID_DOCKER_TMPFS_MOUNT:
+      return "Invalid docker tmpfs mount";
     default:
       return "Unknown error";
   }
@@ -1129,6 +1137,35 @@ static char* get_mount_type(const char *mount) {
   return mount_type;
 }
 
+static int add_tmpfs_mounts(const struct configuration *command_config, args *args) {
+  char **values = get_configuration_values_delimiter("tmpfs", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
+  int i = 0, ret = 0;
+  if (values == NULL) {
+    goto free_and_exit;
+  }
+  for (i = 0; values[i] != NULL; i++) {
+    if (!is_valid_tmpfs_mount(values[i])) {
+      fprintf(ERRORFILE, "Invalid docker tmpfs mount '%s'\n", values[i]);
+      ret = INVALID_DOCKER_TMPFS_MOUNT;
+      goto free_and_exit;
+    }
+    ret = add_to_args(args, "--tmpfs");
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+      goto free_and_exit;
+    }
+    ret = add_to_args(args, values[i]);
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+      goto free_and_exit;
+    }
+  }
+
+free_and_exit:
+  free_values(values);
+  return ret;
+}
+
 static int add_mounts(const struct configuration *command_config, const struct configuration *conf, args *args) {
   const char *tmp_path_buffer[2] = {NULL, NULL};
   char *mount_src = NULL;
@@ -1465,6 +1502,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = add_mounts(&command_config, conf, args);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_tmpfs_mounts(&command_config, args);
   if (ret != 0) {
     goto free_and_exit;
   }

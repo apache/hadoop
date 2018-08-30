@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.yarn.service.utils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
@@ -30,8 +31,6 @@ import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
-import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,7 +53,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Test for ServiceApiUtil helper methods.
  */
-public class TestServiceApiUtil {
+public class TestServiceApiUtil extends ServiceTestUtils {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestServiceApiUtil.class);
   private static final String EXCEPTION_PREFIX = "Should have thrown " +
@@ -635,10 +635,12 @@ public class TestServiceApiUtil {
 
     try {
       ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
-      Assert.fail(EXCEPTION_PREFIX + "service with invalid principal name format.");
+      Assert.fail(EXCEPTION_PREFIX + "service with invalid principal name " +
+          "format.");
     } catch (IllegalArgumentException e) {
       assertEquals(
-          String.format(RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
+          String.format(
+              RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
               kp.getPrincipalName()),
           e.getMessage());
     }
@@ -649,5 +651,93 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
+  }
+
+  @Test
+  public void testResolveCompsDependency() {
+    Service service = createExampleApplication();
+    List<String> dependencies = new ArrayList<String>();
+    dependencies.add("compb");
+    Component compa = createComponent("compa");
+    compa.setDependencies(dependencies);
+    Component compb = createComponent("compb");
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> order = ServiceApiUtil.resolveCompsDependency(service);
+    List<String> expected = new ArrayList<String>();
+    expected.add("compb");
+    expected.add("compa");
+    for (int i = 0; i < expected.size(); i++) {
+      Assert.assertEquals("Components are not equal.", expected.get(i),
+          order.get(i));
+    }
+  }
+
+  @Test
+  public void testResolveCompsDependencyReversed() {
+    Service service = createExampleApplication();
+    List<String> dependencies = new ArrayList<String>();
+    dependencies.add("compa");
+    Component compa = createComponent("compa");
+    Component compb = createComponent("compb");
+    compb.setDependencies(dependencies);
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> order = ServiceApiUtil.resolveCompsDependency(service);
+    List<String> expected = new ArrayList<String>();
+    expected.add("compa");
+    expected.add("compb");
+    for (int i = 0; i < expected.size(); i++) {
+      Assert.assertEquals("Components are not equal.", expected.get(i),
+          order.get(i));
+    }
+  }
+
+  @Test
+  public void testResolveCompsCircularDependency() {
+    Service service = createExampleApplication();
+    List<String> dependencies = new ArrayList<String>();
+    List<String> dependencies2 = new ArrayList<String>();
+    dependencies.add("compb");
+    dependencies2.add("compa");
+    Component compa = createComponent("compa");
+    compa.setDependencies(dependencies);
+    Component compb = createComponent("compb");
+    compa.setDependencies(dependencies2);
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> order = ServiceApiUtil.resolveCompsDependency(service);
+    List<String> expected = new ArrayList<String>();
+    expected.add("compa");
+    expected.add("compb");
+    for (int i = 0; i < expected.size(); i++) {
+      Assert.assertEquals("Components are not equal.", expected.get(i),
+          order.get(i));
+    }
+  }
+
+  @Test
+  public void testResolveNoCompsDependency() {
+    Service service = createExampleApplication();
+    Component compa = createComponent("compa");
+    Component compb = createComponent("compb");
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> order = ServiceApiUtil.resolveCompsDependency(service);
+    List<String> expected = new ArrayList<String>();
+    expected.add("compa");
+    expected.add("compb");
+    for (int i = 0; i < expected.size(); i++) {
+      Assert.assertEquals("Components are not equal.", expected.get(i),
+          order.get(i));
+    }
+  }
+
+  public static Service createExampleApplication() {
+
+    Service exampleApp = new Service();
+    exampleApp.setName("example-app");
+    exampleApp.setVersion("v1");
+    return exampleApp;
   }
 }

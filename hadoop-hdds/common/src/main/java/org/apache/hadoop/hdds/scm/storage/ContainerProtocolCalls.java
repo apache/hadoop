@@ -113,8 +113,8 @@ public final class ContainerProtocolCalls  {
    * @throws IOException if there is an I/O error while performing the call
    */
   public static ContainerProtos.GetCommittedBlockLengthResponseProto
-  getCommittedBlockLength(
-      XceiverClientSpi xceiverClient, BlockID blockID, String traceID)
+      getCommittedBlockLength(
+          XceiverClientSpi xceiverClient, BlockID blockID, String traceID)
       throws IOException {
     ContainerProtos.GetCommittedBlockLengthRequestProto.Builder
         getBlockLengthRequestBuilder =
@@ -375,7 +375,7 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
-   * Reads the data given the blockID
+   * Reads the data given the blockID.
    *
    * @param client
    * @param blockID - ID of the block

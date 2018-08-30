@@ -212,6 +212,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   public HddsProtos.SCMContainerInfo getProtobuf() {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
+    Preconditions.checkState(containerID > 0);
     return builder.setAllocatedBytes(getAllocatedBytes())
         .setContainerID(getContainerID())
         .setUsedBytes(getUsedBytes())
@@ -395,13 +396,13 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     private ReplicationType replicationType;
 
     public Builder setReplicationType(
-        ReplicationType replicationType) {
-      this.replicationType = replicationType;
+        ReplicationType repType) {
+      this.replicationType = repType;
       return this;
     }
 
-    public Builder setPipelineID(PipelineID pipelineID) {
-      this.pipelineID = pipelineID;
+    public Builder setPipelineID(PipelineID pipelineId) {
+      this.pipelineID = pipelineId;
       return this;
     }
 
@@ -446,8 +447,8 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       return this;
     }
 
-    public Builder setDeleteTransactionId(long deleteTransactionId) {
-      this.deleteTransactionId = deleteTransactionId;
+    public Builder setDeleteTransactionId(long deleteTransactionID) {
+      this.deleteTransactionId = deleteTransactionID;
       return this;
     }
 

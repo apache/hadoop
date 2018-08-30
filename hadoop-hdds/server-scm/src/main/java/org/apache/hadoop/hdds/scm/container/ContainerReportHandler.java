@@ -84,7 +84,8 @@ public class ContainerReportHandler implements
     try {
 
       //update state in container db and trigger close container events
-      containerMapping.processContainerReports(datanodeOrigin, containerReport);
+      containerMapping
+          .processContainerReports(datanodeOrigin, containerReport, false);
 
       Set<ContainerID> containerIds = containerReport.getReportsList().stream()
           .map(containerProto -> containerProto.getContainerID())
@@ -128,6 +129,10 @@ public class ContainerReportHandler implements
           "Container is missing from containerStateManager. Can't request "
               + "replication. {}",
           containerID);
+      return;
+    }
+    if (container.isContainerOpen()) {
+      return;
     }
     if (replicationStatus.isReplicationEnabled()) {
 

@@ -1397,6 +1397,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           datanode.getMetrics().incrRamDiskBlocksWrite();
         } catch (DiskOutOfSpaceException de) {
           // Ignore the exception since we just fall back to persistent storage.
+          LOG.warn("Insufficient space for placing the block on a transient "
+              + "volume, fall back to persistent storage: "
+              + de.getMessage());
         } finally {
           if (ref == null) {
             cacheManager.release(b.getNumBytes());

@@ -178,8 +178,8 @@ public class TestContainerMapping {
     mapping
         .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CLOSE);
     ContainerInfo finalContInfo = contInfo;
-    LambdaTestUtils.intercept(SCMException.class,"No entry exist for "
-        + "containerId:" , () -> mapping.getContainerWithPipeline(
+    LambdaTestUtils.intercept(SCMException.class, "No entry exist for "
+        + "containerId:", () -> mapping.getContainerWithPipeline(
         finalContInfo.getContainerID()));
 
     mapping.getStateManager().getContainerStateMap()
@@ -242,7 +242,7 @@ public class TestContainerMapping {
   }
 
   @Test
-  public void testFullContainerReport() throws IOException {
+  public void testFullContainerReport() throws Exception {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
@@ -266,13 +266,26 @@ public class TestContainerMapping {
         .newBuilder();
     crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(datanodeDetails, crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
 
     ContainerInfo updatedContainer =
         mapping.getContainer(info.getContainerID());
     Assert.assertEquals(100000000L,
         updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
+
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
+      LambdaTestUtils.intercept(SCMException.class, "No entry "
+          + "exist for containerId:", () -> mapping.getStateManager()
+          .getContainerReplicas(ContainerID.valueof(c.getContainerID())));
+    }
+
+    mapping.processContainerReports(TestUtils.randomDatanodeDetails(),
+        crBuilder.build(), true);
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
+      Assert.assertTrue(mapping.getStateManager().getContainerReplicas(
+          ContainerID.valueof(c.getContainerID())).size() > 0);
+    }
   }
 
   @Test
@@ -301,7 +314,7 @@ public class TestContainerMapping {
         ContainerReportsProto.newBuilder();
     crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(datanodeDetails, crBuilder.build());
+    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
 
     ContainerInfo updatedContainer =
         mapping.getContainer(info.getContainerID());
@@ -358,6 +371,15 @@ public class TestContainerMapping {
     mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATED);
     return containerInfo;
+  }
+
+  @Test
+  public void testFlushAllContainers() throws IOException {
+    ContainerInfo info = createContainer();
+    List<ContainerInfo> containers = mapping.getStateManager()
+        .getAllContainers();
+    Assert.assertTrue(containers.size() > 0);
+    mapping.flushContainerInfo();
   }
 
 }

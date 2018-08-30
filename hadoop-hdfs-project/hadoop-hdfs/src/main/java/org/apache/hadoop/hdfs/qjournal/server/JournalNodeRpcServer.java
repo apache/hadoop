@@ -176,9 +176,10 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public void format(String journalId,
                      String nameServiceId,
-                     NamespaceInfo nsInfo)
+                     NamespaceInfo nsInfo,
+                     boolean force)
       throws IOException {
-    jn.getOrCreateJournal(journalId, nameServiceId).format(nsInfo);
+    jn.getOrCreateJournal(journalId, nameServiceId).format(nsInfo, force);
   }
 
   @Override

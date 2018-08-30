@@ -48,8 +48,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.hdds.scm.HddsServerUtil.getScmHeartbeatInterval;
-
 /**
  * State Machine Class.
  */
@@ -60,7 +58,6 @@ public class DatanodeStateMachine implements Closeable {
   private final ExecutorService executorService;
   private final Configuration conf;
   private final SCMConnectionManager connectionManager;
-  private final long heartbeatFrequency;
   private StateContext context;
   private final OzoneContainer container;
   private DatanodeDetails datanodeDetails;
@@ -86,8 +83,6 @@ public class DatanodeStateMachine implements Closeable {
             .setNameFormat("Datanode State Machine Thread - %d").build());
     connectionManager = new SCMConnectionManager(conf);
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
-    heartbeatFrequency = TimeUnit.SECONDS.toMillis(
-        getScmHeartbeatInterval(conf));
     container = new OzoneContainer(this.datanodeDetails,
         new OzoneConfiguration(conf), context);
     nextHB = new AtomicLong(Time.monotonicNow());
@@ -148,6 +143,7 @@ public class DatanodeStateMachine implements Closeable {
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
+        long heartbeatFrequency = context.getHeartbeatFrequency();
         nextHB.set(Time.monotonicNow() + heartbeatFrequency);
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);

@@ -57,8 +57,7 @@ public class TestOzoneFSInputStream {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "distributed"
+   * Ozone is made active by setting OZONE_ENABLED = true
    *
    * @throws IOException
    */
@@ -90,9 +89,6 @@ public class TestOzoneFSInputStream {
     // Fetch the host and port for File System init
     DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
         .getDatanodeDetails();
-    int port = datanodeDetails
-        .getPort(DatanodeDetails.Port.Name.REST).getValue();
-    String host = datanodeDetails.getHostName();
 
     // Set the fs.defaultFS and start the filesystem
     String uri = String.format("%s://%s.%s/",

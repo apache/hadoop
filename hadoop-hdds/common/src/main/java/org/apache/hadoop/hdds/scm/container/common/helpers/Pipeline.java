@@ -169,8 +169,8 @@ public class Pipeline {
    */
   public List<String> getDatanodeHosts() {
     List<String> dataHosts = new ArrayList<>();
-    for (DatanodeDetails id :getDatanodes().values()) {
-      dataHosts.add(id.getHostName());
+    for (DatanodeDetails datanode : getDatanodes().values()) {
+      dataHosts.add(datanode.getHostName());
     }
     return dataHosts;
   }
@@ -219,7 +219,7 @@ public class Pipeline {
    * Update the State of the pipeline.
    */
   public void setLifeCycleState(HddsProtos.LifeCycleState nextState) {
-     lifeCycleState = nextState;
+    lifeCycleState = nextState;
   }
 
   /**
@@ -244,9 +244,8 @@ public class Pipeline {
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
         .append("[");
-    getDatanodes().keySet().stream()
-        .forEach(id -> b.
-            append(id.endsWith(getLeaderID()) ? "*" + id : id));
+    getDatanodes().keySet().forEach(
+        node -> b.append(node.endsWith(getLeaderID()) ? "*" + id : id));
     b.append(" id:").append(id);
     if (getType() != null) {
       b.append(" type:").append(getType().toString());

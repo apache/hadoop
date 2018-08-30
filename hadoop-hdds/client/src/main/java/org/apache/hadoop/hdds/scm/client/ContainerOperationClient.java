@@ -257,6 +257,15 @@ public class ContainerOperationClient implements ScmClient {
         factor, nodePool);
   }
 
+  @Override
+  public void close() {
+    try {
+      xceiverClientManager.close();
+    } catch (Exception ex) {
+      LOG.error("Can't close " + this.getClass().getSimpleName(), ex);
+    }
+  }
+
   /**
    * Deletes an existing container.
    *

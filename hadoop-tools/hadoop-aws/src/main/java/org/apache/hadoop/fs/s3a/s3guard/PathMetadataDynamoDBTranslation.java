@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
@@ -64,6 +66,7 @@ final class PathMetadataDynamoDBTranslation {
   @VisibleForTesting
   static final String BLOCK_SIZE = "block_size";
   static final String IS_DELETED = "is_deleted";
+  static final String IS_AUTHORITATIVE = "is_authoritative";
 
   /** Table version field {@value} in version marker item. */
   @VisibleForTesting
@@ -99,12 +102,27 @@ final class PathMetadataDynamoDBTranslation {
   }
 
   /**
-   * Converts a DynamoDB item to a {@link PathMetadata}.
+   * Converts a DynamoDB item to a {@link DDBPathMetadata}.
    *
    * @param item DynamoDB item to convert
-   * @return {@code item} converted to a {@link PathMetadata}
+   * @return {@code item} converted to a {@link DDBPathMetadata}
    */
-  static PathMetadata itemToPathMetadata(Item item, String username)
+  static DDBPathMetadata itemToPathMetadata(Item item, String username)
+      throws IOException {
+    return itemToPathMetadata(item, username, false);
+  }
+
+  /**
+   * Converts a DynamoDB item to a {@link DDBPathMetadata}.
+   * Can ignore {@code IS_AUTHORITATIVE} flag if {@code ignoreIsAuthFlag} is
+   * true.
+   *
+   * @param item DynamoDB item to convert
+   * @param ignoreIsAuthFlag if true, ignore the authoritative flag on item
+   * @return {@code item} converted to a {@link DDBPathMetadata}
+   */
+  static DDBPathMetadata itemToPathMetadata(Item item, String username,
+      boolean ignoreIsAuthFlag)
       throws IOException {
     if (item == null) {
       return null;
@@ -125,8 +143,13 @@ final class PathMetadataDynamoDBTranslation {
     Path path = new Path(parent, childStr);
 
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
+    boolean isAuthoritativeDir = false;
     final FileStatus fileStatus;
     if (isDir) {
+      if (!ignoreIsAuthFlag) {
+        isAuthoritativeDir = item.hasAttribute(IS_AUTHORITATIVE)
+            && item.getBoolean(IS_AUTHORITATIVE);
+      }
       fileStatus = DynamoDBMetadataStore.makeDirStatus(path, username);
     } else {
       long len = item.hasAttribute(FILE_LENGTH) ? item.getLong(FILE_LENGTH) : 0;
@@ -138,21 +161,40 @@ final class PathMetadataDynamoDBTranslation {
     boolean isDeleted =
         item.hasAttribute(IS_DELETED) && item.getBoolean(IS_DELETED);
 
-    return new PathMetadata(fileStatus, Tristate.UNKNOWN, isDeleted);
+    return new DDBPathMetadata(fileStatus, Tristate.UNKNOWN, isDeleted,
+        isAuthoritativeDir);
   }
 
   /**
-   * Converts a {@link PathMetadata} to a DynamoDB item.
+   * Converts a {@link DDBPathMetadata} to a DynamoDB item.
    *
-   * @param meta {@link PathMetadata} to convert
+   * @param meta {@link DDBPathMetadata} to convert
    * @return {@code meta} converted to DynamoDB item
    */
-  static Item pathMetadataToItem(PathMetadata meta) {
+  static Item pathMetadataToItem(DDBPathMetadata meta) {
+    return pathMetadataToItem(meta, false);
+  }
+
+  /**
+   * Converts a {@link DDBPathMetadata} to a DynamoDB item.
+   *
+   * Can ignore {@code IS_AUTHORITATIVE} flag if {@code ignoreIsAuthFlag} is
+   * true.
+   *
+   * @param meta {@link DDBPathMetadata} to convert
+   * @param ignoreIsAuthFlag if true, ignore the authoritative flag on item
+   * @return {@code meta} converted to DynamoDB item
+   */
+  static Item pathMetadataToItem(DDBPathMetadata meta,
+      boolean ignoreIsAuthFlag) {
     Preconditions.checkNotNull(meta);
     final FileStatus status = meta.getFileStatus();
     final Item item = new Item().withPrimaryKey(pathToKey(status.getPath()));
     if (status.isDirectory()) {
       item.withBoolean(IS_DIR, true);
+      if (!ignoreIsAuthFlag) {
+        item.withBoolean(IS_AUTHORITATIVE, meta.isAuthoritativeDir());
+      }
     } else {
       item.withLong(FILE_LENGTH, status.getLen())
           .withLong(MOD_TIME, status.getModificationTime())
@@ -214,18 +256,19 @@ final class PathMetadataDynamoDBTranslation {
   }
 
   /**
-   * Converts a collection {@link PathMetadata} to a collection DynamoDB items.
+   * Converts a collection {@link DDBPathMetadata} to a collection DynamoDB
+   * items.
    *
-   * @see #pathMetadataToItem(PathMetadata)
+   * @see #pathMetadataToItem(DDBPathMetadata)
    */
-  static Item[] pathMetadataToItem(Collection<PathMetadata> metas) {
+  static Item[] pathMetadataToItem(Collection<DDBPathMetadata> metas) {
     if (metas == null) {
       return null;
     }
 
     final Item[] items = new Item[metas.size()];
     int i = 0;
-    for (PathMetadata meta : metas) {
+    for (DDBPathMetadata meta : metas) {
       items[i++] = pathMetadataToItem(meta);
     }
     return items;
@@ -299,6 +342,12 @@ final class PathMetadataDynamoDBTranslation {
    * There is no need to instantiate this class.
    */
   private PathMetadataDynamoDBTranslation() {
+  }
+
+  static List<DDBPathMetadata> pathMetaToDDBPathMeta(
+      Collection<PathMetadata> pathMetadatas) {
+    return pathMetadatas.stream().map(p -> new DDBPathMetadata(p))
+        .collect(Collectors.toList());
   }
 
 }

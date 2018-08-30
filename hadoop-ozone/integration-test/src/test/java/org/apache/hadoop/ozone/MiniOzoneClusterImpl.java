@@ -216,7 +216,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartHddsDatanode(int i) {
+  public void restartHddsDatanode(int i) throws InterruptedException,
+      TimeoutException {
     HddsDatanodeService datanodeService = hddsDatanodes.get(i);
     datanodeService.stop();
     datanodeService.join();
@@ -230,7 +231,15 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
         .getPort(DatanodeDetails.Port.Name.RATIS).getValue();
     conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
     conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
-    datanodeService.start(null);
+    hddsDatanodes.remove(i);
+    // wait for node to be removed from SCM healthy node list.
+    waitForClusterToBeReady();
+    HddsDatanodeService service =
+        HddsDatanodeService.createHddsDatanodeService(conf);
+    hddsDatanodes.add(i, service);
+    service.start(null);
+    // wait for the node to be identified as a healthy node again.
+    waitForClusterToBeReady();
   }
 
   @Override

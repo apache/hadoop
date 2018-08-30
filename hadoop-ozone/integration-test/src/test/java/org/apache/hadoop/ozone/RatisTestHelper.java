@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -50,14 +49,13 @@ public interface RatisTestHelper {
     private final MiniOzoneCluster cluster;
 
     /**
-     * Create a {@link MiniOzoneCluster} for testing by setting
-     *   OZONE_ENABLED = true,
-     *   RATIS_ENABLED = true, and
-     *   OZONE_HANDLER_TYPE_KEY = "distributed".
+     * Create a {@link MiniOzoneCluster} for testing by setting.
+     *   OZONE_ENABLED = true
+     *   RATIS_ENABLED = true
      */
-    public RatisTestSuite(final Class<?> clazz)
+    public RatisTestSuite()
         throws IOException, TimeoutException, InterruptedException {
-      conf = newOzoneConfiguration(clazz, RPC);
+      conf = newOzoneConfiguration(RPC);
       cluster = newMiniOzoneCluster(NUM_DATANODES, conf);
     }
 
@@ -85,10 +83,8 @@ public interface RatisTestHelper {
     }
   }
 
-  static OzoneConfiguration newOzoneConfiguration(
-      Class<?> clazz, RpcType rpc) {
+  static OzoneConfiguration newOzoneConfiguration(RpcType rpc) {
     final OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerTestHelper.setOzoneLocalStorageRoot(clazz, conf);
     initRatisConf(rpc, conf);
     return conf;
   }

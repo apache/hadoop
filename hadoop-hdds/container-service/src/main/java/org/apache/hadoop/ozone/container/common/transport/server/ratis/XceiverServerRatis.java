@@ -71,10 +71,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class XceiverServerRatis implements XceiverServerSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
-  private static final AtomicLong callIdCounter = new AtomicLong();
+  private static final AtomicLong CALL_ID_COUNTER = new AtomicLong();
 
   private static long nextCallId() {
-    return callIdCounter.getAndIncrement() & Long.MAX_VALUE;
+    return CALL_ID_COUNTER.getAndIncrement() & Long.MAX_VALUE;
   }
 
   private final int port;
@@ -307,6 +307,6 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
         PipelineID.getFromProtobuf(pipelineID).getRaftGroupID(),
-        nextCallId(),0, Message.valueOf(request.toByteString()), type);
+        nextCallId(), 0, Message.valueOf(request.toByteString()), type);
   }
 }

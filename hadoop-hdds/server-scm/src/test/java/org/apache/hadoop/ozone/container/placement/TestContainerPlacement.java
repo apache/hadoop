@@ -87,11 +87,13 @@ public class TestContainerPlacement {
     for (int x = 0; x < opsCount; x++) {
       long containerSize = random.nextInt(100) * OzoneConsts.GB;
       List<DatanodeDetails> nodesCapacity =
-          capacityPlacer.chooseDatanodes(new ArrayList<>(), nodesRequired, containerSize);
+          capacityPlacer.chooseDatanodes(new ArrayList<>(), nodesRequired,
+              containerSize);
       assertEquals(nodesRequired, nodesCapacity.size());
 
       List<DatanodeDetails> nodesRandom =
-          randomPlacer.chooseDatanodes(nodesCapacity, nodesRequired, containerSize);
+          randomPlacer.chooseDatanodes(nodesCapacity, nodesRequired,
+              containerSize);
 
       // One fifth of all calls are delete
       if (x % 5 == 0) {

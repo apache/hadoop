@@ -381,7 +381,7 @@ public class ContainerStateMap {
   }
 
   /**
-   * Returns Open containers in the SCM by the Pipeline
+   * Returns Open containers in the SCM by the Pipeline.
    *
    * @param pipelineID - Pipeline id.
    * @return NavigableSet<ContainerID>

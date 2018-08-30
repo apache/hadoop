@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
@@ -66,7 +67,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_SIZE_GB;
+    .OZONE_SCM_CONTAINER_SIZE;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .FAILED_TO_CHANGE_CONTAINER_STATE;
 import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
@@ -129,9 +130,8 @@ public class ContainerMapping implements Mapping {
 
     this.lock = new ReentrantLock();
 
-    // To be replaced with code getStorageSize once it is committed.
-    size = conf.getLong(OZONE_SCM_CONTAINER_SIZE_GB,
-        OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024 * 1024 * 1024;
+    size = (long)conf.getStorageSize(OZONE_SCM_CONTAINER_SIZE,
+        OZONE_SCM_CONTAINER_SIZE_DEFAULT, StorageUnit.BYTES);
     this.containerStateManager =
         new ContainerStateManager(conf, this);
     LOG.trace("Container State Manager created.");
@@ -217,9 +217,10 @@ public class ContainerMapping implements Mapping {
         // For close containers create pipeline from datanodes with replicas
         Set<DatanodeDetails> dnWithReplicas = containerStateManager
             .getContainerReplicas(contInfo.containerID());
-        pipeline = new Pipeline(dnWithReplicas.iterator().next().getHostName(),
-            contInfo.getState(), ReplicationType.STAND_ALONE,
-            contInfo.getReplicationFactor(), PipelineID.randomId());
+        pipeline =
+            new Pipeline(dnWithReplicas.iterator().next().getUuidString(),
+                contInfo.getState(), ReplicationType.STAND_ALONE,
+                contInfo.getReplicationFactor(), PipelineID.randomId());
         dnWithReplicas.forEach(pipeline::addMember);
       }
       return new ContainerWithPipeline(contInfo, pipeline);
@@ -504,15 +505,26 @@ public class ContainerMapping implements Mapping {
    */
   @Override
   public void processContainerReports(DatanodeDetails datanodeDetails,
-                                      ContainerReportsProto reports)
+      ContainerReportsProto reports, boolean isRegisterCall)
       throws IOException {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
     PendingDeleteStatusList pendingDeleteStatusList =
         new PendingDeleteStatusList(datanodeDetails);
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo contInfo :
         containerInfos) {
-      byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
+      // Update replica info during registration process.
+      if (isRegisterCall) {
+        try {
+          getStateManager().addContainerReplica(ContainerID.
+              valueof(contInfo.getContainerID()), datanodeDetails);
+        } catch (Exception ex) {
+          // Continue to next one after logging the error.
+          LOG.error("Error while adding replica for containerId {}.",
+              contInfo.getContainerID(), ex);
+        }
+      }
+      byte[] dbKey = Longs.toByteArray(contInfo.getContainerID());
       lock.lock();
       try {
         byte[] containerBytes = containerStore.get(dbKey);
@@ -521,12 +533,12 @@ public class ContainerMapping implements Mapping {
               HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
 
           HddsProtos.SCMContainerInfo newState =
-              reconcileState(datanodeState, knownState, datanodeDetails);
+              reconcileState(contInfo, knownState, datanodeDetails);
 
-          if (knownState.getDeleteTransactionId() > datanodeState
+          if (knownState.getDeleteTransactionId() > contInfo
               .getDeleteTransactionId()) {
             pendingDeleteStatusList
-                .addPendingDeleteStatus(datanodeState.getDeleteTransactionId(),
+                .addPendingDeleteStatus(contInfo.getDeleteTransactionId(),
                     knownState.getDeleteTransactionId(),
                     knownState.getContainerID());
           }
@@ -557,7 +569,7 @@ public class ContainerMapping implements Mapping {
           LOG.error("Error while processing container report from datanode :" +
                   " {}, for container: {}, reason: container doesn't exist in" +
                   "container database.", datanodeDetails,
-              datanodeState.getContainerID());
+              contInfo.getContainerID());
         }
       } finally {
         lock.unlock();
@@ -588,8 +600,8 @@ public class ContainerMapping implements Mapping {
         .setReplicationType(knownState.getReplicationType())
         .setReplicationFactor(knownState.getReplicationFactor());
 
-    // TODO: If current state doesn't have this DN in list of DataNodes with replica
-    // then add it in list of replicas.
+    // TODO: If current state doesn't have this DN in list of DataNodes with
+    // replica then add it in list of replicas.
 
     // If used size is greater than allocated size, we will be updating
     // allocated size with used size. This update is done as a fallback
@@ -732,21 +744,7 @@ public class ContainerMapping implements Mapping {
         // return info of a deleted container. may revisit this in the future,
         // for now, just skip a not-found container
         if (containerBytes != null) {
-          HddsProtos.SCMContainerInfo oldInfoProto =
-              HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
-          ContainerInfo oldInfo = ContainerInfo.fromProtobuf(oldInfoProto);
-          ContainerInfo newInfo = new ContainerInfo.Builder()
-              .setAllocatedBytes(info.getAllocatedBytes())
-              .setNumberOfKeys(oldInfo.getNumberOfKeys())
-              .setOwner(oldInfo.getOwner())
-              .setPipelineID(oldInfo.getPipelineID())
-              .setState(oldInfo.getState())
-              .setUsedBytes(oldInfo.getUsedBytes())
-              .setDeleteTransactionId(oldInfo.getDeleteTransactionId())
-              .setReplicationFactor(oldInfo.getReplicationFactor())
-              .setReplicationType(oldInfo.getReplicationType())
-              .build();
-          containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
+          containerStore.put(dbKey, info.getProtobuf().toByteArray());
         } else {
           LOG.debug("Container state manager has container {} but not found " +
                   "in container store, a deleted container?",

@@ -383,32 +383,34 @@ public final class ReencryptionUpdater implements Runnable {
     final LinkedList<Future> tasks = tracker.getTasks();
     final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     ListIterator<Future> iter = tasks.listIterator();
-    while (iter.hasNext()) {
-      Future<ReencryptionTask> curr = iter.next();
-      if (curr.isCancelled()) {
-        break;
+    synchronized (handler) {
+      while (iter.hasNext()) {
+        Future<ReencryptionTask> curr = iter.next();
+        if (curr.isCancelled()) {
+          break;
+        }
+        if (!curr.isDone() || !curr.get().processed) {
+          // still has earlier tasks not completed, skip here.
+          break;
+        }
+        ReencryptionTask task = curr.get();
+        LOG.debug("Updating re-encryption checkpoint with completed task."
+            + " last: {} size:{}.", task.lastFile, task.batch.size());
+        assert zoneId == task.zoneId;
+        try {
+          final XAttr xattr = FSDirEncryptionZoneOp
+              .updateReencryptionProgress(dir, zoneNode, status, task.lastFile,
+                  task.numFilesUpdated, task.numFailures);
+          xAttrs.clear();
+          xAttrs.add(xattr);
+        } catch (IOException ie) {
+          LOG.warn("Failed to update re-encrypted progress to xattr" +
+                  " for zone {}", zonePath, ie);
+          ++task.numFailures;
+        }
+        ++tracker.numCheckpointed;
+        iter.remove();
       }
-      if (!curr.isDone() || !curr.get().processed) {
-        // still has earlier tasks not completed, skip here.
-        break;
-      }
-      ReencryptionTask task = curr.get();
-      LOG.debug("Updating re-encryption checkpoint with completed task."
-          + " last: {} size:{}.", task.lastFile, task.batch.size());
-      assert zoneId == task.zoneId;
-      try {
-        final XAttr xattr = FSDirEncryptionZoneOp
-            .updateReencryptionProgress(dir, zoneNode, status, task.lastFile,
-                task.numFilesUpdated, task.numFailures);
-        xAttrs.clear();
-        xAttrs.add(xattr);
-      } catch (IOException ie) {
-        LOG.warn("Failed to update re-encrypted progress to xattr for zone {}",
-            zonePath, ie);
-        ++task.numFailures;
-      }
-      ++tracker.numCheckpointed;
-      iter.remove();
     }
     if (tracker.isCompleted()) {
       LOG.debug("Removed re-encryption tracker for zone {} because it completed"

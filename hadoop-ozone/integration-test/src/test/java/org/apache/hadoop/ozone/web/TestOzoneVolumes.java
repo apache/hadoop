@@ -18,26 +18,28 @@
 package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.TestOzoneHelper;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
+import org.junit.Assert;
+
 import org.junit.rules.Timeout;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 /**
- * Test ozone volume in the local storage handler scenario.
+ * Test ozone volume in the distributed storage handler scenario.
  */
-public class TestLocalOzoneVolumes extends TestOzoneHelper {
+public class TestOzoneVolumes extends TestOzoneHelper {
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestOzoneVolumes.class);
   /**
    * Set the timeout for every test.
    */
@@ -50,29 +52,19 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
-   * emulate Ozone backend.
+   * Ozone is made active by setting OZONE_ENABLED = true
    *
    * @throws IOException
    */
   @BeforeClass
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
-
-    String path = GenericTestUtils
-        .getTempPath(TestLocalOzoneVolumes.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
-
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     port = cluster.getHddsDatanodes().get(0)
-        .getDatanodeDetails().getPort(
-            DatanodeDetails.Port.Name.REST).getValue();
+        .getDatanodeDetails()
+        .getPort(DatanodeDetails.Port.Name.REST).getValue();
   }
 
   /**
@@ -93,6 +85,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumes() throws IOException {
     super.testCreateVolumes(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
 
   /**
@@ -103,6 +97,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithQuota() throws IOException {
     super.testCreateVolumesWithQuota(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
 
   /**
@@ -113,6 +109,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithInvalidQuota() throws IOException {
     super.testCreateVolumesWithInvalidQuota(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
 
   /**
@@ -125,6 +123,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithInvalidUser() throws IOException {
     super.testCreateVolumesWithInvalidUser(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
 
   /**
@@ -138,6 +138,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
   @Test
   public void testCreateVolumesWithOutAdminRights() throws IOException {
     super.testCreateVolumesWithOutAdminRights(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
 
   /**
@@ -145,18 +147,19 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
-  //@Test
+  @Test
   public void testCreateVolumesInLoop() throws IOException {
     super.testCreateVolumesInLoop(port);
+    Assert.assertEquals(0, cluster.getOzoneManager()
+        .getMetrics().getNumVolumeCreateFails());
   }
   /**
    * Get volumes owned by the user.
    *
    * @throws IOException
    */
-  @Test
   public void testGetVolumesByUser() throws IOException {
-    super.testGetVolumesByUser(port);
+    testGetVolumesByUser(port);
   }
 
   /**
@@ -164,7 +167,6 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
-  @Test
   public void testGetVolumesOfAnotherUser() throws IOException {
     super.testGetVolumesOfAnotherUser(port);
   }
@@ -175,13 +177,7 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
    *
    * @throws IOException
    */
-  @Test @Ignore
   public void testGetVolumesOfAnotherUserShouldFail() throws IOException {
     super.testGetVolumesOfAnotherUserShouldFail(port);
-  }
-
-  @Test
-  public void testListKeyOnEmptyBucket() throws IOException {
-    super.testListKeyOnEmptyBucket(port);
   }
 }

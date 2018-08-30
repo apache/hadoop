@@ -31,7 +31,6 @@ import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -52,14 +51,21 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Set;
+import java.util.List;
+import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
+import static org.apache.hadoop.hdds
+    .HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 
@@ -81,17 +87,15 @@ public class TestBlockDeletion {
     File baseDir = new File(path);
     baseDir.mkdirs();
 
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setQuietMode(false);
     conf.setTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL, 100,
         TimeUnit.MILLISECONDS);
-    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 200,
+    conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 200,
         TimeUnit.MILLISECONDS);
-
-    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
+    conf.setQuietMode(false);
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(1)
+        .setHbInterval(200)
+        .build();
     cluster.waitForClusterToBeReady();
     store = OzoneClientFactory.getRpcClient(conf).getObjectStore();
     dnContainerSet = cluster.getHddsDatanodes().get(0)
@@ -102,8 +106,9 @@ public class TestBlockDeletion {
   }
 
   @Test(timeout = 60000)
+  @Ignore("Until delete background service is fixed.")
   public void testBlockDeletion()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -133,7 +138,9 @@ public class TestBlockDeletion {
     Assert.assertTrue(verifyBlocksCreated(omKeyLocationInfoGroupList));
     // No containers with deleted blocks
     Assert.assertTrue(containerIdsWithDeletedBlocks.isEmpty());
-    // Delete transactionIds for the containers should be 0
+    // Delete transactionIds for the containers should be 0.
+    // NOTE: this test assumes that all the container is KetValueContainer. If
+    // other container types is going to be added, this test should be checked.
     matchContainerTransactionIds();
     om.deleteKey(keyArgs);
     Thread.sleep(5000);
@@ -179,7 +186,8 @@ public class TestBlockDeletion {
 
     logCapturer.clearOutput();
     scm.getScmContainerManager().processContainerReports(
-        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), dummyReport);
+        cluster.getHddsDatanodes().get(0).getDatanodeDetails(), dummyReport,
+        false);
     // wait for event to be handled by event handler
     Thread.sleep(1000);
     String output = logCapturer.getOutput();
@@ -209,8 +217,9 @@ public class TestBlockDeletion {
         Assert.assertEquals(
             scm.getContainerInfo(containerId).getDeleteTransactionId(), 0);
       }
-      Assert.assertEquals(dnContainerSet.getContainer(containerId)
-              .getContainerData().getDeleteTransactionId(),
+      Assert.assertEquals(((KeyValueContainerData)dnContainerSet
+              .getContainer(containerId).getContainerData())
+              .getDeleteTransactionId(),
           scm.getContainerInfo(containerId).getDeleteTransactionId());
     }
   }

@@ -23,6 +23,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.cli.container.ContainerCommandHandler;
 import org.apache.hadoop.hdds.scm.cli.container.CreateContainerHandler;
@@ -49,7 +50,7 @@ import java.util.Arrays;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_SIZE_GB;
+    .OZONE_SCM_CONTAINER_SIZE;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.hdds.scm.cli.ResultCode.EXECUTION_ERROR;
 import static org.apache.hadoop.hdds.scm.cli.ResultCode.SUCCESS;
@@ -107,8 +108,9 @@ public class SCMCLI extends OzoneBaseCLI {
         StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress =
         getScmAddressForClients(ozoneConf);
-    int containerSizeGB = ozoneConf.getInt(OZONE_SCM_CONTAINER_SIZE_GB,
-        OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    int containerSizeGB = (int)ozoneConf.getStorageSize(
+        OZONE_SCM_CONTAINER_SIZE, OZONE_SCM_CONTAINER_SIZE_DEFAULT,
+        StorageUnit.GB);
     ContainerOperationClient.setContainerSizeB(containerSizeGB*OzoneConsts.GB);
 
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,

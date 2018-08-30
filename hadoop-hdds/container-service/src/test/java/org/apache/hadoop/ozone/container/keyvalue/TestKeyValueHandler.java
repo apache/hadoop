@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.keyvalue;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -262,7 +263,8 @@ public class TestKeyValueHandler {
   public void testCloseInvalidContainer() {
     long containerID = 1234L;
     Configuration conf = new Configuration();
-    KeyValueContainerData kvData = new KeyValueContainerData(containerID, 1);
+    KeyValueContainerData kvData = new KeyValueContainerData(containerID,
+        (long) StorageUnit.GB.toBytes(1));
     KeyValueContainer container = new KeyValueContainer(kvData, conf);
     kvData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
 

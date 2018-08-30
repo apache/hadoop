@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.block;
 
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -98,9 +98,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     this.nodeManager = nodeManager;
     this.containerManager = containerManager;
 
-    this.containerSize = OzoneConsts.GB * conf.getInt(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+    this.containerSize = (long)conf.getStorageSize(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
+        StorageUnit.BYTES);
 
     this.containerProvisionBatchSize =
         conf.getInt(
@@ -160,11 +161,11 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     lock.lock();
     try {
       for (int i = 0; i < count; i++) {
-        ContainerWithPipeline containerWithPipeline = null;
+        ContainerWithPipeline containerWithPipeline;
         try {
           // TODO: Fix this later when Ratis is made the Default.
-          containerWithPipeline = containerManager.allocateContainer(type, factor,
-              owner);
+          containerWithPipeline = containerManager.allocateContainer(
+              type, factor, owner);
 
           if (containerWithPipeline == null) {
             LOG.warn("Unable to allocate container.");
@@ -292,12 +293,12 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
   private String getChannelName(ReplicationType type) {
     switch (type) {
-      case RATIS:
-        return "RA" + UUID.randomUUID().toString().substring(3);
-      case STAND_ALONE:
-        return "SA" + UUID.randomUUID().toString().substring(3);
-      default:
-        return "RA" + UUID.randomUUID().toString().substring(3);
+    case RATIS:
+      return "RA" + UUID.randomUUID().toString().substring(3);
+    case STAND_ALONE:
+      return "SA" + UUID.randomUUID().toString().substring(3);
+    default:
+      return "RA" + UUID.randomUUID().toString().substring(3);
     }
   }
 

@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.*;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.slf4j.Logger;
@@ -42,7 +44,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.service.api.records.ContainerState.READY;
-import static org.apache.hadoop.yarn.service.api.records.ContainerState.STOPPED;
 import static org.apache.hadoop.yarn.service.timelineservice.ServiceTimelineMetricsConstants.DIAGNOSTICS_INFO;
 
 /**
@@ -130,12 +131,11 @@ public class ServiceTimelinePublisher extends CompositeService {
   }
 
   public void serviceAttemptUnregistered(ServiceContext context,
-      String diagnostics) {
+      FinalApplicationStatus status, String diagnostics) {
     TimelineEntity entity = createServiceAttemptEntity(
         context.attemptId.getApplicationId().toString());
     Map<String, Object> entityInfos = new HashMap<String, Object>();
-    entityInfos.put(ServiceTimelineMetricsConstants.STATE,
-        FinalApplicationStatus.ENDED);
+    entityInfos.put(ServiceTimelineMetricsConstants.STATE, status);
     entityInfos.put(DIAGNOSTICS_INFO, diagnostics);
     entity.addInfo(entityInfos);
 
@@ -180,7 +180,7 @@ public class ServiceTimelinePublisher extends CompositeService {
   }
 
   public void componentInstanceFinished(ContainerId containerId,
-      int exitCode, String diagnostics) {
+      int exitCode, ContainerState state, String diagnostics) {
     TimelineEntity entity = createComponentInstanceEntity(
         containerId.toString());
 
@@ -189,7 +189,7 @@ public class ServiceTimelinePublisher extends CompositeService {
     entityInfos.put(ServiceTimelineMetricsConstants.EXIT_STATUS_CODE,
         exitCode);
     entityInfos.put(DIAGNOSTICS_INFO, diagnostics);
-    entityInfos.put(ServiceTimelineMetricsConstants.STATE, STOPPED);
+    entityInfos.put(ServiceTimelineMetricsConstants.STATE, state);
     entity.addInfo(entityInfos);
 
     // add an event
@@ -374,5 +374,26 @@ public class ServiceTimelinePublisher extends CompositeService {
     } catch (Exception e) {
       log.error("Error when publishing entity " + entity, e);
     }
+  }
+
+  public void componentFinished(
+      Component comp,
+      ComponentState state, long finishTime) {
+    createComponentEntity(comp.getName());
+    TimelineEntity entity = createComponentEntity(comp.getName());
+
+    // create info keys
+    Map<String, Object> entityInfos = new HashMap<String, Object>();
+    entityInfos.put(ServiceTimelineMetricsConstants.STATE, state);
+    entity.addInfo(entityInfos);
+
+    // add an event
+    TimelineEvent startEvent = new TimelineEvent();
+    startEvent
+        .setId(ServiceTimelineEvent.COMPONENT_FINISHED.toString());
+    startEvent.setTimestamp(finishTime);
+    entity.addEvent(startEvent);
+
+    putEntity(entity);
   }
 }

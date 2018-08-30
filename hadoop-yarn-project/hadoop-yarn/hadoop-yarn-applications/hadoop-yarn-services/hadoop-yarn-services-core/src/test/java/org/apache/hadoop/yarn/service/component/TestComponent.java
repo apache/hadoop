@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.TestServiceManager;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
@@ -147,7 +148,8 @@ public class TestComponent {
   }
 
   @Test
-  public void testComponentStateUpdatesWithTerminatingComponents() throws
+  public void testComponentStateReachesStableStateWithTerminatingComponents()
+      throws
       Exception {
     final String serviceName =
         "testComponentStateUpdatesWithTerminatingComponents";
@@ -197,6 +199,57 @@ public class TestComponent {
           componentState);
     }
   }
+
+  @Test
+  public void testComponentStateUpdatesWithTerminatingComponents()
+      throws
+      Exception {
+    final String serviceName =
+        "testComponentStateUpdatesWithTerminatingComponents";
+
+    Service testService = ServiceTestUtils.createTerminatingJobExample(
+        serviceName);
+    TestServiceManager.createDef(serviceName, testService);
+
+    ServiceContext context = new MockRunningServiceContext(rule, testService);
+
+    for (Component comp : context.scheduler.getAllComponents().values()) {
+      Iterator<ComponentInstance> instanceIter = comp.
+          getAllComponentInstances().iterator();
+
+      while (instanceIter.hasNext()) {
+
+        ComponentInstance componentInstance = instanceIter.next();
+        Container instanceContainer = componentInstance.getContainer();
+
+        //stop 1 container
+        ContainerStatus containerStatus = ContainerStatus.newInstance(
+            instanceContainer.getId(),
+            org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+            "successful", 0);
+        comp.handle(new ComponentEvent(comp.getName(),
+            ComponentEventType.CONTAINER_COMPLETED).setStatus(containerStatus)
+            .setContainerId(instanceContainer.getId()));
+        componentInstance.handle(
+            new ComponentInstanceEvent(componentInstance.getContainer().getId(),
+                ComponentInstanceEventType.STOP).setStatus(containerStatus));
+      }
+
+      ComponentState componentState =
+          comp.getComponentSpec().getState();
+      Assert.assertEquals(
+          ComponentState.SUCCEEDED,
+          componentState);
+    }
+
+    ServiceState serviceState =
+        testService.getState();
+    Assert.assertEquals(
+        ServiceState.SUCCEEDED,
+        serviceState);
+  }
+
+
 
   private static org.apache.hadoop.yarn.service.api.records.Component
       createSpecWithEnv(String serviceName, String compName, String key,

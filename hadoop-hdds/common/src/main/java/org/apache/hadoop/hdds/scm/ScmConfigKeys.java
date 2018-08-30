@@ -49,10 +49,6 @@ public final class ScmConfigKeys {
       = "dfs.container.ratis.enabled";
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
       = false;
-  public static final String DFS_CONTAINER_GRPC_ENABLED_KEY
-      = "dfs.container.grpc.enabled";
-  public static final boolean DFS_CONTAINER_GRPC_ENABLED_DEFAULT
-      = false;
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_KEY
       = "dfs.container.ratis.rpc.type";
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT
@@ -215,9 +211,9 @@ public final class ScmConfigKeys {
       "ozone.scm.db.cache.size.mb";
   public static final int OZONE_SCM_DB_CACHE_SIZE_DEFAULT = 128;
 
-  public static final String OZONE_SCM_CONTAINER_SIZE_GB =
-      "ozone.scm.container.size.gb";
-  public static final int OZONE_SCM_CONTAINER_SIZE_DEFAULT = 5;
+  public static final String OZONE_SCM_CONTAINER_SIZE =
+      "ozone.scm.container.size";
+  public static final String OZONE_SCM_CONTAINER_SIZE_DEFAULT = "5GB";
 
   public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY =
       "ozone.scm.container.placement.impl";

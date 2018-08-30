@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -36,12 +35,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
@@ -49,23 +43,12 @@ import static org.apache.hadoop.hdds.scm
 /**
  * Test for XceiverClientManager caching and eviction.
  */
-@RunWith(Parameterized.class)
 public class TestXceiverClientManager {
   private static OzoneConfiguration config;
   private static MiniOzoneCluster cluster;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static String containerOwner = "OZONE";
-  private static boolean shouldUseGrpc;
-
-  @Parameterized.Parameters
-  public static Collection<Object[]> withGrpc() {
-    return Arrays.asList(new Object[][] {{false}, {true}});
-  }
-
-  public TestXceiverClientManager(boolean useGrpc) {
-    shouldUseGrpc = useGrpc;
-  }
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -73,8 +56,6 @@ public class TestXceiverClientManager {
   @Before
   public void init() throws Exception {
     config = new OzoneConfiguration();
-    config.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        shouldUseGrpc);
     cluster = MiniOzoneCluster.newBuilder(config)
         .setNumDatanodes(3)
         .build();
@@ -94,8 +75,6 @@ public class TestXceiverClientManager {
   @Test
   public void testCaching() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     ContainerWithPipeline container1 = storageContainerLocationClient
@@ -129,8 +108,6 @@ public class TestXceiverClientManager {
   public void testFreeByReference() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
-    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();
@@ -186,8 +163,6 @@ public class TestXceiverClientManager {
   public void testFreeByEviction() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
-    conf.setBoolean(ScmConfigKeys.DFS_CONTAINER_GRPC_ENABLED_KEY,
-        shouldUseGrpc);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
     Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();

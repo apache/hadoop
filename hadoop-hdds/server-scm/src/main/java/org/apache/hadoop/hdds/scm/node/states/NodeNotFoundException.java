@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.hdds.scm.node.states;
 
-import java.io.IOException;
-
 /**
  * This exception represents that the node that is being accessed does not
  * exist in NodeStateMap.

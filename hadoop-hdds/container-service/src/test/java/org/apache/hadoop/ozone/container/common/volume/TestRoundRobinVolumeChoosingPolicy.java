@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common.volume;
 
 import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
@@ -43,8 +42,8 @@ public class TestRoundRobinVolumeChoosingPolicy {
   private List<HddsVolume> volumes;
 
   private final String baseDir = MiniDFSCluster.getBaseDirectory();
-	private final String volume1 = baseDir + "disk1";
-	private final String volume2 = baseDir + "disk2";
+  private final String volume1 = baseDir + "disk1";
+  private final String volume2 = baseDir + "disk2";
   private static final String DUMMY_IP_ADDR = "0.0.0.0";
 
   @Before

@@ -48,7 +48,6 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -134,11 +133,6 @@ public class TestOzoneShell {
     baseDir = new File(path);
     baseDir.mkdirs();
 
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setQuietMode(false);
     shell = new Shell();
     shell.setConf(conf);
 
@@ -146,6 +140,7 @@ public class TestOzoneShell {
         .setNumDatanodes(3)
         .build();
     conf.setInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue());
+    conf.setQuietMode(false);
     client = new RpcClient(conf);
     cluster.waitForClusterToBeReady();
   }
@@ -208,12 +203,15 @@ public class TestOzoneShell {
     testCreateVolume(volumeName, "");
     volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     testCreateVolume("/////" + volumeName, "");
-    testCreateVolume("/////", "Volume name is required to create a volume");
+    testCreateVolume("/////", "Volume name is required " +
+        "to create a volume");
     testCreateVolume("/////vol/123",
-        "Illegal argument: Bucket or Volume name has an unsupported character : /");
+        "Illegal argument: Bucket or Volume name has " +
+            "an unsupported character : /");
   }
 
-  private void testCreateVolume(String volumeName, String errorMsg) throws Exception {
+  private void testCreateVolume(String volumeName, String errorMsg)
+      throws Exception {
     err.reset();
     String userName = "bilbo";
     String[] args = new String[] {"-createVolume", url + "/" + volumeName,
@@ -397,7 +395,7 @@ public class TestOzoneShell {
 
     // test -prefix option
     out.reset();
-    args = new String[] { "-listVolume", url + "/", "-user", user1, "-length",
+    args = new String[] {"-listVolume", url + "/", "-user", user1, "-length",
         "100", "-prefix", "test-vol-" + protocol + "1" };
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
@@ -414,7 +412,7 @@ public class TestOzoneShell {
 
     // test -start option
     out.reset();
-    args = new String[] { "-listVolume", url + "/", "-user", user2, "-length",
+    args = new String[] {"-listVolume", url + "/", "-user", user2, "-length",
         "100", "-start", "test-vol-" + protocol + "15" };
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();

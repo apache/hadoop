@@ -18,31 +18,34 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
-import com.google.common.base.Preconditions;
+import java.beans.IntrospectionException;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
-
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+
+import com.google.common.base.Preconditions;
+import static org.apache.hadoop.ozone.container.keyvalue
+    .KeyValueContainerData.KEYVALUE_YAML_TAG;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
-
-import java.beans.IntrospectionException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.File;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Map;
-
 import org.yaml.snakeyaml.constructor.AbstractConstruct;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.introspector.BeanAccess;
@@ -53,9 +56,6 @@ import org.yaml.snakeyaml.nodes.Node;
 import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Representer;
-
-import static org.apache.hadoop.ozone.container.keyvalue
-    .KeyValueContainerData.KEYVALUE_YAML_TAG;
 
 /**
  * Class for creating and reading .container files.
@@ -106,36 +106,52 @@ public final class ContainerDataYaml {
   /**
    * Read the yaml file, and return containerData.
    *
-   * @param containerFile
    * @throws IOException
    */
   public static ContainerData readContainerFile(File containerFile)
       throws IOException {
     Preconditions.checkNotNull(containerFile, "containerFile cannot be null");
-
-    InputStream input = null;
-    ContainerData containerData;
-    try {
-      PropertyUtils propertyUtils = new PropertyUtils();
-      propertyUtils.setBeanAccess(BeanAccess.FIELD);
-      propertyUtils.setAllowReadOnlyProperties(true);
-
-      Representer representer = new ContainerDataRepresenter();
-      representer.setPropertyUtils(propertyUtils);
-
-      Constructor containerDataConstructor = new ContainerDataConstructor();
-
-      Yaml yaml = new Yaml(containerDataConstructor, representer);
-      yaml.setBeanAccess(BeanAccess.FIELD);
-
-      input = new FileInputStream(containerFile);
-      containerData = (ContainerData)
-          yaml.load(input);
-    } finally {
-      if (input!= null) {
-        input.close();
-      }
+    try (FileInputStream inputFileStream = new FileInputStream(containerFile)) {
+      return readContainer(inputFileStream);
     }
+
+  }
+
+  /**
+   * Read the yaml file content, and return containerData.
+   *
+   * @throws IOException
+   */
+  public static ContainerData readContainer(byte[] containerFileContent)
+      throws IOException {
+    return readContainer(
+        new ByteArrayInputStream(containerFileContent));
+  }
+
+  /**
+   * Read the yaml content, and return containerData.
+   *
+   * @throws IOException
+   */
+  public static ContainerData readContainer(InputStream input)
+      throws IOException {
+
+    ContainerData containerData;
+    PropertyUtils propertyUtils = new PropertyUtils();
+    propertyUtils.setBeanAccess(BeanAccess.FIELD);
+    propertyUtils.setAllowReadOnlyProperties(true);
+
+    Representer representer = new ContainerDataRepresenter();
+    representer.setPropertyUtils(propertyUtils);
+
+    Constructor containerDataConstructor = new ContainerDataConstructor();
+
+    Yaml yaml = new Yaml(containerDataConstructor, representer);
+    yaml.setBeanAccess(BeanAccess.FIELD);
+
+    containerData = (ContainerData)
+        yaml.load(input);
+
     return containerData;
   }
 
@@ -220,12 +236,11 @@ public final class ContainerDataYaml {
         long layOutVersion = (long) nodes.get(OzoneConsts.LAYOUTVERSION);
         int lv = (int) layOutVersion;
 
-        long size = (long) nodes.get(OzoneConsts.MAX_SIZE_GB);
-        int maxSize = (int) size;
+        long size = (long) nodes.get(OzoneConsts.MAX_SIZE);
 
         //When a new field is added, it needs to be added here.
         KeyValueContainerData kvData = new KeyValueContainerData(
-            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, maxSize);
+            (long) nodes.get(OzoneConsts.CONTAINER_ID), lv, size);
 
         kvData.setContainerDBType((String)nodes.get(
             OzoneConsts.CONTAINER_DB_TYPE));

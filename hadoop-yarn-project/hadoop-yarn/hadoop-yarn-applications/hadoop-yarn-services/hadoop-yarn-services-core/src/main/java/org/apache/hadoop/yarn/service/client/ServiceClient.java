@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service.client;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -215,6 +216,84 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return EXIT_SUCCESS;
   }
 
+  private ApplicationReport upgradePrecheck(Service service)
+      throws YarnException, IOException {
+    boolean upgradeEnabled = getConfig().getBoolean(
+        YARN_SERVICE_UPGRADE_ENABLED, YARN_SERVICE_UPGRADE_ENABLED_DEFAULT);
+    if (!upgradeEnabled) {
+      throw new YarnException(ErrorStrings.SERVICE_UPGRADE_DISABLED);
+    }
+    Service persistedService = ServiceApiUtil.loadService(fs,
+        service.getName());
+    if (!StringUtils.isEmpty(persistedService.getId())) {
+      cachedAppInfo.put(persistedService.getName(),
+          new AppInfo(ApplicationId.fromString(persistedService.getId()),
+              persistedService.getKerberosPrincipal().getPrincipalName()));
+    }
+
+    if (persistedService.getVersion().equals(service.getVersion())) {
+      String message = service.getName() + " is already at version "
+          + service.getVersion() + ". There is nothing to upgrade.";
+      LOG.error(message);
+      throw new YarnException(message);
+    }
+
+    Service liveService = getStatus(service.getName());
+    if (!liveService.getState().equals(ServiceState.STABLE)) {
+      String message = service.getName() + " is at " + liveService.getState()
+          + " state and upgrade can only be initiated when service is STABLE.";
+      LOG.error(message);
+      throw new YarnException(message);
+    }
+
+    Path serviceUpgradeDir = checkAppNotExistOnHdfs(service, true);
+    ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
+    ServiceApiUtil.createDirAndPersistApp(fs, serviceUpgradeDir, service);
+
+    ApplicationReport appReport = yarnClient
+        .getApplicationReport(getAppId(service.getName()));
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      throw new YarnException(service.getName() + " AM hostname is empty");
+    }
+    return appReport;
+  }
+
+  @Override
+  public int actionUpgradeExpress(String appName, File path)
+      throws IOException, YarnException {
+    Service service =
+        loadAppJsonFromLocalFS(path.getAbsolutePath(), appName, null, null);
+    service.setState(ServiceState.UPGRADING_AUTO_FINALIZE);
+    actionUpgradeExpress(service);
+    return EXIT_SUCCESS;
+  }
+
+  public int actionUpgradeExpress(Service service) throws YarnException,
+      IOException {
+    ApplicationReport appReport = upgradePrecheck(service);
+    ClientAMProtocol proxy = createAMProxy(service.getName(), appReport);
+    UpgradeServiceRequestProto.Builder requestBuilder =
+        UpgradeServiceRequestProto.newBuilder();
+    requestBuilder.setVersion(service.getVersion());
+    if (service.getState().equals(ServiceState.UPGRADING_AUTO_FINALIZE)) {
+      requestBuilder.setAutoFinalize(true);
+    }
+    if (service.getState().equals(ServiceState.EXPRESS_UPGRADING)) {
+      requestBuilder.setExpressUpgrade(true);
+      requestBuilder.setAutoFinalize(true);
+    }
+    UpgradeServiceResponseProto responseProto = proxy.upgrade(
+        requestBuilder.build());
+    if (responseProto.hasError()) {
+      LOG.error("Service {} express upgrade to version {} failed because {}",
+          service.getName(), service.getVersion(), responseProto.getError());
+      throw new YarnException("Failed to express upgrade service " +
+          service.getName() + " to version " + service.getVersion() +
+          " because " + responseProto.getError());
+    }
+    return EXIT_SUCCESS;
+  }
+
   @Override
   public int initiateUpgrade(String appName, String fileName,
       boolean autoFinalize)
@@ -231,46 +310,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
   public int initiateUpgrade(Service service) throws YarnException,
       IOException {
-    boolean upgradeEnabled = getConfig().getBoolean(
-        YARN_SERVICE_UPGRADE_ENABLED,
-        YARN_SERVICE_UPGRADE_ENABLED_DEFAULT);
-    if (!upgradeEnabled) {
-      throw new YarnException(ErrorStrings.SERVICE_UPGRADE_DISABLED);
-    }
-    Service persistedService =
-        ServiceApiUtil.loadService(fs, service.getName());
-    if (!StringUtils.isEmpty(persistedService.getId())) {
-      cachedAppInfo.put(persistedService.getName(), new AppInfo(
-          ApplicationId.fromString(persistedService.getId()),
-          persistedService.getKerberosPrincipal().getPrincipalName()));
-    }
-
-    if (persistedService.getVersion().equals(service.getVersion())) {
-      String message =
-          service.getName() + " is already at version " + service.getVersion()
-              + ". There is nothing to upgrade.";
-      LOG.error(message);
-      throw new YarnException(message);
-    }
-
-    Service liveService = getStatus(service.getName());
-    if (!liveService.getState().equals(ServiceState.STABLE)) {
-      String message = service.getName() + " is at " +
-          liveService.getState()
-          + " state and upgrade can only be initiated when service is STABLE.";
-      LOG.error(message);
-      throw new YarnException(message);
-    }
-
-    Path serviceUpgradeDir = checkAppNotExistOnHdfs(service, true);
-    ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
-    ServiceApiUtil.createDirAndPersistApp(fs, serviceUpgradeDir, service);
-
-    ApplicationReport appReport =
-        yarnClient.getApplicationReport(getAppId(service.getName()));
-    if (StringUtils.isEmpty(appReport.getHost())) {
-      throw new YarnException(service.getName() + " AM hostname is empty");
-    }
+    ApplicationReport appReport = upgradePrecheck(service);
     ClientAMProtocol proxy = createAMProxy(service.getName(), appReport);
 
     UpgradeServiceRequestProto.Builder requestBuilder =

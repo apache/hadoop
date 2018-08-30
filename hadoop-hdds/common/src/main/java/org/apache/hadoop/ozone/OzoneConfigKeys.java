@@ -66,16 +66,9 @@ public final class OzoneConfigKeys {
       "dfs.container.ratis.ipc.random.port";
   public static final boolean DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT =
       false;
-
-  public static final String OZONE_LOCALSTORAGE_ROOT =
-      "ozone.localstorage.root";
-  public static final String OZONE_LOCALSTORAGE_ROOT_DEFAULT = "/tmp/ozone";
   public static final String OZONE_ENABLED =
       "ozone.enabled";
   public static final boolean OZONE_ENABLED_DEFAULT = false;
-  public static final String OZONE_HANDLER_TYPE_KEY =
-      "ozone.handler.type";
-  public static final String OZONE_HANDLER_TYPE_DEFAULT = "distributed";
   public static final String OZONE_TRACE_ENABLED_KEY =
       "ozone.trace.enabled";
   public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;

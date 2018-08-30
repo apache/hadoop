@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerData;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
@@ -39,7 +40,7 @@ import java.util.List;
  * this interface will likely be removed.
  */
 @InterfaceStability.Unstable
-public interface ScmClient {
+public interface ScmClient extends Closeable {
   /**
    * Creates a Container on SCM and returns the pipeline.
    * @return ContainerInfo
@@ -61,7 +62,8 @@ public interface ScmClient {
    * @return ContainerWithPipeline
    * @throws IOException
    */
-  ContainerWithPipeline getContainerWithPipeline(long containerId) throws IOException;
+  ContainerWithPipeline getContainerWithPipeline(long containerId)
+      throws IOException;
 
   /**
    * Close a container.
@@ -87,7 +89,8 @@ public interface ScmClient {
    * @param force - true to forcibly delete the container.
    * @throws IOException
    */
-  void deleteContainer(long containerId, Pipeline pipeline, boolean force) throws IOException;
+  void deleteContainer(long containerId, Pipeline pipeline, boolean force)
+      throws IOException;
 
   /**
    * Deletes an existing container.

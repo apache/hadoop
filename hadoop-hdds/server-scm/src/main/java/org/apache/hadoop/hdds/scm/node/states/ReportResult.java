@@ -94,7 +94,8 @@ public class ReportResult {
       if (nullSafeMissingContainers == null) {
         nullSafeMissingContainers = Collections.emptySet();
       }
-      return new ReportResult(status, nullSafeMissingContainers, nullSafeNewContainers);
+      return new ReportResult(status, nullSafeMissingContainers,
+          nullSafeNewContainers);
     }
   }
 }

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
@@ -132,7 +131,7 @@ public class TestReplicationManager {
       //WHEN
 
       queue.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-          new ReplicationRequest(1l, (short) 2, System.currentTimeMillis(),
+          new ReplicationRequest(1L, (short) 2, System.currentTimeMillis(),
               (short) 3));
 
       Thread.sleep(500L);
@@ -159,10 +158,8 @@ public class TestReplicationManager {
       leaseManager.start();
 
       ReplicationManager replicationManager =
-          new ReplicationManager(containerPlacementPolicy, containerStateManager,
-
-
-              queue, leaseManager) {
+          new ReplicationManager(containerPlacementPolicy,
+              containerStateManager, queue, leaseManager) {
             @Override
             protected List<DatanodeDetails> getCurrentReplicas(
                 ReplicationRequest request) throws IOException {
@@ -172,7 +169,7 @@ public class TestReplicationManager {
       replicationManager.start();
 
       queue.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-          new ReplicationRequest(1l, (short) 2, System.currentTimeMillis(),
+          new ReplicationRequest(1L, (short) 2, System.currentTimeMillis(),
               (short) 3));
 
       Thread.sleep(500L);

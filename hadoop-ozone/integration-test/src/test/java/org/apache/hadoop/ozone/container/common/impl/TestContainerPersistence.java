@@ -20,23 +20,21 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.collect.Maps;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
-import org.apache.hadoop.ozone.container.common.volume
-    .RoundRobinVolumeChoosingPolicy;
+import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
@@ -46,8 +44,6 @@ import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.KeyManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -69,113 +65,79 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Stage.COMBINED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
-import static org.apache.hadoop.ozone.container.ContainerTestHelper
-    .setDataChecksum;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Stage.COMBINED;
+import static org.apache.hadoop.ozone.container.ContainerTestHelper.setDataChecksum;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * Simple tests to verify that container persistence works as expected.
- * Some of these tests are specific to {@link KeyValueContainer}. If a new
- * {@link ContainerProtos.ContainerType} is added, the tests need to be
- * modified.
+ * Simple tests to verify that container persistence works as expected. Some of
+ * these tests are specific to {@link KeyValueContainer}. If a new {@link
+ * ContainerProtos.ContainerType} is added, the tests need to be modified.
  */
 public class TestContainerPersistence {
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(300000);
-
+  private static final String DATANODE_UUID = UUID.randomUUID().toString();
+  private static final String SCM_ID = UUID.randomUUID().toString();
   private static Logger log =
       LoggerFactory.getLogger(TestContainerPersistence.class);
   private static String hddsPath;
-  private static String path;
   private static OzoneConfiguration conf;
-  private static List<StorageLocation> pathLists = new LinkedList<>();
-  private Long  containerID = 8888L;;
-  private static final String datanodeUuid = UUID.randomUUID().toString();
-  private static final String scmId = UUID.randomUUID().toString();
-
   private static ContainerSet containerSet;
   private static VolumeSet volumeSet;
   private static VolumeChoosingPolicy volumeChoosingPolicy;
   private static KeyManager keyManager;
   private static ChunkManager chunkManager;
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
+  private Long containerID = 8888L;
 
   @BeforeClass
   public static void init() throws Throwable {
     conf = new OzoneConfiguration();
     hddsPath = GenericTestUtils
         .getTempPath(TestContainerPersistence.class.getSimpleName());
-    path = hddsPath + conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, hddsPath);
-
-    File containerDir = new File(path);
-    if (containerDir.exists()) {
-      FileUtils.deleteDirectory(new File(path));
-    }
-    Assert.assertTrue(containerDir.mkdirs());
     volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
   }
 
   @AfterClass
   public static void shutdown() throws IOException {
-    FileUtils.deleteDirectory(new File(path));
     FileUtils.deleteDirectory(new File(hddsPath));
   }
 
   @Before
   public void setupPaths() throws IOException {
-    if (!new File(path).exists() && !new File(path).mkdirs()) {
-      throw new IOException("Unable to create paths. " + path);
-    }
-    StorageLocation loc = StorageLocation.parse(
-        Paths.get(path).resolve(CONTAINER_ROOT_PREFIX).toString());
-
-    pathLists.clear();
     containerSet = new ContainerSet();
-    volumeSet = new VolumeSet(datanodeUuid, conf);
+    volumeSet = new VolumeSet(DATANODE_UUID, conf);
     keyManager = new KeyManagerImpl(conf);
     chunkManager = new ChunkManagerImpl();
-
-    if (!new File(loc.getNormalizedUri()).mkdirs()) {
-      throw new IOException("unable to create paths. " +
-          loc.getNormalizedUri());
-    }
-    pathLists.add(loc);
 
     for (String dir : conf.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
       StorageLocation location = StorageLocation.parse(dir);
       FileUtils.forceMkdir(new File(location.getNormalizedUri()));
     }
- }
+  }
 
   @After
   public void cleanupDir() throws IOException {
     // Clean up SCM metadata
-    log.info("Deleting {}", path);
-    FileUtils.deleteDirectory(new File(path));
     log.info("Deleting {}", hddsPath);
     FileUtils.deleteDirectory(new File(hddsPath));
 
@@ -193,13 +155,13 @@ public class TestContainerPersistence {
   private Container addContainer(ContainerSet containerSet, long containerID)
       throws IOException {
     KeyValueContainerData data = new KeyValueContainerData(containerID,
-        ContainerTestHelper.CONTAINER_MAX_SIZE_GB);
+        ContainerTestHelper.CONTAINER_MAX_SIZE);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     KeyValueContainer container = new KeyValueContainer(data, conf);
-    container.create(volumeSet, volumeChoosingPolicy, scmId);
+    container.create(volumeSet, volumeChoosingPolicy, SCM_ID);
     containerSet.addContainer(container);
-    return  container;
+    return container;
   }
 
   @Test
@@ -210,7 +172,7 @@ public class TestContainerPersistence {
         .containsKey(testContainerID));
     KeyValueContainerData kvData =
         (KeyValueContainerData) containerSet.getContainer(testContainerID)
-        .getContainerData();
+            .getContainerData();
 
     Assert.assertNotNull(kvData);
     Assert.assertTrue(new File(kvData.getMetadataPath()).exists());
@@ -288,7 +250,7 @@ public class TestContainerPersistence {
   }
 
   @Test
-  public void testGetContainerReports() throws Exception{
+  public void testGetContainerReports() throws Exception {
     final int count = 10;
     List<Long> containerIDs = new ArrayList<>();
 
@@ -297,7 +259,7 @@ public class TestContainerPersistence {
       Container container = addContainer(containerSet, testContainerID);
 
       // Close a bunch of containers.
-      if (i%3 == 0) {
+      if (i % 3 == 0) {
         container.close();
       }
       containerIDs.add(testContainerID);
@@ -308,7 +270,8 @@ public class TestContainerPersistence {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
         containerSet.getContainerReport().getReportsList();
     Assert.assertEquals(10, reports.size());
-    for(StorageContainerDatanodeProtocolProtos.ContainerInfo   report : reports) {
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo report :
+        reports) {
       long actualContainerID = report.getContainerID();
       Assert.assertTrue(containerIDs.remove(actualContainerID));
     }
@@ -316,8 +279,8 @@ public class TestContainerPersistence {
   }
 
   /**
-   * This test creates 50 containers and reads them back 5 containers at a
-   * time and verifies that we did get back all containers.
+   * This test creates 50 containers and reads them back 5 containers at a time
+   * and verifies that we did get back all containers.
    *
    * @throws IOException
    */
@@ -427,7 +390,7 @@ public class TestContainerPersistence {
         sha.update(FileUtils.readFileToByteArray(fname.toFile()));
         String val = Hex.encodeHexString(sha.digest());
         Assert.assertEquals(fileHashMap.get(fname.getFileName().toString())
-                .getChecksum(), val);
+            .getChecksum(), val);
         count++;
         sha.reset();
       }
@@ -455,8 +418,8 @@ public class TestContainerPersistence {
   @Test
   public void testPartialRead() throws Exception {
     final int datalen = 1024;
-    final int start = datalen/4;
-    final int length = datalen/2;
+    final int start = datalen / 4;
+    final int length = datalen / 2;
 
     long testContainerID = getTestContainerID();
     Container container = addContainer(containerSet, testContainerID);
@@ -545,7 +508,8 @@ public class TestContainerPersistence {
     }
 
     // Request to read the whole data in a single go.
-    ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0, datalen * chunkCount);
+    ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0,
+        datalen * chunkCount);
     byte[] newdata = chunkManager.readChunk(container, blockID, largeChunk);
     MessageDigest newSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     newSha.update(newdata);
@@ -702,8 +666,8 @@ public class TestContainerPersistence {
   }
 
   /**
-   * Tries to update an existing and non-existing container.
-   * Verifies container map and persistent data both updated.
+   * Tries to update an existing and non-existing container. Verifies container
+   * map and persistent data both updated.
    *
    * @throws IOException
    */
@@ -744,7 +708,7 @@ public class TestContainerPersistence {
         orgContainerFile.getAbsolutePath(),
         newContainerFile.getAbsolutePath());
 
-    ContainerData actualContainerData =  ContainerDataYaml.readContainerFile(
+    ContainerData actualContainerData = ContainerDataYaml.readContainerFile(
         newContainerFile);
     Assert.assertEquals("shire_new",
         actualContainerData.getMetadata().get("VOLUME"));

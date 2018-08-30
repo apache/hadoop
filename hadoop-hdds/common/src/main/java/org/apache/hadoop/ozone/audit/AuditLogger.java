@@ -21,10 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.spi.ExtendedLogger;
 
-import java.util.Map;
 
 /**
  * Class to define Audit Logger for Ozone.
@@ -32,16 +30,13 @@ import java.util.Map;
 public class AuditLogger {
 
   private ExtendedLogger logger;
-
-  private static final String SUCCESS = AuditEventStatus.SUCCESS.getStatus();
-  private static final String FAILURE = AuditEventStatus.FAILURE.getStatus();
   private static final String FQCN = AuditLogger.class.getName();
   private static final Marker WRITE_MARKER = AuditMarker.WRITE.getMarker();
   private static final Marker READ_MARKER = AuditMarker.READ.getMarker();
 
   /**
    * Parametrized Constructor to initialize logger.
-   * @param type
+   * @param type Audit Logger Type
    */
   public AuditLogger(AuditLoggerType type){
     initializeLogger(type);
@@ -60,68 +55,53 @@ public class AuditLogger {
     return logger;
   }
 
-  public void logWriteSuccess(AuditAction type, Map<String, String> data) {
-    logWriteSuccess(type, data, Level.INFO);
+  public void logWriteSuccess(AuditMessage msg) {
+    logWriteSuccess(Level.INFO, msg);
   }
 
-  public void logWriteSuccess(AuditAction type, Map<String, String> data, Level
-      level) {
-    StructuredDataMessage msg = new StructuredDataMessage("", SUCCESS,
-        type.getAction(), data);
+  public void logWriteSuccess(Level level, AuditMessage msg) {
     this.logger.logIfEnabled(FQCN, level, WRITE_MARKER, msg, null);
   }
 
-
-  public void logWriteFailure(AuditAction type, Map<String, String> data) {
-    logWriteFailure(type, data, Level.INFO, null);
+  public void logWriteFailure(AuditMessage msg) {
+    logWriteFailure(Level.ERROR, msg);
   }
 
-  public void logWriteFailure(AuditAction type, Map<String, String> data, Level
-      level) {
-    logWriteFailure(type, data, level, null);
+  public void logWriteFailure(Level level, AuditMessage msg) {
+    logWriteFailure(level, msg, null);
   }
 
-  public void logWriteFailure(AuditAction type, Map<String, String> data,
+  public void logWriteFailure(AuditMessage msg, Throwable exception) {
+    logWriteFailure(Level.ERROR, msg, exception);
+  }
+
+  public void logWriteFailure(Level level, AuditMessage msg,
       Throwable exception) {
-    logWriteFailure(type, data, Level.INFO, exception);
-  }
-
-  public void logWriteFailure(AuditAction type, Map<String, String> data, Level
-      level, Throwable exception) {
-    StructuredDataMessage msg = new StructuredDataMessage("", FAILURE,
-        type.getAction(), data);
     this.logger.logIfEnabled(FQCN, level, WRITE_MARKER, msg, exception);
   }
 
-  public void logReadSuccess(AuditAction type, Map<String, String> data) {
-    logReadSuccess(type, data, Level.INFO);
+  public void logReadSuccess(AuditMessage msg) {
+    logReadSuccess(Level.INFO, msg);
   }
 
-  public void logReadSuccess(AuditAction type, Map<String, String> data, Level
-      level) {
-    StructuredDataMessage msg = new StructuredDataMessage("", SUCCESS,
-        type.getAction(), data);
+  public void logReadSuccess(Level level, AuditMessage msg) {
     this.logger.logIfEnabled(FQCN, level, READ_MARKER, msg, null);
   }
 
-  public void logReadFailure(AuditAction type, Map<String, String> data) {
-    logReadFailure(type, data, Level.INFO, null);
+  public void logReadFailure(AuditMessage msg) {
+    logReadFailure(Level.ERROR, msg);
   }
 
-  public void logReadFailure(AuditAction type, Map<String, String> data, Level
-      level) {
-    logReadFailure(type, data, level, null);
+  public void logReadFailure(Level level, AuditMessage msg) {
+    logReadFailure(level, msg, null);
   }
 
-  public void logReadFailure(AuditAction type, Map<String, String> data,
+  public void logReadFailure(AuditMessage msg, Throwable exception) {
+    logReadFailure(Level.ERROR, msg, exception);
+  }
+
+  public void logReadFailure(Level level, AuditMessage msg,
       Throwable exception) {
-    logReadFailure(type, data, Level.INFO, exception);
-  }
-
-  public void logReadFailure(AuditAction type, Map<String, String> data, Level
-      level, Throwable exception) {
-    StructuredDataMessage msg = new StructuredDataMessage("", FAILURE,
-        type.getAction(), data);
     this.logger.logIfEnabled(FQCN, level, READ_MARKER, msg, exception);
   }
 

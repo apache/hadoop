@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.client;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -158,9 +157,9 @@ public class ObjectStore {
     private OzoneVolume currentValue;
 
     /**
-     * Creates an Iterator to iterate over all volumes after prevVolume of the user.
-     * If prevVolume is null it iterates from the first volume. The returned volumes
-     * match volume prefix.
+     * Creates an Iterator to iterate over all volumes after
+     * prevVolume of the user. If prevVolume is null it iterates from the
+     * first volume. The returned volumes match volume prefix.
      * @param user user name
      * @param volPrefix volume prefix to match
      */

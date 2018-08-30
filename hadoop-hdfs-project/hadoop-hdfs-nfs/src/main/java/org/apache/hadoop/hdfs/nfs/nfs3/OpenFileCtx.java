@@ -1211,11 +1211,11 @@ class OpenFileCtx {
 
       LOG.info("Clean up open file context for fileId: {}",
           latestAttr.getFileId());
-      cleanup();
+      cleanupWithLogger();
     }
   }
 
-  synchronized void cleanup() {
+  synchronized void cleanupWithLogger() {
     if (!activeState) {
       LOG.info("Current OpenFileCtx is already inactive, no need to cleanup.");
       return;

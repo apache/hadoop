@@ -22,9 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -43,8 +40,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.INVALID_CONTAINER_STATE;
 
 /**
  * Class that manages Containers created on the datanode.
@@ -137,7 +132,7 @@ public class ContainerSet {
   }
 
   /**
-   * Return a copy of the containerMap
+   * Return a copy of the containerMap.
    * @return containerMap
    */
   public Map<Long, Container> getContainerMap() {
@@ -204,58 +199,19 @@ public class ContainerSet {
     ContainerReportsProto.Builder crBuilder =
         ContainerReportsProto.newBuilder();
 
-
     for (Container container: containers) {
-      long containerId = container.getContainerData().getContainerID();
-      ContainerInfo.Builder ciBuilder = ContainerInfo.newBuilder();
-      ContainerData containerData = container.getContainerData();
-      ciBuilder.setContainerID(containerId)
-          .setReadCount(containerData.getReadCount())
-          .setWriteCount(containerData.getWriteCount())
-          .setReadBytes(containerData.getReadBytes())
-          .setWriteBytes(containerData.getWriteBytes())
-          .setUsed(containerData.getBytesUsed())
-          .setState(getState(containerData))
-          .setDeleteTransactionId(containerData.getDeleteTransactionId());
-
-      crBuilder.addReports(ciBuilder.build());
+      crBuilder.addReports(container.getContainerReport());
     }
 
     return crBuilder.build();
-  }
-
-  /**
-   * Returns LifeCycle State of the container.
-   * @param containerData - ContainerData
-   * @return LifeCycle State of the container
-   * @throws StorageContainerException
-   */
-  private HddsProtos.LifeCycleState getState(ContainerData containerData)
-      throws StorageContainerException {
-    HddsProtos.LifeCycleState state;
-    switch (containerData.getState()) {
-    case OPEN:
-      state = HddsProtos.LifeCycleState.OPEN;
-      break;
-    case CLOSING:
-      state = HddsProtos.LifeCycleState.CLOSING;
-      break;
-    case CLOSED:
-      state = HddsProtos.LifeCycleState.CLOSED;
-      break;
-    default:
-      throw new StorageContainerException("Invalid Container state found: " +
-          containerData.getContainerID(), INVALID_CONTAINER_STATE);
-    }
-    return state;
   }
 
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
       ContainerDeletionChoosingPolicy deletionPolicy)
       throws StorageContainerException {
     Map<Long, ContainerData> containerDataMap = containerMap.entrySet().stream()
-        .filter(e -> e.getValue().getContainerType()
-            == ContainerProtos.ContainerType.KeyValueContainer)
+        .filter(e -> deletionPolicy.isValidContainerType(
+            e.getValue().getContainerType()))
         .collect(Collectors.toMap(Map.Entry::getKey,
             e -> e.getValue().getContainerData()));
     return deletionPolicy

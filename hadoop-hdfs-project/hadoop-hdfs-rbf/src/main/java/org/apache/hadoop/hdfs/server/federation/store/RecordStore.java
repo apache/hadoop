@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.store;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 @InterfaceStability.Evolving
 public abstract class RecordStore<R extends BaseRecord> {
 
-  private static final Log LOG = LogFactory.getLog(RecordStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RecordStore.class);
 
 
   /** Class of the record stored in this State Store. */

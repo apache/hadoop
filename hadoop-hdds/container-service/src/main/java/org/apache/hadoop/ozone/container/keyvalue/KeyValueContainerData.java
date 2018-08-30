@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.container.keyvalue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import java.util.Collections;
+
+import org.apache.hadoop.conf.StorageSize;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -32,7 +34,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.lang.Math.max;
 import static org.apache.hadoop.ozone.OzoneConsts.CHUNKS_PATH;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_TYPE;
 import static org.apache.hadoop.ozone.OzoneConsts.METADATA_PATH;
@@ -61,6 +65,13 @@ public class KeyValueContainerData extends ContainerData {
 
   private File dbFile = null;
 
+  /**
+   * Number of pending deletion blocks in KeyValueContainer.
+   */
+  private final AtomicInteger numPendingDeletionBlocks;
+
+  private long deleteTransactionId;
+
   static {
     // Initialize YAML fields
     KV_YAML_FIELDS = Lists.newArrayList();
@@ -73,21 +84,25 @@ public class KeyValueContainerData extends ContainerData {
   /**
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
-   * @param size - maximum size of the container
+   * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, int size) {
+  public KeyValueContainerData(long id, long size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, size);
+    this.numPendingDeletionBlocks = new AtomicInteger(0);
+    this.deleteTransactionId = 0;
   }
 
   /**
    * Constructs KeyValueContainerData object.
    * @param id - ContainerId
    * @param layOutVersion
-   * @param size - maximum size of the container
+   * @param size - maximum size of the container in bytes
    */
-  public KeyValueContainerData(long id, int layOutVersion, int size) {
+  public KeyValueContainerData(long id, int layOutVersion, long size) {
     super(ContainerProtos.ContainerType.KeyValueContainer, id, layOutVersion,
         size);
+    this.numPendingDeletionBlocks = new AtomicInteger(0);
+    this.deleteTransactionId = 0;
   }
 
 
@@ -169,6 +184,47 @@ public class KeyValueContainerData extends ContainerData {
   }
 
   /**
+   * Increase the count of pending deletion blocks.
+   *
+   * @param numBlocks increment number
+   */
+  public void incrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(numBlocks);
+  }
+
+  /**
+   * Decrease the count of pending deletion blocks.
+   *
+   * @param numBlocks decrement number
+   */
+  public void decrPendingDeletionBlocks(int numBlocks) {
+    this.numPendingDeletionBlocks.addAndGet(-1 * numBlocks);
+  }
+
+  /**
+   * Get the number of pending deletion blocks.
+   */
+  public int getNumPendingDeletionBlocks() {
+    return this.numPendingDeletionBlocks.get();
+  }
+
+  /**
+   * Sets deleteTransactionId to latest delete transactionId for the container.
+   *
+   * @param transactionId latest transactionId of the container.
+   */
+  public void updateDeleteTransactionId(long transactionId) {
+    deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
+  /**
+   * Return the latest deleteTransactionId of the container.
+   */
+  public long getDeleteTransactionId() {
+    return deleteTransactionId;
+  }
+
+  /**
    * Returns a ProtoBuf Message from ContainerData.
    *
    * @return Protocol Buffer Message
@@ -212,9 +268,11 @@ public class KeyValueContainerData extends ContainerData {
   public static KeyValueContainerData getFromProtoBuf(
       ContainerProtos.ContainerData protoData) throws IOException {
     // TODO: Add containerMaxSize to ContainerProtos.ContainerData
+    StorageSize storageSize = StorageSize.parse(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
     KeyValueContainerData data = new KeyValueContainerData(
         protoData.getContainerID(),
-        ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
+        (long)storageSize.getUnit().toBytes(storageSize.getValue()));
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
           protoData.getMetadata(x).getValue());

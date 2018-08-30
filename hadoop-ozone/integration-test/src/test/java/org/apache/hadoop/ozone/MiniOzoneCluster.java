@@ -152,7 +152,8 @@ public interface MiniOzoneCluster {
    *
    * @param i index of HddsDatanode in the MiniOzoneCluster
    */
-  void restartHddsDatanode(int i);
+  void restartHddsDatanode(int i) throws InterruptedException,
+      TimeoutException;
 
   /**
    * Shutdown a particular HddsDatanode.

@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.mapred.JobConf;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  *
  * There's no need to disable the committer setting for the filesystem here,
  * because the committers are being instantiated in their own processes;
- * the settings in {@link #applyCustomConfigOptions(Configuration)} are
+ * the settings in {@link AbstractITCommitMRJob#applyCustomConfigOptions(JobConf)} are
  * passed down to these processes.
  */
 public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
@@ -54,7 +54,7 @@ public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
    * @param conf configuration
    */
   @Override
-  protected void applyCustomConfigOptions(Configuration conf) {
+  protected void applyCustomConfigOptions(JobConf conf) {
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
   }
 

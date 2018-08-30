@@ -95,15 +95,6 @@
     </description>
   </property>
   <property>
-    <name>dfs.container.grpc.enabled</name>
-    <value>false</value>
-    <tag>OZONE, MANAGEMENT, PIPELINE, RATIS</tag>
-    <description>Ozone supports different kinds of replication pipelines
-      protocols. grpc is one of the replication pipeline protocol supported by
-      ozone.
-    </description>
-  </property>
-  <property>
     <name>dfs.container.ratis.ipc</name>
     <value>9858</value>
     <tag>OZONE, CONTAINER, PIPELINE, RATIS, MANAGEMENT</tag>
@@ -287,17 +278,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.handler.type</name>
-    <value>distributed</value>
-    <tag>OZONE, REST</tag>
-    <description>
-      Tells ozone which storage handler to use. The possible values are:
-      distributed - The Ozone distributed storage handler, which speaks to
-      OM/SCM on the backend and provides REST services to clients.
-      local - Local Storage handler strictly for testing - To be removed.
-    </description>
-  </property>
-  <property>
     <name>ozone.key.deleting.limit.per.task</name>
     <value>1000</value>
     <tag>OM, PERFORMANCE</tag>
@@ -423,16 +403,6 @@
     <tag>OM, SECURITY</tag>
     <description>
       Default user permissions used in OM.
-    </description>
-  </property>
-  <property>
-    <name>ozone.localstorage.root</name>
-    <value>${hadoop.tmp.dir}/ozone</value>
-    <tag>OZONE, DEBUG</tag>
-    <description>
-      This is used only for testing purposes. This value is used by the local
-      storage handler to simulate a REST backend. This is useful only when
-      debugging the REST front end independent of OM and SCM. To be removed.
     </description>
   </property>
   <property>
@@ -611,12 +581,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.size.gb</name>
-    <value>5</value>
+    <name>ozone.scm.container.size</name>
+    <value>5GB</value>
     <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
     <description>
-      Default container size used by Ozone. This value is specified
-      in GB.
+      Default container size used by Ozone.
       There are two considerations while picking this number. The speed at which
       a container can be replicated, determined by the network speed and the
       metadata that each container generates. So selecting a large number
@@ -1129,4 +1098,14 @@
       datanode unless the datanode confirms the completion.
     </description>
   </property>
+
+  <property>
+    <name>ozone.db.profile</name>
+    <value>DBProfile.SSD</value>
+    <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
+    <description>This property allows user to pick a configuration
+    that tunes the RocksDB settings for the hardware it is running
+    on. Right now, we have SSD and DISK as profile options.</description>
+  </property>
+
 </configuration>

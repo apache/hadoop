@@ -227,13 +227,13 @@ public class Journal implements Closeable {
   /**
    * Format the local storage with the given namespace.
    */
-  void format(NamespaceInfo nsInfo) throws IOException {
+  void format(NamespaceInfo nsInfo, boolean force) throws IOException {
     Preconditions.checkState(nsInfo.getNamespaceID() != 0,
         "can't format with uninitialized namespace info: %s",
         nsInfo);
     LOG.info("Formatting journal id : " + journalId + " with namespace info: " +
-        nsInfo);
-    storage.format(nsInfo);
+        nsInfo + " and force: " + force);
+    storage.format(nsInfo, force);
     refreshCachedData();
   }
 

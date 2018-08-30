@@ -88,6 +88,54 @@ function(link_libhdfs_test NAME LIBRARY)
 target_link_libraries("${NAME}_${LIBRARY}" ${LIBRARY} ${ARGN})
 endfunction()
 
+
+set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+hadoop_set_find_shared_library_without_version()
+set(OPENSSL_NAME "crypto")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    SET(OPENSSL_NAME "eay32")
+endif()
+message("CUSTOM_OPENSSL_PREFIX = ${CUSTOM_OPENSSL_PREFIX}")
+find_library(OPENSSL_LIBRARY
+    NAMES ${OPENSSL_NAME}
+    PATHS ${CUSTOM_OPENSSL_PREFIX} ${CUSTOM_OPENSSL_PREFIX}/lib
+          ${CUSTOM_OPENSSL_PREFIX}/lib64 ${CUSTOM_OPENSSL_LIB} NO_DEFAULT_PATH)
+find_library(OPENSSL_LIBRARY NAMES ${OPENSSL_NAME})
+find_path(OPENSSL_INCLUDE_DIR
+    NAMES openssl/evp.h
+    PATHS ${CUSTOM_OPENSSL_PREFIX} ${CUSTOM_OPENSSL_PREFIX}/include
+          ${CUSTOM_OPENSSL_INCLUDE} NO_DEFAULT_PATH)
+find_path(OPENSSL_INCLUDE_DIR NAMES openssl/evp.h)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
+set(USABLE_OPENSSL 0)
+if(OPENSSL_LIBRARY AND OPENSSL_INCLUDE_DIR)
+    include(CheckCSourceCompiles)
+    set(OLD_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_c_source_compiles("#include \"${OPENSSL_INCLUDE_DIR}/openssl/evp.h\"\nint main(int argc, char **argv) { return !EVP_aes_256_ctr; }" HAS_NEW_ENOUGH_OPENSSL)
+    set(CMAKE_REQUIRED_INCLUDES ${OLD_CMAKE_REQUIRED_INCLUDES})
+    if(NOT HAS_NEW_ENOUGH_OPENSSL)
+        message("The OpenSSL library installed at ${OPENSSL_LIBRARY} is too old.  You need a version at least new enough to have EVP_aes_256_ctr.")
+    else()
+        SET(USABLE_OPENSSL 1)
+    endif()
+endif()
+if(USABLE_OPENSSL)
+    get_filename_component(HADOOP_OPENSSL_LIBRARY ${OPENSSL_LIBRARY} NAME)
+    set(OPENSSL_SOURCE_FILES
+        "${SRC}/crypto/OpensslCipher.c"
+        "${SRC}/crypto/random/OpensslSecureRandom.c")
+    set(REQUIRE_OPENSSL ${REQUIRE_OPENSSL}) # Stop warning about unused variable.
+else()
+    message("Cannot find a usable OpenSSL library. OPENSSL_LIBRARY=${OPENSSL_LIBRARY}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}, CUSTOM_OPENSSL_LIB=${CUSTOM_OPENSSL_LIB}, CUSTOM_OPENSSL_PREFIX=${CUSTOM_OPENSSL_PREFIX}, CUSTOM_OPENSSL_INCLUDE=${CUSTOM_OPENSSL_INCLUDE}")
+    if(REQUIRE_OPENSSL)
+        message(FATAL_ERROR "Terminating build because require.openssl was specified.")
+    endif()
+    set(OPENSSL_LIBRARY "")
+    set(OPENSSL_INCLUDE_DIR "")
+    set(OPENSSL_SOURCE_FILES "")
+endif()
+
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
 add_subdirectory(main/native/libhdfspp)

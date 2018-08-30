@@ -93,5 +93,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 # Otherwise, use the standard FindJNI module to locate the JNI components.
 #
 else()
+    find_package(Java REQUIRED)
+    include(UseJava)
     find_package(JNI REQUIRED)
 endif()

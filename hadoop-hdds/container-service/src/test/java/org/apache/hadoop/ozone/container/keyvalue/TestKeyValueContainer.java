@@ -19,11 +19,13 @@
 package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.primitives.Longs;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
-
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -37,6 +39,8 @@ import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.utils.MetadataStore;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,6 +50,8 @@ import org.mockito.Mockito;
 
 import java.io.File;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +80,6 @@ public class TestKeyValueContainer {
   private String scmId = UUID.randomUUID().toString();
   private VolumeSet volumeSet;
   private RoundRobinVolumeChoosingPolicy volumeChoosingPolicy;
-  private long containerID = 1L;
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
 
@@ -90,7 +95,8 @@ public class TestKeyValueContainer {
     Mockito.when(volumeChoosingPolicy.chooseVolume(anyList(), anyLong()))
         .thenReturn(hddsVolume);
 
-    keyValueContainerData = new KeyValueContainerData(1L, 5);
+    keyValueContainerData = new KeyValueContainerData(1L,
+        (long) StorageUnit.GB.toBytes(5));
 
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -99,7 +105,8 @@ public class TestKeyValueContainer {
 
   @Test
   public void testBlockIterator() throws Exception{
-    keyValueContainerData = new KeyValueContainerData(100L, 1);
+    keyValueContainerData = new KeyValueContainerData(100L,
+        (long) StorageUnit.GB.toBytes(1));
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
@@ -141,13 +148,14 @@ public class TestKeyValueContainer {
 
   }
 
+  @SuppressWarnings("RedundantCast")
   @Test
   public void testCreateContainer() throws Exception {
 
     // Create Container.
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
-    keyValueContainerData = (KeyValueContainerData) keyValueContainer
+    keyValueContainerData = keyValueContainer
         .getContainerData();
 
     String containerMetaDataPath = keyValueContainerData
@@ -164,6 +172,86 @@ public class TestKeyValueContainer {
         ".Container File does not exist");
     assertTrue(keyValueContainer.getContainerDBFile().exists(), "Container " +
         "DB does not exist");
+  }
+
+  @Test
+  public void testContainerImportExport() throws Exception {
+
+    long containerId = keyValueContainer.getContainerData().getContainerID();
+    // Create Container.
+    keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
+
+
+    keyValueContainerData = keyValueContainer
+        .getContainerData();
+
+    keyValueContainerData.setState(ContainerLifeCycleState.CLOSED);
+
+    int numberOfKeysToWrite = 12;
+    //write one few keys to check the key count after import
+    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainerData, conf);
+    for (int i = 0; i < numberOfKeysToWrite; i++) {
+      metadataStore.put(("test" + i).getBytes(), "test".getBytes());
+    }
+    metadataStore.close();
+
+    Map<String, String> metadata = new HashMap<>();
+    metadata.put("key1", "value1");
+    keyValueContainer.update(metadata, true);
+
+    //destination path
+    File folderToExport = folder.newFile("exported.tar.gz");
+
+    TarContainerPacker packer = new TarContainerPacker();
+
+    //export the container
+    try (FileOutputStream fos = new FileOutputStream(folderToExport)) {
+      keyValueContainer
+          .exportContainerData(fos, packer);
+    }
+
+    //delete the original one
+    keyValueContainer.delete(true);
+
+    //create a new one
+    KeyValueContainerData containerData =
+        new KeyValueContainerData(containerId, 1,
+            keyValueContainerData.getMaxSize());
+    KeyValueContainer container = new KeyValueContainer(containerData, conf);
+
+    HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
+        .getVolumesList(), 1);
+    String hddsVolumeDir = containerVolume.getHddsRootDir().toString();
+
+    container.populatePathFields(scmId, containerVolume, hddsVolumeDir);
+    try (FileInputStream fis = new FileInputStream(folderToExport)) {
+      container.importContainerData(fis, packer);
+    }
+
+    Assert.assertEquals("value1", containerData.getMetadata().get("key1"));
+    Assert.assertEquals(keyValueContainerData.getContainerDBType(),
+        containerData.getContainerDBType());
+    Assert.assertEquals(keyValueContainerData.getState(),
+        containerData.getState());
+    Assert.assertEquals(numberOfKeysToWrite,
+        containerData.getKeyCount());
+    Assert.assertEquals(keyValueContainerData.getLayOutVersion(),
+        containerData.getLayOutVersion());
+    Assert.assertEquals(keyValueContainerData.getMaxSize(),
+        containerData.getMaxSize());
+    Assert.assertEquals(keyValueContainerData.getBytesUsed(),
+        containerData.getBytesUsed());
+
+    //Can't overwrite existing container
+    try {
+      try (FileInputStream fis = new FileInputStream(folderToExport)) {
+        container.importContainerData(fis, packer);
+      }
+      fail("Container is imported twice. Previous files are overwritten");
+    } catch (Exception ex) {
+      //all good
+    }
+
   }
 
   @Test
@@ -224,7 +312,7 @@ public class TestKeyValueContainer {
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
     keyValueContainer.close();
 
-    keyValueContainerData = (KeyValueContainerData) keyValueContainer
+    keyValueContainerData = keyValueContainer
         .getContainerData();
 
     assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
@@ -249,7 +337,7 @@ public class TestKeyValueContainer {
     metadata.put("OWNER", "hdfs");
     keyValueContainer.update(metadata, true);
 
-    keyValueContainerData = (KeyValueContainerData) keyValueContainer
+    keyValueContainerData = keyValueContainer
         .getContainerData();
 
     assertEquals(2, keyValueContainerData.getMetadata().size());

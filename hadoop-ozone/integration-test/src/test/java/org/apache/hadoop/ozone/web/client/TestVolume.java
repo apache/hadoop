@@ -23,7 +23,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.RestClient;
@@ -79,9 +78,7 @@ public class TestVolume {
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
-   * Ozone is made active by setting OZONE_ENABLED = true and
-   * OZONE_HANDLER_TYPE_KEY = "local" , which uses a local directory to
-   * emulate Ozone backend.
+   * Ozone is made active by setting OZONE_ENABLED = true
    *
    * @throws IOException
    */
@@ -91,11 +88,8 @@ public class TestVolume {
 
     String path = GenericTestUtils
         .getTempPath(TestVolume.class.getSimpleName());
-    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
-        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     FileUtils.deleteDirectory(new File(path));
 
-    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
     cluster = MiniOzoneCluster.newBuilder(conf).build();
@@ -221,7 +215,8 @@ public class TestVolume {
     client.createVolume(volumeName);
     client.setVolumeQuota(volumeName, OzoneQuota.parseQuota("1000MB"));
     OzoneVolume newVol = client.getVolumeDetails(volumeName);
-    assertEquals(newVol.getQuota(), OzoneQuota.parseQuota("1000MB").sizeInBytes());
+    assertEquals(newVol.getQuota(),
+        OzoneQuota.parseQuota("1000MB").sizeInBytes());
     // verify if the creation time is missing after setting quota operation
     assertTrue(newVol.getCreationTime() > 0);
   }

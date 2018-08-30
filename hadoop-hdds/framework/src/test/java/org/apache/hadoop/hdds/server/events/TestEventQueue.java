@@ -22,9 +22,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**

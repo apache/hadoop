@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.keyvalue;
 
 import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -244,7 +245,8 @@ public class TestKeyValueBlockIterator {
   private void createContainerWithBlocks(long containerId, int
       normalBlocks, int deletedBlocks) throws
       Exception {
-    containerData = new KeyValueContainerData(containerId, 1);
+    containerData = new KeyValueContainerData(containerId,
+        (long) StorageUnit.GB.toBytes(1));
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(), UUID
         .randomUUID().toString());

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.impl;
 
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -42,7 +43,7 @@ public class TestContainerDataYaml {
 
   private static String testRoot = new FileSystemTestHelper().getTestRootDir();
 
-  private static final int MAXSIZE = 5;
+  private static final long MAXSIZE = (long) StorageUnit.GB.toBytes(5);
 
   /**
    * Creates a .container file. cleanup() should be called at the end of the
@@ -94,7 +95,7 @@ public class TestContainerDataYaml {
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
     assertEquals(0, kvData.getMetadata().size());
-    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
+    assertEquals(MAXSIZE, kvData.getMaxSize());
 
     // Update ContainerData.
     kvData.addMetadata("VOLUME", "hdfs");
@@ -122,7 +123,7 @@ public class TestContainerDataYaml {
     assertEquals(2, kvData.getMetadata().size());
     assertEquals("hdfs", kvData.getMetadata().get("VOLUME"));
     assertEquals("ozone", kvData.getMetadata().get("OWNER"));
-    assertEquals(MAXSIZE, kvData.getMaxSizeGB());
+    assertEquals(MAXSIZE, kvData.getMaxSize());
   }
 
   @Test

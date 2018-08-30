@@ -71,7 +71,7 @@ Execute on
 Run docker compose
     [arguments]                     ${command}
                                     Set Environment Variable    COMPOSE_INTERACTIVE_NO_CLI             1
-                                    Set Environment Variable    OZONEDIR      ${PROJECTDIR}/hadoop-dist/target/ozone
+                                    Set Environment Variable    OZONEDIR      ${OZONEDIR}
     ${rc}                           ${output} =                 Run And Return Rc And Output           docker-compose -f ${COMPOSEFILE} ${command}
     Log                             ${output}
     Should Be Equal As Integers     ${rc}                       0
