@@ -187,7 +187,7 @@ existing documentation and tests and/or adding new documentation or tests.
 
 #### Java Binary compatibility for end-user applications i.e. Apache Hadoop ABI
 
-Apache Hadoop revisions SHOUD retain binary compatability such that end-user
+Apache Hadoop revisions SHOULD retain binary compatability such that end-user
 applications continue to work without any modifications. Minor Apache Hadoop
 revisions within the same major revision MUST retain compatibility such that
 existing MapReduce applications (e.g. end-user applications and projects such
