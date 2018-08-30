@@ -159,25 +159,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     cleanupDestDir();
   }
 
-  /**
-   * Create a random Job ID using the fork ID as part of the number.
-   * @return fork ID string in a format parseable by Jobs
-   * @throws Exception failure
-   */
-  private String randomJobId() throws Exception {
-    String testUniqueForkId = System.getProperty(TEST_UNIQUE_FORK_ID, "0001");
-    int l = testUniqueForkId.length();
-    String trailingDigits = testUniqueForkId.substring(l - 4, l);
-    try {
-      int digitValue = Integer.valueOf(trailingDigits);
-      return String.format("20070712%04d_%04d",
-          (long)(Math.random() * 1000),
-          digitValue);
-    } catch (NumberFormatException e) {
-      throw new Exception("Failed to parse " + trailingDigits, e);
-    }
-  }
-
   @Override
   public void teardown() throws Exception {
     describe("teardown");
@@ -765,6 +746,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     JobContext jContext = jobData.jContext;
     TaskAttemptContext tContext = jobData.tContext;
     AbstractS3ACommitter committer = jobData.committer;
+    validateTaskAttemptWorkingDirectory(committer, tContext);
 
     // write output
     describe("1. Writing output");
@@ -1360,12 +1342,55 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
   }
 
+  @Test
+  public void testS3ACommitterFactoryBinding() throws Throwable {
+    describe("Verify that the committer factory returns this "
+        + "committer when configured to do so");
+    Job job = newJob();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt0);
+    conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf,
+        taskAttempt0);
+    String name = getCommitterName();
+    S3ACommitterFactory factory = new S3ACommitterFactory();
+    assertEquals("Wrong committer from factory",
+        createCommitter(outDir, tContext).getClass(),
+        factory.createOutputCommitter(outDir, tContext).getClass());
+  }
+
+  /**
+   * Validate the path of a file being written to during the write
+   * itself.
+   * @param p path
+   * @throws IOException IO failure
+   */
   protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
 
   }
 
+  /**
+   * Validate the path of a file being written to after the write
+   * operation has completed.
+   * @param p path
+   * @throws IOException IO failure
+   */
   protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
 
+  }
+
+  /**
+   * Perform any actions needed to validate the working directory of
+   * a committer.
+   * For example: filesystem, path attributes
+   * @param committer committer instance
+   * @param context task attempt context
+   * @throws IOException IO failure
+   */
+  protected void validateTaskAttemptWorkingDirectory(
+      AbstractS3ACommitter committer,
+      TaskAttemptContext context) throws IOException {
   }
 
 }

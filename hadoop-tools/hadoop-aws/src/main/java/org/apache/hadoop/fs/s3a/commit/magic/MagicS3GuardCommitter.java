@@ -285,4 +285,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     return CommitUtilsWithMR.getTempTaskAttemptPath(context, getOutputPath());
   }
 
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "MagicCommitter{");
+    sb.append('}');
+    return sb.toString();
+  }
 }

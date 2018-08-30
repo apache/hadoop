@@ -167,13 +167,15 @@ public final class Paths {
             return FileSystem.getLocal(conf).makeQualified(
                 allocator.getLocalPathForWrite(uuid, conf));
           });
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e.getCause());
-    } catch (UncheckedExecutionException e) {
-      if (e.getCause() instanceof RuntimeException) {
-        throw (RuntimeException) e.getCause();
+    } catch (ExecutionException | UncheckedExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
       }
-      throw new RuntimeException(e);
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      }
+      throw new IOException(e);
     }
   }
 
