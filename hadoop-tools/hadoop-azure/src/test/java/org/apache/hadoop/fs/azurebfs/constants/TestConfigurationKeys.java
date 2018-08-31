@@ -22,10 +22,9 @@ package org.apache.hadoop.fs.azurebfs.constants;
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
  */
 public final class TestConfigurationKeys {
-  public static final String FS_AZURE_TEST_ACCOUNT_NAME = "fs.azure.test.account.name";
-  public static final String FS_AZURE_TEST_ACCOUNT_KEY_PREFIX = "fs.azure.test.account.key.";
-  public static final String FS_AZURE_TEST_HOST_NAME = "fs.azure.test.host.name";
-  public static final String FS_AZURE_TEST_HOST_PORT = "fs.azure.test.host.port";
+  public static final String FS_AZURE_ACCOUNT_NAME = "fs.azure.account.name";
+  public static final String FS_AZURE_ABFS_ACCOUNT_NAME = "fs.azure.abfs.account.name";
+  public static final String FS_AZURE_ACCOUNT_KEY_PREFIX = "fs.azure.account.key.";
   public static final String FS_AZURE_CONTRACT_TEST_URI = "fs.contract.test.fs.abfs";
 
   public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID = "fs.azure.account.oauth2.contributor.client.id";
@@ -34,9 +33,9 @@ public final class TestConfigurationKeys {
   public static final String FS_AZURE_BLOB_DATA_READER_CLIENT_ID = "fs.azure.account.oauth2.reader.client.id";
   public static final String FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET = "fs.azure.account.oauth2.reader.client.secret";
 
-  public static final String ABFS_TEST_RESOURCE_XML = "azure-bfs-test.xml";
-
-  public static final String ABFS_TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
+  public static final String TEST_CONFIGURATION_FILE_NAME = "azure-test.xml";
+  public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
+  public static final int TEST_TIMEOUT = 10 * 60 * 1000;
 
   private TestConfigurationKeys() {}
 }

@@ -173,10 +173,6 @@ public class AbfsConfiguration{
     }
   }
 
-  public boolean isEmulator() {
-    return this.getConfiguration().getBoolean(FS_AZURE_EMULATOR_ENABLED, false);
-  }
-
   public boolean isSecureMode() {
     return isSecure;
   }

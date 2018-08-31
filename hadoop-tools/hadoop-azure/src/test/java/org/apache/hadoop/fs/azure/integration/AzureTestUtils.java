@@ -36,10 +36,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
+
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
 import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.*;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Utilities for the Azure tests. Based on {@code S3ATestUtils}, so
@@ -476,4 +480,18 @@ public final class AzureTestUtils extends Assert {
             + KEY_SCALE_TESTS_ENABLED,
         enabled);
   }
+
+  /**
+   * Check the account name for WASB tests is set correctly and return.
+   */
+  public static String verifyWasbAccountNameInConfig(Configuration conf) {
+    String accountName = conf.get(ACCOUNT_NAME_PROPERTY_NAME);
+    if (accountName == null) {
+      accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
+    }
+    assumeTrue("Account for WASB is missing or it is not in correct format",
+            accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX));
+    return accountName;
+  }
+
 }

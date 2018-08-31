@@ -41,20 +41,21 @@ public final class UriUtils {
   }
 
   /**
-   * Extracts the raw account name from account name.
-   * @param accountName to extract the raw account name.
-   * @return extracted raw account name.
+   * Extracts the account name from the host name.
+   * @param hostName the fully-qualified domain name of the storage service
+   *                 endpoint (e.g. {account}.dfs.core.windows.net.
+   * @return the storage service account name.
    */
-  public static String extractRawAccountFromAccountName(final String accountName) {
-    if (accountName == null || accountName.isEmpty()) {
+  public static String extractAccountNameFromHostName(final String hostName) {
+    if (hostName == null || hostName.isEmpty()) {
       return null;
     }
 
-    if (!containsAbfsUrl(accountName)) {
+    if (!containsAbfsUrl(hostName)) {
       return null;
     }
 
-    String[] splitByDot = accountName.split("\\.");
+    String[] splitByDot = hostName.split("\\.");
     if (splitByDot.length == 0) {
       return null;
     }

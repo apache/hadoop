@@ -69,7 +69,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
 
   private String getBlobConnectionString() {
     String connectionString;
-    if (isEmulator()) {
+    if (isIPAddress()) {
       connectionString = "DefaultEndpointsProtocol=http;BlobEndpoint=http://"
               + this.getHostName() + ":8880/" + this.getAccountName().split("\\.") [0]
               + ";AccountName=" + this.getAccountName().split("\\.")[0]

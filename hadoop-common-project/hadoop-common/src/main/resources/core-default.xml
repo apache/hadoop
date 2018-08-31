@@ -1619,6 +1619,18 @@
 
 <!-- Azure file system properties -->
 <property>
+  <name>fs.AbstractFileSystem.wasb.impl</name>
+  <value>org.apache.hadoop.fs.azure.Wasb</value>
+  <description>AbstractFileSystem implementation class of wasb://</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.wasbs.impl</name>
+  <value>org.apache.hadoop.fs.azure.Wasbs</value>
+  <description>AbstractFileSystem implementation class of wasbs://</description>
+</property>
+
+<property>
   <name>fs.wasb.impl</name>
   <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
   <description>The implementation class of the Native Azure Filesystem</description>

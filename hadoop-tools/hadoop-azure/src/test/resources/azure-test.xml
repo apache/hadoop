@@ -16,49 +16,39 @@
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
 
-  <!-- For tests against live azure, provide the following account information -->
+  <!--====================  WASB CONFIGURATION ====================-->
+  <!-- For tests against azure-emulator -->
+  <property>
+    <name>fs.azure.test.emulator</name>
+    <value>false</value>
+  </property>
 
-  <!--
-    <property>
-      <name>fs.azure.test.account.name</name>
-      <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-    </property>
-    <property>
-      <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-      <value>{ACCOUNTKEY}</value>
-    </property>
-  -->
+  <property>
+    <name>fs.azure.secure.mode</name>
+    <value>false</value>
+  </property>
 
-  <!-- uncomment to test in Azure secure mode -->
-  <!--
-    <property>
-      <name>fs.azure.secure.mode</name>
-      <value>true</value>
-    </property>
-  -->
+  <!--====================  ABFS CONFIGURATION ====================-->
+  <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
 
+  <!--========== CONFIGURATION SHARED BY WASB AND ABFS ==========-->
   <property>
     <name>fs.azure.user.agent.prefix</name>
     <value>MSFT</value>
   </property>
 
-  <!-- Save the above configuration properties in a separate file named -->
-  <!-- azure-auth-keys.xml in the same directory as this file. -->
-  <!-- DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your -->
-  <!-- Azure Storage account are a secret and must not be shared. -->
+  <!--====================== IMPORTANT!! ========================-->
+  <!--WARNING!!
+      PLEASE CREATE A FILE NAMED "azure-auth-keys.xml"
+      AND SEE "site/markdown/testing_azure.md", THEN
+      STORE THE CONFIGURATION PROPERTIES WITHIN IT.
+      TO PREVENT ACCIDENTAL LEAKS OF YOUR STORAGE ACCOUNT CREDENTIALS,
+      THIS FILE IS LISTED IN .gitignore TO PREVENT YOU FROM INCLUDING
+      IT IN PATCHES OR COMMITS. -->
+  <!--=============================================================-->
+
   <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
     <fallback />
   </include>
 
-  <!-- For tests against azure-emulator -->
-  <!--
-  <property>
-    <name>fs.azure.test.emulator</name>
-    <value>true</value>
-  </property>
-  -->
-  <property>
-    <name>fs.AbstractFileSystem.wasb.impl</name>
-    <value>org.apache.hadoop.fs.azure.Wasb</value>
-  </property>
 </configuration>

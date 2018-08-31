@@ -37,9 +37,6 @@ public final class ConfigurationKeys {
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
 
-  // Remove this and use common azure storage emulator property for public release.
-  public static final String FS_AZURE_EMULATOR_ENABLED = "fs.azure.abfs.emulator.enabled";
-
   // Read and write buffer sizes defined by the user
   public static final String AZURE_WRITE_BUFFER_SIZE = "fs.azure.write.request.size";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
@@ -60,6 +57,8 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_KEYPROVIDER_PREFIX = "fs.azure.account.keyprovider.";
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 
+  /** End point of ABFS account: {@value}. */
+  public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";
   /** Prefix for auth type properties: {@value}. */
   public static final String FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME = "fs.azure.account.auth.type.";
   /** Prefix for oauth token provider type: {@value}. */
