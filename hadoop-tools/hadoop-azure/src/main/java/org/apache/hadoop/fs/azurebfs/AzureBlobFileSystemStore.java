@@ -77,6 +77,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -86,6 +87,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.util.Time.now;
 
 /**
@@ -146,7 +148,27 @@ public class AzureBlobFileSystemStore {
 
     final URIBuilder uriBuilder = new URIBuilder();
     uriBuilder.setScheme(scheme);
-    uriBuilder.setHost(hostName);
+
+    // For testing purposes, an IP address and port may be provided to override
+    // the host specified in the FileSystem URI.  Also note that the format of
+    // the Azure Storage Service URI changes from
+    // http[s]://[account][domain-suffix]/[filesystem] to
+    // http[s]://[ip]:[port]/[account]/[filesystem].
+    String endPoint = abfsConfiguration.getConfiguration().get(AZURE_ABFS_ENDPOINT);
+    if (endPoint == null || !endPoint.contains(AbfsHttpConstants.COLON)) {
+      uriBuilder.setHost(hostName);
+      return uriBuilder;
+    }
+
+    // Split ip and port
+    String[] data = endPoint.split(AbfsHttpConstants.COLON);
+    if (data.length != 2) {
+      throw new RuntimeException(String.format("ABFS endpoint is not set correctly : %s, "
+              + "Do not specify scheme when using {IP}:{PORT}", endPoint));
+    }
+    uriBuilder.setHost(data[0].trim());
+    uriBuilder.setPort(Integer.parseInt(data[1].trim()));
+    uriBuilder.setPath("/" + UriUtils.extractAccountNameFromHostName(hostName));
 
     return uriBuilder;
   }

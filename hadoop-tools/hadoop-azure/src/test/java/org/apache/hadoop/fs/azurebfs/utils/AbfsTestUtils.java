@@ -22,56 +22,59 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import org.junit.Assume;
-import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ABFS_TEST_CONTAINER_PREFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
 
-/**
- * If unit tests were interrupted and crushed accidentally, the test containers won't be deleted.
- * In that case, dev can use this tool to list and delete all test containers.
- * By default, all test container used in E2E tests sharing same prefix: "abfs-testcontainer-"
- */
-public class CleanUpAbfsTestContainer extends AbstractAbfsIntegrationTest{
+  /*
+  * Some Utils for ABFS tests.
+  * */
+public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
+    private static final Logger LOG =
+            LoggerFactory.getLogger(AbfsTestUtils.class);
+  /**
+   * If unit tests were interrupted and crushed accidentally, the test containers won't be deleted.
+   * In that case, dev can use this tool to list and delete all test containers.
+   * By default, all test container used in E2E tests sharing same prefix: "abfs-testcontainer-"
+   */
 
-  public CleanUpAbfsTestContainer() {
+  public void checkContainers() throws Throwable {
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-  }
-
-  @Test
-  public void testEnumContainers() throws Throwable {
     int count = 0;
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
     Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(ABFS_TEST_CONTAINER_PREFIX);
+            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
     for (CloudBlobContainer container : containers) {
       count++;
-      System.out.println(String.format("Container %s URI %s",
+      LOG.info("Container {}, URI {}",
               container.getName(),
-              container.getUri()));
+              container.getUri());
     }
-    System.out.println(String.format("Found %d test containers", count));
+    LOG.info("Found {} test containers", count);
   }
 
-  @Test
-  public void testDeleteContainers() throws Throwable {
+
+  public void deleteContainers() throws Throwable {
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     int count = 0;
     CloudStorageAccount storageAccount = AzureBlobStorageTestAccount.createTestAccount();
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
     Iterable<CloudBlobContainer> containers
-            = blobClient.listContainers(ABFS_TEST_CONTAINER_PREFIX);
+            = blobClient.listContainers(TEST_CONTAINER_PREFIX);
     for (CloudBlobContainer container : containers) {
-      System.out.println(String.format("Container %s URI %s",
+      LOG.info("Container {} URI {}",
               container.getName(),
-              container.getUri()));
+              container.getUri());
       if (container.deleteIfExists()) {
         count++;
       }
     }
-    System.out.println(String.format("Deleted %s test containers", count));
+    LOG.info("Deleted {} test containers", count);
   }
 }

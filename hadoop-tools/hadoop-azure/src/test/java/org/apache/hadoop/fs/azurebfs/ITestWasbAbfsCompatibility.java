@@ -50,7 +50,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       LoggerFactory.getLogger(ITestWasbAbfsCompatibility.class);
 
   public ITestWasbAbfsCompatibility() throws Exception {
-    Assume.assumeFalse("Emulator is not supported", isEmulator());
+    Assume.assumeFalse("Emulator is not supported", isIPAddress());
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 

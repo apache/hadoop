@@ -500,32 +500,6 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
   }
 
   @Test
-  public void testNoAbstractFileSystemImplementationSpecifiedForWasbsScheme() throws Exception {
-    try {
-      testAccount = AzureBlobStorageTestAccount.createMock();
-      Configuration conf = testAccount.getFileSystem().getConf();
-      String authority = testAccount.getFileSystem().getUri().getAuthority();
-      URI defaultUri = new URI("wasbs", authority, null, null, null);
-      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
-
-      FileSystem fs = FileSystem.get(conf);
-      assertTrue(fs instanceof NativeAzureFileSystem);
-      assertEquals("wasbs", fs.getScheme());
-
-      // should throw if 'fs.AbstractFileSystem.wasbs.impl'' is not specified
-      try{
-        FileContext.getFileContext(conf).getDefaultFileSystem();
-        fail("Should've thrown.");
-      }catch(UnsupportedFileSystemException e){
-      }
-
-    } finally {
-      testAccount.cleanup();
-      FileSystem.closeAll();
-    }
-  }
-
-  @Test
   public void testCredentialProviderPathExclusions() throws Exception {
     String providerPath =
         "user:///,jceks://wasb/user/hrt_qa/sqoopdbpasswd.jceks," +

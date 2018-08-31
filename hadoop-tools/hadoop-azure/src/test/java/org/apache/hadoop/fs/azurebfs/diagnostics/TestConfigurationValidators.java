@@ -32,7 +32,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test configuration validators.

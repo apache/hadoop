@@ -38,11 +38,11 @@ public final class TestUriUtils {
 
   @Test
   public void testExtractRawAccountName() throws Exception {
-    Assert.assertEquals("abfs", UriUtils.extractRawAccountFromAccountName("abfs.dfs.core.windows.net"));
-    Assert.assertEquals("abfs", UriUtils.extractRawAccountFromAccountName("abfs.dfs.preprod.core.windows.net"));
-    Assert.assertEquals(null, UriUtils.extractRawAccountFromAccountName("abfs.dfs.cores.windows.net"));
-    Assert.assertEquals(null, UriUtils.extractRawAccountFromAccountName(""));
-    Assert.assertEquals(null, UriUtils.extractRawAccountFromAccountName(null));
-    Assert.assertEquals(null, UriUtils.extractRawAccountFromAccountName("abfs.dfs.cores.windows.net"));
+    Assert.assertEquals("abfs", UriUtils.extractAccountNameFromHostName("abfs.dfs.core.windows.net"));
+    Assert.assertEquals("abfs", UriUtils.extractAccountNameFromHostName("abfs.dfs.preprod.core.windows.net"));
+    Assert.assertEquals(null, UriUtils.extractAccountNameFromHostName("abfs.dfs.cores.windows.net"));
+    Assert.assertEquals(null, UriUtils.extractAccountNameFromHostName(""));
+    Assert.assertEquals(null, UriUtils.extractAccountNameFromHostName(null));
+    Assert.assertEquals(null, UriUtils.extractAccountNameFromHostName("abfs.dfs.cores.windows.net"));
   }
 }

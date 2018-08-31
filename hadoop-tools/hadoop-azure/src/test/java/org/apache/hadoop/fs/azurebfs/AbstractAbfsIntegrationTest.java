@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azure.AbstractWasbTestWithTimeout;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -45,12 +44,12 @@ import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.assumeTrue;
-import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -58,12 +57,12 @@ import static org.hamcrest.CoreMatchers.*;
  * <I>Important: This is for integration tests only.</I>
  */
 public abstract class AbstractAbfsIntegrationTest extends
-    AbstractWasbTestWithTimeout {
+        AbstractAbfsTestWithTimeout {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
 
-  private boolean isEmulator;
+  private boolean isIPAddress;
   private NativeAzureFileSystem wasb;
   private AzureBlobFileSystem abfs;
   private String abfsScheme;
@@ -75,27 +74,28 @@ public abstract class AbstractAbfsIntegrationTest extends
   private AuthType authType;
 
   protected AbstractAbfsIntegrationTest() {
-    fileSystemName = ABFS_TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
+    fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     configuration = new Configuration();
-    configuration.addResource(ABFS_TEST_RESOURCE_XML);
-    this.accountName = this.configuration.get(FS_AZURE_TEST_ACCOUNT_NAME);
+    configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
+
+    this.accountName = this.configuration.get(FS_AZURE_ACCOUNT_NAME);
+    if (accountName == null) {
+      // check if accountName is set using different config key
+      accountName = configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    }
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
+            accountName != null && !accountName.isEmpty());
+
 
     authType = configuration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME
             + accountName, AuthType.SharedKey);
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
-    String accountName = configuration.get(FS_AZURE_TEST_ACCOUNT_NAME, "");
-    assumeTrue("Not set: " + FS_AZURE_TEST_ACCOUNT_NAME,
-        !accountName.isEmpty());
-    assertThat("The key in " + FS_AZURE_TEST_ACCOUNT_KEY_PREFIX
-            + " is not bound to an ABFS account",
-        accountName, containsString("dfs.core.windows.net"));
-    String fullKey = FS_AZURE_TEST_ACCOUNT_KEY_PREFIX
-        + accountName;
-
     if (authType == AuthType.SharedKey) {
-      assumeTrue("Not set: " + fullKey, configuration.get(fullKey) != null);
+      String keyProperty = FS_AZURE_ACCOUNT_KEY_PREFIX + accountName;
+      assumeTrue("Not set: " + keyProperty, configuration.get(keyProperty) != null);
+      // Update credentials
     } else {
       String accessTokenProviderKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountName;
       assumeTrue("Not set: " + accessTokenProviderKey, configuration.get(accessTokenProviderKey) != null);
@@ -113,7 +113,17 @@ public abstract class AbstractAbfsIntegrationTest extends
     this.testUrl = defaultUri.toString();
     configuration.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     configuration.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    this.isEmulator = this.configuration.getBoolean(FS_AZURE_EMULATOR_ENABLED, false);
+    // For testing purposes, an IP address and port may be provided to override
+    // the host specified in the FileSystem URI.  Also note that the format of
+    // the Azure Storage Service URI changes from
+    // http[s]://[account][domain-suffix]/[filesystem] to
+    // http[s]://[ip]:[port]/[account]/[filesystem].
+    String endPoint = configuration.get(AZURE_ABFS_ENDPOINT);
+    if (endPoint != null && endPoint.contains(":") && endPoint.split(":").length == 2) {
+      this.isIPAddress = true;
+    } else {
+      this.isIPAddress = false;
+    }
   }
 
 
@@ -122,13 +132,22 @@ public abstract class AbstractAbfsIntegrationTest extends
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
-    if (!isEmulator && authType == AuthType.SharedKey) {
+    if (!isIPAddress && authType == AuthType.SharedKey) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
+
+      // update configuration with wasb credentials
+      String accountNameWithoutDomain = accountName.split("\\.")[0];
+      String wasbAccountName = accountNameWithoutDomain + WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
+      String keyProperty = FS_AZURE_ACCOUNT_KEY_PREFIX + wasbAccountName;
+      if (configuration.get(keyProperty) == null) {
+        configuration.set(keyProperty, getAccountKey());
+      }
+
       azureNativeFileSystemStore.initialize(
           wasbUri,
-          getConfiguration(),
+          configuration,
           new AzureFileSystemInstrumentation(getConfiguration()));
 
       wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
@@ -201,7 +220,9 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected String getHostName() {
-    return configuration.get(FS_AZURE_TEST_HOST_NAME);
+    // READ FROM ENDPOINT, THIS IS CALLED ONLY WHEN TESTING AGAINST DEV-FABRIC
+    String endPoint = configuration.get(AZURE_ABFS_ENDPOINT);
+    return endPoint.split(":")[0];
   }
 
   protected void setTestUrl(String testUrl) {
@@ -220,21 +241,21 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected String getAccountName() {
-    return configuration.get(FS_AZURE_TEST_ACCOUNT_NAME);
+    return this.accountName;
   }
 
   protected String getAccountKey() {
     return configuration.get(
-        FS_AZURE_TEST_ACCOUNT_KEY_PREFIX
-            + getAccountName());
+        FS_AZURE_ACCOUNT_KEY_PREFIX
+            + accountName);
   }
 
   protected Configuration getConfiguration() {
     return configuration;
   }
 
-  protected boolean isEmulator() {
-    return isEmulator;
+  protected boolean isIPAddress() {
+    return isIPAddress;
   }
 
   protected AuthType getAuthType() {

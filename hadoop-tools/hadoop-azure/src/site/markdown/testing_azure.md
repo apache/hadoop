@@ -90,7 +90,7 @@ For example:
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>fs.azure.test.account.name</name>
+    <name>fs.azure.wasb.account.name</name>
     <value>{ACCOUNTNAME}.blob.core.windows.net</value>
   </property>
   <property>
@@ -126,7 +126,7 @@ Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` 
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
-    <name>fs.azure.test.account.name</name>
+    <name>fs.azure.wasb.account.name</name>
     <value>{ACCOUNTNAME}.blob.core.windows.net</value>
   </property>
   <property>
@@ -576,77 +576,172 @@ This will delete the containers; the output log of the test run will
 provide the details and summary of the operation.
 
 
-## Testing ABFS
+## Testing the Azure ABFS Client
 
-The ABFS Connector tests share the same account as the wasb tests; this is
-needed for cross-connector compatibility tests.
+Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to 
+big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS 
+schemes target the ADLS Gen 2 REST API, and the WASB and WASBS schemes target
+the Azure Blob Storage REST API.  ADLS Gen 2 offers better performance and
+scalability.  ADLS Gen 2 also offers authentication and authorization compatible 
+with the Hadoop Distributed File System permissions model when hierarchical 
+namespace is enabled for the storage account.  Furthermore, the metadata and data
+produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
+ 
+In order to test ABFS, please add the following configuration to your
+`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
+compatibility tests which require WASB credentials, in addition to the ABFS
+credentials.
 
-This makes for a somewhat complex set of configuration options.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+  <property>
+    <name>fs.azure.abfs.account.name</name>
+    <value>{ACCOUNT_NAME}.dfs.core.windows.net</value>
+  </property>
 
-Here are the settings for an account `ACCOUNTNAME`
+  <property>
+    <name>fs.azure.account.key.{ACCOUNT_NAME}.dfs.core.windows.net</name>
+    <value>{ACCOUNT_ACCESS_KEY}</value>
+  </property>
+
+  <property>
+    <name>fs.azure.wasb.account.name</name>
+    <value>{ACCOUNT_NAME}.blob.core.windows.net</value>
+  </property>
+  
+  <property>
+    <name>fs.azure.account.key.{ACCOUNT_NAME}.blob.core.windows.net</name>
+    <value>{ACCOUNT_ACCESS_KEY}</value>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>abfs://{CONTAINER_NAME}@{ACCOUNT_NAME}.dfs.core.windows.net</value>
+    <description>A file system URI to be used by the contract tests.</description>
+  </property>
+
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>wasb://{CONTAINER_NAME}@{ACCOUNT_NAME}.blob.core.windows.net</value>
+    <description>A file system URI to be used by the contract tests.</description>
+  </property>
+</configuration>
+```
+
+To run OAuth and ACL test cases you must use a storage account with the
+hierarchical namespace enabled, and set the following configuration settings:
+
+```xml
+<!--=========================== AUTHENTICATION  OPTIONS ===================-->
+<!--ATTENTION:
+      TO RUN ABFS & WASB COMPATIBILITY TESTS, YOU MUST SET AUTH TYPE AS SharedKey.
+      OAUTH IS INTRODUCED TO ABFS ONLY.-->
+<property>
+  <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
+  <value>{AUTH TYPE}</value>
+  <description>The authorization type can be SharedKey, OAuth, or Custom. The 
+  default is SharedKey.</description>
+</property>
+
+<!--=============================   FOR OAUTH   ===========================-->
+<!--IF AUTH TYPE IS SET AS OAUTH, FOLLOW THE STEPS BELOW-->
+<!--NOTICE: AAD client and tenant related properties can be obtained through Azure Portal-->
+
+  <!--1. UNCOMMENT BELOW AND CHOOSE YOUR OAUTH PROVIDER TYPE -->
+
+  <!--
+  <property>
+    <name>fs.azure.account.oauth.provider.type.{ABFS_ACCOUNT_NAME}</name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.{Token Provider Class name}</value>
+    <description>The full name of token provider class name.</description>
+  </property>
+ -->
+
+  <!--2. UNCOMMENT BELOW AND SET CREDENTIALS ACCORDING TO THE PROVIDER TYPE-->
+
+  <!--2.1. If "ClientCredsTokenProvider" is set as key provider, uncomment below and
+           set auth endpoint, client id and secret below-->
+  <!--
+   <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{ABFS_ACCOUNT_NAME}</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>Token end point, this can be found through Azure portal</description>
+  </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.secret.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client secret}</value>
+   </property>
+ -->
+
+  <!--2.2. If "UserPasswordTokenProvider" is set as key provider, uncomment below and
+           set auth endpoint, use name and password-->
+  <!--
+   <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{ABFS_ACCOUNT_NAME}</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>Token end point, this can be found through Azure portal</description>
+  </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.user.name.{ABFS_ACCOUNT_NAME}</name>
+     <value>{user name}</value>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.user.password.{ABFS_ACCOUNT_NAME}</name>
+     <value>{user password}</value>
+   </property>
+ -->
+
+  <!--2.3. If "MsiTokenProvider" is set as key provider, uncomment below and
+           set tenantGuid and client id.-->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.msi.tenant.{ABFS_ACCOUNT_NAME}</name>
+     <value>{tenantGuid}</value>
+     <description>msi tenantGuid.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+  -->
+
+  <!--2.4. If "RefreshTokenBasedTokenProvider" is set as key provider, uncomment below and
+           set refresh token and client id.-->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.refresh.token.{ABFS_ACCOUNT_NAME}</name>
+     <value>{refresh token}</value>
+     <description>refresh token.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+  -->
+```
+
+If running tests against an endpoint that uses the URL format
+http[s]://[ip]:[port]/[account]/[filesystem] instead of
+http[s]://[account][domain-suffix]/[filesystem], please use the following:
 
 ```xml
 <property>
-  <name>abfs.account.name</name>
-  <value>ACCOUNTNAME</value>
+  <name>fs.azure.abfs.endpoint</name>
+  <value>{IP}:{PORT}</value>
 </property>
-
-<property>
-  <name>abfs.account.full.name</name>
-  <value>${abfs.account.name}.dfs.core.windows.net</value>
-</property>
-
-<property>
-  <name>abfs.account.key</name>
-  <value>SECRETKEY==</value>
-</property>
-
-<property>
-  <name>fs.azure.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.account.key.ACCOUNTNAME.blob.core.windows.net</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.test.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.test.account.key.ACCOUNTNAME.blob.core.windows.net</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.account.key.ACCOUNTNAME</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.test.account.key.ACCOUNTNAME</name>
-  <value>${abfs.account.key}</value>
-</property>
-
-<property>
-  <name>fs.azure.test.account.name</name>
-  <value>${abfs.account.full.name}</value>
-</property>
-
-<property>
-  <name>fs.contract.test.fs.abfs</name>
-  <value>abfs://TESTCONTAINER@ACCOUNTNAME.dfs.core.windows.net</value>
-  <description>Container for contract tests</description>
-</property>
-
-<property>
-  <name>fs.contract.test.fs.abfss</name>
-  <value>abfss://TESTCONTAINER@ACCOUNTNAME.dfs.core.windows.net</value>
-  <description>Container for contract tests</description>
-</property>
-
-
 ```
