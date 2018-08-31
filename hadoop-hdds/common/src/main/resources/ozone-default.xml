@@ -1100,7 +1100,7 @@
   </property>
 
   <property>
-    <name>ozone.db.profile</name>
+    <name>hdds.db.profile</name>
     <value>DBProfile.SSD</value>
     <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
     <description>This property allows user to pick a configuration
