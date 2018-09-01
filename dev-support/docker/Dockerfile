@@ -22,6 +22,8 @@ FROM ubuntu:xenial
 
 WORKDIR /root
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 #####
 # Disable suggests/recommends
 #####
@@ -38,118 +40,125 @@ ENV DEBCONF_TERSE true
 # WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
 # Ubuntu Java.  See Java section below!
 ######
-RUN apt-get -q update && apt-get -q install -y \
-    apt-utils \
-    build-essential \
-    bzip2 \
-    curl \
-    doxygen \
-    fuse \
-    g++ \
-    gcc \
-    git \
-    gnupg-agent \
-    libbz2-dev \
-    libcurl4-openssl-dev \
-    libfuse-dev \
-    libprotobuf-dev \
-    libprotoc-dev \
-    libsnappy-dev \
-    libssl-dev \
-    libtool \
-    libzstd1-dev \
-    locales \
-    make \
-    pinentry-curses \
-    pkg-config \
-    python \
-    python2.7 \
-    python-pip \
-    python-pkg-resources \
-    python-setuptools \
-    python-wheel \
-    rsync \
-    software-properties-common \
-    snappy \
-    sudo \
-    zlib1g-dev
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends \
+        apt-utils \
+        build-essential \
+        bzip2 \
+        clang \
+        curl \
+        doxygen \
+        fuse \
+        g++ \
+        gcc \
+        git \
+        gnupg-agent \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libfuse-dev \
+        libprotobuf-dev \
+        libprotoc-dev \
+        libsasl2-dev \
+        libsnappy-dev \
+        libssl-dev \
+        libtool \
+        locales \
+        make \
+        pinentry-curses \
+        pkg-config \
+        python \
+        python2.7 \
+        python-pip \
+        python-pkg-resources \
+        python-setuptools \
+        python-wheel \
+        rsync \
+        software-properties-common \
+        snappy \
+        sudo \
+        valgrind \
+        zlib1g-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 #######
 # OpenJDK 8
 #######
-RUN apt-get -q install -y openjdk-8-jdk
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-#######
-# OpenJDK 9
-# w/workaround for
-# https://bugs.launchpad.net/ubuntu/+source/openjdk-9/+bug/1593191
-#######
-RUN apt-get -o Dpkg::Options::="--force-overwrite" \
-    -q install -y \
-    openjdk-9-jdk-headless
-
-#######
-# Set default Java
-#######
-#
-# By default, OpenJDK sets the default Java to the highest version.
-# We want the opposite, soooooo....
-#
-RUN update-java-alternatives --set java-1.8.0-openjdk-amd64
-RUN update-alternatives --get-selections | grep -i jdk | \
-    while read line; do \
-      alternative=$(echo $line | awk '{print $1}'); \
-      path=$(echo $line | awk '{print $3}'); \
-      newpath=$(echo $path | sed -e 's/java-9/java-8/'); \
-      update-alternatives --set $alternative $newpath; \
-    done
 
 ######
 # Install cmake 3.1.0 (3.5.1 ships with Xenial)
 ######
-RUN mkdir -p /opt/cmake && \
-    curl -L -s -S \
+RUN mkdir -p /opt/cmake \
+    && curl -L -s -S \
       https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz && \
-    tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
+      -o /opt/cmake.tar.gz \
+    && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
 ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
 
 ######
 # Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
 ######
-RUN mkdir -p /opt/protobuf-src && \
-    curl -L -s -S \
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/protobuf-src \
+    && curl -L -s -S \
       https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
-      -o /opt/protobuf.tar.gz && \
-    tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src
-RUN cd /opt/protobuf-src && ./configure --prefix=/opt/protobuf && make install
+      -o /opt/protobuf.tar.gz \
+    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
+    && cd /opt/protobuf-src \
+    && ./configure --prefix=/opt/protobuf \
+    && make install \
+    && cd /root \
+    && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
 # Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
 ######
-RUN apt-get -q update && apt-get -q install -y maven
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends maven \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 ENV MAVEN_HOME /usr
 
 ######
 # Install findbugs 3.0.1 (3.0.1 ships with Xenial)
 # Ant is needed for findbugs
 ######
-RUN apt-get -q update && apt-get -q install -y findbugs ant
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends findbugs ant \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 ENV FINDBUGS_HOME /usr
 
 ####
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
-RUN add-apt-repository -y ppa:hvr/ghc
-RUN apt-get -q update && apt-get -q install -y shellcheck ghc-8.0.2
+# hadolint ignore=DL3008
+RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
+    && apt-get -q update \
+    && apt-get -q install -y --no-install-recommends shellcheck \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ####
 # Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
 ####
-RUN apt-get -q update && apt-get -q install -y bats
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends bats \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
@@ -163,17 +172,30 @@ RUN pip2 install \
 ####
 # Install dateutil.parser
 ####
-RUN pip2 install python-dateutil
+RUN pip2 install python-dateutil==2.7.3
 
 ###
 # Install node.js 5.x for web UI framework
 # (instead of 4.2.6 shipped with Xenial)
 ###
-RUN curl -sL https://deb.nodesource.com/setup_5.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@5.10.0 && \
-    npm install -g bower@1.7.7 && \
-    npm install -g ember-cli@1.13.14
+# hadolint ignore=DL3008, DL3016
+RUN apt-get -q update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/nodejs /usr/bin/node \
+    && npm install npm@latest -g \
+    && npm install -g jshint
+
+###
+# Install hadolint
+####
+RUN curl -L -s -S \
+        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
+        -o /bin/hadolint \
+   && chmod a+rx /bin/hadolint \
+   && shasum -a 512 /bin/hadolint | \
+        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
 
 ###
 # Avoid out of memory errors in builds
@@ -189,8 +211,13 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # YETUS CUT HERE
 ###
 
-# Add a welcome message and environment checks.
-ADD hadoop_env_checks.sh /root/hadoop_env_checks.sh
-RUN chmod 755 /root/hadoop_env_checks.sh
-RUN echo '~/hadoop_env_checks.sh' >> /root/.bashrc
+# Hugo static website generator (for new hadoop site and Ozone docs)
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
+    && dpkg --install hugo.deb \
+    && rm hugo.deb
 
+# Add a welcome message and environment checks.
+COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh
+RUN chmod 755 /root/hadoop_env_checks.sh
+# hadolint ignore=SC2016
+RUN echo '${HOME}/hadoop_env_checks.sh' >> /root/.bashrc
