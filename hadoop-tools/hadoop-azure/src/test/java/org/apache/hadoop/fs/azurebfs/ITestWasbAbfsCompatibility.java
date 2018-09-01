@@ -98,7 +98,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
     for (int i = 0; i< 4; i++) {
-      Path path = new Path("/testfiles/~12/!008/testfile" + i);
+      Path path = new Path("/testReadFile/~12/!008/testfile" + i);
       final FileSystem createFs = createFileWithAbfs[i] ? abfs : wasb;
 
       // Write

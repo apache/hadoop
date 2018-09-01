@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -53,6 +54,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     assertEquals("root listing", 0, rootls.length);
   }
 
+  @Ignore("When running against live abfs with Oauth account, this test will fail. Need to check the tenant.")
   @Test
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
@@ -86,6 +88,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     return fileStatus;
   }
 
+  @Ignore("When running against live abfs with Oauth account, this test will fail. Need to check the tenant.")
   @Test
   public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();

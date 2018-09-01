@@ -44,7 +44,6 @@ public class ITestAzureBlobFileSystemE2EScale extends
   private static final int BASE_SIZE = 1024;
   private static final int ONE_MB = 1024 * 1024;
   private static final int DEFAULT_WRITE_TIMES = 100;
-  private static final Path TEST_FILE = new Path("ITestAzureBlobFileSystemE2EScale");
 
   public ITestAzureBlobFileSystemE2EScale() {
   }
@@ -52,7 +51,8 @@ public class ITestAzureBlobFileSystemE2EScale extends
   @Test
   public void testWriteHeavyBytesToFileAcrossThreads() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final FSDataOutputStream stream = fs.create(TEST_FILE);
+    final Path testFile = path(methodName.getMethodName());
+    final FSDataOutputStream stream = fs.create(testFile);
     ExecutorService es = Executors.newFixedThreadPool(TEN);
 
     int testWriteBufferSize = 2 * TEN * ONE_THOUSAND * BASE_SIZE;
@@ -81,7 +81,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
     stream.close();
 
     es.shutdownNow();
-    FileStatus fileStatus = fs.getFileStatus(TEST_FILE);
+    FileStatus fileStatus = fs.getFileStatus(testFile);
     assertEquals(testWriteBufferSize * operationCount, fileStatus.getLen());
   }
 
@@ -89,9 +89,10 @@ public class ITestAzureBlobFileSystemE2EScale extends
   public void testReadWriteHeavyBytesToFileWithStatistics() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final FileSystem.Statistics abfsStatistics;
+    final Path testFile = path(methodName.getMethodName());
     int testBufferSize;
     final byte[] sourceData;
-    try (FSDataOutputStream stream = fs.create(TEST_FILE)) {
+    try (FSDataOutputStream stream = fs.create(testFile)) {
       abfsStatistics = fs.getFsStatistics();
       abfsStatistics.reset();
 
@@ -103,7 +104,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
 
     final byte[] remoteData = new byte[testBufferSize];
     int bytesRead;
-    try (FSDataInputStream inputStream = fs.open(TEST_FILE, 4 * ONE_MB)) {
+    try (FSDataInputStream inputStream = fs.open(testFile, 4 * ONE_MB)) {
       bytesRead = inputStream.read(remoteData);
     }
 

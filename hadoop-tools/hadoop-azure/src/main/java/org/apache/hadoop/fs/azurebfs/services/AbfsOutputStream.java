@@ -30,6 +30,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -368,5 +369,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       this.startOffset = startOffset;
       this.length = length;
     }
+  }
+
+  @VisibleForTesting
+  public synchronized void waitForPendingUploads() throws IOException {
+    waitForTaskToComplete();
   }
 }
