@@ -50,8 +50,10 @@ package org.apache.hadoop.ozone.audit;
  * The implementing class must override toAuditMap() to return an
  * instance of Map<Key, Value> where both Key and Value are String.
  *
- * Key: must not contain any spaces. If the key is multi word then use
- * camel case.
+ * Key: must contain printable US ASCII characters
+ * May not contain a space, =, ], or "
+ * If the key is multi word then use camel case.
+ *
  * Value: if it is a collection/array, then it must be converted to a comma
  * delimited string
  *
