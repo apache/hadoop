@@ -1079,6 +1079,8 @@
                             <argument>--projecttitle</argument>
                             <argument>Apache Hadoop</argument>
                             <argument>--usetoday</argument>
+                            <argument>--fileversions</argument>
+                            <argument>--dirversions</argument>
                             <argument>--version</argument>
                             <argument>${project.version}</argument>
                         </arguments>
