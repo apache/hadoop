@@ -18,18 +18,14 @@
 package org.apache.hadoop.ozone.om.helpers;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.audit.Auditable;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Args for key. Client use this to specify key's attributes on  key creation
  * (putKey()).
  */
-public final class OmKeyArgs implements Auditable {
+public final class OmKeyArgs {
   private final String volumeName;
   private final String bucketName;
   private final String keyName;
@@ -84,22 +80,6 @@ public final class OmKeyArgs implements Auditable {
 
   public List<OmKeyLocationInfo> getLocationInfoList() {
     return locationInfoList;
-  }
-
-  @Override
-  public Map<String, String> toAuditMap() {
-    Map<String, String> auditMap = new LinkedHashMap<>();
-    auditMap.put(OzoneConsts.VOLUME, this.volumeName);
-    auditMap.put(OzoneConsts.BUCKET, this.bucketName);
-    auditMap.put(OzoneConsts.KEY, this.keyName);
-    auditMap.put(OzoneConsts.DATA_SIZE, String.valueOf(this.dataSize));
-    auditMap.put(OzoneConsts.REPLICATION_TYPE,
-        (this.type != null) ? this.type.name() : null);
-    auditMap.put(OzoneConsts.REPLICATION_FACTOR,
-        (this.factor != null) ? this.factor.name() : null);
-    auditMap.put(OzoneConsts.KEY_LOCATION_INFO,
-        (this.locationInfoList != null) ? locationInfoList.toString() : null);
-    return auditMap;
   }
 
   /**
