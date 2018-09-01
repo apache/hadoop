@@ -116,7 +116,7 @@ function ozonecmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
     ;;
     scmcli)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
+      HADOOP_CLASSNAME=org.apache.hadoop.hdds.scm.cli.SCMCLI
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.util.OzoneVersionInfo

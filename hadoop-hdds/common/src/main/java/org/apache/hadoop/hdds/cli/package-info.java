@@ -15,29 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.cli;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.Tool;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
 
 /**
- * This class is the base CLI for scm, om and scmadm.
+ * Generic helper class to make instantiate picocli based cli tools.
  */
-public abstract class OzoneBaseCLI extends Configured implements Tool {
-
-  protected abstract int dispatch(CommandLine cmd, Options opts)
-      throws IOException, URISyntaxException;
-
-  protected abstract CommandLine parseArgs(String[] argv, Options opts)
-      throws ParseException;
-
-  protected abstract Options getOptions();
-
-  protected abstract void displayHelp();
-}
+package org.apache.hadoop.hdds.cli;

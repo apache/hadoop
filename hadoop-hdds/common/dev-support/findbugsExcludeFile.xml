@@ -21,4 +21,8 @@
   <Match>
     <Package name="org.apache.hadoop.hdds.protocol.datanode.proto"/>
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdds.cli.GenericCli"></Class>
+    <Bug pattern="DM_EXIT" />
+  </Match>
 </FindBugsFilter>
