@@ -107,7 +107,11 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (abfsStore.getAbfsConfiguration().getCreateRemoteFileSystemDuringInitialization()) {
       if (!this.fileSystemExists()) {
-        this.createFileSystem();
+        try {
+          this.createFileSystem();
+        } catch (AzureBlobFileSystemException ex) {
+          checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+        }
       }
     }
 
@@ -121,7 +125,7 @@ public class AzureBlobFileSystem extends FileSystem {
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsStore.getAbfsConfiguration().isDelegationTokenManagerEnabled();
 
-      if(this.delegationTokenEnabled) {
+      if (this.delegationTokenEnabled) {
         LOG.debug("Initializing DelegationTokenManager for {}", uri);
         this.delegationTokenManager = abfsStore.getAbfsConfiguration().getDelegationTokenManager();
       }
