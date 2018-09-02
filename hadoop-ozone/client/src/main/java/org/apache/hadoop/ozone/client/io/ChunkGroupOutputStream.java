@@ -74,7 +74,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
   private final OmKeyArgs keyArgs;
-  private final int openID;
+  private final long openID;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
   private final String requestID;
@@ -115,7 +115,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   @VisibleForTesting
-  public int getOpenID() {
+  public long getOpenID() {
     return openID;
   }
 

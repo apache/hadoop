@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package org.apache.hadoop.ozone.client.rpc;
@@ -69,7 +68,6 @@ public class TestCloseContainerHandlingByClient {
   private static String bucketName;
   private static String keyString;
 
-
   /**
    * Create a MiniDFSCluster for testing.
    * <p>
@@ -80,7 +78,7 @@ public class TestCloseContainerHandlingByClient {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    chunkSize = (int)OzoneConsts.MB;
+    chunkSize = (int) OzoneConsts.MB;
     blockSize = 4 * chunkSize;
     conf.setInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY, chunkSize);
     conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, (4));
@@ -108,7 +106,7 @@ public class TestCloseContainerHandlingByClient {
   }
 
   private static String fixedLengthString(String string, int length) {
-    return String.format("%1$"+length+ "s", string);
+    return String.format("%1$" + length + "s", string);
   }
 
   @Test
@@ -288,13 +286,13 @@ public class TestCloseContainerHandlingByClient {
 
     ChunkGroupOutputStream groupOutputStream =
         (ChunkGroupOutputStream) outputStream.getOutputStream();
-    int clientId = groupOutputStream.getOpenID();
+    long clientId = groupOutputStream.getOpenID();
     OMMetadataManager metadataManager =
         cluster.getOzoneManager().getMetadataManager();
-    String objectKey =
-        metadataManager.getKeyWithDBPrefix(volumeName, bucketName, keyName);
-    byte[] openKey = metadataManager.getOpenKeyNameBytes(objectKey, clientId);
-    byte[] openKeyData = metadataManager.get(openKey);
+    byte[] openKey =
+        metadataManager.getOpenKeyBytes(
+            volumeName, bucketName, keyName, clientId);
+    byte[] openKeyData = metadataManager.getOpenKeyTable().get(openKey);
     OmKeyInfo keyInfo = OmKeyInfo.getFromProtobuf(
         OzoneManagerProtocolProtos.KeyInfo.parseFrom(openKeyData));
     List<OmKeyLocationInfo> locationInfoList =
@@ -360,7 +358,6 @@ public class TestCloseContainerHandlingByClient {
     Assert.assertTrue(Arrays.equals(sha1.digest(), sha2.digest()));
     is.close();
   }
-
 
   @Test
   public void testBlockWriteViaRatis() throws Exception {

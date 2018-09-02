@@ -273,7 +273,7 @@ message LocateKeyResponse {
     optional KeyInfo keyInfo = 2;
     // clients' followup request may carry this ID for stateful operations (similar
     // to a cookie).
-    optional uint32 ID = 3;
+    optional uint64 ID = 3;
     // TODO : allow specifiying a particular version to read.
     optional uint64 openVersion = 4;
 }
@@ -319,7 +319,7 @@ message ListKeysResponse {
 
 message AllocateBlockRequest {
     required KeyArgs keyArgs = 1;
-    required uint32 clientID = 2;
+    required uint64 clientID = 2;
 }
 
 message AllocateBlockResponse {
@@ -329,7 +329,7 @@ message AllocateBlockResponse {
 
 message CommitKeyRequest {
     required KeyArgs keyArgs = 1;
-    required uint32 clientID = 2;
+    required uint64 clientID = 2;
 }
 
 message CommitKeyResponse {

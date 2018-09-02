@@ -1101,7 +1101,7 @@
 
   <property>
     <name>hdds.db.profile</name>
-    <value>DBProfile.SSD</value>
+    <value>SSD</value>
     <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
     <description>This property allows user to pick a configuration
     that tunes the RocksDB settings for the hardware it is running

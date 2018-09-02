@@ -18,12 +18,11 @@ package org.apache.hadoop.ozone.om;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.BucketInfo;
-import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.util.Time;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
@@ -46,9 +45,10 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * Constructs BucketManager.
+   *
    * @param metadataManager
    */
-  public BucketManagerImpl(OMMetadataManager metadataManager){
+  public BucketManagerImpl(OMMetadataManager metadataManager) {
     this.metadataManager = metadataManager;
   }
 
@@ -73,6 +73,7 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * Creates a bucket.
+   *
    * @param bucketInfo - OmBucketInfo.
    */
   @Override
@@ -86,13 +87,13 @@ public class BucketManagerImpl implements BucketManager {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
       //Check if the volume exists
-      if (metadataManager.get(volumeKey) == null) {
+      if (metadataManager.getVolumeTable().get(volumeKey) == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
-      if (metadataManager.get(bucketKey) != null) {
+      if (metadataManager.getBucketTable().get(bucketKey) != null) {
         LOG.debug("bucket: {} already exists ", bucketName);
         throw new OMException("Bucket already exist",
             OMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
@@ -106,7 +107,8 @@ public class BucketManagerImpl implements BucketManager {
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
           .build();
-      metadataManager.put(bucketKey, omBucketInfo.getProtobuf().toByteArray());
+      metadataManager.getBucketTable().put(bucketKey,
+          omBucketInfo.getProtobuf().toByteArray());
 
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {
@@ -134,7 +136,7 @@ public class BucketManagerImpl implements BucketManager {
     metadataManager.readLock().lock();
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] value = metadataManager.get(bucketKey);
+      byte[] value = metadataManager.getBucketTable().get(bucketKey);
       if (value == null) {
         LOG.debug("bucket: {} not found in volume: {}.", bucketName,
             volumeName);
@@ -155,8 +157,9 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * Sets bucket property from args.
+   *
    * @param args - BucketArgs.
-   * @throws IOException
+   * @throws IOException - On Failure.
    */
   @Override
   public void setBucketProperty(OmBucketArgs args) throws IOException {
@@ -167,15 +170,15 @@ public class BucketManagerImpl implements BucketManager {
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       //Check if volume exists
-      if(metadataManager.get(metadataManager.getVolumeKey(volumeName)) ==
-          null) {
+      if (metadataManager.getVolumeTable()
+          .get(metadataManager.getVolumeKey(volumeName)) == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
-      byte[] value = metadataManager.get(bucketKey);
+      byte[] value = metadataManager.getBucketTable().get(bucketKey);
       //Check if bucket exist
-      if(value == null) {
+      if (value == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
             OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
@@ -187,7 +190,7 @@ public class BucketManagerImpl implements BucketManager {
           .setBucketName(oldBucketInfo.getBucketName());
 
       //Check ACLs to update
-      if(args.getAddAcls() != null || args.getRemoveAcls() != null) {
+      if (args.getAddAcls() != null || args.getRemoveAcls() != null) {
         bucketInfoBuilder.setAcls(getUpdatedAclList(oldBucketInfo.getAcls(),
             args.getRemoveAcls(), args.getAddAcls()));
         LOG.debug("Updating ACLs for bucket: {} in volume: {}",
@@ -218,7 +221,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
-      metadataManager.put(bucketKey,
+      metadataManager.getBucketTable().put(bucketKey,
           bucketInfoBuilder.build().getProtobuf().toByteArray());
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
@@ -242,10 +245,10 @@ public class BucketManagerImpl implements BucketManager {
    */
   private List<OzoneAcl> getUpdatedAclList(List<OzoneAcl> existingAcls,
       List<OzoneAcl> removeAcls, List<OzoneAcl> addAcls) {
-    if(removeAcls != null && !removeAcls.isEmpty()) {
+    if (removeAcls != null && !removeAcls.isEmpty()) {
       existingAcls.removeAll(removeAcls);
     }
-    if(addAcls != null && !addAcls.isEmpty()) {
+    if (addAcls != null && !addAcls.isEmpty()) {
       addAcls.stream().filter(acl -> !existingAcls.contains(acl)).forEach(
           existingAcls::add);
     }
@@ -254,9 +257,10 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * Deletes an existing empty bucket from volume.
+   *
    * @param volumeName - Name of the volume.
    * @param bucketName - Name of the bucket.
-   * @throws IOException
+   * @throws IOException - on Failure.
    */
   public void deleteBucket(String volumeName, String bucketName)
       throws IOException {
@@ -264,16 +268,17 @@ public class BucketManagerImpl implements BucketManager {
     Preconditions.checkNotNull(bucketName);
     metadataManager.writeLock().lock();
     try {
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       //Check if volume exists
-      if (metadataManager.get(metadataManager.getVolumeKey(volumeName))
-          == null) {
+      if (metadataManager.getVolumeTable()
+          .get(metadataManager.getVolumeKey(volumeName)) == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
-      //Check if bucket exist
-      if (metadataManager.get(bucketKey) == null) {
+
+      //Check if bucket exists
+      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      if (metadataManager.getBucketTable().get(bucketKey) == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
             OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
@@ -284,7 +289,7 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket is not empty",
             OMException.ResultCodes.FAILED_BUCKET_NOT_EMPTY);
       }
-      metadataManager.delete(bucketKey);
+      metadataManager.getBucketTable().delete(bucketKey);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
@@ -301,7 +306,7 @@ public class BucketManagerImpl implements BucketManager {
    */
   @Override
   public List<OmBucketInfo> listBuckets(String volumeName,
-                                        String startBucket, String bucketPrefix, int maxNumOfBuckets)
+      String startBucket, String bucketPrefix, int maxNumOfBuckets)
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     metadataManager.readLock().lock();

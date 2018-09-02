@@ -136,4 +136,9 @@ public final class ServerUtils {
     return dirPath;
   }
 
+  public static void setOzoneMetaDirPath(OzoneConfiguration conf,
+      String path) {
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, path);
+  }
+
 }

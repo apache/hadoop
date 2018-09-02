@@ -49,7 +49,7 @@ public interface KeyManager {
    * @param clientID the client that is committing.
    * @throws IOException
    */
-  void commitKey(OmKeyArgs args, int clientID) throws IOException;
+  void commitKey(OmKeyArgs args, long clientID) throws IOException;
 
   /**
    * A client calls this on an open key, to request to allocate a new block,
@@ -60,7 +60,7 @@ public interface KeyManager {
    * @return the reference to the new block.
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, int clientID)
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException;
   /**
    * Given the args of a key to put, write an open key entry to meta data.
@@ -128,7 +128,7 @@ public interface KeyManager {
    * @throws IOException
    */
   List<OmKeyInfo> listKeys(String volumeName,
-                           String bucketName, String startKey, String keyPrefix, int maxKeys)
+      String bucketName, String startKey, String keyPrefix, int maxKeys)
       throws IOException;
 
   /**

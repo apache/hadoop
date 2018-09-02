@@ -17,33 +17,26 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.LinkedList;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import static org.mockito.Mockito.any;
+import java.util.List;
 
 /**
  * Tests BucketManagerImpl, mocks OMMetadataManager for testing.
@@ -53,86 +46,35 @@ public class TestBucketManagerImpl {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private OMMetadataManager getMetadataManagerMock(String... volumesToCreate)
-      throws IOException {
-    OMMetadataManager metadataManager = Mockito.mock(OMMetadataManager.class);
-    Map<String, byte[]> metadataDB = new HashMap<>();
-    ReadWriteLock lock = new ReentrantReadWriteLock();
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
 
-    Mockito.when(metadataManager.writeLock()).thenReturn(lock.writeLock());
-    Mockito.when(metadataManager.readLock()).thenReturn(lock.readLock());
-    Mockito.when(metadataManager.getVolumeKey(any(String.class))).thenAnswer(
-        (InvocationOnMock invocation) ->
-            DFSUtil.string2Bytes(
-                OzoneConsts.OM_VOLUME_PREFIX + invocation.getArguments()[0]));
-    Mockito.when(metadataManager
-        .getBucketKey(any(String.class), any(String.class))).thenAnswer(
-            (InvocationOnMock invocation) ->
-                DFSUtil.string2Bytes(
-                    OzoneConsts.OM_VOLUME_PREFIX
-                        + invocation.getArguments()[0]
-                        + OzoneConsts.OM_BUCKET_PREFIX
-                        + invocation.getArguments()[1]));
-
-    Mockito.doAnswer(
-        new Answer<Boolean>() {
-          @Override
-          public Boolean answer(InvocationOnMock invocation)
-              throws Throwable {
-            String keyRootName =  OzoneConsts.OM_KEY_PREFIX
-                + invocation.getArguments()[0]
-                + OzoneConsts.OM_KEY_PREFIX
-                + invocation.getArguments()[1]
-                + OzoneConsts.OM_KEY_PREFIX;
-            Iterator<String> keyIterator = metadataDB.keySet().iterator();
-            while(keyIterator.hasNext()) {
-              if(keyIterator.next().startsWith(keyRootName)) {
-                return false;
-              }
-            }
-            return true;
-          }
-        }).when(metadataManager).isBucketEmpty(any(String.class),
-        any(String.class));
-
-    Mockito.doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            metadataDB.put(DFSUtil.bytes2String(
-                (byte[])invocation.getArguments()[0]),
-                (byte[])invocation.getArguments()[1]);
-            return null;
-          }
-        }).when(metadataManager).put(any(byte[].class), any(byte[].class));
-
-    Mockito.when(metadataManager.get(any(byte[].class))).thenAnswer(
-        (InvocationOnMock invocation) ->
-            metadataDB.get(DFSUtil.bytes2String(
-                (byte[])invocation.getArguments()[0]))
-    );
-    Mockito.doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            metadataDB.remove(DFSUtil.bytes2String(
-                (byte[])invocation.getArguments()[0]));
-            return null;
-          }
-        }).when(metadataManager).delete(any(byte[].class));
-
-    for(String volumeName : volumesToCreate) {
-      byte[] dummyVolumeInfo = DFSUtil.string2Bytes(volumeName);
-      metadataDB.put(OzoneConsts.OM_VOLUME_PREFIX + volumeName,
-                     dummyVolumeInfo);
+  private OzoneConfiguration createNewTestPath() throws IOException {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    File newFolder = folder.newFolder();
+    if (!newFolder.exists()) {
+      Assert.assertTrue(newFolder.mkdirs());
     }
-    return metadataManager;
+    ServerUtils.setOzoneMetaDirPath(conf, newFolder.toString());
+    return conf;
+  }
+
+  private OmMetadataManagerImpl createSampleVol() throws IOException {
+    OzoneConfiguration conf = createNewTestPath();
+    OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(conf);
+    byte[] volumeKey = metaMgr.getVolumeKey("sampleVol");
+    // This is a simple hack for testing, we just test if the volume via a
+    // null check, do not parse the value part. So just write some dummy value.
+    metaMgr.getVolumeTable().put(volumeKey, volumeKey);
+    return metaMgr;
   }
 
   @Test
-  public void testCreateBucketWithoutVolume() throws IOException {
+  public void testCreateBucketWithoutVolume() throws Exception {
     thrown.expectMessage("Volume doesn't exist");
-    OMMetadataManager metaMgr = getMetadataManagerMock();
+    OzoneConfiguration conf = createNewTestPath();
+    OmMetadataManagerImpl metaMgr =
+        new OmMetadataManagerImpl(conf);
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
@@ -140,29 +82,35 @@ public class TestBucketManagerImpl {
           .setBucketName("bucketOne")
           .build();
       bucketManager.createBucket(bucketInfo);
-    } catch(OMException omEx) {
+    } catch (OMException omEx) {
       Assert.assertEquals(ResultCodes.FAILED_VOLUME_NOT_FOUND,
           omEx.getResult());
       throw omEx;
+    } finally {
+      metaMgr.getStore().close();
     }
   }
 
   @Test
-  public void testCreateBucket() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testCreateBucket() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
         .setBucketName("bucketOne")
         .build();
     bucketManager.createBucket(bucketInfo);
-    Assert.assertNotNull(bucketManager.getBucketInfo("sampleVol", "bucketOne"));
+    Assert.assertNotNull(bucketManager.getBucketInfo("sampleVol",
+        "bucketOne"));
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testCreateAlreadyExistingBucket() throws IOException {
+  public void testCreateAlreadyExistingBucket() throws Exception {
     thrown.expectMessage("Bucket already exist");
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     try {
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
@@ -171,30 +119,37 @@ public class TestBucketManagerImpl {
           .build();
       bucketManager.createBucket(bucketInfo);
       bucketManager.createBucket(bucketInfo);
-    } catch(OMException omEx) {
+    } catch (OMException omEx) {
       Assert.assertEquals(ResultCodes.FAILED_BUCKET_ALREADY_EXISTS,
           omEx.getResult());
       throw omEx;
+    } finally {
+      metaMgr.getStore().close();
     }
   }
 
   @Test
-  public void testGetBucketInfoForInvalidBucket() throws IOException {
+  public void testGetBucketInfoForInvalidBucket() throws Exception {
     thrown.expectMessage("Bucket not found");
+    OmMetadataManagerImpl metaMgr = createSampleVol();
     try {
-      OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+
+
       BucketManager bucketManager = new BucketManagerImpl(metaMgr);
       bucketManager.getBucketInfo("sampleVol", "bucketOne");
-    } catch(OMException omEx) {
+    } catch (OMException omEx) {
       Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
+    } finally {
+      metaMgr.getStore().close();
     }
   }
 
   @Test
-  public void testGetBucketInfo() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testGetBucketInfo() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -210,11 +165,13 @@ public class TestBucketManagerImpl {
     Assert.assertEquals(StorageType.DISK,
         result.getStorageType());
     Assert.assertEquals(false, result.getIsVersionEnabled());
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testSetBucketPropertyAddACL() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testSetBucketPropertyAddACL() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl ozoneAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
@@ -247,11 +204,13 @@ public class TestBucketManagerImpl {
         "sampleVol", "bucketOne");
     Assert.assertEquals(2, updatedResult.getAcls().size());
     Assert.assertTrue(updatedResult.getAcls().contains(newAcl));
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testSetBucketPropertyRemoveACL() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testSetBucketPropertyRemoveACL() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl aclOne = new OzoneAcl(OzoneAcl.OzoneACLType.USER,
         "root", OzoneAcl.OzoneACLRights.READ);
@@ -283,11 +242,13 @@ public class TestBucketManagerImpl {
         "sampleVol", "bucketOne");
     Assert.assertEquals(1, updatedResult.getAcls().size());
     Assert.assertFalse(updatedResult.getAcls().contains(aclTwo));
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testSetBucketPropertyChangeStorageType() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testSetBucketPropertyChangeStorageType() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -309,11 +270,13 @@ public class TestBucketManagerImpl {
         "sampleVol", "bucketOne");
     Assert.assertEquals(StorageType.SSD,
         updatedResult.getStorageType());
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testSetBucketPropertyChangeVersioning() throws IOException {
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+  public void testSetBucketPropertyChangeVersioning() throws Exception {
+    OmMetadataManagerImpl metaMgr = createSampleVol();
+
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -333,21 +296,22 @@ public class TestBucketManagerImpl {
     OmBucketInfo updatedResult = bucketManager.getBucketInfo(
         "sampleVol", "bucketOne");
     Assert.assertTrue(updatedResult.getIsVersionEnabled());
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testDeleteBucket() throws IOException {
+  public void testDeleteBucket() throws Exception {
     thrown.expectMessage("Bucket not found");
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    OmMetadataManagerImpl metaMgr = createSampleVol();
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
-    for(int i = 0; i < 5; i++) {
+    for (int i = 0; i < 5; i++) {
       OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
           .setVolumeName("sampleVol")
           .setBucketName("bucket_" + i)
           .build();
       bucketManager.createBucket(bucketInfo);
     }
-    for(int i = 0; i < 5; i++) {
+    for (int i = 0; i < 5; i++) {
       Assert.assertEquals("bucket_" + i,
           bucketManager.getBucketInfo(
               "sampleVol", "bucket_" + i).getBucketName());
@@ -356,22 +320,23 @@ public class TestBucketManagerImpl {
       bucketManager.deleteBucket("sampleVol", "bucket_1");
       Assert.assertNotNull(bucketManager.getBucketInfo(
           "sampleVol", "bucket_2"));
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       Assert.fail(ex.getMessage());
     }
     try {
       bucketManager.getBucketInfo("sampleVol", "bucket_1");
-    } catch(OMException omEx) {
+    } catch (OMException omEx) {
       Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_FOUND,
           omEx.getResult());
       throw omEx;
     }
+    metaMgr.getStore().close();
   }
 
   @Test
-  public void testDeleteNonEmptyBucket() throws IOException {
+  public void testDeleteNonEmptyBucket() throws Exception {
     thrown.expectMessage("Bucket is not empty");
-    OMMetadataManager metaMgr = getMetadataManagerMock("sampleVol");
+    OmMetadataManagerImpl metaMgr = createSampleVol();
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
         .setVolumeName("sampleVol")
@@ -379,16 +344,19 @@ public class TestBucketManagerImpl {
         .build();
     bucketManager.createBucket(bucketInfo);
     //Create keys in bucket
-    metaMgr.put(DFSUtil.string2Bytes("/sampleVol/bucketOne/key_one"),
+    metaMgr.getKeyTable().put(DFSUtil.string2Bytes("/sampleVol/bucketOne" +
+            "/key_one"),
         DFSUtil.string2Bytes("value_one"));
-    metaMgr.put(DFSUtil.string2Bytes("/sampleVol/bucketOne/key_two"),
+    metaMgr.getKeyTable().put(DFSUtil.string2Bytes("/sampleVol/bucketOne" +
+            "/key_two"),
         DFSUtil.string2Bytes("value_two"));
     try {
       bucketManager.deleteBucket("sampleVol", "bucketOne");
-    } catch(OMException omEx) {
+    } catch (OMException omEx) {
       Assert.assertEquals(ResultCodes.FAILED_BUCKET_NOT_EMPTY,
           omEx.getResult());
       throw omEx;
     }
+    metaMgr.getStore().close();
   }
 }

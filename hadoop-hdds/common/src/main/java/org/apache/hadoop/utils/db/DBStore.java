@@ -20,6 +20,7 @@
 package org.apache.hadoop.utils.db;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.rocksdb.WriteBatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -83,11 +84,32 @@ public interface DBStore extends AutoCloseable {
       throws IOException;
 
   /**
+   * Moves a key from the Source Table to the destination Table and updates the
+   * destination with the new key name and value.
+   * This is similar to deleting an entry in one table and adding an entry in
+   * another table, here it is done atomically.
+   *
+   * @param sourceKey - Key to move.
+   * @param destKey - Destination key name.
+   * @param value - new value to write to the destination table.
+   * @param source - Source Table.
+   * @param dest - Destination Table.
+   * @throws IOException on Failure
+   */
+  void move(byte[] sourceKey, byte[] destKey, byte[] value,
+            Table source, Table dest) throws IOException;
+
+  /**
    * Returns an estimated count of keys in this DB.
    *
    * @return long, estimate of keys in the DB.
    */
   long getEstimatedKeyCount() throws IOException;
 
+  /**
+   * Writes a transaction into the DB using the default write Options.
+   * @param batch - Batch to write.
+   */
+  void write(WriteBatch batch) throws IOException;
 
 }

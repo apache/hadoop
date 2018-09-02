@@ -189,8 +189,15 @@ public class RDBStore implements DBStore {
     }
   }
 
+
   @Override
   public void move(byte[] key, byte[] value, Table source,
+      Table dest) throws IOException {
+    move(key, key, value, source, dest);
+  }
+
+  @Override
+  public void move(byte[] sourceKey, byte[] destKey, byte[] value, Table source,
       Table dest) throws IOException {
     RDBTable sourceTable;
     RDBTable destTable;
@@ -210,13 +217,13 @@ public class RDBStore implements DBStore {
           + "RocksDBTable.");
     }
     try (WriteBatch batch = new WriteBatch()) {
-      batch.put(destTable.getHandle(), key, value);
-      batch.delete(sourceTable.getHandle(), key);
+      batch.put(destTable.getHandle(), destKey, value);
+      batch.delete(sourceTable.getHandle(), sourceKey);
       db.write(writeOptions, batch);
     } catch (RocksDBException rockdbException) {
-      LOG.error("Move of key failed. Key:{}", DFSUtil.bytes2String(key));
-      throw toIOException("Unable to move key: " + DFSUtil.bytes2String(key),
-          rockdbException);
+      LOG.error("Move of key failed. Key:{}", DFSUtil.bytes2String(sourceKey));
+      throw toIOException("Unable to move key: " +
+              DFSUtil.bytes2String(sourceKey), rockdbException);
     }
   }
 
@@ -226,6 +233,15 @@ public class RDBStore implements DBStore {
       return db.getLongProperty("rocksdb.estimate-num-keys");
     } catch (RocksDBException e) {
       throw toIOException("Unable to get the estimated count.", e);
+    }
+  }
+
+  @Override
+  public void write(WriteBatch batch) throws IOException {
+    try {
+      db.write(writeOptions, batch);
+    } catch (RocksDBException e) {
+      throw toIOException("Unable to write the batch.", e);
     }
   }
 

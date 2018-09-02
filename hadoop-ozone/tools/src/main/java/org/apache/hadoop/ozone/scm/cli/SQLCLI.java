@@ -57,9 +57,8 @@ import java.sql.Statement;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_BUCKET_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
@@ -412,12 +411,15 @@ public class SQLCLI  extends Configured implements Tool {
     }
   }
 
+  // TODO: This has to be fixed.
+  // we don't have prefix anymore. now each key is written into different
+  // table. The logic has to be changed.
   private KeyType getKeyType(String key) {
     if (key.startsWith(OM_USER_PREFIX)) {
       return KeyType.USER;
-    } else if (key.startsWith(OM_VOLUME_PREFIX)) {
-      return key.replaceFirst(OM_VOLUME_PREFIX, "")
-          .contains(OM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
+    } else if (key.startsWith(OM_KEY_PREFIX)) {
+      return key.replaceFirst(OM_KEY_PREFIX, "")
+          .contains(OM_KEY_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
     }else {
       return KeyType.KEY;
     }

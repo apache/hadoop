@@ -17,12 +17,12 @@
 package org.apache.hadoop.ozone.om;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.utils.BatchOperation;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.utils.db.Table;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,68 +40,47 @@ public interface OMMetadataManager {
   /**
    * Stop metadata manager.
    */
-  void stop() throws IOException;
+  void stop() throws Exception;
 
   /**
    * Get metadata store.
+   *
    * @return metadata store.
    */
   @VisibleForTesting
-  MetadataStore getStore();
+  DBStore getStore();
 
   /**
    * Returns the read lock used on Metadata DB.
+   *
    * @return readLock
    */
   Lock readLock();
 
   /**
    * Returns the write lock used on Metadata DB.
+   *
    * @return writeLock
    */
   Lock writeLock();
 
   /**
-   * Returns the value associated with this key.
-   * @param key - key
-   * @return value
-   */
-  byte[] get(byte[] key) throws IOException;
-
-  /**
-   * Puts a Key into Metadata DB.
-   * @param key   - key
-   * @param value - value
-   */
-  void put(byte[] key, byte[] value) throws IOException;
-
-  /**
-   * Deletes a Key from Metadata DB.
-   * @param key   - key
-   */
-  void delete(byte[] key) throws IOException;
-
-  /**
-   * Atomic write a batch of operations.
-   * @param batch
-   * @throws IOException
-   */
-  void writeBatch(BatchOperation batch) throws IOException;
-
-  /**
    * Given a volume return the corresponding DB key.
+   *
    * @param volume - Volume name
    */
   byte[] getVolumeKey(String volume);
 
   /**
    * Given a user return the corresponding DB key.
+   *
    * @param user - User name
    */
   byte[] getUserKey(String user);
 
   /**
    * Given a volume and bucket, return the corresponding DB key.
+   *
    * @param volume - User name
    * @param bucket - Bucket name
    */
@@ -109,131 +88,103 @@ public interface OMMetadataManager {
 
   /**
    * Given a volume, bucket and a key, return the corresponding DB key.
+   *
    * @param volume - volume name
    * @param bucket - bucket name
    * @param key - key name
    * @return bytes of DB key.
    */
-  byte[] getDBKeyBytes(String volume, String bucket, String key);
+  byte[] getOzoneKeyBytes(String volume, String bucket, String key);
 
   /**
-   * Returns the DB key name of a deleted key in OM metadata store.
-   * The name for a deleted key has prefix #deleting# followed by
-   * the actual key name.
-   * @param keyName - key name
-   * @return bytes of DB key.
-   */
-  byte[] getDeletedKeyName(byte[] keyName);
-
-  /**
-   * Returns the DB key name of a open key in OM metadata store.
-   * Should be #open# prefix followed by actual key name.
-   * @param keyName - key name
+   * Returns the DB key name of a open key in OM metadata store. Should be
+   * #open# prefix followed by actual key name.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key - key name
    * @param id - the id for this open
    * @return bytes of DB key.
    */
-  byte[] getOpenKeyNameBytes(String keyName, int id);
+  byte[] getOpenKeyBytes(String volume, String bucket, String key, long id);
 
   /**
-   * Returns the full name of a key given volume name, bucket name and key name.
-   * Generally done by padding certain delimiters.
+   * Given a volume, check if it is empty, i.e there are no buckets inside it.
    *
-   * @param volumeName - volume name
-   * @param bucketName - bucket name
-   * @param keyName - key name
-   * @return the full key name.
-   */
-  String getKeyWithDBPrefix(String volumeName, String bucketName,
-      String keyName);
-
-  /**
-   * Given a volume, check if it is empty,
-   * i.e there are no buckets inside it.
    * @param volume - Volume name
    */
   boolean isVolumeEmpty(String volume) throws IOException;
 
   /**
-   * Given a volume/bucket, check if it is empty,
-   * i.e there are no keys inside it.
+   * Given a volume/bucket, check if it is empty, i.e there are no keys inside
+   * it.
+   *
    * @param volume - Volume name
-   * @param  bucket - Bucket name
+   * @param bucket - Bucket name
    * @return true if the bucket is empty
    */
   boolean isBucketEmpty(String volume, String bucket) throws IOException;
 
   /**
-   * Returns a list of buckets represented by {@link OmBucketInfo}
-   * in the given volume.
+   * Returns a list of buckets represented by {@link OmBucketInfo} in the given
+   * volume.
    *
-   * @param volumeName
-   *   the name of the volume. This argument is required,
-   *   this method returns buckets in this given volume.
-   * @param startBucket
-   *   the start bucket name. Only the buckets whose name is
-   *   after this value will be included in the result.
-   *   This key is excluded from the result.
-   * @param bucketPrefix
-   *   bucket name prefix. Only the buckets whose name has
-   *   this prefix will be included in the result.
-   * @param maxNumOfBuckets
-   *   the maximum number of buckets to return. It ensures
-   *   the size of the result will not exceed this limit.
+   * @param volumeName the name of the volume. This argument is required, this
+   * method returns buckets in this given volume.
+   * @param startBucket the start bucket name. Only the buckets whose name is
+   * after this value will be included in the result. This key is excluded from
+   * the result.
+   * @param bucketPrefix bucket name prefix. Only the buckets whose name has
+   * this prefix will be included in the result.
+   * @param maxNumOfBuckets the maximum number of buckets to return. It ensures
+   * the size of the result will not exceed this limit.
    * @return a list of buckets.
    * @throws IOException
    */
   List<OmBucketInfo> listBuckets(String volumeName, String startBucket,
-                                 String bucketPrefix, int maxNumOfBuckets) throws IOException;
+      String bucketPrefix, int maxNumOfBuckets)
+      throws IOException;
 
   /**
-   * Returns a list of keys represented by {@link OmKeyInfo}
-   * in the given bucket.
+   * Returns a list of keys represented by {@link OmKeyInfo} in the given
+   * bucket.
    *
-   * @param volumeName
-   *   the name of the volume.
-   * @param bucketName
-   *   the name of the bucket.
-   * @param startKey
-   *   the start key name, only the keys whose name is
-   *   after this value will be included in the result.
-   *   This key is excluded from the result.
-   * @param keyPrefix
-   *   key name prefix, only the keys whose name has
-   *   this prefix will be included in the result.
-   * @param maxKeys
-   *   the maximum number of keys to return. It ensures
-   *   the size of the result will not exceed this limit.
+   * @param volumeName the name of the volume.
+   * @param bucketName the name of the bucket.
+   * @param startKey the start key name, only the keys whose name is after this
+   * value will be included in the result. This key is excluded from the
+   * result.
+   * @param keyPrefix key name prefix, only the keys whose name has this prefix
+   * will be included in the result.
+   * @param maxKeys the maximum number of keys to return. It ensures the size of
+   * the result will not exceed this limit.
    * @return a list of keys.
    * @throws IOException
    */
   List<OmKeyInfo> listKeys(String volumeName,
-                           String bucketName, String startKey, String keyPrefix, int maxKeys)
+      String bucketName, String startKey, String keyPrefix, int maxKeys)
       throws IOException;
 
   /**
-   * Returns a list of volumes owned by a given user; if user is null,
-   * returns all volumes.
+   * Returns a list of volumes owned by a given user; if user is null, returns
+   * all volumes.
    *
-   * @param userName
-   *   volume owner
-   * @param prefix
-   *   the volume prefix used to filter the listing result.
-   * @param startKey
-   *   the start volume name determines where to start listing from,
-   *   this key is excluded from the result.
-   * @param maxKeys
-   *   the maximum number of volumes to return.
+   * @param userName volume owner
+   * @param prefix the volume prefix used to filter the listing result.
+   * @param startKey the start volume name determines where to start listing
+   * from, this key is excluded from the result.
+   * @param maxKeys the maximum number of volumes to return.
    * @return a list of {@link OmVolumeArgs}
    * @throws IOException
    */
   List<OmVolumeArgs> listVolumes(String userName, String prefix,
-                                 String startKey, int maxKeys) throws IOException;
+      String startKey, int maxKeys) throws IOException;
 
   /**
    * Returns a list of pending deletion key info that ups to the given count.
-   * Each entry is a {@link BlockGroup}, which contains the info about the
-   * key name and all its associated block IDs. A pending deletion key is
-   * stored with #deleting# prefix in OM DB.
+   * Each entry is a {@link BlockGroup}, which contains the info about the key
+   * name and all its associated block IDs. A pending deletion key is stored
+   * with #deleting# prefix in OM DB.
    *
    * @param count max number of keys to return.
    * @return a list of {@link BlockGroup} represent keys and blocks.
@@ -250,4 +201,47 @@ public interface OMMetadataManager {
    * @throws IOException
    */
   List<BlockGroup> getExpiredOpenKeys() throws IOException;
+
+  /**
+   * Returns the user Table.
+   *
+   * @return UserTable.
+   */
+  Table getUserTable();
+
+  /**
+   * Returns the Volume Table.
+   *
+   * @return VolumeTable.
+   */
+  Table getVolumeTable();
+
+  /**
+   * Returns the BucketTable.
+   *
+   * @return BucketTable.
+   */
+  Table getBucketTable();
+
+  /**
+   * Returns the KeyTable.
+   *
+   * @return KeyTable.
+   */
+  Table getKeyTable();
+
+  /**
+   * Get Deleted Table.
+   *
+   * @return Deleted Table.
+   */
+  Table getDeletedTable();
+
+  /**
+   * Gets the OpenKeyTable.
+   *
+   * @return Table.
+   */
+  Table getOpenKeyTable();
+
 }

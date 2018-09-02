@@ -21,14 +21,27 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -39,36 +52,12 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
-import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .ServicePort;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.ScmInfo;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .ScmBlockLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
-import org.apache.hadoop.hdds.scm.protocolPB
-    .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
-import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
-import static org.apache.hadoop.hdds.HddsUtils.isHddsEnabled;
-import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
-import static org.apache.hadoop.hdds.server.ServerUtils
-    .updateRPCListenAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,18 +70,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
+import static org.apache.hadoop.hdds.HddsUtils.isHddsEnabled;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
+import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
+import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
-import static org.apache.hadoop.ozone.om.OMConfigKeys
-    .OZONE_OM_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.om.OMConfigKeys
-    .OZONE_OM_HANDLER_COUNT_DEFAULT;
-import static org.apache.hadoop.ozone.om.OMConfigKeys
-    .OZONE_OM_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneManagerService
-    .newReflectiveBlockingService;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
-    .NodeState.HEALTHY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneManagerService.newReflectiveBlockingService;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -108,33 +96,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       "Usage: \n ozone om [genericOptions] " + "[ "
           + StartupOption.CREATEOBJECTSTORE.getName() + " ]\n " + "ozone om [ "
           + StartupOption.HELP.getName() + " ]\n";
-
-  /** Startup options. */
-  public enum StartupOption {
-    CREATEOBJECTSTORE("-createObjectStore"),
-    HELP("-help"),
-    REGULAR("-regular");
-
-    private final String name;
-
-    StartupOption(String arg) {
-      this.name = arg;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public static StartupOption parse(String value) {
-      for (StartupOption option : StartupOption.values()) {
-        if (option.name.equalsIgnoreCase(value)) {
-          return option;
-        }
-      }
-      return null;
-    }
-  }
-
   private final OzoneConfiguration configuration;
   private final RPC.Server omRpcServer;
   private final InetSocketAddress omRpcAddress;
@@ -238,20 +199,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return scmContainerClient;
   }
 
-  @VisibleForTesting
-  public KeyManager getKeyManager() {
-    return keyManager;
-  }
-
-  @VisibleForTesting
-  public ScmInfo getScmInfo() throws IOException {
-    return scmBlockClient.getScmInfo();
-  }
-
-  @VisibleForTesting
-  public OMStorage getOmStorage() {
-    return omStorage;
-  }
   /**
    * Starts an RPC server, if configured.
    *
@@ -260,7 +207,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param protocol RPC protocol provided by RPC server
    * @param instance RPC protocol implementation instance
    * @param handlerCount RPC server handler count
-   *
    * @return RPC server
    * @throws IOException if there is an I/O error while creating RPC server
    */
@@ -279,18 +225,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     DFSUtil.addPBProtocol(conf, protocol, instance, rpcServer);
     return rpcServer;
-  }
-
-  /**
-   * Get metadata manager.
-   * @return metadata manager.
-   */
-  public OMMetadataManager getMetadataManager() {
-    return metadataManager;
-  }
-
-  public OMMetrics getMetrics() {
-    return metrics;
   }
 
   /**
@@ -329,6 +263,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   /**
    * Constructs OM instance based on command line arguments.
+   *
    * @param argv Command line arguments
    * @param conf OzoneConfiguration
    * @return OM instance
@@ -336,7 +271,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
 
   public static OzoneManager createOm(String[] argv,
-                                      OzoneConfiguration conf) throws IOException {
+      OzoneConfiguration conf) throws IOException {
     if (!isHddsEnabled(conf)) {
       System.err.println("OM cannot be started in secure mode or when " +
           OZONE_ENABLED + " is set to false");
@@ -363,9 +298,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   /**
    * Initializes the OM instance.
+   *
    * @param conf OzoneConfiguration
    * @return true if OM initialization succeeds, false otherwise
-   * @throws IOException in case ozone metadata directory path is not accessible
+   * @throws IOException in case ozone metadata directory path is not
+   *                     accessible
    */
 
   private static boolean omInit(OzoneConfiguration conf) throws IOException {
@@ -406,14 +343,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   /**
    * Parses the command line options for OM initialization.
+   *
    * @param args command line arguments
    * @return StartupOption if options are valid, null otherwise
    */
   private static StartupOption parseArguments(String[] args) {
     if (args == null || args.length == 0) {
       return StartupOption.REGULAR;
-    } else if (args.length == 1) {
-      return StartupOption.parse(args[0]);
+    } else {
+      if (args.length == 1) {
+        return StartupOption.parse(args[0]);
+      }
     }
     return null;
   }
@@ -430,6 +370,34 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return addr != null ? String.format("%s is listening at %s",
         description, addr.toString()) :
         String.format("%s not started", description);
+  }
+
+  @VisibleForTesting
+  public KeyManager getKeyManager() {
+    return keyManager;
+  }
+
+  @VisibleForTesting
+  public ScmInfo getScmInfo() throws IOException {
+    return scmBlockClient.getScmInfo();
+  }
+
+  @VisibleForTesting
+  public OMStorage getOmStorage() {
+    return omStorage;
+  }
+
+  /**
+   * Get metadata manager.
+   *
+   * @return metadata manager.
+   */
+  public OMMetadataManager getMetadataManager() {
+    return metadataManager;
+  }
+
+  public OMMetrics getMetrics() {
+    return metrics;
   }
 
   /**
@@ -533,8 +501,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    *
    * @param volume - volume
    * @param userAcl - user acls which needs to be checked for access
-   * @return true if the user has required access for the volume,
-   *         false otherwise
+   * @return true if the user has required access for the volume, false
+   * otherwise
    * @throws IOException
    */
   @Override
@@ -597,7 +565,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public List<OmVolumeArgs> listVolumeByUser(String userName, String prefix,
-                                             String prevKey, int maxKeys) throws IOException {
+      String prevKey, int maxKeys) throws IOException {
     try {
       metrics.incNumVolumeLists();
       return volumeManager.listVolumes(userName, prefix, prevKey, maxKeys);
@@ -651,7 +619,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public List<OmBucketInfo> listBuckets(String volumeName,
-                                        String startKey, String prefix, int maxNumOfBuckets)
+      String startKey, String prefix, int maxNumOfBuckets)
       throws IOException {
     try {
       metrics.incNumBucketLists();
@@ -702,7 +670,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public void commitKey(OmKeyArgs args, int clientID)
+  public void commitKey(OmKeyArgs args, long clientID)
       throws IOException {
     try {
       metrics.incNumKeyCommits();
@@ -714,7 +682,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, int clientID)
+  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException {
     try {
       metrics.incNumBlockAllocateCalls();
@@ -773,7 +741,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
-                                  String startKey, String keyPrefix, int maxKeys) throws IOException {
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
     try {
       metrics.incNumKeyLists();
       return keyManager.listKeys(volumeName, bucketName,
@@ -786,6 +754,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   /**
    * Sets bucket property from args.
+   *
    * @param args - BucketArgs.
    * @throws IOException
    */
@@ -801,9 +770,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
-
   /**
    * Deletes an existing empty bucket from volume.
+   *
    * @param volume - Name of the volume.
    * @param bucket - Name of the bucket.
    * @throws IOException
@@ -853,8 +822,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setNodeType(HddsProtos.NodeType.OM)
         .setHostname(omRpcAddress.getHostName())
         .addServicePort(ServicePort.newBuilder()
-                .setType(ServicePort.Type.RPC)
-                .setValue(omRpcAddress.getPort())
+            .setType(ServicePort.Type.RPC)
+            .setValue(omRpcAddress.getPort())
             .build());
     if (httpServer.getHttpAddress() != null) {
       omServiceInfoBuilder.addServicePort(ServicePort.newBuilder()
@@ -907,5 +876,33 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // handle exception in this method, we need to incorporate
     // metrics.incNumGetServiceListFails()
     return services;
+  }
+
+  /**
+   * Startup options.
+   */
+  public enum StartupOption {
+    CREATEOBJECTSTORE("-createObjectStore"),
+    HELP("-help"),
+    REGULAR("-regular");
+
+    private final String name;
+
+    StartupOption(String arg) {
+      this.name = arg;
+    }
+
+    public static StartupOption parse(String value) {
+      for (StartupOption option : StartupOption.values()) {
+        if (option.name.equalsIgnoreCase(value)) {
+          return option;
+        }
+      }
+      return null;
+    }
+
+    public String getName() {
+      return name;
+    }
   }
 }

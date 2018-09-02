@@ -94,7 +94,7 @@ public class RocksDBStore implements MetadataStore {
     }
   }
 
-  private IOException toIOException(String msg, RocksDBException e) {
+  public static IOException toIOException(String msg, RocksDBException e) {
     String statusCode = e.getStatus() == null ? "N/A" :
         e.getStatus().getCodeString();
     String errMessage = e.getMessage() == null ? "Unknown error" :

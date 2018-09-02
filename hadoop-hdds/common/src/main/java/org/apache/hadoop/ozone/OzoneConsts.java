@@ -92,7 +92,6 @@ public final class OzoneConsts {
   public static final String CONTAINER_DB_SUFFIX = "container.db";
   public static final String SCM_CONTAINER_DB = "scm-" + CONTAINER_DB_SUFFIX;
   public static final String DN_CONTAINER_DB = "-dn-"+ CONTAINER_DB_SUFFIX;
-  public static final String BLOCK_DB = "block.db";
   public static final String OPEN_CONTAINERS_DB = "openContainers.db";
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String OM_DB_NAME = "om.db";
@@ -113,8 +112,6 @@ public final class OzoneConsts {
   public static final String DELETING_KEY_PREFIX = "#deleting#";
   public static final String DELETED_KEY_PREFIX = "#deleted#";
   public static final String DELETE_TRANSACTION_KEY_PREFIX = "#delTX#";
-  public static final String OPEN_KEY_PREFIX = "#open#";
-  public static final String OPEN_KEY_ID_DELIMINATOR = "#";
 
   /**
    * OM LevelDB prefixes.
@@ -138,8 +135,7 @@ public final class OzoneConsts {
    *  | #deleting#/volumeName/bucketName/keyName |  KeyInfo    |
    *  ----------------------------------------------------------
    */
-  public static final String OM_VOLUME_PREFIX = "/#";
-  public static final String OM_BUCKET_PREFIX = "/#";
+
   public static final String OM_KEY_PREFIX = "/";
   public static final String OM_USER_PREFIX = "$";
 

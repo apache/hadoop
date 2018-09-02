@@ -526,8 +526,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           .setFactor(factor)
           .setDataSize(keyArgs.getDataSize())
           .build();
-      int id = request.getClientID();
-      impl.commitKey(omKeyArgs, id);
+      impl.commitKey(omKeyArgs, request.getClientID());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
@@ -547,8 +546,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
           .build();
-      int id = request.getClientID();
-      OmKeyLocationInfo newLocation = impl.allocateBlock(omKeyArgs, id);
+      OmKeyLocationInfo newLocation = impl.allocateBlock(omKeyArgs,
+          request.getClientID());
       resp.setKeyLocation(newLocation.getProtobuf());
       resp.setStatus(Status.OK);
     } catch (IOException e) {

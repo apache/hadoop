@@ -148,7 +148,7 @@ public interface OzoneManagerProtocol {
    * @param clientID the client identification
    * @throws IOException
    */
-  void commitKey(OmKeyArgs args, int clientID) throws IOException;
+  void commitKey(OmKeyArgs args, long clientID) throws IOException;
 
   /**
    * Allocate a new block, it is assumed that the client is having an open key
@@ -159,7 +159,7 @@ public interface OzoneManagerProtocol {
    * @return an allocated block
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, int clientID)
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException;
 
   /**
@@ -172,9 +172,10 @@ public interface OzoneManagerProtocol {
   OmKeyInfo lookupKey(OmKeyArgs args) throws IOException;
 
   /**
-   * Rename an existing key within a bucket
+   * Rename an existing key within a bucket.
    * @param args the args of the key.
    * @param toKeyName New name to be used for the Key
+   * @throws IOException
    */
   void renameKey(OmKeyArgs args, String toKeyName) throws IOException;
 
@@ -214,7 +215,7 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<OmBucketInfo> listBuckets(String volumeName,
-                                 String startBucketName, String bucketPrefix, int maxNumOfBuckets)
+      String startBucketName, String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
 
   /**
@@ -239,7 +240,7 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<OmKeyInfo> listKeys(String volumeName,
-                           String bucketName, String startKeyName, String keyPrefix, int maxKeys)
+      String bucketName, String startKeyName, String keyPrefix, int maxKeys)
       throws IOException;
 
   /**
