@@ -824,7 +824,7 @@ public class ApplicationMaster {
 
     // When the application completes, it should send a finish application
     // signal to the RM
-    LOG.info("Application completed. Signalling finish to RM");
+    LOG.info("Application completed. Signalling finished to RM");
 
     FinalApplicationStatus appStatus;
     String appMessage = null;
