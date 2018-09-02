@@ -624,6 +624,7 @@ public class TestDistributedShell {
       String entityfileName) {
     String outputDirPathForEntity =
         basePath + File.separator + entityType + File.separator;
+    LOG.info(outputDirPathForEntity);
     File outputDirForEntity = new File(outputDirPathForEntity);
     Assert.assertTrue(outputDirForEntity.isDirectory());
 
