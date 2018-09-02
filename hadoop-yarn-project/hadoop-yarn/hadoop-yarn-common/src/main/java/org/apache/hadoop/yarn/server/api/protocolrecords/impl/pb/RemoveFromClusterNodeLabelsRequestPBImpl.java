@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos
 import org.apache.hadoop.yarn.server.api.protocolrecords
     .RemoveFromClusterNodeLabelsRequest;
 
+/**
+ * Proto class to handlde RemoveFromClusterNodeLabels request.
+ */
 public class RemoveFromClusterNodeLabelsRequestPBImpl
     extends RemoveFromClusterNodeLabelsRequest {
   Set<String> labels;

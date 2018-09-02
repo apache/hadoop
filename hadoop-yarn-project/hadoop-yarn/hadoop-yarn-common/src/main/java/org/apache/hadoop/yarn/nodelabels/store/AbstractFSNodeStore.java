@@ -182,14 +182,14 @@ public abstract class AbstractFSNodeStore<M> {
     LOG.info("Finished create editlog file at:" + editLogPath.toString());
   }
 
-  protected void loadManagerFromEditLog(Path editLogPath) throws IOException {
-    if (!fs.exists(editLogPath)) {
+  protected void loadManagerFromEditLog(Path editPath) throws IOException {
+    if (!fs.exists(editPath)) {
       return;
     }
-    try (FSDataInputStream is = fs.open(editLogPath)) {
+    try (FSDataInputStream is = fs.open(editPath)) {
       while (true) {
         try {
-          StoreOp storeOp = FSStoreOpHandler.get(is.readInt(),storeType);
+          StoreOp storeOp = FSStoreOpHandler.get(is.readInt(), storeType);
           storeOp.recover(is, manager);
         } catch (EOFException e) {
           // EOF hit, break

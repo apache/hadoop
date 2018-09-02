@@ -360,7 +360,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     Mockito.when(store.getFs().exists(Mockito.any(
         Path.class))).thenReturn(existsRetVal);
     store.init(conf, mgr);
-    Mockito.verify(store.getFs(),Mockito.times(
+    Mockito.verify(store.getFs(), Mockito.times(
         expectedNumOfCalls)).mkdirs(Mockito.any(Path
         .class));
   }

@@ -59,8 +59,8 @@ public class RemoveClusterLabelOp
     mgr.removeFromClusterNodeLabels(labels);
   }
 
-  public RemoveClusterLabelOp setLabels(Collection<String> labels) {
-    this.labels = labels;
+  public RemoveClusterLabelOp setLabels(Collection<String> nodeLabels) {
+    this.labels = nodeLabels;
     return this;
   }
 

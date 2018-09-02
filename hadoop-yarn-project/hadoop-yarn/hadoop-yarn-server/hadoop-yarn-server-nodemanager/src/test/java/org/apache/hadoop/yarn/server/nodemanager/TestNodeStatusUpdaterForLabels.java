@@ -180,6 +180,9 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     }
   }
 
+  /**
+   * A dummy NodeLabelsProvider class for tests.
+   */
   public static class DummyNodeLabelsProvider extends NodeLabelsProvider {
 
     public DummyNodeLabelsProvider() {

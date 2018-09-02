@@ -30,7 +30,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 /**
  * Partition representation in RM.
  */
-public class RMNodeLabel extends AbstractLabel implements Comparable<RMNodeLabel> {
+public class RMNodeLabel extends AbstractLabel
+    implements Comparable<RMNodeLabel> {
   private boolean exclusive;
   private NodeLabel nodeLabel;
   private Set<NodeId> nodeIds;

@@ -936,7 +936,8 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes(
+  public abstract Map<NodeAttributeKey,
+      List<NodeToAttributeValue>> getAttributesToNodes(
       Set<NodeAttributeKey> attributes) throws YarnException, IOException;
 
   /**

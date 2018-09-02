@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 
-import java.util.Set;
-
 /**
  * Abstract class which will be responsible for fetching the node attributes.
  *

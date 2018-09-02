@@ -150,7 +150,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Private
   @Idempotent
-  public NodesToAttributesMappingResponse mapAttributesToNodes(
+  NodesToAttributesMappingResponse mapAttributesToNodes(
       NodesToAttributesMappingRequest request) throws YarnException,
       IOException;
 }

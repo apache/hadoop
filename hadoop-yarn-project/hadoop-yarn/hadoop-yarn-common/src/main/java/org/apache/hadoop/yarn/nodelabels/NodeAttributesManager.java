@@ -96,7 +96,8 @@ public abstract class NodeAttributesManager extends AbstractService {
    * @return a Map of attributeKeys to a map of hostnames to its attribute
    *         values.
    */
-  public abstract Map<NodeAttributeKey, Map<String, AttributeValue>> getAttributesToNodes(
+  public abstract Map<NodeAttributeKey,
+      Map<String, AttributeValue>> getAttributesToNodes(
       Set<NodeAttributeKey> attributes);
 
   /**

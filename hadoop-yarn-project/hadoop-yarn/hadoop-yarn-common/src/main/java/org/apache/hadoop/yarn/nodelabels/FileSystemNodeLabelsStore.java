@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.store.AbstractFSNodeStore;
-import org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler;
 
 import org.apache.hadoop.yarn.nodelabels.store.op.AddClusterLabelOp;
 import org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler.StoreType;
@@ -41,6 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * FileSystemNodeLabelsStore for storing node labels.
+ */
 public class FileSystemNodeLabelsStore
     extends AbstractFSNodeStore<CommonNodeLabelsManager>
     implements NodeLabelsStore {

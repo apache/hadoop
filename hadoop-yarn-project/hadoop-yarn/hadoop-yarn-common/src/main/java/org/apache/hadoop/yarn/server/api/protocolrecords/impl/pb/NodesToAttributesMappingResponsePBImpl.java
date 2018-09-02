@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.NodesToAttributesMappingResponseProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 
+/**
+ * Proto class for node to attributes mapping response.
+ */
 public class NodesToAttributesMappingResponsePBImpl
     extends NodesToAttributesMappingResponse {
 

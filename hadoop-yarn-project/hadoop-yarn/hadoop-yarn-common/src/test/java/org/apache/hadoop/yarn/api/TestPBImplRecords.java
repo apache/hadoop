@@ -465,7 +465,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(NodeToAttributeValue.class);
     generateByNewInstance(NodeAttributeInfo.class);
     generateByNewInstance(NodesToAttributesMappingRequest.class);
- }
+  }
 
   @Test
   public void testAllocateRequestPBImpl() throws Exception {

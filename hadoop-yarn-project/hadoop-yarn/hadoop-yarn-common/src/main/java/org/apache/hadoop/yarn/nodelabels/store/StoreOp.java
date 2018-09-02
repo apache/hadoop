@@ -30,7 +30,7 @@ import java.io.IOException;
 public interface StoreOp<W, R, M> {
 
   /**
-   * Write operation to persistent storage
+   * Write operation to persistent storage.
    *
    * @param write write to be done to
    * @param mgr manager used by store
@@ -39,7 +39,7 @@ public interface StoreOp<W, R, M> {
   void write(W write, M mgr) throws IOException;
 
   /**
-   * Read and populate StoreOp
+   * Read and populate StoreOp.
    *
    * @param read read to be done from
    * @param mgr  manager used by store

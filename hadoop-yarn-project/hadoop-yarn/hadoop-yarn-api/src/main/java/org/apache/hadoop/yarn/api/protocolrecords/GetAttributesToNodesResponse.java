@@ -54,12 +54,13 @@ public abstract class GetAttributesToNodesResponse {
 
   /**
    * Get mapping of NodeAttributeKey to its associated mapping of list of
-   * NodeToAttributeValuenode to attribute value.
+   * NodeToAttributeValue associated with attribute.
    *
    * @return Map<NodeAttributeKey, List<NodeToAttributeValue>> node attributes
    *         to list of NodeToAttributeValuenode.
    */
   @Public
   @Evolving
-  public abstract Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes();
+  public abstract Map<NodeAttributeKey,
+      List<NodeToAttributeValue>> getAttributesToNodes();
 }

@@ -29,6 +29,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperati
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 
+/**
+ * Proto class for node to attributes mapping request.
+ */
 public class NodesToAttributesMappingRequestPBImpl
     extends NodesToAttributesMappingRequest {
   private NodesToAttributesMappingRequestProto proto =

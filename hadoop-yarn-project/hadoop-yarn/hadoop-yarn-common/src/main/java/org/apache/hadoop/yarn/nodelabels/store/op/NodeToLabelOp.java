@@ -59,8 +59,8 @@ public class NodeToLabelOp
   }
 
   public NodeToLabelOp setNodeToLabels(
-      Map<NodeId, Set<String>> nodeToLabels) {
-    this.nodeToLabels = nodeToLabels;
+      Map<NodeId, Set<String>> nodeToLabelsList) {
+    this.nodeToLabels = nodeToLabelsList;
     return this;
   }
 

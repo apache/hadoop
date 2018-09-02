@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeToAttributesProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeToAttributesProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 
+/**
+ * Proto class for Node to attributes mapping.
+ */
 public class NodeToAttributesPBImpl extends NodeToAttributes {
   private NodeToAttributesProto proto =
       NodeToAttributesProto.getDefaultInstance();

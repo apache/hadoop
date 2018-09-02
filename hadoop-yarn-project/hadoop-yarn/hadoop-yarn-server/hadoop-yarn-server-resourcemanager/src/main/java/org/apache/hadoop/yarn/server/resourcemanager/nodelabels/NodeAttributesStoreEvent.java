@@ -41,7 +41,8 @@ public class NodeAttributesStoreEvent
     this.operation = operation;
   }
 
-  public Map<String, Map<NodeAttribute, AttributeValue>> getNodeAttributeMappingList() {
+  public Map<String,
+      Map<NodeAttribute, AttributeValue>> getNodeAttributeMappingList() {
     return nodeAttributeMapping;
   }
 

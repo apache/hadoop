@@ -41,6 +41,9 @@ public class FSStoreOpHandler {
       editLogOp;
   private static Map<StoreType, Class<? extends FSNodeStoreLogOp>> mirrorOp;
 
+  /**
+   * Store Type enum to hold label and attribute.
+   */
   public enum StoreType {
     NODE_LABEL_STORE,
     NODE_ATTRIBUTE
@@ -53,14 +56,19 @@ public class FSStoreOpHandler {
     // registerLog edit log operation
 
     //Node Label Operations
-    registerLog(NODE_LABEL_STORE, AddClusterLabelOp.OPCODE, AddClusterLabelOp.class);
+    registerLog(NODE_LABEL_STORE, AddClusterLabelOp.OPCODE,
+        AddClusterLabelOp.class);
     registerLog(NODE_LABEL_STORE, NodeToLabelOp.OPCODE, NodeToLabelOp.class);
-    registerLog(NODE_LABEL_STORE, RemoveClusterLabelOp.OPCODE, RemoveClusterLabelOp.class);
+    registerLog(NODE_LABEL_STORE, RemoveClusterLabelOp.OPCODE,
+        RemoveClusterLabelOp.class);
 
     //NodeAttibute operation
-    registerLog(NODE_ATTRIBUTE, AddNodeToAttributeLogOp.OPCODE, AddNodeToAttributeLogOp.class);
-    registerLog(NODE_ATTRIBUTE, RemoveNodeToAttributeLogOp.OPCODE, RemoveNodeToAttributeLogOp.class);
-    registerLog(NODE_ATTRIBUTE, ReplaceNodeToAttributeLogOp.OPCODE, ReplaceNodeToAttributeLogOp.class);
+    registerLog(NODE_ATTRIBUTE, AddNodeToAttributeLogOp.OPCODE,
+        AddNodeToAttributeLogOp.class);
+    registerLog(NODE_ATTRIBUTE, RemoveNodeToAttributeLogOp.OPCODE,
+        RemoveNodeToAttributeLogOp.class);
+    registerLog(NODE_ATTRIBUTE, ReplaceNodeToAttributeLogOp.OPCODE,
+        ReplaceNodeToAttributeLogOp.class);
 
     // registerLog Mirror op
 

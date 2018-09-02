@@ -36,7 +36,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Store implementation for Non Appendable File Store
+ * Store implementation for Non Appendable File Store.
  */
 public class NonAppendableFSNodeLabelStore extends FileSystemNodeLabelsStore {
   protected static final Log

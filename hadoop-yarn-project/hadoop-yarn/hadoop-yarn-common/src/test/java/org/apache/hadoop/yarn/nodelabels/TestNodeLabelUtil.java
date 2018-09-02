@@ -20,12 +20,16 @@ package org.apache.hadoop.yarn.nodelabels;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 
+/**
+ * Test class to verify node label util ops.
+ */
 public class TestNodeLabelUtil {
 
   @Test
   public void testAttributeValueAddition() {
     String[] values =
-        new String[] {"1_8", "1.8", "ABZ", "ABZ", "az", "a-z","a_z", "123456789"};
+        new String[]{"1_8", "1.8", "ABZ", "ABZ", "az", "a-z", "a_z",
+            "123456789"};
     for (String val : values) {
       try {
         NodeLabelUtil.checkAndThrowAttributeValue(val);
@@ -34,7 +38,7 @@ public class TestNodeLabelUtil {
       }
     }
 
-    String[] invalidVals = new String[] {"_18","1,8","1/5",".15","1\\5"};
+    String[] invalidVals = new String[]{"_18", "1,8", "1/5", ".15", "1\\5"};
     for (String val : invalidVals) {
       try {
         NodeLabelUtil.checkAndThrowAttributeValue(val);

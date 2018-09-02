@@ -36,6 +36,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Test class for FileSystemNodeAttributeStore.
+ */
 public class TestFileSystemNodeAttributeStore {
 
   private MockNodeAttrbuteManager mgr = null;

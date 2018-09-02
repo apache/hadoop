@@ -100,8 +100,9 @@ public class GetAttributesToNodesResponsePBImpl
     Iterable<AttributeToNodesProto> iterable =
         () -> new Iterator<AttributeToNodesProto>() {
 
-          private Iterator<Map.Entry<NodeAttributeKey, List<NodeToAttributeValue>>> iter =
-              attributesToNodes.entrySet().iterator();
+          private Iterator<Map.Entry<NodeAttributeKey,
+              List<NodeToAttributeValue>>> iter = attributesToNodes.entrySet()
+              .iterator();
 
           @Override
           public void remove() {
@@ -198,7 +199,8 @@ public class GetAttributesToNodesResponsePBImpl
   }
 
   @Override
-  public Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes() {
+  public Map<NodeAttributeKey,
+      List<NodeToAttributeValue>> getAttributesToNodes() {
     initAttributesToNodes();
     return this.attributesToNodes;
   }

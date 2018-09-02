@@ -285,7 +285,7 @@ public class MockNodes {
     public Map<String, Long> getAllocationTagsWithCount() {
       return null;
     }
-    
+
     public void setNodeAttributes(String prefix,
         Set<NodeAttribute> nodeAttributes) {
 

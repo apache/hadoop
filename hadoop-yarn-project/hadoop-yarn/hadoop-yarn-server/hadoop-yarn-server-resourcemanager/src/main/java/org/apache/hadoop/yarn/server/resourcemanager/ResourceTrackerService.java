@@ -515,7 +515,6 @@ public class ResourceTrackerService extends AbstractService implements
      * 4. Send healthStatus to RMNode
      * 5. Update node's labels if distributed Node Labels configuration is enabled
      */
-
     NodeId nodeId = remoteNodeStatus.getNodeId();
 
     // 1. Check if it's a valid (i.e. not excluded) node, if not, see if it is

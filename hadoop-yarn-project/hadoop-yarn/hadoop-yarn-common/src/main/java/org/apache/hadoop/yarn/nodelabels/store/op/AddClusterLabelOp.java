@@ -57,8 +57,8 @@ public class AddClusterLabelOp
     mgr.addToCluserNodeLabels(labels);
   }
 
-  public AddClusterLabelOp setLabels(List<NodeLabel> labels) {
-    this.labels = labels;
+  public AddClusterLabelOp setLabels(List<NodeLabel> nodeLabels) {
+    this.labels = nodeLabels;
     return this;
   }
 

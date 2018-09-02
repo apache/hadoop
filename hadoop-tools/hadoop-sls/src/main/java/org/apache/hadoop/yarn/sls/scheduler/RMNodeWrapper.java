@@ -207,7 +207,7 @@ public class RMNodeWrapper implements RMNode {
   public Map<String, Long> getAllocationTagsWithCount() {
     return node.getAllocationTagsWithCount();
   }
-  
+
   @Override
   public Set<NodeAttribute> getAllNodeAttributes() {
     return node.getAllNodeAttributes();

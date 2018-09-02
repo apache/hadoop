@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * NodesToAttributesMappingResponse holds response object for attribute
+ * mapping.
+ */
 public class NodesToAttributesMappingResponse {
   public static NodesToAttributesMappingResponse newInstance() {
     return Records.newRecord(NodesToAttributesMappingResponse.class);
