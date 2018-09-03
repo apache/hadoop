@@ -125,6 +125,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.CreateFileSystem,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -148,6 +149,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.SetFileSystemProperties,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -170,6 +172,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.ListPaths,
             this,
             HTTP_METHOD_GET,
             url,
@@ -186,6 +189,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.GetFileSystemProperties,
             this,
             HTTP_METHOD_HEAD,
             url,
@@ -202,6 +206,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.DeleteFileSystem,
             this,
             HTTP_METHOD_DELETE,
             url,
@@ -230,6 +235,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.CreatePath,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -251,6 +257,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.RenamePath,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -273,6 +280,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.Append,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -296,6 +304,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.Flush,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -319,6 +328,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.SetPathProperties,
             this,
             HTTP_METHOD_PUT,
             url,
@@ -334,6 +344,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.GetPathProperties,
             this,
             HTTP_METHOD_HEAD,
             url,
@@ -354,6 +365,7 @@ public class AbfsClient {
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.ReadFile,
             this,
             HTTP_METHOD_GET,
             url,
@@ -376,6 +388,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+            AbfsRestOperationType.DeletePath,
             this,
             HTTP_METHOD_DELETE,
             url,
@@ -404,6 +417,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.SetOwner,
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
@@ -427,6 +441,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.SetPermissions,
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
@@ -458,6 +473,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.SetAcl,
         this,
         AbfsHttpConstants.HTTP_METHOD_PUT,
         url,
@@ -474,6 +490,7 @@ public class AbfsClient {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.GetAcl,
         this,
         AbfsHttpConstants.HTTP_METHOD_HEAD,
         url,

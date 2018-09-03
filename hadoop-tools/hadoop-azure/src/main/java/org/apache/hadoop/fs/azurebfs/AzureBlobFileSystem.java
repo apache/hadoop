@@ -38,6 +38,7 @@ import java.util.concurrent.Future;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,6 +131,8 @@ public class AzureBlobFileSystem extends FileSystem {
         this.delegationTokenManager = abfsStore.getAbfsConfiguration().getDelegationTokenManager();
       }
     }
+    
+    AbfsClientThrottlingIntercept.initializeSingleton(abfsStore.getAbfsConfiguration().isAutoThrottlingEnabled());
   }
 
   @Override
