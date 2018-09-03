@@ -65,11 +65,11 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k` and `REPLICATION`.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k`.
 
-    `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
+    The default `REPLICATION` scheme is also supported. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
 
-    `REPLICATION` policy is always enabled. For other built-in policies, they are disabled by default.
+    `REPLICATION` is always enabled. Out of all the EC policies, RS(6,3) is enabled by default.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -184,7 +184,7 @@ Below are the details about each command.
       This parameter can be omitted if a 'dfs.namenode.ec.system.default.policy' configuration is set.
       The EC policy of the path will be set with the default value in configuration.
 
-      `-replicate` apply the special `REPLICATION` policy on the directory, force the directory to adopt 3x replication scheme.
+      `-replicate` apply the default `REPLICATION` scheme on the directory, force the directory to adopt 3x replication scheme.
 
       `-replicate` and `-policy <policyName>` are optional arguments. They cannot be specified at the same time.
 
