@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
@@ -25,12 +30,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.nodelabels.AttributeValue;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
+import org.apache.hadoop.yarn.server.resourcemanager.NodeAttributeTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,12 +73,7 @@ public class TestFileSystemNodeAttributeStore {
     conf = new Configuration();
     conf.setClass(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_IMPL_CLASS,
         FileSystemNodeAttributeStore.class, NodeAttributeStore.class);
-    File tempDir = File.createTempFile("nattr", ".tmp");
-    tempDir.delete();
-    tempDir.mkdirs();
-    tempDir.deleteOnExit();
-    conf.set(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_ROOT_DIR,
-        tempDir.getAbsolutePath());
+    conf = NodeAttributeTestUtils.getRandomDirConf(conf);
     mgr.init(conf);
     mgr.start();
   }
@@ -84,6 +84,20 @@ public class TestFileSystemNodeAttributeStore {
         ((FileSystemNodeAttributeStore) mgr.store);
     fsStore.getFs().delete(fsStore.getFsWorkingPath(), true);
     mgr.stop();
+  }
+
+  @Test(timeout = 10000)
+  public void testEmptyRecoverSkipInternalUdpate() throws Exception {
+    // Stop manager
+    mgr.stop();
+
+    // Start new attribute manager with same path
+    mgr = spy(new MockNodeAttrbuteManager());
+    mgr.init(conf);
+    mgr.start();
+
+    verify(mgr, times(0))
+        .internalUpdateAttributesOnNodes(any(), any(), any(), any());
   }
 
   @Test(timeout = 10000)

@@ -1557,7 +1557,8 @@ public class TestRMAdminService {
     // 1.5. Test with unknown node when failOnUnknownNodes is false
 
     // also test : 3. Ensure Appropriate manager Method call is done
-    rm = new MockRM();
+    Configuration newConf = NodeAttributeTestUtils.getRandomDirConf(null);
+    rm = new MockRM(newConf);
 
     NodeAttributesManager spiedAttributesManager =
         Mockito.spy(rm.getRMContext().getNodeAttributesManager());

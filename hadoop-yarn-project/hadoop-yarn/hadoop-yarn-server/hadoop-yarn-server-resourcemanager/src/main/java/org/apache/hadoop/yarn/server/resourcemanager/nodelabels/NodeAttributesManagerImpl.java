@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -151,7 +152,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
   }
 
-  private void internalUpdateAttributesOnNodes(
+  @VisibleForTesting
+  protected void internalUpdateAttributesOnNodes(
       Map<String, Map<NodeAttribute, AttributeValue>> nodeAttributeMapping,
       AttributeMappingOperationType op,
       Map<NodeAttributeKey, RMNodeAttribute> newAttributesToBeAdded,
@@ -195,7 +197,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         logMsg.append(" NM = ");
         logMsg.append(entry.getKey());
         logMsg.append(", attributes=[ ");
-        logMsg.append(StringUtils.join(entry.getValue().entrySet(), ","));
+        logMsg.append(StringUtils.join(entry.getValue().keySet(), ","));
         logMsg.append("] ,");
       }
 
@@ -700,9 +702,10 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         new HashMap<>();
     Map<String, Map<NodeAttribute, AttributeValue>> validMapping =
         validate(nodeAttributeMapping, newAttributesToBeAdded, false);
-
-    internalUpdateAttributesOnNodes(validMapping, mappingType,
-        newAttributesToBeAdded, attributePrefix);
+    if (validMapping.size() > 0) {
+      internalUpdateAttributesOnNodes(validMapping, mappingType,
+          newAttributesToBeAdded, attributePrefix);
+    }
   }
 
   protected void stopDispatcher() {
