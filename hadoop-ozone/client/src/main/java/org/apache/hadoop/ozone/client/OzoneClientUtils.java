@@ -25,10 +25,10 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
-import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
-import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
-import org.apache.hadoop.ozone.client.rest.response.VolumeOwner;
+import org.apache.hadoop.ozone.client.rest.response.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -111,5 +111,26 @@ public final class OzoneClientUtils {
         .retryByException(RetryPolicies.TRY_ONCE_THEN_FAIL,
             exceptionToPolicyMap);
     return retryPolicy;
+  }
+  /**
+   * Returns a KeyInfoDetails object constructed using fields of the input
+   * OzoneKeyDetails object.
+   *
+   * @param key OzoneKeyDetails instance from which KeyInfo object needs to
+   *            be created.
+   * @return KeyInfoDetails instance
+   */
+  public static KeyInfoDetails asKeyInfoDetails(OzoneKeyDetails key) {
+    KeyInfoDetails keyInfo = new KeyInfoDetails();
+    keyInfo.setKeyName(key.getName());
+    keyInfo.setCreatedOn(HddsClientUtils.formatDateTime(key.getCreationTime()));
+    keyInfo.setModifiedOn(
+        HddsClientUtils.formatDateTime(key.getModificationTime()));
+    keyInfo.setSize(key.getDataSize());
+    List<KeyLocation> keyLocations = new ArrayList<>();
+    key.getOzoneKeyLocations().forEach((a) -> keyLocations.add(new KeyLocation(
+        a.getContainerID(), a.getLocalID(), a.getLength(), a.getOffset())));
+    keyInfo.setKeyLocation(keyLocations);
+    return keyInfo;
   }
 }

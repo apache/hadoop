@@ -18,23 +18,22 @@
 
 package org.apache.hadoop.ozone.client.rest;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.ObjectStore;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.*;
+import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
-import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueBlockIterator;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -42,6 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -412,6 +412,72 @@ public class TestOzoneRestClient {
     // Lookup for old key should fail.
     thrown.expectMessage("Lookup key failed, error");
     bucket.getKey(fromKeyName);
+  }
+
+  @Test
+  public void testGetKeyDetails() throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    String keyName = UUID.randomUUID().toString();
+    String keyValue = RandomStringUtils.random(128);
+    OzoneOutputStream out = bucket.createKey(keyName,
+        keyValue.getBytes().length, ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE);
+    out.write(keyValue.getBytes());
+    out.close();
+
+    // Get the containerID and localID.
+    OzoneKeyDetails keyDetails = (OzoneKeyDetails)bucket.getKey(keyName);
+    Assert.assertEquals(keyName, keyDetails.getName());
+    List<OzoneKeyLocation> keyLocations = keyDetails.getOzoneKeyLocations();
+    Assert.assertEquals(1, keyLocations.size());
+    Long containerID = keyLocations.get(0).getContainerID();
+    Long localID = keyLocations.get(0).getLocalID();
+
+    // Make sure that the data size matched.
+    Assert.assertEquals(keyValue.getBytes().length,
+        keyLocations.get(0).getLength());
+
+    // Sum the data size from chunks in Container via containerID
+    // and localID, make sure the size equals to the actually value size.
+    Pipeline pipeline = cluster.getStorageContainerManager()
+        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getPipeline();
+    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    Assert.assertEquals(datanodes.size(), 1);
+
+    DatanodeDetails datanodeDetails = datanodes.get(0);
+    Assert.assertNotNull(datanodeDetails);
+    HddsDatanodeService datanodeService = null;
+    for (HddsDatanodeService datanodeServiceItr : cluster.getHddsDatanodes()) {
+      if (datanodeDetails.equals(datanodeServiceItr.getDatanodeDetails())) {
+        datanodeService = datanodeServiceItr;
+        break;
+      }
+    }
+    KeyValueContainerData containerData =
+        (KeyValueContainerData)(datanodeService.getDatanodeStateMachine()
+            .getContainer().getContainerSet().getContainer(containerID)
+            .getContainerData());
+    String containerPath = new File(containerData.getMetadataPath())
+        .getParent();
+    KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
+        containerID, new File(containerPath));
+    long valueLength = 0;
+    while (keyValueBlockIterator.hasNext()) {
+      KeyData keyData = keyValueBlockIterator.nextBlock();
+      if (keyData.getBlockID().getLocalID() == localID) {
+        List<ContainerProtos.ChunkInfo> chunks = keyData.getChunks();
+        for (ContainerProtos.ChunkInfo chunk : chunks) {
+          valueLength += chunk.getLen();
+        }
+      }
+    }
+    Assert.assertEquals(keyValue.getBytes().length, valueLength);
   }
 
   /**

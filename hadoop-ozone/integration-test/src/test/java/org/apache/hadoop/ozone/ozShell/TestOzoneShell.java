@@ -773,7 +773,7 @@ public class TestOzoneShell {
   }
 
   @Test
-  public void testInfoKey() throws Exception {
+  public void testInfoKeyDetails() throws Exception {
     LOG.info("Running testInfoKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
@@ -797,7 +797,9 @@ public class TestOzoneShell {
     assertTrue(
         output.contains("createdOn") && output.contains("modifiedOn") && output
             .contains(OzoneConsts.OZONE_TIME_ZONE));
-
+    assertTrue(
+        output.contains("containerID") && output.contains("localID") && output
+            .contains("length") && output.contains("offset"));
     // reset stream
     out.reset();
     err.reset();

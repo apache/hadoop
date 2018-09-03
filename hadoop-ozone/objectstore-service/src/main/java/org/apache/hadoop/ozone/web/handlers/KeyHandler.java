@@ -88,6 +88,8 @@ public class KeyHandler implements Keys {
           return getKey(args);
         } else if (info.equals(Header.OZONE_INFO_QUERY_KEY)) {
           return getKeyInfo(args);
+        } else if (info.equals(Header.OZONE_INFO_QUERY_KEY_DETAIL)) {
+          return getKeyInfoDetail(args);
         }
 
         OzoneException ozException = ErrorTable
@@ -115,6 +117,16 @@ public class KeyHandler implements Keys {
       throws IOException, OzoneException {
     StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
     KeyInfo keyInfo = fs.getKeyInfo(args);
+    return OzoneRestUtils.getResponse(args, HTTP_OK, keyInfo.toJsonString());
+  }
+
+  /**
+   * Gets the Key detail information if it exists.
+   */
+  private Response getKeyInfoDetail(KeyArgs args)
+      throws IOException, OzoneException {
+    StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+    KeyInfo keyInfo = fs.getKeyInfoDetails(args);
     return OzoneRestUtils.getResponse(args, HTTP_OK, keyInfo.toJsonString());
   }
 

@@ -54,18 +54,13 @@ import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.response.ListVolumes;
-import org.apache.hadoop.ozone.web.response.VolumeInfo;
-import org.apache.hadoop.ozone.web.response.VolumeOwner;
-import org.apache.hadoop.ozone.web.response.ListBuckets;
-import org.apache.hadoop.ozone.web.response.BucketInfo;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
-import org.apache.hadoop.ozone.web.response.ListKeys;
+import org.apache.hadoop.ozone.web.response.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -492,6 +487,30 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfo.setModifiedOn(
         HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
     return keyInfo;
+  }
+
+  @Override
+  public KeyInfo getKeyInfoDetails(KeyArgs args) throws IOException{
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
+    List<KeyLocation> keyLocations = new ArrayList<>();
+    omKeyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly()
+        .forEach((a) -> keyLocations.add(new KeyLocation(a.getContainerID(),
+            a.getLocalID(), a.getLength(), a.getOffset())));
+    KeyInfoDetails keyInfoDetails = new KeyInfoDetails();
+    keyInfoDetails.setVersion(0);
+    keyInfoDetails.setKeyName(omKeyInfo.getKeyName());
+    keyInfoDetails.setSize(omKeyInfo.getDataSize());
+    keyInfoDetails.setCreatedOn(
+        HddsClientUtils.formatDateTime(omKeyInfo.getCreationTime()));
+    keyInfoDetails.setModifiedOn(
+        HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
+    keyInfoDetails.setKeyLocations(keyLocations);
+    return keyInfoDetails;
   }
 
   @Override

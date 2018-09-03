@@ -258,10 +258,10 @@ public class OzoneBucket {
   /**
    * Returns information about the key.
    * @param key Name of the key.
-   * @return OzoneKey Information about the key.
+   * @return OzoneKeyDetails Information about the key.
    * @throws IOException
    */
-  public OzoneKey getKey(String key) throws IOException {
+  public OzoneKeyDetails getKey(String key) throws IOException {
     return proxy.getKeyDetails(volumeName, name, key);
   }
 
