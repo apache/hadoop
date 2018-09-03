@@ -146,6 +146,43 @@ public class RouterAdmin extends Configured implements Tool {
     return getUsage(null);
   }
 
+  /**
+   * Usage: validates the maximum number of arguments for a command.
+   * @param arg List of of command line parameters.
+   */
+  private void validateMax(String[] arg) {
+    if (arg[0].equals("-rm")) {
+      if (arg.length > 2) {
+        throw new IllegalArgumentException(
+            "Too many arguments, Max=1 argument allowed");
+      }
+    } else if (arg[0].equals("-ls")) {
+      if (arg.length > 2) {
+        throw new IllegalArgumentException(
+            "Too many arguments, Max=1 argument allowed");
+      }
+    } else if (arg[0].equals("-clrQuota")) {
+      if (arg.length > 2) {
+        throw new IllegalArgumentException(
+            "Too many arguments, Max=1 argument allowed");
+      }
+    } else if (arg[0].equals("-safemode")) {
+      if (arg.length > 2) {
+        throw new IllegalArgumentException(
+            "Too many arguments, Max=1 argument allowed only");
+      }
+    } else if (arg[0].equals("-nameservice")) {
+      if (arg.length > 3) {
+        throw new IllegalArgumentException(
+            "Too many arguments, Max=2 arguments allowed");
+      }
+    } else if (arg[0].equals("-getDisabledNameservices")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    }
+  }
+
   @Override
   public int run(String[] argv) throws Exception {
     if (argv.length < 1) {
@@ -222,6 +259,7 @@ public class RouterAdmin extends Configured implements Tool {
     Exception debugException = null;
     exitCode = 0;
     try {
+      validateMax(argv);
       if ("-add".equals(cmd)) {
         if (addMount(argv, i)) {
           System.out.println("Successfully added mount point " + argv[i]);
@@ -251,10 +289,6 @@ public class RouterAdmin extends Configured implements Tool {
               "Successfully clear quota for mount point " + argv[i]);
         }
       } else if ("-safemode".equals(cmd)) {
-        if (argv.length > 2) {
-          throw new IllegalArgumentException(
-              "Too many arguments, Max=1 argument allowed only");
-        }
         manageSafeMode(argv[i]);
       } else if ("-nameservice".equals(cmd)) {
         String subcmd = argv[i];
@@ -641,6 +675,9 @@ public class RouterAdmin extends Configured implements Tool {
           throw new IllegalArgumentException(
               "Cannot parse ssQuota: " + parameters[i]);
         }
+      } else {
+        throw new IllegalArgumentException(
+            "Invalid argument : " + parameters[i]);
       }
 
       i++;
