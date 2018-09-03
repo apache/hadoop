@@ -22,6 +22,7 @@ import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.SCMContainerInfo;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
@@ -531,6 +532,18 @@ public class ContainerMapping implements Mapping {
         if (containerBytes != null) {
           HddsProtos.SCMContainerInfo knownState =
               HddsProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
+
+          if (knownState.getState() == LifeCycleState.CLOSING
+              && contInfo.getState() == LifeCycleState.CLOSED) {
+
+            updateContainerState(contInfo.getContainerID(),
+                LifeCycleEvent.CLOSE);
+
+            //reread the container
+            knownState =
+                HddsProtos.SCMContainerInfo.PARSER
+                    .parseFrom(containerStore.get(dbKey));
+          }
 
           HddsProtos.SCMContainerInfo newState =
               reconcileState(contInfo, knownState, datanodeDetails);
