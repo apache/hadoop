@@ -267,6 +267,13 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(src));
 
+    // Test with wrong number of arguments
+    argv = new String[] {"-ls", srcWithSlash, "check", "check2"};
+    System.setErr(new PrintStream(err));
+    ToolRunner.run(admin, argv);
+    assertTrue(
+        err.toString().contains("Too many arguments, Max=1 argument allowed"));
+
     out.reset();
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
         .newInstance("/");
@@ -317,6 +324,13 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(
         "Cannot remove mount point " + invalidPath));
+
+    // test wrong number of arguments
+    System.setErr(new PrintStream(err));
+    argv = new String[] {"-rm", src, "check" };
+    ToolRunner.run(admin, argv);
+    assertTrue(err.toString()
+        .contains("Too many arguments, Max=1 argument allowed"));
   }
 
   @Test
@@ -572,6 +586,18 @@ public class TestRouterAdminCLI {
     // verify if quota unset successfully
     assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
+
+    // verify wrong arguments
+    System.setErr(new PrintStream(err));
+    argv = new String[] {"-clrQuota", src, "check"};
+    ToolRunner.run(admin, argv);
+    assertTrue(err.toString(),
+        err.toString().contains("Too many arguments, Max=1 argument allowed"));
+
+    argv = new String[] {"-setQuota", src, "check", "check2"};
+    err.reset();
+    ToolRunner.run(admin, argv);
+    assertTrue(err.toString().contains("Invalid argument : check"));
   }
 
   @Test
@@ -686,6 +712,15 @@ public class TestRouterAdminCLI {
         new String[] {"-nameservice", "wrong", "ns0"}));
     assertTrue("Got error: " + err.toString(),
         err.toString().startsWith("nameservice: Unknown command: wrong"));
+
+    err.reset();
+    ToolRunner.run(admin,
+        new String[] {"-nameservice", "enable", "ns0", "check"});
+    assertTrue(
+        err.toString().contains("Too many arguments, Max=2 arguments allowed"));
+    err.reset();
+    ToolRunner.run(admin, new String[] {"-getDisabledNameservices", "check"});
+    assertTrue(err.toString().contains("No arguments allowed"));
   }
 
   /**
