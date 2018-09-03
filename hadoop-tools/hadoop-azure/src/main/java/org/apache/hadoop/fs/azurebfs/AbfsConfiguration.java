@@ -141,6 +141,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_FLUSH)
   private boolean enableFlush;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
+      DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
+  private boolean enableAutoThrottling;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
       DefaultValue = "")
   private String userAgentId;
@@ -277,6 +281,10 @@ public class AbfsConfiguration{
 
   public boolean isFlushEnabled() {
     return this.enableFlush;
+  }
+
+  public boolean isAutoThrottlingEnabled() {
+    return this.enableAutoThrottling;
   }
 
   public String getCustomUserAgentPrefix() {

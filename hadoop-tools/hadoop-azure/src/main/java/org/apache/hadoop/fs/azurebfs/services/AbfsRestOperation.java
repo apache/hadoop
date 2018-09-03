@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
  * The AbfsRestOperation for Rest AbfsClient.
  */
 public class AbfsRestOperation {
+  // The type of the REST operation (Append, ReadFile, etc)
+  private final AbfsRestOperationType operationType;
   // Blob FS client, which has the credentials, retry policy, and logs.
   private final AbfsClient client;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
@@ -71,10 +73,12 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    */
-  AbfsRestOperation(final AbfsClient client,
+  AbfsRestOperation(final AbfsRestOperationType operationType,
+                    final AbfsClient client,
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
+    this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
@@ -86,6 +90,7 @@ public class AbfsRestOperation {
   /**
    * Initializes a new REST operation.
    *
+   * @param operationType The type of the REST operation (Append, ReadFile, etc).
    * @param client The Blob FS client.
    * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param url The full URL including query string parameters.
@@ -95,14 +100,15 @@ public class AbfsRestOperation {
    * @param bufferOffset An offset into the buffer where the data beings.
    * @param bufferLength The length of the data in the buffer.
    */
-  AbfsRestOperation(AbfsClient client,
+  AbfsRestOperation(AbfsRestOperationType operationType,
+                    AbfsClient client,
                     String method,
                     URL url,
                     List<AbfsHttpHeader> requestHeaders,
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength) {
-    this(client, method, url, requestHeaders);
+    this(operationType, client, method, url, requestHeaders);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -152,6 +158,7 @@ public class AbfsRestOperation {
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
+        AbfsClientThrottlingIntercept.sendingRequest(operationType);
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
       }
 
@@ -168,6 +175,8 @@ public class AbfsRestOperation {
         throw new InvalidAbfsRestOperationException(ex);
       }
       return false;
+    } finally {
+      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
     LOG.debug("HttpRequest: " + httpOperation.toString());

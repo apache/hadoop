@@ -16,29 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azure;
+package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Throttles storage operations to minimize errors and maximum throughput. This
- * improves throughput by as much as 35% when the service throttles requests due
- * to exceeding account level ingress or egress limits.
- */
-@InterfaceAudience.Private
-class ClientThrottlingAnalyzer {
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+class AbfsClientThrottlingAnalyzer {
   private static final Logger LOG = LoggerFactory.getLogger(
-      ClientThrottlingAnalyzer.class);
+      AbfsClientThrottlingAnalyzer.class);
   private static final int DEFAULT_ANALYSIS_PERIOD_MS = 10 * 1000;
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
   private static final int MAX_ANALYSIS_PERIOD_MS = 30000;
@@ -55,51 +49,47 @@ class ClientThrottlingAnalyzer {
   private long consecutiveNoErrorCount = 0;
   private String name = null;
   private Timer timer = null;
-  private AtomicReference<BlobOperationMetrics> blobMetrics = null;
+  private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
 
-  private ClientThrottlingAnalyzer() {
+  private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
   }
 
   /**
-   * Creates an instance of the <code>ClientThrottlingAnalyzer</code> class with
+   * Creates an instance of the <code>AbfsClientThrottlingAnalyzer</code> class with
    * the specified name.
    *
    * @param name a name used to identify this instance.
-   *
    * @throws IllegalArgumentException if name is null or empty.
    */
-  ClientThrottlingAnalyzer(String name) throws IllegalArgumentException {
+  AbfsClientThrottlingAnalyzer(String name) throws IllegalArgumentException {
     this(name, DEFAULT_ANALYSIS_PERIOD_MS);
   }
 
   /**
-   * Creates an instance of the <code>ClientThrottlingAnalyzer</code> class with
+   * Creates an instance of the <code>AbfsClientThrottlingAnalyzer</code> class with
    * the specified name and period.
    *
-   * @param name A name used to identify this instance.
-   *
+   * @param name   A name used to identify this instance.
    * @param period The frequency, in milliseconds, at which metrics are
-   *              analyzed.
-   *
-   * @throws IllegalArgumentException
-   *           If name is null or empty.
-   *           If period is less than 1000 or greater than 30000 milliseconds.
+   *               analyzed.
+   * @throws IllegalArgumentException If name is null or empty.
+   *                                  If period is less than 1000 or greater than 30000 milliseconds.
    */
-  ClientThrottlingAnalyzer(String name, int period)
+  AbfsClientThrottlingAnalyzer(String name, int period)
       throws IllegalArgumentException {
     Preconditions.checkArgument(
         StringUtils.isNotEmpty(name),
         "The argument 'name' cannot be null or empty.");
     Preconditions.checkArgument(
         period >= MIN_ANALYSIS_PERIOD_MS && period <= MAX_ANALYSIS_PERIOD_MS,
-      "The argument 'period' must be between 1000 and 30000.");
+        "The argument 'period' must be between 1000 and 30000.");
     this.name = name;
     this.analysisPeriodMs = period;
-    this.blobMetrics = new AtomicReference<BlobOperationMetrics>(
-        new BlobOperationMetrics(System.currentTimeMillis()));
+    this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
+        new AbfsOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(
-        String.format("wasb-timer-client-throttling-analyzer-%s", name), true);
+        String.format("abfs-timer-client-throttling-analyzer-%s", name), true);
     this.timer.schedule(new TimerTaskImpl(),
         analysisPeriodMs,
         analysisPeriodMs);
@@ -108,12 +98,11 @@ class ClientThrottlingAnalyzer {
   /**
    * Updates metrics with results from the current storage operation.
    *
-   * @param count The count of bytes transferred.
-   *
+   * @param count             The count of bytes transferred.
    * @param isFailedOperation True if the operation failed; otherwise false.
    */
   public void addBytesTransferred(long count, boolean isFailedOperation) {
-    BlobOperationMetrics metrics = blobMetrics.get();
+    AbfsOperationMetrics metrics = blobMetrics.get();
     if (isFailedOperation) {
       metrics.bytesFailed.addAndGet(count);
       metrics.operationsFailed.incrementAndGet();
@@ -142,7 +131,7 @@ class ClientThrottlingAnalyzer {
     return sleepDuration;
   }
 
-  private int analyzeMetricsAndUpdateSleepDuration(BlobOperationMetrics metrics,
+  private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
                                                    int sleepDuration) {
     final double percentageConversionFactor = 100;
     double bytesFailed = metrics.bytesFailed.get();
@@ -151,9 +140,9 @@ class ClientThrottlingAnalyzer {
     double operationsSuccessful = metrics.operationsSuccessful.get();
     double errorPercentage = (bytesFailed <= 0)
         ? 0
-        : percentageConversionFactor
+        : (percentageConversionFactor
         * bytesFailed
-        / (bytesFailed + bytesSuccessful);
+        / (bytesFailed + bytesSuccessful));
     long periodMs = metrics.endTime - metrics.startTime;
 
     double newSleepDuration;
@@ -247,14 +236,13 @@ class ClientThrottlingAnalyzer {
 
         long now = System.currentTimeMillis();
         if (now - blobMetrics.get().startTime >= analysisPeriodMs) {
-          BlobOperationMetrics oldMetrics = blobMetrics.getAndSet(
-              new BlobOperationMetrics(now));
+          AbfsOperationMetrics oldMetrics = blobMetrics.getAndSet(
+              new AbfsOperationMetrics(now));
           oldMetrics.endTime = now;
           sleepDuration = analyzeMetricsAndUpdateSleepDuration(oldMetrics,
               sleepDuration);
         }
-      }
-      finally {
+      } finally {
         if (doWork) {
           doingWork.set(0);
         }
@@ -263,9 +251,9 @@ class ClientThrottlingAnalyzer {
   }
 
   /**
-   * Stores blob operation metrics during each analysis period.
+   * Stores Abfs operation metrics during each analysis period.
    */
-  static class BlobOperationMetrics {
+  static class AbfsOperationMetrics {
     private AtomicLong bytesFailed;
     private AtomicLong bytesSuccessful;
     private AtomicLong operationsFailed;
@@ -273,7 +261,7 @@ class ClientThrottlingAnalyzer {
     private long endTime;
     private long startTime;
 
-    BlobOperationMetrics(long startTime) {
+    AbfsOperationMetrics(long startTime) {
       this.startTime = startTime;
       this.bytesFailed = new AtomicLong();
       this.bytesSuccessful = new AtomicLong();
