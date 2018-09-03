@@ -244,6 +244,22 @@
     </description>
   </property>
   <property>
+    <name>ozone.client.max.retries</name>
+    <value>50</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Maximum number of retries by Ozone Client on encountering
+      exception while fetching committed block length.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.retry.interval</name>
+    <value>200ms</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Interval between retries by Ozone Client on encountering
+      exception while fetching committed block length.
+    </description>
+  </property>
+  <property>
     <name>ozone.client.protocol</name>
     <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
     <tag>OZONE, CLIENT, MANAGEMENT</tag>

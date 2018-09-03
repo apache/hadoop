@@ -17,13 +17,22 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.BlockNotCommittedException;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeOwner;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** A utility class for OzoneClient. */
 public final class OzoneClientUtils {
@@ -83,5 +92,24 @@ public final class OzoneClientUtils {
         HddsClientUtils.formatDateTime(key.getModificationTime()));
     keyInfo.setSize(key.getDataSize());
     return keyInfo;
+  }
+
+  public static RetryPolicy createRetryPolicy(Configuration conf) {
+    int maxRetryCount =
+        conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
+            OZONE_CLIENT_MAX_RETRIES_DEFAULT);
+    long retryInterval = conf.getTimeDuration(OzoneConfigKeys.
+        OZONE_CLIENT_RETRY_INTERVAL, OzoneConfigKeys.
+        OZONE_CLIENT_RETRY_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+    RetryPolicy basePolicy = RetryPolicies
+        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, retryInterval,
+            TimeUnit.MILLISECONDS);
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
+        new HashMap<Class<? extends Exception>, RetryPolicy>();
+    exceptionToPolicyMap.put(BlockNotCommittedException.class, basePolicy);
+    RetryPolicy retryPolicy = RetryPolicies
+        .retryByException(RetryPolicies.TRY_ONCE_THEN_FAIL,
+            exceptionToPolicyMap);
+    return retryPolicy;
   }
 }

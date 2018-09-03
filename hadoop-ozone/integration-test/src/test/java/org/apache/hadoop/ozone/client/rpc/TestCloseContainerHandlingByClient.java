@@ -22,6 +22,10 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.hdds.scm.container.common.helpers.
+    StorageContainerException;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -45,6 +49,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -52,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.Random;
 
 /**
  * Tests Close Container Exception handling by Ozone Client.
@@ -67,6 +73,7 @@ public class TestCloseContainerHandlingByClient {
   private static String volumeName;
   private static String bucketName;
   private static String keyString;
+  private static int maxRetries;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -78,6 +85,9 @@ public class TestCloseContainerHandlingByClient {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
+    // generate a no between 1 to 10
+    maxRetries = new Random().nextInt(10);
+    conf.setInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, maxRetries);
     chunkSize = (int) OzoneConsts.MB;
     blockSize = 4 * chunkSize;
     conf.setInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY, chunkSize);
@@ -286,17 +296,8 @@ public class TestCloseContainerHandlingByClient {
 
     ChunkGroupOutputStream groupOutputStream =
         (ChunkGroupOutputStream) outputStream.getOutputStream();
-    long clientId = groupOutputStream.getOpenID();
-    OMMetadataManager metadataManager =
-        cluster.getOzoneManager().getMetadataManager();
-    byte[] openKey =
-        metadataManager.getOpenKeyBytes(
-            volumeName, bucketName, keyName, clientId);
-    byte[] openKeyData = metadataManager.getOpenKeyTable().get(openKey);
-    OmKeyInfo keyInfo = OmKeyInfo.getFromProtobuf(
-        OzoneManagerProtocolProtos.KeyInfo.parseFrom(openKeyData));
     List<OmKeyLocationInfo> locationInfoList =
-        keyInfo.getKeyLocationVersions().get(0).getBlocksLatestVersionOnly();
+        getLocationInfos(groupOutputStream, keyName);
     List<Long> containerIdList = new ArrayList<>();
     List<Pipeline> pipelineList = new ArrayList<>();
     for (OmKeyLocationInfo info : locationInfoList) {
@@ -318,7 +319,6 @@ public class TestCloseContainerHandlingByClient {
                 new CloseContainerCommand(containerID, type, pipeline.getId()));
       }
     }
-
     int index = 0;
     for (long containerID : containerIdList) {
       Pipeline pipeline = pipelineList.get(index);
@@ -333,7 +333,6 @@ public class TestCloseContainerHandlingByClient {
       }
       index++;
     }
-
   }
 
   private OzoneOutputStream createKey(String keyName, ReplicationType type,
@@ -343,6 +342,20 @@ public class TestCloseContainerHandlingByClient {
             ReplicationFactor.THREE;
     return objectStore.getVolume(volumeName).getBucket(bucketName)
         .createKey(keyName, size, type, factor);
+  }
+
+  private List<OmKeyLocationInfo> getLocationInfos(
+      ChunkGroupOutputStream groupOutputStream, String keyName)
+      throws IOException {
+    long clientId = groupOutputStream.getOpenID();
+    OMMetadataManager metadataManager =
+        cluster.getOzoneManager().getMetadataManager();
+    byte[] openKey = metadataManager
+        .getOpenKeyBytes(volumeName, bucketName, keyName, clientId);
+    byte[] openKeyData = metadataManager.getOpenKeyTable().get(openKey);
+    OmKeyInfo keyInfo = OmKeyInfo.getFromProtobuf(
+        OzoneManagerProtocolProtos.KeyInfo.parseFrom(openKeyData));
+    return keyInfo.getKeyLocationVersions().get(0).getBlocksLatestVersionOnly();
   }
 
   private void validateData(String keyName, byte[] data) throws Exception {
@@ -398,5 +411,59 @@ public class TestCloseContainerHandlingByClient {
     String dataString = new String(data);
     dataString.concat(dataString);
     validateData(keyName, dataString.getBytes());
+  }
+
+  @Test
+  public void testRetriesOnBlockNotCommittedException() throws Exception {
+    String keyName = "blockcommitexceptiontest";
+    OzoneOutputStream key = createKey(keyName, ReplicationType.STAND_ALONE, 0);
+    ChunkGroupOutputStream groupOutputStream =
+        (ChunkGroupOutputStream) key.getOutputStream();
+    GenericTestUtils.setLogLevel(ChunkGroupOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.LogCapturer logCapturer =
+        GenericTestUtils.LogCapturer.captureLogs(ChunkGroupOutputStream.LOG);
+
+    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    String dataString = fixedLengthString(keyString, (3 * chunkSize));
+    key.write(dataString.getBytes());
+    List<OmKeyLocationInfo> locationInfos =
+        getLocationInfos(groupOutputStream, keyName);
+    long containerID = locationInfos.get(0).getContainerID();
+    List<DatanodeDetails> datanodes =
+        cluster.getStorageContainerManager().getScmContainerManager()
+            .getContainerWithPipeline(containerID).getPipeline().getMachines();
+    Assert.assertEquals(1, datanodes.size());
+    // move the container on the datanode to Closing state, this will ensure
+    // closing the key will hit BLOCK_NOT_COMMITTED_EXCEPTION while trying
+    // to fetch the committed length
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+      if (datanodes.get(0).equals(datanodeService.getDatanodeDetails())) {
+        datanodeService.getDatanodeStateMachine().getContainer()
+            .getContainerSet().getContainer(containerID).getContainerData()
+            .setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+      }
+    }
+    dataString = fixedLengthString(keyString, (chunkSize * 1 / 2));
+    key.write(dataString.getBytes());
+    try {
+      key.close();
+      Assert.fail("Expected Exception not thrown");
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe instanceof StorageContainerException);
+      Assert.assertTrue(((StorageContainerException) ioe).getResult()
+          == ContainerProtos.Result.BLOCK_NOT_COMMITTED);
+    }
+    // It should retry only for max retries times
+    for (int i = 1; i <= maxRetries; i++) {
+      Assert.assertTrue(logCapturer.getOutput()
+          .contains("Retrying GetCommittedBlockLength request"));
+      Assert.assertTrue(logCapturer.getOutput().contains("Already tried " + i));
+    }
+    Assert.assertTrue(logCapturer.getOutput()
+        .contains("GetCommittedBlockLength request failed."));
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "retries get failed due to exceeded maximum allowed retries number"
+            + ": " + maxRetries));
+    logCapturer.stopCapturing();
   }
 }

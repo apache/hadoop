@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .BlockNotCommittedException;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -420,6 +422,9 @@ public final class ContainerProtocolCalls  {
   ) throws StorageContainerException {
     if (response.getResult() == ContainerProtos.Result.SUCCESS) {
       return;
+    } else if (response.getResult()
+        == ContainerProtos.Result.BLOCK_NOT_COMMITTED) {
+      throw new BlockNotCommittedException(response.getMessage());
     }
     throw new StorageContainerException(
         response.getMessage(), response.getResult());

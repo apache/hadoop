@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -46,6 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -63,7 +65,7 @@ import java.util.Optional;
  */
 public class ChunkGroupOutputStream extends OutputStream {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(ChunkGroupOutputStream.class);
 
   // array list's get(index) is O(1)
@@ -80,6 +82,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final String requestID;
   private boolean closed;
   private List<OmKeyLocationInfo> locationInfoList;
+  private final RetryPolicy retryPolicy;
   /**
    * A constructor for testing purpose only.
    */
@@ -95,6 +98,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     requestID = null;
     closed = false;
     locationInfoList = null;
+    retryPolicy = null;
   }
 
   /**
@@ -124,7 +128,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
       OzoneManagerProtocolClientSideTranslatorPB omClient,
       int chunkSize, String requestId, ReplicationFactor factor,
-      ReplicationType type) throws IOException {
+      ReplicationType type, RetryPolicy retryPolicy) throws IOException {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.byteOffset = 0;
@@ -143,6 +147,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.chunkSize = chunkSize;
     this.requestID = requestId;
     this.locationInfoList = new ArrayList<>();
+    this.retryPolicy = retryPolicy;
     LOG.debug("Expecting open key with one block, but got" +
         info.getKeyLocationVersions().size());
   }
@@ -305,6 +310,62 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
   }
 
+  private long getCommittedBlockLength(ChunkOutputStreamEntry streamEntry)
+      throws IOException {
+    long blockLength;
+    ContainerProtos.GetCommittedBlockLengthResponseProto responseProto;
+    RetryPolicy.RetryAction action;
+    int numRetries = 0;
+
+    // TODO : At this point of time, we also need to allocate new blocks
+    // from a different container and may need to nullify
+    // all the remaining pre-allocated blocks in case they were
+    // pre-allocated on the same container which got closed now.This needs
+    // caching the closed container list on the client itself.
+    while (true) {
+      try {
+        responseProto = ContainerProtocolCalls
+            .getCommittedBlockLength(streamEntry.xceiverClient,
+                streamEntry.blockID, requestID);
+        blockLength = responseProto.getBlockLength();
+        return blockLength;
+      } catch (StorageContainerException sce) {
+        try {
+          action = retryPolicy.shouldRetry(sce, numRetries, 0, true);
+        } catch (Exception e) {
+          throw e instanceof IOException ? (IOException) e : new IOException(e);
+        }
+        if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
+          if (action.reason != null) {
+            LOG.error(
+                "GetCommittedBlockLength request failed. " + action.reason,
+                sce);
+          }
+          throw sce;
+        }
+
+        // Throw the exception if the thread is interrupted
+        if (Thread.currentThread().isInterrupted()) {
+          LOG.warn("Interrupted while trying for connection");
+          throw sce;
+        }
+        Preconditions.checkArgument(
+            action.action == RetryPolicy.RetryAction.RetryDecision.RETRY);
+        try {
+          Thread.sleep(action.delayMillis);
+        } catch (InterruptedException e) {
+          throw (IOException) new InterruptedIOException(
+              "Interrupted: action=" + action + ", retry policy=" + retryPolicy)
+              .initCause(e);
+        }
+        numRetries++;
+        LOG.trace("Retrying GetCommittedBlockLength request. Already tried "
+            + numRetries + " time(s); retry policy is " + retryPolicy);
+        continue;
+      }
+    }
+  }
+
   /**
    * It performs following actions :
    * a. Updates the committed length at datanode for the current stream in
@@ -317,15 +378,6 @@ public class ChunkGroupOutputStream extends OutputStream {
    */
   private void handleCloseContainerException(ChunkOutputStreamEntry streamEntry,
       int streamIndex) throws IOException {
-    // TODO : If the block is still not committed and is in the
-    // pending openBlock Map, it will return BLOCK_NOT_COMMITTED
-    // exception. We should handle this by retrying the same operation
-    // n times and update the OzoneManager with the actual block length
-    // written. At this point of time, we also need to allocate new blocks
-    // from a different container and may need to nullify
-    // all the remaining pre-allocated blocks in case they were
-    // pre-allocated on the same container which got closed now.This needs
-    // caching the closed container list on the client itself.
     long committedLength = 0;
     ByteBuffer buffer = streamEntry.getBuffer();
     if (buffer == null) {
@@ -342,11 +394,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     // for this block associated with the stream here.
     if (streamEntry.currentPosition >= chunkSize
         || streamEntry.currentPosition != buffer.position()) {
-      ContainerProtos.GetCommittedBlockLengthResponseProto responseProto =
-          ContainerProtocolCalls
-              .getCommittedBlockLength(streamEntry.xceiverClient,
-                  streamEntry.blockID, requestID);
-      committedLength = responseProto.getBlockLength();
+      committedLength = getCommittedBlockLength(streamEntry);
       // update the length of the current stream
       locationInfoList.get(streamIndex).setLength(committedLength);
     }
@@ -481,6 +529,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     private String requestID;
     private ReplicationType type;
     private ReplicationFactor factor;
+    private RetryPolicy retryPolicy;
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -526,8 +575,14 @@ public class ChunkGroupOutputStream extends OutputStream {
 
     public ChunkGroupOutputStream build() throws IOException {
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
-          omClient, chunkSize, requestID, factor, type);
+          omClient, chunkSize, requestID, factor, type, retryPolicy);
     }
+
+    public Builder setRetryPolicy(RetryPolicy rPolicy) {
+      this.retryPolicy = rPolicy;
+      return this;
+    }
+
   }
 
   private static class ChunkOutputStreamEntry extends OutputStream {
