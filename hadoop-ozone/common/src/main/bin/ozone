@@ -97,6 +97,8 @@ function ozonecmd_case
     om)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.om.OzoneManager
+      HDFS_OM_OPTS="${HDFS_OM_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/om-audit-log4j2.properties"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_OPTS}"
     ;;
     oz)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell

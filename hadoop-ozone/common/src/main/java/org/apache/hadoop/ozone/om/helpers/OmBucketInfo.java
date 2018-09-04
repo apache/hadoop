@@ -21,18 +21,22 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * A class that encapsulates Bucket Info.
  */
-public final class OmBucketInfo {
+public final class OmBucketInfo implements Auditable {
   /**
    * Name of the volume in which the bucket belongs to.
    */
@@ -135,6 +139,21 @@ public final class OmBucketInfo {
    */
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  @Override
+  public Map<String, String> toAuditMap() {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, this.volumeName);
+    auditMap.put(OzoneConsts.BUCKET, this.bucketName);
+    auditMap.put(OzoneConsts.ACLS,
+        (this.acls != null) ? this.acls.toString() : null);
+    auditMap.put(OzoneConsts.IS_VERSION_ENABLED,
+        String.valueOf(this.isVersionEnabled));
+    auditMap.put(OzoneConsts.STORAGE_TYPE,
+        (this.storageType != null) ? this.storageType.name() : null);
+    auditMap.put(OzoneConsts.CREATION_TIME, String.valueOf(this.creationTime));
+    return auditMap;
   }
 
   /**

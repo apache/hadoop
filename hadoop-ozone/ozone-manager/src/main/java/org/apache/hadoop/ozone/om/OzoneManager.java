@@ -36,9 +36,17 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditLoggerType;
+import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -58,6 +66,7 @@ import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslat
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.logging.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +76,7 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,6 +101,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     implements OzoneManagerProtocol, OMMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(OzoneManager.class);
+
+  private static final AuditLogger AUDIT =
+      new AuditLogger(AuditLoggerType.OMLOGGER);
 
   private static final String USAGE =
       "Usage: \n ozone om [genericOptions] " + "[ "
@@ -454,8 +467,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       metrics.incNumVolumeCreates();
       volumeManager.createVolume(args);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.CREATE_VOLUME,
+          (args == null) ? null : args.toAuditMap()));
     } catch (Exception ex) {
       metrics.incNumVolumeCreateFails();
+      AUDIT.logWriteFailure(Level.ERROR,
+          buildAuditMessageForFailure(OMAction.CREATE_VOLUME,
+              (args == null) ? null : args.toAuditMap()), ex);
       throw ex;
     }
   }
@@ -469,11 +487,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public void setOwner(String volume, String owner) throws IOException {
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.OWNER, owner);
     try {
       metrics.incNumVolumeUpdates();
       volumeManager.setOwner(volume, owner);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.SET_OWNER,
+          auditMap));
     } catch (Exception ex) {
       metrics.incNumVolumeUpdateFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.SET_OWNER,
+          auditMap), ex);
       throw ex;
     }
   }
@@ -487,11 +511,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public void setQuota(String volume, long quota) throws IOException {
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.QUOTA, String.valueOf(quota));
     try {
       metrics.incNumVolumeUpdates();
       volumeManager.setQuota(volume, quota);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.SET_QUOTA,
+          auditMap));
     } catch (Exception ex) {
       metrics.incNumVolumeUpdateFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.SET_QUOTA,
+          auditMap), ex);
       throw ex;
     }
   }
@@ -508,12 +538,24 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public boolean checkVolumeAccess(String volume, OzoneAclInfo userAcl)
       throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.USER_ACL,
+        (userAcl == null) ? null : userAcl.getName());
     try {
       metrics.incNumVolumeCheckAccesses();
       return volumeManager.checkVolumeAccess(volume, userAcl);
     } catch (Exception ex) {
       metrics.incNumVolumeCheckAccessFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(
+          OMAction.CHECK_VOLUME_ACCESS, auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+            OMAction.CHECK_VOLUME_ACCESS, auditMap));
+      }
     }
   }
 
@@ -526,12 +568,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volume);
     try {
       metrics.incNumVolumeInfos();
       return volumeManager.getVolumeInfo(volume);
     } catch (Exception ex) {
       metrics.incNumVolumeInfoFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_VOLUME,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_VOLUME,
+            auditMap));
+      }
     }
   }
 
@@ -546,8 +598,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       metrics.incNumVolumeDeletes();
       volumeManager.deleteVolume(volume);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.DELETE_VOLUME,
+          buildAuditMap(volume)));
     } catch (Exception ex) {
       metrics.incNumVolumeDeleteFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_VOLUME,
+          buildAuditMap(volume)), ex);
       throw ex;
     }
   }
@@ -566,12 +622,26 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public List<OmVolumeArgs> listVolumeByUser(String userName, String prefix,
       String prevKey, int maxKeys) throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.PREV_KEY, prevKey);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.USERNAME, userName);
     try {
       metrics.incNumVolumeLists();
       return volumeManager.listVolumes(userName, prefix, prevKey, maxKeys);
     } catch (Exception ex) {
       metrics.incNumVolumeListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_VOLUMES,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_VOLUMES,
+            auditMap));
+      }
     }
   }
 
@@ -588,12 +658,26 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public List<OmVolumeArgs> listAllVolumes(String prefix, String prevKey, int
       maxKeys) throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.PREV_KEY, prevKey);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.USERNAME, null);
     try {
       metrics.incNumVolumeLists();
       return volumeManager.listVolumes(null, prefix, prevKey, maxKeys);
     } catch (Exception ex) {
       metrics.incNumVolumeListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_VOLUMES,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_VOLUMES,
+            auditMap));
+      }
     }
   }
 
@@ -608,8 +692,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       metrics.incNumBucketCreates();
       bucketManager.createBucket(bucketInfo);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.CREATE_BUCKET,
+          (bucketInfo == null) ? null : bucketInfo.toAuditMap()));
     } catch (Exception ex) {
       metrics.incNumBucketCreateFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.CREATE_BUCKET,
+          (bucketInfo == null) ? null : bucketInfo.toAuditMap()), ex);
       throw ex;
     }
   }
@@ -621,13 +709,27 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   public List<OmBucketInfo> listBuckets(String volumeName,
       String startKey, String prefix, int maxNumOfBuckets)
       throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volumeName);
+    auditMap.put(OzoneConsts.START_KEY, startKey);
+    auditMap.put(OzoneConsts.PREFIX, prefix);
+    auditMap.put(OzoneConsts.MAX_NUM_OF_BUCKETS,
+        String.valueOf(maxNumOfBuckets));
     try {
       metrics.incNumBucketLists();
       return bucketManager.listBuckets(volumeName,
           startKey, prefix, maxNumOfBuckets);
     } catch (IOException ex) {
       metrics.incNumBucketListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_BUCKETS,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_BUCKETS,
+            auditMap));
+      }
     }
   }
 
@@ -642,12 +744,23 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OmBucketInfo getBucketInfo(String volume, String bucket)
       throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.BUCKET, bucket);
     try {
       metrics.incNumBucketInfos();
       return bucketManager.getBucketInfo(volume, bucket);
     } catch (Exception ex) {
       metrics.incNumBucketInfoFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_BUCKET,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_BUCKET,
+            auditMap));
+      }
     }
   }
 
@@ -660,23 +773,39 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OpenKeySession openKey(OmKeyArgs args) throws IOException {
+    boolean auditSuccess = true;
     try {
       metrics.incNumKeyAllocates();
       return keyManager.openKey(args);
     } catch (Exception ex) {
       metrics.incNumKeyAllocateFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.ALLOCATE_KEY,
+          (args == null) ? null : args.toAuditMap()), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.ALLOCATE_KEY, (args == null) ? null : args.toAuditMap()));
+      }
     }
   }
 
   @Override
   public void commitKey(OmKeyArgs args, long clientID)
       throws IOException {
+    Map<String, String> auditMap = (args == null) ? new LinkedHashMap<>() :
+        args.toAuditMap();
+    auditMap.put(OzoneConsts.CLIENT_ID, String.valueOf(clientID));
     try {
       metrics.incNumKeyCommits();
       keyManager.commitKey(args, clientID);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.COMMIT_KEY,
+          auditMap));
     } catch (Exception ex) {
       metrics.incNumKeyCommitFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.COMMIT_KEY,
+          auditMap), ex);
       throw ex;
     }
   }
@@ -684,12 +813,24 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = (args == null) ? new LinkedHashMap<>() :
+        args.toAuditMap();
+    auditMap.put(OzoneConsts.CLIENT_ID, String.valueOf(clientID));
     try {
       metrics.incNumBlockAllocateCalls();
       return keyManager.allocateBlock(args, clientID);
     } catch (Exception ex) {
       metrics.incNumBlockAllocateCallFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.ALLOCATE_BLOCK,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.ALLOCATE_BLOCK, auditMap));
+      }
     }
   }
 
@@ -702,22 +843,38 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
+    boolean auditSuccess = true;
     try {
       metrics.incNumKeyLookups();
       return keyManager.lookupKey(args);
     } catch (Exception ex) {
       metrics.incNumKeyLookupFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
+          (args == null) ? null : args.toAuditMap()), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
+            (args == null) ? null : args.toAuditMap()));
+      }
     }
   }
 
   @Override
   public void renameKey(OmKeyArgs args, String toKeyName) throws IOException {
+    Map<String, String> auditMap = (args == null) ? new LinkedHashMap<>() :
+        args.toAuditMap();
+    auditMap.put(OzoneConsts.TO_KEY_NAME, toKeyName);
     try {
       metrics.incNumKeyRenames();
       keyManager.renameKey(args, toKeyName);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.RENAME_KEY,
+          auditMap));
     } catch (IOException e) {
       metrics.incNumKeyRenameFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.RENAME_KEY,
+          auditMap), e);
       throw e;
     }
   }
@@ -733,8 +890,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       metrics.incNumKeyDeletes();
       keyManager.deleteKey(args);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.DELETE_KEY,
+          (args == null) ? null : args.toAuditMap()));
     } catch (Exception ex) {
       metrics.incNumKeyDeleteFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_KEY,
+          (args == null) ? null : args.toAuditMap()), ex);
       throw ex;
     }
   }
@@ -742,13 +903,27 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+    auditMap.put(OzoneConsts.START_KEY, startKey);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.KEY_PREFIX, keyPrefix);
     try {
       metrics.incNumKeyLists();
       return keyManager.listKeys(volumeName, bucketName,
           startKey, keyPrefix, maxKeys);
     } catch (IOException ex) {
       metrics.incNumKeyListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
+          auditMap), ex);
       throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
+            auditMap));
+      }
     }
   }
 
@@ -764,8 +939,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       metrics.incNumBucketUpdates();
       bucketManager.setBucketProperty(args);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.UPDATE_BUCKET,
+          (args == null) ? null : args.toAuditMap()));
     } catch (Exception ex) {
       metrics.incNumBucketUpdateFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.UPDATE_BUCKET,
+          (args == null) ? null : args.toAuditMap()), ex);
       throw ex;
     }
   }
@@ -778,13 +957,47 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @throws IOException
    */
   public void deleteBucket(String volume, String bucket) throws IOException {
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.BUCKET, bucket);
     try {
       metrics.incNumBucketDeletes();
       bucketManager.deleteBucket(volume, bucket);
+      AUDIT.logWriteSuccess(buildAuditMessageForSuccess(OMAction.DELETE_BUCKET,
+          auditMap));
     } catch (Exception ex) {
       metrics.incNumBucketDeleteFails();
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_BUCKET,
+          auditMap), ex);
       throw ex;
     }
+  }
+
+  private Map<String, String> buildAuditMap(String volume){
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volume);
+    return auditMap;
+  }
+
+  // TODO: Temporary method until AuditMessage is simplified
+  private AuditMessage buildAuditMessageForSuccess(AuditAction op,
+      Map<String, String> auditMap) {
+    return new AuditMessage(
+      (Server.getRemoteUser() == null) ? null :
+              Server.getRemoteUser().getUserName(),
+      (Server.getRemoteIp() == null) ? null :
+          Server.getRemoteIp().getHostAddress(), op.toString(), auditMap,
+      AuditEventStatus.SUCCESS.toString());
+  }
+
+  // TODO: Temporary method until AuditMessage is simplified
+  private AuditMessage buildAuditMessageForFailure(AuditAction op,
+      Map<String, String> auditMap) {
+    return new AuditMessage(
+      (Server.getRemoteUser() == null) ? null :
+              Server.getRemoteUser().getUserName(),
+      (Server.getRemoteIp() == null) ? null :
+          Server.getRemoteIp().getHostAddress(), op.toString(), auditMap,
+      AuditEventStatus.FAILURE.toString());
   }
 
   private void registerMXBean() {
