@@ -1339,7 +1339,7 @@ public class RouterRpcServer extends AbstractService
           this.subclusterResolver.getDestinationForPath(path);
       if (location == null) {
         throw new IOException("Cannot find locations for " + path + " in " +
-            this.subclusterResolver);
+            this.subclusterResolver.getClass().getSimpleName());
       }
 
       // We may block some write operations
