@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -1396,6 +1397,50 @@ public class TestIPC {
   public void testClientGetTimeout() throws IOException {
     Configuration config = new Configuration();
     assertEquals(Client.getTimeout(config), -1);
+  }
+
+  @Test(timeout=60000)
+  public void testSetupConnectionShouldNotBlockShutdown() throws Exception {
+    // Start server
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Server server = new TestServer(1, true);
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+
+    // Track how many times we retried to set up the connection
+    final AtomicInteger createSocketCalled = new AtomicInteger();
+
+    doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        createSocketCalled.addAndGet(1);
+        Thread.sleep(MIN_SLEEP_TIME * 5);
+        throw new ConnectTimeoutException("fake");
+      }
+    }).when(mockFactory).createSocket();
+    final Client client = new Client(LongWritable.class, conf, mockFactory);
+
+    final AtomicBoolean callStarted = new AtomicBoolean(false);
+
+    // Call a random function asynchronously so that we can call stop()
+    new Thread(new Runnable() {
+      public void run() {
+        try {
+          callStarted.set(true);
+          call(client, RANDOM.nextLong(), addr, conf);
+        } catch (IOException ignored) {}
+      }
+    }).start();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return callStarted.get() && createSocketCalled.get() == 1;
+      }
+    }, 50, 60000);
+
+    // stop() should stop the client immediately without any more retries
+    client.stop();
+    assertEquals(1, createSocketCalled.get());
   }
 
   private void assertRetriesOnSocketTimeouts(Configuration conf,
