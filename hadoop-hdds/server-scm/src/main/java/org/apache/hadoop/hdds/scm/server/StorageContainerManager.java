@@ -218,7 +218,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     NewNodeHandler newNodeHandler = new NewNodeHandler(node2ContainerMap);
     StaleNodeHandler staleNodeHandler = new StaleNodeHandler(node2ContainerMap);
-    DeadNodeHandler deadNodeHandler = new DeadNodeHandler(node2ContainerMap);
+    DeadNodeHandler deadNodeHandler = new DeadNodeHandler(node2ContainerMap,
+        getScmContainerManager().getStateManager());
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
     PendingDeleteHandler pendingDeleteHandler =
         new PendingDeleteHandler(scmBlockManager.getSCMBlockDeletingService());

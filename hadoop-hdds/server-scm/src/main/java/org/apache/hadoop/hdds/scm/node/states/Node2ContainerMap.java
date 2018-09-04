@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.hdds.scm.node.states;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -30,8 +26,15 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.DUPLICATE_DATANODE;
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.NO_SUCH_DATANODE;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
+    .DUPLICATE_DATANODE;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
+    .NO_SUCH_DATANODE;
 
 /**
  * This data structure maintains the list of containers that is on a datanode.
@@ -62,7 +65,7 @@ public class Node2ContainerMap {
   /**
    * Insert a new datanode into Node2Container Map.
    *
-   * @param datanodeID -- Datanode UUID
+   * @param datanodeID   -- Datanode UUID
    * @param containerIDs - List of ContainerIDs.
    */
   public void insertNewDatanode(UUID datanodeID, Set<ContainerID> containerIDs)
@@ -72,7 +75,7 @@ public class Node2ContainerMap {
     if (dn2ContainerMap.putIfAbsent(datanodeID, new HashSet<>(containerIDs))
         != null) {
       throw new SCMException("Node already exists in the map",
-                  DUPLICATE_DATANODE);
+          DUPLICATE_DATANODE);
     }
   }
 
@@ -97,6 +100,7 @@ public class Node2ContainerMap {
 
   /**
    * Removes datanode Entry from the map.
+   *
    * @param datanodeID - Datanode ID.
    */
   public void removeDatanode(UUID datanodeID) {
@@ -170,10 +174,6 @@ public class Node2ContainerMap {
         .build();
   }
 
-
-
-
-
   /**
    * Results possible from processing a container report by
    * Node2ContainerMapper.
@@ -184,5 +184,10 @@ public class Node2ContainerMap {
     NEW_CONTAINERS_FOUND,
     MISSING_AND_NEW_CONTAINERS_FOUND,
     NEW_DATANODE_FOUND
+  }
+
+  @VisibleForTesting
+  public int size() {
+    return dn2ContainerMap.size();
   }
 }
