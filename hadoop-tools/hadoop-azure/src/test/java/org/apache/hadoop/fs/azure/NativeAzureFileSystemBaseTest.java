@@ -1488,7 +1488,7 @@ public abstract class NativeAzureFileSystemBaseTest
     Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     long currentUtcTime = utc.getTime().getTime();
     FileStatus fileStatus = fs.getFileStatus(testPath);
-    final long errorMargin = 10 * 1000; // Give it +/-10 seconds
+    final long errorMargin = 60 * 1000; // Give it +/-60 seconds
     assertTrue("Modification time " +
         new Date(fileStatus.getModificationTime()) + " is not close to now: " +
         utc.getTime(),

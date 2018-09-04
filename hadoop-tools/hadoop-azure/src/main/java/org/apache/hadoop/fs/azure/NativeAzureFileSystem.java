@@ -32,9 +32,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -126,20 +124,12 @@ public class NativeAzureFileSystem extends FileSystem {
       this.dstKey = dstKey;
       this.folderLease = lease;
       this.fs = fs;
-      ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
 
       // List all the files in the folder.
       long start = Time.monotonicNow();
-      String priorLastKey = null;
-      do {
-        PartialListing listing = fs.getStoreInterface().listAll(srcKey, AZURE_LIST_ALL,
-          AZURE_UNBOUNDED_DEPTH, priorLastKey);
-        for(FileMetadata file : listing.getFiles()) {
-          fileMetadataList.add(file);
-        }
-        priorLastKey = listing.getPriorLastKey();
-      } while (priorLastKey != null);
-      fileMetadata = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
+      fileMetadata = fs.getStoreInterface().list(srcKey, AZURE_LIST_ALL,
+          AZURE_UNBOUNDED_DEPTH);
+
       long end = Time.monotonicNow();
       LOG.debug("Time taken to list {} blobs for rename operation is: {} ms", fileMetadata.length, (end - start));
 
@@ -668,7 +658,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   public static final Logger LOG = LoggerFactory.getLogger(NativeAzureFileSystem.class);
 
-  static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   /**
    * The time span in seconds before which we consider a temp blob to be
    * dangling (not being actively uploaded to) and up for reclamation.
@@ -683,8 +672,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private static final int AZURE_LIST_ALL = -1;
   private static final int AZURE_UNBOUNDED_DEPTH = -1;
-
-  private static final long MAX_AZURE_BLOCK_SIZE = 512 * 1024 * 1024L;
 
   /**
    * The configuration property that determines which group owns files created
@@ -1204,7 +1191,6 @@ public class NativeAzureFileSystem extends FileSystem {
   private NativeFileSystemStore store;
   private AzureNativeFileSystemStore actualStore;
   private Path workingDir;
-  private long blockSize = MAX_AZURE_BLOCK_SIZE;
   private AzureFileSystemInstrumentation instrumentation;
   private String metricsSourceName;
   private boolean isClosed = false;
@@ -1369,13 +1355,10 @@ public class NativeAzureFileSystem extends FileSystem {
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", UserGroupInformation.getCurrentUser()
         .getShortUserName()).makeQualified(getUri(), getWorkingDirectory());
-    this.blockSize = conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME,
-        MAX_AZURE_BLOCK_SIZE);
 
     this.appendSupportEnabled = conf.getBoolean(APPEND_SUPPORT_ENABLE_PROPERTY_NAME, false);
     LOG.debug("NativeAzureFileSystem. Initializing.");
-    LOG.debug("  blockSize  = {}",
-        conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME, MAX_AZURE_BLOCK_SIZE));
+    LOG.debug("  blockSize  = {}", store.getHadoopBlockSize());
 
     // Initialize thread counts from user configuration
     deleteThreadCount = conf.getInt(AZURE_DELETE_THREADS, DEFAULT_AZURE_DELETE_THREADS);
@@ -1499,7 +1482,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
-  private static Path keyToPath(String key) {
+  static Path keyToPath(String key) {
     if (key.equals("/")) {
       return new Path("/"); // container
     }
@@ -1607,7 +1590,7 @@ public class NativeAzureFileSystem extends FileSystem {
       throw new FileNotFoundException(f.toString());
     }
 
-    if (meta.isDir()) {
+    if (meta.isDirectory()) {
       throw new FileNotFoundException(f.toString()
           + " is a directory not a file.");
     }
@@ -1823,7 +1806,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     FileMetadata existingMetadata = store.retrieveMetadata(key);
     if (existingMetadata != null) {
-      if (existingMetadata.isDir()) {
+      if (existingMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create file " + f
             + "; already exists as a directory.");
       }
@@ -1841,7 +1824,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // already exists.
       String parentKey = pathToKey(parentFolder);
       FileMetadata parentMetadata = store.retrieveMetadata(parentKey);
-      if (parentMetadata != null && parentMetadata.isDir() &&
+      if (parentMetadata != null && parentMetadata.isDirectory() &&
         parentMetadata.getBlobMaterialization() == BlobMaterialization.Explicit) {
         if (parentFolderLease != null) {
           store.updateFolderLastModifiedTime(parentKey, parentFolderLease);
@@ -1858,7 +1841,7 @@ public class NativeAzureFileSystem extends FileSystem {
           firstExisting = firstExisting.getParent();
           metadata = store.retrieveMetadata(pathToKey(firstExisting));
         }
-        mkdirs(parentFolder, metadata.getPermissionStatus().getPermission(), true);
+        mkdirs(parentFolder, metadata.getPermission(), true);
       }
     }
 
@@ -1996,7 +1979,7 @@ public class NativeAzureFileSystem extends FileSystem {
               + parentPath + " whose metadata cannot be retrieved. Can't resolve");
       }
 
-      if (!parentMetadata.isDir()) {
+      if (!parentMetadata.isDirectory()) {
          // Invalid state: the parent path is actually a file. Throw.
          throw new AzureException("File " + f + " has a parent directory "
              + parentPath + " which is also a file. Can't resolve.");
@@ -2005,7 +1988,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // The path exists, determine if it is a folder containing objects,
     // an empty folder, or a simple file and take the appropriate actions.
-    if (!metaFile.isDir()) {
+    if (!metaFile.isDirectory()) {
       // The path specifies a file. We need to check the parent path
       // to make sure it's a proper materialized directory before we
       // delete the file. Otherwise we may get into a situation where
@@ -2122,9 +2105,9 @@ public class NativeAzureFileSystem extends FileSystem {
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
         public boolean execute(FileMetadata file) throws IOException{
-          if (!deleteFile(file.getKey(), file.isDir())) {
+          if (!deleteFile(file.getKey(), file.isDirectory())) {
             LOG.warn("Attempt to delete non-existent {} {}",
-                file.isDir() ? "directory" : "file",
+                file.isDirectory() ? "directory" : "file",
                 file.getKey());
           }
           return true;
@@ -2146,7 +2129,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // Delete the current directory if all underlying contents are deleted
       if (isPartialDelete || (store.retrieveMetadata(metaFile.getKey()) != null
-          && !deleteFile(metaFile.getKey(), metaFile.isDir()))) {
+          && !deleteFile(metaFile.getKey(), metaFile.isDirectory()))) {
         LOG.error("Failed delete directory : {}", f);
         return false;
       }
@@ -2199,7 +2182,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // The path exists, determine if it is a folder containing objects,
     // an empty folder, or a simple file and take the appropriate actions.
-    if (!metaFile.isDir()) {
+    if (!metaFile.isDirectory()) {
       // The path specifies a file. We need to check the parent path
       // to make sure it's a proper materialized directory before we
       // delete the file. Otherwise we may get into a situation where
@@ -2242,7 +2225,7 @@ public class NativeAzureFileSystem extends FileSystem {
               + parentPath + " whose metadata cannot be retrieved. Can't resolve");
         }
 
-        if (!parentMetadata.isDir()) {
+        if (!parentMetadata.isDirectory()) {
           // Invalid state: the parent path is actually a file. Throw.
           throw new AzureException("File " + f + " has a parent directory "
               + parentPath + " which is also a file. Can't resolve.");
@@ -2327,38 +2310,27 @@ public class NativeAzureFileSystem extends FileSystem {
         }
       }
 
-      // List all the blobs in the current folder.
-      String priorLastKey = null;
-
       // Start time for list operation
       long start = Time.monotonicNow();
-      ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
+      final FileMetadata[] contents;
 
       // List all the files in the folder with AZURE_UNBOUNDED_DEPTH depth.
-      do {
-        try {
-          PartialListing listing = store.listAll(key, AZURE_LIST_ALL,
-            AZURE_UNBOUNDED_DEPTH, priorLastKey);
-          for(FileMetadata file : listing.getFiles()) {
-            fileMetadataList.add(file);
-          }
-          priorLastKey = listing.getPriorLastKey();
-        } catch (IOException e) {
-          Throwable innerException = checkForAzureStorageException(e);
+      try {
+        contents = store.list(key, AZURE_LIST_ALL,
+            AZURE_UNBOUNDED_DEPTH);
+      } catch (IOException e) {
+        Throwable innerException = checkForAzureStorageException(e);
 
-          if (innerException instanceof StorageException
-              && isFileNotFoundException((StorageException) innerException)) {
-            return false;
-          }
-
-          throw e;
+        if (innerException instanceof StorageException
+            && isFileNotFoundException((StorageException) innerException)) {
+          return false;
         }
-      } while (priorLastKey != null);
+
+        throw e;
+      }
 
       long end = Time.monotonicNow();
-      LOG.debug("Time taken to list {} blobs for delete operation: {} ms", fileMetadataList.size(), (end - start));
-
-      final FileMetadata[] contents = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
+      LOG.debug("Time taken to list {} blobs for delete operation: {} ms", contents.length, (end - start));
 
       if (contents.length > 0) {
         if (!recursive) {
@@ -2373,9 +2345,9 @@ public class NativeAzureFileSystem extends FileSystem {
       AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
         @Override
         public boolean execute(FileMetadata file) throws IOException{
-          if (!deleteFile(file.getKey(), file.isDir())) {
+          if (!deleteFile(file.getKey(), file.isDirectory())) {
             LOG.warn("Attempt to delete non-existent {} {}",
-                file.isDir() ? "directory" : "file",
+                file.isDirectory() ? "directory" : "file",
                 file.getKey());
           }
           return true;
@@ -2392,7 +2364,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // Delete the current directory
       if (store.retrieveMetadata(metaFile.getKey()) != null
-          && !deleteFile(metaFile.getKey(), metaFile.isDir())) {
+          && !deleteFile(metaFile.getKey(), metaFile.isDirectory())) {
         LOG.error("Failed delete directory : {}", f);
         return false;
       }
@@ -2464,13 +2436,13 @@ public class NativeAzureFileSystem extends FileSystem {
 
     boolean isPartialDelete = false;
 
-    Path pathToDelete = makeAbsolute(keyToPath(folderToDelete.getKey()));
+    Path pathToDelete = makeAbsolute(folderToDelete.getPath());
     foldersToProcess.push(folderToDelete);
 
     while (!foldersToProcess.empty()) {
 
       FileMetadata currentFolder = foldersToProcess.pop();
-      Path currentPath = makeAbsolute(keyToPath(currentFolder.getKey()));
+      Path currentPath = makeAbsolute(currentFolder.getPath());
       boolean canDeleteChildren = true;
 
       // If authorization is enabled, check for 'write' permission on current folder
@@ -2486,8 +2458,8 @@ public class NativeAzureFileSystem extends FileSystem {
       if (canDeleteChildren) {
 
         // get immediate children list
-        ArrayList<FileMetadata> fileMetadataList = getChildrenMetadata(currentFolder.getKey(),
-            maxListingDepth);
+        FileMetadata[] fileMetadataList = store.list(currentFolder.getKey(),
+            AZURE_LIST_ALL, maxListingDepth);
 
         // Process children of currentFolder and add them to list of contents
         // that can be deleted. We Perform stickybit check on every file and
@@ -2498,12 +2470,12 @@ public class NativeAzureFileSystem extends FileSystem {
             // This file/folder cannot be deleted and neither can the parent paths be deleted.
             // Remove parent paths from list of contents that can be deleted.
             canDeleteChildren = false;
-            Path filePath = makeAbsolute(keyToPath(childItem.getKey()));
+            Path filePath = makeAbsolute(childItem.getPath());
             LOG.error("User does not have permissions to delete {}. "
               + "Parent directory has sticky bit set.", filePath);
           } else {
             // push the child directories to the stack to process their contents
-            if (childItem.isDir()) {
+            if (childItem.isDirectory()) {
               foldersToProcess.push(childItem);
             }
             // Add items to list of contents that can be deleted.
@@ -2546,23 +2518,6 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     return isPartialDelete;
-  }
-
-  private ArrayList<FileMetadata> getChildrenMetadata(String key, int maxListingDepth)
-    throws IOException {
-
-    String priorLastKey = null;
-    ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
-    do {
-       PartialListing listing = store.listAll(key, AZURE_LIST_ALL,
-         maxListingDepth, priorLastKey);
-       for (FileMetadata file : listing.getFiles()) {
-         fileMetadataList.add(file);
-       }
-       priorLastKey = listing.getPriorLastKey();
-    } while (priorLastKey != null);
-
-    return fileMetadataList;
   }
 
   private boolean isStickyBitCheckViolated(FileMetadata metaData,
@@ -2610,13 +2565,13 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     // stickybit is not set on parent and hence cannot be violated
-    if (!parentMetadata.getPermissionStatus().getPermission().getStickyBit()) {
+    if (!parentMetadata.getPermission().getStickyBit()) {
       return false;
     }
 
     String currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
-    String parentDirectoryOwner = parentMetadata.getPermissionStatus().getUserName();
-    String currentFileOwner = metaData.getPermissionStatus().getUserName();
+    String parentDirectoryOwner = parentMetadata.getOwner();
+    String currentFileOwner = metaData.getOwner();
 
     // Files/Folders with no owner set will not pass stickybit check
     if ((parentDirectoryOwner.equalsIgnoreCase(currentUser))
@@ -2695,7 +2650,15 @@ public class NativeAzureFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
-      return newDirectory(null, absolutePath);
+      return new FileStatus(
+          0,
+          true,
+          1,
+          store.getHadoopBlockSize(),
+          0,
+          0,
+          FsPermission.getDefault(), "", "",
+          absolutePath.makeQualified(getUri(), getWorkingDirectory()));
     }
 
     // The path is either a folder or a file. Retrieve metadata to
@@ -2717,7 +2680,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     if (meta != null) {
-      if (meta.isDir()) {
+      if (meta.isDirectory()) {
         // The path is a folder with files in it.
         //
 
@@ -2731,14 +2694,14 @@ public class NativeAzureFileSystem extends FileSystem {
         }
 
         // Return reference to the directory object.
-        return newDirectory(meta, absolutePath);
+        return updateFileStatusPath(meta, absolutePath);
       }
 
       // The path is a file.
       LOG.debug("Found the path: {} as a file.", f.toString());
 
       // Return with reference to a file object.
-      return newFile(meta, absolutePath);
+      return updateFileStatusPath(meta, absolutePath);
     }
 
     // File not found. Throw exception no such file or directory.
@@ -2795,7 +2758,7 @@ public class NativeAzureFileSystem extends FileSystem {
     performAuthCheck(absolutePath, WasbAuthorizationOperations.READ, "liststatus", absolutePath);
 
     String key = pathToKey(absolutePath);
-    Set<FileStatus> status = new TreeSet<FileStatus>();
+
     FileMetadata meta = null;
     try {
       meta = store.retrieveMetadata(key);
@@ -2812,101 +2775,93 @@ public class NativeAzureFileSystem extends FileSystem {
       throw ex;
     }
 
-    if (meta != null) {
-      if (!meta.isDir()) {
+    if (meta == null) {
+      // There is no metadata found for the path.
+      LOG.debug("Did not find any metadata for path: {}", key);
+      throw new FileNotFoundException(f + " is not found");
+    }
 
-        LOG.debug("Found path as a file");
+    if (!meta.isDirectory()) {
+      LOG.debug("Found path as a file");
+      return new FileStatus[] { updateFileStatusPath(meta, absolutePath) };
+    }
 
-        return new FileStatus[] { newFile(meta, absolutePath) };
-      }
+    FileMetadata[] listing;
 
-      String partialKey = null;
-      PartialListing listing = null;
+    listing = listWithErrorHandling(key, AZURE_LIST_ALL, 1);
 
-      try {
-        listing  = store.list(key, AZURE_LIST_ALL, 1, partialKey);
-      } catch (IOException ex) {
+    // NOTE: We don't check for Null condition as the Store API should return
+    // an empty list if there are not listing.
 
-        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+    // For any -RenamePending.json files in the listing,
+    // push the rename forward.
+    boolean renamed = conditionalRedoFolderRenames(listing);
 
-        if (innerException instanceof StorageException
-            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+    // If any renames were redone, get another listing,
+    // since the current one may have changed due to the redo.
+    if (renamed) {
+      listing = listWithErrorHandling(key, AZURE_LIST_ALL, 1);
+    }
 
-            throw new FileNotFoundException(String.format("%s is not found", key));
-        }
+    // We only need to check for AZURE_TEMP_FOLDER if the key is the root,
+    // and if it is not the root we also know the exact size of the array
+    // of FileStatus.
 
-        throw ex;
-      }
-      // NOTE: We don't check for Null condition as the Store API should return
-      // an empty list if there are not listing.
+    FileMetadata[] result = null;
 
-      // For any -RenamePending.json files in the listing,
-      // push the rename forward.
-      boolean renamed = conditionalRedoFolderRenames(listing);
+    if (key.equals("/")) {
+      ArrayList<FileMetadata> status = new ArrayList<>(listing.length);
 
-      // If any renames were redone, get another listing,
-      // since the current one may have changed due to the redo.
-      if (renamed) {
-       listing = null;
-       try {
-         listing = store.list(key, AZURE_LIST_ALL, 1, partialKey);
-       } catch (IOException ex) {
-         Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
-
-         if (innerException instanceof StorageException
-             && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-
-           throw new FileNotFoundException(String.format("%s is not found", key));
-         }
-
-         throw ex;
-       }
-      }
-
-      // NOTE: We don't check for Null condition as the Store API should return
-      // and empty list if there are not listing.
-
-      for (FileMetadata fileMetadata : listing.getFiles()) {
-        Path subpath = keyToPath(fileMetadata.getKey());
-
-        // Test whether the metadata represents a file or directory and
-        // add the appropriate metadata object.
-        //
-        // Note: There was a very old bug here where directories were added
-        // to the status set as files flattening out recursive listings
-        // using "-lsr" down the file system hierarchy.
-        if (fileMetadata.isDir()) {
+      for (FileMetadata fileMetadata : listing) {
+        if (fileMetadata.isDirectory()) {
           // Make sure we hide the temp upload folder
           if (fileMetadata.getKey().equals(AZURE_TEMP_FOLDER)) {
             // Don't expose that.
             continue;
           }
-          status.add(newDirectory(fileMetadata, subpath));
+          status.add(updateFileStatusPath(fileMetadata, fileMetadata.getPath()));
         } else {
-          status.add(newFile(fileMetadata, subpath));
+          status.add(updateFileStatusPath(fileMetadata, fileMetadata.getPath()));
         }
       }
-
-      LOG.debug("Found path as a directory with {}"
-          + " files in it.", status.size());
-
+      result = status.toArray(new FileMetadata[0]);
     } else {
-      // There is no metadata found for the path.
-      LOG.debug("Did not find any metadata for path: {}", key);
-
-      throw new FileNotFoundException(f + " is not found");
+      for (int i = 0; i < listing.length; i++) {
+        FileMetadata fileMetadata = listing[i];
+          listing[i] = updateFileStatusPath(fileMetadata, fileMetadata.getPath());
+      }
+      result = listing;
     }
 
-    return status.toArray(new FileStatus[0]);
+    LOG.debug("Found path as a directory with {}"
+        + " files in it.", result.length);
+
+    return result;
+  }
+
+  private FileMetadata[] listWithErrorHandling(String prefix, final int maxListingCount,
+                                              final int maxListingDepth) throws IOException {
+    try {
+      return store.list(prefix, maxListingCount, maxListingDepth);
+    } catch (IOException ex) {
+      Throwable innerException
+          = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException(
+          (StorageException) innerException)) {
+        throw new FileNotFoundException(String.format("%s is not found", prefix));
+      }
+      throw ex;
+    }
   }
 
   // Redo any folder renames needed if there are rename pending files in the
   // directory listing. Return true if one or more redo operations were done.
-  private boolean conditionalRedoFolderRenames(PartialListing listing)
+  private boolean conditionalRedoFolderRenames(FileMetadata[] listing)
       throws IllegalArgumentException, IOException {
     boolean renamed = false;
-    for (FileMetadata fileMetadata : listing.getFiles()) {
-      Path subpath = keyToPath(fileMetadata.getKey());
+    for (FileMetadata fileMetadata : listing) {
+      Path subpath = fileMetadata.getPath();
       if (isRenamePendingFile(subpath)) {
         FolderRenamePending pending =
             new FolderRenamePending(subpath, this);
@@ -2922,32 +2877,11 @@ public class NativeAzureFileSystem extends FileSystem {
     return path.toString().endsWith(FolderRenamePending.SUFFIX);
   }
 
-  private FileStatus newFile(FileMetadata meta, Path path) {
-    return new FileStatus (
-        meta.getLength(),
-        false,
-        1,
-        blockSize,
-        meta.getLastModified(),
-        0,
-        meta.getPermissionStatus().getPermission(),
-        meta.getPermissionStatus().getUserName(),
-        meta.getPermissionStatus().getGroupName(),
-        path.makeQualified(getUri(), getWorkingDirectory()));
-  }
-
-  private FileStatus newDirectory(FileMetadata meta, Path path) {
-    return new FileStatus (
-        0,
-        true,
-        1,
-        blockSize,
-        meta == null ? 0 : meta.getLastModified(),
-        0,
-        meta == null ? FsPermission.getDefault() : meta.getPermissionStatus().getPermission(),
-        meta == null ? "" : meta.getPermissionStatus().getUserName(),
-        meta == null ? "" : meta.getPermissionStatus().getGroupName(),
-        path.makeQualified(getUri(), getWorkingDirectory()));
+  private FileMetadata updateFileStatusPath(FileMetadata meta, Path path) {
+    meta.setPath(path.makeQualified(getUri(), getWorkingDirectory()));
+    // reduce memory use by setting the internal-only key to null
+    meta.removeKey();
+    return meta;
   }
 
   private static enum UMaskApplyMode {
@@ -3008,8 +2942,8 @@ public class NativeAzureFileSystem extends FileSystem {
 
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
-      if (currentMetadata != null && currentMetadata.isDir()) {
-        Path ancestor = keyToPath(currentMetadata.getKey());
+      if (currentMetadata != null && currentMetadata.isDirectory()) {
+        Path ancestor = currentMetadata.getPath();
         LOG.debug("Found ancestor {}, for path: {}", ancestor.toString(), f.toString());
         return ancestor;
       }
@@ -3062,7 +2996,7 @@ public class NativeAzureFileSystem extends FileSystem {
         current = parent, parent = current.getParent()) {
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
-      if (currentMetadata != null && !currentMetadata.isDir()) {
+      if (currentMetadata != null && !currentMetadata.isDirectory()) {
         throw new FileAlreadyExistsException("Cannot create directory " + f + " because "
             + current + " is an existing file.");
       } else if (currentMetadata == null) {
@@ -3117,7 +3051,7 @@ public class NativeAzureFileSystem extends FileSystem {
     if (meta == null) {
       throw new FileNotFoundException(f.toString());
     }
-    if (meta.isDir()) {
+    if (meta.isDirectory()) {
       throw new FileNotFoundException(f.toString()
           + " is a directory not a file.");
     }
@@ -3138,7 +3072,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     return new FSDataInputStream(new BufferedFSInputStream(
-        new NativeAzureFsInputStream(inputStream, key, meta.getLength()), bufferSize));
+        new NativeAzureFsInputStream(inputStream, key, meta.getLen()), bufferSize));
   }
 
   @Override
@@ -3214,7 +3148,7 @@ public class NativeAzureFileSystem extends FileSystem {
       }
     }
 
-    if (dstMetadata != null && dstMetadata.isDir()) {
+    if (dstMetadata != null && dstMetadata.isDirectory()) {
       // It's an existing directory.
       performAuthCheck(absoluteDstPath, WasbAuthorizationOperations.WRITE, "rename",
           absoluteDstPath);
@@ -3250,7 +3184,7 @@ public class NativeAzureFileSystem extends FileSystem {
         LOG.debug("Parent of the destination {}"
             + " doesn't exist, failing the rename.", dst);
         return false;
-      } else if (!parentOfDestMetadata.isDir()) {
+      } else if (!parentOfDestMetadata.isDirectory()) {
         LOG.debug("Parent of the destination {}"
             + " is a file, failing the rename.", dst);
         return false;
@@ -3279,7 +3213,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Source doesn't exist
       LOG.debug("Source {} doesn't exist, failing the rename.", src);
       return false;
-    } else if (!srcMetadata.isDir()) {
+    } else if (!srcMetadata.isDirectory()) {
       LOG.debug("Source {} found as a file, renaming.", src);
       try {
         // HADOOP-15086 - file rename must ensure that the destination does
@@ -3353,7 +3287,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // single file. In this case, the parent folder no longer exists if the
       // file is renamed; so we can safely ignore the null pointer case.
       if (parentMetadata != null) {
-        if (parentMetadata.isDir()
+        if (parentMetadata.isDirectory()
             && parentMetadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
           store.storeEmptyFolder(parentKey,
               createPermissionStatus(FsPermission.getDefault()));
@@ -3529,7 +3463,7 @@ public class NativeAzureFileSystem extends FileSystem {
           && !isAllowedUser(currentUgi.getShortUserName(), daemonUsers)) {
 
         //Check if the user is the owner of the file.
-        String owner = metadata.getPermissionStatus().getUserName();
+        String owner = metadata.getOwner();
         if (!currentUgi.getShortUserName().equals(owner)) {
           throw new WasbAuthorizationException(
               String.format("user '%s' does not have the privilege to "
@@ -3540,16 +3474,16 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     permission = applyUMask(permission,
-        metadata.isDir() ? UMaskApplyMode.ChangeExistingDirectory
+        metadata.isDirectory() ? UMaskApplyMode.ChangeExistingDirectory
             : UMaskApplyMode.ChangeExistingFile);
     if (metadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
       // It's an implicit folder, need to materialize it.
       store.storeEmptyFolder(key, createPermissionStatus(permission));
-    } else if (!metadata.getPermissionStatus().getPermission().
+    } else if (!metadata.getPermission().
         equals(permission)) {
       store.changePermissionStatus(key, new PermissionStatus(
-          metadata.getPermissionStatus().getUserName(),
-          metadata.getPermissionStatus().getGroupName(),
+          metadata.getOwner(),
+          metadata.getGroup(),
           permission));
     }
   }
@@ -3597,10 +3531,10 @@ public class NativeAzureFileSystem extends FileSystem {
 
     PermissionStatus newPermissionStatus = new PermissionStatus(
         username == null ?
-            metadata.getPermissionStatus().getUserName() : username,
+            metadata.getOwner() : username,
         groupname == null ?
-            metadata.getPermissionStatus().getGroupName() : groupname,
-        metadata.getPermissionStatus().getPermission());
+            metadata.getGroup() : groupname,
+        metadata.getPermission());
     if (metadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
       // It's an implicit folder, need to materialize it.
       store.storeEmptyFolder(key, newPermissionStatus);
@@ -3796,30 +3730,26 @@ public class NativeAzureFileSystem extends FileSystem {
             AZURE_TEMP_EXPIRY_DEFAULT) * 1000;
     // Go over all the blobs under the given root and look for blobs to
     // recover.
-    String priorLastKey = null;
-    do {
-      PartialListing listing = store.listAll(pathToKey(root), AZURE_LIST_ALL,
-          AZURE_UNBOUNDED_DEPTH, priorLastKey);
+    FileMetadata[] listing = store.list(pathToKey(root), AZURE_LIST_ALL,
+        AZURE_UNBOUNDED_DEPTH);
 
-      for (FileMetadata file : listing.getFiles()) {
-        if (!file.isDir()) { // We don't recover directory blobs
-          // See if this blob has a link in it (meaning it's a place-holder
-          // blob for when the upload to the temp blob is complete).
-          String link = store.getLinkInFileMetadata(file.getKey());
-          if (link != null) {
-            // It has a link, see if the temp blob it is pointing to is
-            // existent and old enough to be considered dangling.
-            FileMetadata linkMetadata = store.retrieveMetadata(link);
-            if (linkMetadata != null
-                && linkMetadata.getLastModified() >= cutoffForDangling) {
-              // Found one!
-              handler.handleFile(file, linkMetadata);
-            }
+    for (FileMetadata file : listing) {
+      if (!file.isDirectory()) { // We don't recover directory blobs
+        // See if this blob has a link in it (meaning it's a place-holder
+        // blob for when the upload to the temp blob is complete).
+        String link = store.getLinkInFileMetadata(file.getKey());
+        if (link != null) {
+          // It has a link, see if the temp blob it is pointing to is
+          // existent and old enough to be considered dangling.
+          FileMetadata linkMetadata = store.retrieveMetadata(link);
+          if (linkMetadata != null
+              && linkMetadata.getModificationTime() >= cutoffForDangling) {
+            // Found one!
+            handler.handleFile(file, linkMetadata);
           }
         }
       }
-      priorLastKey = listing.getPriorLastKey();
-    } while (priorLastKey != null);
+    }
   }
 
   /**
@@ -3906,7 +3836,7 @@ public class NativeAzureFileSystem extends FileSystem {
       meta = store.retrieveMetadata(key);
 
       if (meta != null) {
-        owner = meta.getPermissionStatus().getUserName();
+        owner = meta.getOwner();
         LOG.debug("Retrieved '{}' as owner for path - {}", owner, absolutePath);
       } else {
         // meta will be null if file/folder doen not exist
