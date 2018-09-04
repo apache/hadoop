@@ -953,8 +953,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
       KeyVersion decrypted;
       try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
+        LOG.debug("Start decrypting EDEK for file: {}, output stream: 0x{}",
+            dfsos.getSrc(), Integer.toHexString(dfsos.hashCode()));
         decrypted = HdfsKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
           getKeyProvider());
+        LOG.debug("Decrypted EDEK for file: {}, output stream: 0x{}",
+            dfsos.getSrc(), Integer.toHexString(dfsos.hashCode()));
       }
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
