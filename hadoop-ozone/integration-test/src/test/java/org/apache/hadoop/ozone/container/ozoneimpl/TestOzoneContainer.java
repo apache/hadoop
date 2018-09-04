@@ -513,7 +513,7 @@ public class TestOzoneContainer {
     return new XceiverClientGrpc(pipeline, conf);
   }
 
-  private static void createContainerForTesting(XceiverClientSpi client,
+  public static void createContainerForTesting(XceiverClientSpi client,
       long containerID) throws Exception {
     // Create container
     ContainerProtos.ContainerCommandRequestProto request =
@@ -525,7 +525,7 @@ public class TestOzoneContainer {
     Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
   }
 
-  private static ContainerProtos.ContainerCommandRequestProto
+  public static ContainerProtos.ContainerCommandRequestProto
       writeChunkForContainer(XceiverClientSpi client,
       long containerID, int dataLen) throws Exception {
     // Write Chunk

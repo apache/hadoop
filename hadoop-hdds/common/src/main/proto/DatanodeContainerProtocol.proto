@@ -430,16 +430,22 @@ message CopyContainerRequestProto {
 }
 
 message CopyContainerResponseProto {
-  required string archiveName = 1;
+  required int64 containerID = 1;
   required uint64 readOffset = 2;
   required uint64 len = 3;
   required bool eof = 4;
-  repeated bytes data = 5;
+  required bytes data = 5;
   optional int64 checksum = 6;
 }
 
 service XceiverClientProtocolService {
   // A client-to-datanode RPC to send container commands
   rpc send(stream ContainerCommandRequestProto) returns
-    (stream ContainerCommandResponseProto) {}
+    (stream ContainerCommandResponseProto) {};
+
+}
+
+service IntraDatanodeProtocolService {
+  // An intradatanode service to copy the raw containerdata betwen nodes
+  rpc download (CopyContainerRequestProto) returns (stream CopyContainerResponseProto);
 }

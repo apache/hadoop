@@ -265,6 +265,9 @@ public final class OzoneConfigKeys {
   public static final long
       HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT = 10000L;
 
+  public static final String OZONE_CONTAINER_COPY_WORKDIR =
+      "hdds.datanode.replication.work.dir";
+
   /**
    * There is no need to instantiate this class.
    */

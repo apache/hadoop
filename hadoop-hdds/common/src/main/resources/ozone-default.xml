@@ -1124,4 +1124,12 @@
     on. Right now, we have SSD and DISK as profile options.</description>
   </property>
 
+  <property>
+    <name>hdds.datanode.replication.work.dir</name>
+    <tag>DATANODE</tag>
+    <description>Temporary which is used during the container replication
+      betweeen datanodes. Should have enough space to store multiple container
+      (in compressed format), but doesn't require fast io access such as SSD.
+    </description>
+  </property>
 </configuration>
