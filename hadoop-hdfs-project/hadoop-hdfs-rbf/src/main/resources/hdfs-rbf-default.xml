@@ -32,6 +32,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.default.nameservice.enable</name>
+    <value>true</value>
+    <description>
+      The default subcluster is enabled to read and write files.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.rpc.enable</name>
     <value>true</value>
     <description>
