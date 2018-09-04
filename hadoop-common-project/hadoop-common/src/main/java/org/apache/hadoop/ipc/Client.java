@@ -70,6 +70,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
@@ -439,6 +440,8 @@ public class Client implements AutoCloseable {
     
     private final Object sendRpcRequestLock = new Object();
 
+    private AtomicReference<Thread> connectingThread = new AtomicReference<>();
+
     public Connection(ConnectionId remoteId, int serviceClass) throws IOException {
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
@@ -777,6 +780,7 @@ public class Client implements AutoCloseable {
         }
       }
       try {
+        connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
         }
@@ -862,6 +866,8 @@ public class Client implements AutoCloseable {
           markClosed(new IOException("Couldn't set up IO streams: " + t, t));
         }
         close();
+      } finally {
+        connectingThread.set(null);
       }
     }
     
@@ -1215,6 +1221,13 @@ public class Client implements AutoCloseable {
         notifyAll();
       }
     }
+
+    private void interruptConnectingThread() {
+      Thread connThread = connectingThread.get();
+      if (connThread != null) {
+        connThread.interrupt();
+      }
+    }
     
     /** Close the connection. */
     private synchronized void close() {
@@ -1321,6 +1334,7 @@ public class Client implements AutoCloseable {
     // wake up all connections
     for (Connection conn : connections.values()) {
       conn.interrupt();
+      conn.interruptConnectingThread();
     }
     
     // wait until all connections are closed
