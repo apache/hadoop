@@ -59,7 +59,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
  * This is the CLI that can be use to convert an ozone metadata DB into
@@ -270,9 +269,6 @@ public class SQLCLI  extends Configured implements Tool {
     if (dbName.toString().endsWith(CONTAINER_DB_SUFFIX)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
-    } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
-      LOG.info("Converting open container DB");
-      convertOpenContainerDB(dbPath, outPath);
     } else if (dbName.toString().equals(OM_DB_NAME)) {
       LOG.info("Converting om DB");
       convertOMDB(dbPath, outPath);
