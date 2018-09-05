@@ -263,10 +263,14 @@ public class RouterAdmin extends Configured implements Tool {
       if ("-add".equals(cmd)) {
         if (addMount(argv, i)) {
           System.out.println("Successfully added mount point " + argv[i]);
+        } else {
+          exitCode = -1;
         }
       } else if ("-update".equals(cmd)) {
         if (updateMount(argv, i)) {
           System.out.println("Successfully updated mount point " + argv[i]);
+        } else {
+          exitCode = -1;
         }
       } else if ("-rm".equals(cmd)) {
         if (removeMount(argv[i])) {
@@ -369,6 +373,9 @@ public class RouterAdmin extends Configured implements Tool {
         i++;
         short modeValue = Short.parseShort(parameters[i], 8);
         mode = new FsPermission(modeValue);
+      } else {
+        printUsage("-add");
+        return false;
       }
 
       i++;
@@ -521,6 +528,9 @@ public class RouterAdmin extends Configured implements Tool {
         i++;
         short modeValue = Short.parseShort(parameters[i], 8);
         mode = new FsPermission(modeValue);
+      } else {
+        printUsage("-update");
+        return false;
       }
 
       i++;
