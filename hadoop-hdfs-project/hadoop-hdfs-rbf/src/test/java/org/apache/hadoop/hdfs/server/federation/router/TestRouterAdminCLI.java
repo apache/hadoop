@@ -224,6 +224,24 @@ public class TestRouterAdminCLI {
     testAddOrderMountTable(DestinationOrder.HASH_ALL);
   }
 
+  @Test
+  public void testAddOrderErrorMsg() throws Exception {
+    DestinationOrder order = DestinationOrder.HASH;
+    final String mnt = "/newAdd1" + order;
+    final String nsId = "ns0,ns1";
+    final String dest = "/changAdd";
+
+    String[] argv1 = new String[] {"-add", mnt, nsId, dest, "-order",
+        order.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv1));
+
+    // Add the order with wrong command
+    String[] argv = new String[] {"-add", mnt, nsId, dest, "-orde",
+        order.toString()};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+  }
+
   private void testAddOrderMountTable(DestinationOrder order)
       throws Exception {
     final String mnt = "/" + order;
@@ -403,7 +421,7 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-add", "/testpath2-2", "ns0", "/testdir2-2",
         "-owner", TEST_USER, "-group", TEST_USER, "-mode", "0255"};
     assertEquals(0, ToolRunner.run(admin, argv));
-    verifyExecutionResult("/testpath2-2", false, 0, 0);
+    verifyExecutionResult("/testpath2-2", false, -1, 0);
 
     // set mount table entry with read and write permission
     argv = new String[] {"-add", "/testpath2-3", "ns0", "/testdir2-3",
@@ -886,6 +904,43 @@ public class TestRouterAdminCLI {
     testUpdateOrderMountTable(DestinationOrder.LOCAL);
     testUpdateOrderMountTable(DestinationOrder.RANDOM);
     testUpdateOrderMountTable(DestinationOrder.HASH_ALL);
+  }
+
+  @Test
+  public void testOrderErrorMsg() throws Exception {
+    String nsId = "ns0";
+    DestinationOrder order = DestinationOrder.HASH;
+    String src = "/testod" + order.toString();
+    String dest = "/testUpd";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, mountTable.getDestinations().get(0).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(0).getDest());
+    assertEquals(DestinationOrder.HASH, mountTable.getDestOrder());
+
+    argv = new String[] {"-update", src, nsId, dest, "-order",
+        order.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    // Update the order with wrong command
+    argv = new String[] {"-update", src + "a", nsId, dest + "a", "-orde",
+        order.toString()};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    // Update without order argument
+    argv = new String[] {"-update", src, nsId, dest, order.toString()};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
   }
 
   private void testUpdateOrderMountTable(DestinationOrder order)
