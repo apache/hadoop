@@ -23,6 +23,9 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.codehaus.jackson.map.annotate.JsonRootName;
+
+@JsonRootName(value = "jobs")
 @XmlRootElement(name = "jobs")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class JobsInfo {
@@ -40,4 +43,11 @@ public class JobsInfo {
     return this.job;
   }
 
+  public ArrayList<JobInfo> getJob() {
+    return job;
+  }
+
+  public void setJob(ArrayList<JobInfo> job) {
+    this.job = job;
+  }
 }

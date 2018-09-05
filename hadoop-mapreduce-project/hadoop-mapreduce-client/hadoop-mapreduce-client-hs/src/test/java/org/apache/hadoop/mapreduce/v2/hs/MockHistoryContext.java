@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -31,10 +32,11 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-public class MockHistoryContext extends MockAppContext implements HistoryContext {
+public class MockHistoryContext extends MockAppContext implements HistoryContext, ConfigureAware {
 
   private final Map<JobId, Job> partialJobs;
   private final Map<JobId, Job> fullJobs;
+  private Configuration config = new Configuration();
   
   public MockHistoryContext(int numJobs, int numTasks, int numAttempts) {
     super(0);
@@ -109,4 +111,8 @@ public class MockHistoryContext extends MockAppContext implements HistoryContext
         offset, count, user, queue, sBegin, sEnd, fBegin, fEnd, jobState);
   }
 
+  @Override
+  public Configuration getConfig() {
+    return config;
+  }
 }
