@@ -53,6 +53,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.ListIterator;
 
 /**
  * Maintaining a list of ChunkInputStream. Write based on offset.
@@ -81,7 +82,6 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final int chunkSize;
   private final String requestID;
   private boolean closed;
-  private List<OmKeyLocationInfo> locationInfoList;
   private final RetryPolicy retryPolicy;
   /**
    * A constructor for testing purpose only.
@@ -97,7 +97,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     chunkSize = 0;
     requestID = null;
     closed = false;
-    locationInfoList = null;
     retryPolicy = null;
   }
 
@@ -118,9 +117,16 @@ public class ChunkGroupOutputStream extends OutputStream {
     return streamEntries;
   }
 
-  @VisibleForTesting
-  public long getOpenID() {
-    return openID;
+  public List<OmKeyLocationInfo> getLocationInfoList() {
+    List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
+    for (ChunkOutputStreamEntry streamEntry : streamEntries) {
+      OmKeyLocationInfo info =
+          new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
+              .setShouldCreateContainer(false)
+              .setLength(streamEntry.currentPosition).setOffset(0).build();
+      locationInfoList.add(info);
+    }
+    return locationInfoList;
   }
 
   public ChunkGroupOutputStream(
@@ -146,7 +152,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.xceiverClientManager = xceiverClientManager;
     this.chunkSize = chunkSize;
     this.requestID = requestId;
-    this.locationInfoList = new ArrayList<>();
     this.retryPolicy = retryPolicy;
     LOG.debug("Expecting open key with one block, but got" +
         info.getKeyLocationVersions().size());
@@ -211,18 +216,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
         chunkSize, subKeyInfo.getLength()));
-    // reset the original length to zero here. It will be updated as and when
-    // the data gets written.
-    subKeyInfo.setLength(0);
-    locationInfoList.add(subKeyInfo);
-  }
-
-  private void incrementBlockLength(int index, long length) {
-    if (locationInfoList != null) {
-      OmKeyLocationInfo locationInfo = locationInfoList.get(index);
-      long originalLength = locationInfo.getLength();
-      locationInfo.setLength(originalLength + length);
-    }
   }
 
   @VisibleForTesting
@@ -298,7 +291,6 @@ public class ChunkGroupOutputStream extends OutputStream {
           throw ioe;
         }
       }
-      incrementBlockLength(currentStreamIndex, writeLen);
       if (current.getRemaining() <= 0) {
         // since the current block is already written close the stream.
         handleFlushOrClose(true);
@@ -316,12 +308,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     ContainerProtos.GetCommittedBlockLengthResponseProto responseProto;
     RetryPolicy.RetryAction action;
     int numRetries = 0;
-
-    // TODO : At this point of time, we also need to allocate new blocks
-    // from a different container and may need to nullify
-    // all the remaining pre-allocated blocks in case they were
-    // pre-allocated on the same container which got closed now.This needs
-    // caching the closed container list on the client itself.
     while (true) {
       try {
         responseProto = ContainerProtocolCalls
@@ -367,6 +353,43 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   /**
+   * Discards the subsequent pre allocated blocks and removes the streamEntries
+   * from the streamEntries list for the container which is closed.
+   * @param containerID id of the closed container
+   */
+  private void discardPreallocatedBlocks(long containerID) {
+    // currentStreamIndex < streamEntries.size() signifies that, there are still
+    // pre allocated blocks available.
+    if (currentStreamIndex < streamEntries.size()) {
+      ListIterator<ChunkOutputStreamEntry> streamEntryIterator =
+          streamEntries.listIterator(currentStreamIndex);
+      while (streamEntryIterator.hasNext()) {
+        if (streamEntryIterator.next().blockID.getContainerID()
+            == containerID) {
+          streamEntryIterator.remove();
+        }
+      }
+    }
+  }
+
+  /**
+   * It might be possible that the blocks pre allocated might never get written
+   * while the stream gets closed normally. In such cases, it would be a good
+   * idea to trim down the locationInfoList by removing the unused blocks if any
+   * so as only the used block info gets updated on OzoneManager during close.
+   */
+  private void removeEmptyBlocks() {
+    if (currentStreamIndex < streamEntries.size()) {
+      ListIterator<ChunkOutputStreamEntry> streamEntryIterator =
+          streamEntries.listIterator(currentStreamIndex);
+      while (streamEntryIterator.hasNext()) {
+        if (streamEntryIterator.next().currentPosition == 0) {
+          streamEntryIterator.remove();
+        }
+      }
+    }
+  }
+  /**
    * It performs following actions :
    * a. Updates the committed length at datanode for the current stream in
    *    datanode.
@@ -396,7 +419,7 @@ public class ChunkGroupOutputStream extends OutputStream {
         || streamEntry.currentPosition != buffer.position()) {
       committedLength = getCommittedBlockLength(streamEntry);
       // update the length of the current stream
-      locationInfoList.get(streamIndex).setLength(committedLength);
+      streamEntry.currentPosition = committedLength;
     }
 
     if (buffer.position() > 0) {
@@ -418,10 +441,12 @@ public class ChunkGroupOutputStream extends OutputStream {
     // written. Remove it from the current stream list.
     if (committedLength == 0) {
       streamEntries.remove(streamIndex);
-      locationInfoList.remove(streamIndex);
       Preconditions.checkArgument(currentStreamIndex != 0);
       currentStreamIndex -= 1;
     }
+    // discard subsequent pre allocated blocks from the streamEntries list
+    // from the closed container
+    discardPreallocatedBlocks(streamEntry.blockID.getContainerID());
   }
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
@@ -433,7 +458,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   private long getKeyLength() {
-    return locationInfoList.parallelStream().mapToLong(e -> e.getLength())
+    return streamEntries.parallelStream().mapToLong(e -> e.currentPosition)
         .sum();
   }
 
@@ -506,12 +531,11 @@ public class ChunkGroupOutputStream extends OutputStream {
     handleFlushOrClose(true);
     if (keyArgs != null) {
       // in test, this could be null
-      Preconditions.checkState(streamEntries.size() == locationInfoList.size());
+      removeEmptyBlocks();
       Preconditions.checkState(byteOffset == getKeyLength());
       keyArgs.setDataSize(byteOffset);
-      keyArgs.setLocationInfoList(locationInfoList);
+      keyArgs.setLocationInfoList(getLocationInfoList());
       omClient.commitKey(keyArgs, openID);
-      locationInfoList = null;
     } else {
       LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
     }
