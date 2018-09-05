@@ -220,7 +220,7 @@ The following properties are not required, but may be specified for tuning:
 
     The NameNode will use this as the amount of milliseconds between subsequent path cache rescans. This calculates the blocks to cache and each DataNode containing a replica of the block that should cache it.
 
-    By default, this parameter is set to 300000, which is five minutes.
+    By default, this parameter is set to 30000, which is thirty seconds.
 
 *   dfs.datanode.fsdatasetcache.max.threads.per.volume
 
