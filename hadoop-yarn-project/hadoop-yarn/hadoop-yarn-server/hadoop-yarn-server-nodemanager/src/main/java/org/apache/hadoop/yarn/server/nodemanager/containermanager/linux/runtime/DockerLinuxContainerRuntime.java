@@ -373,6 +373,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS)));
   }
 
+  @Override
+  public boolean isRuntimeRequested(Map<String, String> env) {
+    return isDockerContainerRequested(env);
+  }
+
   private Set<String> getDockerCapabilitiesFromConf() throws
       ContainerExecutionException {
     Set<String> caps = new HashSet<>(Arrays.asList(
