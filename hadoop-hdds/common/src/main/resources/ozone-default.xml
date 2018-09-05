@@ -930,9 +930,9 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.close.threshold</name>
+    <name>hdds.container.close.threshold</name>
     <value>0.9f</value>
-    <tag>OZONE, SCM</tag>
+    <tag>OZONE, DATANODE</tag>
     <description>
       This determines the threshold to be used for closing a container.
       When the container used percentage reaches this threshold,

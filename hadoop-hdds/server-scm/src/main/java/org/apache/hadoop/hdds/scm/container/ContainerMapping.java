@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -91,8 +90,6 @@ public class ContainerMapping implements Mapping {
   private final PipelineSelector pipelineSelector;
   private final ContainerStateManager containerStateManager;
   private final LeaseManager<ContainerInfo> containerLeaseManager;
-  private final float containerCloseThreshold;
-  private final ContainerCloser closer;
   private final EventPublisher eventPublisher;
   private final long size;
 
@@ -116,7 +113,6 @@ public class ContainerMapping implements Mapping {
       cacheSizeMB, EventPublisher eventPublisher) throws IOException {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
-    this.closer = new ContainerCloser(nodeManager, conf);
 
     File metaDir = getOzoneMetaDirPath(conf);
 
@@ -140,9 +136,6 @@ public class ContainerMapping implements Mapping {
     this.pipelineSelector = new PipelineSelector(nodeManager,
         containerStateManager, conf, eventPublisher);
 
-    this.containerCloseThreshold = conf.getFloat(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
     this.eventPublisher = eventPublisher;
 
     long containerCreationLeaseTimeout = conf.getTimeDuration(
@@ -461,18 +454,18 @@ public class ContainerMapping implements Mapping {
   /**
    * Return a container matching the attributes specified.
    *
-   * @param size - Space needed in the Container.
+   * @param sizeRequired - Space needed in the Container.
    * @param owner - Owner of the container - A specific nameservice.
    * @param type - Replication Type {StandAlone, Ratis}
    * @param factor - Replication Factor {ONE, THREE}
    * @param state - State of the Container-- {Open, Allocated etc.}
    * @return ContainerInfo, null if there is no match found.
    */
-  public ContainerWithPipeline getMatchingContainerWithPipeline(final long size,
-      String owner, ReplicationType type, ReplicationFactor factor,
-      LifeCycleState state) throws IOException {
+  public ContainerWithPipeline getMatchingContainerWithPipeline(
+      final long sizeRequired, String owner, ReplicationType type,
+      ReplicationFactor factor, LifeCycleState state) throws IOException {
     ContainerInfo containerInfo = getStateManager()
-        .getMatchingContainer(size, owner, type, factor, state);
+        .getMatchingContainer(sizeRequired, owner, type, factor, state);
     if (containerInfo == null) {
       return null;
     }
@@ -563,20 +556,6 @@ public class ContainerMapping implements Mapping {
           // the updated State.
           containerStore.put(dbKey, newState.toByteArray());
 
-          // If the container is closed, then state is already written to SCM
-          Pipeline pipeline =
-              pipelineSelector.getPipeline(
-                  PipelineID.getFromProtobuf(newState.getPipelineID()),
-                  newState.getReplicationType());
-          if(pipeline == null) {
-            pipeline = pipelineSelector
-                .getReplicationPipeline(newState.getReplicationType(),
-                    newState.getReplicationFactor());
-          }
-          // DB.TODO: So can we can write only once to DB.
-          if (closeContainerIfNeeded(newState, pipeline)) {
-            LOG.info("Closing the Container: {}", newState.getContainerID());
-          }
         } else {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
@@ -637,52 +616,6 @@ public class ContainerMapping implements Mapping {
     return builder.build();
   }
 
-  /**
-   * Queues the close container command, to datanode and writes the new state
-   * to container DB.
-   * <p>
-   * TODO : Remove this 2 ContainerInfo definitions. It is brain dead to have
-   * one protobuf in one file and another definition in another file.
-   *
-   * @param newState - This is the state we maintain in SCM.
-   * @param pipeline
-   * @throws IOException
-   */
-  private boolean closeContainerIfNeeded(SCMContainerInfo newState,
-      Pipeline pipeline)
-      throws IOException {
-    float containerUsedPercentage = 1.0f *
-        newState.getUsedBytes() / this.size;
-
-    ContainerInfo scmInfo = getContainer(newState.getContainerID());
-    if (containerUsedPercentage >= containerCloseThreshold
-        && !isClosed(scmInfo)) {
-      // We will call closer till get to the closed state.
-      // That is SCM will make this call repeatedly until we reach the closed
-      // state.
-      closer.close(newState, pipeline);
-
-      if (shouldClose(scmInfo)) {
-        // This event moves the Container from Open to Closing State, this is
-        // a state inside SCM. This is the desired state that SCM wants this
-        // container to reach. We will know that a container has reached the
-        // closed state from container reports. This state change should be
-        // invoked once and only once.
-        HddsProtos.LifeCycleState state = updateContainerState(
-            scmInfo.getContainerID(),
-            HddsProtos.LifeCycleEvent.FINALIZE);
-        if (state != HddsProtos.LifeCycleState.CLOSING) {
-          LOG.error("Failed to close container {}, reason : Not able " +
-                  "to " +
-                  "update container state, current container state: {}.",
-              newState.getContainerID(), state);
-          return false;
-        }
-        return true;
-      }
-    }
-    return false;
-  }
 
   /**
    * In Container is in closed state, if it is in closed, Deleting or Deleted
@@ -697,11 +630,6 @@ public class ContainerMapping implements Mapping {
 
   private boolean isClosed(ContainerInfo info) {
     return info.getState() == HddsProtos.LifeCycleState.CLOSED;
-  }
-
-  @VisibleForTesting
-  public ContainerCloser getCloser() {
-    return closer;
   }
 
   /**

@@ -64,4 +64,10 @@ public final class HddsConfigKeys {
   public static final String HDDS_DB_PROFILE = "hdds.db.profile";
   public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.SSD;
 
+  // Once a container usage crosses this threshold, it is eligible for
+  // closing.
+  public static final String HDDS_CONTAINER_CLOSE_THRESHOLD =
+      "hdds.container.close.threshold";
+  public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
+
 }

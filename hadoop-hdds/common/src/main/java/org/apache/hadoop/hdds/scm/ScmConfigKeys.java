@@ -242,12 +242,6 @@ public final class ScmConfigKeys {
       "ozone.scm.block.deletion.max.retry";
   public static final int OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT = 4096;
 
-  // Once a container usage crosses this threshold, it is eligible for
-  // closing.
-  public static final String OZONE_SCM_CONTAINER_CLOSE_THRESHOLD =
-      "ozone.scm.container.close.threshold";
-  public static final float OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
-
   public static final String HDDS_SCM_WATCHER_TIMEOUT =
       "hdds.scm.watcher.timeout";
 

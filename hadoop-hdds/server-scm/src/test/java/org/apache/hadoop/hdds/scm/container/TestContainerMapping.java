@@ -289,49 +289,6 @@ public class TestContainerMapping {
   }
 
   @Test
-  public void testContainerCloseWithContainerReport() throws IOException {
-    ContainerInfo info = createContainer();
-    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
-        new ArrayList<>();
-
-    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
-        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
-    ciBuilder.setFinalhash("7c45eb4d7ed5e0d2e89aaab7759de02e")
-        .setSize(5368709120L)
-        .setUsed(5368705120L)
-        .setKeyCount(500000000L)
-        .setReadCount(500000000L)
-        .setWriteCount(500000000L)
-        .setReadBytes(5368705120L)
-        .setWriteBytes(5368705120L)
-        .setContainerID(info.getContainerID())
-        .setDeleteTransactionId(0);
-
-    reports.add(ciBuilder.build());
-
-    ContainerReportsProto.Builder crBuilder =
-        ContainerReportsProto.newBuilder();
-    crBuilder.addAllReports(reports);
-
-    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
-
-    ContainerInfo updatedContainer =
-        mapping.getContainer(info.getContainerID());
-    Assert.assertEquals(500000000L,
-        updatedContainer.getNumberOfKeys());
-    Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
-    NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
-        .getMatchingContainerIDs(
-            containerOwner,
-            xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.CLOSING);
-    Assert.assertTrue(
-         pendingCloseContainers.contains(updatedContainer.containerID()));
-  }
-
-  @Test
   public void testCloseContainer() throws IOException {
     ContainerInfo info = createContainer();
     mapping.updateContainerState(info.getContainerID(),
