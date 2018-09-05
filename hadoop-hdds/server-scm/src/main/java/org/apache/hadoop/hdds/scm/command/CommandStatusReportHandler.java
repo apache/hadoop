@@ -103,7 +103,7 @@ public class CommandStatusReportHandler implements
    * Wrapper event for Replicate Command.
    */
   public static class ReplicationStatus extends CommandStatusEvent {
-    ReplicationStatus(CommandStatus cmdStatus) {
+    public ReplicationStatus(CommandStatus cmdStatus) {
       super(cmdStatus);
     }
   }
@@ -112,7 +112,7 @@ public class CommandStatusReportHandler implements
    * Wrapper event for CloseContainer Command.
    */
   public static class CloseContainerStatus extends CommandStatusEvent {
-    CloseContainerStatus(CommandStatus cmdStatus) {
+    public CloseContainerStatus(CommandStatus cmdStatus) {
       super(cmdStatus);
     }
   }
@@ -121,7 +121,7 @@ public class CommandStatusReportHandler implements
    * Wrapper event for DeleteBlock Command.
    */
   public static class DeleteBlockCommandStatus extends CommandStatusEvent {
-    DeleteBlockCommandStatus(CommandStatus cmdStatus) {
+    public DeleteBlockCommandStatus(CommandStatus cmdStatus) {
       super(cmdStatus);
     }
   }

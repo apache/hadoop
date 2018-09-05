@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .DeleteBlockCommandStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
+import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler.CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerActionsFromDatanode;
@@ -102,6 +103,16 @@ public final class SCMEvents {
    */
   public static final TypedEvent<ContainerID> CLOSE_CONTAINER =
       new TypedEvent<>(ContainerID.class, "Close_Container");
+
+  /**
+   * A CLOSE_CONTAINER_RETRYABLE_REQ will be triggered by
+   * CloseContainerEventHandler after sending a SCMCommand to DataNode.
+   * CloseContainerWatcher will track this event. Watcher will be responsible
+   * for retrying it in event of failure or timeout.
+   */
+  public static final TypedEvent<CloseContainerRetryableReq>
+      CLOSE_CONTAINER_RETRYABLE_REQ = new TypedEvent<>(
+      CloseContainerRetryableReq.class, "Close_Container_Retryable");
 
   /**
    * This event will be triggered whenever a new datanode is registered with
