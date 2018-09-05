@@ -138,6 +138,10 @@ public final class HttpServer2 implements FilterContainer {
       "hadoop.http.selector.count";
   // -1 to use default behavior of setting count based on CPU core count
   public static final int HTTP_SELECTOR_COUNT_DEFAULT = -1;
+  // idle timeout in milliseconds
+  public static final String HTTP_IDLE_TIMEOUT_MS_KEY =
+      "hadoop.http.idle_timeout.ms";
+  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 10000;
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
   static final String FILTER_INITIALIZER_PROPERTY
@@ -436,6 +440,8 @@ public final class HttpServer2 implements FilterContainer {
       int responseHeaderSize = conf.getInt(
           HTTP_MAX_RESPONSE_HEADER_SIZE_KEY,
           HTTP_MAX_RESPONSE_HEADER_SIZE_DEFAULT);
+      int idleTimeout = conf.getInt(HTTP_IDLE_TIMEOUT_MS_KEY,
+          HTTP_IDLE_TIMEOUT_MS_DEFAULT);
 
       HttpConfiguration httpConfig = new HttpConfiguration();
       httpConfig.setRequestHeaderSize(requestHeaderSize);
@@ -461,6 +467,7 @@ public final class HttpServer2 implements FilterContainer {
         connector.setHost(ep.getHost());
         connector.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         connector.setAcceptQueueSize(backlogSize);
+        connector.setIdleTimeout(idleTimeout);
         server.addListener(connector);
       }
       server.loadListeners();
@@ -474,7 +481,13 @@ public final class HttpServer2 implements FilterContainer {
           conf.getInt(HTTP_SELECTOR_COUNT_KEY, HTTP_SELECTOR_COUNT_DEFAULT));
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
       conn.addConnectionFactory(connFactory);
-      configureChannelConnector(conn);
+      if(Shell.WINDOWS) {
+        // result of setting the SO_REUSEADDR flag is different on Windows
+        // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
+        // without this 2 NN's can start on the same machine and listen on
+        // the same port with indeterminate routing of incoming requests to them
+        conn.setReuseAddress(false);
+      }
       return conn;
     }
 
@@ -651,17 +664,6 @@ public final class HttpServer2 implements FilterContainer {
   private static void addNoCacheFilter(ServletContextHandler ctxt) {
     defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
                  Collections.<String, String> emptyMap(), new String[] { "/*" });
-  }
-
-  private static void configureChannelConnector(ServerConnector c) {
-    c.setIdleTimeout(10000);
-    if(Shell.WINDOWS) {
-      // result of setting the SO_REUSEADDR flag is different on Windows
-      // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
-      // without this 2 NN's can start on the same machine and listen on
-      // the same port with indeterminate routing of incoming requests to them
-      c.setReuseAddress(false);
-    }
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
