@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 
+import java.util.Map;
+
 /**
  * Linux-specific container runtime implementations must implement this
  * interface.
@@ -44,5 +46,14 @@ public interface LinuxContainerRuntime extends ContainerRuntime {
    * the runtime
    */
   void initialize(Configuration conf, Context nmContext) throws ContainerExecutionException;
+
+  /**
+   * Return whether the given environment variables indicate that the operation
+   * is requesting this runtime.
+   *
+   * @param env the environment variable settings for the operation
+   * @return whether this runtime is requested
+   */
+  boolean isRuntimeRequested(Map<String, String> env);
 }
 

@@ -1826,7 +1826,7 @@ public class YarnConfiguration extends Configuration {
 
   /**
    * Comma separated list of runtimes that are allowed when using
-   * LinuxContainerExecutor. The allowed values are:
+   * LinuxContainerExecutor. The standard values are:
    * <ul>
    *   <li>default</li>
    *   <li>docker</li>
@@ -1835,6 +1835,9 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
       LINUX_CONTAINER_RUNTIME_PREFIX + "allowed-runtimes";
+
+  public static final String LINUX_CONTAINER_RUNTIME_CLASS_FMT =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "%s.class";
 
   /** The default list of allowed runtimes when using LinuxContainerExecutor. */
   public static final String[] DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES

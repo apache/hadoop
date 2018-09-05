@@ -32,11 +32,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -64,6 +66,12 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   public DefaultLinuxContainerRuntime(PrivilegedOperationExecutor
       privilegedOperationExecutor) {
     this.privilegedOperationExecutor = privilegedOperationExecutor;
+  }
+
+  @Override
+  public boolean isRuntimeRequested(Map<String, String> env) {
+    String type = env.get(ContainerRuntimeConstants.ENV_CONTAINER_TYPE);
+    return type == null || type.equals("default");
   }
 
   @Override
