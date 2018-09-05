@@ -423,6 +423,14 @@ This guide describes high-level uses of each of these subcommands. For specific 
     **Note:** This is not yet implemented, and at present will always return
     success, unless the given NameNode is completely down.
 
+
+### Load Balancer Setup
+
+If you are running a set of NameNodes behind a Load Balancer (e.g. [Azure](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-custom-probe-overview) or [AWS](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html) ) and would like the Load Balancer to point to the active NN, you can use the /isActive HTTP endpoint as a health probe.
+http://NN_HOSTNAME/isActive will return a 200 status code response if the NN is in Active HA State, 405 otherwise.
+
+
+
 Automatic Failover
 ------------------
 

@@ -1206,6 +1206,11 @@ public class ResourceManager extends CompositeService
       }
     }
 
+    builder.withAttribute(IsResourceManagerActiveServlet.RM_ATTRIBUTE, this);
+    builder.withServlet(IsResourceManagerActiveServlet.SERVLET_NAME,
+        IsResourceManagerActiveServlet.PATH_SPEC,
+        IsResourceManagerActiveServlet.class);
+
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 

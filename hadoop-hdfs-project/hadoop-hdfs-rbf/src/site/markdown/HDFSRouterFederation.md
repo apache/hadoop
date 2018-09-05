@@ -62,7 +62,7 @@ Each Router has two roles:
 #### Federated interface
 The Router receives a client request, checks the State Store for the correct subcluster, and forwards the request to the active NameNode of that subcluster.
 The reply from the NameNode then flows in the opposite direction.
-The Routers are stateless and can be behind a load balancer.
+The Routers are stateless and can be behind a load balancer. For health checking, you can use /isActive endpoint as a health probe (e.g. http://ROUTER_HOSTNAME:ROUTER_PORT/isActive).
 For performance, the Router also caches remote mount table entries and the state of the subclusters.
 To make sure that changes have been propagated to all Routers, each Router heartbeats its state to the State Store.
 

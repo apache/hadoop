@@ -294,6 +294,9 @@ public class NameNodeHttpServer {
         true);
     httpServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
         ImageServlet.class, true);
+    httpServer.addInternalServlet(IsNameNodeActiveServlet.SERVLET_NAME,
+        IsNameNodeActiveServlet.PATH_SPEC,
+        IsNameNodeActiveServlet.class);
   }
 
   static FSImage getFsImageFromContext(ServletContext context) {
