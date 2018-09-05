@@ -273,7 +273,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   @Override
   public byte[] getOpenKeyBytes(String volume, String bucket,
-                                    String key, long id) {
+      String key, long id) {
     String openKey = OM_KEY_PREFIX + volume + OM_KEY_PREFIX + bucket +
         OM_KEY_PREFIX + key + OM_KEY_PREFIX + id;
     return DFSUtil.string2Bytes(openKey);
@@ -573,27 +573,37 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public List<BlockGroup> getPendingDeletionKeys(final int count)
+  public List<BlockGroup> getPendingDeletionKeys(final int keyCount)
       throws IOException {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
-    // TODO: Fix this later, Not part of this patch.
-    List<Map.Entry<byte[], byte[]>> rangeResult = Collections.emptyList();
-    for (Map.Entry<byte[], byte[]> entry : rangeResult) {
-      OmKeyInfo info =
-          OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));
-      // Get block keys as a list.
-      OmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
-      if (latest == null) {
-        return Collections.emptyList();
+    try (TableIterator<Table.KeyValue> keyIter = getDeletedTable().iterator()) {
+      int currentCount = 0;
+      while (keyIter.hasNext() && currentCount < keyCount) {
+        Table.KeyValue kv = keyIter.next();
+        if (kv != null) {
+          OmKeyInfo info =
+              OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(kv.getValue()));
+          // Get block keys as a list.
+          OmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
+          if (latest == null) {
+            // This means that we have a key without any blocks.
+            // BUG-BUG: if this happens the key will never be deleted.
+            // TODO: Right thing to do is to remove this key right here.
+            LOG.warn("Found a key without blocks: {}, skipping for now.",
+                DFSUtil.bytes2String(kv.getKey()));
+            continue;
+          }
+          List<BlockID> item = latest.getLocationList().stream()
+              .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
+              .collect(Collectors.toList());
+          BlockGroup keyBlocks = BlockGroup.newBuilder()
+              .setKeyName(DFSUtil.bytes2String(kv.getKey()))
+              .addAllBlockIDs(item)
+              .build();
+          keyBlocksList.add(keyBlocks);
+          currentCount++;
+        }
       }
-      List<BlockID> item = latest.getLocationList().stream()
-          .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
-          .collect(Collectors.toList());
-      BlockGroup keyBlocks = BlockGroup.newBuilder()
-          .setKeyName(DFSUtil.bytes2String(entry.getKey()))
-          .addAllBlockIDs(item)
-          .build();
-      keyBlocksList.add(keyBlocks);
     }
     return keyBlocksList;
   }

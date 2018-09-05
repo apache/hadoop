@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.om.helpers;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +102,14 @@ public final class OmKeyArgs implements Auditable {
     auditMap.put(OzoneConsts.KEY_LOCATION_INFO,
         (this.locationInfoList != null) ? locationInfoList.toString() : null);
     return auditMap;
+  }
+
+  @VisibleForTesting
+  public void addLocationInfo(OmKeyLocationInfo locationInfo) {
+    if (this.locationInfoList == null) {
+      locationInfoList = new ArrayList<>();
+    }
+    locationInfoList.add(locationInfo);
   }
 
   /**

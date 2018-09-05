@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.BackgroundService;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteBatch;
 import org.slf4j.Logger;
@@ -43,9 +44,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
@@ -69,6 +75,8 @@ public class KeyManagerImpl implements KeyManager {
   private final long preallocateMax;
   private final String omId;
 
+  private final BackgroundService keyDeletingService;
+
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager,
       OzoneConfiguration conf,
@@ -82,15 +90,28 @@ public class KeyManagerImpl implements KeyManager {
     this.preallocateMax = conf.getLong(
         OZONE_KEY_PREALLOCATION_MAXSIZE,
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
+    long blockDeleteInterval = conf.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    long serviceTimeout = conf.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    keyDeletingService = new KeyDeletingService(
+        scmBlockClient, this, blockDeleteInterval, serviceTimeout, conf);
+
     this.omId = omId;
   }
 
   @Override
   public void start() {
+    keyDeletingService.start();
   }
 
   @Override
   public void stop() throws IOException {
+    keyDeletingService.shutdown();
   }
 
   private void validateBucket(String volumeName, String bucketName)
@@ -460,14 +481,7 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public List<BlockGroup> getPendingDeletionKeys(final int count)
       throws IOException {
-    //TODO: Fix this in later patches.
-    return null;
-  }
-
-  @Override
-  public void deletePendingDeletionKey(String objectKeyName)
-      throws IOException {
-    // TODO : Fix in later patches.
+    return  metadataManager.getPendingDeletionKeys(count);
   }
 
   @Override
@@ -484,5 +498,15 @@ public class KeyManagerImpl implements KeyManager {
   public void deleteExpiredOpenKey(String objectKeyName) throws IOException {
     Preconditions.checkNotNull(objectKeyName);
     // TODO: Fix this in later patches.
+  }
+
+  @Override
+  public OMMetadataManager getMetadataManager() {
+    return metadataManager;
+  }
+
+  @Override
+  public BackgroundService getDeletingService() {
+    return keyDeletingService;
   }
 }

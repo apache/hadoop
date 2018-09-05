@@ -21,6 +21,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.utils.BackgroundService;
 
 import java.io.IOException;
 import java.util.List;
@@ -144,16 +145,6 @@ public interface KeyManager {
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
 
   /**
-   * Deletes a pending deletion key by its name. This is often called when
-   * key can be safely deleted from this layer. Once called, all footprints
-   * of the key will be purged from OM DB.
-   *
-   * @param objectKeyName object key name with #deleting# prefix.
-   * @throws IOException if specified key doesn't exist or other I/O errors.
-   */
-  void deletePendingDeletionKey(String objectKeyName) throws IOException;
-
-  /**
    * Returns a list of all still open key info. Which contains the info about
    * the key name and all its associated block IDs. A pending open key has
    * prefix #open# in OM DB.
@@ -172,4 +163,17 @@ public interface KeyManager {
    * @throws IOException if specified key doesn't exist or other I/O errors.
    */
   void deleteExpiredOpenKey(String objectKeyName) throws IOException;
+
+  /**
+   * Returns the metadataManager.
+   * @return OMMetadataManager.
+   */
+  OMMetadataManager getMetadataManager();
+
+  /**
+   * Returns the instance of Deleting Service.
+   * @return Background service.
+   */
+  BackgroundService getDeletingService();
+
 }
