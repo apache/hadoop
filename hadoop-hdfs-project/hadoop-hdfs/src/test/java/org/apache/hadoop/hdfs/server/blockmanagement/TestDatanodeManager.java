@@ -34,8 +34,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
@@ -75,7 +75,8 @@ import static org.junit.Assert.*;
 
 public class TestDatanodeManager {
   
-  public static final Log LOG = LogFactory.getLog(TestDatanodeManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDatanodeManager.class);
   
   //The number of times the registration / removal of nodes should happen
   final int NUM_ITERATIONS = 500;

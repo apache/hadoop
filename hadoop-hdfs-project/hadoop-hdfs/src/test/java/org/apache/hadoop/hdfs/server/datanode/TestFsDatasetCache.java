@@ -38,8 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -88,8 +87,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.slf4j.event.Level;
 
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
@@ -98,7 +96,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_M
 
 @NotThreadSafe
 public class TestFsDatasetCache {
-  private static final Log LOG = LogFactory.getLog(TestFsDatasetCache.class);
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestFsDatasetCache.class);
 
   // Most Linux installs allow a default of 64KB locked memory
   static final long CACHE_CAPACITY = 64 * 1024;
@@ -126,7 +125,8 @@ public class TestFsDatasetCache {
   private static DataNodeFaultInjector oldInjector;
 
   static {
-    LogManager.getLogger(FsDatasetCache.class).setLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(FsDatasetCache.class), Level.DEBUG);
   }
 
   @BeforeClass
@@ -263,7 +263,7 @@ public class TestFsDatasetCache {
         blockChannel = blockInputStream.getChannel();
         sizes[i] = blockChannel.size();
       } finally {
-        IOUtils.cleanup(LOG, blockChannel, blockInputStream);
+        IOUtils.cleanupWithLogger(LOG, blockChannel, blockInputStream);
       }
     }
     return sizes;

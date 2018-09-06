@@ -24,8 +24,8 @@ import java.io.PrintStream;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -55,8 +55,8 @@ import org.junit.Test;
  * replica.
  */
 public class TestClientReportBadBlock {
-  private static final Log LOG = LogFactory
-      .getLog(TestClientReportBadBlock.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestClientReportBadBlock.class);
 
   static final long BLOCK_SIZE = 64 * 1024;
   private static int buffersize;

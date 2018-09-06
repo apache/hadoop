@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -181,7 +181,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSImageFormat {
-  private static final Log LOG = FSImage.LOG;
+  private static final Logger LOG = FSImage.LOG;
 
   // Static-only class
   private FSImageFormat() {}
@@ -231,7 +231,7 @@ public class FSImageFormat {
           loader.load(file);
         }
       } finally {
-        IOUtils.cleanup(LOG, is);
+        IOUtils.cleanupWithLogger(LOG, is);
       }
     }
   }

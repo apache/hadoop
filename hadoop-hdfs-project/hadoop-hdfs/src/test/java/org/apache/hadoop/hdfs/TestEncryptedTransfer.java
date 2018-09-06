@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -84,7 +84,8 @@ public class TestEncryptedTransfer {
     return params;
   }
   
-  private static final Log LOG = LogFactory.getLog(TestEncryptedTransfer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestEncryptedTransfer.class);
   
   private static final String PLAIN_TEXT = "this is very secret plain text";
   private static final Path TEST_PATH = new Path("/non-encrypted-file");
@@ -167,9 +168,9 @@ public class TestEncryptedTransfer {
     FileChecksum checksum = writeUnencryptedAndThenRestartEncryptedCluster();
 
     LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(SaslDataTransferServer.class));
+        LoggerFactory.getLogger(SaslDataTransferServer.class));
     LogCapturer logs1 = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(DataTransferSaslUtil.class));
+        LoggerFactory.getLogger(DataTransferSaslUtil.class));
     try {
       assertEquals(PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
       assertEquals(checksum, fs.getFileChecksum(TEST_PATH));
@@ -238,7 +239,7 @@ public class TestEncryptedTransfer {
     DFSClientAdapter.setDFSClient((DistributedFileSystem) fs, spyClient);
 
     LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(DataNode.class));
+        LoggerFactory.getLogger(DataNode.class));
     try {
       assertEquals(PLAIN_TEXT, DFSTestUtil.readFile(fs, TEST_PATH));
       if (resolverClazz != null &&
@@ -458,9 +459,9 @@ public class TestEncryptedTransfer {
     fs = getFileSystem(conf);
 
     LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(SaslDataTransferServer.class));
+        LoggerFactory.getLogger(SaslDataTransferServer.class));
     LogCapturer logs1 = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(DataTransferSaslUtil.class));
+        LoggerFactory.getLogger(DataTransferSaslUtil.class));
     try {
       writeTestDataToFile(fs);
     } finally {

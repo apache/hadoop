@@ -649,7 +649,7 @@ public class DFSUtilClient {
       return peer;
     } finally {
       if (!success) {
-        IOUtilsClient.cleanup(null, peer);
+        IOUtilsClient.cleanupWithLogger(LOG, peer);
       }
     }
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +39,7 @@ import static org.junit.Assert.assertEquals;
  * invalidate block, etc.
  */
 public class TestStandbyBlockManagement {
-  protected static final Log LOG = LogFactory.getLog(
+  protected static final Logger LOG = LoggerFactory.getLogger(
       TestStandbyBlockManagement.class);
   private static final String TEST_FILE_DATA = "hello world";
   private static final String TEST_FILE = "/TestStandbyBlockManagement";

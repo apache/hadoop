@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -60,7 +60,7 @@ import org.junit.Test;
 public class TestFSImageWithSnapshot {
   {
     SnapshotTestHelper.disableLogs();
-    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
   }
 
   static final long seed = 0;

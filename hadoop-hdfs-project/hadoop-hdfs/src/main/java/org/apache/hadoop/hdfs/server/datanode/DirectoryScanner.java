@@ -39,8 +39,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.time.FastDateFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -60,7 +60,8 @@ import org.apache.hadoop.util.Time;
  */
 @InterfaceAudience.Private
 public class DirectoryScanner implements Runnable {
-  private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DirectoryScanner.class);
   private static final int MILLIS_PER_SECOND = 1000;
   private static final String START_MESSAGE =
       "Periodic Directory Tree Verification scan"

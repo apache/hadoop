@@ -21,8 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -75,8 +74,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -140,7 +138,8 @@ public class TestBlockManager {
    */
   private static final int NUM_TEST_ITERS = 30;
   private static final int BLOCK_SIZE = 64*1024;
-  private static final Log LOG = LogFactory.getLog(TestBlockManager.class);
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(TestBlockManager.class);
 
   private FSNamesystem fsn;
   private BlockManager bm;
@@ -1156,7 +1155,8 @@ public class TestBlockManager {
   // spam the block manager with IBRs to verify queuing is occurring.
   @Test
   public void testAsyncIBR() throws Exception {
-    Logger.getRootLogger().setLevel(Level.WARN);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME), Level.WARN);
 
     // will create files with many small blocks.
     final int blkSize = 4*1024;

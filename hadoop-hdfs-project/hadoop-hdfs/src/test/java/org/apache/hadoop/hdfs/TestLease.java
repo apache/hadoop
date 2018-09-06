@@ -31,8 +31,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
@@ -69,7 +69,7 @@ public class TestLease {
   
   static final String dirString = "/test/lease";
   final Path dir = new Path(dirString);
-  static final Log LOG = LogFactory.getLog(TestLease.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestLease.class);
   final Configuration conf = new HdfsConfiguration();
 
   @Test

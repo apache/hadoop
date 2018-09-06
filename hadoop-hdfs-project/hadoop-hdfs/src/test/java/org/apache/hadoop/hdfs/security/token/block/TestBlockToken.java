@@ -39,8 +39,8 @@ import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -94,7 +94,8 @@ import org.apache.hadoop.fs.StorageType;
 
 /** Unit tests for block tokens */
 public class TestBlockToken {
-  public static final Log LOG = LogFactory.getLog(TestBlockToken.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockToken.class);
   private static final String ADDRESS = "0.0.0.0";
 
   static {

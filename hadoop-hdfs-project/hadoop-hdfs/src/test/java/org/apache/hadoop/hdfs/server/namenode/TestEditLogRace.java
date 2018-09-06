@@ -32,8 +32,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -86,7 +86,8 @@ public class TestEditLogRace {
 
   private static final String NAME_DIR = MiniDFSCluster.getBaseDirectory() + "name-0-1";
 
-  private static final Log LOG = LogFactory.getLog(TestEditLogRace.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestEditLogRace.class);
 
   // This test creates NUM_THREADS threads and each thread continuously writes
   // transactions
@@ -420,7 +421,7 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
-            LOG.fatal("Got exception", ioe);
+            LOG.error("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterFlush.countDown();
           }
@@ -522,7 +523,7 @@ public class TestEditLogRace {
             editLog.logSync();
             LOG.info("edit thread: logSync complete");
           } catch (Throwable ioe) {
-            LOG.fatal("Got exception", ioe);
+            LOG.error("Got exception", ioe);
             deferredException.set(ioe);
             sleepingBeforeSync.countDown();
           }

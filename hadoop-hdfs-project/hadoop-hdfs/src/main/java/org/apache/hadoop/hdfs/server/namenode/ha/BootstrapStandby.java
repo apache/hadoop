@@ -31,8 +31,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
@@ -76,7 +76,8 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class BootstrapStandby implements Tool, Configurable {
-  private static final Log LOG = LogFactory.getLog(BootstrapStandby.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BootstrapStandby.class);
   private String nsId;
   private String nnId;
   private List<RemoteNameNodeInfo> remoteNNs;
@@ -182,14 +183,14 @@ public class BootstrapStandby implements Tool, Configurable {
     }
 
     if (nsInfo == null) {
-      LOG.fatal(
+      LOG.error(
           "Unable to fetch namespace information from any remote NN. Possible NameNodes: "
               + remoteNNs);
       return ERR_CODE_FAILED_CONNECT;
     }
 
     if (!checkLayoutVersion(nsInfo)) {
-      LOG.fatal("Layout version on remote node (" + nsInfo.getLayoutVersion()
+      LOG.error("Layout version on remote node (" + nsInfo.getLayoutVersion()
           + ") does not match " + "this node's layout version ("
           + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ")");
       return ERR_CODE_INVALID_VERSION;
@@ -382,7 +383,7 @@ public class BootstrapStandby implements Tool, Configurable {
           "Please copy these logs into the shared edits storage " + 
           "or call saveNamespace on the active node.\n" +
           "Error: " + e.getLocalizedMessage();
-      LOG.fatal(msg, e);
+      LOG.error(msg, e);
 
       return false;
     }

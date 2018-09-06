@@ -24,8 +24,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,7 +46,7 @@ import org.mockito.Mockito;
  */
 public class TestHDFSTrash {
 
-  public static final Log LOG = LogFactory.getLog(TestHDFSTrash.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestHDFSTrash.class);
 
   private static MiniDFSCluster cluster = null;
   private static FileSystem fs;

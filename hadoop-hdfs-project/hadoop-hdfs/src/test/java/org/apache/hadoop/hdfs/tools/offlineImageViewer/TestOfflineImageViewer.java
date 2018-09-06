@@ -77,8 +77,8 @@ import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -106,7 +106,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -124,7 +124,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class TestOfflineImageViewer {
-  private static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageViewerPB.class);
   private static final int NUM_DIRS = 3;
   private static final int FILES_PER_DIR = 4;
   private static final String TEST_RENEWER = "JobTracker";

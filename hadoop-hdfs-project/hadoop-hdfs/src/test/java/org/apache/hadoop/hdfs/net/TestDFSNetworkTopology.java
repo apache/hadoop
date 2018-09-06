@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.net;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -45,8 +45,8 @@ import static org.junit.Assert.assertTrue;
  * DFSNetworkTopology.
  */
 public class TestDFSNetworkTopology {
-  private static final Log LOG =
-      LogFactory.getLog(TestDFSNetworkTopology.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSNetworkTopology.class);
   private final static DFSNetworkTopology CLUSTER =
       DFSNetworkTopology.getInstance(new Configuration());
   private DatanodeDescriptor[] dataNodes;

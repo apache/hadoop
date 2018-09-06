@@ -29,8 +29,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
@@ -71,7 +71,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;
   private DataInputStream dataIn = null;
-  static final Log LOG = LogFactory.getLog(EditLogInputStream.class);
+  static final Logger LOG = LoggerFactory.getLogger(EditLogInputStream.class);
   
   /**
    * Open an EditLogInputStream for the given file.
@@ -161,7 +161,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       state = State.OPEN;
     } finally {
       if (reader == null) {
-        IOUtils.cleanup(LOG, dataIn, tracker, bin, fStream);
+        IOUtils.cleanupWithLogger(LOG, dataIn, tracker, bin, fStream);
         state = State.CLOSED;
       }
     }

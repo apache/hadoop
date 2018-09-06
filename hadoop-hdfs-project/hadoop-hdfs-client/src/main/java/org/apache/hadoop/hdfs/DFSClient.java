@@ -1872,7 +1872,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return PBHelperClient.convert(
           reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
-      IOUtilsClient.cleanup(null, pair.in, pair.out);
+      IOUtilsClient.cleanupWithLogger(LOG, pair.in, pair.out);
     }
   }
 
@@ -2933,7 +2933,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return peer;
     } finally {
       if (!success) {
-        IOUtilsClient.cleanup(LOG, peer);
+        IOUtilsClient.cleanupWithLogger(LOG, peer);
         IOUtils.closeSocket(sock);
       }
     }

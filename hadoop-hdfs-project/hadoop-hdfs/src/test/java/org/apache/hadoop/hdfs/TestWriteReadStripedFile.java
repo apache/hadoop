@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,7 +45,8 @@ import java.util.Arrays;
 import java.util.Random;
 
 public class TestWriteReadStripedFile {
-  public static final Log LOG = LogFactory.getLog(TestWriteReadStripedFile.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestWriteReadStripedFile.class);
   private final ErasureCodingPolicy ecPolicy =
       SystemErasureCodingPolicies.getByID(
           SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
@@ -63,11 +63,10 @@ public class TestWriteReadStripedFile {
   private Configuration conf = new HdfsConfiguration();
 
   static {
-    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class))
-        .getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockPlacementPolicy.LOG, Level.TRACE);
   }
 
   @Rule

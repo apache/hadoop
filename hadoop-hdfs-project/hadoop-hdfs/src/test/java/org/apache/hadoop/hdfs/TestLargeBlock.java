@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,7 +45,8 @@ public class TestLargeBlock {
     GenericTestUtils.setLogLevel(TestLargeBlock.LOG, Level.ALL);
   }
  */
-  private static final Log LOG = LogFactory.getLog(TestLargeBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestLargeBlock.class);
 
   // should we verify the data read back from the file? (slow)
   static final boolean verifyData = true;

@@ -42,8 +42,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -95,7 +95,7 @@ import org.mockito.Mockito;
 import com.google.common.base.Supplier;
 
 public class TestCacheDirectives {
-  static final Log LOG = LogFactory.getLog(TestCacheDirectives.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCacheDirectives.class);
 
   private static final UserGroupInformation unprivilegedUser =
       UserGroupInformation.createRemoteUser("unprivilegedUser");

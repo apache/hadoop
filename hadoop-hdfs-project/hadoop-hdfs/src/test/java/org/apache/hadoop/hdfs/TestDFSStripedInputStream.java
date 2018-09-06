@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -62,8 +62,8 @@ import static org.mockito.Mockito.spy;
 
 public class TestDFSStripedInputStream {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestDFSStripedInputStream.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSStripedInputStream.class);
 
   private MiniDFSCluster cluster;
   private Configuration conf = new Configuration();

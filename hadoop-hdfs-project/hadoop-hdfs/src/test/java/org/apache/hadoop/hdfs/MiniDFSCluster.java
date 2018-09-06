@@ -67,8 +67,8 @@ import java.util.concurrent.TimeoutException;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -141,7 +141,8 @@ import com.google.common.collect.Sets;
 public class MiniDFSCluster implements AutoCloseable {
 
   private static final String NAMESERVICE_ID_PREFIX = "nameserviceId";
-  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniDFSCluster.class);
   /** System property to set the data dir: {@value} */
   public static final String PROP_TEST_BUILD_DATA =
       GenericTestUtils.SYSPROP_TEST_DATA_DIR;
@@ -2004,7 +2005,7 @@ public class MiniDFSCluster implements AutoCloseable {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
-        LOG.fatal("Test resulted in an unexpected exit",
+        LOG.error("Test resulted in an unexpected exit",
             ExitUtil.getFirstExitException());
         ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");

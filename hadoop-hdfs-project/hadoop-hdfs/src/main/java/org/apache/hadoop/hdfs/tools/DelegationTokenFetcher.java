@@ -28,8 +28,8 @@ import java.util.Date;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,8 +57,8 @@ public class DelegationTokenFetcher {
   private static final String CANCEL = "cancel";
   private static final String HELP = "help";
   private static final String HELP_SHORT = "h";
-  private static final Log LOG = LogFactory
-      .getLog(DelegationTokenFetcher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DelegationTokenFetcher.class);
   private static final String PRINT = "print";
   private static final String RENEW = "renew";
   private static final String RENEWER = "renewer";

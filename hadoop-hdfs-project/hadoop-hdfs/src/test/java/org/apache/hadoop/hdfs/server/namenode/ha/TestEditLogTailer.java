@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -60,7 +60,7 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class TestEditLogTailer {
   static {
-    GenericTestUtils.setLogLevel(FSEditLog.LOG, org.slf4j.event.Level.DEBUG);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
   @Parameters

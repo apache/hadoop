@@ -20,12 +20,13 @@ package org.apache.hadoop.fs;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 public class TestHdfsNativeCodeLoader {
-  static final Log LOG = LogFactory.getLog(TestHdfsNativeCodeLoader.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestHdfsNativeCodeLoader.class);
 
   private static boolean requireTestJni() {
     String rtj = System.getProperty("require.test.libhadoop");

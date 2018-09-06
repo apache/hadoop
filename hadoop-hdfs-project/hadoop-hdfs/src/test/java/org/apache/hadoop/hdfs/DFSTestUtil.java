@@ -82,8 +82,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -205,7 +205,7 @@ import com.google.common.annotations.VisibleForTesting;
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
 
-  private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DFSTestUtil.class);
   
   private static final Random gen = new Random();
   private static final String[] dirNames = {

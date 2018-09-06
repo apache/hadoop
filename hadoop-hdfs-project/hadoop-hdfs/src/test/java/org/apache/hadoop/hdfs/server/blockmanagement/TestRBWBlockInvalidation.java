@@ -24,8 +24,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,7 +52,8 @@ import com.google.common.collect.Lists;
  * and then the under replicated block gets replicated to the datanode.
  */
 public class TestRBWBlockInvalidation {
-  private static final Log LOG = LogFactory.getLog(TestRBWBlockInvalidation.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRBWBlockInvalidation.class);
   
   private static NumberReplicas countReplicas(final FSNamesystem namesystem,
       ExtendedBlock block) {
@@ -236,7 +237,7 @@ public class TestRBWBlockInvalidation {
           assertEquals("old gs data\n" + "new gs data\n", ret);
         }
       } finally {
-        IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
+        IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
       }
     } finally {
       cluster.shutdown();

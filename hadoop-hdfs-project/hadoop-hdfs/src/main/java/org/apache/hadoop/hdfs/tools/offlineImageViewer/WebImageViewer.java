@@ -32,8 +32,8 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -47,7 +47,8 @@ import java.net.InetSocketAddress;
  * namespace.
  */
 public class WebImageViewer implements Closeable {
-  public static final Log LOG = LogFactory.getLog(WebImageViewer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(WebImageViewer.class);
 
   private Channel channel;
   private InetSocketAddress address;

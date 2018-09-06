@@ -25,8 +25,8 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
@@ -56,7 +56,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
-  public static final Log LOG = LogFactory.getLog(INode.class);
+  public static final Logger LOG = LoggerFactory.getLogger(INode.class);
 
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
   private INode parent = null;

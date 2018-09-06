@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -62,7 +62,8 @@ import org.slf4j.event.Level;
 
 public class TestLeaseRecovery2 {
   
-  public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestLeaseRecovery2.class);
   
   {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);

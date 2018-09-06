@@ -25,8 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -46,7 +46,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 public class TestDFSStripedOutputStream {
-  public static final Log LOG = LogFactory.getLog(
+  public static final Logger LOG = LoggerFactory.getLogger(
       TestDFSStripedOutputStream.class);
 
   static {

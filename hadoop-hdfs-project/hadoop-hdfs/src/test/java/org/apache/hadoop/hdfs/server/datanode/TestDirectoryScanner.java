@@ -44,8 +44,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,7 +83,8 @@ import org.mockito.Mockito;
  * between blocks on the disk and block in memory.
  */
 public class TestDirectoryScanner {
-  private static final Log LOG = LogFactory.getLog(TestDirectoryScanner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDirectoryScanner.class);
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_GEN_STAMP = 9999;
 
@@ -138,7 +139,7 @@ public class TestDirectoryScanner {
             LOG.info("Truncated block file " + f.getAbsolutePath());
             return b.getBlockId();
           } finally {
-            IOUtils.cleanup(LOG, channel, s);
+            IOUtils.cleanupWithLogger(LOG, channel, s);
           }
         }
       }

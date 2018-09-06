@@ -31,7 +31,8 @@ public class IOUtilsClient {
    * @param log the log to record problems to at debug level. Can be null.
    * @param closeables the objects to close
    */
-  public static void cleanup(Logger log, java.io.Closeable... closeables) {
+  public static void cleanupWithLogger(Logger log,
+                                       java.io.Closeable... closeables) {
     for (java.io.Closeable c : closeables) {
       if (c != null) {
         try {

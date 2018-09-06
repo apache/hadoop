@@ -49,8 +49,8 @@ import java.util.List;
 import java.util.Random;
 import com.google.common.collect.ImmutableList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -88,7 +88,7 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -108,7 +108,8 @@ public class TestNameNodeMetrics {
       SystemErasureCodingPolicies.getByID(
           SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
 
-  public static final Log LOG = LogFactory.getLog(TestNameNodeMetrics.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestNameNodeMetrics.class);
   
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = EC_POLICY.getNumDataUnits() +
@@ -139,7 +140,7 @@ public class TestNameNodeMetrics {
     // Enable stale DataNodes checking
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
-    GenericTestUtils.setLogLevel(LogFactory.getLog(MetricsAsserts.class),
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(MetricsAsserts.class),
         Level.DEBUG);
   }
   

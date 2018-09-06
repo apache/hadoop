@@ -35,8 +35,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,7 +65,8 @@ import javax.management.ObjectName;
 
 @NotThreadSafe
 public class TestDataNodeMetrics {
-  private static final Log LOG = LogFactory.getLog(TestDataNodeMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeMetrics.class);
 
   @Test
   public void testDataNodeMetrics() throws Exception {
@@ -253,7 +254,7 @@ public class TestDataNodeMetrics {
       assertTrue("expected to see networkErrors",
           allDnc.indexOf("networkErrors") >= 0);
     } finally {
-      IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
+      IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
       if (cluster != null) {
         cluster.shutdown();
       }
