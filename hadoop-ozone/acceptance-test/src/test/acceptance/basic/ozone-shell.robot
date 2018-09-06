@@ -27,27 +27,27 @@ ${PROJECTDIR}           ${CURDIR}/../../../../../..
 
 *** Test Cases ***
 RestClient without http port
-   Test ozone shell       http://          ozoneManager          restwoport        True
+   Test ozone shell       http://          ozoneManager          restwoport
 
 RestClient with http port
-   Test ozone shell       http://          ozoneManager:9874     restwport         True
+   Test ozone shell       http://          ozoneManager:9874     restwport
 
 RestClient without host name
-   Test ozone shell       http://          ${EMPTY}              restwohost        True
+   Test ozone shell       http://          ${EMPTY}              restwohost
 
 RpcClient with port
-   Test ozone shell       o3://            ozoneManager:9862     rpcwoport         False
+   Test ozone shell       o3://            ozoneManager:9862     rpcwoport
 
 RpcClient without host
-   Test ozone shell       o3://            ${EMPTY}              rpcwport          False
+   Test ozone shell       o3://            ${EMPTY}              rpcwport
 
 RpcClient without scheme
-   Test ozone shell       ${EMPTY}         ${EMPTY}              rpcwoscheme       False
+   Test ozone shell       ${EMPTY}         ${EMPTY}              rpcwoscheme
 
 
 *** Keywords ***
 Test ozone shell
-    [arguments]     ${protocol}         ${server}       ${volume}     ${withkeytest}
+    [arguments]     ${protocol}         ${server}       ${volume}
     ${result} =     Execute on          datanode        ozone oz -createVolume ${protocol}${server}/${volume} -user bilbo -quota 100TB -root
                     Should not contain  ${result}       Failed
                     Should contain      ${result}       Creating Volume: ${volume}
@@ -69,7 +69,7 @@ Test ozone shell
                     Should Be Equal     ${result}       USER
     ${result} =     Execute on          datanode        ozone oz -listBucket ${protocol}${server}/${volume}/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
                     Should Be Equal     ${result}       ${volume}
-                    Run Keyword and Return If           ${withkeytest}        Test key handling       ${protocol}       ${server}       ${volume}
+                    Run Keyword         Test key handling       ${protocol}       ${server}       ${volume}
                     Execute on          datanode        ozone oz -deleteBucket ${protocol}${server}/${volume}/bb1
                     Execute on          datanode        ozone oz -deleteVolume ${protocol}${server}/${volume} -user bilbo
 
