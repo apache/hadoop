@@ -46,8 +46,6 @@ public final class AbfsClientThrottlingIntercept {
   private AbfsClientThrottlingIntercept() {
     readThrottler = new AbfsClientThrottlingAnalyzer("read");
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
-    isAutoThrottlingEnabled = true;
-    LOG.debug("Client-side throttling is enabled for the ABFS file system.");
   }
 
   public static synchronized void initializeSingleton(boolean isAutoThrottlingEnabled) {
@@ -56,6 +54,8 @@ public final class AbfsClientThrottlingIntercept {
     }
     if (singleton == null) {
       singleton = new AbfsClientThrottlingIntercept();
+      isAutoThrottlingEnabled = true;
+      LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     }
   }
 
