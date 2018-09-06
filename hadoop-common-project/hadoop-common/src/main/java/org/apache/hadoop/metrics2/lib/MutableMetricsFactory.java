@@ -83,6 +83,10 @@ public class MutableMetricsFactory {
       return registry.newMutableRollingAverages(info.name(),
           annotation.valueName());
     }
+    if (cls == MutableQuantiles.class) {
+      return registry.newQuantiles(info.name(), annotation.about(),
+          annotation.sampleName(), annotation.valueName(), annotation.interval());
+    }
     throw new MetricsException("Unsupported metric field "+ field.getName() +
                                " of type "+ field.getType().getName());
   }
