@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.KeyLocationList;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
@@ -447,6 +449,15 @@ public class KeyManagerImpl implements KeyManager {
       if (objectValue == null) {
         throw new OMException("Key not found",
             OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+      } else {
+        // directly delete key with no blocks from db. This key need not be
+        // moved to deleted table.
+        KeyInfo keyInfo = KeyInfo.parseFrom(objectValue);
+        if (isKeyEmpty(keyInfo)) {
+          metadataManager.getKeyTable().delete(objectKey);
+          LOG.debug("Key {} deleted from OM DB", keyName);
+          return;
+        }
       }
       metadataManager.getStore().move(objectKey,
           metadataManager.getKeyTable(),
@@ -461,6 +472,15 @@ public class KeyManagerImpl implements KeyManager {
     } finally {
       metadataManager.writeLock().unlock();
     }
+  }
+
+  private boolean isKeyEmpty(KeyInfo keyInfo) {
+    for (KeyLocationList keyLocationList : keyInfo.getKeyLocationListList()) {
+      if (keyLocationList.getKeyLocationsCount() != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

@@ -33,6 +33,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -91,14 +92,18 @@ public class TestKeyDeletingService {
             new ScmBlockLocationTestIngClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString());
     final int keyCount = 100;
-    createAndDeleteKeys(keyManager, keyCount);
+    createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
         (KeyDeletingService) keyManager.getDeletingService();
     keyManager.start();
+    Assert.assertEquals(
+        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), keyCount);
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getDeletedKeyCount().get() >= keyCount,
         1000, 10000);
     Assert.assertTrue(keyDeletingService.getRunCount().get() > 1);
+    Assert.assertEquals(
+        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), 0);
   }
 
   @Test(timeout = 30000)
@@ -112,22 +117,51 @@ public class TestKeyDeletingService {
             new ScmBlockLocationTestIngClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString());
     final int keyCount = 100;
-    createAndDeleteKeys(keyManager, keyCount);
+    createAndDeleteKeys(keyManager, keyCount, 1);
     KeyDeletingService keyDeletingService =
         (KeyDeletingService) keyManager.getDeletingService();
     keyManager.start();
+    Assert.assertEquals(
+        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), keyCount);
     // Make sure that we have run the background thread 5 times more
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getRunCount().get() >= 5,
         100, 1000);
     // Since SCM calls are failing, deletedKeyCount should be zero.
     Assert.assertEquals(keyDeletingService.getDeletedKeyCount().get(), 0);
-
-
+    Assert.assertEquals(
+        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), keyCount);
   }
 
-  private void createAndDeleteKeys(KeyManager keyManager, int keyCount)
-      throws IOException {
+  @Test(timeout = 30000)
+  public void checkDeletionForEmptyKey()
+      throws IOException, TimeoutException, InterruptedException {
+    OzoneConfiguration conf = createConfAndInitValues();
+    OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(conf);
+    //failCallsFrequency = 1 , means all calls fail.
+    KeyManager keyManager =
+        new KeyManagerImpl(
+            new ScmBlockLocationTestIngClient(null, null, 1),
+            metaMgr, conf, UUID.randomUUID().toString());
+    final int keyCount = 100;
+    createAndDeleteKeys(keyManager, keyCount, 0);
+    KeyDeletingService keyDeletingService =
+        (KeyDeletingService) keyManager.getDeletingService();
+    keyManager.start();
+
+    // Since empty keys are directly deleted from db there should be no
+    // pending deletion keys. Also deletedKeyCount should be zero.
+    Assert.assertEquals(
+        keyManager.getPendingDeletionKeys(Integer.MAX_VALUE).size(), 0);
+    // Make sure that we have run the background thread 2 times or more
+    GenericTestUtils.waitFor(
+        () -> keyDeletingService.getRunCount().get() >= 2,
+        100, 1000);
+    Assert.assertEquals(keyDeletingService.getDeletedKeyCount().get(), 0);
+  }
+
+  private void createAndDeleteKeys(KeyManager keyManager, int keyCount,
+      int numBlocks) throws IOException {
     for (int x = 0; x < keyCount; x++) {
       String volumeName = String.format("volume%s",
           RandomStringUtils.randomAlphanumeric(5));
@@ -153,10 +187,13 @@ public class TestKeyDeletingService {
               .setVolumeName(volumeName)
               .setBucketName(bucketName)
               .setKeyName(keyName)
+              .setLocationInfoList(new ArrayList<>())
               .build();
       //Open, Commit and Delete the Keys in the Key Manager.
       OpenKeySession session = keyManager.openKey(arg);
-      arg.addLocationInfo(keyManager.allocateBlock(arg, session.getId()));
+      for (int i = 0; i < numBlocks; i++) {
+        arg.addLocationInfo(keyManager.allocateBlock(arg, session.getId()));
+      }
       keyManager.commitKey(arg, session.getId());
       keyManager.deleteKey(arg);
     }

@@ -585,14 +585,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
               OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(kv.getValue()));
           // Get block keys as a list.
           OmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
-          if (latest == null) {
-            // This means that we have a key without any blocks.
-            // BUG-BUG: if this happens the key will never be deleted.
-            // TODO: Right thing to do is to remove this key right here.
-            LOG.warn("Found a key without blocks: {}, skipping for now.",
-                DFSUtil.bytes2String(kv.getKey()));
-            continue;
-          }
           List<BlockID> item = latest.getLocationList().stream()
               .map(b -> new BlockID(b.getContainerID(), b.getLocalID()))
               .collect(Collectors.toList());
