@@ -486,10 +486,9 @@ public class ContainerStateManager implements Closeable {
    * @throws IOException
    */
   public ContainerWithPipeline getContainer(PipelineSelector selector,
-      ContainerID containerID) throws IOException {
+      ContainerID containerID) {
     ContainerInfo info = containers.getContainerInfo(containerID.getId());
-    Pipeline pipeline = selector.getPipeline(info.getPipelineID(),
-        info.getReplicationType());
+    Pipeline pipeline = selector.getPipeline(info.getPipelineID());
     return new ContainerWithPipeline(info, pipeline);
   }
 

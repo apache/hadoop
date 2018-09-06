@@ -127,6 +127,15 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.replication.level</name>
+    <value>MAJORITY</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Replication level to be used by datanode for submitting a
+      container command to ratis. Available replication levels are ALL and
+      MAJORTIY, MAJORITY is used as the default replication level.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.segment.size</name>
     <value>1073741824</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
@@ -153,6 +162,15 @@
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The timeout duration for ratis server request.</description>
+  </property>
+  <property>
+    <name>dfs.ratis.server.failure.duration</name>
+    <value>120s</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server failure detection,
+      once the threshold has reached, the ratis state machine will be informed
+      about the failure in the ratis ring
+    </description>
   </property>
   <property>
     <name>hdds.node.report.interval</name>
@@ -1104,6 +1122,15 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.pipeline.action.max.limit</name>
+    <value>20</value>
+    <tag>DATANODE</tag>
+    <description>
+      Maximum number of Pipeline Actions sent by the datanode to SCM in a
+      single heartbeat.
+    </description>
+  </property>
   <property>
     <name>hdds.scm.watcher.timeout</name>
     <value>10m</value>

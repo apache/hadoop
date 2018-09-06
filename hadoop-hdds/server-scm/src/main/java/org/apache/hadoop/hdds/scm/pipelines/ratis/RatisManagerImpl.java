@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 /**
  * Implementation of {@link PipelineManager}.
@@ -59,8 +60,8 @@ public class RatisManagerImpl extends PipelineManager {
    */
   public RatisManagerImpl(NodeManager nodeManager,
       ContainerPlacementPolicy placementPolicy, long size, Configuration conf,
-      Node2PipelineMap map) {
-    super(map);
+      Node2PipelineMap map, Map<PipelineID, Pipeline> pipelineMap) {
+    super(map, pipelineMap);
     this.conf = conf;
     this.nodeManager = nodeManager;
     ratisMembers = new HashSet<>();
@@ -101,20 +102,23 @@ public class RatisManagerImpl extends PipelineManager {
     //TODO:move the initialization from SCM to client
     try (XceiverClientRatis client =
         XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.createPipeline(pipeline);
+      client.createPipeline();
     }
   }
 
   /**
    * Close the pipeline.
    */
-  public void closePipeline(Pipeline pipeline) {
+  public void closePipeline(Pipeline pipeline) throws IOException {
     super.closePipeline(pipeline);
     for (DatanodeDetails node : pipeline.getMachines()) {
       // A node should always be the in ratis members list.
       Preconditions.checkArgument(ratisMembers.remove(node));
     }
-    //TODO: should the raft ring also be destroyed as well?
+    try (XceiverClientRatis client =
+        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
+      client.destroyPipeline();
+    }
   }
 
   /**

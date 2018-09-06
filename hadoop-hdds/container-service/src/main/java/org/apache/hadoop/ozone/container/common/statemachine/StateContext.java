@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CommandStatus.Status;
@@ -66,6 +68,7 @@ public class StateContext {
   private final Configuration conf;
   private final Queue<GeneratedMessage> reports;
   private final Queue<ContainerAction> containerActions;
+  private final Queue<PipelineAction> pipelineActions;
   private DatanodeStateMachine.DatanodeStates state;
 
   /**
@@ -91,6 +94,7 @@ public class StateContext {
     cmdStatusMap = new ConcurrentHashMap<>();
     reports = new LinkedList<>();
     containerActions = new LinkedList<>();
+    pipelineActions = new LinkedList<>();
     lock = new ReentrantLock();
     stateExecutionCount = new AtomicLong(0);
   }
@@ -252,6 +256,47 @@ public class StateContext {
   public List<ContainerAction> getPendingContainerAction(int maxLimit) {
     synchronized (containerActions) {
       return containerActions.parallelStream().limit(maxLimit)
+          .collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * Add PipelineAction to PipelineAction queue if it's not present.
+   *
+   * @param pipelineAction PipelineAction to be added
+   */
+  public void addPipelineActionIfAbsent(PipelineAction pipelineAction) {
+    synchronized (pipelineActions) {
+      /**
+       * If pipelineAction queue already contains entry for the pipeline id
+       * with same action, we should just return.
+       * Note: We should not use pipelineActions.contains(pipelineAction) here
+       * as, pipelineAction has a msg string. So even if two msgs differ though
+       * action remains same on the given pipeline, it will end up adding it
+       * multiple times here.
+       */
+      for (PipelineAction pipelineActionIter : pipelineActions) {
+        if (pipelineActionIter.getAction() == pipelineAction.getAction()
+            && pipelineActionIter.hasClosePipeline() && pipelineAction
+            .hasClosePipeline()
+            && pipelineActionIter.getClosePipeline().getPipelineID()
+            == pipelineAction.getClosePipeline().getPipelineID()) {
+          return;
+        }
+      }
+      pipelineActions.add(pipelineAction);
+    }
+  }
+
+  /**
+   * Returns pending PipelineActions from the PipelineAction queue with a
+   * max limit on list size, or empty list if the queue is empty.
+   *
+   * @return List<ContainerAction>
+   */
+  public List<PipelineAction> getPendingPipelineAction(int maxLimit) {
+    synchronized (pipelineActions) {
+      return pipelineActions.parallelStream().limit(maxLimit)
           .collect(Collectors.toList());
     }
   }

@@ -29,6 +29,9 @@ import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler.CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -72,6 +75,23 @@ public final class SCMEvents {
   public static final TypedEvent<ContainerActionsFromDatanode>
       CONTAINER_ACTIONS = new TypedEvent<>(ContainerActionsFromDatanode.class,
       "Container_Actions");
+
+  /**
+   * PipelineActions are sent by Datanode. This event is received by
+   * SCMDatanodeHeartbeatDispatcher and PIPELINE_ACTIONS event is generated.
+   */
+  public static final TypedEvent<PipelineActionsFromDatanode>
+      PIPELINE_ACTIONS = new TypedEvent<>(PipelineActionsFromDatanode.class,
+      "Pipeline_Actions");
+
+  /**
+   * Pipeline close event are triggered to close pipeline because of failure,
+   * stale node, decommissioning etc.
+   */
+  public static final TypedEvent<PipelineID>
+      PIPELINE_CLOSE = new TypedEvent<>(PipelineID.class,
+      "Pipeline_Close");
+
   /**
    * A Command status report will be sent by datanodes. This repoort is received
    * by SCMDatanodeHeartbeatDispatcher and CommandReport event is generated.
@@ -155,7 +175,7 @@ public final class SCMEvents {
    */
   public static final Event<DeleteBlockCommandStatus>
       DELETE_BLOCK_STATUS =
-      new TypedEvent(DeleteBlockCommandStatus.class,
+      new TypedEvent<>(DeleteBlockCommandStatus.class,
           "DeleteBlockCommandStatus");
 
   /**
@@ -164,7 +184,7 @@ public final class SCMEvents {
    * deleteTransactionID on SCM.
    */
   public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
-      new TypedEvent(PendingDeleteStatusList.class, "PendingDeleteStatus");
+      new TypedEvent<>(PendingDeleteStatusList.class, "PendingDeleteStatus");
 
   /**
    * This is the command for ReplicationManager to handle under/over

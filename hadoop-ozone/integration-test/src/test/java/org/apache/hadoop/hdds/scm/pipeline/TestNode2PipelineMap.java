@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
@@ -97,10 +97,10 @@ public class TestNode2PipelineMap {
     Assert.assertEquals(3, dns.size());
 
     // get pipeline details by dnid
-    Set<Pipeline> pipelines = mapping.getPipelineSelector()
+    Set<PipelineID> pipelines = mapping.getPipelineSelector()
         .getNode2PipelineMap().getPipelines(dns.get(0).getUuid());
     Assert.assertEquals(1, pipelines.size());
-    pipelines.forEach(p -> Assert.assertEquals(p.getId(),
+    pipelines.forEach(p -> Assert.assertEquals(p,
         ratisContainer.getPipeline().getId()));
 
 

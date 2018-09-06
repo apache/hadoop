@@ -200,8 +200,7 @@ public class ContainerMapping implements Mapping {
       Pipeline pipeline;
       if (contInfo.isContainerOpen()) {
         // If pipeline with given pipeline Id already exist return it
-        pipeline = pipelineSelector.getPipeline(contInfo.getPipelineID(),
-            contInfo.getReplicationType());
+        pipeline = pipelineSelector.getPipeline(contInfo.getPipelineID());
         if (pipeline == null) {
           pipeline = pipelineSelector
               .getReplicationPipeline(contInfo.getReplicationType(),
@@ -389,8 +388,7 @@ public class ContainerMapping implements Mapping {
           .updateContainerState(containerInfo, event);
       if (!updatedContainer.isContainerOpen()) {
         Pipeline pipeline = pipelineSelector
-            .getPipeline(containerInfo.getPipelineID(),
-                containerInfo.getReplicationType());
+            .getPipeline(containerInfo.getPipelineID());
         pipelineSelector.closePipelineIfNoOpenContainers(pipeline);
       }
       containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
@@ -470,14 +468,31 @@ public class ContainerMapping implements Mapping {
       return null;
     }
     Pipeline pipeline = pipelineSelector
-        .getPipeline(containerInfo.getPipelineID(),
-            containerInfo.getReplicationType());
+        .getPipeline(containerInfo.getPipelineID());
     if (pipeline == null) {
       pipeline = pipelineSelector
           .getReplicationPipeline(containerInfo.getReplicationType(),
               containerInfo.getReplicationFactor());
     }
     return new ContainerWithPipeline(containerInfo, pipeline);
+  }
+
+  public void handlePipelineClose(PipelineID pipelineID) {
+    try {
+      Pipeline pipeline = pipelineSelector.getPipeline(pipelineID);
+      if (pipeline != null) {
+        pipelineSelector.finalizePipeline(pipeline);
+      } else {
+        LOG.debug("pipeline:{} not found", pipelineID);
+      }
+    } catch (Exception e) {
+      LOG.info("failed to close pipeline:{}", pipelineID, e);
+    }
+  }
+
+  public Set<PipelineID> getPipelineOnDatanode(
+      DatanodeDetails datanodeDetails) {
+    return pipelineSelector.getPipelineId(datanodeDetails.getUuid());
   }
 
   /**

@@ -216,13 +216,14 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   /**
    * Create a pipeline.
-   *
-   * @param ignored -  pipeline to be created.
    */
   @Override
-  public void createPipeline(Pipeline ignored)
-      throws IOException {
+  public void createPipeline() {
     // For stand alone pipeline, there is no notion called setup pipeline.
+  }
+
+  public void destroyPipeline() {
+    // For stand alone pipeline, there is no notion called destroy pipeline.
   }
 
   /**

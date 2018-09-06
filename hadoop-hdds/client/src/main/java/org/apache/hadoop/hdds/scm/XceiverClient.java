@@ -186,13 +186,15 @@ public class XceiverClient extends XceiverClientSpi {
 
   /**
    * Create a pipeline.
-   *
-   * @param ignored -  pipeline to be created.
    */
   @Override
-  public void createPipeline(Pipeline ignored)
+  public void createPipeline()
       throws IOException {
     // For stand alone pipeline, there is no notion called setup pipeline.
+  }
+
+  public void destroyPipeline() {
+    // For stand alone pipeline, there is no notion called destroy pipeline.
   }
 
   /**

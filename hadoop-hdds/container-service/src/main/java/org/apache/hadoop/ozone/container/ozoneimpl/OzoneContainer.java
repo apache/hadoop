@@ -84,7 +84,7 @@ public class OzoneContainer {
         new XceiverServerGrpc(datanodeDetails, this.config, this
             .hddsDispatcher, createReplicationService()),
         XceiverServerRatis.newXceiverServerRatis(datanodeDetails, this
-            .config, hddsDispatcher)
+            .config, hddsDispatcher, context)
     };
 
 

@@ -81,6 +81,7 @@ message SCMHeartbeatRequestProto {
   optional ContainerReportsProto containerReport = 3;
   optional CommandStatusReportsProto commandStatusReport = 4;
   optional ContainerActionsProto containerActions = 5;
+  optional PipelineActionsProto pipelineActions = 6;
 }
 
 /*
@@ -160,6 +161,31 @@ message ContainerAction {
   required int64 containerID = 1;
   required Action action = 2;
   optional Reason reason = 3;
+}
+
+message PipelineActionsProto {
+  repeated PipelineAction pipelineActions = 1;
+}
+
+message ClosePipelineInfo {
+  enum Reason {
+    PIPELINE_FAILED = 1;
+  }
+  required PipelineID pipelineID = 1;
+  optional Reason reason = 3;
+  optional string detailedReason = 4;
+}
+
+message PipelineAction {
+  enum Action {
+    CLOSE = 1;
+  }
+
+  /**
+   * Action will be used to identify the correct pipeline action.
+   */
+  required Action action = 1;
+  optional ClosePipelineInfo closePipeline = 2;
 }
 
 /**

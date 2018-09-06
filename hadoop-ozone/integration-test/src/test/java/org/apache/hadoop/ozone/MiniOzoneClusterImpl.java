@@ -157,6 +157,16 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     return hddsDatanodes;
   }
 
+  private int getHddsDatanodeIndex(DatanodeDetails dn) throws IOException {
+    for (HddsDatanodeService service : hddsDatanodes) {
+      if (service.getDatanodeDetails().equals(dn)) {
+        return hddsDatanodes.indexOf(service);
+      }
+    }
+    throw new IOException(
+        "Not able to find datanode with datanode Id " + dn.getUuid());
+  }
+
   @Override
   public OzoneClient getClient() throws IOException {
     return OzoneClientFactory.getClient(conf);
@@ -243,8 +253,19 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
+  public void restartHddsDatanode(DatanodeDetails dn)
+      throws InterruptedException, TimeoutException, IOException {
+    restartHddsDatanode(getHddsDatanodeIndex(dn));
+  }
+
+  @Override
   public void shutdownHddsDatanode(int i) {
     hddsDatanodes.get(i).stop();
+  }
+
+  @Override
+  public void shutdownHddsDatanode(DatanodeDetails dn) throws IOException {
+    shutdownHddsDatanode(getHddsDatanodeIndex(dn));
   }
 
   @Override
