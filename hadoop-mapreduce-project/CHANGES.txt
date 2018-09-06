@@ -1,5 +1,21 @@
 Hadoop MapReduce Change Log
 
+Release 2.7.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-7131. Job History Server has race condition where it moves
+    files from intermediate to finished but thinks file is in
+    intermediate. (Anthony Hsu via jlowe)
+
 Release 2.7.7 - 2018-07-18
 
   INCOMPATIBLE CHANGES
