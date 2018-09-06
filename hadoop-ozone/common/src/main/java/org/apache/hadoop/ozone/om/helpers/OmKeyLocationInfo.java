@@ -130,4 +130,14 @@ public final class OmKeyLocationInfo {
     info.setCreateVersion(keyLocation.getCreateVersion());
     return info;
   }
+
+  @Override
+  public String toString() {
+    return "{blockID={containerID=" + blockID.getContainerID() +
+        ", localID=" + blockID.getLocalID() + "}" +
+        ", shouldCreateContainer=" + shouldCreateContainer +
+        ", length=" + length +
+        ", offset=" + offset +
+        ", createVersion=" + createVersion + '}';
+  }
 }
