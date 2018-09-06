@@ -1068,7 +1068,17 @@ public class HistoryFileManager extends AbstractService {
   private void moveToDoneNow(final Path src, final Path target)
       throws IOException {
     LOG.info("Moving " + src.toString() + " to " + target.toString());
-    intermediateDoneDirFc.rename(src, target, Options.Rename.NONE);
+    try {
+      intermediateDoneDirFc.rename(src, target, Options.Rename.NONE);
+    } catch (FileNotFoundException e) {
+      if (doneDirFc.util().exists(target)) {
+        LOG.info("Source file " + src.toString() + " not found, but target "
+            + "file " + target.toString() + " already exists. Move already "
+            + "happened.");
+      } else {
+        throw e;
+      }
+    }
   }
 
   private String getJobSummary(FileContext fc, Path path) throws IOException {
