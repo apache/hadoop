@@ -18,76 +18,76 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
-import java.util.HashSet;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.Matchers.eq;
 import org.mockito.Mockito;
 
 /**
  * Test DeadNodeHandler.
  */
 public class TestDeadNodeHandler {
+
+  private List<ReplicationRequest> sentEvents = new ArrayList<>();
+
   @Test
-  public void testOnMessage() throws SCMException {
+  public void testOnMessage() throws IOException {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
-
-    ContainerInfo container1 = TestUtils.getRandomContainerInfo(1);
-    ContainerInfo container2 = TestUtils.getRandomContainerInfo(2);
-    ContainerInfo container3 = TestUtils.getRandomContainerInfo(3);
 
     Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
     ContainerStateManager containerStateManager = new ContainerStateManager(
         new OzoneConfiguration(),
         Mockito.mock(Mapping.class)
     );
+
+    ContainerInfo container1 =
+        TestUtils.allocateContainer(containerStateManager);
+    ContainerInfo container2 =
+        TestUtils.allocateContainer(containerStateManager);
+    ContainerInfo container3 =
+        TestUtils.allocateContainer(containerStateManager);
+
     DeadNodeHandler handler =
         new DeadNodeHandler(node2ContainerMap, containerStateManager);
 
-    node2ContainerMap
-        .insertNewDatanode(datanode1.getUuid(), new HashSet<ContainerID>() {{
-            add(new ContainerID(container1.getContainerID()));
-            add(new ContainerID(container2.getContainerID()));
-          }});
+    registerReplicas(node2ContainerMap, datanode1, container1, container2);
+    registerReplicas(node2ContainerMap, datanode2, container1, container3);
 
-    node2ContainerMap
-        .insertNewDatanode(datanode2.getUuid(), new HashSet<ContainerID>() {{
-            add(new ContainerID(container1.getContainerID()));
-            add(new ContainerID(container3.getContainerID()));
-          }});
+    registerReplicas(containerStateManager, container1, datanode1, datanode2);
+    registerReplicas(containerStateManager, container2, datanode1);
+    registerReplicas(containerStateManager, container3, datanode2);
 
-    containerStateManager.getContainerStateMap()
-        .addContainerReplica(new ContainerID(container1.getContainerID()),
-            datanode1, datanode2);
+    TestUtils.closeContainer(containerStateManager, container1);
 
-    containerStateManager.getContainerStateMap()
-        .addContainerReplica(new ContainerID(container2.getContainerID()),
-            datanode1);
-
-    containerStateManager.getContainerStateMap()
-        .addContainerReplica(new ContainerID(container3.getContainerID()),
-            datanode2);
+    EventPublisher publisher = Mockito.mock(EventPublisher.class);
 
     //WHEN datanode1 is dead
-    handler.onMessage(datanode1, Mockito.mock(EventPublisher.class));
+    handler.onMessage(datanode1, publisher);
 
     //THEN
-
     //node2ContainerMap has not been changed
     Assert.assertEquals(2, node2ContainerMap.size());
 
@@ -108,5 +108,40 @@ public class TestDeadNodeHandler {
     Assert.assertEquals(1, container3Replicas.size());
     Assert.assertEquals(datanode2, container3Replicas.iterator().next());
 
+    ArgumentCaptor<ReplicationRequest> replicationRequestParameter =
+        ArgumentCaptor.forClass(ReplicationRequest.class);
+
+    Mockito.verify(publisher)
+        .fireEvent(eq(SCMEvents.REPLICATE_CONTAINER),
+            replicationRequestParameter.capture());
+
+    Assert
+        .assertEquals(container1.getContainerID(),
+            replicationRequestParameter.getValue().getContainerId());
+    Assert
+        .assertEquals(1,
+            replicationRequestParameter.getValue().getReplicationCount());
+    Assert
+        .assertEquals(3,
+            replicationRequestParameter.getValue().getExpecReplicationCount());
   }
+
+  private void registerReplicas(ContainerStateManager containerStateManager,
+      ContainerInfo container, DatanodeDetails... datanodes) {
+    containerStateManager.getContainerStateMap()
+        .addContainerReplica(new ContainerID(container.getContainerID()),
+            datanodes);
+  }
+
+  private void registerReplicas(Node2ContainerMap node2ContainerMap,
+      DatanodeDetails datanode,
+      ContainerInfo... containers)
+      throws SCMException {
+    node2ContainerMap
+        .insertNewDatanode(datanode.getUuid(),
+            Arrays.stream(containers)
+                .map(container -> new ContainerID(container.getContainerID()))
+                .collect(Collectors.toSet()));
+  }
+
 }
