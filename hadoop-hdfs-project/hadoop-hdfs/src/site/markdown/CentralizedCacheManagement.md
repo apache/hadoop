@@ -238,6 +238,11 @@ The following properties are not required, but may be specified for tuning:
 
     The percentage of the Java heap which we will allocate to the cached blocks map. The cached blocks map is a hash map which uses chained hashing. Smaller maps may be accessed more slowly if the number of cached blocks is large; larger maps will consume more memory. The default is 0.25 percent.
 
+*   dfs.namenode.caching.enabled
+
+    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is true (i.e. centralized caching is enabled).
+
+
 ### OS Limits
 
 If you get the error "Cannot start datanode because the configured max locked memory size... is more than the datanode's available RLIMIT\_MEMLOCK ulimit," that means that the operating system is imposing a lower limit on the amount of memory that you can lock than what you have configured. To fix this, you must adjust the ulimit -l value that the DataNode runs with. Usually, this value is configured in `/etc/security/limits.conf`. However, it will vary depending on what operating system and distribution you are using.

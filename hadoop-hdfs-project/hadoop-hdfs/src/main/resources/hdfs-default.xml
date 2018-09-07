@@ -2469,6 +2469,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.caching.enabled</name>
+  <value>true</value>
+  <description>
+    Set to true to enable block caching.  This flag enables the NameNode to
+    maintain a mapping of cached blocks to DataNodes via processing DataNode
+    cache reports.  Based on these reports and addition and removal of caching
+    directives, the NameNode will schedule caching and uncaching work.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
   <value>0.25</value>
   <description>
