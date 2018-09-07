@@ -48,7 +48,7 @@ import org.slf4j.event.Level;
 /**
  * Tests for ContainerStateManager.
  */
-public class TestContainerStateManager {
+public class TestContainerStateManagerIntegration {
 
   private OzoneConfiguration conf;
   private MiniOzoneCluster cluster;
