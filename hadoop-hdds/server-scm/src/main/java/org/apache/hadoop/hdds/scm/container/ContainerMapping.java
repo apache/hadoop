@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -210,6 +211,10 @@ public class ContainerMapping implements Mapping {
         // For close containers create pipeline from datanodes with replicas
         Set<DatanodeDetails> dnWithReplicas = containerStateManager
             .getContainerReplicas(contInfo.containerID());
+        if (dnWithReplicas.size() == 0) {
+          throw new SCMException("Can't create a pipeline for container with "
+              + "no replica.", ResultCodes.NO_REPLICA_FOUND);
+        }
         pipeline =
             new Pipeline(dnWithReplicas.iterator().next().getUuidString(),
                 contInfo.getState(), ReplicationType.STAND_ALONE,

@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
     .ReplicationCompleted;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -60,6 +61,15 @@ public final class SCMEvents {
    */
   public static final TypedEvent<NodeReportFromDatanode> NODE_REPORT =
       new TypedEvent<>(NodeReportFromDatanode.class, "Node_Report");
+
+  /**
+   * Event generated on DataNode registration.
+   */
+  public static final TypedEvent<NodeRegistrationContainerReport>
+      NODE_REGISTRATION_CONT_REPORT = new TypedEvent<>(
+      NodeRegistrationContainerReport.class,
+      "Node_Registration_Container_Report");
+
   /**
    * ContainerReports are send out by Datanodes. This report is received by
    * SCMDatanodeHeartbeatDispatcher and Container_Report Event
