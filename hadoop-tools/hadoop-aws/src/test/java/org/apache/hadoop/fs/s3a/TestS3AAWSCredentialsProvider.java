@@ -26,6 +26,7 @@ import java.util.List;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import org.junit.Rule;
@@ -121,7 +122,8 @@ public class TestS3AAWSCredentialsProvider {
         Arrays.asList(
             BasicAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class,
-            InstanceProfileCredentialsProvider.class);
+            InstanceProfileCredentialsProvider.class,
+            EC2ContainerCredentialsProviderWrapper.class);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
     assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(2),

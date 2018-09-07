@@ -25,6 +25,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
@@ -597,6 +598,7 @@ public final class S3AUtils {
               creds.getUser(), creds.getPassword()));
       credentials.add(new EnvironmentVariableCredentialsProvider());
       credentials.add(InstanceProfileCredentialsProvider.getInstance());
+      credentials.add(new EC2ContainerCredentialsProviderWrapper());
     } else {
       for (Class<?> aClass : awsClasses) {
         credentials.add(createAWSCredentialProvider(conf,
