@@ -488,6 +488,24 @@ public final class Constants {
       = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
 
   /**
+   * Maximum number of records in LocalMetadataStore.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_MAX_RECORDS =
+      "fs.s3a.s3guard.local.max_records";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS = 256;
+
+  /**
+   * Time to live in milliseconds in LocalMetadataStore.
+   * If zero, time-based expiration is disabled.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
+      "fs.s3a.s3guard.local.ttl";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
+      = 10 * 1000;
+
+  /**
    * Use DynamoDB for the metadata: {@value}.
    */
   @InterfaceStability.Unstable
