@@ -1113,6 +1113,15 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.threshold.pct</name>
+    <value>0.99</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description> % of containers which should have at least one
+      reported replica before SCM comes out of chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>

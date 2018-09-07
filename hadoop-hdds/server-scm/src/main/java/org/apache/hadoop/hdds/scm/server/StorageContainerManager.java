@@ -176,6 +176,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final LeaseManager<Long> commandWatcherLeaseManager;
 
   private final ReplicationActivityStatus replicationStatus;
+  private final SCMChillModeManager scmChillModeManager;
 
   /**
    * Creates a new StorageContainerManager. Configuration will be updated
@@ -231,7 +232,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     ContainerReportHandler containerReportHandler =
         new ContainerReportHandler(scmContainerManager, node2ContainerMap,
             replicationStatus);
-
+    scmChillModeManager = new SCMChillModeManager(conf,
+        getScmContainerManager().getStateManager().getAllContainers());
     PipelineActionEventHandler pipelineActionEventHandler =
         new PipelineActionEventHandler();
 
@@ -253,6 +255,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
         pipelineActionEventHandler);
     eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
+    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+        scmChillModeManager);
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
@@ -619,9 +623,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         "server", getDatanodeProtocolServer().getDatanodeRpcAddress()));
     getDatanodeProtocolServer().start();
 
-    replicationStatus.start();
     httpServer.start();
     scmBlockManager.start();
+    replicationStatus.start();
     replicationManager.start();
     setStartTime();
   }
@@ -807,6 +811,15 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     return id2StatMap;
+  }
+
+  public boolean isInChillMode() {
+    return scmChillModeManager.getInChillMode();
+  }
+
+  @VisibleForTesting
+  public double getCurrentContainerThreshold() {
+    return scmChillModeManager.getCurrentContainerThreshold();
   }
 
   /**
