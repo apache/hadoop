@@ -27,6 +27,8 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
@@ -208,6 +210,21 @@ public class TestOfflineImageViewer {
       dirCount++;
       writtenFiles.put(entityRefXMLDir.toString(),
           hdfs.getFileStatus(entityRefXMLDir));
+
+      //Create directories with new line characters
+      Path newLFDir = new Path("/dirContainingNewLineChar"
+          + StringUtils.LF + "here");
+      hdfs.mkdirs(newLFDir);
+      dirCount++;
+      writtenFiles.put("\"/dirContainingNewLineChar%x0Ahere\"",
+          hdfs.getFileStatus(newLFDir));
+
+      Path newCRLFDir = new Path("/dirContainingNewLineChar"
+          + PBImageDelimitedTextWriter.CRLF + "here");
+      hdfs.mkdirs(newCRLFDir);
+      dirCount++;
+      writtenFiles.put("\"/dirContainingNewLineChar%x0D%x0Ahere\"",
+          hdfs.getFileStatus(newCRLFDir));
 
       //Create a directory with sticky bits
       Path stickyBitDir = new Path("/stickyBit");
