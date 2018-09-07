@@ -126,6 +126,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -515,8 +516,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       GetClusterMetricsRequest request) throws YarnException, IOException {
 
     validateRunning();
-
-    return GetClusterMetricsResponse.newInstance(null);
+    YarnClusterMetrics clusterMetrics = YarnClusterMetrics.newInstance(1);
+    return GetClusterMetricsResponse.newInstance(clusterMetrics);
   }
 
   @Override

@@ -3315,6 +3315,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
+  public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
+      ROUTER_PREFIX + "interceptor.user.threadpool-size";
+
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE = 5;
+
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
       ROUTER_WEBAPP_PREFIX + "address";

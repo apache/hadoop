@@ -3472,6 +3472,14 @@
 
   <property>
     <description>
+      The thread pool executor size of per user in Router ClientRM Service FederationClientInterceptor.
+    </description>
+    <name>yarn.router.interceptor.user.threadpool-size</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
       Size of LRU cache for Router ClientRM Service and RMAdmin Service.
     </description>
     <name>yarn.router.pipeline.cache-max-size</name>
