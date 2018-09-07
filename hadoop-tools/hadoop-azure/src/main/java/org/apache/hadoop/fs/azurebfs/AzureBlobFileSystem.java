@@ -497,6 +497,10 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.setOwner path: {}", path);
+    if (!getIsNamespaceEnabeld()) {
+      super.setOwner(path, owner, group);
+      return;
+    }
 
     if ((owner == null || owner.isEmpty()) && (group == null || group.isEmpty())) {
       throw new IllegalArgumentException("A valid owner or group must be specified.");
@@ -521,6 +525,10 @@ public class AzureBlobFileSystem extends FileSystem {
   public void setPermission(final Path path, final FsPermission permission)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setPermission path: {}", path);
+    if (!getIsNamespaceEnabeld()) {
+      super.setPermission(path, permission);
+      return;
+    }
 
     if (permission == null) {
       throw new IllegalArgumentException("The permission can't be null");
@@ -549,6 +557,12 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path.toString());
 
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "modifyAclEntries is only supported by storage accounts " +
+                      "with the hierarchical namespace enabled.");
+    }
+
     if (aclSpec == null || aclSpec.isEmpty()) {
       throw new IllegalArgumentException("The value of the aclSpec parameter is invalid.");
     }
@@ -574,6 +588,12 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAclEntries path: {}", path);
 
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "removeAclEntries is only supported by storage accounts " +
+                      "with the hierarchical namespace enabled.");
+    }
+
     if (aclSpec == null || aclSpec.isEmpty()) {
       throw new IllegalArgumentException("The aclSpec argument is invalid.");
     }
@@ -595,6 +615,12 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeDefaultAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeDefaultAcl path: {}", path);
 
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "removeDefaultAcl is only supported by storage accounts" +
+                      " with the hierarchical namespace enabled.");
+    }
+
     try {
       abfsStore.removeDefaultAcl(makeQualified(path));
     } catch (AzureBlobFileSystemException ex) {
@@ -613,6 +639,12 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void removeAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAcl path: {}", path);
+
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "removeAcl is only supported by storage accounts" +
+                      " with the hierarchical namespace enabled.");
+    }
 
     try {
       abfsStore.removeAcl(makeQualified(path));
@@ -636,6 +668,12 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setAcl path: {}", path);
 
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "setAcl is only supported by storage accounts" +
+                      " with the hierarchical namespace enabled.");
+    }
+
     if (aclSpec == null || aclSpec.size() == 0) {
       throw new IllegalArgumentException("The aclSpec argument is invalid.");
     }
@@ -657,6 +695,12 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path.toString());
+
+    if (!getIsNamespaceEnabeld()) {
+      throw new UnsupportedOperationException(
+              "getAclStatus is only supported by storage accounts" +
+                      " with the hierarchical namespace enabled.");
+    }
 
     try {
       return abfsStore.getAclStatus(makeQualified(path));
