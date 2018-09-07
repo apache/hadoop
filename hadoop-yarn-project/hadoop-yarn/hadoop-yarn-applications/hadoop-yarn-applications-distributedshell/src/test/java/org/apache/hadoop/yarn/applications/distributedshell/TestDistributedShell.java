@@ -758,6 +758,12 @@ public class TestDistributedShell {
 
   }
 
+  private String getSleepCommand(int sec) {
+    // Windows doesn't have a sleep command, ping -n does the trick
+    return Shell.WINDOWS ? "ping -n " + (sec + 1) + " 127.0.0.1 >nul"
+        : "sleep " + sec;
+  }
+
   @Test
   public void testDSRestartWithPreviousRunningContainers() throws Exception {
     String[] args = {
@@ -766,7 +772,7 @@ public class TestDistributedShell {
         "--num_containers",
         "1",
         "--shell_command",
-        "sleep 8",
+        getSleepCommand(8),
         "--master_memory",
         "512",
         "--container_memory",
@@ -801,7 +807,7 @@ public class TestDistributedShell {
         "--num_containers",
         "1",
         "--shell_command",
-        "sleep 8",
+        getSleepCommand(8),
         "--master_memory",
         "512",
         "--container_memory",
@@ -839,7 +845,7 @@ public class TestDistributedShell {
         "--num_containers",
         "1",
         "--shell_command",
-        "sleep 8",
+        getSleepCommand(8),
         "--master_memory",
         "512",
         "--container_memory",
