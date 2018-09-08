@@ -1995,7 +1995,10 @@ public class YarnConfiguration extends Configuration {
    * A configurable value to pass to the Docker Stop command. This value
    * defines the number of seconds between the docker stop command sending
    * a SIGTERM and a SIGKILL.
+   *
+   * @deprecated use {@link YarnConfiguration#NM_SLEEP_DELAY_BEFORE_SIGKILL_MS}
    */
+  @Deprecated
   public static final String NM_DOCKER_STOP_GRACE_PERIOD =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "stop.grace-period";
 
@@ -2003,6 +2006,7 @@ public class YarnConfiguration extends Configuration {
    * The default value for the grace period between the SIGTERM and the
    * SIGKILL in the Docker Stop command.
    */
+  @Deprecated
   public static final int DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD = 10;
 
   /** The default list of read-only mounts to be bind-mounted into all

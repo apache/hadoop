@@ -113,39 +113,11 @@ public final class DockerCommandExecutor {
       PrivilegedOperationExecutor privilegedOperationExecutor,
       Context nmContext) {
     try {
-      DockerContainerStatus dockerContainerStatus;
       String currentContainerStatus =
           executeStatusCommand(containerId,
           privilegedOperationExecutor, nmContext);
-      if (currentContainerStatus == null) {
-        dockerContainerStatus = DockerContainerStatus.UNKNOWN;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.CREATED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.CREATED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.RUNNING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.RUNNING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.STOPPED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.STOPPED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.RESTARTING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.RESTARTING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.REMOVING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.REMOVING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.DEAD.getName())) {
-        dockerContainerStatus = DockerContainerStatus.DEAD;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.EXITED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.EXITED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.NONEXISTENT.getName())) {
-        dockerContainerStatus = DockerContainerStatus.NONEXISTENT;
-      } else {
-        dockerContainerStatus = DockerContainerStatus.UNKNOWN;
-      }
+      DockerContainerStatus dockerContainerStatus = parseContainerStatus(
+          currentContainerStatus);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Container Status: " + dockerContainerStatus.getName()
             + " ContainerId: " + containerId);
@@ -159,6 +131,47 @@ public final class DockerCommandExecutor {
       }
       return DockerContainerStatus.NONEXISTENT;
     }
+  }
+
+  /**
+   * Parses the container status string.
+   *
+   * @param containerStatusStr container status.
+   * @return a {@link DockerContainerStatus} representing the status.
+   */
+  public static DockerContainerStatus parseContainerStatus(
+      String containerStatusStr) {
+    DockerContainerStatus dockerContainerStatus;
+    if (containerStatusStr == null) {
+      dockerContainerStatus = DockerContainerStatus.UNKNOWN;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.CREATED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.CREATED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.RUNNING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.RUNNING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.STOPPED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.STOPPED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.RESTARTING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.RESTARTING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.REMOVING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.REMOVING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.DEAD.getName())) {
+      dockerContainerStatus = DockerContainerStatus.DEAD;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.EXITED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.EXITED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.NONEXISTENT.getName())) {
+      dockerContainerStatus = DockerContainerStatus.NONEXISTENT;
+    } else {
+      dockerContainerStatus = DockerContainerStatus.UNKNOWN;
+    }
+    return dockerContainerStatus;
   }
 
   /**
