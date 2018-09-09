@@ -58,6 +58,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   }
 
   private HddsProtos.LifeCycleState state;
+  @JsonIgnore
   private PipelineID pipelineID;
   private ReplicationFactor replicationFactor;
   private ReplicationType replicationType;
