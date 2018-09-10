@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.tools.TableListing;
@@ -424,6 +425,12 @@ public class ECAdmin extends Configured implements Tool {
               "non-empty directory will not automatically convert existing" +
               " files to replicated data.");
         }
+      } catch (NoECPolicySetException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        System.err.println("Use '-setPolicy -path <PATH> -replicate' to enforce"
+            + " default replication policy irrespective of EC policy"
+            + " defined on parent.");
+        return 2;
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
