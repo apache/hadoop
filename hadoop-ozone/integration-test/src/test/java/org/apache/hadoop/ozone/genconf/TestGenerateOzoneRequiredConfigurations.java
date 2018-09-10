@@ -95,8 +95,8 @@ public class TestGenerateOzoneRequiredConfigurations {
     try (PrintStream ps = new PrintStream(outContent)) {
       System.setOut(ps);
       GenerateOzoneRequiredConfigurations.main(args);
-      Assert.assertThat(outContent.toString(),
-              CoreMatchers.containsString("ozone-site.xml has been generated at"));
+      Assert.assertThat(outContent.toString(), CoreMatchers.containsString(
+          "ozone-site.xml has been generated at"));
       System.setOut(oldStream);
     }
   }
@@ -123,8 +123,29 @@ public class TestGenerateOzoneRequiredConfigurations {
     tempPath.setWritable(true);
   }
 
+  /**
+   * Test to avoid generating ozone-site.xml when invalid permission.
+   * @throws Exception
+   */
+  @Test
+  public void generateConfigurationsFailureForInvalidPath() throws Exception {
+    File tempPath = getRandomTempDir();
+    tempPath.setReadOnly();
+    String[] args = new String[]{"-output",
+        tempPath.getAbsolutePath() + "/ozone-site.xml"};
+    GenerateOzoneRequiredConfigurations.main(args);
+
+    Assert.assertEquals("Path is invalid", false,
+        GenerateOzoneRequiredConfigurations.isValidPath(args[1]));
+
+    Assert.assertEquals("Config file not generated", 1,
+        GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
+    tempPath.setWritable(true);
+  }
+
   private File getRandomTempDir() throws IOException {
-    File tempDir = new File(outputBaseDir, RandomStringUtils.randomAlphanumeric(5));
+    File tempDir = new File(outputBaseDir,
+        RandomStringUtils.randomAlphanumeric(5));
     FileUtils.forceMkdir(tempDir);
     return tempDir;
   }

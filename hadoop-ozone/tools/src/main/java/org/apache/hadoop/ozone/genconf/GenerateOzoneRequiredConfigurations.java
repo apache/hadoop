@@ -25,6 +25,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -94,18 +95,17 @@ public final class GenerateOzoneRequiredConfigurations {
   }
 
   /**
-   * Check if the path is valid.
+   * Check if the path is valid directory.
    *
    * @param path
-   * @return true, if path is valid, else return false
+   * @return true, if path is valid directory, else return false
    */
   public static boolean isValidPath(String path) {
     try {
-      Paths.get(path);
+      return Files.isDirectory(Paths.get(path));
     } catch (InvalidPathException | NullPointerException ex) {
       return false;
     }
-    return true;
   }
 
   /**
@@ -129,12 +129,12 @@ public final class GenerateOzoneRequiredConfigurations {
   public static int generateConfigurations(String path) throws JAXBException {
 
     if (!isValidPath(path)) {
-      System.out.println("Invalid path or insufficient permission");
+      System.out.println("Invalid directory path.");
       return FAILURE;
     }
 
     if (!canWrite(path)) {
-      System.out.println("Invalid path or insufficient permission");
+      System.out.println("Insufficient permission.");
       return FAILURE;
     }
 
