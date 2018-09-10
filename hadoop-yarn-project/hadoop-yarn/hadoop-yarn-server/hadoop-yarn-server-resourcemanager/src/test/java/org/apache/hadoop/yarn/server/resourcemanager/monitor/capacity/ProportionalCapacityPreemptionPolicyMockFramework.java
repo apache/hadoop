@@ -206,6 +206,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         mClock);
   }
 
+  public void updateQueueConfig(String queuesConfig) {
+    ParentQueue root = mockQueueHierarchy(queuesConfig);
+    when(cs.getRootQueue()).thenReturn(root);
+  }
+
   private void mockContainers(String containersConfig, FiCaSchedulerApp app,
       ApplicationAttemptId attemptId, String queueName,
       List<RMContainer> reservedContainers, List<RMContainer> liveContainers) {
