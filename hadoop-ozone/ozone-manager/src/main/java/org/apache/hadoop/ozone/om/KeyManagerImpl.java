@@ -250,8 +250,8 @@ public class KeyManagerImpl implements KeyManager {
             .setKeyName(args.getKeyName())
             .setOmKeyLocationInfos(Collections.singletonList(
                 new OmKeyLocationInfoGroup(0, locations)))
-            .setCreationTime(currentTime)
-            .setModificationTime(currentTime)
+            .setCreationTime(Time.now())
+            .setModificationTime(Time.now())
             .setDataSize(size)
             .setReplicationType(type)
             .setReplicationFactor(factor)
