@@ -293,6 +293,9 @@ public class DataNode extends ReconfigurableBase
       "  and rolling upgrades.";
 
   static final int CURRENT_BLOCK_FORMAT_VERSION = 1;
+  public static final int MAX_VOLUME_FAILURE_TOLERATED_LIMIT = -1;
+  public static final String MAX_VOLUME_FAILURES_TOLERATED_MSG = "should be greater than -1";
+
 
   /** A list of property that are reconfigurable at runtime. */
   private static final List<String> RECONFIGURABLE_PROPERTIES =
@@ -1355,10 +1358,11 @@ public class DataNode extends ReconfigurableBase
 
     int volFailuresTolerated = dnConf.getVolFailuresTolerated();
     int volsConfigured = dnConf.getVolsConfigured();
-    if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
+    if (volFailuresTolerated < MAX_VOLUME_FAILURE_TOLERATED_LIMIT
+        || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
-          + ". Value configured is either less than 0 or >= "
+          + ". Value configured is either greater than -1 or >= "
           + "to the number of configured volumes (" + volsConfigured + ").");
     }
 
