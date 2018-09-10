@@ -1284,7 +1284,11 @@
 <property>
   <name>dfs.image.compress</name>
   <value>false</value>
-  <description>Should the dfs image be compressed?
+  <description>When this value is true, the dfs image will be compressed.
+    Enabling this will be very helpful if dfs image is large since it can
+    avoid consuming a lot of network bandwidth when SBN uploads a new dfs
+    image to ANN. The compressed codec is specified by the setting
+    dfs.image.compression.codec.
   </description>
 </property>
 
