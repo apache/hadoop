@@ -467,6 +467,9 @@ public class ProportionalCapacityPreemptionPolicy
     Resource totalPreemptionAllowed = Resources.multiply(clusterResources,
         percentageClusterPreemptionAllowed);
 
+    //clear under served queues for every run
+    partitionToUnderServedQueues.clear();
+
     // based on ideal allocation select containers to be preemptionCandidates from each
     // queue and each application
     Map<ApplicationAttemptId, Set<RMContainer>> toPreempt =
