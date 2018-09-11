@@ -20,21 +20,9 @@ package org.apache.hadoop.ozone.web.ozShell;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.ozone.web.ozShell.bucket.CreateBucketHandler;
-import org.apache.hadoop.ozone.web.ozShell.bucket.DeleteBucketHandler;
-import org.apache.hadoop.ozone.web.ozShell.bucket.InfoBucketHandler;
-import org.apache.hadoop.ozone.web.ozShell.bucket.ListBucketHandler;
-import org.apache.hadoop.ozone.web.ozShell.bucket.UpdateBucketHandler;
-import org.apache.hadoop.ozone.web.ozShell.keys.DeleteKeyHandler;
-import org.apache.hadoop.ozone.web.ozShell.keys.GetKeyHandler;
-import org.apache.hadoop.ozone.web.ozShell.keys.InfoKeyHandler;
-import org.apache.hadoop.ozone.web.ozShell.keys.ListKeyHandler;
-import org.apache.hadoop.ozone.web.ozShell.keys.PutKeyHandler;
-import org.apache.hadoop.ozone.web.ozShell.volume.CreateVolumeHandler;
-import org.apache.hadoop.ozone.web.ozShell.volume.DeleteVolumeHandler;
-import org.apache.hadoop.ozone.web.ozShell.volume.InfoVolumeHandler;
-import org.apache.hadoop.ozone.web.ozShell.volume.ListVolumeHandler;
-import org.apache.hadoop.ozone.web.ozShell.volume.UpdateVolumeHandler;
+import org.apache.hadoop.ozone.web.ozShell.bucket.BucketCommands;
+import org.apache.hadoop.ozone.web.ozShell.keys.KeyCommands;
+import org.apache.hadoop.ozone.web.ozShell.volume.VolumeCommands;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,21 +37,9 @@ import picocli.CommandLine.Command;
 @Command(name = "ozone oz",
     description = "Client for the Ozone object store",
     subcommands = {
-        InfoVolumeHandler.class,
-        ListVolumeHandler.class,
-        CreateVolumeHandler.class,
-        UpdateVolumeHandler.class,
-        DeleteVolumeHandler.class,
-        InfoBucketHandler.class,
-        ListBucketHandler.class,
-        CreateBucketHandler.class,
-        UpdateBucketHandler.class,
-        DeleteBucketHandler.class,
-        InfoKeyHandler.class,
-        ListKeyHandler.class,
-        PutKeyHandler.class,
-        GetKeyHandler.class,
-        DeleteKeyHandler.class
+        VolumeCommands.class,
+        BucketCommands.class,
+        KeyCommands.class
     },
     versionProvider = HddsVersionProvider.class,
     mixinStandardHelpOptions = true)
@@ -100,8 +76,5 @@ public class Shell extends GenericCli {
   public static void main(String[] argv) throws Exception {
     new Shell().run(argv);
   }
-
-
-
 }
 

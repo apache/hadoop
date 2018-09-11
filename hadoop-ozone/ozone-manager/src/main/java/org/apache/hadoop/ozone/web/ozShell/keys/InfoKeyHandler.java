@@ -38,7 +38,7 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes Info Object.
  */
-@Command(name = "-infoKey",
+@Command(name = "info",
     description = "returns information about an existing key")
 public class InfoKeyHandler extends Handler {
 

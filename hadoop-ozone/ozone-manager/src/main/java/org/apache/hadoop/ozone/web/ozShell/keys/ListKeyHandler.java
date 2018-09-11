@@ -42,23 +42,24 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes List Keys.
  */
-@Command(name = "-listKey",
+@Command(name = "list",
+    aliases = "ls",
     description = "list all keys in a given bucket")
 public class ListKeyHandler extends Handler {
 
   @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"--length", "-length", "-l"},
+  @Option(names = {"--length", "-l"},
       description = "Limit of the max results",
       defaultValue = "100")
   private int maxKeys;
 
-  @Option(names = {"--start", "-start", "-s"},
+  @Option(names = {"--start", "-s"},
       description = "The first key to start the listing")
   private String startKey;
 
-  @Option(names = {"--prefix", "-prefix", "-p"},
+  @Option(names = {"--prefix", "-p"},
       description = "Prefix to filter the key")
   private String prefix;
 

@@ -18,41 +18,41 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
+import java.net.URI;
 
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.net.URI;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes the create volume call for the shell.
  */
-@Command(name = "-createVolume",
+@Command(name = "create",
     description = "Creates a volume for the specified user")
 public class CreateVolumeHandler extends Handler {
 
   @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"--user", "-user"},
+  @Option(names = {"--user", "-u"},
       description = "Owner of of the volume", required =
       true)
   private String userName;
 
-  @Option(names = {"--quota", "-quota"},
+  @Option(names = {"--quota", "-q"},
       description =
           "Quota of the newly created volume (eg. 1G)")
   private String quota;
 
-  @Option(names = {"--root", "-root"},
+  @Option(names = {"--root"},
       description = "Development flag to execute the "
           + "command as the admin (hdfs) user.")
   private boolean root;

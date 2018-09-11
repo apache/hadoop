@@ -34,7 +34,7 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes Delete Key.
  */
-@Command(name = "-deleteKey",
+@Command(name = "delete",
     description = "deletes an existing key")
 public class DeleteKeyHandler extends Handler {
 

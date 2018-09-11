@@ -33,7 +33,7 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes volume Info calls.
  */
-@Command(name = "-infoVolume",
+@Command(name = "info",
     description = "returns information about a specific volume")
 public class InfoVolumeHandler extends Handler{
 

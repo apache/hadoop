@@ -27,13 +27,12 @@ import com.google.common.annotations.VisibleForTesting;
 import picocli.CommandLine;
 import picocli.CommandLine.ExecutionException;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.RunLast;
 
 /**
  * This is a generic parent class for all the ozone related cli tools.
  */
-public class GenericCli implements Callable<Void> {
+public class GenericCli implements Callable<Void>, GenericParentCommand {
 
   @Option(names = {"--verbose"},
       description = "More verbose output. Show the stack trace of the errors.")
@@ -72,7 +71,7 @@ public class GenericCli implements Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    throw new ParameterException(cmd, "Please choose a subcommand");
+    throw new MissingSubcommandException();
   }
 
   public OzoneConfiguration createOzoneConfiguration() {
@@ -86,12 +85,13 @@ public class GenericCli implements Callable<Void> {
     return ozoneConf;
   }
 
-  public boolean isVerbose() {
-    return verbose;
-  }
-
   @VisibleForTesting
   public picocli.CommandLine getCmd() {
     return cmd;
+  }
+
+  @Override
+  public boolean isVerbose() {
+    return verbose;
   }
 }

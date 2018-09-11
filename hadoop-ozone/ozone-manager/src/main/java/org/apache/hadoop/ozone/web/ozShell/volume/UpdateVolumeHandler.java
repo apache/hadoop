@@ -35,18 +35,18 @@ import java.net.URI;
 /**
  * Executes update volume calls.
  */
-@Command(name = "-updateVolume",
+@Command(name = "update",
     description = "Updates parameter of the volumes")
 public class UpdateVolumeHandler extends Handler {
 
   @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"--user", "-user"},
+  @Option(names = {"--user"},
       description = "Owner of the volume to set")
   private String ownerName;
 
-  @Option(names = {"--quota", "-quota"},
+  @Option(names = {"--quota"},
       description = "Quota of the volume to set"
           + "(eg. 1G)")
   private String quota;

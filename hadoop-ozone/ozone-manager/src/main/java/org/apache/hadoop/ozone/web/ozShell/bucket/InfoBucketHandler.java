@@ -35,7 +35,7 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes Info bucket.
  */
-@Command(name = "-infoBucket",
+@Command(name = "info",
     description = "returns information about a bucket")
 public class InfoBucketHandler extends Handler {
 

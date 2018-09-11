@@ -38,22 +38,21 @@ import org.apache.commons.codec.digest.DigestUtils;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 /**
  * Gets an existing key.
  */
-@Command(name = "-getKey",
+@Command(name = "get",
     description = "Gets a specific key from ozone server")
 public class GetKeyHandler extends Handler {
 
-  @Parameters(arity = "1..1", description = Shell.OZONE_KEY_URI_DESCRIPTION)
+  @Parameters(index = "0", arity = "1..1", description =
+      Shell.OZONE_KEY_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"-f", "--file", "-file"},
-      description = "File path to download the key to",
-      required = true)
+  @Parameters(index = "1", arity = "1..1",
+      description = "File path to download the key to")
   private String fileName;
 
   /**

@@ -39,7 +39,8 @@ import java.util.List;
 /**
  * Executes List Volume call.
  */
-@Command(name = "-listVolume",
+@Command(name = "list",
+    aliases = "ls",
     description = "List the volumes of a given user")
 public class ListVolumeHandler extends Handler {
 
@@ -48,20 +49,20 @@ public class ListVolumeHandler extends Handler {
       defaultValue = "/")
   private String uri;
 
-  @Option(names = {"--length", "-length", "-l"},
+  @Option(names = {"--length", "-l"},
       description = "Limit of the max results",
       defaultValue = "100")
   private int maxVolumes;
 
-  @Option(names = {"--start", "-start", "-s"},
+  @Option(names = {"--start", "-s"},
       description = "The first volume to start the listing")
   private String startVolume;
 
-  @Option(names = {"--prefix", "-prefix", "-p"},
+  @Option(names = {"--prefix", "-p"},
       description = "Prefix to filter the volumes")
   private String prefix;
 
-  @Option(names = {"--user", "-user", "-u"},
+  @Option(names = {"--user", "-u"},
       description = "Owner of the volumes to list.")
   private String userName;
 

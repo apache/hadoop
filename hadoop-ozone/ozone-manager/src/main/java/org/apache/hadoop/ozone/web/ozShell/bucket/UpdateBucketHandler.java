@@ -40,19 +40,19 @@ import picocli.CommandLine.Parameters;
 /**
  * Allows users to add and remove acls and from a bucket.
  */
-@Command(name = "-updateBucket",
+@Command(name = "update",
     description = "allows changing bucket attributes")
 public class UpdateBucketHandler extends Handler {
 
   @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"--addAcl", "-addAcl"},
+  @Option(names = {"--addAcl"},
       description = "Comma separated list of acl rules to add (eg. " +
           "user:bilbo:rw)")
   private String addAcl;
 
-  @Option(names = {"--removeAcl", "-removeAcl"},
+  @Option(names = {"--removeAcl"},
       description = "Comma separated list of acl rules to remove (eg. "
           + "user:bilbo:rw)")
   private String removeAcl;
