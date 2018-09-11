@@ -613,6 +613,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
             "StorageContainerLocationProtocol RPC server",
             getClientRpcAddress()));
     DefaultMetricsSystem.initialize("StorageContainerManager");
+
+    commandWatcherLeaseManager.start();
     getClientProtocolServer().start();
 
     LOG.info(buildRpcServerStartMessage("ScmBlockLocationProtocol RPC " +
