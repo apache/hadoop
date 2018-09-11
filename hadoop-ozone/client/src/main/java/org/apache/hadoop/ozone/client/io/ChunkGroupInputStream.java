@@ -71,7 +71,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
   }
 
   @VisibleForTesting
-  public long getRemainingOfIndex(int index) {
+  public long getRemainingOfIndex(int index) throws IOException {
     return streamEntries.get(index).getRemaining();
   }
 
@@ -206,31 +206,27 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
 
     private final ChunkInputStream chunkInputStream;
     private final long length;
-    private long currentPosition;
 
     public ChunkInputStreamEntry(ChunkInputStream chunkInputStream,
         long length) {
       this.chunkInputStream = chunkInputStream;
       this.length = length;
-      this.currentPosition = 0;
     }
 
-    synchronized long getRemaining() {
-      return length - currentPosition;
+    synchronized long getRemaining() throws IOException {
+      return length - getPos();
     }
 
     @Override
     public synchronized int read(byte[] b, int off, int len)
         throws IOException {
       int readLen = chunkInputStream.read(b, off, len);
-      currentPosition += readLen;
       return readLen;
     }
 
     @Override
     public synchronized int read() throws IOException {
       int data = chunkInputStream.read();
-      currentPosition += 1;
       return data;
     }
 
