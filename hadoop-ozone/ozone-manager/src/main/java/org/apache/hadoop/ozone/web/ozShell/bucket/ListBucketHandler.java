@@ -42,24 +42,25 @@ import picocli.CommandLine.Parameters;
 /**
  * Executes List Bucket.
  */
-@Command(name = "-listBucket",
+@Command(name = "list",
+    aliases = "ls",
     description = "lists the buckets in a volume.")
 public class ListBucketHandler extends Handler {
 
   @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"--length", "-length", "-l"},
+  @Option(names = {"--length", "-l"},
       description = "Limit of the max results",
       defaultValue = "100",
       showDefaultValue = Visibility.ALWAYS)
   private int maxBuckets;
 
-  @Option(names = {"--start", "-start", "-s"},
+  @Option(names = {"--start", "-s"},
       description = "The first bucket to start the listing")
   private String startBucket;
 
-  @Option(names = {"--prefix", "-prefix", "-p"},
+  @Option(names = {"--prefix", "-p"},
       description = "Prefix to filter the buckets")
   private String prefix;
   /**

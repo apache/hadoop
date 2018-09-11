@@ -218,8 +218,8 @@ public class TestOzoneShell {
       throws Exception {
     err.reset();
     String userName = "bilbo";
-    String[] args = new String[] {"-createVolume", url + "/" + volumeName,
-        "-user", userName, "-root"};
+    String[] args = new String[] {"volume", "create", url + "/" + volumeName,
+        "--user", userName, "--root"};
 
     if (Strings.isNullOrEmpty(errorMsg)) {
       execute(shell, args);
@@ -271,7 +271,7 @@ public class TestOzoneShell {
     OzoneVolume volume = client.getVolumeDetails(volumeName);
     assertNotNull(volume);
 
-    String[] args = new String[] {"-deleteVolume", url + "/" + volumeName};
+    String[] args = new String[] {"volume", "delete", url + "/" + volumeName};
     execute(shell, args);
     String output = out.toString();
     assertTrue(output.contains("Volume " + volumeName + " is deleted"));
@@ -296,7 +296,7 @@ public class TestOzoneShell {
         .build();
     client.createVolume(volumeName, volumeArgs);
 
-    String[] args = new String[] {"-infoVolume", url + "/" + volumeName};
+    String[] args = new String[] {"volume", "info", url + "/" + volumeName};
     execute(shell, args);
 
     String output = out.toString();
@@ -305,7 +305,7 @@ public class TestOzoneShell {
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // get info for non-exist volume
-    args = new String[] {"-infoVolume", url + "/invalid-volume"};
+    args = new String[] {"volume", "info", url + "/invalid-volume"};
     executeWithError(shell, args, "VOLUME_NOT_FOUND");
   }
 
@@ -323,28 +323,28 @@ public class TestOzoneShell {
     assertEquals(userName, vol.getOwner());
     assertEquals(OzoneQuota.parseQuota("100TB").sizeInBytes(), vol.getQuota());
 
-    String[] args = new String[] {"-updateVolume", url + "/" + volumeName,
-        "-quota", "500MB"};
+    String[] args = new String[] {"volume", "update", url + "/" + volumeName,
+        "--quota", "500MB"};
     execute(shell, args);
     vol = client.getVolumeDetails(volumeName);
     assertEquals(userName, vol.getOwner());
     assertEquals(OzoneQuota.parseQuota("500MB").sizeInBytes(), vol.getQuota());
 
     String newUser = "new-user";
-    args = new String[] {"-updateVolume", url + "/" + volumeName,
-        "-user", newUser};
+    args = new String[] {"volume", "update", url + "/" + volumeName,
+        "--user", newUser};
     execute(shell, args);
     vol = client.getVolumeDetails(volumeName);
     assertEquals(newUser, vol.getOwner());
 
     // test error conditions
-    args = new String[] {"-updateVolume", url + "/invalid-volume",
-        "-user", newUser};
+    args = new String[] {"volume", "update", url + "/invalid-volume",
+        "--user", newUser};
     executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
 
     err.reset();
-    args = new String[] {"-updateVolume", url + "/invalid-volume",
-        "-quota", "500MB"};
+    args = new String[] {"volume", "update", url + "/invalid-volume",
+        "--quota", "500MB"};
     executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
   }
 
@@ -411,14 +411,14 @@ public class TestOzoneShell {
       assertNotNull(vol);
     }
 
-    String[] args = new String[] {"-listVolume", url + "/abcde", "-user",
-        user1, "-length", "100"};
+    String[] args = new String[] {"volume", "list", url + "/abcde", "--user",
+        user1, "--length", "100"};
     executeWithError(shell, args, "Invalid URI");
 
     err.reset();
     // test -length option
-    args = new String[] {"-listVolume", url + "/", "-user",
-        user1, "-length", "100"};
+    args = new String[] {"volume", "list", url + "/", "--user",
+        user1, "--length", "100"};
     execute(shell, args);
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -431,8 +431,8 @@ public class TestOzoneShell {
     }
 
     out.reset();
-    args = new String[] {"-listVolume", url + "/", "-user",
-        user1, "-length", "2"};
+    args = new String[] {"volume", "list", url + "/", "--user",
+        user1, "--length", "2"};
     execute(shell, args);
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -440,10 +440,11 @@ public class TestOzoneShell {
 
     assertEquals(2, volumes.size());
 
-    // test -prefix option
+    // test --prefix option
     out.reset();
-    args = new String[] {"-listVolume", url + "/", "-user", user1, "-length",
-        "100", "-prefix", "test-vol-" + protocol + "1" };
+    args =
+        new String[] {"volume", "list", url + "/", "--user", user1, "--length",
+            "100", "--prefix", "test-vol-" + protocol + "1"};
     execute(shell, args);
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -459,8 +460,9 @@ public class TestOzoneShell {
 
     // test -start option
     out.reset();
-    args = new String[] {"-listVolume", url + "/", "-user", user2, "-length",
-        "100", "-start", "test-vol-" + protocol + "15" };
+    args =
+        new String[] {"volume", "list", url + "/", "--user", user2, "--length",
+            "100", "--start", "test-vol-" + protocol + "15"};
     execute(shell, args);
     commandOutput = out.toString();
     volumes = (List<VolumeInfo>) JsonUtils
@@ -475,13 +477,13 @@ public class TestOzoneShell {
 
     // test error conditions
     err.reset();
-    args  = new String[] {"-listVolume", url + "/", "-user",
-        user2, "-length", "-1"};
+    args = new String[] {"volume", "list", url + "/", "--user",
+        user2, "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
 
     err.reset();
-    args  = new String[] {"-listVolume", url + "/", "-user",
-        user2, "-length", "invalid-length"};
+    args = new String[] {"volume", "list", url + "/", "--user",
+        user2, "--length", "invalid-length"};
     executeWithError(shell, args, "For input string: \"invalid-length\"");
   }
 
@@ -490,7 +492,7 @@ public class TestOzoneShell {
     LOG.info("Running testCreateBucket");
     OzoneVolume vol = creatVolume();
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    String[] args = new String[] {"-createBucket",
+    String[] args = new String[] {"bucket", "create",
         url + "/" + vol.getName() + "/" + bucketName};
 
     execute(shell, args);
@@ -500,7 +502,7 @@ public class TestOzoneShell {
     assertEquals(bucketName, bucketInfo.getName());
 
     // test create a bucket in a non-exist volume
-    args = new String[] {"-createBucket",
+    args = new String[] {"bucket", "create",
         url + "/invalid-volume/" + bucketName};
 
     executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
@@ -515,7 +517,7 @@ public class TestOzoneShell {
     OzoneBucket bucketInfo = vol.getBucket(bucketName);
     assertNotNull(bucketInfo);
 
-    String[] args = new String[] {"-deleteBucket",
+    String[] args = new String[] {"bucket", "delete",
         url + "/" + vol.getName() + "/" + bucketName};
     execute(shell, args);
 
@@ -529,13 +531,13 @@ public class TestOzoneShell {
     }
 
     // test delete bucket in a non-exist volume
-    args = new String[] {"-deleteBucket",
+    args = new String[] {"bucket", "delete",
         url + "/invalid-volume" + "/" + bucketName};
     executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
 
     err.reset();
     // test delete non-exist bucket
-    args = new String[] {"-deleteBucket",
+    args = new String[] {"bucket", "delete",
         url + "/" + vol.getName() + "/invalid-bucket"};
     executeWithError(shell, args,
         "Delete Bucket failed, error:BUCKET_NOT_FOUND");
@@ -548,7 +550,7 @@ public class TestOzoneShell {
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     vol.createBucket(bucketName);
 
-    String[] args = new String[] {"-infoBucket",
+    String[] args = new String[] {"bucket", "info",
         url + "/" + vol.getName() + "/" + bucketName};
     execute(shell, args);
 
@@ -558,7 +560,7 @@ public class TestOzoneShell {
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // test get info from a non-exist bucket
-    args = new String[] {"-infoBucket",
+    args = new String[] {"bucket", "info",
         url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     executeWithError(shell, args,
         "Info Bucket failed, error: BUCKET_NOT_FOUND");
@@ -573,8 +575,8 @@ public class TestOzoneShell {
     OzoneBucket bucket = vol.getBucket(bucketName);
     int aclSize = bucket.getAcls().size();
 
-    String[] args = new String[] {"-updateBucket",
-        url + "/" + vol.getName() + "/" + bucketName, "-addAcl",
+    String[] args = new String[] {"bucket", "update",
+        url + "/" + vol.getName() + "/" + bucketName, "--addAcl",
         "user:frodo:rw,group:samwise:r"};
     execute(shell, args);
     String output = out.toString();
@@ -589,8 +591,8 @@ public class TestOzoneShell {
         && acl.getType() == OzoneACLType.USER
         && acl.getRights()== OzoneACLRights.READ_WRITE);
 
-    args = new String[] {"-updateBucket",
-        url + "/" + vol.getName() + "/" + bucketName, "-removeAcl",
+    args = new String[] {"bucket", "update",
+        url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
         "user:frodo:rw"};
     execute(shell, args);
 
@@ -602,8 +604,8 @@ public class TestOzoneShell {
         && acl.getRights()== OzoneACLRights.READ);
 
     // test update bucket for a non-exist bucket
-    args = new String[] {"-updateBucket",
-        url + "/" + vol.getName() + "/invalid-bucket", "-addAcl",
+    args = new String[] {"bucket", "update",
+        url + "/" + vol.getName() + "/invalid-bucket", "--addAcl",
         "user:frodo:rw"};
     executeWithError(shell, args,
         "Info Bucket failed, error: BUCKET_NOT_FOUND");
@@ -628,8 +630,8 @@ public class TestOzoneShell {
     }
 
     // test -length option
-    String[] args = new String[] {"-listBucket",
-        url + "/" + vol.getName(), "-length", "100"};
+    String[] args = new String[] {"bucket", "list",
+        url + "/" + vol.getName(), "--length", "100"};
     execute(shell, args);
     commandOutput = out.toString();
     buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
@@ -648,8 +650,8 @@ public class TestOzoneShell {
     }
 
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getName(),
-        "-length", "3"};
+    args = new String[] {"bucket", "list", url + "/" + vol.getName(),
+        "--length", "3"};
     execute(shell, args);
     commandOutput = out.toString();
     buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
@@ -662,10 +664,10 @@ public class TestOzoneShell {
     assertEquals(buckets.get(1).getBucketName(), "test-bucket1");
     assertEquals(buckets.get(2).getBucketName(), "test-bucket10");
 
-    // test -prefix option
+    // test --prefix option
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getName(),
-        "-length", "100", "-prefix", "test-bucket1"};
+    args = new String[] {"bucket", "list", url + "/" + vol.getName(),
+        "--length", "100", "--prefix", "test-bucket1"};
     execute(shell, args);
     commandOutput = out.toString();
     buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
@@ -678,8 +680,8 @@ public class TestOzoneShell {
 
     // test -start option
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getName(),
-        "-length", "100", "-start", "test-bucket7"};
+    args = new String[] {"bucket", "list", url + "/" + vol.getName(),
+        "--length", "100", "--start", "test-bucket7"};
     execute(shell, args);
     commandOutput = out.toString();
     buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
@@ -691,8 +693,8 @@ public class TestOzoneShell {
 
     // test error conditions
     err.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getName(),
-        "-length", "-1"};
+    args = new String[] {"bucket", "list", url + "/" + vol.getName(),
+        "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
   }
 
@@ -704,8 +706,8 @@ public class TestOzoneShell {
     String bucketName = bucket.getName();
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
-    String[] args = new String[] {"-putKey",
-        url + "/" + volumeName + "/" + bucketName + "/" + keyName, "-file",
+    String[] args = new String[] {"key", "put",
+        url + "/" + volumeName + "/" + bucketName + "/" + keyName,
         createTmpFile()};
     execute(shell, args);
 
@@ -713,8 +715,8 @@ public class TestOzoneShell {
     assertEquals(keyName, keyInfo.getName());
 
     // test put key in a non-exist bucket
-    args = new String[] {"-putKey",
-        url + "/" + volumeName + "/invalid-bucket/" + keyName, "-file",
+    args = new String[] {"key", "put",
+        url + "/" + volumeName + "/invalid-bucket/" + keyName,
         createTmpFile()};
     executeWithError(shell, args,
         "Info Bucket failed, error: BUCKET_NOT_FOUND");
@@ -736,8 +738,8 @@ public class TestOzoneShell {
 
     String tmpPath = baseDir.getAbsolutePath() + "/testfile-"
         + UUID.randomUUID().toString();
-    String[] args = new String[] {"-getKey",
-        url + "/" + volumeName + "/" + bucketName + "/" + keyName, "-file",
+    String[] args = new String[] {"key", "get",
+        url + "/" + volumeName + "/" + bucketName + "/" + keyName,
         tmpPath};
     execute(shell, args);
 
@@ -748,8 +750,8 @@ public class TestOzoneShell {
     assertEquals(dataStr, DFSUtil.bytes2String(dataBytes));
 
     tmpPath = baseDir.getAbsolutePath() + File.separatorChar + keyName;
-    args = new String[] {"-getKey",
-        url + "/" + volumeName + "/" + bucketName + "/" + keyName, "-file",
+    args = new String[] {"key", "get",
+        url + "/" + volumeName + "/" + bucketName + "/" + keyName,
         baseDir.getAbsolutePath()};
     execute(shell, args);
 
@@ -776,7 +778,7 @@ public class TestOzoneShell {
     OzoneKey keyInfo = bucket.getKey(keyName);
     assertEquals(keyName, keyInfo.getName());
 
-    String[] args = new String[] {"-deleteKey",
+    String[] args = new String[] {"key", "delete",
         url + "/" + volumeName + "/" + bucketName + "/" + keyName};
     execute(shell, args);
 
@@ -790,14 +792,14 @@ public class TestOzoneShell {
     }
 
     // test delete key in a non-exist bucket
-    args = new String[] {"-deleteKey",
+    args = new String[] {"key", "delete",
         url + "/" + volumeName + "/invalid-bucket/" + keyName};
     executeWithError(shell, args,
         "Info Bucket failed, error: BUCKET_NOT_FOUND");
 
     err.reset();
     // test delete a non-exist key in bucket
-    args = new String[] {"-deleteKey",
+    args = new String[] {"key", "delete",
         url + "/" + volumeName + "/" + bucketName + "/invalid-key"};
     executeWithError(shell, args, "Delete key failed, error:KEY_NOT_FOUND");
   }
@@ -815,7 +817,7 @@ public class TestOzoneShell {
     keyOutputStream.write(dataStr.getBytes());
     keyOutputStream.close();
 
-    String[] args = new String[] {"-infoKey",
+    String[] args = new String[] {"key", "info",
         url + "/" + volumeName + "/" + bucketName + "/" + keyName};
 
     // verify the response output
@@ -834,7 +836,7 @@ public class TestOzoneShell {
     err.reset();
 
     // get the info of a non-exist key
-    args = new String[] {"-infoKey",
+    args = new String[] {"key", "info",
         url + "/" + volumeName + "/" + bucketName + "/invalid-key"};
 
     // verify the response output
@@ -855,7 +857,7 @@ public class TestOzoneShell {
         bucket.createKey(dirKeyName, dataStr.length());
     keyOutputStream.write(dataStr.getBytes());
     keyOutputStream.close();
-    String[] args = new String[] {"-infoKey",
+    String[] args = new String[] {"key", "info",
         url + "/" + volumeName + "/" + bucketName + "/" + dirKeyName};
     // verify the response output
     execute(shell, args);
@@ -864,7 +866,7 @@ public class TestOzoneShell {
     assertTrue(output.contains("createdOn") &&
                 output.contains("modifiedOn") &&
                 output.contains(OzoneConsts.OZONE_TIME_ZONE));
-    args = new String[] {"-infoKey",
+    args = new String[] {"key", "info",
         url + "/" + volumeName + "/" + bucketName + "/" + keyNameOnly};
     executeWithError(shell, args, "Lookup key failed, error:KEY_NOT_FOUND");
     out.reset();
@@ -894,8 +896,8 @@ public class TestOzoneShell {
     }
 
     // test -length option
-    String[] args = new String[] {"-listKey",
-        url + "/" + volumeName + "/" + bucketName, "-length", "100"};
+    String[] args = new String[] {"key", "list",
+        url + "/" + volumeName + "/" + bucketName, "--length", "100"};
     execute(shell, args);
     commandOutput = out.toString();
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
@@ -916,8 +918,9 @@ public class TestOzoneShell {
     }
 
     out.reset();
-    args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
-        "-length", "3"};
+    args =
+        new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
+            "--length", "3"};
     execute(shell, args);
     commandOutput = out.toString();
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
@@ -929,10 +932,11 @@ public class TestOzoneShell {
     assertEquals(keys.get(1).getKeyName(), "test-key1");
     assertEquals(keys.get(2).getKeyName(), "test-key10");
 
-    // test -prefix option
+    // test --prefix option
     out.reset();
-    args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
-        "-length", "100", "-prefix", "test-key1"};
+    args =
+        new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
+            "--length", "100", "--prefix", "test-key1"};
     execute(shell, args);
     commandOutput = out.toString();
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
@@ -945,8 +949,9 @@ public class TestOzoneShell {
 
     // test -start option
     out.reset();
-    args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
-        "-length", "100", "-start", "test-key7"};
+    args =
+        new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
+            "--length", "100", "--start", "test-key7"};
     execute(shell, args);
     commandOutput = out.toString();
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
@@ -957,8 +962,9 @@ public class TestOzoneShell {
 
     // test error conditions
     err.reset();
-    args = new String[] {"-listKey", url + "/" + volumeName + "/" + bucketName,
-        "-length", "-1"};
+    args =
+        new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
+            "--length", "-1"};
     executeWithError(shell, args, "the length should be a positive number");
   }
 

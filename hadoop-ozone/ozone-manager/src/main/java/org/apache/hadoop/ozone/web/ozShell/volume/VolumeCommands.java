@@ -18,46 +18,43 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import java.net.URI;
+import java.util.concurrent.Callable;
 
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.hdds.cli.GenericParentCommand;
+import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
 /**
- * Executes deleteVolume call for the shell.
+ * Subcommand to group volume related operations.
  */
-@Command(name = "delete",
-    description = "deletes a volume if it is empty")
-public class DeleteVolumeHandler extends Handler {
+@Command(name = "volume",
+    aliases = "vol",
+    description = "Volume specific operations",
+    subcommands = {
+        InfoVolumeHandler.class,
+        ListVolumeHandler.class,
+        CreateVolumeHandler.class,
+        UpdateVolumeHandler.class,
+        DeleteVolumeHandler.class
+    },
+    mixinStandardHelpOptions = true,
+    versionProvider = HddsVersionProvider.class)
+public class VolumeCommands implements GenericParentCommand, Callable<Void> {
 
-  @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
-  private String uri;
+  @ParentCommand
+  private Shell shell;
 
-  /**
-   * Executes the delete volume call.
-   */
   @Override
   public Void call() throws Exception {
+    throw new MissingSubcommandException();
+  }
 
-    URI ozoneURI = verifyURI(uri);
-    if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to delete a volume");
-    }
-
-    // we need to skip the slash in the URI path
-    String volumeName = ozoneURI.getPath().substring(1);
-
-    if (isVerbose()) {
-      System.out.printf("Volume name : %s%n", volumeName);
-    }
-
-    client.getObjectStore().deleteVolume(volumeName);
-    System.out.printf("Volume %s is deleted%n", volumeName);
-    return null;
+  @Override
+  public boolean isVerbose() {
+    return shell.isVerbose();
   }
 }

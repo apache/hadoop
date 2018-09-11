@@ -33,7 +33,7 @@ import picocli.CommandLine.Parameters;
 /**
  * Delete bucket Handler.
  */
-@Command(name = "-deleteBucket",
+@Command(name = "delete",
     description = "deletes an empty bucket")
 public class DeleteBucketHandler extends Handler {
 

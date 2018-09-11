@@ -50,19 +50,18 @@ import picocli.CommandLine.Parameters;
 /**
  * Puts a file into an ozone bucket.
  */
-@Command(name = "-putKey",
+@Command(name = "put",
     description = "creates or overwrites an existing key")
 public class PutKeyHandler extends Handler {
 
-  @Parameters(arity = "1..1", description = Shell.OZONE_KEY_URI_DESCRIPTION)
+  @Parameters(index = "0", arity = "1..1", description =
+      Shell.OZONE_KEY_URI_DESCRIPTION)
   private String uri;
 
-  @Option(names = {"-f", "--file", "-file"},
-      description = "File to upload",
-      required = true)
+  @Parameters(index = "1", arity = "1..1", description = "File to upload")
   private String fileName;
 
-  @Option(names = {"-r", "--replication", "-replicationFactor"},
+  @Option(names = {"-r", "--replication"},
       description = "Replication factor of the new key. (use ONE or THREE) "
           + "Default is specified in the cluster-wide config.")
   private ReplicationFactor replicationFactor;

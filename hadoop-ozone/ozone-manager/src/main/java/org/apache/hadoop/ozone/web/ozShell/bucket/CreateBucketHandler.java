@@ -35,7 +35,7 @@ import picocli.CommandLine.Parameters;
 /**
  * create bucket handler.
  */
-@Command(name = "-createBucket",
+@Command(name = "create",
     description = "creates a bucket in a given volume")
 public class CreateBucketHandler extends Handler {
 
