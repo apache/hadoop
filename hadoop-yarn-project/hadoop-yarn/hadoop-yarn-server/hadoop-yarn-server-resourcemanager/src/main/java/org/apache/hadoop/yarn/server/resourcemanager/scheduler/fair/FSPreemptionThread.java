@@ -204,6 +204,12 @@ class FSPreemptionThread extends Thread {
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
           scheduler.getSchedulerApp(container.getApplicationAttemptId());
+      if (app == null) {
+        // e.g. "INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler: Container container_1536156801471_0071_01_000096 completed with event FINISHED, but corresponding RMContainer doesn't exist."
+        LOG.warn("app == null, giving up in identifyContainersToPreemptOnNode()");
+        return null;
+      }
+
       ApplicationId appId = app.getApplicationId();
 
       if (app.canContainerBePreempted(container,
