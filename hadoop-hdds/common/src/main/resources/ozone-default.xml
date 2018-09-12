@@ -1168,4 +1168,15 @@
       (in compressed format), but doesn't require fast io access such as SSD.
     </description>
   </property>
+
+  <property>
+    <name>hdds.lock.max.concurrency</name>
+    <value>100</value>
+    <tag>HDDS</tag>
+    <description>Locks in HDDS/Ozone uses object pool to maintain active locks
+      in the system, this property defines the max limit for the locks that
+      will be maintained in the pool.
+    </description>
+  </property>
+
 </configuration>
