@@ -479,6 +479,20 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
       Map<String, String> options = new HashMap<>();
+      String s3Path = paths.get(0);
+
+      // Check if DynamoDB url is set from arguments.
+      String metadataStoreUri = getCommandFormat().getOptValue(META_FLAG);
+      if(metadataStoreUri == null || metadataStoreUri.isEmpty()) {
+        // If not set, check if filesystem is guarded by creating an
+        // S3AFileSystem and check if hasMetadataStore is true
+        try (S3AFileSystem s3AFileSystem = (S3AFileSystem)
+            S3AFileSystem.newInstance(toUri(s3Path), getConf())){
+          Preconditions.checkState(s3AFileSystem.hasMetadataStore(),
+              "The S3 bucket is unguarded. " + getName()
+                  + " can not be used on an unguarded bucket.");
+        }
+      }
 
       String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (StringUtils.isNotEmpty(readCap)) {
