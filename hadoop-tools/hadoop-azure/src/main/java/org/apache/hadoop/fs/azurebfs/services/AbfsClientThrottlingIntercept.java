@@ -48,8 +48,8 @@ public final class AbfsClientThrottlingIntercept {
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
   }
 
-  public static synchronized void initializeSingleton(boolean isAutoThrottlingEnabled) {
-    if (!isAutoThrottlingEnabled) {
+  public static synchronized void initializeSingleton(boolean enableAutoThrottling) {
+    if (!enableAutoThrottling) {
       return;
     }
     if (singleton == null) {
