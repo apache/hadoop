@@ -603,7 +603,9 @@
       fs.s3a.*.server-side-encryption.key
       fs.azure.account.key.*
       credential$
-      oauth.*token$
+      oauth.*secret
+      oauth.*password
+      oauth.*token
       hadoop.security.sensitive-config-keys
   </value>
   <description>A comma-separated or multi-line list of regular expressions to
