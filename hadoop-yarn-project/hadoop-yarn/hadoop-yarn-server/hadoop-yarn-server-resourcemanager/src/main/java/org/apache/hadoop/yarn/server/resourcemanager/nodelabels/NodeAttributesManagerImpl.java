@@ -279,8 +279,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
    * @param nodeAttributeMapping
    * @param newAttributesToBeAdded
    * @param isRemoveOperation : to indicate whether its a remove operation.
-   * @return Map<String, Map<NodeAttribute, AttributeValue>>, node -> Map(
-   *         NodeAttribute -> AttributeValue)
+   * @return Map of String to Map of NodeAttribute to AttributeValue
    * @throws IOException : on invalid mapping in the current request or against
    *           already existing NodeAttributes.
    */

@@ -56,7 +56,7 @@ public abstract class GetAttributesToNodesRequest {
    * Set node attributeKeys for which the mapping of hostname to attribute value
    * is required.
    *
-   * @param attributes Set<NodeAttributeKey> provided.
+   * @param attributes Set of NodeAttributeKey provided.
    */
   @Public
   @Unstable
@@ -66,7 +66,7 @@ public abstract class GetAttributesToNodesRequest {
    * Get node attributeKeys for which mapping of hostname to attribute value is
    * required.
    *
-   * @return Set<NodeAttributeKey>
+   * @return Set of NodeAttributeKey
    */
   @Public
   @Unstable

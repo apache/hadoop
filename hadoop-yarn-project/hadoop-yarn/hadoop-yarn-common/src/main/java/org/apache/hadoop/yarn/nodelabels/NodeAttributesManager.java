@@ -103,7 +103,7 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * NodeAttribute to AttributeValue Map.
    *
-   * @return Map<NodeAttribute, AttributeValue> mapping of Attribute to Value.
+   * @return Map of NodeAttribute to AttributeValue.
    */
   public abstract Map<NodeAttribute, AttributeValue> getAttributesForNode(
       String hostName);
@@ -111,7 +111,7 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * Get All node to Attributes list based on filter.
    *
-   * @return List<NodeToAttributes> nodeToAttributes matching filter.If empty
+   * @return List of NodeToAttributes matching filter. If empty
    * or null is passed as argument will return all.
    */
   public abstract List<NodeToAttributes> getNodeToAttributes(
@@ -120,8 +120,8 @@ public abstract class NodeAttributesManager extends AbstractService {
   /**
    * Get all node to Attributes mapping.
    *
-   * @return Map<String, Set<NodeAttribute>> nodesToAttributes matching
-   * filter.If empty or null is passed as argument will return all.
+   * @return Map of String to Set of nodesToAttributes matching
+   * filter. If empty or null is passed as argument will return all.
    */
   public abstract Map<String, Set<NodeAttribute>> getNodesToAttributes(
       Set<String> hostNames);

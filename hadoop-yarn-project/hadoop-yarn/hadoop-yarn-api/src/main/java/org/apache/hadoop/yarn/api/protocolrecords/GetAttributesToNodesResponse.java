@@ -56,8 +56,7 @@ public abstract class GetAttributesToNodesResponse {
    * Get mapping of NodeAttributeKey to its associated mapping of list of
    * NodeToAttributeValue associated with attribute.
    *
-   * @return Map<NodeAttributeKey, List<NodeToAttributeValue>> node attributes
-   *         to list of NodeToAttributeValuenode.
+   * @return Map of node attributes to list of NodeToAttributeValue.
    */
   @Public
   @Evolving

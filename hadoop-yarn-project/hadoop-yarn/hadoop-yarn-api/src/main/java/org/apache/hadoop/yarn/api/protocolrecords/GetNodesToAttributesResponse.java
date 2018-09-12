@@ -55,7 +55,7 @@ public abstract class GetNodesToAttributesResponse {
   /**
    * Get hostnames to NodeAttributes mapping.
    *
-   * @return Map<String, Set<NodeAttribute>> host to attributes.
+   * @return Map of host to attributes.
    */
   @Public
   @Evolving
