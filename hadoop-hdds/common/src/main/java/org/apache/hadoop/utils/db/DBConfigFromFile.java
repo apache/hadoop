@@ -26,6 +26,8 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.Env;
 import org.rocksdb.OptionsUtil;
 import org.rocksdb.RocksDBException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +46,9 @@ import java.util.List;
  * responsibility.
  */
 public final class DBConfigFromFile {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBConfigFromFile.class);
+
   public static final String CONFIG_DIR = "HADOOP_CONF_DIR";
 
   private DBConfigFromFile() {
@@ -59,8 +64,11 @@ public final class DBConfigFromFile {
     }
 
     if (StringUtil.isBlank(path)) {
-      throw new IOException("Unable to find the configuration directory. "
-          + "Please make sure that HADOOP_CONF_DIR is setup correctly ");
+      LOG.debug("Unable to find the configuration directory. "
+          + "Please make sure that HADOOP_CONF_DIR is setup correctly.");
+    }
+    if(StringUtil.isBlank(path)){
+      return null;
     }
     return new File(path);
 
@@ -115,17 +123,21 @@ public final class DBConfigFromFile {
     //TODO: Add Documentation on how to support RocksDB Mem Env.
     Env env = Env.getDefault();
     DBOptions options = null;
-    Path optionsFile = Paths.get(getConfigLocation().toString(),
-        getOptionsFileNameFromDB(dbFileName));
+    File configLocation = getConfigLocation();
+    if(configLocation != null &&
+        StringUtil.isNotBlank(configLocation.toString())){
+      Path optionsFile = Paths.get(configLocation.toString(),
+          getOptionsFileNameFromDB(dbFileName));
 
-    if (optionsFile.toFile().exists()) {
-      options = new DBOptions();
-      try {
-        OptionsUtil.loadOptionsFromFile(optionsFile.toString(),
-            env, options, cfDescs, true);
+      if (optionsFile.toFile().exists()) {
+        options = new DBOptions();
+        try {
+          OptionsUtil.loadOptionsFromFile(optionsFile.toString(),
+              env, options, cfDescs, true);
 
-      } catch (RocksDBException rdEx) {
-        RDBTable.toIOException("Unable to find/open Options file.", rdEx);
+        } catch (RocksDBException rdEx) {
+          RDBTable.toIOException("Unable to find/open Options file.", rdEx);
+        }
       }
     }
     return options;
