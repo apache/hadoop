@@ -77,14 +77,15 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
 
   @Test
   public void ensureAzureBlobFileSystemIsDefaultFileSystem() throws Exception {
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(getConfiguration());
+    Configuration rawConfig = getRawConfiguration();
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig);
     assertNotNull("filesystem", fs);
 
     if (this.getAuthType() == AuthType.OAuth) {
-      Abfss afs = (Abfss) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+      Abfss afs = (Abfss) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
       assertNotNull("filecontext", afs);
     } else {
-      Abfs afs = (Abfs) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+      Abfs afs = (Abfs) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
       assertNotNull("filecontext", afs);
     }
 
@@ -100,13 +101,13 @@ public class ITestFileSystemRegistration extends AbstractAbfsIntegrationTest {
         null,
         null,
         null);
-    getConfiguration().set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+    Configuration rawConfig = getRawConfiguration();
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         defaultUri.toString());
 
-    SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.get(
-        getConfiguration());
+    SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.get(rawConfig);
     assertNotNull("filesystem", fs);
-    Abfss afs = (Abfss) FileContext.getFileContext(getConfiguration()).getDefaultFileSystem();
+    Abfss afs = (Abfss) FileContext.getFileContext(rawConfig).getDefaultFileSystem();
     assertNotNull("filecontext", afs);
   }
 }

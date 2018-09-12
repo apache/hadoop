@@ -42,7 +42,7 @@ public class ITestAbfsFileSystemContractDelete extends AbstractContractDeleteTes
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

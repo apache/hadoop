@@ -35,7 +35,8 @@ import org.apache.hadoop.fs.Path;
  */
 public class ITestAzureBlobFileSystemBackCompat extends
     AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemBackCompat() {
+
+  public ITestAzureBlobFileSystemBackCompat() throws Exception {
     super();
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }

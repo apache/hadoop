@@ -38,7 +38,8 @@ public class ITestAzureBlobFileSystemCreate extends
   private static final Path TEST_FILE_PATH = new Path("testfile");
   private static final Path TEST_FOLDER_PATH = new Path("testFolder");
   private static final String TEST_CHILD_FILE = "childFile";
-  public ITestAzureBlobFileSystemCreate() {
+
+  public ITestAzureBlobFileSystemCreate() throws Exception {
     super();
   }
 

@@ -31,8 +31,8 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
  */
 public class ITestAzureBlobFileSystemInitAndCreate extends
     AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemInitAndCreate() {
 
+  public ITestAzureBlobFileSystemInitAndCreate() throws Exception {
     this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
   }
 

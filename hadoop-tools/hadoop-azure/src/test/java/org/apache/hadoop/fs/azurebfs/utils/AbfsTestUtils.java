@@ -37,6 +37,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
     private static final Logger LOG =
             LoggerFactory.getLogger(AbfsTestUtils.class);
+
+  public AbfsTestUtils() throws Exception {
+    super();
+  }
+
   /**
    * If unit tests were interrupted and crushed accidentally, the test containers won't be deleted.
    * In that case, dev can use this tool to list and delete all test containers.

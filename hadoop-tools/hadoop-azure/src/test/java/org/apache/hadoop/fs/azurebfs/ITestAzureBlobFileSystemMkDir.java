@@ -28,7 +28,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
  * Test mkdir operation.
  */
 public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemMkDir() {
+
+  public ITestAzureBlobFileSystemMkDir() throws Exception {
     super();
   }
 

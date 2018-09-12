@@ -41,12 +41,12 @@ public class ITestAzureBlobFileSystemFinalize extends AbstractAbfsScaleTest{
   @Test
   public void testFinalize() throws Exception {
     // Disable the cache for filesystem to make sure there is no reference.
-    Configuration configuration = this.getConfiguration();
-    configuration.setBoolean(
+    Configuration rawConfig = this.getRawConfiguration();
+    rawConfig.setBoolean(
             this.getAuthType() == AuthType.SharedKey ? DISABLE_ABFS_CACHE_KEY : DISABLE_ABFSSS_CACHE_KEY,
     true);
 
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(rawConfig);
 
     WeakReference<Object> ref = new WeakReference<Object>(fs);
     fs = null;

@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
  * Test AzureBlobFileSystem initialization.
  */
 public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
-  public ITestFileSystemInitialization() {
+  public ITestFileSystemInitialization() throws Exception {
     super();
   }
 
@@ -62,10 +62,10 @@ public class ITestFileSystemInitialization extends AbstractAbfsIntegrationTest {
         null,
         null,
         null);
-    Configuration conf = getConfiguration();
-    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
+    Configuration rawConfig = getRawConfiguration();
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
 
-    try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(conf)) {
+    try(SecureAzureBlobFileSystem fs = (SecureAzureBlobFileSystem) FileSystem.newInstance(rawConfig)) {
       assertEquals(fs.getUri(), new URI(FileSystemUriSchemes.ABFS_SECURE_SCHEME,
           filesystem + "@" + accountName,
           null,

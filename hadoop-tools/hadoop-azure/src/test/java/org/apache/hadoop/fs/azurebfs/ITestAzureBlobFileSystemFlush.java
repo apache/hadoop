@@ -60,7 +60,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
   private static final int WAITING_TIME = 1000;
 
-  public ITestAzureBlobFileSystemFlush() {
+  public ITestAzureBlobFileSystemFlush() throws Exception {
     super();
   }
 

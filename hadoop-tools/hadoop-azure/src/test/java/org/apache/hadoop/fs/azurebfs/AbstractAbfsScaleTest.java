@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
@@ -34,6 +35,10 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsScaleTest.class);
 
+  public AbstractAbfsScaleTest() throws Exception {
+    super();
+  }
+
   @Override
   protected int getTestTimeoutMillis() {
     return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
@@ -43,7 +48,8 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
   public void setup() throws Exception {
     super.setup();
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    assumeScaleTestsEnabled(getConfiguration());
+    Configuration rawConfiguration = getRawConfiguration();
+    assumeScaleTestsEnabled(rawConfiguration);
   }
 
   protected long getOperationCount() {

@@ -24,7 +24,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 public final class TestConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_NAME = "fs.azure.account.name";
   public static final String FS_AZURE_ABFS_ACCOUNT_NAME = "fs.azure.abfs.account.name";
-  public static final String FS_AZURE_ACCOUNT_KEY_PREFIX = "fs.azure.account.key.";
+  public static final String FS_AZURE_ACCOUNT_KEY = "fs.azure.account.key";
   public static final String FS_AZURE_CONTRACT_TEST_URI = "fs.contract.test.fs.abfs";
 
   public static final String FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID = "fs.azure.account.oauth2.contributor.client.id";

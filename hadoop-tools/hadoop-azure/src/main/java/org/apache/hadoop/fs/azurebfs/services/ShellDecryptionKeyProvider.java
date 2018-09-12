@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.util.Shell;
@@ -36,11 +37,18 @@ public class ShellDecryptionKeyProvider extends SimpleKeyProvider {
   private static final Logger LOG = LoggerFactory.getLogger(ShellDecryptionKeyProvider.class);
 
   @Override
-  public String getStorageAccountKey(String accountName, Configuration conf)
+  public String getStorageAccountKey(String accountName, Configuration rawConfig)
       throws KeyProviderException {
-    String envelope = super.getStorageAccountKey(accountName, conf);
+    String envelope = super.getStorageAccountKey(accountName, rawConfig);
 
-    final String command = conf.get(ConfigurationKeys.AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT);
+    AbfsConfiguration abfsConfig;
+    try {
+      abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+    } catch(IllegalAccessException | IOException e) {
+      throw new KeyProviderException("Unable to get key from credential providers.", e);
+    }
+
+    final String command = abfsConfig.get(ConfigurationKeys.AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT);
     if (command == null) {
       throw new KeyProviderException(
           "Script path is not specified via fs.azure.shellkeyprovider.script");

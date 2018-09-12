@@ -62,6 +62,16 @@ The abfs client has a fully consistent view of the store, which has complete Cre
 * Directory Rename: `O(files)`.
 * Directory Delete: `O(files)`.
 
+## Configuring ABFS
+
+Any configuration can be specified generally (or as the default when accessing all accounts) or can be tied to s a specific account.
+For example, an OAuth identity can be configured for use regardless of which account is accessed with the property
+"fs.azure.account.oauth2.client.id"
+or you can configure an identity to be used only for a specific storage account with
+"fs.azure.account.oauth2.client.id.\<account\_name\>.dfs.core.windows.net".
+
+Note that it doesn't make sense to do this with some properties, like shared keys that are inherently account-specific.
+
 ## Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).

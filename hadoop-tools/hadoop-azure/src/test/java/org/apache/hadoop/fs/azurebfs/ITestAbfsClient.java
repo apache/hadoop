@@ -30,6 +30,10 @@ import org.junit.Test;
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 5000;
 
+  public ITestAbfsClient() throws Exception {
+    super();
+  }
+
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();

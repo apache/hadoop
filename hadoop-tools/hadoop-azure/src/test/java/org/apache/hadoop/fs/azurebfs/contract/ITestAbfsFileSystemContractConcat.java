@@ -41,7 +41,7 @@ public class ITestAbfsFileSystemContractConcat extends AbstractContractConcatTes
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

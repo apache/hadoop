@@ -42,7 +42,7 @@ public class ITestAbfsFileSystemContractMkdir extends AbstractContractMkdirTest 
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

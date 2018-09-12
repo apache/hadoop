@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
 /**
  * Provides tokens based on username and password.
  */
@@ -53,14 +52,5 @@ public class UserPasswordTokenProvider extends AccessTokenProvider {
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing user-password based token");
     return AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, username, password);
-  }
-
-  private static String getPasswordString(Configuration conf, String key)
-          throws IOException {
-    char[] passchars = conf.getPassword(key);
-    if (passchars == null) {
-      throw new IOException("Password " + key + " not found");
-    }
-    return new String(passchars);
   }
 }

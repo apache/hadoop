@@ -41,7 +41,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
  */
 public class ITestAzureBlobFileSystemRename extends
     AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemRename() {
+
+  public ITestAzureBlobFileSystemRename() throws Exception {
+    super();
   }
 
   @Test
