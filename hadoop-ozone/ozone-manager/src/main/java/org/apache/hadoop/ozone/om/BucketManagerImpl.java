@@ -79,9 +79,10 @@ public class BucketManagerImpl implements BucketManager {
   @Override
   public void createBucket(OmBucketInfo bucketInfo) throws IOException {
     Preconditions.checkNotNull(bucketInfo);
-    metadataManager.writeLock().lock();
     String volumeName = bucketInfo.getVolumeName();
     String bucketName = bucketInfo.getBucketName();
+    metadataManager.getLock().acquireVolumeLock(volumeName);
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
@@ -118,7 +119,8 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseVolumeLock(volumeName);
     }
   }
 
@@ -133,7 +135,7 @@ public class BucketManagerImpl implements BucketManager {
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(bucketName);
-    metadataManager.readLock().lock();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       byte[] value = metadataManager.getBucketTable().get(bucketKey);
@@ -151,7 +153,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.readLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
@@ -164,18 +166,11 @@ public class BucketManagerImpl implements BucketManager {
   @Override
   public void setBucketProperty(OmBucketArgs args) throws IOException {
     Preconditions.checkNotNull(args);
-    metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      //Check if volume exists
-      if (metadataManager.getVolumeTable()
-          .get(metadataManager.getVolumeKey(volumeName)) == null) {
-        LOG.debug("volume: {} not found ", volumeName);
-        throw new OMException("Volume doesn't exist",
-            OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
-      }
       byte[] value = metadataManager.getBucketTable().get(bucketKey);
       //Check if bucket exist
       if (value == null) {
@@ -230,7 +225,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
@@ -266,16 +261,8 @@ public class BucketManagerImpl implements BucketManager {
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(bucketName);
-    metadataManager.writeLock().lock();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      //Check if volume exists
-      if (metadataManager.getVolumeTable()
-          .get(metadataManager.getVolumeKey(volumeName)) == null) {
-        LOG.debug("volume: {} not found ", volumeName);
-        throw new OMException("Volume doesn't exist",
-            OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
-      }
-
       //Check if bucket exists
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       if (metadataManager.getBucketTable().get(bucketKey) == null) {
@@ -297,7 +284,7 @@ public class BucketManagerImpl implements BucketManager {
       }
       throw ex;
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
@@ -309,12 +296,8 @@ public class BucketManagerImpl implements BucketManager {
       String startBucket, String bucketPrefix, int maxNumOfBuckets)
       throws IOException {
     Preconditions.checkNotNull(volumeName);
-    metadataManager.readLock().lock();
-    try {
-      return metadataManager.listBuckets(
-          volumeName, startBucket, bucketPrefix, maxNumOfBuckets);
-    } finally {
-      metadataManager.readLock().unlock();
-    }
+    return metadataManager.listBuckets(
+        volumeName, startBucket, bucketPrefix, maxNumOfBuckets);
+
   }
 }

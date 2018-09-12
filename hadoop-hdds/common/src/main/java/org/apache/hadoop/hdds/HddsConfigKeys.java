@@ -81,4 +81,8 @@ public final class HddsConfigKeys {
       "hdds.scm.chillmode.threshold.pct";
   public static final double HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT = 0.99;
 
+  public static final String HDDS_LOCK_MAX_CONCURRENCY =
+      "hdds.lock.max.concurrency";
+  public static final int HDDS_LOCK_MAX_CONCURRENCY_DEFAULT = 100;
+
 }

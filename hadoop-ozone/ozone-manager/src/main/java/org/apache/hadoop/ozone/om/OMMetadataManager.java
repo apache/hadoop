@@ -26,7 +26,6 @@ import org.apache.hadoop.utils.db.Table;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
 
 /**
  * OM metadata manager interface.
@@ -51,18 +50,11 @@ public interface OMMetadataManager {
   DBStore getStore();
 
   /**
-   * Returns the read lock used on Metadata DB.
+   * Returns the OzoneManagerLock used on Metadata DB.
    *
-   * @return readLock
+   * @return OzoneManagerLock
    */
-  Lock readLock();
-
-  /**
-   * Returns the write lock used on Metadata DB.
-   *
-   * @return writeLock
-   */
-  Lock writeLock();
+  OzoneManagerLock getLock();
 
   /**
    * Given a volume return the corresponding DB key.

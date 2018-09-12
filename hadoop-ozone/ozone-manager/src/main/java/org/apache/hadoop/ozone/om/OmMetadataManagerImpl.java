@@ -52,9 +52,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
@@ -102,9 +99,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   private final DBStore store;
 
-  // TODO: Make this lock move into Table instead of *ONE* lock for the whole
-  // DB.
-  private final ReadWriteLock lock;
+  private final OzoneManagerLock lock;
   private final long openKeyExpireThresholdMS;
 
   private final Table userTable;
@@ -116,7 +111,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     File metaDir = getOzoneMetaDirPath(conf);
-    this.lock = new ReentrantReadWriteLock();
+    this.lock = new OzoneManagerLock(conf);
     this.openKeyExpireThresholdMS = 1000 * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
@@ -280,23 +275,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   /**
-   * Returns the read lock used on Metadata DB.
+   * Returns the OzoneManagerLock used on Metadata DB.
    *
-   * @return readLock
+   * @return OzoneManagerLock
    */
   @Override
-  public Lock readLock() {
-    return lock.readLock();
-  }
-
-  /**
-   * Returns the write lock used on Metadata DB.
-   *
-   * @return writeLock
-   */
-  @Override
-  public Lock writeLock() {
-    return lock.writeLock();
+  public OzoneManagerLock getLock() {
+    return lock;
   }
 
   /**

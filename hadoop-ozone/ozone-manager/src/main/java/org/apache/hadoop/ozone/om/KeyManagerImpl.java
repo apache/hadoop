@@ -139,44 +139,38 @@ public class KeyManagerImpl implements KeyManager {
   public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException {
     Preconditions.checkNotNull(args);
-    metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
+    validateBucket(volumeName, bucketName);
+    byte[] openKey = metadataManager.getOpenKeyBytes(
+        volumeName, bucketName, keyName, clientID);
 
-    try {
-      validateBucket(volumeName, bucketName);
-      byte[] openKey = metadataManager.getOpenKeyBytes(
-          volumeName, bucketName, keyName, clientID);
-
-      byte[] keyData = metadataManager.getOpenKeyTable().get(openKey);
-      if (keyData == null) {
-        LOG.error("Allocate block for a key not in open status in meta store" +
-            " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
-        throw new OMException("Open Key not found",
-            OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
-      }
-      OmKeyInfo keyInfo =
-          OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(keyData));
-      AllocatedBlock allocatedBlock =
-          scmBlockClient.allocateBlock(scmBlockSize, keyInfo.getType(),
-              keyInfo.getFactor(), omId);
-      OmKeyLocationInfo info = new OmKeyLocationInfo.Builder()
-          .setBlockID(allocatedBlock.getBlockID())
-          .setShouldCreateContainer(allocatedBlock.getCreateContainer())
-          .setLength(scmBlockSize)
-          .setOffset(0)
-          .build();
-      // current version not committed, so new blocks coming now are added to
-      // the same version
-      keyInfo.appendNewBlocks(Collections.singletonList(info));
-      keyInfo.updateModifcationTime();
-      metadataManager.getOpenKeyTable().put(openKey,
-          keyInfo.getProtobuf().toByteArray());
-      return info;
-    } finally {
-      metadataManager.writeLock().unlock();
+    byte[] keyData = metadataManager.getOpenKeyTable().get(openKey);
+    if (keyData == null) {
+      LOG.error("Allocate block for a key not in open status in meta store" +
+          " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
+      throw new OMException("Open Key not found",
+          OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
     }
+    OmKeyInfo keyInfo =
+        OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(keyData));
+    AllocatedBlock allocatedBlock =
+        scmBlockClient.allocateBlock(scmBlockSize, keyInfo.getType(),
+            keyInfo.getFactor(), omId);
+    OmKeyLocationInfo info = new OmKeyLocationInfo.Builder()
+        .setBlockID(allocatedBlock.getBlockID())
+        .setShouldCreateContainer(allocatedBlock.getCreateContainer())
+        .setLength(scmBlockSize)
+        .setOffset(0)
+        .build();
+    // current version not committed, so new blocks coming now are added to
+    // the same version
+    keyInfo.appendNewBlocks(Collections.singletonList(info));
+    keyInfo.updateModifcationTime();
+    metadataManager.getOpenKeyTable().put(openKey,
+        keyInfo.getProtobuf().toByteArray());
+    return info;
   }
 
   @Override
@@ -186,7 +180,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     validateBucket(volumeName, bucketName);
 
-    metadataManager.writeLock().lock();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     String keyName = args.getKeyName();
     ReplicationFactor factor = args.getFactor();
     ReplicationType type = args.getType();
@@ -286,17 +280,17 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           OMException.ResultCodes.FAILED_KEY_ALLOCATION);
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
   @Override
   public void commitKey(OmKeyArgs args, long clientID) throws IOException {
     Preconditions.checkNotNull(args);
-    metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       validateBucket(volumeName, bucketName);
       byte[] openKey = metadataManager.getOpenKeyBytes(volumeName, bucketName,
@@ -329,17 +323,17 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           OMException.ResultCodes.FAILED_KEY_ALLOCATION);
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
-    metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       byte[] keyBytes = metadataManager.getOzoneKeyBytes(
           volumeName, bucketName, keyName);
@@ -357,7 +351,7 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
@@ -375,7 +369,7 @@ public class KeyManagerImpl implements KeyManager {
           ResultCodes.FAILED_INVALID_KEY_NAME);
     }
 
-    metadataManager.writeLock().lock();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       // fromKeyName should exist
       byte[] fromKey = metadataManager.getOzoneKeyBytes(
@@ -431,17 +425,17 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.FAILED_KEY_RENAME);
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
   @Override
   public void deleteKey(OmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
-    metadataManager.writeLock().lock();
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       byte[] objectKey = metadataManager.getOzoneKeyBytes(
           volumeName, bucketName, keyName);
@@ -470,7 +464,7 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(), ex,
           ResultCodes.FAILED_KEY_DELETION);
     } finally {
-      metadataManager.writeLock().unlock();
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
@@ -506,12 +500,8 @@ public class KeyManagerImpl implements KeyManager {
 
   @Override
   public List<BlockGroup> getExpiredOpenKeys() throws IOException {
-    metadataManager.readLock().lock();
-    try {
-      return metadataManager.getExpiredOpenKeys();
-    } finally {
-      metadataManager.readLock().unlock();
-    }
+    return metadataManager.getExpiredOpenKeys();
+
   }
 
   @Override
