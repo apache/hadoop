@@ -19,11 +19,13 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -44,6 +46,7 @@ import org.apache.hadoop.ozone.container.replication.SimpleContainerDownloader;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,13 +100,19 @@ public class ReplicateContainerCommandHandler implements CommandHandler {
     ReplicateContainerCommand replicateCommand =
         (ReplicateContainerCommand) command;
     try {
-
+      List<DatanodeDetails> sourceDatanodes =
+          replicateCommand.getSourceDatanodes();
       long containerID = replicateCommand.getContainerID();
+
+      Preconditions.checkArgument(sourceDatanodes.size() > 0,
+          String.format("Replication command is received for container %d "
+              + "but the size of source datanodes was 0.", containerID));
+
       LOG.info("Starting replication of container {} from {}", containerID,
-          replicateCommand.getSourceDatanodes());
+          sourceDatanodes);
       CompletableFuture<Path> tempTarFile = downloader
           .getContainerDataFromReplicas(containerID,
-              replicateCommand.getSourceDatanodes());
+              sourceDatanodes);
 
       CompletableFuture<Void> result =
           tempTarFile.thenAccept(path -> {
