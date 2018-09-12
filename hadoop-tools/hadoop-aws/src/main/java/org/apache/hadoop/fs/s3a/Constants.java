@@ -305,13 +305,6 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  /**
-   * The original key name. Never used in ASF releases,
-   * but did get into downstream products.
-   */
-  static final String OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY
-      = "fs.s3a.server-side-encryption-key";
-
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 

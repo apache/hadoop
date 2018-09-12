@@ -50,32 +50,26 @@ public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
   private String accessKey;
   private String secretKey;
   private String sessionToken;
-  private IOException lookupIOE;
 
-  public TemporaryAWSCredentialsProvider(Configuration conf) {
+  public TemporaryAWSCredentialsProvider(Configuration conf)
+      throws IOException {
     this(null, conf);
   }
 
-  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf) {
-    try {
+  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf)
+      throws IOException {
+
       // determine the bucket
       String bucket = uri != null ? uri.getHost():  "";
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
-      this.accessKey = lookupPassword(bucket, c, ACCESS_KEY, null);
-      this.secretKey = lookupPassword(bucket, c, SECRET_KEY, null);
-      this.sessionToken = lookupPassword(bucket, c, SESSION_TOKEN, null);
-    } catch (IOException e) {
-      lookupIOE = e;
-    }
+      this.accessKey = lookupPassword(bucket, c, ACCESS_KEY);
+      this.secretKey = lookupPassword(bucket, c, SECRET_KEY);
+      this.sessionToken = lookupPassword(bucket, c, SESSION_TOKEN);
   }
 
+  @Override
   public AWSCredentials getCredentials() {
-    if (lookupIOE != null) {
-      // propagate any initialization problem
-      throw new CredentialInitializationException(lookupIOE.toString(),
-          lookupIOE);
-    }
     if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)
         && !StringUtils.isEmpty(sessionToken)) {
       return new BasicSessionCredentials(accessKey, secretKey, sessionToken);

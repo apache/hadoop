@@ -977,9 +977,8 @@
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports static
-        configuration of AWS access key ID and secret access key.  See also
-        fs.s3a.access.key and fs.s3a.secret.key.
+    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
