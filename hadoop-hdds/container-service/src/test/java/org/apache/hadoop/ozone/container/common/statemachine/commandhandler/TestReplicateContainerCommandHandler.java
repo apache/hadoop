@@ -106,7 +106,6 @@ public class TestReplicateContainerCommandHandler {
     handler.handle(command, null, Mockito.mock(StateContext.class), null);
 
     //THEN
-
     TestGenericTestUtils
         .waitFor(() -> downloader.futureByContainers.size() == 1, 100, 2000);
 
@@ -124,6 +123,24 @@ public class TestReplicateContainerCommandHandler {
             2000);
   }
 
+  /**
+   * Can't handle a command if there are no source replicas.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void handleWithoutReplicas()
+      throws TimeoutException, InterruptedException {
+    //GIVEN
+    ReplicateContainerCommand commandWithoutReplicas =
+        new ReplicateContainerCommand(1L, new ArrayList<>());
+
+    //WHEN
+    handler
+        .handle(commandWithoutReplicas,
+            null,
+            Mockito.mock(StateContext.class),
+            null);
+
+  }
   private static class StubDownloader implements ContainerDownloader {
 
     private Map<Long, CompletableFuture<Path>> futureByContainers =
