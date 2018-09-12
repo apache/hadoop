@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
-import static org.junit.Assert.assertTrue;
-
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -32,6 +31,9 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /** Test class for SCMChillModeManager.
  */
@@ -62,13 +64,13 @@ public class TestSCMChillModeManager {
 
   @Test
   public void testChillModeStateWithNullContainers() {
-    new SCMChillModeManager(config, null);
+    new SCMChillModeManager(config, null, queue);
   }
 
   private void testChillMode(int numContainers) throws Exception {
     containers = new ArrayList<>();
     containers.addAll(HddsTestUtils.getContainerInfo(numContainers));
-    scmChillModeManager = new SCMChillModeManager(config, containers);
+    scmChillModeManager = new SCMChillModeManager(config, containers, queue);
     queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         scmChillModeManager);
     assertTrue(scmChillModeManager.getInChillMode());
@@ -83,7 +85,7 @@ public class TestSCMChillModeManager {
   public void testChillModeExitRule() throws Exception {
     containers = new ArrayList<>();
     containers.addAll(HddsTestUtils.getContainerInfo(25 * 4));
-    scmChillModeManager = new SCMChillModeManager(config, containers);
+    scmChillModeManager = new SCMChillModeManager(config, containers, queue);
     queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         scmChillModeManager);
     assertTrue(scmChillModeManager.getInChillMode());
@@ -99,6 +101,14 @@ public class TestSCMChillModeManager {
     GenericTestUtils.waitFor(() -> {
       return !scmChillModeManager.getInChillMode();
     }, 100, 1000 * 5);
+  }
+
+  @Test
+  public void testDisableChillMode() {
+    OzoneConfiguration conf = new OzoneConfiguration(config);
+    conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
+    scmChillModeManager = new SCMChillModeManager(conf, containers, queue);
+    assertFalse(scmChillModeManager.getInChillMode());
   }
 
   private void testContainerThreshold(List<ContainerInfo> dnContainers,
