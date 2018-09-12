@@ -268,7 +268,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     }
   }
 
-  private LogEntryProto readStateMachineData(SMLogEntryProto smLogEntryProto,
+  private LogEntryProto readStateMachineData(LogEntryProto entry,
       ContainerCommandRequestProto requestProto) {
     WriteChunkRequestProto writeChunkRequestProto =
         requestProto.getWriteChunk();
@@ -307,18 +307,18 @@ public class ContainerStateMachine extends BaseStateMachine {
         ContainerCommandRequestProto.newBuilder(requestProto)
             .setWriteChunk(dataWriteChunkProto);
 
-    return recreateLogEntryProto(smLogEntryProto,
+    return recreateLogEntryProto(entry,
         newStateMachineProto.build().toByteString());
   }
 
-  private LogEntryProto recreateLogEntryProto(SMLogEntryProto smLogEntryProto,
+  private LogEntryProto recreateLogEntryProto(LogEntryProto entry,
       ByteString stateMachineData) {
     // recreate the log entry
     final SMLogEntryProto log =
-        SMLogEntryProto.newBuilder(smLogEntryProto)
+        SMLogEntryProto.newBuilder(entry.getSmLogEntry())
             .setStateMachineData(stateMachineData)
             .build();
-    return LogEntryProto.newBuilder().setSmLogEntry(log).build();
+    return LogEntryProto.newBuilder(entry).setSmLogEntry(log).build();
   }
 
   /**
@@ -360,11 +360,11 @@ public class ContainerStateMachine extends BaseStateMachine {
 
       if (requestProto.getCmdType() == Type.WriteChunk) {
         return CompletableFuture.supplyAsync(() ->
-                readStateMachineData(smLogEntryProto, requestProto),
+                readStateMachineData(entry, requestProto),
             chunkExecutor);
       } else if (requestProto.getCmdType() == Type.CreateContainer) {
         LogEntryProto log =
-            recreateLogEntryProto(smLogEntryProto, requestProto.toByteString());
+            recreateLogEntryProto(entry, requestProto.toByteString());
         return CompletableFuture.completedFuture(log);
       } else {
         throw new IllegalStateException("Cmd type:" + requestProto.getCmdType()
