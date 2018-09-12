@@ -412,6 +412,16 @@ public final class Constants {
       "fs.s3a.s3guard.ddb.table";
 
   /**
+   * A prefix for adding tags to the DDB Table upon creation.
+   *
+   * For example:
+   * fs.s3a.s3guard.ddb.table.tag.mytag
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_TAG =
+      "fs.s3a.s3guard.ddb.table.tag.";
+
+  /**
    * Test table name to use during DynamoDB integration test.
    *
    * The table will be modified, and deleted in the end of the tests.
