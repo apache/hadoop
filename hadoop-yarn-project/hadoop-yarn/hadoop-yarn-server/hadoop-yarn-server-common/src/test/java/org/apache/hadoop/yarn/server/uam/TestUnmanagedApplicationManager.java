@@ -374,7 +374,7 @@ public class TestUnmanagedApplicationManager {
         ApplicationId appId, String queueName, String submitter,
         String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
       super(conf, appId, queueName, submitter, appNameSuffix,
-          keepContainersAcrossApplicationAttempts);
+          keepContainersAcrossApplicationAttempts, "TEST");
     }
 
     @SuppressWarnings("unchecked")

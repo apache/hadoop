@@ -254,7 +254,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.homeSubClusterId =
         SubClusterId.newInstance(YarnConfiguration.getClusterId(conf));
     this.homeRMRelayer = new AMRMClientRelayer(createHomeRMProxy(appContext,
-        ApplicationMasterProtocol.class, this.appOwner), appId);
+        ApplicationMasterProtocol.class, this.appOwner), appId,
+        this.homeSubClusterId.toString());
 
     this.federationFacade = FederationStateStoreFacade.getInstance();
     this.subClusterResolver = this.federationFacade.getSubClusterResolver();
@@ -340,7 +341,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
               this.attemptId.getApplicationId(),
               this.amRegistrationResponse.getQueue(),
               getApplicationContext().getUser(), this.homeSubClusterId.getId(),
-              entry.getValue());
+              entry.getValue(), subClusterId.toString());
 
           this.secondaryRelayers.put(subClusterId.getId(),
               this.uamPool.getAMRMClientRelayer(subClusterId.getId()));
@@ -666,7 +667,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   uamPool.finishApplicationMaster(subClusterId, finishRequest);
 
               if (uamResponse.getIsUnregistered()) {
-                secondaryRelayers.remove(subClusterId);
+                AMRMClientRelayer relayer =
+                    secondaryRelayers.remove(subClusterId);
+                if(relayer != null) {
+                  relayer.shutdown();
+                }
 
                 if (getNMStateStore() != null) {
                   getNMStateStore().removeAMRMProxyAppContextEntry(attemptId,
@@ -752,6 +757,10 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       } catch (Throwable ex) {
       }
       this.threadpool = null;
+    }
+    homeRMRelayer.shutdown();
+    for(AMRMClientRelayer relayer : secondaryRelayers.values()){
+      relayer.shutdown();
     }
     super.shutdown();
   }
@@ -885,7 +894,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 uamPool.reAttachUAM(subClusterId.getId(), config, appId,
                     amRegistrationResponse.getQueue(),
                     getApplicationContext().getUser(), homeSubClusterId.getId(),
-                    amrmToken);
+                    amrmToken, subClusterId.toString());
 
                 secondaryRelayers.put(subClusterId.getId(),
                     uamPool.getAMRMClientRelayer(subClusterId.getId()));
@@ -1136,7 +1145,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   token = uamPool.launchUAM(subClusterId, config,
                       attemptId.getApplicationId(),
                       amRegistrationResponse.getQueue(), appContext.getUser(),
-                      homeSubClusterId.toString(), true);
+                      homeSubClusterId.toString(), true, subClusterId);
 
                   secondaryRelayers.put(subClusterId,
                       uamPool.getAMRMClientRelayer(subClusterId));

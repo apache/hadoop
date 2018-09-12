@@ -122,7 +122,8 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     @Override
     public UnmanagedApplicationManager createUAM(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+        String rmId) {
       return new TestableUnmanagedApplicationManager(conf, appId, queueName,
           submitter, appNameSuffix, keepContainersAcrossApplicationAttempts);
     }
@@ -139,7 +140,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
         ApplicationId appId, String queueName, String submitter,
         String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
       super(conf, appId, queueName, submitter, appNameSuffix,
-          keepContainersAcrossApplicationAttempts);
+          keepContainersAcrossApplicationAttempts, "TEST");
     }
 
     /**

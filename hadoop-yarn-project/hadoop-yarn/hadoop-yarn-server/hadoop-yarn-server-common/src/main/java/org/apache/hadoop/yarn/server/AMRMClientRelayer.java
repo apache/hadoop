@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRespons
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.metrics.AMRMClientRelayerMetrics;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSet;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSetKey;
 import org.slf4j.Logger;
@@ -98,6 +100,15 @@ public class AMRMClientRelayer extends AbstractService
   private Set<ResourceRequest> ask =
       new TreeSet<>(new ResourceRequest.ResourceRequestComparator());
 
+  /**
+   * Data structures for pending and allocate latency metrics. This only applies
+   * for requests with non-zero allocationRequestId.
+   */
+  private Map<Long, Integer> pendingCountForMetrics = new HashMap<>();
+  private Map<Long, Long> askTimeStamp = new HashMap<>();
+  // List of allocated containerId to avoid double counting
+  private Set<ContainerId> knownContainers = new HashSet<>();
+
   private Set<ContainerId> remotePendingRelease = new HashSet<>();
   private Set<ContainerId> release = new HashSet<>();
 
@@ -108,6 +119,7 @@ public class AMRMClientRelayer extends AbstractService
   private Map<ContainerId, UpdateContainerRequest> remotePendingChange =
       new HashMap<>();
   private Map<ContainerId, UpdateContainerRequest> change = new HashMap<>();
+  private Map<ContainerId, Long> changeTimeStamp = new HashMap<>();
 
   private Map<Set<String>, List<SchedulingRequest>> remotePendingSchedRequest =
       new HashMap<>();
@@ -119,16 +131,26 @@ public class AMRMClientRelayer extends AbstractService
   // heartbeat
   private volatile int resetResponseId;
 
+  private String rmId = "";
+  private volatile boolean shutdown = false;
+
+  private AMRMClientRelayerMetrics metrics;
+
   public AMRMClientRelayer() {
     super(AMRMClientRelayer.class.getName());
     this.resetResponseId = -1;
+    this.metrics = AMRMClientRelayerMetrics.getInstance();
+    this.rmClient = null;
+    this.appId = null;
+    this.rmId = "";
   }
 
   public AMRMClientRelayer(ApplicationMasterProtocol rmClient,
-      ApplicationId appId) {
+      ApplicationId appId, String rmId) {
     this();
     this.rmClient = rmClient;
     this.appId = appId;
+    this.rmId = rmId;
   }
 
   @Override
@@ -155,12 +177,56 @@ public class AMRMClientRelayer extends AbstractService
     if (this.rmClient != null) {
       RPC.stopProxy(this.rmClient);
     }
+    shutdown();
     super.serviceStop();
   }
 
   public void setAMRegistrationRequest(
       RegisterApplicationMasterRequest registerRequest) {
     this.amRegistrationRequest = registerRequest;
+  }
+
+  public void setRMClient(ApplicationMasterProtocol client){
+    this.rmClient = client;
+  }
+
+  public void shutdown() {
+    // On finish, clear out our pending count from the metrics
+    // and set the shut down flag so no more pending requests get
+    // added
+    synchronized (this) {
+      if (this.shutdown) {
+        LOG.warn(
+            "Shutdown called twice for AMRMClientRelayer for RM " + this.rmId);
+        return;
+      }
+      this.shutdown = true;
+      for (Map.Entry<ResourceRequestSetKey, ResourceRequestSet> entry
+          : this.remotePendingAsks .entrySet()) {
+        ResourceRequestSetKey key = entry.getKey();
+        if (key.getAllocationRequestId() == 0) {
+          this.metrics.decrClientPending(this.rmId,
+              AMRMClientRelayerMetrics.getRequestType(key.getExeType()),
+              entry.getValue().getNumContainers());
+        } else {
+          this.askTimeStamp.remove(key.getAllocationRequestId());
+          Integer pending =
+              this.pendingCountForMetrics.remove(key.getAllocationRequestId());
+          if (pending == null) {
+            throw new YarnRuntimeException(
+                "pendingCountForMetrics not found for key " + key
+                    + " during shutdown");
+          }
+          this.metrics.decrClientPending(this.rmId,
+              AMRMClientRelayerMetrics.getRequestType(key.getExeType()),
+              pending);
+        }
+      }
+      for(UpdateContainerRequest req : remotePendingChange.values()) {
+        this.metrics
+            .decrClientPending(rmId, req.getContainerUpdateType(), 1);
+      }
+    }
   }
 
   @Override
@@ -178,7 +244,8 @@ public class AMRMClientRelayer extends AbstractService
     try {
       return this.rmClient.finishApplicationMaster(request);
     } catch (ApplicationMasterNotRegisteredException e) {
-      LOG.warn("Out of sync with RM for " + this.appId + ", hence resyncing.");
+      LOG.warn("Out of sync with RM " + rmId
+          + " for " + this.appId + ", hence resyncing.");
       // re register with RM
       registerApplicationMaster(this.amRegistrationRequest);
       return finishApplicationMaster(request);
@@ -215,7 +282,23 @@ public class AMRMClientRelayer extends AbstractService
     if (allocateRequest.getUpdateRequests() != null) {
       for (UpdateContainerRequest update : allocateRequest
           .getUpdateRequests()) {
-        this.remotePendingChange.put(update.getContainerId(), update);
+        UpdateContainerRequest req =
+            this.remotePendingChange.put(update.getContainerId(), update);
+        this.changeTimeStamp
+            .put(update.getContainerId(), System.currentTimeMillis());
+        if (req == null) {
+          // If this is a brand new request, all we have to do is increment
+          this.metrics
+              .incrClientPending(rmId, update.getContainerUpdateType(), 1);
+        } else if (req.getContainerUpdateType() != update
+            .getContainerUpdateType()) {
+          // If this is replacing a request with a different update type, we
+          // need to decrement the replaced type
+          this.metrics
+              .decrClientPending(rmId, req.getContainerUpdateType(), 1);
+          this.metrics
+              .incrClientPending(rmId, update.getContainerUpdateType(), 1);
+        }
         this.change.put(update.getContainerId(), update);
       }
     }
@@ -232,141 +315,196 @@ public class AMRMClientRelayer extends AbstractService
   public AllocateResponse allocate(AllocateRequest allocateRequest)
       throws YarnException, IOException {
     AllocateResponse allocateResponse = null;
+    long startTime = System.currentTimeMillis();
+    synchronized (this) {
+      if(this.shutdown){
+        throw new YarnException("Allocate called after AMRMClientRelayer for "
+            + "RM " + rmId + " shutdown.");
+      }
+      addNewAllocateRequest(allocateRequest);
+
+      ArrayList<ResourceRequest> askList = new ArrayList<>(ask.size());
+      for (ResourceRequest r : ask) {
+        // create a copy of ResourceRequest as we might change it while the
+        // RPC layer is using it to send info across
+        askList.add(ResourceRequest.clone(r));
+      }
+
+      allocateRequest = AllocateRequest.newBuilder()
+          .responseId(allocateRequest.getResponseId())
+          .progress(allocateRequest.getProgress()).askList(askList)
+          .releaseList(new ArrayList<>(this.release))
+          .resourceBlacklistRequest(ResourceBlacklistRequest.newInstance(
+              new ArrayList<>(this.blacklistAdditions),
+              new ArrayList<>(this.blacklistRemovals)))
+          .updateRequests(new ArrayList<>(this.change.values()))
+          .schedulingRequests(new ArrayList<>(this.schedulingRequest))
+          .build();
+
+      if (this.resetResponseId != -1) {
+        LOG.info("Override allocate responseId from "
+            + allocateRequest.getResponseId() + " to " + this.resetResponseId
+            + " for " + this.appId);
+        allocateRequest.setResponseId(this.resetResponseId);
+      }
+    }
+
+    // Do the actual allocate call
     try {
+      allocateResponse = this.rmClient.allocate(allocateRequest);
+
+      // Heartbeat succeeded, wipe out responseId overriding
+      this.resetResponseId = -1;
+    } catch (ApplicationMasterNotRegisteredException e) {
+      // This is a retriable exception - we will re register and mke a
+      // recursive call to retry
+      LOG.warn("ApplicationMaster is out of sync with RM " + rmId
+          + " for " + this.appId + ", hence resyncing.");
+
+      this.metrics.incrRMMasterSlaveSwitch(this.rmId);
+
       synchronized (this) {
-        addNewAllocateRequest(allocateRequest);
-
-        ArrayList<ResourceRequest> askList = new ArrayList<>(ask.size());
-        for (ResourceRequest r : ask) {
-          // create a copy of ResourceRequest as we might change it while the
-          // RPC layer is using it to send info across
-          askList.add(ResourceRequest.clone(r));
+        // Add all remotePending data into to-send data structures
+        for (ResourceRequestSet requestSet : this.remotePendingAsks
+            .values()) {
+          for (ResourceRequest rr : requestSet.getRRs()) {
+            addResourceRequestToAsk(rr);
+          }
         }
-
-        allocateRequest = AllocateRequest.newBuilder()
-            .responseId(allocateRequest.getResponseId())
-            .progress(allocateRequest.getProgress()).askList(askList)
-            .releaseList(new ArrayList<>(this.release))
-            .resourceBlacklistRequest(ResourceBlacklistRequest.newInstance(
-                new ArrayList<>(this.blacklistAdditions),
-                new ArrayList<>(this.blacklistRemovals)))
-            .updateRequests(new ArrayList<>(this.change.values()))
-            .schedulingRequests(new ArrayList<>(this.schedulingRequest))
-            .build();
-
-        if (this.resetResponseId != -1) {
-          LOG.info("Override allocate responseId from "
-              + allocateRequest.getResponseId() + " to " + this.resetResponseId
-              + " for " + this.appId);
-          allocateRequest.setResponseId(this.resetResponseId);
+        this.release.addAll(this.remotePendingRelease);
+        this.blacklistAdditions.addAll(this.remoteBlacklistedNodes);
+        this.change.putAll(this.remotePendingChange);
+        for (List<SchedulingRequest> reqs : this.remotePendingSchedRequest
+            .values()) {
+          this.schedulingRequest.addAll(reqs);
         }
       }
 
-      // Do the actual allocate call
-      try {
-        allocateResponse = this.rmClient.allocate(allocateRequest);
+      // re-register with RM, then retry allocate recursively
+      registerApplicationMaster(this.amRegistrationRequest);
+      // Reset responseId after re-register
+      allocateRequest.setResponseId(0);
+      allocateResponse = allocate(allocateRequest);
+      return allocateResponse;
+    } catch (Throwable t) {
+      // Unexpected exception - rethrow and increment heart beat failure metric
+      this.metrics.addHeartbeatFailure(this.rmId,
+          System.currentTimeMillis() - startTime);
 
-        // Heartbeat succeeded, wipe out responseId overriding
-        this.resetResponseId = -1;
-      } catch (ApplicationMasterNotRegisteredException e) {
-        LOG.warn("ApplicationMaster is out of sync with RM for " + this.appId
-            + " hence resyncing.");
+      // If RM is complaining about responseId out of sync, force reset next
+      // time
+      if (t instanceof InvalidApplicationMasterRequestException) {
+        int responseId = AMRMClientUtils
+            .parseExpectedResponseIdFromException(t.getMessage());
+        if (responseId != -1) {
+          this.resetResponseId = responseId;
+          LOG.info("ResponseId out of sync with RM, expect " + responseId
+              + " but " + allocateRequest.getResponseId() + " used by "
+              + this.appId + ". Will override in the next allocate.");
+        } else {
+          LOG.warn("Failed to parse expected responseId out of exception for "
+              + this.appId);
+        }
+      }
 
-        synchronized (this) {
-          // Add all remotePending data into to-send data structures
-          for (ResourceRequestSet requestSet : this.remotePendingAsks
-              .values()) {
-            for (ResourceRequest rr : requestSet.getRRs()) {
-              addResourceRequestToAsk(rr);
+      throw t;
+    }
+
+    synchronized (this) {
+      if (this.shutdown) {
+        throw new YarnException("Allocate call succeeded for " + this.appId
+            + " after AMRMClientRelayer for RM " + rmId + " shutdown.");
+      }
+
+      updateMetrics(allocateResponse, startTime);
+
+      AMRMClientUtils.removeFromOutstandingSchedulingRequests(
+          allocateResponse.getAllocatedContainers(),
+          this.remotePendingSchedRequest);
+      AMRMClientUtils.removeFromOutstandingSchedulingRequests(
+          allocateResponse.getContainersFromPreviousAttempts(),
+          this.remotePendingSchedRequest);
+
+      this.ask.clear();
+      this.release.clear();
+
+      this.blacklistAdditions.clear();
+      this.blacklistRemovals.clear();
+
+      this.change.clear();
+      this.schedulingRequest.clear();
+      return allocateResponse;
+    }
+  }
+
+  private void updateMetrics(AllocateResponse allocateResponse,
+      long startTime) {
+    this.metrics.addHeartbeatSuccess(this.rmId,
+        System.currentTimeMillis() - startTime);
+    // Process the allocate response from RM
+    if (allocateResponse.getAllocatedContainers() != null) {
+      for (Container container : allocateResponse
+          .getAllocatedContainers()) {
+        // Do not update metrics aggressively for AllocationRequestId zero
+        // case. Also avoid double count to due to re-send
+        if (this.knownContainers.add(container.getId())) {
+          this.metrics.addFulfilledQPS(this.rmId, AMRMClientRelayerMetrics
+              .getRequestType(container.getExecutionType()), 1);
+          if (container.getAllocationRequestId() != 0) {
+            Integer count = this.pendingCountForMetrics
+                .get(container.getAllocationRequestId());
+            if (count != null && count > 0) {
+              this.pendingCountForMetrics
+                  .put(container.getAllocationRequestId(), --count);
+              this.metrics.decrClientPending(this.rmId,
+                  AMRMClientRelayerMetrics
+                      .getRequestType(container.getExecutionType()), 1);
+              this.metrics.addFulfillLatency(this.rmId,
+                  AMRMClientRelayerMetrics
+                      .getRequestType(container.getExecutionType()),
+                  System.currentTimeMillis() - this.askTimeStamp
+                      .get(container.getAllocationRequestId()));
             }
           }
-          this.release.addAll(this.remotePendingRelease);
-          this.blacklistAdditions.addAll(this.remoteBlacklistedNodes);
-          this.change.putAll(this.remotePendingChange);
-          for (List<SchedulingRequest> reqs : this.remotePendingSchedRequest
-              .values()) {
-            this.schedulingRequest.addAll(reqs);
-          }
-        }
-
-        // re-register with RM, then retry allocate recursively
-        registerApplicationMaster(this.amRegistrationRequest);
-        // Reset responseId after re-register
-        allocateRequest.setResponseId(0);
-        return allocate(allocateRequest);
-      } catch (Throwable t) {
-
-        // If RM is complaining about responseId out of sync, force reset next
-        // time
-        if (t instanceof InvalidApplicationMasterRequestException) {
-          int responseId = AMRMClientUtils
-              .parseExpectedResponseIdFromException(t.getMessage());
-          if (responseId != -1) {
-            this.resetResponseId = responseId;
-            LOG.info("ResponseId out of sync with RM, expect " + responseId
-                + " but " + allocateRequest.getResponseId() + " used by "
-                + this.appId + ". Will override in the next allocate.");
-          } else {
-            LOG.warn("Failed to parse expected responseId out of exception for "
-                + this.appId);
-          }
-        }
-
-        throw t;
-      }
-
-      synchronized (this) {
-        // Process the allocate response from RM
-        if (allocateResponse.getCompletedContainersStatuses() != null) {
-          for (ContainerStatus container : allocateResponse
-              .getCompletedContainersStatuses()) {
-            this.remotePendingRelease.remove(container.getContainerId());
-            this.remotePendingChange.remove(container.getContainerId());
-          }
-        }
-
-        if (allocateResponse.getUpdatedContainers() != null) {
-          for (UpdatedContainer updatedContainer : allocateResponse
-              .getUpdatedContainers()) {
-            this.remotePendingChange
-                .remove(updatedContainer.getContainer().getId());
-          }
-        }
-
-        AMRMClientUtils.removeFromOutstandingSchedulingRequests(
-            allocateResponse.getAllocatedContainers(),
-            this.remotePendingSchedRequest);
-        AMRMClientUtils.removeFromOutstandingSchedulingRequests(
-            allocateResponse.getContainersFromPreviousAttempts(),
-            this.remotePendingSchedRequest);
-      }
-
-    } finally {
-      synchronized (this) {
-        /*
-         * If allocateResponse is null, it means exception happened and RM did
-         * not accept the request. Don't clear any data structures so that they
-         * will be re-sent next time.
-         *
-         * Otherwise request was accepted by RM, we are safe to clear these.
-         */
-        if (allocateResponse != null) {
-          this.ask.clear();
-          this.release.clear();
-
-          this.blacklistAdditions.clear();
-          this.blacklistRemovals.clear();
-
-          this.change.clear();
-          this.schedulingRequest.clear();
         }
       }
     }
-    return allocateResponse;
+    if (allocateResponse.getCompletedContainersStatuses() != null) {
+      for (ContainerStatus container : allocateResponse
+          .getCompletedContainersStatuses()) {
+        this.remotePendingRelease.remove(container.getContainerId());
+        UpdateContainerRequest req =
+            this.remotePendingChange.remove(container.getContainerId());
+        if (req != null) {
+          this.metrics
+              .decrClientPending(rmId, req.getContainerUpdateType(), 1);
+        }
+        this.knownContainers.remove(container.getContainerId());
+      }
+    }
+
+    if (allocateResponse.getUpdatedContainers() != null) {
+      for (UpdatedContainer updatedContainer : allocateResponse
+          .getUpdatedContainers()) {
+        UpdateContainerRequest req = this.remotePendingChange
+            .remove(updatedContainer.getContainer().getId());
+        if (req != null) {
+          this.metrics
+              .decrClientPending(rmId, req.getContainerUpdateType(), 1);
+          this.metrics.addFulfillLatency(rmId, req.getContainerUpdateType(),
+              System.currentTimeMillis() - this.changeTimeStamp
+                  .remove(req.getContainerId()));
+          this.metrics
+              .addFulfilledQPS(rmId, req.getContainerUpdateType(), 1);
+        }
+      }
+    }
+
   }
 
   private void addNewAsks(List<ResourceRequest> asks) throws YarnException {
     Set<ResourceRequestSetKey> touchedKeys = new HashSet<>();
+    Set<ResourceRequestSetKey> nonZeroNewKeys = new HashSet<>();
     for (ResourceRequest rr : asks) {
       addResourceRequestToAsk(rr);
 
@@ -377,8 +515,38 @@ public class AMRMClientRelayer extends AbstractService
       if (askSet == null) {
         askSet = new ResourceRequestSet(key);
         this.remotePendingAsks.put(key, askSet);
+        if (key.getAllocationRequestId() != 0) {
+          nonZeroNewKeys.add(key);
+        }
       }
+
+      int numContainers = askSet.getNumContainers();
       askSet.addAndOverrideRR(rr);
+      int deltaContainers = askSet.getNumContainers() - numContainers;
+
+      if (key.getAllocationRequestId() == 0) {
+        // AllocationRequestId is zero, keep track of pending count in the
+        // delayed but correct way. Allocation latency is not supported
+        if (deltaContainers != 0) {
+          this.metrics.incrClientPending(this.rmId,
+              AMRMClientRelayerMetrics.getRequestType(key.getExeType()),
+              deltaContainers);
+          if(deltaContainers > 0){
+            this.metrics.addRequestedQPS(this.rmId,
+                AMRMClientRelayerMetrics.getRequestType(key.getExeType()),
+                deltaContainers);
+          }
+        }
+      } else {
+        // AllocationRequestId is non-zero, we do pending decrement and latency
+        // aggressively. So don't update metrics here. Double check AM is not
+        // reusing the requestId for more asks
+        if (deltaContainers > 0 && numContainers != 0) {
+          throw new YarnException("Received new ask ("
+              + askSet.getNumContainers() + ") on top of existing ("
+              + numContainers + ") in key " + key);
+        }
+      }
     }
 
     // Cleanup properly if needed
@@ -389,6 +557,20 @@ public class AMRMClientRelayer extends AbstractService
       } else {
         // Remove non-any zero RRs
         askSet.cleanupZeroNonAnyRR();
+      }
+    }
+
+    // Initialize data for pending metrics for each new key
+    for (ResourceRequestSetKey key : nonZeroNewKeys) {
+      if(remotePendingAsks.containsKey(key)){
+        this.askTimeStamp.put(key.getAllocationRequestId(),
+            System.currentTimeMillis());
+        int count = this.remotePendingAsks.get(key).getNumContainers();
+        this.pendingCountForMetrics.put(key.getAllocationRequestId(), count);
+        this.metrics.incrClientPending(this.rmId,
+            AMRMClientRelayerMetrics.getRequestType(key.getExeType()), count);
+        this.metrics.addRequestedQPS(this.rmId,
+            AMRMClientRelayerMetrics.getRequestType(key.getExeType()), count);
       }
     }
   }
