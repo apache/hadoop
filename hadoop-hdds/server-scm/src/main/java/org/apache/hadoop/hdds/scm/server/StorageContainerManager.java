@@ -233,7 +233,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new ContainerReportHandler(scmContainerManager, node2ContainerMap,
             replicationStatus);
     scmChillModeManager = new SCMChillModeManager(conf,
-        getScmContainerManager().getStateManager().getAllContainers());
+        getScmContainerManager().getStateManager().getAllContainers(),
+        eventQueue);
     PipelineActionEventHandler pipelineActionEventHandler =
         new PipelineActionEventHandler();
 

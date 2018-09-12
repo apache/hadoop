@@ -1122,6 +1122,14 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.enabled</name>
+    <value>true</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>Boolean value to enable or disable SCM chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>

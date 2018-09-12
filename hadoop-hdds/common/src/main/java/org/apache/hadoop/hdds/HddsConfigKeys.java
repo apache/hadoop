@@ -75,6 +75,10 @@ public final class HddsConfigKeys {
       "hdds.container.close.threshold";
   public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
 
+  public static final String HDDS_SCM_CHILLMODE_ENABLED =
+      "hdds.scm.chillmode.enabled";
+  public static final boolean HDDS_SCM_CHILLMODE_ENABLED_DEFAULT = true;
+
   // % of containers which should have at least one reported replica
   // before SCM comes out of chill mode.
   public static final String HDDS_SCM_CHILLMODE_THRESHOLD_PCT =

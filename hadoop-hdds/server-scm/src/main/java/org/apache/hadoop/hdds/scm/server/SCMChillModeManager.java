@@ -58,10 +58,15 @@ public class SCMChillModeManager implements
   private Configuration config;
   private static final String CONT_EXIT_RULE = "ContainerChillModeRule";
 
-  SCMChillModeManager(Configuration conf, List<ContainerInfo> allContainers) {
+  SCMChillModeManager(Configuration conf, List<ContainerInfo> allContainers,
+      EventPublisher eventQueue) {
     this.config = conf;
     exitRules
         .put(CONT_EXIT_RULE, new ContainerChillModeRule(config, allContainers));
+    if (!conf.getBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT)) {
+      exitChillMode(eventQueue);
+    }
   }
 
   private void validateChillModeExitRules(EventPublisher eventQueue) {
