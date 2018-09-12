@@ -45,7 +45,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
   private static final int ONE_MB = 1024 * 1024;
   private static final int DEFAULT_WRITE_TIMES = 100;
 
-  public ITestAzureBlobFileSystemE2EScale() {
+  public ITestAzureBlobFileSystemE2EScale() throws Exception {
   }
 
   @Test

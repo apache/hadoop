@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.net.URI;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
@@ -41,7 +41,7 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
   public ABFSContractTestBinding(
       final boolean useExistingFileSystem) throws Exception{
     if (useExistingFileSystem) {
-      Configuration configuration = getConfiguration();
+      AbfsConfiguration configuration = getConfiguration();
       String testUrl = configuration.get(TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
       Assume.assumeTrue("Contract tests are skipped because of missing config property :"
       + TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI, testUrl != null);
@@ -59,10 +59,6 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
     } else {
       this.testUri = new URI(super.getTestUrl());
     }
-  }
-
-  public Configuration getConfiguration() {
-    return super.getConfiguration();
   }
 
   public boolean isSecureMode() {

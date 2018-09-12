@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   private static final int TEST_DATA = 100;
   private static final Path TEST_PATH = new Path("/testfile");
-  public ITestFileSystemProperties() {
+  public ITestFileSystemProperties() throws Exception {
   }
 
   @Test

@@ -41,7 +41,7 @@ public class ITestAbfsFileSystemContractSetTimes extends AbstractContractSetTime
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

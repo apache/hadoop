@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
@@ -65,7 +66,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AbfsConfiguration{
-  private final Configuration configuration;
+  private final Configuration rawConfig;
+  private final String accountName;
   private final boolean isSecure;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
@@ -155,9 +157,12 @@ public class AbfsConfiguration{
 
   private Map<String, String> storageAccountKeys;
 
-  public AbfsConfiguration(final Configuration configuration) throws IllegalAccessException, InvalidConfigurationValueException {
-    this.configuration = configuration;
-    this.isSecure = this.configuration.getBoolean(FS_AZURE_SECURE_MODE, false);
+  public AbfsConfiguration(final Configuration rawConfig, String accountName)
+      throws IllegalAccessException, InvalidConfigurationValueException, IOException {
+    this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
+        rawConfig, AzureBlobFileSystem.class);
+    this.accountName = accountName;
+    this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     validateStorageAccountKeys();
     Field[] fields = this.getClass().getDeclaredFields();
@@ -177,14 +182,130 @@ public class AbfsConfiguration{
     }
   }
 
+  /**
+   * Appends an account name to a configuration key yielding the
+   * account-specific form.
+   * @param key Account-agnostic configuration key
+   * @return Account-specific configuration key
+   */
+  public String accountConf(String key) {
+    return key + "." + accountName;
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value.
+   * @param key Account-agnostic configuration key
+   * @return value if one exists, else null
+   */
+  public String get(String key) {
+    return rawConfig.get(accountConf(key), rawConfig.get(key));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value if one exists, else the default value
+   */
+  public boolean getBoolean(String key, boolean defaultValue) {
+    return rawConfig.getBoolean(accountConf(key), rawConfig.getBoolean(key, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value if one exists, else the default value
+   */
+  public long getLong(String key, long defaultValue) {
+    return rawConfig.getLong(accountConf(key), rawConfig.getLong(key, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific password in string form if it exists, then
+   * looks for an account-agnostic value.
+   * @param key Account-agnostic configuration key
+   * @return value in String form if one exists, else null
+   * @throws IOException
+   */
+  public String getPasswordString(String key) throws IOException {
+    char[] passchars = rawConfig.getPassword(accountConf(key));
+    if (passchars == null) {
+      passchars = rawConfig.getPassword(key);
+    }
+    if (passchars != null) {
+      return new String(passchars);
+    }
+    return null;
+  }
+
+  /**
+   * Returns the account-specific Class if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Class returned if none is configured
+   * @param xface Interface shared by all possible values
+   * @return Highest-precedence Class object that was found
+   * @throws IOException
+   */
+  public <U> Class<? extends U> getClass(String name, Class<? extends U> defaultValue, Class<U> xface) {
+    return rawConfig.getClass(accountConf(name),
+        rawConfig.getClass(name, defaultValue, xface),
+        xface);
+  }
+
+  /**
+   * Returns the account-specific password in string form if it exists, then
+   * looks for an account-agnostic value.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value in String form if one exists, else null
+   * @throws IOException
+   */
+  public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
+    return rawConfig.getEnum(accountConf(name),
+        rawConfig.getEnum(name, defaultValue));
+  }
+
+  /**
+   * Unsets parameter in the underlying Configuration object.
+   * Provided only as a convenience; does not add any account logic.
+   * @param key Configuration key
+   */
+  public void unset(String key) {
+    rawConfig.unset(key);
+  }
+
+  /**
+   * Sets String in the underlying Configuration object.
+   * Provided only as a convenience; does not add any account logic.
+   * @param key Configuration key
+   * @param value Configuration value
+   */
+  public void set(String key, String value) {
+    rawConfig.set(key, value);
+  }
+
+  /**
+   * Sets boolean in the underlying Configuration object.
+   * Provided only as a convenience; does not add any account logic.
+   * @param key Configuration key
+   * @param value Configuration value
+   */
+  public void setBoolean(String key, boolean value) {
+    rawConfig.setBoolean(key, value);
+  }
+
   public boolean isSecureMode() {
     return isSecure;
   }
 
-  public String getStorageAccountKey(final String accountName) throws AzureBlobFileSystemException {
+  public String getStorageAccountKey() throws AzureBlobFileSystemException {
     String key;
-    String keyProviderClass =
-            configuration.get(AZURE_KEY_ACCOUNT_KEYPROVIDER_PREFIX + accountName);
+    String keyProviderClass = get(AZURE_KEY_ACCOUNT_KEYPROVIDER);
     KeyProvider keyProvider;
 
     if (keyProviderClass == null) {
@@ -195,7 +316,7 @@ public class AbfsConfiguration{
       // implements KeyProvider
       Object keyProviderObject;
       try {
-        Class<?> clazz = configuration.getClassByName(keyProviderClass);
+        Class<?> clazz = rawConfig.getClassByName(keyProviderClass);
         keyProviderObject = clazz.newInstance();
       } catch (Exception e) {
         throw new KeyProviderException("Unable to load key provider class.", e);
@@ -206,7 +327,7 @@ public class AbfsConfiguration{
       }
       keyProvider = (KeyProvider) keyProviderObject;
     }
-    key = keyProvider.getStorageAccountKey(accountName, configuration);
+    key = keyProvider.getStorageAccountKey(accountName, rawConfig);
 
     if (key == null) {
       throw new ConfigurationPropertyNotFoundException(accountName);
@@ -215,8 +336,8 @@ public class AbfsConfiguration{
     return key;
   }
 
-  public Configuration getConfiguration() {
-    return this.configuration;
+  public Configuration getRawConfiguration() {
+    return this.rawConfig;
   }
 
   public int getWriteBufferSize() {
@@ -292,11 +413,11 @@ public class AbfsConfiguration{
   }
 
   public SSLSocketFactoryEx.SSLChannelMode getPreferredSSLFactoryOption() {
-    return configuration.getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
+    return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
-  public AuthType getAuthType(final String accountName) {
-    return configuration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountName, AuthType.SharedKey);
+  public AuthType getAuthType(String accountName) {
+    return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
   }
 
   public boolean isDelegationTokenManagerEnabled() {
@@ -304,34 +425,34 @@ public class AbfsConfiguration{
   }
 
   public AbfsDelegationTokenManager getDelegationTokenManager() throws IOException {
-    return new AbfsDelegationTokenManager(configuration);
+    return new AbfsDelegationTokenManager(getRawConfiguration());
   }
 
-  public AccessTokenProvider getTokenProvider(final String accountName) throws TokenAccessProviderException {
-    AuthType authType = configuration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountName, AuthType.SharedKey);
+  public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
       try {
         Class<? extends AccessTokenProvider> tokenProviderClass =
-                configuration.getClass(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountName, null,
+                getClass(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
                         AccessTokenProvider.class);
         AccessTokenProvider tokenProvider = null;
         if (tokenProviderClass == ClientCredsTokenProvider.class) {
-          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT + accountName);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountName);
-          String clientSecret = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + accountName);
+          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String clientSecret = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
           tokenProvider = new ClientCredsTokenProvider(authEndpoint, clientId, clientSecret);
         } else if (tokenProviderClass == UserPasswordTokenProvider.class) {
-          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT + accountName);
-          String username = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME + accountName);
-          String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD + accountName);
+          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String username = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
+          String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
           tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
         } else if (tokenProviderClass == MsiTokenProvider.class) {
-          String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountName);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountName);
+          String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           tokenProvider = new MsiTokenProvider(tenantGuid, clientId);
         } else if (tokenProviderClass == RefreshTokenBasedTokenProvider.class) {
-          String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN + accountName);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountName);
+          String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
+          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           tokenProvider = new RefreshTokenBasedTokenProvider(clientId, refreshToken);
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
@@ -345,20 +466,19 @@ public class AbfsConfiguration{
 
     } else if (authType == AuthType.Custom) {
       try {
-        String configKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountName;
+        String configKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
         Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass =
-                configuration.getClass(configKey, null,
-                        CustomTokenProviderAdaptee.class);
+                getClass(configKey, null, CustomTokenProviderAdaptee.class);
         if (customTokenProviderClass == null) {
           throw new IllegalArgumentException(
                   String.format("The configuration value for \"%s\" is invalid.", configKey));
         }
         CustomTokenProviderAdaptee azureTokenProvider = ReflectionUtils
-                .newInstance(customTokenProviderClass, configuration);
+                .newInstance(customTokenProviderClass, rawConfig);
         if (azureTokenProvider == null) {
           throw new IllegalArgumentException("Failed to initialize " + customTokenProviderClass);
         }
-        azureTokenProvider.initialize(configuration, accountName);
+        azureTokenProvider.initialize(rawConfig, accountName);
         return new CustomTokenProviderAdapter(azureTokenProvider);
       } catch(IllegalArgumentException e) {
         throw e;
@@ -375,7 +495,7 @@ public class AbfsConfiguration{
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {
     Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
         FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
-    this.storageAccountKeys = configuration.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
+    this.storageAccountKeys = rawConfig.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
 
     for (Map.Entry<String, String> account : storageAccountKeys.entrySet()) {
       validator.validate(account.getValue());
@@ -384,7 +504,7 @@ public class AbfsConfiguration{
 
   int validateInt(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     IntegerConfigurationValidatorAnnotation validator = field.getAnnotation(IntegerConfigurationValidatorAnnotation.class);
-    String value = configuration.get(validator.ConfigurationKey());
+    String value = get(validator.ConfigurationKey());
 
     // validate
     return new IntegerConfigurationBasicValidator(
@@ -397,7 +517,7 @@ public class AbfsConfiguration{
 
   long validateLong(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     LongConfigurationValidatorAnnotation validator = field.getAnnotation(LongConfigurationValidatorAnnotation.class);
-    String value = configuration.get(validator.ConfigurationKey());
+    String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
     return new LongConfigurationBasicValidator(
@@ -410,7 +530,7 @@ public class AbfsConfiguration{
 
   String validateString(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     StringConfigurationValidatorAnnotation validator = field.getAnnotation(StringConfigurationValidatorAnnotation.class);
-    String value = configuration.get(validator.ConfigurationKey());
+    String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
     return new StringConfigurationBasicValidator(
@@ -421,7 +541,7 @@ public class AbfsConfiguration{
 
   String validateBase64String(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     Base64StringConfigurationValidatorAnnotation validator = field.getAnnotation((Base64StringConfigurationValidatorAnnotation.class));
-    String value = configuration.get(validator.ConfigurationKey());
+    String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
     return new Base64StringConfigurationBasicValidator(
@@ -432,21 +552,13 @@ public class AbfsConfiguration{
 
   boolean validateBoolean(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     BooleanConfigurationValidatorAnnotation validator = field.getAnnotation(BooleanConfigurationValidatorAnnotation.class);
-    String value = configuration.get(validator.ConfigurationKey());
+    String value = rawConfig.get(validator.ConfigurationKey());
 
     // validate
     return new BooleanConfigurationBasicValidator(
         validator.ConfigurationKey(),
         validator.DefaultValue(),
         validator.ThrowIfInvalid()).validate(value);
-  }
-
-  String getPasswordString(String key) throws IOException {
-    char[] passchars = configuration.getPassword(key);
-    if (passchars != null) {
-      return new String(passchars);
-    }
-    return null;
   }
 
   @VisibleForTesting

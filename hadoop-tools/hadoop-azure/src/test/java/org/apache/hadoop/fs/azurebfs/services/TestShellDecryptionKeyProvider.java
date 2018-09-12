@@ -54,6 +54,7 @@ public class TestShellDecryptionKeyProvider {
     String key = "key";
 
     conf.set(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + account, key);
+
     try {
       provider.getStorageAccountKey(account, conf);
       Assert

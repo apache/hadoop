@@ -39,7 +39,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
  * Test copy operation.
  */
 public class ITestAzureBlobFileSystemCopy extends AbstractAbfsIntegrationTest {
-  public ITestAzureBlobFileSystemCopy() {
+
+  public ITestAzureBlobFileSystemCopy() throws Exception {
     super();
   }
 

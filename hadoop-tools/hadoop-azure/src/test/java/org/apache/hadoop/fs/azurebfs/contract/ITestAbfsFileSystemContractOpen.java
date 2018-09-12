@@ -42,7 +42,7 @@ public class ITestAbfsFileSystemContractOpen extends AbstractContractOpenTest {
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

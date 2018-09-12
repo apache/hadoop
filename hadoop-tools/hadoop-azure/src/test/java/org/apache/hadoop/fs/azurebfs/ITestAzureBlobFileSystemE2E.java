@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import static org.junit.Assert.assertEquals;
@@ -45,9 +44,9 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   private static final int TEST_DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
   private static final int TEST_DEFAULT_READ_BUFFER_SIZE = 1023900;
 
-  public ITestAzureBlobFileSystemE2E() {
+  public ITestAzureBlobFileSystemE2E() throws Exception {
     super();
-    Configuration configuration = this.getConfiguration();
+    AbfsConfiguration configuration = this.getConfiguration();
     configuration.set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
   }
 

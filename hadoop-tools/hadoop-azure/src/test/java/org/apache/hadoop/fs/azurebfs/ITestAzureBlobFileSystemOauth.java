@@ -53,7 +53,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   private static final Path EXISTED_FILE_PATH = new Path("/existedFile");
   private static final Path EXISTED_FOLDER_PATH = new Path("/existedFolder");
 
-  public ITestAzureBlobFileSystemOauth() {
+  public ITestAzureBlobFileSystemOauth() throws Exception {
     Assume.assumeTrue(this.getAuthType() == AuthType.OAuth);
   }
   /*
@@ -161,16 +161,18 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
   }
 
   private AzureBlobFileSystem getBlobConributor() throws Exception {
-    Configuration configuration = this.getConfiguration();
-    configuration.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + this.getAccountName(), configuration.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID));
-    configuration.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + this.getAccountName(), configuration.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET));
-    return getFileSystem(configuration);
+    AbfsConfiguration abfsConfig = this.getConfiguration();
+    abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID));
+    abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET));
+    Configuration rawConfig = abfsConfig.getRawConfiguration();
+    return getFileSystem(rawConfig);
   }
 
   private AzureBlobFileSystem getBlobReader() throws Exception {
-    Configuration configuration = this.getConfiguration();
-    configuration.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + this.getAccountName(), configuration.get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID));
-    configuration.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + this.getAccountName(), configuration.get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET));
-    return getFileSystem(configuration);
+    AbfsConfiguration abfsConfig = this.getConfiguration();
+    abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_READER_CLIENT_ID));
+    abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + "." + this.getAccountName(), abfsConfig.get(FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET));
+    Configuration rawConfig = abfsConfig.getRawConfiguration();
+    return getFileSystem(rawConfig);
   }
 }

@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
-import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,19 +36,19 @@ public class SimpleKeyProvider implements KeyProvider {
   private static final Logger LOG = LoggerFactory.getLogger(SimpleKeyProvider.class);
 
   @Override
-  public String getStorageAccountKey(String accountName, Configuration conf)
+  public String getStorageAccountKey(String accountName, Configuration rawConfig)
       throws KeyProviderException {
     String key = null;
+
     try {
-      Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
-          conf, AzureBlobFileSystem.class);
-      char[] keyChars = c.getPassword(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + accountName);
-      if (keyChars != null) {
-        key = new String(keyChars);
-      }
+      AbfsConfiguration abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+      key = abfsConfig.getPasswordString(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
+    } catch(IllegalAccessException | InvalidConfigurationValueException e) {
+      throw new KeyProviderException("Failure to initialize configuration", e);
     } catch(IOException ioe) {
       LOG.warn("Unable to get key from credential providers. {}", ioe);
     }
+
     return key;
   }
 }

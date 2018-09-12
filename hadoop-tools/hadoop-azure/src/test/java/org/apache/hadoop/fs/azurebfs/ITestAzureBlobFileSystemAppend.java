@@ -34,7 +34,8 @@ public class ITestAzureBlobFileSystemAppend extends
     AbstractAbfsIntegrationTest {
   private static final Path TEST_FILE_PATH = new Path("testfile");
   private static final Path TEST_FOLDER_PATH = new Path("testFolder");
-  public ITestAzureBlobFileSystemAppend() {
+
+  public ITestAzureBlobFileSystemAppend() throws Exception {
     super();
   }
 

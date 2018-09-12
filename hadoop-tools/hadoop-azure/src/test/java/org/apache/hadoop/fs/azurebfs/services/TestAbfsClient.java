@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
  */
 public final class TestAbfsClient {
 
+  private final String accountName = "bogusAccountName";
+
   private void validateUserAgent(String expectedPattern,
                                  URL baseUrl,
                                  AbfsConfiguration config,
@@ -55,7 +57,7 @@ public final class TestAbfsClient {
     String expectedUserAgentPattern = "Azure Blob FS\\/1.0 \\(JavaJRE ([^\\)]+)\\)";
     final Configuration configuration = new Configuration();
     configuration.unset(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY);
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, accountName);
     validateUserAgent(expectedUserAgentPattern, new URL("http://azure.com"),
         abfsConfiguration, false);
   }
@@ -65,7 +67,7 @@ public final class TestAbfsClient {
     String expectedUserAgentPattern = "Azure Blob FS\\/1.0 \\(JavaJRE ([^\\)]+)\\) Partner Service";
     final Configuration configuration = new Configuration();
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, "Partner Service");
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, accountName);
     validateUserAgent(expectedUserAgentPattern, new URL("http://azure.com"),
         abfsConfiguration, false);
   }
@@ -77,7 +79,7 @@ public final class TestAbfsClient {
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, "Partner Service");
     configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
         SSLSocketFactoryEx.SSLChannelMode.Default_JSSE.name());
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, accountName);
     validateUserAgent(expectedUserAgentPattern, new URL("https://azure.com"),
         abfsConfiguration, true);
   }

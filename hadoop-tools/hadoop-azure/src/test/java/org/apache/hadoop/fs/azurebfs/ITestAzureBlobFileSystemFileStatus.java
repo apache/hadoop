@@ -41,7 +41,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   private static final Path TEST_FILE = new Path("testFile");
   private static final Path TEST_FOLDER = new Path("testDir");
 
-  public ITestAzureBlobFileSystemFileStatus() {
+  public ITestAzureBlobFileSystemFileStatus() throws Exception {
     super();
   }
 

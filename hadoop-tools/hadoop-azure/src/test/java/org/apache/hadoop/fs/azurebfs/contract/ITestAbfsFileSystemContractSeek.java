@@ -42,7 +42,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

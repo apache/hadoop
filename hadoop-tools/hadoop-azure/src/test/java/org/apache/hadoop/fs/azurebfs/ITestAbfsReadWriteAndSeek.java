@@ -51,7 +51,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
   private final int size;
 
-  public ITestAbfsReadWriteAndSeek(final int size) {
+  public ITestAbfsReadWriteAndSeek(final int size) throws Exception {
     this.size = size;
   }
 
@@ -62,7 +62,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsConfiguration abfsConfiguration = new AbfsConfiguration(getConfiguration());
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);

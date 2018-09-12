@@ -42,7 +42,7 @@ public class ITestAbfsFileSystemContractCreate extends AbstractContractCreateTes
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getConfiguration();
+    return binding.getRawConfiguration();
   }
 
   @Override

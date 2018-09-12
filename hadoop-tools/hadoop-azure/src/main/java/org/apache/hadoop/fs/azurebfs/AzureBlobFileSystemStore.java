@@ -113,10 +113,15 @@ public class AzureBlobFileSystemStore {
   private boolean isNamespaceEnabled;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecure, Configuration configuration, UserGroupInformation userGroupInformation)
-          throws AzureBlobFileSystemException {
+          throws AzureBlobFileSystemException, IOException {
     this.uri = uri;
+
+    String[] authorityParts = authorityParts(uri);
+    final String fileSystemName = authorityParts[0];
+    final String accountName = authorityParts[1];
+
     try {
-      this.abfsConfiguration = new AbfsConfiguration(configuration);
+      this.abfsConfiguration = new AbfsConfiguration(configuration, accountName);
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
@@ -125,7 +130,31 @@ public class AzureBlobFileSystemStore {
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
 
-    initializeClient(uri, isSecure);
+    initializeClient(uri, fileSystemName, accountName, isSecure);
+  }
+
+  private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {
+    final String authority = uri.getRawAuthority();
+    if (null == authority) {
+      throw new InvalidUriAuthorityException(uri.toString());
+    }
+
+    if (!authority.contains(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER)) {
+      throw new InvalidUriAuthorityException(uri.toString());
+    }
+
+    final String[] authorityParts = authority.split(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
+
+    if (authorityParts.length < 2 || authorityParts[0] != null
+        && authorityParts[0].isEmpty()) {
+      final String errMsg = String
+              .format("'%s' has a malformed authority, expected container name. "
+                      + "Authority takes the form "
+                      + FileSystemUriSchemes.ABFS_SCHEME + "://[<container name>@]<account name>",
+                      uri.toString());
+      throw new InvalidUriException(errMsg);
+    }
+    return authorityParts;
   }
 
   public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
@@ -154,7 +183,7 @@ public class AzureBlobFileSystemStore {
     // the Azure Storage Service URI changes from
     // http[s]://[account][domain-suffix]/[filesystem] to
     // http[s]://[ip]:[port]/[account]/[filesystem].
-    String endPoint = abfsConfiguration.getConfiguration().get(AZURE_ABFS_ENDPOINT);
+    String endPoint = abfsConfiguration.get(AZURE_ABFS_ENDPOINT);
     if (endPoint == null || !endPoint.contains(AbfsHttpConstants.COLON)) {
       uriBuilder.setHost(hostName);
       return uriBuilder;
@@ -738,36 +767,12 @@ public class AzureBlobFileSystemStore {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  private void initializeClient(URI uri, boolean isSeure) throws AzureBlobFileSystemException {
+  private void initializeClient(URI uri, String fileSystemName, String accountName, boolean isSecure) throws AzureBlobFileSystemException {
     if (this.client != null) {
       return;
     }
 
-    final String authority = uri.getRawAuthority();
-    if (null == authority) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    if (!authority.contains(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER)) {
-      throw new InvalidUriAuthorityException(uri.toString());
-    }
-
-    final String[] authorityParts = authority.split(AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
-
-    if (authorityParts.length < 2 || authorityParts[0] != null
-        && authorityParts[0].isEmpty()) {
-      final String errMsg = String
-              .format("'%s' has a malformed authority, expected container name. "
-                      + "Authority takes the form "
-                      + FileSystemUriSchemes.ABFS_SCHEME + "://[<container name>@]<account name>",
-                      uri.toString());
-      throw new InvalidUriException(errMsg);
-    }
-
-    final String fileSystemName = authorityParts[0];
-    final String accountName = authorityParts[1];
-
-    final URIBuilder uriBuilder = getURIBuilder(accountName, isSeure);
+    final URIBuilder uriBuilder = getURIBuilder(accountName, isSecure);
 
     final String url = uriBuilder.toString() + AbfsHttpConstants.FORWARD_SLASH + fileSystemName;
 
@@ -788,9 +793,9 @@ public class AzureBlobFileSystemStore {
                 uri.toString() + " - account name is not fully qualified.");
       }
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
-            abfsConfiguration.getStorageAccountKey(accountName));
+            abfsConfiguration.getStorageAccountKey());
     } else {
-      tokenProvider = abfsConfiguration.getTokenProvider(accountName);
+      tokenProvider = abfsConfiguration.getTokenProvider();
     }
 
     this.client =  new AbfsClient(baseUrl, creds, abfsConfiguration, new ExponentialRetryPolicy(), tokenProvider);

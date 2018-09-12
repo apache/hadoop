@@ -41,7 +41,7 @@ public class ITestAbfsFileSystemContractGetFileStatus extends AbstractContractGe
 
   @Override
   protected Configuration createConfiguration() {
-    return this.binding.getConfiguration();
+    return this.binding.getRawConfiguration();
   }
 
   @Override
