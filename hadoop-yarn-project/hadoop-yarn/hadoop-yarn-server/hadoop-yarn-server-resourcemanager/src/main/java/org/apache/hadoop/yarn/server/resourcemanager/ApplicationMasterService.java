@@ -559,7 +559,7 @@ public class ApplicationMasterService extends AbstractService implements
           NodeReport report =
               BuilderUtils.newNodeReport(nodeId, rmNode.getState(),
                   rmNode.getHttpAddress(), rmNode.getRackName(), used,
-                  rmNode.getTotalCapability(), numContainers,
+                  Resources.clone(rmNode.getTotalCapability()), numContainers,
                   rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
                   rmNode.getNodeLabels());
 
