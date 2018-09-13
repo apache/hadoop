@@ -58,10 +58,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -537,5 +541,23 @@ public class ResourceMgrDelegate extends YarnClient {
   public List<ResourceTypeInfo> getResourceTypeInfo()
       throws YarnException, IOException {
     return client.getResourceTypeInfo();
+  }
+
+  @Override
+  public Set<NodeAttributeInfo> getClusterAttributes()
+      throws YarnException, IOException {
+    return client.getClusterAttributes();
+  }
+
+  @Override
+  public Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException {
+    return client.getAttributesToNodes(attributes);
+  }
+
+  @Override
+  public Map<String, Set<NodeAttribute>> getNodeToAttributes(
+      Set<String> hostNames) throws YarnException, IOException {
+    return client.getNodeToAttributes(hostNames);
   }
 }

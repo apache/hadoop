@@ -27,8 +27,12 @@ import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -39,6 +43,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -642,4 +648,53 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   @Unstable
   GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get attributes to nodes mappings
+   * available in ResourceManager.
+   * </p>
+   *
+   * @param request request to get details of attributes to nodes mapping.
+   * @return Response containing the details of attributes to nodes mappings.
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException   incase of other errors
+   */
+  @Public
+  @Unstable
+  GetAttributesToNodesResponse getAttributesToNodes(
+      GetAttributesToNodesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node attributes available in
+   * ResourceManager.
+   * </p>
+   *
+   * @param request request to get node attributes collection of this cluster.
+   * @return Response containing node attributes collection.
+   * @throws YarnException if any error happens inside YARN.
+   * @throws IOException   incase of other errors.
+   */
+  @Public
+  @Unstable
+  GetClusterNodeAttributesResponse getClusterNodeAttributes(
+      GetClusterNodeAttributesRequest request)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node to attributes mappings.
+   * in existing cluster.
+   * </p>
+   *
+   * @param request request to get nodes to attributes mapping.
+   * @return nodes to attributes mappings.
+   * @throws YarnException if any error happens inside YARN.
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  GetNodesToAttributesResponse getNodesToAttributes(
+      GetNodesToAttributesRequest request) throws YarnException, IOException;
 }

@@ -25,8 +25,8 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Options;
@@ -42,7 +42,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestParam {
-  public static final Log LOG = LogFactory.getLog(TestParam.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestParam.class);
 
   final Configuration conf = new Configuration();
  

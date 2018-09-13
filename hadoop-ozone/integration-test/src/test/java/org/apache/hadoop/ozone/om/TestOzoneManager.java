@@ -276,10 +276,28 @@ public class TestOzoneManager {
     Assert.assertTrue(volumeInfo.getVolumeName().equals(volumeName2));
 
     // Make sure volume with _A suffix is successfully deleted.
-    exception.expect(IOException.class);
-    exception.expectMessage("Info Volume failed, error:VOLUME_NOT_FOUND");
-    volumeArgs = new VolumeArgs(volumeName1, userArgs);
-    storageHandler.getVolumeInfo(volumeArgs);
+    try {
+      volumeArgs = new VolumeArgs(volumeName1, userArgs);
+      storageHandler.getVolumeInfo(volumeArgs);
+      Assert.fail("Volume is not deleted");
+    } catch (IOException ex) {
+      Assert.assertEquals("Info Volume failed, error:VOLUME_NOT_FOUND",
+          ex.getMessage());
+    }
+    //delete the _AA volume, too
+    storageHandler.deleteVolume(new VolumeArgs(volumeName2, userArgs));
+
+    //Make sure there is no volume information for the specific user
+    OMMetadataManager metadataManager =
+        cluster.getOzoneManager().getMetadataManager();
+
+    byte[] userKey = metadataManager.getUserKey(userName);
+    byte[] volumes = metadataManager.getUserTable().get(userKey);
+
+    //that was the last volume of the user, shouldn't be any record here
+    Assert.assertNull(volumes);
+
+
   }
 
   // Create a volume and a bucket inside the volume,

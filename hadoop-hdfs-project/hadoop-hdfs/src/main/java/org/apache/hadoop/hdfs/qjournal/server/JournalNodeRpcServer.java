@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -61,7 +61,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST
 @VisibleForTesting
 public class JournalNodeRpcServer implements QJournalProtocol,
     InterQJournalProtocol {
-  private static final Log LOG = JournalNode.LOG;
+  private static final Logger LOG = JournalNode.LOG;
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;

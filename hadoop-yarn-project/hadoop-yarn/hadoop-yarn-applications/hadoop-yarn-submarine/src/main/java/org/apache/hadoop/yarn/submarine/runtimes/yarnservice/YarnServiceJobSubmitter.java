@@ -125,6 +125,7 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
         fw.append("export HADOOP_HOME=\n");
         fw.append("export HADOOP_YARN_HOME=\n");
         fw.append("export HADOOP_HDFS_HOME=" + hdfsHome + "\n");
+        fw.append("export HADOOP_COMMON_HOME=" + hdfsHome + "\n");
       } else{
         lackingEnvs = true;
       }
@@ -170,10 +171,12 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
 
     // DEBUG
     if (SubmarineLogs.isVerbose()) {
-      fw.append("echo $CLASSPATH\n");
-      fw.append("echo $JAVA_HOME\n");
-      fw.append("echo $LD_LIBRARY_PATH\n");
-      fw.append("echo $HADOOP_HDFS_HOME\n");
+      fw.append("echo \"CLASSPATH:$CLASSPATH\"\n");
+      fw.append("echo \"HADOOP_CONF_DIR:$HADOOP_CONF_DIR\"\n");
+      fw.append("echo \"HADOOP_TOKEN_FILE_LOCATION:$HADOOP_TOKEN_FILE_LOCATION\"\n");
+      fw.append("echo \"JAVA_HOME:$JAVA_HOME\"\n");
+      fw.append("echo \"LD_LIBRARY_PATH:$LD_LIBRARY_PATH\"\n");
+      fw.append("echo \"HADOOP_HDFS_HOME:$HADOOP_HDFS_HOME\"\n");
     }
   }
 

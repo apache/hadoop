@@ -29,12 +29,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
@@ -66,8 +68,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -84,6 +90,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -127,8 +135,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -148,6 +160,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.nodelabels.AttributeValue;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
@@ -1036,8 +1050,9 @@ public class ClientRMService extends AbstractService implements
     if (schedulerNodeReport != null) {
       used = schedulerNodeReport.getUsedResource();
       numContainers = schedulerNodeReport.getNumContainers();
-    } 
+    }
 
+    Set<NodeAttribute> attrs = rmNode.getAllNodeAttributes();
     NodeReport report =
         BuilderUtils.newNodeReport(rmNode.getNodeID(), rmNode.getState(),
             rmNode.getHttpAddress(), rmNode.getRackName(), used,
@@ -1045,7 +1060,7 @@ public class ClientRMService extends AbstractService implements
             rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
             rmNode.getNodeLabels(), rmNode.getAggregatedContainersUtilization(),
             rmNode.getNodeUtilization(), rmNode.getDecommissioningTimeout(),
-            null);
+            null, attrs);
 
     return report;
   }
@@ -1835,6 +1850,58 @@ public class ClientRMService extends AbstractService implements
     GetAllResourceTypeInfoResponse response =
         GetAllResourceTypeInfoResponse.newInstance();
     response.setResourceTypeInfo(ResourceUtils.getResourcesTypeInfo());
+    return response;
+  }
+
+  @Override
+  public GetAttributesToNodesResponse getAttributesToNodes(
+      GetAttributesToNodesRequest request) throws YarnException, IOException {
+    NodeAttributesManager attributesManager =
+        rmContext.getNodeAttributesManager();
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrToNodesWithStrVal =
+        new HashMap<>();
+    Map<NodeAttributeKey, Map<String, AttributeValue>> attributesToNodes =
+        attributesManager.getAttributesToNodes(request.getNodeAttributes());
+    for (Map.Entry<NodeAttributeKey, Map<String, AttributeValue>> attrib :
+          attributesToNodes.entrySet()) {
+      Map<String, AttributeValue> nodesToVal = attrib.getValue();
+      List<NodeToAttributeValue> nodeToAttrValList = new ArrayList<>();
+      for (Map.Entry<String, AttributeValue> nodeToVal : nodesToVal
+          .entrySet()) {
+        nodeToAttrValList.add(NodeToAttributeValue
+            .newInstance(nodeToVal.getKey(), nodeToVal.getValue().getValue()));
+      }
+      attrToNodesWithStrVal.put(attrib.getKey(), nodeToAttrValList);
+    }
+    GetAttributesToNodesResponse response =
+        GetAttributesToNodesResponse.newInstance(attrToNodesWithStrVal);
+    return response;
+  }
+
+  @Override
+  public GetClusterNodeAttributesResponse getClusterNodeAttributes(
+      GetClusterNodeAttributesRequest request)
+      throws YarnException, IOException {
+    NodeAttributesManager attributesManager =
+        rmContext.getNodeAttributesManager();
+    Set<NodeAttribute> attributes =
+        attributesManager.getClusterNodeAttributes(null);
+
+    GetClusterNodeAttributesResponse response =
+        GetClusterNodeAttributesResponse.newInstance(
+            attributes.stream().map(attr -> NodeAttributeInfo.newInstance(attr))
+                .collect(Collectors.toSet()));
+    return response;
+  }
+
+  @Override
+  public GetNodesToAttributesResponse getNodesToAttributes(
+      GetNodesToAttributesRequest request) throws YarnException, IOException {
+    NodeAttributesManager attributesManager =
+        rmContext.getNodeAttributesManager();
+    GetNodesToAttributesResponse response = GetNodesToAttributesResponse
+        .newInstance(
+            attributesManager.getNodesToAttributes(request.getHostNames()));
     return response;
   }
 

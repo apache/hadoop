@@ -1284,7 +1284,11 @@
 <property>
   <name>dfs.image.compress</name>
   <value>false</value>
-  <description>Should the dfs image be compressed?
+  <description>When this value is true, the dfs image will be compressed.
+    Enabling this will be very helpful if dfs image is large since it can
+    avoid consuming a lot of network bandwidth when SBN uploads a new dfs
+    image to ANN. The compressed codec is specified by the setting
+    dfs.image.compression.codec.
   </description>
 </property>
 
@@ -2465,6 +2469,17 @@
     be valid, if there is no communication from the DataNode.  After this time
     has elapsed, we will re-fetch the short-circuit replica even if it is in
     the cache.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.caching.enabled</name>
+  <value>true</value>
+  <description>
+    Set to true to enable block caching.  This flag enables the NameNode to
+    maintain a mapping of cached blocks to DataNodes via processing DataNode
+    cache reports.  Based on these reports and addition and removal of caching
+    directives, the NameNode will schedule caching and uncaching work.
   </description>
 </property>
 

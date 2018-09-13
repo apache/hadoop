@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -156,6 +157,13 @@ public interface MiniOzoneCluster {
       TimeoutException;
 
   /**
+   * Restart a particular HddsDatanode.
+   *
+   * @param dn HddsDatanode in the MiniOzoneCluster
+   */
+  void restartHddsDatanode(DatanodeDetails dn) throws InterruptedException,
+      TimeoutException, IOException;
+  /**
    * Shutdown a particular HddsDatanode.
    *
    * @param i index of HddsDatanode in the MiniOzoneCluster
@@ -163,9 +171,31 @@ public interface MiniOzoneCluster {
   void shutdownHddsDatanode(int i);
 
   /**
-   * Shutdown the MiniOzoneCluster.
+   * Shutdown a particular HddsDatanode.
+   *
+   * @param dn HddsDatanode in the MiniOzoneCluster
+   */
+  void shutdownHddsDatanode(DatanodeDetails dn) throws IOException;
+
+  /**
+   * Shutdown the MiniOzoneCluster and delete the storage dirs.
    */
   void shutdown();
+
+  /**
+   * Stop the MiniOzoneCluster without any cleanup.
+   */
+  void stop();
+
+  /**
+   * Start Scm.
+   */
+  void startScm() throws IOException;
+
+  /**
+   * Start DataNodes.
+   */
+  void startHddsDatanodes();
 
   /**
    * Builder class for MiniOzoneCluster.
@@ -194,6 +224,7 @@ public interface MiniOzoneCluster {
     protected int numOfOmHandlers = 20;
     protected int numOfScmHandlers = 20;
     protected int numOfDatanodes = 1;
+    protected boolean  startDataNodes = true;
 
     protected Builder(OzoneConfiguration conf) {
       this.conf = conf;
@@ -211,6 +242,11 @@ public interface MiniOzoneCluster {
      */
     public Builder setClusterId(String id) {
       clusterId = id;
+      return this;
+    }
+
+    public Builder setStartDataNodes(boolean startDataNodes) {
+      this.startDataNodes = startDataNodes;
       return this;
     }
 

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -49,7 +49,8 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 
 public class TestStorageReport {
-  public static final Log LOG = LogFactory.getLog(TestStorageReport.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestStorageReport.class);
 
   private static final short REPL_FACTOR = 1;
   private static final StorageType storageType = StorageType.SSD; // pick non-default.

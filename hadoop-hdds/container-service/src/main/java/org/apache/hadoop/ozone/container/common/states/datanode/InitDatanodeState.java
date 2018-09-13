@@ -93,6 +93,16 @@ public class InitDatanodeState implements DatanodeState,
       return DatanodeStateMachine.DatanodeStates.SHUTDOWN;
     } else {
       for (InetSocketAddress addr : addresses) {
+        if (addr.isUnresolved()) {
+          LOG.warn("One SCM address ({}) can't (yet?) be resolved. Postpone "
+              + "initialization.", addr);
+
+          //skip any further initialization. DatanodeStateMachine will try it
+          // again after the hb frequency
+          return this.context.getState();
+        }
+      }
+      for (InetSocketAddress addr : addresses) {
         connectionManager.addSCMServer(addr);
       }
     }

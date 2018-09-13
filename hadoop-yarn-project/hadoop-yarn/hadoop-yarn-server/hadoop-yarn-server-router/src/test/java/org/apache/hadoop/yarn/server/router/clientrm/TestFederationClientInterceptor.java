@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -130,7 +132,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetNewApplication()
       throws YarnException, IOException, InterruptedException {
-    System.out.println("Test FederationClientInterceptor: Get New Application");
+    LOG.info("Test FederationClientInterceptor: Get New Application");
 
     GetNewApplicationRequest request = GetNewApplicationRequest.newInstance();
     GetNewApplicationResponse response = interceptor.getNewApplication(request);
@@ -149,7 +151,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testSubmitApplication()
       throws YarnException, IOException, InterruptedException {
-    System.out.println("Test FederationClientInterceptor: Submit Application");
+    LOG.info("Test FederationClientInterceptor: Submit Application");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -174,7 +176,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testSubmitApplicationMultipleSubmission()
       throws YarnException, IOException, InterruptedException {
-    System.out.println(
+    LOG.info(
         "Test FederationClientInterceptor: Submit Application - Multiple");
 
     ApplicationId appId =
@@ -207,7 +209,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testSubmitApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
-    System.out.println(
+    LOG.info(
         "Test FederationClientInterceptor: Submit Application - Empty");
     try {
       interceptor.submitApplication(null);
@@ -246,8 +248,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testForceKillApplication()
       throws YarnException, IOException, InterruptedException {
-    System.out
-        .println("Test FederationClientInterceptor: Force Kill Application");
+    LOG.info("Test FederationClientInterceptor: Force Kill Application");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -276,7 +277,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testForceKillApplicationNotExists()
       throws YarnException, IOException, InterruptedException {
-    System.out.println("Test FederationClientInterceptor: "
+    LOG.info("Test FederationClientInterceptor: "
         + "Force Kill Application - Not Exists");
 
     ApplicationId appId =
@@ -299,7 +300,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testForceKillApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
-    System.out.println(
+    LOG.info(
         "Test FederationClientInterceptor: Force Kill Application - Empty");
     try {
       interceptor.forceKillApplication(null);
@@ -325,8 +326,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationReport()
       throws YarnException, IOException, InterruptedException {
-    System.out
-        .println("Test FederationClientInterceptor: Get Application Report");
+    LOG.info("Test FederationClientInterceptor: Get Application Report");
 
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -357,7 +357,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationNotExists()
       throws YarnException, IOException, InterruptedException {
-    System.out.println(
+    LOG.info(
         "Test ApplicationClientProtocol: Get Application Report - Not Exists");
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -379,7 +379,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
-    System.out.println(
+    LOG.info(
         "Test FederationClientInterceptor: Get Application Report - Empty");
     try {
       interceptor.getApplicationReport(null);
@@ -400,4 +400,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     }
   }
 
+  @Test
+  public void testGetClusterMetricsRequest() throws YarnException, IOException {
+    LOG.info("Test FederationClientInterceptor : Get Cluster Metrics request");
+    // null request
+    GetClusterMetricsResponse response = interceptor.getClusterMetrics(null);
+    Assert.assertEquals(subClusters.size(),
+        response.getClusterMetrics().getNumNodeManagers());
+    // normal request.
+    response =
+        interceptor.getClusterMetrics(GetClusterMetricsRequest.newInstance());
+    Assert.assertEquals(subClusters.size(),
+        response.getClusterMetrics().getNumNodeManagers());
+  }
 }

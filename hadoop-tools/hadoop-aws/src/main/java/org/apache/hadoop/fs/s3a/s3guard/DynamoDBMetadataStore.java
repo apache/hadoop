@@ -61,6 +61,8 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import com.amazonaws.services.dynamodbv2.model.Tag;
+import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -215,6 +217,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
 
+  private AmazonDynamoDB amazonDynamoDB;
   private DynamoDB dynamoDB;
   private AWSCredentialProviderList credentials;
   private String region;
@@ -257,21 +260,22 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @return DynamoDB instance.
    * @throws IOException I/O error.
    */
-  private static DynamoDB createDynamoDB(
+  private DynamoDB createDynamoDB(
       final Configuration conf,
       final String s3Region,
       final String bucket,
       final AWSCredentialsProvider credentials)
       throws IOException {
-    Preconditions.checkNotNull(conf);
-    final Class<? extends DynamoDBClientFactory> cls = conf.getClass(
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL,
-        S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT,
-        DynamoDBClientFactory.class);
-    LOG.debug("Creating DynamoDB client {} with S3 region {}", cls, s3Region);
-    final AmazonDynamoDB dynamoDBClient = ReflectionUtils.newInstance(cls, conf)
-        .createDynamoDBClient(s3Region, bucket, credentials);
-    return new DynamoDB(dynamoDBClient);
+    if (amazonDynamoDB == null) {
+      Preconditions.checkNotNull(conf);
+      final Class<? extends DynamoDBClientFactory> cls =
+          conf.getClass(S3GUARD_DDB_CLIENT_FACTORY_IMPL,
+          S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT, DynamoDBClientFactory.class);
+      LOG.debug("Creating DynamoDB client {} with S3 region {}", cls, s3Region);
+      amazonDynamoDB = ReflectionUtils.newInstance(cls, conf)
+          .createDynamoDBClient(s3Region, bucket, credentials);
+    }
+    return new DynamoDB(amazonDynamoDB);
   }
 
   /**
@@ -978,6 +982,34 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
   }
 
+  /**
+   *  Add tags from configuration to the existing DynamoDB table.
+   */
+  @Retries.OnceRaw
+  public void tagTable() {
+    List<Tag> tags = new ArrayList<>();
+    Map <String, String> tagProperties =
+        conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG);
+    for (Map.Entry<String, String> tagMapEntry : tagProperties.entrySet()) {
+      Tag tag = new Tag().withKey(tagMapEntry.getKey())
+          .withValue(tagMapEntry.getValue());
+      tags.add(tag);
+    }
+    if (tags.isEmpty()) {
+      return;
+    }
+
+    TagResourceRequest tagResourceRequest = new TagResourceRequest()
+        .withResourceArn(table.getDescription().getTableArn())
+        .withTags(tags);
+    getAmazonDynamoDB().tagResource(tagResourceRequest);
+  }
+
+  @VisibleForTesting
+  public AmazonDynamoDB getAmazonDynamoDB() {
+    return amazonDynamoDB;
+  }
+
   @Override
   public String toString() {
     return getClass().getSimpleName() + '{'
@@ -1166,6 +1198,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     final Item marker = createVersionMarker(VERSION_MARKER, VERSION,
         System.currentTimeMillis());
     putItem(marker);
+    tagTable();
   }
 
   /**

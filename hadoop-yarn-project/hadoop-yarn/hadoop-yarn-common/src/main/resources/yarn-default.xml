@@ -2901,6 +2901,68 @@
     <value>1800000</value>
   </property>
 
+  <!-- Distributed Node Attributes Configuration -->
+  <property>
+    <description>
+      This property determines which provider will be plugged by the
+      node manager to collect node-attributes. Administrators can
+      configure "config", "script" or the class name of the provider.
+      Configured class needs to extend
+      org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider.
+      If "config" is configured, then "ConfigurationNodeLabelsProvider" and if
+      "script" is configured, then "ScriptBasedNodeAttributesProvider"
+      will be used.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider</name>
+  </property>
+
+  <property>
+    <description>
+      The node attribute script NM runs to collect node attributes.
+      Script output Line starting with "NODE_ATTRIBUTE:" will be
+      considered as a record of node attribute, attribute name, type
+      and value should be delimited by comma. Each of such lines
+      will be parsed to a node attribute.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.script.path</name>
+  </property>
+
+  <property>
+    <description>
+      Command arguments passed to the node attribute script.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.script.opts</name>
+  </property>
+
+  <property>
+    <description>
+      Time interval that determines how long NM fetches node attributes
+      from a given provider. If -1 is configured then node labels are
+      retrieved from provider only during initialization. Defaults to 10 mins.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.fetch-interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>
+      Timeout period after which NM will interrupt the node attribute
+      provider script which queries node attributes. Defaults to 20 mins.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.fetch-timeout-ms</name>
+    <value>1200000</value>
+  </property>
+
+  <property>
+    <description>
+      When "yarn.nodemanager.node-attributes.provider" is configured with
+      "config" then ConfigurationNodeAttributesProvider fetches node attributes
+      from this parameter.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.configured-node-attributes</name>
+    <value></value>
+  </property>
+
   <property>
     <description>
     Timeout in seconds for YARN node graceful decommission.
@@ -3472,6 +3534,14 @@
 
   <property>
     <description>
+      The thread pool executor size of per user in Router ClientRM Service FederationClientInterceptor.
+    </description>
+    <name>yarn.router.interceptor.user.threadpool-size</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
       Size of LRU cache for Router ClientRM Service and RMAdmin Service.
     </description>
     <name>yarn.router.pipeline.cache-max-size</name>
@@ -3894,5 +3964,21 @@
     </description>
     <name>yarn.nodemanager.elastic-memory-control.timeout-sec</name>
     <value>5</value>
+  </property>
+  <property>
+    <description>
+      URI for NodeAttributeManager. The default value is
+      /tmp/hadoop-yarn-${user}/node-attribute/ in the local filesystem.
+    </description>
+    <name>yarn.node-attribute.fs-store.root-dir</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Choose different implementation of node attribute's storage
+    </description>
+    <name>yarn.node-attribute.fs-store.impl.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore</value>
   </property>
 </configuration>

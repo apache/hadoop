@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -65,8 +65,8 @@ import static org.junit.Assert.*;
  **/
 public class TestDelegationTokensWithHA {
   private static final Configuration conf = new Configuration();
-  private static final Log LOG =
-    LogFactory.getLog(TestDelegationTokensWithHA.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDelegationTokensWithHA.class);
   private static MiniDFSCluster cluster;
   private static NameNode nn0;
   private static NameNode nn1;

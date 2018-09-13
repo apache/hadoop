@@ -35,6 +35,9 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverSe
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
+import org.apache.hadoop.ozone.container.replication
+    .OnDemandContainerReplicationSource;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,14 +82,18 @@ public class OzoneContainer {
         context);
     server = new XceiverServerSpi[]{
         new XceiverServerGrpc(datanodeDetails, this.config, this
-            .hddsDispatcher),
+            .hddsDispatcher, createReplicationService()),
         XceiverServerRatis.newXceiverServerRatis(datanodeDetails, this
-            .config, hddsDispatcher)
+            .config, hddsDispatcher, context)
     };
 
 
   }
 
+  private GrpcReplicationService createReplicationService() {
+    return new GrpcReplicationService(
+        new OnDemandContainerReplicationSource(containerSet));
+  }
 
   /**
    * Build's container map.

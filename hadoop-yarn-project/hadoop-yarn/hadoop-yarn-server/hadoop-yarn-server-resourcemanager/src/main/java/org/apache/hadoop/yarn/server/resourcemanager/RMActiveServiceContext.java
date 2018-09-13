@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -101,6 +102,7 @@ public class RMActiveServiceContext {
   private ApplicationMasterService applicationMasterService;
 
   private RMNodeLabelsManager nodeLabelManager;
+  private NodeAttributesManager nodeAttributesManager;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
   private Clock systemClock = SystemClock.getInstance();
@@ -403,6 +405,18 @@ public class RMActiveServiceContext {
   @Unstable
   public void setNodeLabelManager(RMNodeLabelsManager mgr) {
     nodeLabelManager = mgr;
+  }
+
+  @Private
+  @Unstable
+  public NodeAttributesManager getNodeAttributesManager() {
+    return nodeAttributesManager;
+  }
+
+  @Private
+  @Unstable
+  public void setNodeAttributesManager(NodeAttributesManager mgr) {
+    nodeAttributesManager = mgr;
   }
 
   @Private

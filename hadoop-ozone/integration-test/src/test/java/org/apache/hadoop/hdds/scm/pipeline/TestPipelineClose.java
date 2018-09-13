@@ -112,8 +112,7 @@ public class TestPipelineClose {
 
     pipelineSelector.finalizePipeline(ratisContainer1.getPipeline());
     Pipeline pipeline1 = pipelineSelector
-        .getPipeline(ratisContainer1.getPipeline().getId(),
-            ratisContainer1.getContainerInfo().getReplicationType());
+        .getPipeline(ratisContainer1.getPipeline().getId());
     Assert.assertNull(pipeline1);
     Assert.assertEquals(ratisContainer1.getPipeline().getLifeCycleState(),
         HddsProtos.LifeCycleState.CLOSED);
@@ -140,8 +139,7 @@ public class TestPipelineClose {
     Assert.assertEquals(ratisContainer2.getPipeline().getLifeCycleState(),
         HddsProtos.LifeCycleState.CLOSING);
     Pipeline pipeline2 = pipelineSelector
-        .getPipeline(ratisContainer2.getPipeline().getId(),
-            ratisContainer2.getContainerInfo().getReplicationType());
+        .getPipeline(ratisContainer2.getPipeline().getId());
     Assert.assertEquals(pipeline2.getLifeCycleState(),
         HddsProtos.LifeCycleState.CLOSING);
   }

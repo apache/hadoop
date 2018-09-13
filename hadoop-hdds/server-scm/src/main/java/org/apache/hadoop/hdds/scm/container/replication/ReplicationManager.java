@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -116,7 +117,15 @@ public class ReplicationManager implements Runnable {
 
         //check the current replication
         List<DatanodeDetails> datanodesWithReplicas =
-            getCurrentReplicas(request);
+            new ArrayList<>(getCurrentReplicas(request));
+
+        if (datanodesWithReplicas.size() == 0) {
+          LOG.warn(
+              "Container {} should be replicated but can't find any existing "
+                  + "replicas",
+              containerID);
+          return;
+        }
 
         ReplicationRequest finalRequest = request;
 
@@ -165,11 +174,10 @@ public class ReplicationManager implements Runnable {
   }
 
   @VisibleForTesting
-  protected List<DatanodeDetails> getCurrentReplicas(ReplicationRequest request)
+  protected Set<DatanodeDetails> getCurrentReplicas(ReplicationRequest request)
       throws IOException {
-    //TODO: replication information is not yet available after HDDS-175,
-    // should be fixed after HDDS-228
-    return new ArrayList<>();
+    return containerStateManager
+        .getContainerReplicas(new ContainerID(request.getContainerId()));
   }
 
   @VisibleForTesting

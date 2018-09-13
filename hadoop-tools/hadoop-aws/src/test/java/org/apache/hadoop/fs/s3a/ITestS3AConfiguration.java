@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
 import static org.junit.Assert.*;
 
 /**
- * S3A tests for configuration.
+ * S3A tests for configuration, especially credentials.
  */
 public class ITestS3AConfiguration {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
@@ -246,47 +246,6 @@ public class ITestS3AConfiguration {
   }
 
   @Test
-  public void testCredsFromUserInfo() throws Exception {
-    // set up conf to have a cred provider
-    final Configuration conf = new Configuration();
-    final File file = tempDir.newFile("test.jks");
-    final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
-        file.toURI());
-    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
-        jks.toString());
-
-    provisionAccessKeys(conf);
-
-    conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
-    URI uriWithUserInfo = new URI("s3a://123:456@foobar");
-    S3xLoginHelper.Login creds =
-        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getUser());
-    assertEquals("SecretKey incorrect.", "456", creds.getPassword());
-  }
-
-  @Test
-  public void testIDFromUserInfoSecretFromCredentialProvider()
-      throws Exception {
-    // set up conf to have a cred provider
-    final Configuration conf = new Configuration();
-    final File file = tempDir.newFile("test.jks");
-    final URI jks = ProviderUtils.nestURIForLocalJavaKeyStoreProvider(
-        file.toURI());
-    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
-        jks.toString());
-
-    provisionAccessKeys(conf);
-
-    conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
-    URI uriWithUserInfo = new URI("s3a://123@foobar");
-    S3xLoginHelper.Login creds =
-        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getUser());
-    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
-  }
-
-  @Test
   public void testSecretFromCredentialProviderIDFromConfig() throws Exception {
     // set up conf to have a cred provider
     final Configuration conf = new Configuration();
@@ -358,11 +317,11 @@ public class ITestS3AConfiguration {
     provisionAccessKeys(c);
 
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
-    URI uriWithUserInfo = new URI("s3a://123:456@foobar");
+    URI uri2 = new URI("s3a://foobar");
     S3xLoginHelper.Login creds =
-        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getUser());
-    assertEquals("SecretKey incorrect.", "456", creds.getPassword());
+        S3AUtils.getAWSAccessKeys(uri2, conf);
+    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getUser());
+    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
 
   }
 

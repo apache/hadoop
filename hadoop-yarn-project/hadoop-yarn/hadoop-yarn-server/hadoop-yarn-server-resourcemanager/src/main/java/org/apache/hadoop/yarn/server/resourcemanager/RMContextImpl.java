@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -505,6 +506,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public void setNodeAttributesManager(NodeAttributesManager mgr) {
+    activeServiceContext.setNodeAttributesManager(mgr);
+  }
+
+  @Override
   public AllocationTagsManager getAllocationTagsManager() {
     return activeServiceContext.getAllocationTagsManager();
   }
@@ -632,4 +638,9 @@ public class RMContextImpl implements RMContext {
     this.activeServiceContext.setResourceProfilesManager(mgr);
   }
   // Note: Read java doc before adding any services over here.
+
+  @Override
+  public NodeAttributesManager getNodeAttributesManager() {
+    return activeServiceContext.getNodeAttributesManager();
+  }
 }

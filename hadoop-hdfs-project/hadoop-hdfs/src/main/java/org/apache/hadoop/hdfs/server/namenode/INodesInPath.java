@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -36,7 +36,7 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.ID_INTEGE
  * Contains INodes information resolved from a given path.
  */
 public class INodesInPath {
-  public static final Log LOG = LogFactory.getLog(INodesInPath.class);
+  public static final Logger LOG = LoggerFactory.getLogger(INodesInPath.class);
 
   /**
    * @return true if path component is {@link HdfsConstants#DOT_SNAPSHOT_DIR}

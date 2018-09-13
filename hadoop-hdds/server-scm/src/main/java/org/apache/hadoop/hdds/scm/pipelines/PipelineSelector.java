@@ -55,6 +55,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -77,6 +79,7 @@ public class PipelineSelector {
   private final StandaloneManagerImpl standaloneManager;
   private final long containerSize;
   private final Node2PipelineMap node2PipelineMap;
+  private final Map<PipelineID, Pipeline> pipelineMap;
   private final LeaseManager<Pipeline> pipelineLeaseManager;
   private final StateMachine<LifeCycleState,
       HddsProtos.LifeCycleEvent> stateMachine;
@@ -99,12 +102,13 @@ public class PipelineSelector {
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.BYTES);
     node2PipelineMap = new Node2PipelineMap();
+    pipelineMap = new ConcurrentHashMap<>();
     this.standaloneManager =
         new StandaloneManagerImpl(this.nodeManager, placementPolicy,
-            containerSize, node2PipelineMap);
+            containerSize, node2PipelineMap, pipelineMap);
     this.ratisManager =
         new RatisManagerImpl(this.nodeManager, placementPolicy, containerSize,
-            conf, node2PipelineMap);
+            conf, node2PipelineMap, pipelineMap);
     // Initialize the container state machine.
     Set<HddsProtos.LifeCycleState> finalStates = new HashSet();
     long pipelineCreationLeaseTimeout = conf.getTimeDuration(
@@ -303,19 +307,10 @@ public class PipelineSelector {
   }
 
   /**
-   * This function to return pipeline for given pipeline name and replication
-   * type.
+   * This function to return pipeline for given pipeline id.
    */
-  public Pipeline getPipeline(PipelineID pipelineID,
-      ReplicationType replicationType) throws IOException {
-    if (pipelineID == null) {
-      return null;
-    }
-    PipelineManager manager = getPipelineManager(replicationType);
-    Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
-    LOG.debug("Getting replication pipeline forReplicationType {} :" +
-        " pipelineName:{}", replicationType, pipelineID);
-    return manager.getPipeline(pipelineID);
+  public Pipeline getPipeline(PipelineID pipelineID) {
+    return pipelineMap.get(pipelineID);
   }
 
   /**
@@ -324,9 +319,18 @@ public class PipelineSelector {
   public void finalizePipeline(Pipeline pipeline) throws IOException {
     PipelineManager manager = getPipelineManager(pipeline.getType());
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
-    LOG.debug("Finalizing pipeline. pipelineID: {}", pipeline.getId());
+    if (pipeline.getLifeCycleState() == LifeCycleState.CLOSING ||
+        pipeline.getLifeCycleState() == LifeCycleState.CLOSED) {
+      LOG.debug("pipeline:{} already in closing state, skipping",
+          pipeline.getId());
+      // already in closing/closed state
+      return;
+    }
+
     // Remove the pipeline from active allocation
     manager.finalizePipeline(pipeline);
+
+    LOG.info("Finalizing pipeline. pipelineID: {}", pipeline.getId());
     updatePipelineState(pipeline, HddsProtos.LifeCycleEvent.FINALIZE);
     closePipelineIfNoOpenContainers(pipeline);
   }
@@ -350,7 +354,7 @@ public class PipelineSelector {
   /**
    * Close a given pipeline.
    */
-  private void closePipeline(Pipeline pipeline) {
+  private void closePipeline(Pipeline pipeline) throws IOException {
     PipelineManager manager = getPipelineManager(pipeline.getType());
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
     LOG.debug("Closing pipeline. pipelineID: {}", pipeline.getId());
@@ -400,14 +404,8 @@ public class PipelineSelector {
     return node2PipelineMap;
   }
 
-  public void removePipeline(UUID dnId) {
-    Set<Pipeline> pipelineSet =
-        node2PipelineMap.getPipelines(dnId);
-    for (Pipeline pipeline : pipelineSet) {
-      getPipelineManager(pipeline.getType())
-          .closePipeline(pipeline);
-    }
-    node2PipelineMap.removeDatanode(dnId);
+  public Set<PipelineID> getPipelineId(UUID dnId) {
+    return node2PipelineMap.getPipelines(dnId);
   }
 
   /**

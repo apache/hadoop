@@ -19,6 +19,9 @@
 package org.apache.hadoop.ozone.container.common.interfaces;
 
 
+import java.io.FileInputStream;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -30,7 +33,7 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
-
+import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 /**
  * Dispatcher sends ContainerCommandRequests to Handler. Each Container Type
@@ -66,6 +69,16 @@ public abstract class Handler {
 
   public abstract ContainerCommandResponseProto handle(
       ContainerCommandRequestProto msg, Container container);
+
+  /**
+   * Import container data from a raw input stream.
+   */
+  public abstract Container importContainer(
+      long containerID,
+      long maxSize,
+      FileInputStream rawContainerStream,
+      TarContainerPacker packer)
+      throws IOException;
 
   public void setScmID(String scmId) {
     this.scmID = scmId;

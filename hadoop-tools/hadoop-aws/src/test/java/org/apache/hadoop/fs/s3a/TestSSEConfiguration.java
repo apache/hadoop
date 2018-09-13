@@ -77,17 +77,6 @@ public class TestSSEConfiguration extends Assert {
   }
 
   @Test
-  public void testKMSGoodOldOptionName() throws Throwable {
-    Configuration conf = emptyConf();
-    conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM, SSE_KMS.getMethod());
-    conf.set(OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY, "kmskeyID");
-    // verify key round trip
-    assertEquals("kmskeyID", getServerSideEncryptionKey(BUCKET, conf));
-    // and that KMS lookup finds it
-    assertEquals(SSE_KMS, getEncryptionAlgorithm(BUCKET, conf));
-  }
-
-  @Test
   public void testAESKeySet() throws Throwable {
     assertGetAlgorithmFails(SSE_S3_WITH_KEY_ERROR,
         SSE_S3.getMethod(), "setkey");
@@ -120,24 +109,6 @@ public class TestSSEConfiguration extends Assert {
     // provider provisioned value instead.
     conf.set(SERVER_SIDE_ENCRYPTION_KEY, "keyInConfObject");
 
-    String sseKey = getServerSideEncryptionKey(BUCKET, conf);
-    assertNotNull("Proxy password should not retrun null.", sseKey);
-    assertEquals("Proxy password override did NOT work.", key, sseKey);
-  }
-
-  /**
-   * Very that the old key is picked up via the properties.
-   * @throws Exception failure
-   */
-  @Test
-  public void testOldKeyFromCredentialProvider() throws Exception {
-    // set up conf to have a cred provider
-    final Configuration conf = confWithProvider();
-    String key = "provisioned";
-    setProviderOption(conf, OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY, key);
-    // let's set the password in config and ensure that it uses the credential
-    // provider provisioned value instead.
-    //conf.set(OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY, "oldKeyInConf");
     String sseKey = getServerSideEncryptionKey(BUCKET, conf);
     assertNotNull("Proxy password should not retrun null.", sseKey);
     assertEquals("Proxy password override did NOT work.", key, sseKey);
@@ -293,7 +264,7 @@ public class TestSSEConfiguration extends Assert {
       String bucket,
       String expected, String overrideVal) throws IOException {
     assertEquals(expected,
-        S3AUtils.lookupPassword(bucket, conf, SECRET_KEY, overrideVal));
+        S3AUtils.lookupPassword(bucket, conf, SECRET_KEY, overrideVal, null));
   }
 
   @Test

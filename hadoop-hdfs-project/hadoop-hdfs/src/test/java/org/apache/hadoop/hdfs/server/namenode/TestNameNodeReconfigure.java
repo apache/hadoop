@@ -26,8 +26,8 @@ import org.junit.After;
 
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.Path;
@@ -54,8 +54,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
 
 public class TestNameNodeReconfigure {
 
-  public static final Log LOG = LogFactory
-      .getLog(TestNameNodeReconfigure.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(TestNameNodeReconfigure.class);
 
   private MiniDFSCluster cluster;
   private final int customizedBlockInvalidateLimit = 500;

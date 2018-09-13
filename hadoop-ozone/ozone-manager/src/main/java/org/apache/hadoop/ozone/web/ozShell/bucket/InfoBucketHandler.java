@@ -17,49 +17,38 @@
  */
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes Info bucket.
  */
+@Command(name = "info",
+    description = "returns information about a bucket")
 public class InfoBucketHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
+
+  @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
+  private String uri;
 
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   *
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.INFO_BUCKET)) {
-      throw new OzoneClientException(
-          "Incorrect call : infoBucket is missing");
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.INFO_BUCKET);
-    URI ozoneURI = verifyURI(ozoneURIString);
+  public Void call() throws Exception {
+    String volumeName, bucketName;
+    URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
 
     if (path.getNameCount() < 2) {
@@ -70,7 +59,7 @@ public class InfoBucketHandler extends Handler {
     volumeName = path.getName(0).toString();
     bucketName = path.getName(1).toString();
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
     }
@@ -80,6 +69,7 @@ public class InfoBucketHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(OzoneClientUtils.asBucketInfo(bucket))));
+    return null;
   }
 
 }

@@ -18,56 +18,47 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import org.apache.commons.cli.CommandLine;
+import java.net.URI;
+
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes volume Info calls.
  */
+@Command(name = "info",
+    description = "returns information about a specific volume")
 public class InfoVolumeHandler extends Handler{
 
-  private String volumeName;
+  @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
+  private String uri;
 
   /**
    * Executes volume Info.
-   *
-   * @param cmd - CommandLine
-   *
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.INFO_VOLUME)) {
-      throw new OzoneClientException(
-          "Incorrect call : infoVolume is missing");
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.INFO_VOLUME);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     if (ozoneURI.getPath().isEmpty()) {
       throw new OzoneClientException(
           "Volume name is required to get info of a volume");
     }
 
     // we need to skip the slash in the URI path
-    volumeName = ozoneURI.getPath().substring(1);
+    String volumeName = ozoneURI.getPath().substring(1);
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(vol))));
+    return null;
   }
+
 }

@@ -33,7 +33,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
@@ -52,10 +51,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -900,4 +903,59 @@ public abstract class YarnClient extends AbstractService {
   @Unstable
   public abstract List<ResourceTypeInfo> getResourceTypeInfo()
       throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node attributes in the cluster.
+   * </p>
+   *
+   * @return cluster node attributes collection
+   * @throws YarnException when there is a failure in
+   *                       {@link ApplicationClientProtocol}
+   * @throws IOException   when there is a failure in
+   *                       {@link ApplicationClientProtocol}
+   */
+  @Public
+  @Unstable
+  public abstract Set<NodeAttributeInfo> getClusterAttributes()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get mapping of AttributeKey to associated
+   * NodeToAttributeValue list for specified node attributeKeys in the cluster.
+   * </p>
+   *
+   * @param attributes AttributeKeys for which associated NodeToAttributeValue
+   *          mapping value has to be retrieved. If empty or null is set then
+   *          will return mapping for all attributeKeys in the cluster
+   * @return mapping of AttributeKey to List of associated
+   *         NodeToAttributeValue's.
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<NodeAttributeKey,
+      List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get all node to attribute mapping in
+   * existing cluster.
+   * </p>
+   *
+   * @param hostNames HostNames for which host to attributes mapping has to
+   *                  be retrived.If empty or null is set then will return
+   *                  all nodes to attributes mapping in cluster.
+   * @return Node to attribute mappings
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Set<NodeAttribute>> getNodeToAttributes(
+      Set<String> hostNames) throws YarnException, IOException;
+
 }

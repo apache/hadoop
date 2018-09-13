@@ -131,6 +131,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
@@ -953,8 +954,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
       KeyVersion decrypted;
       try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
+        LOG.debug("Start decrypting EDEK for file: {}, output stream: 0x{}",
+            dfsos.getSrc(), Integer.toHexString(dfsos.hashCode()));
         decrypted = HdfsKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
           getKeyProvider());
+        LOG.debug("Decrypted EDEK for file: {}, output stream: 0x{}",
+            dfsos.getSrc(), Integer.toHexString(dfsos.hashCode()));
       }
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
@@ -1868,7 +1873,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return PBHelperClient.convert(
           reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
-      IOUtilsClient.cleanup(null, pair.in, pair.out);
+      IOUtilsClient.cleanupWithLogger(LOG, pair.in, pair.out);
     }
   }
 
@@ -2746,7 +2751,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,
           UnresolvedPathException.class,
-          FileNotFoundException.class);
+          FileNotFoundException.class, NoECPolicySetException.class);
     }
   }
 
@@ -2929,7 +2934,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return peer;
     } finally {
       if (!success) {
-        IOUtilsClient.cleanup(LOG, peer);
+        IOUtilsClient.cleanupWithLogger(LOG, peer);
         IOUtils.closeSocket(sock);
       }
     }

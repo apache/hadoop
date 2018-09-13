@@ -149,18 +149,21 @@ credentials, through a command such as:
 Note the trailing "/" here; without that the shell thinks you are trying to list
 your home directory under the bucket, which will only exist if explicitly created.
 
-Attempting to list a bucket using inline credentials is a
-means of verifying that the key and secret can access a bucket;
-
-    hadoop fs -ls s3a://key:secret@my-bucket/
-
-Do escape any `+` or `/` symbols in the secret, as discussed below, and never
-share the URL, logs generated using it, or use such an inline authentication
-mechanism in production.
-
 Finally, if you set the environment variables, you can take advantage of S3A's
 support of environment-variable authentication by attempting the same ls operation.
 That is: unset the `fs.s3a` secrets and rely on the environment variables.
+
+
+### Authentication failure "The Filesystem URI contains login details."
+
+```
+The Filesystem URI contains login details. This authentication mechanism is no longer supported.
+```
+
+The S3A connector no longer supports the dangerously insecure mechanism of
+passing login details within the S3A URLs.
+
+Fix: use a more secure mechanism to pass down the secrets.
 
 ### Authentication failure due to clock skew
 
@@ -172,29 +175,6 @@ This can surface as the situation where
 read requests are allowed, but operations which write to the bucket are denied.
 
 Check the system clock.
-
-### Authentication failure when using URLs with embedded secrets
-
-If using the (strongly discouraged) mechanism of including the
-AWS Key and secret in a URL, then both "+" and "/" symbols need
-to encoded in the URL. As many AWS secrets include these characters,
-encoding problems are not uncommon.
-
-| symbol | encoded  value|
-|-----------|-------------|
-| `+` | `%2B` |
-| `/` | `%2F` |
-
-
-As an example, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
-be represented as
-
-```
-s3a://user1:a%2Bb%2Fc@bucket/
-```
-
-This technique is only needed when placing secrets in the URL. Again,
-this is something users are strongly advised against using.
 
 ### <a name="bad_request"></a> "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or other "V4" endpoint
 

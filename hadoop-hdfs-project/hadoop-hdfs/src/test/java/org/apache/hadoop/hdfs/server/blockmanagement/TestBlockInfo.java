@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
@@ -38,8 +38,8 @@ import org.mockito.Mockito;
 
 public class TestBlockInfo {
 
-  private static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.hdfs.TestBlockInfo");
+  private static final Logger LOG = LoggerFactory
+      .getLogger("org.apache.hadoop.hdfs.TestBlockInfo");
 
   @Test
   public void testIsDeleted() {

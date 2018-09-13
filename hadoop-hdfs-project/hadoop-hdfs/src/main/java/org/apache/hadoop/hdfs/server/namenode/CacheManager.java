@@ -25,6 +25,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_DEFAULT;
 
 import java.io.DataInput;
 import java.io.DataOutputStream;
@@ -172,6 +174,21 @@ public class CacheManager {
   private final SerializerCompat serializerCompat = new SerializerCompat();
 
   /**
+   * Whether caching is enabled.
+   *
+   * If caching is disabled, we will not process cache reports or store
+   * information about what is cached where.  We also do not start the
+   * CacheReplicationMonitor thread.  This will save resources, but provide
+   * less functionality.
+   *
+   * Even when caching is disabled, we still store path-based cache
+   * information.  This information is stored in the edit log and fsimage.  We
+   * don't want to lose it just because a configuration setting was turned off.
+   * However, we will not act on this information if caching is disabled.
+   */
+  private final boolean enabled;
+
+  /**
    * The CacheReplicationMonitor.
    */
   private CacheReplicationMonitor monitor;
@@ -194,6 +211,8 @@ public class CacheManager {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
     this.nextDirectiveId = 1;
+    this.enabled = conf.getBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY,
+        DFS_NAMENODE_CACHING_ENABLED_DEFAULT);
     this.maxListCachePoolsResponses = conf.getInt(
         DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES,
         DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT);
@@ -211,10 +230,13 @@ public class CacheManager {
         DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT);
       cachedBlocksPercent = MIN_CACHED_BLOCKS_PERCENT;
     }
-    this.cachedBlocks = new LightWeightGSet<CachedBlock, CachedBlock>(
+    this.cachedBlocks = enabled ? new LightWeightGSet<CachedBlock, CachedBlock>(
           LightWeightGSet.computeCapacity(cachedBlocksPercent,
-              "cachedBlocks"));
+              "cachedBlocks")) : new LightWeightGSet<>(0);
+  }
 
+  public boolean isEnabled() {
+    return enabled;
   }
 
   /**
@@ -229,6 +251,12 @@ public class CacheManager {
   }
 
   public void startMonitorThread() {
+    if (!isEnabled()) {
+      LOG.info("Not starting CacheReplicationMonitor as name-node caching" +
+              " is disabled.");
+      return;
+    }
+
     crmLock.lock();
     try {
       if (this.monitor == null) {
@@ -242,6 +270,10 @@ public class CacheManager {
   }
 
   public void stopMonitorThread() {
+    if (!isEnabled()) {
+      return;
+    }
+
     crmLock.lock();
     try {
       if (this.monitor != null) {
@@ -945,6 +977,12 @@ public class CacheManager {
 
   public final void processCacheReport(final DatanodeID datanodeID,
       final List<Long> blockIds) throws IOException {
+    if (!enabled) {
+      LOG.debug("Ignoring cache report from {} because {} = false. " +
+              "number of blocks: {}", datanodeID,
+              DFS_NAMENODE_CACHING_ENABLED_KEY, blockIds.size());
+      return;
+    }
     namesystem.writeLock();
     final long startTime = Time.monotonicNow();
     final long endTime;

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -40,6 +42,7 @@ import org.apache.hadoop.ozone.common.statemachine
     .InvalidStateTransitionException;
 import org.apache.hadoop.ozone.common.statemachine.StateMachine;
 import org.apache.hadoop.util.Time;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +151,7 @@ public class ContainerStateManager implements Closeable {
         finalStates);
     initializeStateMachine();
 
-    this.containerSize =(long)configuration.getStorageSize(
+    this.containerSize = (long) configuration.getStorageSize(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.BYTES);
@@ -399,7 +402,7 @@ public class ContainerStateManager implements Closeable {
     // container ID.
     ContainerState key = new ContainerState(owner, type, factor);
     ContainerID lastID = lastUsedMap.get(key);
-    if(lastID == null) {
+    if (lastID == null) {
       lastID = matchingSet.first();
     }
 
@@ -426,7 +429,7 @@ public class ContainerStateManager implements Closeable {
       selectedContainer = findContainerWithSpace(size, resultSet, owner);
     }
     // Update the allocated Bytes on this container.
-    if(selectedContainer != null) {
+    if (selectedContainer != null) {
       selectedContainer.updateAllocatedBytes(size);
     }
     return selectedContainer;
@@ -486,10 +489,9 @@ public class ContainerStateManager implements Closeable {
    * @throws IOException
    */
   public ContainerWithPipeline getContainer(PipelineSelector selector,
-      ContainerID containerID) throws IOException {
+      ContainerID containerID) {
     ContainerInfo info = containers.getContainerInfo(containerID.getId());
-    Pipeline pipeline = selector.getPipeline(info.getPipelineID(),
-        info.getReplicationType());
+    Pipeline pipeline = selector.getPipeline(info.getPipelineID());
     return new ContainerWithPipeline(info, pipeline);
   }
 
@@ -540,9 +542,36 @@ public class ContainerStateManager implements Closeable {
       DatanodeDetails dn) throws SCMException {
     return containers.removeContainerReplica(containerID, dn);
   }
-  
+
+  /**
+   * Compare the existing replication number with the expected one.
+   */
+  public ReplicationRequest checkReplicationState(ContainerID containerID)
+      throws SCMException {
+    int existingReplicas = getContainerReplicas(containerID).size();
+    int expectedReplicas = getContainer(containerID)
+        .getReplicationFactor().getNumber();
+    if (existingReplicas != expectedReplicas) {
+      return new ReplicationRequest(containerID.getId(), existingReplicas,
+          expectedReplicas);
+    }
+    return null;
+  }
+
+  /**
+   * Checks if the container is open.
+   */
+  public boolean isOpen(ContainerID containerID) {
+    Preconditions.checkNotNull(containerID);
+    ContainerInfo container = Preconditions
+        .checkNotNull(getContainer(containerID),
+            "Container can't be found " + containerID);
+    return container.isContainerOpen();
+  }
+
   @VisibleForTesting
   public ContainerStateMap getContainerStateMap() {
     return containers;
   }
+
 }

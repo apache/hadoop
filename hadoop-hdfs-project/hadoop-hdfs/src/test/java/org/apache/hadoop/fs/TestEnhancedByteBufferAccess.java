@@ -37,8 +37,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -78,8 +78,8 @@ import com.google.common.base.Supplier;
  * This class tests if EnhancedByteBufferAccess works correctly.
  */
 public class TestEnhancedByteBufferAccess {
-  private static final Log LOG =
-      LogFactory.getLog(TestEnhancedByteBufferAccess.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestEnhancedByteBufferAccess.class.getName());
 
   static private TemporarySocketDirectory sockDir;
 
@@ -575,7 +575,7 @@ public class TestEnhancedByteBufferAccess {
       fis = new FileInputStream(testPath);
       testFallbackImpl(fis, original);
     } finally {
-      IOUtils.cleanup(LOG, fos, fis);
+      IOUtils.cleanupWithLogger(LOG, fos, fis);
       new File(testPath).delete();
     }
   }

@@ -139,7 +139,7 @@ class OpenFileCtxCache {
     
     // Cleanup the old stream outside the lock
     if (toEvict != null) {
-      toEvict.cleanupWithLogger();
+      toEvict.cleanup();
     }
     return true;
   }
@@ -179,7 +179,7 @@ class OpenFileCtxCache {
 
     // Invoke the cleanup outside the lock
     for (OpenFileCtx ofc : ctxToRemove) {
-      ofc.cleanupWithLogger();
+      ofc.cleanup();
     }
   }
 
@@ -215,7 +215,7 @@ class OpenFileCtxCache {
 
     // Invoke the cleanup outside the lock
     for (OpenFileCtx ofc : cleanedContext) {
-      ofc.cleanupWithLogger();
+      ofc.cleanup();
     }
   }
 

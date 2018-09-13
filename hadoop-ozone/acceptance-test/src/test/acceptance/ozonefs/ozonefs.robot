@@ -27,13 +27,13 @@ ${PROJECTDIR}           ${CURDIR}/../../../../../..
 
 *** Test Cases ***
 Create volume and bucket
-    Execute on          datanode        ozone oz -createVolume http://ozoneManager/fstest -user bilbo -quota 100TB -root
-    Execute on          datanode        ozone oz -createBucket http://ozoneManager/fstest/bucket1
+    Execute on          datanode        ozone oz volume create http://ozoneManager/fstest --user bilbo --quota 100TB --root
+    Execute on          datanode        ozone oz bucket create http://ozoneManager/fstest/bucket1
 
 Check volume from ozonefs
     ${result} =         Execute on          datanode          ozone fs -ls o3://bucket1.fstest/
 
 Create directory from ozonefs
                         Execute on          datanode          ozone fs -mkdir -p o3://bucket1.fstest/testdir/deep
-    ${result} =         Execute on          ozoneManager      ozone oz -listKey o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute on          ozoneManager      ozone oz key list o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
                                             Should contain    ${result}         testdir/deep

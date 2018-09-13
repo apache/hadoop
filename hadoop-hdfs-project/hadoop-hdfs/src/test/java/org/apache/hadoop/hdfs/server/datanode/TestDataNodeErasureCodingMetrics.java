@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -51,8 +51,8 @@ import java.io.IOException;
  * This file tests the erasure coding metrics in DataNode.
  */
 public class TestDataNodeErasureCodingMetrics {
-  public static final Log LOG = LogFactory.
-      getLog(TestDataNodeErasureCodingMetrics.class);
+  public static final Logger LOG = LoggerFactory.
+      getLogger(TestDataNodeErasureCodingMetrics.class);
   private final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();

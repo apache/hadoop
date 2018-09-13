@@ -28,8 +28,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
@@ -103,7 +103,8 @@ import org.apache.log4j.LogManager;
  * documentation accordingly.
  */
 public class NNThroughputBenchmark implements Tool {
-  private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
   private static final String GENERAL_OPTIONS_USAGE =
       "[-keepResults] | [-logLevel L] | [-UGCacheRefreshCount G]";
@@ -145,7 +146,7 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   static void setNameNodeLoggingLevel(Level logLevel) {
-    LOG.fatal("Log level = " + logLevel.toString());
+    LOG.error("Log level = " + logLevel.toString());
     // change log level to NameNode logs
     DFSTestUtil.setNameNodeLogLevel(logLevel);
     GenericTestUtils.setLogLevel(LogManager.getLogger(

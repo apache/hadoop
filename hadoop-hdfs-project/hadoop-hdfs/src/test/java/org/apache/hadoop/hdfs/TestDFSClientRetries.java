@@ -50,8 +50,8 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.ChecksumException;
@@ -113,8 +113,8 @@ public class TestDFSClientRetries {
   private static final String ADDRESS = "0.0.0.0";
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-  public static final Log LOG =
-    LogFactory.getLog(TestDFSClientRetries.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSClientRetries.class.getName());
   static private Configuration conf = null;
  
  private static class TestServer extends Server {
@@ -523,7 +523,7 @@ public class TestDFSClientRetries {
         stm.close();
         stm = null;
       } finally {
-        IOUtils.cleanup(LOG, stm);
+        IOUtils.cleanupWithLogger(LOG, stm);
       }
       
       // Make sure the mock was actually properly injected.

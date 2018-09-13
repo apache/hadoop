@@ -155,7 +155,6 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
-  private int dockerStopGracePeriod;
 
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
@@ -180,10 +179,6 @@ public class TestDockerContainerRuntime {
     env.put("FROM_CLIENT", "1");
     image = "busybox:latest";
     nmContext = createMockNMContext();
-
-    dockerStopGracePeriod = conf.getInt(
-      YarnConfiguration.NM_DOCKER_STOP_GRACE_PERIOD,
-      YarnConfiguration.DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD);
 
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
     when(container.getContainerId()).thenReturn(cId);
@@ -1655,13 +1650,23 @@ public class TestDockerContainerRuntime {
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.TERM);
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
-    Assert.assertEquals(
-        "  name=container_e11_1518975676334_14532816_01_000001",
-        dockerCommands.get(2));
-    Assert.assertEquals("  time=10", dockerCommands.get(3));
+    verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testDockerStopWithQuitSignalWhenRunning()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        DockerCommandExecutor.DockerContainerStatus.RUNNING.getName() +
+            ",SIGQUIT");
+
+    List<String> dockerCommands = getDockerCommandsForDockerStop(
+        ContainerExecutor.Signal.TERM);
+    verifyStopCommand(dockerCommands, "SIGQUIT");
   }
 
   @Test
@@ -1714,13 +1719,7 @@ public class TestDockerContainerRuntime {
         DockerCommandExecutor.DockerContainerStatus.RUNNING.getName());
     List<String> dockerCommands = getDockerCommandsForDockerStop(
         ContainerExecutor.Signal.TERM);
-    Assert.assertEquals(4, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
-    Assert.assertEquals(
-        "  name=container_e11_1518975676334_14532816_01_000001",
-        dockerCommands.get(2));
-    Assert.assertEquals("  time=10", dockerCommands.get(3));
+    verifyStopCommand(dockerCommands, ContainerExecutor.Signal.TERM.toString());
   }
 
   @Test
@@ -2350,5 +2349,15 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(
         "  name=container_e11_1518975676334_14532816_01_000001",
         dockerCommands.get(counter));
+  }
+
+  private static void verifyStopCommand(List<String> dockerCommands,
+      String signal) {
+    Assert.assertEquals(4, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
+    Assert.assertEquals("  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(2));
+    Assert.assertEquals("  signal=" + signal, dockerCommands.get(3));
   }
 }

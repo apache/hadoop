@@ -20,10 +20,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-client</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Client</description>
   <name>Apache Hadoop Ozone Client</name>
   <packaging>jar</packaging>

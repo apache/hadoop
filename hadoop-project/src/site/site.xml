@@ -142,6 +142,7 @@
       <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Resource Model" href="hadoop-yarn/hadoop-yarn-site/ResourceModel.html"/>
       <item name="Node Labels" href="hadoop-yarn/hadoop-yarn-site/NodeLabel.html"/>
+      <item name="Node Attributes" href="hadoop-yarn/hadoop-yarn-site/NodeAttributes.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html"/>

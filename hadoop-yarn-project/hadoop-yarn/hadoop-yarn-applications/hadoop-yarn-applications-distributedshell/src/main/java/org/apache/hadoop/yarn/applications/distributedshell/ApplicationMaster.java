@@ -523,9 +523,13 @@ public class ApplicationMaster {
 
     if (cliParser.hasOption("placement_spec")) {
       String placementSpec = cliParser.getOptionValue("placement_spec");
-      LOG.info("Placement Spec received [{}]", placementSpec);
-      parsePlacementSpecs(placementSpec);
+      String decodedSpec = getDecodedPlacementSpec(placementSpec);
+      LOG.info("Placement Spec received [{}]", decodedSpec);
+
+      this.numTotalContainers = 0;
+      parsePlacementSpecs(decodedSpec);
       LOG.info("Total num containers requested [{}]", numTotalContainers);
+
       if (numTotalContainers == 0) {
         throw new IllegalArgumentException(
             "Cannot run distributed shell with no containers");
@@ -694,21 +698,23 @@ public class ApplicationMaster {
     return true;
   }
 
-  private void parsePlacementSpecs(String placementSpecifications) {
-    // Client sends placement spec in encoded format
+  private void parsePlacementSpecs(String decodedSpec) {
+    Map<String, PlacementSpec> pSpecs =
+        PlacementSpec.parse(decodedSpec);
+    this.placementSpecs = new HashMap<>();
+    for (PlacementSpec pSpec : pSpecs.values()) {
+      this.numTotalContainers += pSpec.getNumContainers();
+      this.placementSpecs.put(pSpec.sourceTag, pSpec);
+    }
+  }
+
+  private String getDecodedPlacementSpec(String placementSpecifications) {
     Base64.Decoder decoder = Base64.getDecoder();
     byte[] decodedBytes = decoder.decode(
         placementSpecifications.getBytes(StandardCharsets.UTF_8));
     String decodedSpec = new String(decodedBytes, StandardCharsets.UTF_8);
     LOG.info("Decode placement spec: " + decodedSpec);
-    Map<String, PlacementSpec> pSpecs =
-        PlacementSpec.parse(decodedSpec);
-    this.placementSpecs = new HashMap<>();
-    this.numTotalContainers = 0;
-    for (PlacementSpec pSpec : pSpecs.values()) {
-      this.numTotalContainers += pSpec.numContainers;
-      this.placementSpecs.put(pSpec.sourceTag, pSpec);
-    }
+    return decodedSpec;
   }
 
   /**
@@ -798,6 +804,7 @@ public class ApplicationMaster {
         }
       }
     }
+
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
             appMasterTrackingUrl, placementConstraintMap);
@@ -845,14 +852,18 @@ public class ApplicationMaster {
     // Keep looping until all the containers are launched and shell script
     // executed on them ( regardless of success/failure).
     if (this.placementSpecs == null) {
+      LOG.info("placementSpecs null");
       for (int i = 0; i < numTotalContainersToRequest; ++i) {
         ContainerRequest containerAsk = setupContainerAskForRM();
         amRMClient.addContainerRequest(containerAsk);
       }
     } else {
+      LOG.info("placementSpecs to create req:" + placementSpecs);
       List<SchedulingRequest> schedReqs = new ArrayList<>();
       for (PlacementSpec pSpec : this.placementSpecs.values()) {
-        for (int i = 0; i < pSpec.numContainers; i++) {
+        LOG.info("placementSpec :" + pSpec + ", container:" + pSpec
+            .getNumContainers());
+        for (int i = 0; i < pSpec.getNumContainers(); i++) {
           SchedulingRequest sr = setupSchedulingRequest(pSpec);
           schedReqs.add(sr);
         }

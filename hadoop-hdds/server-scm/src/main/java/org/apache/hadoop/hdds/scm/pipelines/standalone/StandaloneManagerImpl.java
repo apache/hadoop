@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 /**
  * Standalone Manager Impl to prove that pluggable interface
@@ -58,8 +59,8 @@ public class StandaloneManagerImpl extends PipelineManager {
    */
   public StandaloneManagerImpl(NodeManager nodeManager,
       ContainerPlacementPolicy placementPolicy, long containerSize,
-      Node2PipelineMap map) {
-    super(map);
+      Node2PipelineMap map, Map<PipelineID, Pipeline> pipelineMap) {
+    super(map, pipelineMap);
     this.nodeManager = nodeManager;
     this.placementPolicy = placementPolicy;
     this.containerSize =  containerSize;
@@ -103,7 +104,7 @@ public class StandaloneManagerImpl extends PipelineManager {
   /**
    * Close the pipeline.
    */
-  public void closePipeline(Pipeline pipeline) {
+  public void closePipeline(Pipeline pipeline) throws IOException {
     super.closePipeline(pipeline);
     for (DatanodeDetails node : pipeline.getMachines()) {
       // A node should always be the in standalone members list.

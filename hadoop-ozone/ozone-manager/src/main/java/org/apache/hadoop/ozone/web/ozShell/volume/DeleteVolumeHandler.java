@@ -18,55 +18,46 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import org.apache.commons.cli.CommandLine;
+import java.net.URI;
+
 import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes deleteVolume call for the shell.
  */
+@Command(name = "delete",
+    description = "deletes a volume if it is empty")
 public class DeleteVolumeHandler extends Handler {
 
-  private String volumeName;
+  @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
+  private String uri;
 
   /**
    * Executes the delete volume call.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.DELETE_VOLUME)) {
-      throw new OzoneClientException(
-          "Incorrect call : deleteVolume call is missing");
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.DELETE_VOLUME);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     if (ozoneURI.getPath().isEmpty()) {
       throw new OzoneClientException(
           "Volume name is required to delete a volume");
     }
 
     // we need to skip the slash in the URI path
-    volumeName = ozoneURI.getPath().substring(1);
+    String volumeName = ozoneURI.getPath().substring(1);
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);
     }
 
     client.getObjectStore().deleteVolume(volumeName);
     System.out.printf("Volume %s is deleted%n", volumeName);
+    return null;
   }
 }

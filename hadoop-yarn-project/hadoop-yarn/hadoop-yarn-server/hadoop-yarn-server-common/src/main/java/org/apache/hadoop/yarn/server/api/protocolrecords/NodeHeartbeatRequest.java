@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 
 public abstract class NodeHeartbeatRequest {
   
@@ -61,6 +62,18 @@ public abstract class NodeHeartbeatRequest {
     return nodeHeartbeatRequest;
   }
 
+  public static NodeHeartbeatRequest newInstance(NodeStatus nodeStatus,
+      MasterKey lastKnownContainerTokenMasterKey,
+      MasterKey lastKnownNMTokenMasterKey, Set<NodeLabel> nodeLabels,
+      Set<NodeAttribute> nodeAttributes,
+      Map<ApplicationId, AppCollectorData> registeringCollectors) {
+    NodeHeartbeatRequest request = NodeHeartbeatRequest
+        .newInstance(nodeStatus, lastKnownContainerTokenMasterKey,
+            lastKnownNMTokenMasterKey, nodeLabels, registeringCollectors);
+    request.setNodeAttributes(nodeAttributes);
+    return request;
+  }
+
   public abstract NodeStatus getNodeStatus();
   public abstract void setNodeStatus(NodeStatus status);
 
@@ -85,4 +98,8 @@ public abstract class NodeHeartbeatRequest {
 
   public abstract void setRegisteringCollectors(Map<ApplicationId,
       AppCollectorData> appCollectorsMap);
+
+  public abstract Set<NodeAttribute> getNodeAttributes();
+
+  public abstract void setNodeAttributes(Set<NodeAttribute> nodeAttributes);
 }

@@ -29,11 +29,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudPageBlobWrapper;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -52,7 +54,7 @@ import com.microsoft.azure.storage.blob.CloudPageBlob;
  * An output stream that write file data to a page blob stored using ASV's
  * custom format.
  */
-final class PageBlobOutputStream extends OutputStream implements Syncable {
+final class PageBlobOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   /**
    * The maximum number of raw bytes Azure Storage allows us to upload in a
    * single request (4 MB).
@@ -192,6 +194,23 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
   private void checkStreamState() throws IOException {
     if (lastError != null) {
       throw lastError;
+    }
+  }
+
+  /**
+   * Query the stream for a specific capability.
+   *
+   * @param capability string to query the stream support for.
+   * @return true for hsync and hflush.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.HSYNC:
+      case StreamCapabilities.HFLUSH:
+        return true;
+      default:
+        return false;
     }
   }
 

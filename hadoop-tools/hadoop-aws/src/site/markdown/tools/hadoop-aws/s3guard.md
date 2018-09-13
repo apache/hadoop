@@ -415,6 +415,13 @@ pertaining to [Provisioned Throughput](http://docs.aws.amazon.com/amazondynamodb
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
+Tag argument can be added with a key=value list of tags. The table for the
+metadata store will be created with these tags in DynamoDB.
+
+```bash
+[-tag key=value;]
+```
+
 Example 1
 
 ```bash
@@ -433,6 +440,14 @@ hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
 
+
+Example 3
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -tag tag1=first;tag2=second;
+```
+
+Creates a table "ireland-team" with tags "first" and "second".
 
 ### Import a bucket: `s3guard import`
 

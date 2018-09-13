@@ -18,13 +18,24 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -44,8 +55,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -62,6 +77,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -140,6 +157,7 @@ public class FederationClientInterceptor
   private Random rand;
   private RouterPolicyFacade policyFacade;
   private RouterMetrics routerMetrics;
+  private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
 
   @Override
@@ -148,6 +166,17 @@ public class FederationClientInterceptor
 
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random(System.currentTimeMillis());
+
+
+    int numThreads = getConf().getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat("RPC Router Client-" + userName + "-%d ").build();
+
+    BlockingQueue workQueue = new LinkedBlockingQueue<>();
+    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     final Configuration conf = this.getConf();
 
@@ -570,7 +599,72 @@ public class FederationClientInterceptor
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    Map<SubClusterId, SubClusterInfo> subclusters =
+        federationFacade.getSubClusters(true);
+    ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
+        new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
+    ArrayList<SubClusterId> clusterList = new ArrayList<>(subclusters.keySet());
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics =
+        invokeConcurrent(clusterList, remoteMethod,
+            GetClusterMetricsResponse.class);
+    return RouterYarnClientUtils.merge(clusterMetrics.values());
+  }
+
+  <R> Map<SubClusterId, R> invokeConcurrent(ArrayList<SubClusterId> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    List<Callable<Object>> callables = new ArrayList<>();
+    List<Future<Object>> futures = new ArrayList<>();
+    Map<SubClusterId, IOException> exceptions = new TreeMap<>();
+    for (SubClusterId subClusterId : clusterIds) {
+      callables.add(new Callable<Object>() {
+        @Override
+        public Object call() throws Exception {
+          ApplicationClientProtocol protocol =
+              getClientRMProxyForSubCluster(subClusterId);
+          Method method = ApplicationClientProtocol.class
+              .getDeclaredMethod(request.getMethodName(), request.getTypes());
+          return method.invoke(protocol, request.getParams());
+        }
+      });
+    }
+    Map<SubClusterId, R> results = new TreeMap<>();
+    try {
+      futures.addAll(executorService.invokeAll(callables));
+      for (int i = 0; i < futures.size(); i++) {
+        SubClusterId subClusterId = clusterIds.get(i);
+        try {
+          Future<Object> future = futures.get(i);
+          Object result = future.get();
+          results.put(subClusterId, clazz.cast(result));
+        } catch (ExecutionException ex) {
+          Throwable cause = ex.getCause();
+          LOG.debug("Cannot execute {} on {}: {}", request.getMethodName(),
+              subClusterId.getId(), cause.getMessage());
+          IOException ioe;
+          if (cause instanceof IOException) {
+            ioe = (IOException) cause;
+          } else if (cause instanceof YarnException) {
+            throw (YarnException) cause;
+          } else {
+            ioe = new IOException(
+                "Unhandled exception while calling " + request.getMethodName()
+                    + ": " + cause.getMessage(), cause);
+          }
+          // Store the exceptions
+          exceptions.put(subClusterId, ioe);
+        }
+      }
+      if (results.isEmpty()) {
+        SubClusterId subClusterId = clusterIds.get(0);
+        IOException ioe = exceptions.get(subClusterId);
+        if (ioe != null) {
+          throw ioe;
+        }
+      }
+    } catch (InterruptedException e) {
+      throw new YarnException(e);
+    }
+    return results;
   }
 
   @Override
@@ -730,6 +824,31 @@ public class FederationClientInterceptor
   @Override
   public GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public void shutdown() {
+    executorService.shutdown();
+    super.shutdown();
+  }
+
+  @Override
+  public GetAttributesToNodesResponse getAttributesToNodes(
+      GetAttributesToNodesRequest request) throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public GetClusterNodeAttributesResponse getClusterNodeAttributes(
+      GetClusterNodeAttributesRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public GetNodesToAttributesResponse getNodesToAttributes(
+      GetNodesToAttributesRequest request) throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 }

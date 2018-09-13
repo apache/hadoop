@@ -30,6 +30,7 @@ import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.shaded.proto.RaftProtos;
 import org.apache.ratis.util.SizeInBytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -48,8 +50,19 @@ public interface RatisHelper {
   Logger LOG = LoggerFactory.getLogger(RatisHelper.class);
 
   static String toRaftPeerIdString(DatanodeDetails id) {
-    return id.getUuidString() + "_" +
-        id.getPort(DatanodeDetails.Port.Name.RATIS).getValue();
+    return id.getUuidString();
+  }
+
+  static UUID toDatanodeId(String peerIdString) {
+    return UUID.fromString(peerIdString);
+  }
+
+  static UUID toDatanodeId(RaftPeerId peerId) {
+    return toDatanodeId(peerId.toString());
+  }
+
+  static UUID toDatanodeId(RaftProtos.RaftPeerProto peerId) {
+    return toDatanodeId(RaftPeerId.valueOf(peerId.getId()));
   }
 
   static String toRaftPeerAddressString(DatanodeDetails id) {
@@ -115,6 +128,11 @@ public interface RatisHelper {
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader) {
     return newRaftClient(rpcType, leader.getId(),
         newRaftGroup(new ArrayList<>(Arrays.asList(leader))));
+  }
+
+  static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
+      RaftGroup group) {
+    return newRaftClient(rpcType, leader.getId(), group);
   }
 
   static RaftClient newRaftClient(

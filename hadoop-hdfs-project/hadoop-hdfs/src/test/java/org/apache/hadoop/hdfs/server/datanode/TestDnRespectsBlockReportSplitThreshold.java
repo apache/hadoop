@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
@@ -50,7 +50,8 @@ import static org.mockito.Mockito.times;
  * {@link DFSConfigKeys#DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY}
  */
 public class TestDnRespectsBlockReportSplitThreshold {
-  public static final Log LOG = LogFactory.getLog(TestStorageReport.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestStorageReport.class);
 
   private static final int BLOCK_SIZE = 1024;
   private static final short REPL_FACTOR = 1;

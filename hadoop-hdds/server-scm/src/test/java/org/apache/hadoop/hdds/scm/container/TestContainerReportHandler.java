@@ -71,9 +71,7 @@ public class TestContainerReportHandler implements EventPublisher {
 
   @Test
   public void test() throws IOException {
-
-    //given
-
+    //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
     Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
     Mapping mapping = Mockito.mock(Mapping.class);
@@ -133,19 +131,9 @@ public class TestContainerReportHandler implements EventPublisher {
     long c3 = cont3.getContainerID();
 
     // Close remaining containers
-    try {
-      containerStateManager.getContainerStateMap()
-          .updateState(cont1, cont1.getState(), LifeCycleState.CLOSING);
-      containerStateManager.getContainerStateMap()
-          .updateState(cont1, cont1.getState(), LifeCycleState.CLOSED);
-      containerStateManager.getContainerStateMap()
-          .updateState(cont2, cont2.getState(), LifeCycleState.CLOSING);
-      containerStateManager.getContainerStateMap()
-          .updateState(cont2, cont2.getState(), LifeCycleState.CLOSED);
+    TestUtils.closeContainer(containerStateManager, cont1);
+    TestUtils.closeContainer(containerStateManager, cont2);
 
-    } catch (IOException e) {
-      LOG.info("Failed to change state of open containers.", e);
-    }
     //when
 
     //initial reports before replication is enabled. 2 containers w 3 replicas.

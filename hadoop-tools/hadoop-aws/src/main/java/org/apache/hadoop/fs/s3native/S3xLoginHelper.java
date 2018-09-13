@@ -18,56 +18,57 @@
 
 package org.apache.hadoop.fs.s3native;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Objects;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
 
 /**
  * Class to aid logging in to S3 endpoints.
  * It is in S3N so that it can be used across all S3 filesystems.
+ *
+ * The core function of this class was the extraction and decoding of user:secret
+ * information from filesystems URIs. As this is no longer supported,
+ * its role has been reduced to checking for secrets in the URI and rejecting
+ * them where found.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public final class S3xLoginHelper {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(S3xLoginHelper.class);
 
   private S3xLoginHelper() {
   }
 
   public static final String LOGIN_WARNING =
       "The Filesystem URI contains login details."
-      +" This is insecure and may be unsupported in future.";
-
-  public static final String PLUS_WARNING =
-      "Secret key contains a special character that should be URL encoded! " +
-          "Attempting to resolve...";
-
-  public static final String PLUS_UNENCODED = "+";
-  public static final String PLUS_ENCODED = "%2B";
+      +" This authentication mechanism is no longer supported.";
 
   /**
-   * Build the filesystem URI. This can include stripping down of part
-   * of the URI.
+   * Build the filesystem URI.
    * @param uri filesystem uri
    * @return the URI to use as the basis for FS operation and qualifying paths.
    * @throws IllegalArgumentException if the URI is in some way invalid.
    */
   public static URI buildFSURI(URI uri) {
+    // look for login secrets and fail if they are present.
+    rejectSecretsInURIs(uri);
     Objects.requireNonNull(uri, "null uri");
     Objects.requireNonNull(uri.getScheme(), "null uri.getScheme()");
     if (uri.getHost() == null && uri.getAuthority() != null) {
-      Objects.requireNonNull(uri.getHost(), "null uri host." +
-          " This can be caused by unencoded / in the password string");
+      Objects.requireNonNull(uri.getHost(), "null uri host.");
     }
     Objects.requireNonNull(uri.getHost(), "null uri host.");
     return URI.create(uri.getScheme() + "://" + uri.getHost());
@@ -86,17 +87,14 @@ public final class S3xLoginHelper {
   }
 
   /**
-   * Extract the login details from a URI, logging a warning if
-   * the URI contains these.
+   * Extract the login details from a URI, raising an exception if
+   * the URI contains them.
    * @param name URI of the filesystem, can be null
-   * @return a login tuple, possibly empty.
+   * @throws IllegalArgumentException if there is a secret in the URI.
    */
-  public static Login extractLoginDetailsWithWarnings(URI name) {
+  public static void rejectSecretsInURIs(URI name) {
     Login login = extractLoginDetails(name);
-    if (login.hasLogin()) {
-      LOG.warn(LOGIN_WARNING);
-    }
-    return login;
+    Preconditions.checkArgument(!login.hasLogin(), LOGIN_WARNING);
   }
 
   /**
@@ -104,43 +102,34 @@ public final class S3xLoginHelper {
    * @param name URI of the filesystem, may be null
    * @return a login tuple, possibly empty.
    */
-  public static Login extractLoginDetails(URI name) {
+  @VisibleForTesting
+  static Login extractLoginDetails(URI name) {
     if (name == null) {
       return Login.EMPTY;
     }
 
-    try {
-      String authority = name.getAuthority();
-      if (authority == null) {
-        return Login.EMPTY;
-      }
-      int loginIndex = authority.indexOf('@');
-      if (loginIndex < 0) {
-        // no login
-        return Login.EMPTY;
-      }
-      String login = authority.substring(0, loginIndex);
-      int loginSplit = login.indexOf(':');
-      if (loginSplit > 0) {
-        String user = login.substring(0, loginSplit);
-        String encodedPassword = login.substring(loginSplit + 1);
-        if (encodedPassword.contains(PLUS_UNENCODED)) {
-          LOG.warn(PLUS_WARNING);
-          encodedPassword = encodedPassword.replaceAll("\\" + PLUS_UNENCODED,
-              PLUS_ENCODED);
-        }
-        String password = URLDecoder.decode(encodedPassword,
-            "UTF-8");
-        return new Login(user, password);
-      } else if (loginSplit == 0) {
-        // there is no user, just a password. In this case, there's no login
-        return Login.EMPTY;
-      } else {
-        return new Login(login, "");
-      }
-    } catch (UnsupportedEncodingException e) {
-      // this should never happen; translate it if it does.
-      throw new RuntimeException(e);
+    String authority = name.getAuthority();
+    if (authority == null) {
+      return Login.EMPTY;
+    }
+    int loginIndex = authority.indexOf('@');
+    if (loginIndex < 0) {
+      // no login
+      return Login.EMPTY;
+    }
+    String login = authority.substring(0, loginIndex);
+    int loginSplit = login.indexOf(':');
+    if (loginSplit > 0) {
+      String user = login.substring(0, loginSplit);
+      String encodedPassword = login.substring(loginSplit + 1);
+      return new Login(user, encodedPassword.isEmpty()? "": "password removed");
+    } else if (loginSplit == 0) {
+      // there is no user, just a password. In this case, there's no login
+      return Login.EMPTY;
+    } else {
+      // loginSplit < 0: there is no ":".
+      // return a login with a null password
+      return new Login(login, "");
     }
   }
 
@@ -159,7 +148,7 @@ public final class S3xLoginHelper {
       // reconstruct the uri with the default port set
       try {
         uri = new URI(uri.getScheme(),
-            null,
+            uri.getUserInfo(),
             uri.getHost(),
             defaultPort,
             uri.getPath(),
@@ -262,10 +251,10 @@ public final class S3xLoginHelper {
 
     /**
      * Predicate to verify login details are defined.
-     * @return true if the username is defined (not null, not empty).
+     * @return true if the instance contains login information.
      */
     public boolean hasLogin() {
-      return StringUtils.isNotEmpty(user);
+      return StringUtils.isNotEmpty(password) || StringUtils.isNotEmpty(user);
     }
 
     /**

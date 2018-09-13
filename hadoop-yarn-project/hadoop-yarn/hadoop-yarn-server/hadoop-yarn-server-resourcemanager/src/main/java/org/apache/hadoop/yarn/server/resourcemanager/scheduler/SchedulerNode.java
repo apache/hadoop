@@ -34,6 +34,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
@@ -78,6 +79,8 @@ public abstract class SchedulerNode {
   private final RMContext rmContext;
 
   private volatile Set<String> labels = null;
+
+  private volatile Set<NodeAttribute> nodeAttributes = null;
 
   // Last updated time
   private volatile long lastHeartbeatMonotonicTime;
@@ -501,6 +504,14 @@ public abstract class SchedulerNode {
   @Override
   public int hashCode() {
     return getNodeID().hashCode();
+  }
+
+  public Set<NodeAttribute> getNodeAttributes() {
+    return nodeAttributes;
+  }
+
+  public void updateNodeAttributes(Set<NodeAttribute> attributes) {
+    this.nodeAttributes = attributes;
   }
 
   private static class ContainerInfo {

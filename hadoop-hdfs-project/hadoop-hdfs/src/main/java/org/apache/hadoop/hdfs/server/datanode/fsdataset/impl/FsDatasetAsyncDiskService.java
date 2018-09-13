@@ -30,8 +30,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
@@ -59,7 +59,8 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
  * They should be combined.
  */
 class FsDatasetAsyncDiskService {
-  public static final Log LOG = LogFactory.getLog(FsDatasetAsyncDiskService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FsDatasetAsyncDiskService.class);
   
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;

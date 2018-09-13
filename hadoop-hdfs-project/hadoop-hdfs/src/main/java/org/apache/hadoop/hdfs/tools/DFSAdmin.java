@@ -40,8 +40,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
@@ -114,7 +114,7 @@ public class DFSAdmin extends FsShell {
     HdfsConfiguration.init();
   }
   
-  private static final Log LOG = LogFactory.getLog(DFSAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DFSAdmin.class);
 
   /**
    * An abstract class for the execution of a file system command

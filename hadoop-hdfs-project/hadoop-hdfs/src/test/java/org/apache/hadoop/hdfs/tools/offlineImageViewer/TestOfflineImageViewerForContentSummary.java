@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -45,8 +45,8 @@ import org.junit.Test;
  */
 public class TestOfflineImageViewerForContentSummary {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestOfflineImageViewerForContentSummary.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestOfflineImageViewerForContentSummary.class);
 
   private static File originalFsimage = null;
   private static ContentSummary summaryFromDFS = null;

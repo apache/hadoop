@@ -26,8 +26,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -104,7 +104,8 @@ public final class FSImageFormatPBINode {
       XAttr.NameSpace.values();
   
 
-  private static final Log LOG = LogFactory.getLog(FSImageFormatPBINode.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSImageFormatPBINode.class);
 
   public final static class Loader {
     public static PermissionStatus loadPermission(long id,

@@ -23,8 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
@@ -37,7 +37,7 @@ import com.google.common.base.Charsets;
  */
 @InterfaceAudience.Private
 public class PersistentLongFile {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       PersistentLongFile.class);
 
   private final File file;
@@ -99,7 +99,7 @@ public class PersistentLongFile {
         br.close();
         br = null;
       } finally {
-        IOUtils.cleanup(LOG, br);
+        IOUtils.cleanupWithLogger(LOG, br);
       }
     }
     return val;

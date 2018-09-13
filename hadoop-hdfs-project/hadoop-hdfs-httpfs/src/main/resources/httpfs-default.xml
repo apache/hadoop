@@ -54,6 +54,13 @@
   </property>
 
   <!-- HTTP properties -->
+  <property>
+    <name>hadoop.http.idle_timeout.ms</name>
+    <value>1000</value>
+    <description>
+      Httpfs Server connection timeout in milliseconds.
+    </description>
+  </property>
 
   <property>
     <name>hadoop.http.max.threads</name>

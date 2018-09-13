@@ -88,13 +88,27 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * {@inheritDoc}
    */
-  public void createPipeline(Pipeline pipeline)
+  public void createPipeline()
       throws IOException {
     RaftGroupId groupId = pipeline.getId().getRaftGroupID();
     RaftGroup group = RatisHelper.newRaftGroup(groupId, pipeline.getMachines());
     LOG.debug("initializing pipeline:{} with nodes:{}",
         pipeline.getId(), group.getPeers());
-    reinitialize(pipeline.getMachines(), group);
+    reinitialize(pipeline.getMachines(), RatisHelper.emptyRaftGroup(), group);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void destroyPipeline()
+      throws IOException {
+    RaftGroupId groupId = pipeline.getId().getRaftGroupID();
+    RaftGroup currentGroup =
+        RatisHelper.newRaftGroup(groupId, pipeline.getMachines());
+    LOG.debug("destroying pipeline:{} with nodes:{}",
+        pipeline.getId(), currentGroup.getPeers());
+    reinitialize(pipeline.getMachines(), currentGroup,
+        RatisHelper.emptyRaftGroup());
   }
 
   /**
@@ -107,8 +121,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return HddsProtos.ReplicationType.RATIS;
   }
 
-  private void reinitialize(List<DatanodeDetails> datanodes, RaftGroup group)
-      throws IOException {
+  private void reinitialize(List<DatanodeDetails> datanodes, RaftGroup oldGroup,
+      RaftGroup newGroup) throws IOException {
     if (datanodes.isEmpty()) {
       return;
     }
@@ -116,7 +130,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     IOException exception = null;
     for (DatanodeDetails d : datanodes) {
       try {
-        reinitialize(d, group);
+        reinitialize(d, oldGroup, newGroup);
       } catch (IOException ioe) {
         if (exception == null) {
           exception = new IOException(
@@ -135,14 +149,18 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * Adds a new peers to the Ratis Ring.
    *
    * @param datanode - new datanode
-   * @param group    - Raft group
+   * @param oldGroup    - previous Raft group
+   * @param newGroup    - new Raft group
    * @throws IOException - on Failure.
    */
-  private void reinitialize(DatanodeDetails datanode, RaftGroup group)
+  private void reinitialize(DatanodeDetails datanode, RaftGroup oldGroup,
+      RaftGroup newGroup)
       throws IOException {
     final RaftPeer p = RatisHelper.toRaftPeer(datanode);
-    try (RaftClient client = RatisHelper.newRaftClient(rpcType, p)) {
-      client.reinitialize(group, p.getId());
+    try (RaftClient client = oldGroup == RatisHelper.emptyRaftGroup() ?
+        RatisHelper.newRaftClient(rpcType, p) :
+        RatisHelper.newRaftClient(rpcType, p, oldGroup)) {
+      client.reinitialize(newGroup, p.getId());
     } catch (IOException ioe) {
       LOG.error("Failed to reinitialize RaftPeer:{} datanode: {}  ",
           p, datanode, ioe);

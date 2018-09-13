@@ -19,20 +19,19 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import com.google.common.base.Strings;
-import org.apache.commons.cli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -40,49 +39,40 @@ import java.util.List;
 /**
  * Executes List Volume call.
  */
+@Command(name = "list",
+    aliases = "ls",
+    description = "List the volumes of a given user")
 public class ListVolumeHandler extends Handler {
+
+  @Parameters(arity = "1..1",
+      description = Shell.OZONE_VOLUME_URI_DESCRIPTION,
+      defaultValue = "/")
+  private String uri;
+
+  @Option(names = {"--length", "-l"},
+      description = "Limit of the max results",
+      defaultValue = "100")
+  private int maxVolumes;
+
+  @Option(names = {"--start", "-s"},
+      description = "The first volume to start the listing")
+  private String startVolume;
+
+  @Option(names = {"--prefix", "-p"},
+      description = "Prefix to filter the volumes")
+  private String prefix;
+
+  @Option(names = {"--user", "-u"},
+      description = "Owner of the volumes to list.")
   private String userName;
 
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.LIST_VOLUME)) {
-      throw new OzoneClientException(
-          "Incorrect call : listVolume is missing");
-    }
-
-    int maxVolumes = Integer.MAX_VALUE;
-    if (cmd.hasOption(Shell.LIST_LENGTH)) {
-      String length = cmd.getOptionValue(Shell.LIST_LENGTH);
-      OzoneUtils.verifyMaxKeyLength(length);
-
-      maxVolumes = Integer.parseInt(length);
-    }
-
-    String startVolume = null;
-    if (cmd.hasOption(Shell.START)) {
-      startVolume = cmd.getOptionValue(Shell.START);
-    }
-
-    String prefix = null;
-    if (cmd.hasOption(Shell.PREFIX)) {
-      prefix = cmd.getOptionValue(Shell.PREFIX);
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.LIST_VOLUME);
-    if (Strings.isNullOrEmpty(ozoneURIString)) {
-      ozoneURIString = "/";
-    }
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     if (!Strings.isNullOrEmpty(ozoneURI.getPath()) && !ozoneURI.getPath()
         .equals("/")) {
       throw new OzoneClientException(
@@ -90,10 +80,13 @@ public class ListVolumeHandler extends Handler {
               .getPath());
     }
 
-    if (cmd.hasOption(Shell.USER)) {
-      userName = cmd.getOptionValue(Shell.USER);
-    } else {
+    if (userName == null) {
       userName = System.getProperty("user.name");
+    }
+
+    if (maxVolumes < 1) {
+      throw new IllegalArgumentException(
+          "the length should be a positive number");
     }
 
     Iterator<OzoneVolume> volumeIterator;
@@ -112,12 +105,13 @@ public class ListVolumeHandler extends Handler {
       maxVolumes -= 1;
     }
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Found : %d volumes for user : %s ", volumeInfos.size(),
           userName);
     }
     System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(volumeInfos)));
+    return null;
   }
 }
 

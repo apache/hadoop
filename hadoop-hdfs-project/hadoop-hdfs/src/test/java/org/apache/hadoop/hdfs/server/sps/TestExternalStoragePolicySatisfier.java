@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -1252,7 +1251,7 @@ public class TestExternalStoragePolicySatisfier {
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 5, 0);
       fs.setReplication(filePath, (short) 3);
       LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-          LogFactory.getLog(BlockStorageMovementAttemptedItems.class));
+          LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class));
       fs.setStoragePolicy(filePath, "COLD");
       fs.satisfyStoragePolicy(filePath);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),

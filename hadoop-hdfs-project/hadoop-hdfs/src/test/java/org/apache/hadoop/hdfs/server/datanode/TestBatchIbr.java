@@ -30,8 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,7 +44,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ import org.junit.Test;
  * and the namenode allows closing a file with COMMITTED blocks.
  */
 public class TestBatchIbr {
-  public static final Log LOG = LogFactory.getLog(TestBatchIbr.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestBatchIbr.class);
 
   private static final short NUM_DATANODES = 4;
   private static final int BLOCK_SIZE = 1024;
@@ -66,7 +66,8 @@ public class TestBatchIbr {
 
   static {
     GenericTestUtils.setLogLevel(
-        LogFactory.getLog(IncrementalBlockReportManager.class), Level.ALL);
+        LoggerFactory.getLogger(IncrementalBlockReportManager.class),
+        Level.TRACE);
   }
 
   static HdfsConfiguration newConf(long ibrInterval) throws IOException {

@@ -20,16 +20,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdds</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-hdds-common</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Common</description>
   <name>Apache Hadoop HDDS Common</name>
   <packaging>jar</packaging>
 
   <properties>
-    <hdds.version>0.2.1-SNAPSHOT</hdds.version>
+    <hdds.version>0.3.0-SNAPSHOT</hdds.version>
     <hadoop.component>hdds</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
     <log4j2.version>2.11.0</log4j2.version>
@@ -99,6 +99,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>com.lmax</groupId>
       <artifactId>disruptor</artifactId>
       <version>${disruptor.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-pool2</artifactId>
+      <version>2.6.0</version>
     </dependency>
 
   </dependencies>

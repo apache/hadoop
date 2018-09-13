@@ -208,14 +208,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
-    Configuration.addDeprecations(
-        new Configuration.DeprecationDelta[]{
-            // never shipped in an ASF release, but did get into the wild.
-            new Configuration.DeprecationDelta(
-                OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
-                SERVER_SIDE_ENCRYPTION_KEY)
-        });
-    Configuration.reloadExistingConfigurations();
+    // this is retained as a placeholder for when new deprecated keys
+    // need to be added.
+    Configuration.DeprecationDelta[] deltas = {
+    };
+
+    if (deltas.length > 0) {
+      Configuration.addDeprecations(deltas);
+      Configuration.reloadExistingConfigurations();
+    }
   }
 
   static {

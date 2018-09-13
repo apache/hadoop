@@ -492,8 +492,7 @@ public class RpcClient implements ClientProtocol {
         ChunkGroupInputStream.getFromOmKeyInfo(
             keyInfo, xceiverClientManager, storageContainerLocationClient,
             requestId);
-    return new OzoneInputStream(
-        (ChunkGroupInputStream)lengthInputStream.getWrappedStream());
+    return new OzoneInputStream(lengthInputStream.getWrappedStream());
   }
 
   @Override

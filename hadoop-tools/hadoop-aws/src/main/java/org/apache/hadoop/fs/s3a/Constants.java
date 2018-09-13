@@ -305,13 +305,6 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  /**
-   * The original key name. Never used in ASF releases,
-   * but did get into downstream products.
-   */
-  static final String OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY
-      = "fs.s3a.server-side-encryption-key";
-
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 
@@ -419,6 +412,16 @@ public final class Constants {
       "fs.s3a.s3guard.ddb.table";
 
   /**
+   * A prefix for adding tags to the DDB Table upon creation.
+   *
+   * For example:
+   * fs.s3a.s3guard.ddb.table.tag.mytag
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_TAG =
+      "fs.s3a.s3guard.ddb.table.tag.";
+
+  /**
    * Test table name to use during DynamoDB integration test.
    *
    * The table will be modified, and deleted in the end of the tests.
@@ -486,6 +489,24 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_LOCAL
       = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
+
+  /**
+   * Maximum number of records in LocalMetadataStore.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_MAX_RECORDS =
+      "fs.s3a.s3guard.local.max_records";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS = 256;
+
+  /**
+   * Time to live in milliseconds in LocalMetadataStore.
+   * If zero, time-based expiration is disabled.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
+      "fs.s3a.s3guard.local.ttl";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
+      = 10 * 1000;
 
   /**
    * Use DynamoDB for the metadata: {@value}.

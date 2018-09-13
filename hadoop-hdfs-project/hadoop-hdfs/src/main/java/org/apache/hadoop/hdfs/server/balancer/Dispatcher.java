@@ -44,8 +44,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -88,7 +88,7 @@ import com.google.common.base.Preconditions;
 /** Dispatching block replica moves between datanodes. */
 @InterfaceAudience.Private
 public class Dispatcher {
-  static final Log LOG = LogFactory.getLog(Dispatcher.class);
+  static final Logger LOG = LoggerFactory.getLogger(Dispatcher.class);
 
   /**
    * the period of time to delay the usage of a DataNode after hitting

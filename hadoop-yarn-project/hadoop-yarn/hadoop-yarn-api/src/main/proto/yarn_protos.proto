@@ -355,6 +355,7 @@ message NodeReportProto {
   optional ResourceUtilizationProto node_utilization = 12;
   optional uint32 decommissioning_timeout = 13;
   optional NodeUpdateTypeProto node_update_type = 14;
+  repeated NodeAttributeProto node_attributes = 15;
 }
 
 message NodeIdToLabelsProto {
@@ -370,6 +371,42 @@ message LabelsToNodeIdsProto {
 message NodeLabelProto {
   optional string name = 1;
   optional bool isExclusive = 2 [default = true]; 
+}
+
+enum NodeAttributeTypeProto {
+  STRING = 1;
+}
+
+message NodeAttributeKeyProto {
+  optional string attributePrefix = 1 [default="rm.yarn.io"];
+  required string attributeName = 2;
+}
+
+message NodeAttributeProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  optional NodeAttributeTypeProto attributeType = 2 [default = STRING];
+  optional string attributeValue = 3 [default=""];
+}
+
+
+message NodeAttributeInfoProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  required NodeAttributeTypeProto attributeType = 2;
+}
+
+message NodeToAttributeValueProto {
+  required string hostname = 1;
+  required string attributeValue = 2;
+}
+
+message AttributeToNodesProto {
+  required NodeAttributeKeyProto nodeAttribute = 1;
+  repeated NodeToAttributeValueProto nodeValueMap = 2;
+}
+
+message NodeToAttributesProto {
+  optional string node = 1;
+  repeated NodeAttributeProto nodeAttributes = 2;
 }
 
 enum ContainerTypeProto {
@@ -609,11 +646,18 @@ message PlacementConstraintProto {
   optional CompositePlacementConstraintProto compositeConstraint = 2;
 }
 
+enum NodeAttributeOpCodeProto {
+  NO_OP = 1;
+  EQ = 2;
+  NE = 3;
+}
+
 message SimplePlacementConstraintProto {
   required string scope = 1;
   repeated PlacementConstraintTargetProto targetExpressions = 2;
   optional int32 minCardinality = 3;
   optional int32 maxCardinality = 4;
+  optional NodeAttributeOpCodeProto attributeOpCode = 5;
 }
 
 message PlacementConstraintTargetProto {

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.Scheduler;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,7 +43,8 @@ import static org.mockito.Mockito.spy;
  * using a few different values .
  */
 public class TestBpServiceActorScheduler {
-  protected static final Log LOG = LogFactory.getLog(TestBpServiceActorScheduler.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestBpServiceActorScheduler.class);
 
   @Rule
   public Timeout timeout = new Timeout(300000);

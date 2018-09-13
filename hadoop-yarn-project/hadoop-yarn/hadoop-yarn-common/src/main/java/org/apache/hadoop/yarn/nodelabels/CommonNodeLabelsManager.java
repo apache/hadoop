@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -65,15 +64,12 @@ import com.google.common.collect.ImmutableSet;
 @Private
 public class CommonNodeLabelsManager extends AbstractService {
   protected static final Log LOG = LogFactory.getLog(CommonNodeLabelsManager.class);
-  private static final int MAX_LABEL_LENGTH = 255;
   public static final Set<String> EMPTY_STRING_SET = Collections
       .unmodifiableSet(new HashSet<String>(0));
   public static final Set<NodeLabel> EMPTY_NODELABEL_SET = Collections
       .unmodifiableSet(new HashSet<NodeLabel>(0));
   public static final String ANY = "*";
   public static final Set<String> ACCESS_ANY_LABEL_SET = ImmutableSet.of(ANY);
-  private static final Pattern LABEL_PATTERN = Pattern
-      .compile("^[0-9a-zA-Z][0-9a-zA-Z-_]*");
   public static final int WILDCARD_PORT = 0;
   // Flag to identify startup for removelabel
   private boolean initNodeLabelStoreInProgress = false;
@@ -112,7 +108,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   /**
    * A <code>Host</code> can have multiple <code>Node</code>s 
    */
-  protected static class Host {
+  public static class Host {
     public Set<String> labels;
     public Map<NodeId, Node> nms;
     
@@ -238,7 +234,10 @@ public class CommonNodeLabelsManager extends AbstractService {
     return initNodeLabelStoreInProgress;
   }
 
-  boolean isCentralizedConfiguration() {
+  /**
+   * @return true if node label configuration type is not distributed.
+   */
+  public boolean isCentralizedConfiguration() {
     return isCentralizedNodeLabelConfiguration;
   }
 
@@ -249,8 +248,7 @@ public class CommonNodeLabelsManager extends AbstractService {
                 conf.getClass(YarnConfiguration.FS_NODE_LABELS_STORE_IMPL_CLASS,
                     FileSystemNodeLabelsStore.class, NodeLabelsStore.class),
                 conf);
-    this.store.setNodeLabelsManager(this);
-    this.store.init(conf);
+    this.store.init(conf, this);
     this.store.recover();
   }
 
@@ -317,7 +315,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     // do a check before actual adding them, will throw exception if any of them
     // doesn't meet label name requirement
     for (NodeLabel label : labels) {
-      checkAndThrowLabelName(label.getName());
+      NodeLabelUtil.checkAndThrowLabelName(label.getName());
     }
 
     for (NodeLabel label : labels) {
@@ -966,22 +964,6 @@ public class CommonNodeLabelsManager extends AbstractService {
       return label.getIsExclusive();
     } finally {
       readLock.unlock();
-    }
-  }
-
-  public static void checkAndThrowLabelName(String label) throws IOException {
-    if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {
-      throw new IOException("label added is empty or exceeds "
-          + MAX_LABEL_LENGTH + " character(s)");
-    }
-    label = label.trim();
-
-    boolean match = LABEL_PATTERN.matcher(label).matches();
-
-    if (!match) {
-      throw new IOException("label name should only contains "
-          + "{0-9, a-z, A-Z, -, _} and should not started with {-,_}"
-          + ", now it is=" + label);
     }
   }
 

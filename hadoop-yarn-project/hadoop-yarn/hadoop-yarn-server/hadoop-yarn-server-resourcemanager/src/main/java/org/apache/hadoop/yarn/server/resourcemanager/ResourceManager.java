@@ -62,15 +62,17 @@ import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
-import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeAttributesManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -517,6 +519,12 @@ public class ResourceManager extends CompositeService
     return new RMNodeLabelsManager();
   }
 
+  protected NodeAttributesManager createNodeAttributesManager() {
+    NodeAttributesManagerImpl namImpl = new NodeAttributesManagerImpl();
+    namImpl.setRMContext(rmContext);
+    return namImpl;
+  }
+
   protected AllocationTagsManager createAllocationTagsManager() {
     return new AllocationTagsManager(this.rmContext);
   }
@@ -655,6 +663,10 @@ public class ResourceManager extends CompositeService
       nlm.setRMContext(rmContext);
       addService(nlm);
       rmContext.setNodeLabelManager(nlm);
+
+      NodeAttributesManager nam = createNodeAttributesManager();
+      addService(nam);
+      rmContext.setNodeAttributesManager(nam);
 
       AllocationTagsManager allocationTagsManager =
           createAllocationTagsManager();
@@ -1205,6 +1217,11 @@ public class ResourceManager extends CompositeService
         }
       }
     }
+
+    builder.withAttribute(IsResourceManagerActiveServlet.RM_ATTRIBUTE, this);
+    builder.withServlet(IsResourceManagerActiveServlet.SERVLET_NAME,
+        IsResourceManagerActiveServlet.PATH_SPEC,
+        IsResourceManagerActiveServlet.class);
 
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }

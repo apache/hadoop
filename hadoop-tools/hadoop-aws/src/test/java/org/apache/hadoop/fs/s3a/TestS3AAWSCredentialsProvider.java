@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
@@ -37,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
@@ -119,7 +119,7 @@ public class TestS3AAWSCredentialsProvider {
         uri2, conf);
     List<Class<? extends AWSCredentialsProvider>> expectedClasses =
         Arrays.asList(
-            BasicAWSCredentialsProvider.class,
+            SimpleAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class,
             InstanceProfileCredentialsProvider.class);
     assertCredentialProviders(expectedClasses, list1);
@@ -213,25 +213,13 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
-  /**
-   * Declare what exception to raise, and the text which must be found
-   * in it.
-   * @param exceptionClass class of exception
-   * @param text text in exception
-   */
-  private void expectException(Class<? extends Throwable> exceptionClass,
-      String text) {
-    exception.expect(exceptionClass);
-    exception.expectMessage(text);
-  }
-
-  private void expectProviderInstantiationFailure(String option,
+  private IOException expectProviderInstantiationFailure(String option,
       String expectedErrorText) throws Exception {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER, option);
     Path testFile = new Path(
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    intercept(IOException.class, expectedErrorText,
+    return intercept(IOException.class, expectedErrorText,
         () -> S3AUtils.createAWSCredentialProviderSet(testFile.toUri(), conf));
   }
 
@@ -355,5 +343,35 @@ public class TestS3AAWSCredentialsProvider {
         () -> providers.getCredentials());
   }
 
+  /**
+   * Verify that IOEs are passed up without being wrapped.
+   */
+  @Test
+  public void testIOEInConstructorPropagation() throws Throwable {
+    IOException expected = expectProviderInstantiationFailure(
+        IOERaisingProvider.class.getName(),
+        "expected");
+    if (!(expected instanceof InterruptedIOException)) {
+      throw expected;
+    }
+  }
+
+  private static class IOERaisingProvider implements AWSCredentialsProvider {
+
+    public IOERaisingProvider(URI uri, Configuration conf)
+        throws IOException {
+      throw new InterruptedIOException("expected");
+    }
+
+    @Override
+    public AWSCredentials getCredentials() {
+      return null;
+    }
+
+    @Override
+    public void refresh() {
+
+    }
+  }
 
 }

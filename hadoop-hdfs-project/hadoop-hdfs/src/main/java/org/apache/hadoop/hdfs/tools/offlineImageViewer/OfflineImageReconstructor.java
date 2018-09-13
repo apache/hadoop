@@ -54,8 +54,8 @@ import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -96,8 +96,8 @@ import javax.xml.stream.events.XMLEvent;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class OfflineImageReconstructor {
-  public static final Log LOG =
-      LogFactory.getLog(OfflineImageReconstructor.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageReconstructor.class);
 
   /**
    * The output stream.
@@ -1839,7 +1839,7 @@ class OfflineImageReconstructor {
           new OfflineImageReconstructor(out, reader);
       oir.processXml();
     } finally {
-      IOUtils.cleanup(LOG, reader, fis, out, fout);
+      IOUtils.cleanupWithLogger(LOG, reader, fis, out, fout);
     }
     // Write the md5 file
     MD5FileUtils.saveMD5File(new File(outputPath),

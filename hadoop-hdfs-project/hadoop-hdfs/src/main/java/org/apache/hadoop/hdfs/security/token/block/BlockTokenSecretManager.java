@@ -29,8 +29,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -58,7 +58,8 @@ import com.google.common.collect.Multiset;
 @InterfaceAudience.Private
 public class BlockTokenSecretManager extends
     SecretManager<BlockTokenIdentifier> {
-  public static final Log LOG = LogFactory.getLog(BlockTokenSecretManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(BlockTokenSecretManager.class);
 
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 

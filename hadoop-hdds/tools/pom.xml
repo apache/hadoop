@@ -20,11 +20,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdds</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>hadoop-hdds-tools</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Tools</description>
   <name>Apache Hadoop HDDS Tools</name>
   <packaging>jar</packaging>

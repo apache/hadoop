@@ -33,8 +33,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.cli.CLITestCmdDFS;
 import org.apache.hadoop.cli.util.CLICommandDFSAdmin;
 import org.apache.hadoop.cli.util.CommandExecutor;
@@ -60,8 +60,8 @@ import com.google.common.collect.ImmutableSet;
 public class TestStorageRestore {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
-  private static final Log LOG =
-    LogFactory.getLog(TestStorageRestore.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestStorageRestore.class.getName());
   private Configuration config;
   private File hdfsDir=null;
   static final long seed = 0xAAAAEEFL;

@@ -28,8 +28,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +51,8 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 
 public class TestBootstrapStandby {
-  private static final Log LOG = LogFactory.getLog(TestBootstrapStandby.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBootstrapStandby.class);
 
   private static final int maxNNCount = 3;
   private static final int STARTING_PORT = 20000;
@@ -197,14 +198,14 @@ public class TestBootstrapStandby {
     // Trying to bootstrap standby should now fail since the edit
     // logs aren't available in the shared dir.
     LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
-        LogFactory.getLog(BootstrapStandby.class));
+        LoggerFactory.getLogger(BootstrapStandby.class));
     try {
       assertEquals(BootstrapStandby.ERR_CODE_LOGS_UNAVAILABLE, forceBootstrap(1));
     } finally {
       logs.stopCapturing();
     }
-    GenericTestUtils.assertMatches(logs.getOutput(),
-        "FATAL.*Unable to read transaction ids 1-3 from the configured shared");
+    assertTrue(logs.getOutput().contains(
+        "Unable to read transaction ids 1-3 from the configured shared"));
   }
 
   /**

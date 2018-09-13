@@ -71,6 +71,10 @@
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.9.5</jackson2.version>
 
+    <!-- httpcomponents versions -->
+    <httpclient.version>4.5.2</httpclient.version>
+    <httpcore.version>4.4.4</httpcore.version>
+
     <!-- SLF4J version -->
     <slf4j.version>1.7.25</slf4j.version>
 
@@ -732,12 +736,12 @@
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
-        <version>4.5.2</version>
+        <version>${httpclient.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
-        <version>4.4.4</version>
+        <version>${httpcore.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>

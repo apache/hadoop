@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,19 +18,14 @@
 
 package org.apache.hadoop.ozone.freon;
 
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Tests Freon, with MiniOzoneCluster and validate data.
@@ -45,7 +40,6 @@ public class TestDataValidate {
    * <p>
    * Ozone is made active by setting OZONE_ENABLED = true
    *
-   * @throws IOException
    */
   @BeforeClass
   public static void init() throws Exception {
@@ -67,74 +61,55 @@ public class TestDataValidate {
 
   @Test
   public void ratisTestLargeKey() throws Exception {
-    List<String> args = new ArrayList<>();
-    args.add("-validateWrites");
-    args.add("-numOfVolumes");
-    args.add("1");
-    args.add("-numOfBuckets");
-    args.add("1");
-    args.add("-numOfKeys");
-    args.add("1");
-    args.add("-ratis");
-    args.add("3");
-    args.add("-keySize");
-    args.add("104857600");
-    Freon freon = new Freon(conf);
-    int res = ToolRunner.run(conf, freon,
-        args.toArray(new String[0]));
-    Assert.assertEquals(1, freon.getNumberOfVolumesCreated());
-    Assert.assertEquals(1, freon.getNumberOfBucketsCreated());
-    Assert.assertEquals(1, freon.getNumberOfKeysAdded());
-    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
-    Assert.assertEquals(0, res);
+    RandomKeyGenerator randomKeyGenerator =
+        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
+    randomKeyGenerator.setNumOfVolumes(1);
+    randomKeyGenerator.setNumOfBuckets(1);
+    randomKeyGenerator.setNumOfKeys(1);
+    randomKeyGenerator.setType(ReplicationType.RATIS);
+    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
+    randomKeyGenerator.setKeySize(104857600);
+    randomKeyGenerator.setValidateWrites(true);
+    randomKeyGenerator.call();
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
+    Assert.assertEquals(0, randomKeyGenerator.getUnsuccessfulValidationCount());
   }
 
   @Test
   public void standaloneTestLargeKey() throws Exception {
-    List<String> args = new ArrayList<>();
-    args.add("-validateWrites");
-    args.add("-numOfVolumes");
-    args.add("1");
-    args.add("-numOfBuckets");
-    args.add("1");
-    args.add("-numOfKeys");
-    args.add("1");
-    args.add("-keySize");
-    args.add("104857600");
-    Freon freon = new Freon(conf);
-    int res = ToolRunner.run(conf, freon,
-        args.toArray(new String[0]));
-    Assert.assertEquals(1, freon.getNumberOfVolumesCreated());
-    Assert.assertEquals(1, freon.getNumberOfBucketsCreated());
-    Assert.assertEquals(1, freon.getNumberOfKeysAdded());
-    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
-    Assert.assertEquals(0, res);
+    RandomKeyGenerator randomKeyGenerator =
+        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
+    randomKeyGenerator.setNumOfVolumes(1);
+    randomKeyGenerator.setNumOfBuckets(1);
+    randomKeyGenerator.setNumOfKeys(1);
+    randomKeyGenerator.setKeySize(104857600);
+    randomKeyGenerator.setValidateWrites(true);
+    randomKeyGenerator.call();
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
+    Assert.assertEquals(0, randomKeyGenerator.getUnsuccessfulValidationCount());
   }
 
   @Test
   public void validateWriteTest() throws Exception {
-    PrintStream originalStream = System.out;
-    ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-    System.setOut(new PrintStream(outStream));
-    List<String> args = new ArrayList<>();
-    args.add("-validateWrites");
-    args.add("-numOfVolumes");
-    args.add("2");
-    args.add("-numOfBuckets");
-    args.add("5");
-    args.add("-numOfKeys");
-    args.add("10");
-    Freon freon = new Freon(conf);
-    int res = ToolRunner.run(conf, freon,
-        args.toArray(new String[0]));
-    Assert.assertEquals(0, res);
-    Assert.assertEquals(2, freon.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
-    Assert.assertTrue(freon.getValidateWrites());
-    Assert.assertNotEquals(0, freon.getTotalKeysValidated());
-    Assert.assertNotEquals(0, freon.getSuccessfulValidationCount());
-    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
-    System.setOut(originalStream);
+    RandomKeyGenerator randomKeyGenerator =
+        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
+    randomKeyGenerator.setNumOfVolumes(2);
+    randomKeyGenerator.setNumOfBuckets(5);
+    randomKeyGenerator.setNumOfKeys(10);
+    randomKeyGenerator.setValidateWrites(true);
+    randomKeyGenerator.call();
+    Assert.assertEquals(2, randomKeyGenerator.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
+    Assert.assertTrue(randomKeyGenerator.getValidateWrites());
+    Assert.assertNotEquals(0, randomKeyGenerator.getTotalKeysValidated());
+    Assert.assertNotEquals(0, randomKeyGenerator
+        .getSuccessfulValidationCount());
+    Assert.assertEquals(0, randomKeyGenerator
+        .getUnsuccessfulValidationCount());
   }
 }

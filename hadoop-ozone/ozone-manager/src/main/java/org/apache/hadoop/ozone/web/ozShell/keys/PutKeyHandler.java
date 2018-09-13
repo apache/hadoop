@@ -18,86 +18,79 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_TYPE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * Puts a file into an ozone bucket.
  */
+@Command(name = "put",
+    description = "creates or overwrites an existing key")
 public class PutKeyHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
-  private String keyName;
 
+  @Parameters(index = "0", arity = "1..1", description =
+      Shell.OZONE_KEY_URI_DESCRIPTION)
+  private String uri;
+
+  @Parameters(index = "1", arity = "1..1", description = "File to upload")
+  private String fileName;
+
+  @Option(names = {"-r", "--replication"},
+      description = "Replication factor of the new key. (use ONE or THREE) "
+          + "Default is specified in the cluster-wide config.")
+  private ReplicationFactor replicationFactor;
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.PUT_KEY)) {
-      throw new OzoneClientException("Incorrect call : putKey is missing");
-    }
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.FILE)) {
-      throw new OzoneClientException("put key needs a file to put");
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.PUT_KEY);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
       throw new OzoneClientException(
           "volume/bucket/key name required in putKey");
     }
 
-    volumeName = path.getName(0).toString();
-    bucketName = path.getName(1).toString();
-    keyName = path.getName(2).toString();
+    String volumeName = path.getName(0).toString();
+    String bucketName = path.getName(1).toString();
+    String keyName = path.getName(2).toString();
 
-
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
       System.out.printf("Key Name : %s%n", keyName);
     }
 
-    String fileName = cmd.getOptionValue(Shell.FILE);
     File dataFile = new File(fileName);
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       FileInputStream stream = new FileInputStream(dataFile);
       String hash = DigestUtils.md5Hex(stream);
       System.out.printf("File Hash : %s%n", hash);
@@ -105,11 +98,7 @@ public class PutKeyHandler extends Handler {
     }
 
     Configuration conf = new OzoneConfiguration();
-    ReplicationFactor replicationFactor;
-    if (cmd.hasOption(Shell.REPLICATION_FACTOR)) {
-      replicationFactor = ReplicationFactor.valueOf(Integer.parseInt(cmd
-          .getOptionValue(Shell.REPLICATION_FACTOR)));
-    } else {
+    if (replicationFactor == null) {
       replicationFactor = ReplicationFactor.valueOf(
           conf.getInt(OZONE_REPLICATION, OZONE_REPLICATION_DEFAULT));
     }
@@ -126,6 +115,7 @@ public class PutKeyHandler extends Handler {
         conf.getInt(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT));
     outputStream.close();
     fileInputStream.close();
+    return null;
   }
 
 }

@@ -150,6 +150,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix for the UAM
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
+   * @param rmName name of the YarnRM
    * @see ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return uamId for the UAM
@@ -159,7 +160,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
   public String createAndRegisterNewUAM(
       RegisterApplicationMasterRequest registerRequest, Configuration conf,
       String queueName, String submitter, String appNameSuffix,
-      boolean keepContainersAcrossApplicationAttempts)
+      boolean keepContainersAcrossApplicationAttempts, String rmName)
       throws YarnException, IOException {
     ApplicationId appId = null;
     ApplicationClientProtocol rmClient;
@@ -183,7 +184,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
     // Launch the UAM in RM
     launchUAM(appId.toString(), conf, appId, queueName, submitter,
-        appNameSuffix, keepContainersAcrossApplicationAttempts);
+        appNameSuffix, keepContainersAcrossApplicationAttempts, rmName);
 
     // Register the UAM application
     registerApplicationMaster(appId.toString(), registerRequest);
@@ -203,6 +204,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix for the UAM
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
+   * @param rmName name of the YarnRM
    * @see ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return UAM token
@@ -211,14 +213,15 @@ public class UnmanagedAMPoolManager extends AbstractService {
    */
   public Token<AMRMTokenIdentifier> launchUAM(String uamId, Configuration conf,
       ApplicationId appId, String queueName, String submitter,
-      String appNameSuffix, boolean keepContainersAcrossApplicationAttempts)
-      throws YarnException, IOException {
+      String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+      String rmName) throws YarnException, IOException {
 
     if (this.unmanagedAppMasterMap.containsKey(uamId)) {
       throw new YarnException("UAM " + uamId + " already exists");
     }
     UnmanagedApplicationManager uam = createUAM(conf, appId, queueName,
-        submitter, appNameSuffix, keepContainersAcrossApplicationAttempts);
+        submitter, appNameSuffix, keepContainersAcrossApplicationAttempts,
+        rmName);
     // Put the UAM into map first before initializing it to avoid additional UAM
     // for the same uamId being created concurrently
     this.unmanagedAppMasterMap.put(uamId, uam);
@@ -248,19 +251,20 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param submitter submitter name of the UAM
    * @param appNameSuffix application name suffix for the UAM
    * @param uamToken UAM token
+   * @param rmName name of the YarnRM
    * @throws YarnException if fails
    * @throws IOException if fails
    */
-  public void reAttachUAM(String uamId, Configuration conf,
-      ApplicationId appId, String queueName, String submitter,
-      String appNameSuffix, Token<AMRMTokenIdentifier> uamToken)
+  public void reAttachUAM(String uamId, Configuration conf, ApplicationId appId,
+      String queueName, String submitter, String appNameSuffix,
+      Token<AMRMTokenIdentifier> uamToken, String rmName)
       throws YarnException, IOException {
 
     if (this.unmanagedAppMasterMap.containsKey(uamId)) {
       throw new YarnException("UAM " + uamId + " already exists");
     }
-    UnmanagedApplicationManager uam =
-        createUAM(conf, appId, queueName, submitter, appNameSuffix, true);
+    UnmanagedApplicationManager uam = createUAM(conf, appId, queueName,
+        submitter, appNameSuffix, true, rmName);
     // Put the UAM into map first before initializing it to avoid additional UAM
     // for the same uamId being created concurrently
     this.unmanagedAppMasterMap.put(uamId, uam);
@@ -287,14 +291,16 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param submitter submitter name of the application
    * @param appNameSuffix application name suffix
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
+   * @param rmName name of the YarnRM
    * @return the UAM instance
    */
   @VisibleForTesting
   protected UnmanagedApplicationManager createUAM(Configuration conf,
       ApplicationId appId, String queueName, String submitter,
-      String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+      String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+      String rmName) {
     return new UnmanagedApplicationManager(conf, appId, queueName, submitter,
-        appNameSuffix, keepContainersAcrossApplicationAttempts);
+        appNameSuffix, keepContainersAcrossApplicationAttempts, rmName);
   }
 
   /**

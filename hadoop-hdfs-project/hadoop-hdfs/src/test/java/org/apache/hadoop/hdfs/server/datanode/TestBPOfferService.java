@@ -36,8 +36,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -85,7 +85,7 @@ public class TestBPOfferService {
 
   private static final String FAKE_BPID = "fake bpid";
   private static final String FAKE_CLUSTERID = "fake cluster";
-  protected static final Log LOG = LogFactory.getLog(
+  protected static final Logger LOG = LoggerFactory.getLogger(
       TestBPOfferService.class);
   private static final ExtendedBlock FAKE_BLOCK =
     new ExtendedBlock(FAKE_BPID, 12345L);

@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +39,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * This is a local, in-memory implementation of MetadataStore.
@@ -60,23 +61,6 @@ import java.util.concurrent.TimeUnit;
 public class LocalMetadataStore implements MetadataStore {
 
   public static final Logger LOG = LoggerFactory.getLogger(MetadataStore.class);
-  public static final int DEFAULT_MAX_RECORDS = 256;
-  public static final int DEFAULT_CACHE_ENTRY_TTL_MSEC = 10 * 1000;
-
-  /**
-   * Maximum number of records.
-   */
-  @InterfaceStability.Evolving
-  public static final String CONF_MAX_RECORDS =
-      "fs.metadatastore.local.max_records";
-
-  /**
-   * Time to live in milliseconds.  If zero, time-based expiration is
-   * disabled.
-   */
-  @InterfaceStability.Evolving
-  public static final String CONF_CACHE_ENTRY_TTL =
-      "fs.metadatastore.local.ttl";
 
   /** Contains directory and file listings. */
   private Cache<Path, LocalMetadataEntry> localCache;
@@ -101,11 +85,13 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public void initialize(Configuration conf) throws IOException {
     Preconditions.checkNotNull(conf);
-    int maxRecords = conf.getInt(CONF_MAX_RECORDS, DEFAULT_MAX_RECORDS);
+    int maxRecords = conf.getInt(S3GUARD_METASTORE_LOCAL_MAX_RECORDS,
+        DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS);
     if (maxRecords < 4) {
       maxRecords = 4;
     }
-    int ttl = conf.getInt(CONF_CACHE_ENTRY_TTL, DEFAULT_CACHE_ENTRY_TTL_MSEC);
+    int ttl = conf.getInt(S3GUARD_METASTORE_LOCAL_ENTRY_TTL,
+        DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL);
 
     CacheBuilder builder = CacheBuilder.newBuilder().maximumSize(maxRecords);
     if (ttl >= 0) {

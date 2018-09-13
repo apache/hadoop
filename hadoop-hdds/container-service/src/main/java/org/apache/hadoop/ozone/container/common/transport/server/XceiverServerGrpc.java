@@ -26,6 +26,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+
+import org.apache.ratis.shaded.io.grpc.BindableService;
 import org.apache.ratis.shaded.io.grpc.Server;
 import org.apache.ratis.shaded.io.grpc.ServerBuilder;
 import org.apache.ratis.shaded.io.grpc.netty.NettyServerBuilder;
@@ -54,7 +56,7 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
    * @param conf - Configuration
    */
   public XceiverServerGrpc(DatanodeDetails datanodeDetails, Configuration conf,
-                       ContainerDispatcher dispatcher) {
+      ContainerDispatcher dispatcher, BindableService... additionalServices) {
     Preconditions.checkNotNull(conf);
 
     this.port = conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
@@ -80,6 +82,14 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
         .maxInboundMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
         .addService(new GrpcXceiverService(dispatcher))
         .build();
+    NettyServerBuilder nettyServerBuilder =
+        ((NettyServerBuilder) ServerBuilder.forPort(port))
+            .maxInboundMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
+            .addService(new GrpcXceiverService(dispatcher));
+    for (BindableService service : additionalServices) {
+      nettyServerBuilder.addService(service);
+    }
+    server = nettyServerBuilder.build();
     storageContainer = dispatcher;
   }
 

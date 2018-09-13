@@ -34,8 +34,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -65,7 +65,8 @@ import com.google.common.collect.Maps;
  * file status of the namespace of the fsimage.
  */
 class FSImageLoader {
-  public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSImageHandler.class);
 
   private final String[] stringTable;
   // byte representation of inodes, sorted by id

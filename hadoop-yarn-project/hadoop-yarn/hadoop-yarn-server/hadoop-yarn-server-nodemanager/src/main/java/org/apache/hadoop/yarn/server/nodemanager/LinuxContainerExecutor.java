@@ -611,17 +611,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (exitCode ==
           ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
           exitCode ==
-              ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
+              ExitCode.INVALID_CONFIG_FILE.getExitCode()) {
         throw new ConfigurationException(
             "Linux Container Executor reached unrecoverable exception", e);
       }

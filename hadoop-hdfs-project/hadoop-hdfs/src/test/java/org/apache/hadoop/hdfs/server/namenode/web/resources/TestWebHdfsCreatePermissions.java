@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.web.resources;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -39,7 +39,8 @@ import org.junit.Test;
  * from dfs CLI for specifying files/directories permissions.
  */
 public class TestWebHdfsCreatePermissions {
-  static final Log LOG = LogFactory.getLog(TestWebHdfsCreatePermissions.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestWebHdfsCreatePermissions.class);
   {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
   }

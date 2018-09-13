@@ -20,10 +20,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-ozone-manager</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Manager Server</description>
   <name>Apache Hadoop Ozone Manager Server</name>
   <packaging>jar</packaging>
@@ -38,13 +38,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-client</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>

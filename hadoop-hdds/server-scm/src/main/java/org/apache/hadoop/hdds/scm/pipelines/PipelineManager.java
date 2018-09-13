@@ -18,7 +18,6 @@ package org.apache.hadoop.hdds.scm.pipelines;
 
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.WeakHashMap;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
@@ -43,11 +42,12 @@ public abstract class PipelineManager {
   private final AtomicInteger pipelineIndex;
   private final Node2PipelineMap node2PipelineMap;
 
-  public PipelineManager(Node2PipelineMap map) {
+  public PipelineManager(Node2PipelineMap map,
+      Map<PipelineID, Pipeline> pipelineMap) {
     activePipelines = new LinkedList<>();
     pipelineIndex = new AtomicInteger(0);
-    pipelineMap = new WeakHashMap<>();
-    node2PipelineMap = map;
+    this.pipelineMap = pipelineMap;
+    this.node2PipelineMap = map;
   }
 
   /**
@@ -187,7 +187,7 @@ public abstract class PipelineManager {
    *
    * @param pipeline
    */
-  public void closePipeline(Pipeline pipeline) {
+  public void closePipeline(Pipeline pipeline) throws IOException {
     pipelineMap.remove(pipeline.getId());
     node2PipelineMap.removePipeline(pipeline);
   }

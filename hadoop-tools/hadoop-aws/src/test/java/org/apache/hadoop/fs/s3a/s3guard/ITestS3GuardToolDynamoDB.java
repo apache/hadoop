@@ -19,15 +19,21 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.Tag;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -39,8 +45,10 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test S3Guard related CLI commands against DynamoDB.
@@ -91,6 +99,53 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
           }
         });
   }
+
+  @Test
+  public void testDynamoTableTagging() throws Exception {
+    // setup
+    Configuration conf = getConfiguration();
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
+        "testDynamoTableTagging-" + UUID.randomUUID());
+    S3GuardTool.Init cmdR = new S3GuardTool.Init(conf);
+    Map<String, String> tagMap = new HashMap<>();
+    tagMap.put("hello", "dynamo");
+    tagMap.put("tag", "youre it");
+
+    String[] argsR = new String[]{
+        cmdR.getName(),
+        "-tag", tagMapToStringParams(tagMap)
+    };
+
+    // run
+    cmdR.run(argsR);
+
+    // Check. Should create new metadatastore with the table name set.
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
+      ddbms.initialize(conf);
+      ListTagsOfResourceRequest listTagsOfResourceRequest = new ListTagsOfResourceRequest()
+          .withResourceArn(ddbms.getTable().getDescription().getTableArn());
+      List<Tag> tags = ddbms.getAmazonDynamoDB().listTagsOfResource(listTagsOfResourceRequest).getTags();
+
+      // assert
+      assertEquals(tagMap.size(), tags.size());
+      for (Tag tag : tags) {
+        Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
+      }
+      // be sure to clean up - delete table
+      ddbms.destroy();
+    }
+  }
+
+  private String tagMapToStringParams(Map<String, String> tagMap) {
+    StringBuilder stringBuilder = new StringBuilder();
+
+    for (Map.Entry<String, String> kv : tagMap.entrySet()) {
+      stringBuilder.append(kv.getKey() + "=" + kv.getValue() + ";");
+    }
+
+    return stringBuilder.toString();
+  }
+
 
   private static class Capacities {
     private final long read, write;

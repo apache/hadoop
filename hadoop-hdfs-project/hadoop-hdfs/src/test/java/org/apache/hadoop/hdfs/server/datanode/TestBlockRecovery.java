@@ -61,8 +61,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Iterators;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -107,7 +107,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.SleepAnswer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -124,7 +124,8 @@ import com.google.common.base.Supplier;
  * This tests if sync all replicas in block recovery works correctly.
  */
 public class TestBlockRecovery {
-  private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR =
     MiniDFSCluster.getBaseDirectory() + "data";
   private DataNode dn;
@@ -173,8 +174,8 @@ public class TestBlockRecovery {
         11 * cellSize}, {36 * cellSize}}, };
 
   static {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   private final long

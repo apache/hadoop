@@ -33,8 +33,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -65,17 +65,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestFileTruncate {
   static {
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
-    GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.TRACE);
   }
-  static final Log LOG = LogFactory.getLog(TestFileTruncate.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFileTruncate.class);
   static final int BLOCK_SIZE = 4;
   static final short REPLICATION = 3;
   static final int DATANODE_NUM = 3;

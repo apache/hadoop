@@ -18,78 +18,73 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.client.*;
-import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 /**
  * Executes List Keys.
  */
+@Command(name = "list",
+    aliases = "ls",
+    description = "list all keys in a given bucket")
 public class ListKeyHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
+
+  @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
+  private String uri;
+
+  @Option(names = {"--length", "-l"},
+      description = "Limit of the max results",
+      defaultValue = "100")
+  private int maxKeys;
+
+  @Option(names = {"--start", "-s"},
+      description = "The first key to start the listing")
+  private String startKey;
+
+  @Option(names = {"--prefix", "-p"},
+      description = "Prefix to filter the key")
+  private String prefix;
 
   /**
    * Executes the Client Calls.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
+  public Void call() throws Exception {
 
-    if (!cmd.hasOption(Shell.LIST_KEY)) {
-      throw new OzoneClientException(
-          "Incorrect call : listKey is missing");
-    }
-
-    int maxKeys = Integer.MAX_VALUE;
-    if (cmd.hasOption(Shell.LIST_LENGTH)) {
-      String length = cmd.getOptionValue(Shell.LIST_LENGTH);
-      OzoneUtils.verifyMaxKeyLength(length);
-      maxKeys = Integer.parseInt(length);
-    }
-
-    String startKey = null;
-    if (cmd.hasOption(Shell.START)) {
-      startKey = cmd.getOptionValue(Shell.START);
-    }
-
-    String prefix = null;
-    if (cmd.hasOption(Shell.PREFIX)) {
-      prefix = cmd.getOptionValue(Shell.PREFIX);
-    }
-
-    String ozoneURIString = cmd.getOptionValue(Shell.LIST_KEY);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 2) {
       throw new OzoneClientException(
           "volume/bucket is required in listKey");
     }
 
-    volumeName = path.getName(0).toString();
-    bucketName = path.getName(1).toString();
+    if (maxKeys < 1) {
+      throw new IllegalArgumentException(
+          "the length should be a positive number");
+    }
 
+    String volumeName = path.getName(0).toString();
+    String bucketName = path.getName(1).toString();
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("bucket Name : %s%n", bucketName);
     }
@@ -105,12 +100,13 @@ public class ListKeyHandler extends Handler {
       maxKeys -= 1;
     }
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Found : %d keys for bucket %s in volume : %s ",
           keyInfos.size(), bucketName, volumeName);
     }
     System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(keyInfos)));
+    return null;
   }
 
 }

@@ -69,7 +69,7 @@ public class TestContainerStateMachine {
           new ArrayBlockingQueue<>(1024),
           new ThreadPoolExecutor.CallerRunsPolicy());
   private ContainerStateMachine stateMachine =
-      new ContainerStateMachine(new TestContainerDispatcher(), executor);
+      new ContainerStateMachine(new TestContainerDispatcher(), executor, null);
 
 
   @Test

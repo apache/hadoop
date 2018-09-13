@@ -27,8 +27,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -52,7 +52,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 public class TestDFSHAAdmin {
-  private static final Log LOG = LogFactory.getLog(TestDFSHAAdmin.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSHAAdmin.class);
   
   private DFSHAAdmin tool;
   private final ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();

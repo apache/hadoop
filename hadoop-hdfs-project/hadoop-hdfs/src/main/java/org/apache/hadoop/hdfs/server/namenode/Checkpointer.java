@@ -28,8 +28,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -56,8 +56,8 @@ import com.google.common.collect.Lists;
  * (1) time or (2) the size of the edits file.
  */
 class Checkpointer extends Daemon {
-  public static final Log LOG = 
-    LogFactory.getLog(Checkpointer.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(Checkpointer.class.getName());
 
   private final BackupNode backupNode;
   volatile boolean shouldRun;

@@ -38,12 +38,10 @@ import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -247,9 +245,8 @@ public class TestCloseContainerHandlingByClient {
 
   @Test
   public void testMultiBlockWrites2() throws Exception {
-
     String keyName = "standalone4";
-    long dataLength = 0;
+    long dataLength;
     OzoneOutputStream key =
         createKey(keyName, ReplicationType.STAND_ALONE, 4 * blockSize);
     ChunkGroupOutputStream groupOutputStream =
@@ -293,11 +290,10 @@ public class TestCloseContainerHandlingByClient {
   private void waitForContainerClose(String keyName,
       OzoneOutputStream outputStream, HddsProtos.ReplicationType type)
       throws Exception {
-
     ChunkGroupOutputStream groupOutputStream =
         (ChunkGroupOutputStream) outputStream.getOutputStream();
     List<OmKeyLocationInfo> locationInfoList =
-        getLocationInfos(groupOutputStream, keyName);
+        groupOutputStream.getLocationInfoList();
     List<Long> containerIdList = new ArrayList<>();
     List<Pipeline> pipelineList = new ArrayList<>();
     for (OmKeyLocationInfo info : locationInfoList) {
@@ -335,6 +331,46 @@ public class TestCloseContainerHandlingByClient {
     }
   }
 
+  @Test
+  public void testDiscardPreallocatedBlocks() throws Exception {
+    String keyName = "discardpreallocatedblocks";
+    OzoneOutputStream key =
+        createKey(keyName, ReplicationType.STAND_ALONE, 2 * blockSize);
+    ChunkGroupOutputStream groupOutputStream =
+        (ChunkGroupOutputStream) key.getOutputStream();
+
+    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    // With the initial size provided, it should have pre allocated 4 blocks
+    Assert.assertEquals(2, groupOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, groupOutputStream.getLocationInfoList().size());
+    String dataString = fixedLengthString(keyString, (1 * blockSize));
+    byte[] data = dataString.getBytes();
+    key.write(data);
+    List<OmKeyLocationInfo> locationInfos =
+        new ArrayList<>(groupOutputStream.getLocationInfoList());
+    long containerID = locationInfos.get(0).getContainerID();
+    List<DatanodeDetails> datanodes =
+        cluster.getStorageContainerManager().getScmContainerManager()
+            .getContainerWithPipeline(containerID).getPipeline().getMachines();
+    Assert.assertEquals(1, datanodes.size());
+    waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
+    dataString = fixedLengthString(keyString, (1 * blockSize));
+    data = dataString.getBytes();
+    key.write(data);
+    Assert.assertEquals(2, groupOutputStream.getStreamEntries().size());
+
+    // the 1st block got written. Now all the containers are closed, so the 2nd
+    // pre allocated block will be removed from the list and new block should
+    // have been allocated
+    Assert.assertTrue(
+        groupOutputStream.getLocationInfoList().get(0).getBlockID()
+            .equals(locationInfos.get(0).getBlockID()));
+    Assert.assertFalse(
+        groupOutputStream.getLocationInfoList().get(1).getBlockID()
+            .equals(locationInfos.get(1).getBlockID()));
+    key.close();
+  }
+
   private OzoneOutputStream createKey(String keyName, ReplicationType type,
       long size) throws Exception {
     ReplicationFactor factor =
@@ -342,20 +378,6 @@ public class TestCloseContainerHandlingByClient {
             ReplicationFactor.THREE;
     return objectStore.getVolume(volumeName).getBucket(bucketName)
         .createKey(keyName, size, type, factor);
-  }
-
-  private List<OmKeyLocationInfo> getLocationInfos(
-      ChunkGroupOutputStream groupOutputStream, String keyName)
-      throws IOException {
-    long clientId = groupOutputStream.getOpenID();
-    OMMetadataManager metadataManager =
-        cluster.getOzoneManager().getMetadataManager();
-    byte[] openKey = metadataManager
-        .getOpenKeyBytes(volumeName, bucketName, keyName, clientId);
-    byte[] openKeyData = metadataManager.getOpenKeyTable().get(openKey);
-    OmKeyInfo keyInfo = OmKeyInfo.getFromProtobuf(
-        OzoneManagerProtocolProtos.KeyInfo.parseFrom(openKeyData));
-    return keyInfo.getKeyLocationVersions().get(0).getBlocksLatestVersionOnly();
   }
 
   private void validateData(String keyName, byte[] data) throws Exception {
@@ -427,7 +449,7 @@ public class TestCloseContainerHandlingByClient {
     String dataString = fixedLengthString(keyString, (3 * chunkSize));
     key.write(dataString.getBytes());
     List<OmKeyLocationInfo> locationInfos =
-        getLocationInfos(groupOutputStream, keyName);
+        groupOutputStream.getLocationInfoList();
     long containerID = locationInfos.get(0).getContainerID();
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getScmContainerManager()

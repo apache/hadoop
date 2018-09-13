@@ -18,61 +18,53 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import org.apache.commons.cli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Executes update volume calls.
  */
+@Command(name = "update",
+    description = "Updates parameter of the volumes")
 public class UpdateVolumeHandler extends Handler {
+
+  @Parameters(arity = "1..1", description = Shell.OZONE_VOLUME_URI_DESCRIPTION)
+  private String uri;
+
+  @Option(names = {"--user"},
+      description = "Owner of the volume to set")
   private String ownerName;
-  private String volumeName;
+
+  @Option(names = {"--quota"},
+      description = "Quota of the volume to set"
+          + "(eg. 1G)")
   private String quota;
 
   /**
-   * Executes update volume calls.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
+   * Executes the Client Calls.
    */
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.UPDATE_VOLUME)) {
-      throw new OzoneClientException(
-          "Incorrect call : updateVolume is missing");
-    }
+  public Void call() throws Exception {
 
-    String ozoneURIString = cmd.getOptionValue(Shell.UPDATE_VOLUME);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     if (ozoneURI.getPath().isEmpty()) {
       throw new OzoneClientException(
           "Volume name is required to update a volume");
     }
 
     // we need to skip the slash in the URI path
-    volumeName = ozoneURI.getPath().substring(1);
-
-    if (cmd.hasOption(Shell.QUOTA)) {
-      quota = cmd.getOptionValue(Shell.QUOTA);
-    }
-
-    if (cmd.hasOption(Shell.USER)) {
-      ownerName = cmd.getOptionValue(Shell.USER);
-    }
+    String volumeName = ozoneURI.getPath().substring(1);
 
     OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
     if (quota != null && !quota.isEmpty()) {
@@ -85,5 +77,6 @@ public class UpdateVolumeHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(volume))));
+    return null;
   }
 }

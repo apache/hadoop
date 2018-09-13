@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -46,7 +46,8 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     implements VolumeChoosingPolicy<V>, Configurable {
   
-  private static final Log LOG = LogFactory.getLog(AvailableSpaceVolumeChoosingPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AvailableSpaceVolumeChoosingPolicy.class);
 
   private Object[] syncLocks;
   

@@ -30,8 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -63,7 +63,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,7 +75,8 @@ import com.google.common.collect.Lists;
  * Tests that exercise safemode in an HA cluster.
  */
 public class TestHASafeMode {
-  private static final Log LOG = LogFactory.getLog(TestHASafeMode.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHASafeMode.class);
   private static final int BLOCK_SIZE = 1024;
   private NameNode nn0;
   private NameNode nn1;
@@ -83,8 +84,8 @@ public class TestHASafeMode {
   private MiniDFSCluster cluster;
   
   static {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
-    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.TRACE);
   }
   
   @Before

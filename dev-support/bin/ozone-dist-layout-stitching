@@ -127,8 +127,6 @@ run cp -p "${ROOT}/README.txt" .
 # Copy hadoop-common first so that it have always have all dependencies.
 # Remaining projects will copy only libraries which are not present already in 'share' directory.
 run copy "${ROOT}/hadoop-common-project/hadoop-common/target/hadoop-common-${VERSION}" .
-run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${VERSION}" .
-run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-${VERSION}" .
 
 
 # HDDS
@@ -151,11 +149,15 @@ cp "${ROOT}/hadoop-ozone/ozonefs/target/hadoop-ozone-filesystem-${HDDS_VERSION}.
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ozoneManager/
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
 
+rm sbin/*all.sh
+rm sbin/*all.cmd
+
 #Copy docker compose files
 run cp -p -r "${ROOT}/hadoop-dist/src/main/compose" .
 
 mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn
+mkdir -p ./share/hadoop/hdfs
 echo
 echo "Hadoop Ozone dist layout available at: ${BASEDIR}/ozone"
 echo

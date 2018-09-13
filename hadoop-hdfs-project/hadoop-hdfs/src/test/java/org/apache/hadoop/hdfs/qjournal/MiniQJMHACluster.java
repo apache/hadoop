@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -38,7 +38,8 @@ public class MiniQJMHACluster {
   private MiniDFSCluster cluster;
   private MiniJournalCluster journalCluster;
   private final Configuration conf;
-  private static final Log LOG = LogFactory.getLog(MiniQJMHACluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniQJMHACluster.class);
 
   public static final String NAMESERVICE = "ns1";
   private static final Random RANDOM = new Random();

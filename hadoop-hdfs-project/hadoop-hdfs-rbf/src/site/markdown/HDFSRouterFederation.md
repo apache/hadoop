@@ -62,7 +62,7 @@ Each Router has two roles:
 #### Federated interface
 The Router receives a client request, checks the State Store for the correct subcluster, and forwards the request to the active NameNode of that subcluster.
 The reply from the NameNode then flows in the opposite direction.
-The Routers are stateless and can be behind a load balancer.
+The Routers are stateless and can be behind a load balancer. For health checking, you can use /isActive endpoint as a health probe (e.g. http://ROUTER_HOSTNAME:ROUTER_PORT/isActive).
 For performance, the Router also caches remote mount table entries and the state of the subclusters.
 To make sure that changes have been propagated to all Routers, each Router heartbeats its state to the State Store.
 
@@ -214,6 +214,7 @@ Mount table permission can be set by following command:
 
 The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
+#### Quotas
 Router-based federation supports global quota at mount table level. Mount table entries may spread multiple subclusters and the global quota will be
 accounted across these subclusters.
 
@@ -228,6 +229,31 @@ Ls command will show below information for each mount table entry:
 
     Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
     /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
+
+#### Multiple subclusters
+A mount point also supports mapping multiple subclusters.
+For example, to create a mount point that stores files in subclusters `ns1` and `ns2`.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data ns1,ns2 /data -order SPACE
+
+When listing `/data`, it will show all the folders and files in both subclusters.
+For deciding where to create a new file/folder it uses the order parameter, it currently supports the following methods:
+
+* HASH: Follow consistent hashing in the first level. Deeper levels will be in the one of the parent.
+* LOCAL: Try to write data in the local subcluster.
+* RANDOM: Random subcluster. This is usually useful for balancing the load across. Folders are created in all subclusters.
+* HASH_ALL: Follow consistent hashing at all the levels. This approach tries to balance the reads and writes evenly across subclusters. Folders are created in all subclusters.
+* SPACE: Try to write data in the subcluster with the most available space. Folders are created in all subclusters.
+
+For the hash-based approaches, the difference is that HASH would make all the files/folders within a folder belong to the same subcluster while HASH_ALL will spread all files under a mount point.
+For example, assuming we have a HASH mount point for `/data/hash`, files and folders under `/data/hash/folder0` will all be in the same subcluster.
+On the other hand, a HASH_ALL mount point for `/data/hash_all`, will spread files under `/data/hash_all/folder0` across all the subclusters for that mount point (subfolders will be created to all subclusters).
+
+RANDOM can be used for reading and writing data from/into different subclusters.
+The common use for this approach is to have the same data in multiple subclusters and balance the reads across subclusters.
+For example, if thousands of containers need to read the same data (e.g., a library), one can use RANDOM to read the data from any of the subclusters.
+
+Note that consistency of the data across subclusters is not guaranteed by the Router.
 
 ### Disabling nameservices
 

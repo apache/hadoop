@@ -37,8 +37,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -83,7 +83,8 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSImage implements Closeable {
-  public static final Log LOG = LogFactory.getLog(FSImage.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSImage.class.getName());
 
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
@@ -1136,7 +1137,7 @@ public class FSImage implements Closeable {
     getStorage().updateNameDirSize();
 
     if (exitAfterSave.get()) {
-      LOG.fatal("NameNode process will exit now... The saved FsImage " +
+      LOG.error("NameNode process will exit now... The saved FsImage " +
           nnf + " is potentially corrupted.");
       ExitUtil.terminate(-1);
     }
