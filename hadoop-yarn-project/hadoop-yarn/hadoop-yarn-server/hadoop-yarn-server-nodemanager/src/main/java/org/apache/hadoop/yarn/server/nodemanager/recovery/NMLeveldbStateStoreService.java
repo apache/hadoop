@@ -67,6 +67,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.AbstractMap;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -153,6 +154,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
+
+  /**
+   * The Local Tracker State DB key locations - "completed" and "started".
+   * To seek through app tracker states in RecoveredUserResources
+   * we need to move from one app tracker state to another using key "zzz".
+   * zzz comes later in lexicographical order than started.
+   * Similarly to move one user to another in RLS,we can use "zzz",
+   * as RecoveredUserResources uses two keys appcache and filecache.
+   */
+  private static final String BEYOND_ENTRIES_SUFFIX = "zzz/";
 
   private static final String CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX =
       "/assignedResources_";
@@ -862,112 +873,154 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   public RecoveredLocalizationState loadLocalizationState()
       throws IOException {
     RecoveredLocalizationState state = new RecoveredLocalizationState();
-    LeveldbIterator it = getLevelDBIterator(LOCALIZATION_PUBLIC_KEY_PREFIX);
-    state.publicTrackerState = loadResourceTrackerState(it,
+    state.publicTrackerState = loadResourceTrackerState(
         LOCALIZATION_PUBLIC_KEY_PREFIX);
     state.it = new UserResourcesIterator();
     return state;
   }
 
-  private LocalResourceTrackerState loadResourceTrackerState(
-      LeveldbIterator iter, String keyPrefix) throws IOException {
+  private LocalResourceTrackerState loadResourceTrackerState(String keyPrefix)
+      throws IOException {
     final String completedPrefix = keyPrefix + LOCALIZATION_COMPLETED_SUFFIX;
     final String startedPrefix = keyPrefix + LOCALIZATION_STARTED_SUFFIX;
-    LocalResourceTrackerState state = new LocalResourceTrackerState();
-    while (iter.hasNext()) {
-      Entry<byte[], byte[]> entry = iter.peekNext();
-      String key = asString(entry.getKey());
-      if (!key.startsWith(keyPrefix)) {
-        break;
-      }
 
-      if (key.startsWith(completedPrefix)) {
-        state.localizedResources = loadCompletedResources(iter,
-            completedPrefix);
-      } else if (key.startsWith(startedPrefix)) {
-        state.inProgressResources = loadStartedResources(iter, startedPrefix);
-      } else {
-        throw new IOException("Unexpected key in resource tracker state: "
-            + key);
-      }
-    }
+    RecoveryIterator<LocalizedResourceProto> crIt =
+        new CompletedResourcesIterator(completedPrefix);
+    RecoveryIterator<Entry<LocalResourceProto, Path>> srIt =
+        new StartedResourcesIterator(startedPrefix);
 
-    return state;
+    return new LocalResourceTrackerState(crIt, srIt);
   }
 
-  private List<LocalizedResourceProto> loadCompletedResources(
+  private class CompletedResourcesIterator extends
+      BaseRecoveryIterator<LocalizedResourceProto> {
+    private String startKey;
+    CompletedResourcesIterator(String startKey) throws IOException {
+      super(startKey);
+      this.startKey = startKey;
+    }
+
+    @Override
+    protected LocalizedResourceProto getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextCompletedResource(it, startKey);
+    }
+  }
+
+  private LocalizedResourceProto getNextCompletedResource(
       LeveldbIterator iter, String keyPrefix) throws IOException {
-    List<LocalizedResourceProto> rsrcs =
-        new ArrayList<LocalizedResourceProto>();
-    while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+    LocalizedResourceProto nextCompletedResource = null;
+    if (iter.hasNext()){
+      Entry<byte[], byte[]> entry = iter.next();
       String key = asString(entry.getKey());
       if (!key.startsWith(keyPrefix)) {
-        break;
+        return null;
       }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Loading completed resource from " + key);
       }
-      rsrcs.add(LocalizedResourceProto.parseFrom(entry.getValue()));
-      iter.next();
+      nextCompletedResource = LocalizedResourceProto.parseFrom(
+          entry.getValue());
     }
-
-    return rsrcs;
+    return nextCompletedResource;
   }
 
-  private Map<LocalResourceProto, Path> loadStartedResources(
+  private class StartedResourcesIterator extends
+      BaseRecoveryIterator<Entry<LocalResourceProto, Path>> {
+    private String startKey;
+    StartedResourcesIterator(String startKey) throws IOException {
+      super(startKey);
+      this.startKey = startKey;
+    }
+
+    @Override
+    protected Entry<LocalResourceProto, Path> getNextItem(LeveldbIterator it)
+        throws IOException {
+      return getNextStartedResource(it, startKey);
+    }
+  }
+
+  private Entry<LocalResourceProto, Path> getNextStartedResource(
       LeveldbIterator iter, String keyPrefix) throws IOException {
-    Map<LocalResourceProto, Path> rsrcs =
-        new HashMap<LocalResourceProto, Path>();
-    while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+    Entry<LocalResourceProto, Path> nextStartedResource = null;
+    if (iter.hasNext()){
+      Entry<byte[], byte[]> entry = iter.next();
       String key = asString(entry.getKey());
       if (!key.startsWith(keyPrefix)) {
-        break;
+        return null;
       }
 
       Path localPath = new Path(key.substring(keyPrefix.length()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Loading in-progress resource at " + localPath);
       }
-      rsrcs.put(LocalResourceProto.parseFrom(entry.getValue()), localPath);
-      iter.next();
+      nextStartedResource = new SimpleEntry<LocalResourceProto, Path>(
+          LocalResourceProto.parseFrom(entry.getValue()), localPath);
     }
+    return nextStartedResource;
+  }
 
-    return rsrcs;
+  private void seekPastPrefix(LeveldbIterator iter, String keyPrefix)
+      throws IOException {
+    try{
+      iter.seek(bytes(keyPrefix + BEYOND_ENTRIES_SUFFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (key.startsWith(keyPrefix)) {
+          iter.next();
+        } else {
+          break;
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
   }
 
   private RecoveredUserResources loadUserLocalizedResources(
       LeveldbIterator iter, String keyPrefix) throws IOException {
     RecoveredUserResources userResources = new RecoveredUserResources();
+
+    // seek through App cache
+    String appCachePrefix = keyPrefix + LOCALIZATION_APPCACHE_SUFFIX;
+    iter.seek(bytes(appCachePrefix));
     while (iter.hasNext()) {
-      Entry<byte[],byte[]> entry = iter.peekNext();
+      Entry<byte[], byte[]> entry = iter.peekNext();
       String key = asString(entry.getKey());
-      if (!key.startsWith(keyPrefix)) {
+
+      if (!key.startsWith(appCachePrefix)) {
         break;
       }
 
-      if (key.startsWith(LOCALIZATION_FILECACHE_SUFFIX, keyPrefix.length())) {
-        userResources.privateTrackerState = loadResourceTrackerState(iter,
-            keyPrefix + LOCALIZATION_FILECACHE_SUFFIX);
-      } else if (key.startsWith(LOCALIZATION_APPCACHE_SUFFIX,
-          keyPrefix.length())) {
-        int appIdStartPos = keyPrefix.length() +
-            LOCALIZATION_APPCACHE_SUFFIX.length();
-        int appIdEndPos = key.indexOf('/', appIdStartPos);
-        if (appIdEndPos < 0) {
-          throw new IOException("Unable to determine appID in resource key: "
-              + key);
-        }
-        ApplicationId appId = ApplicationId.fromString(
-            key.substring(appIdStartPos, appIdEndPos));
-        userResources.appTrackerStates.put(appId,
-            loadResourceTrackerState(iter, key.substring(0, appIdEndPos+1)));
-      } else {
-        throw new IOException("Unexpected user resource key " + key);
+      int appIdStartPos = appCachePrefix.length();
+      int appIdEndPos = key.indexOf('/', appIdStartPos);
+      if (appIdEndPos < 0) {
+        throw new IOException("Unable to determine appID in resource key: "
+            + key);
       }
+      ApplicationId appId = ApplicationId.fromString(
+          key.substring(appIdStartPos, appIdEndPos));
+      String trackerStateKey = key.substring(0, appIdEndPos+1);
+      userResources.appTrackerStates.put(appId,
+          loadResourceTrackerState(trackerStateKey));
+      // Seek to next application
+      seekPastPrefix(iter, trackerStateKey);
     }
+
+    // File Cache
+    String fileCachePrefix = keyPrefix + LOCALIZATION_FILECACHE_SUFFIX;
+    iter.seek(bytes(fileCachePrefix));
+    Entry<byte[], byte[]> entry = iter.peekNext();
+    String key = asString(entry.getKey());
+    if (key.startsWith(fileCachePrefix)) {
+      userResources.privateTrackerState =
+          loadResourceTrackerState(fileCachePrefix);
+    }
+
+    // seek to Next User.
+    seekPastPrefix(iter, keyPrefix);
     return userResources;
   }
 
