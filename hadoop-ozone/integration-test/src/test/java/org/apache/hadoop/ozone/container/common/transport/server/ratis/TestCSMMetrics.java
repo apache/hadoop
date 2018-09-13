@@ -46,12 +46,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
-import org.apache.ratis.RatisHelper;
-import org.apache.ratis.rpc.RpcType;
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.protocol.RaftPeer;
-import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.util.CheckedBiConsumer;
 
 import java.util.function.BiConsumer;
@@ -77,7 +72,7 @@ public class TestCSMMetrics {
         (pipeline, conf) -> RatisTestHelper.initRatisConf(GRPC, conf),
         XceiverClientRatis::newXceiverClientRatis,
         TestCSMMetrics::newXceiverServerRatis,
-        (dn, p) -> initXceiverServerRatis(GRPC, dn, p));
+        (dn, p) -> RatisTestHelper.initXceiverServerRatis(GRPC, dn, p));
   }
 
   static void runContainerStateMachineMetrics(
@@ -158,15 +153,6 @@ public class TestCSMMetrics {
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
         null);
-  }
-
-  static void initXceiverServerRatis(
-      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
-    final RaftPeer p = RatisHelper.toRaftPeer(dd);
-    final RaftClient client = RatisHelper.newRaftClient(rpc, p);
-    RaftGroupId groupId = pipeline.getId().getRaftGroupID();
-    client.reinitialize(RatisHelper.newRaftGroup(groupId,
-        pipeline.getMachines()), p.getId());
   }
 
   private static class TestContainerDispatcher implements ContainerDispatcher {

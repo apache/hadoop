@@ -80,6 +80,12 @@ public final class ScmConfigKeys {
   public static final TimeDuration
       DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT =
       TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
+  public static final String
+      DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY =
+      "dfs.ratis.leader.election.minimum.timeout.duration";
+  public static final TimeDuration
+      DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
+      TimeDuration.valueOf(1, TimeUnit.SECONDS);
 
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       "dfs.ratis.server.failure.duration";
