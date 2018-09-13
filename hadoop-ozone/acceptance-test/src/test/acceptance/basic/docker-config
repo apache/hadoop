@@ -30,4 +30,5 @@ LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
-LOG4J.PROPERTIES_log4j.category.org.apache.hadoop.util.NativeCodeLoader=ERROR
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
+LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
