@@ -19,12 +19,10 @@ package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
 import java.util.ArrayList;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "taskAttempts")
-@XmlAccessorType(XmlAccessType.FIELD)
 public class TaskAttemptsInfo {
 
   protected ArrayList<TaskAttemptInfo> taskAttempt = new ArrayList<TaskAttemptInfo>();
@@ -36,6 +34,10 @@ public class TaskAttemptsInfo {
     taskAttempt.add(taskattemptInfo);
   }
 
+  // XmlElementRef annotation should be used to identify the exact type of a list element
+  // otherwise metadata will be added to XML attributes,
+  // it can lead to incorrect JSON marshaling
+  @XmlElementRef
   public ArrayList<TaskAttemptInfo> getTaskAttempts() {
     return taskAttempt;
   }
