@@ -707,6 +707,7 @@ public abstract class Server {
     private int priorityLevel;
     // the priority level assigned by scheduler, 0 by default
     private long clientStateId;
+    private boolean isCallCoordinated;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -738,6 +739,7 @@ public abstract class Server {
       this.traceScope = traceScope;
       this.callerContext = callerContext;
       this.clientStateId = Long.MIN_VALUE;
+      this.isCallCoordinated = false;
     }
 
     @Override
@@ -821,6 +823,14 @@ public abstract class Server {
 
     public void setClientStateId(long stateId) {
       this.clientStateId = stateId;
+    }
+
+    public void markCallCoordinated(boolean flag) {
+      this.isCallCoordinated = flag;
+    }
+
+    public boolean isCallCoordinated() {
+      return this.isCallCoordinated;
     }
 
     @InterfaceStability.Unstable
@@ -2527,9 +2537,31 @@ public abstract class Server {
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
-      if(alignmentContext != null) {
-        long stateId = alignmentContext.receiveRequestState(header);
-        call.setClientStateId(stateId);
+      if(alignmentContext != null && call.rpcRequest != null &&
+          (call.rpcRequest instanceof ProtobufRpcEngine.RpcProtobufRequest)) {
+        // if call.rpcRequest is not RpcProtobufRequest, will skip the following
+        // step and treat the call as uncoordinated. As currently only certain
+        // ClientProtocol methods request made through RPC protobuf needs to be
+        // coordinated.
+        String methodName;
+        String protoName;
+        try {
+          ProtobufRpcEngine.RpcProtobufRequest req =
+              (ProtobufRpcEngine.RpcProtobufRequest) call.rpcRequest;
+          methodName = req.getRequestHeader().getMethodName();
+          protoName = req.getRequestHeader().getDeclaringClassProtocolName();
+        } catch (IOException ioe) {
+          throw new RpcServerException("Rpc request header check fail", ioe);
+        }
+        if (!alignmentContext.isCoordinatedCall(protoName, methodName)) {
+          call.markCallCoordinated(false);
+        } else {
+          call.markCallCoordinated(true);
+          long stateId = alignmentContext.receiveRequestState(header);
+          call.setClientStateId(stateId);
+        }
+      } else {
+        call.markCallCoordinated(false);
       }
 
       try {
@@ -2712,8 +2744,8 @@ public abstract class Server {
         TraceScope traceScope = null;
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
-          if (alignmentContext != null && call.getClientStateId() >
-              alignmentContext.getLastSeenStateId()) {
+          if (alignmentContext != null && call.isCallCoordinated() &&
+              call.getClientStateId() > alignmentContext.getLastSeenStateId()) {
             /*
              * The call processing should be postponed until the client call's
              * state id is aligned (>=) with the server state id.
