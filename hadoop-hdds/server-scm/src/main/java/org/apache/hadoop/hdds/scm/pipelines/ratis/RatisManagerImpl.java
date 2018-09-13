@@ -110,14 +110,14 @@ public class RatisManagerImpl extends PipelineManager {
    * Close the pipeline.
    */
   public void closePipeline(Pipeline pipeline) throws IOException {
+    try (XceiverClientRatis client =
+        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
+      client.destroyPipeline();
+    }
     super.closePipeline(pipeline);
     for (DatanodeDetails node : pipeline.getMachines()) {
       // A node should always be the in ratis members list.
       Preconditions.checkArgument(ratisMembers.remove(node));
-    }
-    try (XceiverClientRatis client =
-        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.destroyPipeline();
     }
   }
 

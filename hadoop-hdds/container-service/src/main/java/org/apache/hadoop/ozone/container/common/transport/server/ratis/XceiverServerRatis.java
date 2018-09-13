@@ -397,6 +397,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .setAction(PipelineAction.Action.CLOSE)
         .build();
     context.addPipelineActionIfAbsent(action);
+    LOG.debug(
+        "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
+            + ".Reason : " + action.getClosePipeline().getDetailedReason());
   }
 
   void handleNodeSlowness(

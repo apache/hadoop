@@ -50,6 +50,8 @@ public class PipelineActionEventHandler implements
       case CLOSE:
         PipelineID pipelineID = PipelineID.
             getFromProtobuf(action.getClosePipeline().getPipelineID());
+        LOG.info("Closing pipeline " + pipelineID + " for reason:" + action
+            .getClosePipeline().getDetailedReason());
         publisher.fireEvent(SCMEvents.PIPELINE_CLOSE, pipelineID);
         break;
       default:

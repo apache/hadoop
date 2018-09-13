@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
@@ -32,6 +34,7 @@ import java.util.Set;
  * Handles Stale node event.
  */
 public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
+  static final Logger LOG = LoggerFactory.getLogger(StaleNodeHandler.class);
 
   private final Node2ContainerMap node2ContainerMap;
   private final Mapping containerManager;
@@ -48,6 +51,7 @@ public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
     Set<PipelineID> pipelineIDs =
         containerManager.getPipelineOnDatanode(datanodeDetails);
     for (PipelineID id : pipelineIDs) {
+      LOG.info("closing pipeline {}.", id);
       publisher.fireEvent(SCMEvents.PIPELINE_CLOSE, id);
     }
   }
