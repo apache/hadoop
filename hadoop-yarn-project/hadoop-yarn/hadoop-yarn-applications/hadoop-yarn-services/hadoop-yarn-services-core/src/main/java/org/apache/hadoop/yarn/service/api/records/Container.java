@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "An instance of a running service container")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Container extends BaseResource {
