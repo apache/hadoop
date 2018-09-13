@@ -742,6 +742,54 @@ sequential one afterwards. The IO heavy ones must also be subclasses of
 
 This is invaluable for debugging test failures.
 
+### Keeping AWS Costs down
+
+Most of the base S3 tests are designed to use public AWS data
+(the landsat-pds bucket) for read IO, so you don't have to pay for bytes
+downloaded or long term storage costs. The scale tests do work with more data
+so will cost more as well as generally take more time to execute.
+
+You are however billed for
+
+1. Data left in S3 after test runs.
+2. DynamoDB capacity reserved by S3Guard tables.
+3. HTTP operations on files (HEAD, LIST, GET).
+4. In-progress multipart uploads from bulk IO or S3A committer tests.
+5. Encryption/decryption using AWS KMS keys.
+
+The GET/decrypt costs are incurred on each partial read of a file,
+so random IO can cost more than sequential IO; the speedup of queries with
+columnar data usually justifies this.
+
+The DynamoDB costs come from the number of entries stores and the allocated capacity.
+
+How to keep costs down
+
+* Don't run the scale tests with large datasets; keep `fs.s3a.scale.test.huge.filesize` unset, or a few MB (minimum: 5).
+* Remove all files in the filesystem. The root tests usually do this, but
+it can be manually done:
+
+      hadoop fs -rm -r -f -skipTrash s3a://test-bucket/\*
+* Abort all outstanding uploads:
+
+      hadoop s3guard uploads -abort -force s3a://test-bucket/
+* If you don't need it, destroy the S3Guard DDB table.
+
+      hadoop s3guard destroy s3a://hwdev-steve-ireland-new/
+
+The S3Guard tests will automatically create the Dynamo DB table in runs with
+`-Ds3guard -Ddynamodb` set; default capacity of these buckets
+tests is very small; it keeps costs down at the expense of IO performance
+and, for test runs in or near the S3/DDB stores, throttling events.
+
+If you want to manage capacity, use `s3guard set-capacity` to increase it
+(performance) or decrease it (costs).
+For remote `hadoop-aws` test runs, the read/write capacities of "10" each should suffice;
+increase it if parallel test run logs warn of throttling.
+
+Tip: for agility, use DynamoDB autoscaling, setting the minimum to something very low (e.g 5 units), the maximum to the largest amount you are willing to pay.
+This will automatically reduce capacity when you are not running tests against
+the bucket, slowly increase it over multiple test runs, if the load justifies it.
 
 ## <a name="tips"></a> Tips
 
@@ -985,9 +1033,13 @@ are included in the scale tests executed when `-Dscale` is passed to
 the maven command line.
 
 The two S3Guard scale tests are `ITestDynamoDBMetadataStoreScale` and
-`ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
-define your table name and region in your test configuration.  For example,
-the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
+`ITestLocalMetadataStoreScale`.
+
+To run these tests, your DynamoDB table needs to be of limited capacity;
+the values in `ITestDynamoDBMetadataStoreScale` currently require a read capacity
+of 10 or less. a write capacity of 15 or more.
+
+The following settings allow us to run `ITestDynamoDBMetadataStoreScale` with
 artificially low read and write capacity provisioned, so we can judge the
 effects of being throttled by the DynamoDB service:
 
@@ -1009,22 +1061,47 @@ effects of being throttled by the DynamoDB service:
   <value>my-scale-test</value>
 </property>
 <property>
-  <name>fs.s3a.s3guard.ddb.region</name>
-  <value>us-west-2</value>
-</property>
-<property>
   <name>fs.s3a.s3guard.ddb.table.create</name>
   <value>true</value>
 </property>
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>10</value>
+  <value>5</value>
 </property>
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>10</value>
+  <value>5</value>
 </property>
 ```
+
+These tests verify that the invoked operations can trigger retries in the
+S3Guard code, rather than just in the AWS SDK level, so showing that if
+SDK operations fail, they get retried. They also verify that the filesystem
+statistics are updated to record that throttling took place.
+
+*Do not panic if these tests fail to detect throttling!*
+
+These tests are unreliable as they need certain conditions to be met
+to repeatedly fail:
+
+1. You must have a low-enough latency connection to the DynamoDB store that,
+for the capacity allocated, you can overload it.
+1. The AWS Console can give you a view of what is happening here.
+1. Running a single test on its own is less likely to trigger an overload
+than trying to run the whole test suite.
+1. And running the test suite more than once, back-to-back, can also help
+overload the cluster.
+1. Stepping through with a debugger will reduce load, so may not trigger
+failures.
+
+If the tests fail, it *probably* just means you aren't putting enough load
+on the table.
+
+These tests do not verify that the entire set of DynamoDB calls made
+during the use of a S3Guarded S3A filesystem are wrapped by retry logic.
+
+*The best way to verify resilience is to run the entire `hadoop-aws` test suite,
+or even a real application, with throttling enabled.
 
 ### Testing only: Local Metadata Store
 

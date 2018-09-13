@@ -184,6 +184,8 @@
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
+                    <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
+                    <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -216,6 +218,8 @@
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
+                    <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
+                    <include>**/ITestDynamoDBMetadataStoreScale.java</include>
                   </includes>
                 </configuration>
               </execution>

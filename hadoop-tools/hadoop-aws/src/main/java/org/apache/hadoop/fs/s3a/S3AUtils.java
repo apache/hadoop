@@ -27,6 +27,7 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
@@ -358,8 +359,10 @@ public final class S3AUtils {
   /**
    * Is the exception an instance of a throttling exception. That
    * is an AmazonServiceException with a 503 response, any
-   * exception from DynamoDB for limits exceeded, or an
-   * {@link AWSServiceThrottledException}.
+   * exception from DynamoDB for limits exceeded, an
+   * {@link AWSServiceThrottledException},
+   * or anything which the AWS SDK's RetryUtils considers to be
+   * a throttling exception.
    * @param ex exception to examine
    * @return true if it is considered a throttling exception
    */
@@ -368,7 +371,9 @@ public final class S3AUtils {
         || ex instanceof ProvisionedThroughputExceededException
         || ex instanceof LimitExceededException
         || (ex instanceof AmazonServiceException
-            && 503  == ((AmazonServiceException)ex).getStatusCode());
+            && 503  == ((AmazonServiceException)ex).getStatusCode())
+        || (ex instanceof SdkBaseException
+            && RetryUtils.isThrottlingException((SdkBaseException) ex));
   }
 
   /**
