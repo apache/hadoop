@@ -42,6 +42,12 @@ public class ClientGSIContext implements AlignmentContext {
     return lastSeenStateId.get();
   }
 
+  @Override
+  public boolean isCoordinatedCall(String protocolName, String method) {
+    throw new UnsupportedOperationException(
+        "Client should not be checking uncoordinated call");
+  }
+
   /**
    * Client side implementation only receives state alignment info.
    * It does not provide state alignment info therefore this does nothing.

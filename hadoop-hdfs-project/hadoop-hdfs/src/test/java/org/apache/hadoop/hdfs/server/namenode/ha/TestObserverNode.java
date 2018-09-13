@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
@@ -349,6 +350,57 @@ public class TestObserverNode {
     }, 100, 10000);
     // the reader should have succeed.
     assertEquals(1, readStatus.get());
+  }
+
+  @Test
+  public void testUncoordinatedCall() throws Exception {
+    // disable fast tailing so that coordination takes time.
+    conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, false);
+    conf.setTimeDuration(DFS_HA_LOGROLL_PERIOD_KEY, 300, TimeUnit.SECONDS);
+    conf.setTimeDuration(
+        DFS_HA_TAILEDITS_PERIOD_KEY, 200, TimeUnit.SECONDS);
+    setUpCluster(1);
+    setObserverRead(true);
+
+    // make a write call so that client will be ahead of
+    // observer for now.
+    dfs.mkdir(testPath, FsPermission.getDefault());
+
+    // a status flag, initialized to 0, after reader finished, this will be
+    // updated to 1, -1 on error
+    AtomicInteger readStatus = new AtomicInteger(0);
+
+    // create a separate thread to make a blocking read.
+    Thread reader = new Thread(() -> {
+      try {
+        // this read call will block until server state catches up. But due to
+        // configuration, this will take a very long time.
+        dfs.getClient().getFileInfo("/");
+        readStatus.set(1);
+        fail("Should have been interrupted before getting here.");
+      } catch (IOException e) {
+        e.printStackTrace();
+        readStatus.set(-1);
+      }
+    });
+    reader.start();
+
+    long before = System.currentTimeMillis();
+    dfs.getClient().datanodeReport(HdfsConstants.DatanodeReportType.ALL);
+    long after = System.currentTimeMillis();
+
+    // should succeed immediately, because datanodeReport is marked an
+    // uncoordinated call, and will not be waiting for server to catch up.
+    assertTrue(after - before < 200);
+    // by this time, reader thread should still be blocking, so the status not
+    // updated
+    assertEquals(0, readStatus.get());
+    Thread.sleep(5000);
+    // reader thread status should still be unchanged after 5 sec...
+    assertEquals(0, readStatus.get());
+    // and the reader thread is not dead, so it must be still waiting
+    assertEquals(Thread.State.WAITING, reader.getState());
+    reader.interrupt();
   }
 
   private void setUpCluster(int numObservers) throws Exception {
