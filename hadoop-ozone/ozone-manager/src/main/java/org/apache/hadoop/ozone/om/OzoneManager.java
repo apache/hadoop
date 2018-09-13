@@ -305,6 +305,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       terminate(0);
       return null;
     default:
+      if (argv == null) {
+        argv = new String[]{};
+      }
       StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
       return new OzoneManager(conf);
     }
