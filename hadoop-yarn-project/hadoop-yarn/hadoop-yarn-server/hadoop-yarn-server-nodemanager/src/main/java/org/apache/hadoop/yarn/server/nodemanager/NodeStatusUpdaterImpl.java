@@ -310,8 +310,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         statusUpdater.join();
         registerWithRM();
         statusUpdater = new Thread(statusUpdaterRunnable, "Node Status Updater");
-        statusUpdater.start();
         this.isStopped = false;
+        statusUpdater.start();
         LOG.info("NodeStatusUpdater thread is reRegistered and restarted");
       } catch (Exception e) {
         String errorMessage = "Unexpected error rebooting NodeStatusUpdater";
