@@ -38,6 +38,7 @@ public interface AlignmentContext {
   /**
    * This is the intended server method call to implement to pass state info
    * during RPC response header construction.
+   *
    * @param header The RPC response header builder.
    */
   void updateResponseState(RpcResponseHeaderProto.Builder header);
@@ -45,6 +46,7 @@ public interface AlignmentContext {
   /**
    * This is the intended client method call to implement to recieve state info
    * during RPC response processing.
+   *
    * @param header The RPC response header.
    */
   void receiveResponseState(RpcResponseHeaderProto header);
@@ -52,6 +54,7 @@ public interface AlignmentContext {
   /**
    * This is the intended client method call to pull last seen state info
    * into RPC request processing.
+   *
    * @param header The RPC request header builder.
    */
   void updateRequestState(RpcRequestHeaderProto.Builder header);
@@ -59,6 +62,7 @@ public interface AlignmentContext {
   /**
    * This is the intended server method call to implement to receive
    * client state info during RPC response header processing.
+   *
    * @param header The RPC request header.
    * @return state id of in the request header.
    */
@@ -66,7 +70,19 @@ public interface AlignmentContext {
 
   /**
    * Returns the last seen state id of the alignment context instance.
+   *
    * @return the value of the last seen state id.
    */
   long getLastSeenStateId();
+
+  /**
+   * Return true if this method call does need to be synced, false
+   * otherwise. sync meaning server state needs to have caught up with
+   * client state.
+   *
+   * @param protocolName the name of the protocol
+   * @param method the method call to check
+   * @return true if this method is async, false otherwise.
+   */
+  boolean isCoordinatedCall(String protocolName, String method);
 }

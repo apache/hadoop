@@ -984,7 +984,7 @@ public class TestQuorumJournalManager {
     List<EditLogInputStream> streams = new ArrayList<>();
     qjm.selectInputStreams(streams, 1, true, true);
     verifyEdits(streams, 1, 5);
-    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    closeStreams(streams.toArray(new Closeable[0]));
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getJournaledEdits(1,
           QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
@@ -1000,7 +1000,7 @@ public class TestQuorumJournalManager {
     List<EditLogInputStream> streams = new ArrayList<>();
     qjm.selectInputStreams(streams, 1, true, false);
     verifyEdits(streams, 1, 5);
-    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    closeStreams(streams.toArray(new Closeable[0]));
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getJournaledEdits(1,
           QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
@@ -1018,7 +1018,7 @@ public class TestQuorumJournalManager {
     List<EditLogInputStream> streams = new ArrayList<>();
     qjm.selectInputStreams(streams, 1, true, false);
     verifyEdits(streams, 1, 10);
-    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    closeStreams(streams.toArray(new Closeable[0]));
   }
 
   @Test
@@ -1060,7 +1060,7 @@ public class TestQuorumJournalManager {
     // This should still succeed as the QJM should fall back to the streaming
     // mechanism for fetching edits
     verifyEdits(streams, 1, 11);
-    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    closeStreams(streams.toArray(new Closeable[0]));
 
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
@@ -1087,7 +1087,7 @@ public class TestQuorumJournalManager {
     // This should still succeed as the QJM should fall back to the streaming
     // mechanism for fetching edits
     verifyEdits(streams, 1, 10);
-    IOUtils.closeStreams(streams.toArray(new Closeable[0]));
+    closeStreams(streams.toArray(new Closeable[0]));
 
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
@@ -1146,6 +1146,15 @@ public class TestQuorumJournalManager {
     if (numFinalized < cluster.getQuorumSize()) {
       fail("Did not find a quorum of finalized logs starting at " +
           segmentTxId);
+    }
+  }
+
+  private void closeStreams(java.io.Closeable... closeables)
+      throws IOException {
+    for (java.io.Closeable c : closeables) {
+      if (c != null) {
+        c.close();
+      }
     }
   }
 }

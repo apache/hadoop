@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.lang.reflect.Method;
+import java.util.HashSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -34,12 +38,23 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 class GlobalStateIdContext implements AlignmentContext {
   private final FSNamesystem namesystem;
 
+  private final HashSet<String> coordinatedMethods;
+
   /**
    * Server side constructor.
    * @param namesystem server side state provider
    */
   GlobalStateIdContext(FSNamesystem namesystem) {
     this.namesystem = namesystem;
+    this.coordinatedMethods = new HashSet<>();
+    // For now, only ClientProtocol methods can be coordinated, so only checking
+    // against ClientProtocol.
+    for (Method method : ClientProtocol.class.getDeclaredMethods()) {
+      if (method.isAnnotationPresent(ReadOnly.class) &&
+          method.getAnnotationsByType(ReadOnly.class)[0].isCoordinated()) {
+        coordinatedMethods.add(method.getName());
+      }
+    }
   }
 
   /**
@@ -91,5 +106,11 @@ class GlobalStateIdContext implements AlignmentContext {
   @Override
   public long getLastSeenStateId() {
     return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+  }
+
+  @Override
+  public boolean isCoordinatedCall(String protocolName, String methodName) {
+    return protocolName.equals(ClientProtocol.class.getCanonicalName())
+        && coordinatedMethods.contains(methodName);
   }
 }
