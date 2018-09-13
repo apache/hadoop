@@ -280,7 +280,7 @@ public class StateContext {
             && pipelineActionIter.hasClosePipeline() && pipelineAction
             .hasClosePipeline()
             && pipelineActionIter.getClosePipeline().getPipelineID()
-            == pipelineAction.getClosePipeline().getPipelineID()) {
+            .equals(pipelineAction.getClosePipeline().getPipelineID())) {
           return;
         }
       }
