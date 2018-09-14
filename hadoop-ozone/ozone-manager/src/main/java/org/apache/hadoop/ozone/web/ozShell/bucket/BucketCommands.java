@@ -49,7 +49,8 @@ public class BucketCommands implements GenericParentCommand, Callable<Void> {
 
   @Override
   public Void call() throws Exception {
-    throw new MissingSubcommandException();
+    throw new MissingSubcommandException(
+        this.shell.getCmd().getSubcommands().get("bucket").getUsageMessage());
   }
 
   @Override
