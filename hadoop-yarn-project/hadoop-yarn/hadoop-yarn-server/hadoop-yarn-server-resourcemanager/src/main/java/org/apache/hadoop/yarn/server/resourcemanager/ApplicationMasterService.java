@@ -467,7 +467,8 @@ public class ApplicationMasterService extends AbstractService implements
         }
       }
       
-      Resource maximumCapacity = rScheduler.getMaximumResourceCapability();
+      Resource maximumCapacity =
+          rScheduler.getMaximumResourceCapability(app.getQueue());
               
       // sanity check
       try {

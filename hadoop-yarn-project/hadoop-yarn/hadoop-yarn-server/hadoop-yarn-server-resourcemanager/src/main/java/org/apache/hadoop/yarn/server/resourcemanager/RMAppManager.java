@@ -398,10 +398,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             .getNodeLabelExpression());
       }
 
+      String queue = submissionContext.getQueue();
       try {
         SchedulerUtils.normalizeAndValidateRequest(amReq,
-            scheduler.getMaximumResourceCapability(),
-            submissionContext.getQueue(), scheduler, isRecovery, rmContext);
+            scheduler.getMaximumResourceCapability(queue),
+            queue, scheduler, isRecovery, rmContext);
       } catch (InvalidResourceRequestException e) {
         LOG.warn("RM app submission failed in validating AM resource request"
             + " for application " + submissionContext.getApplicationId(), e);
