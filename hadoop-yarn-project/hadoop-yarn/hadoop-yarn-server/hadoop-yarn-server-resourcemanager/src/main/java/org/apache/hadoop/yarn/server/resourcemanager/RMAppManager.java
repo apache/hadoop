@@ -515,10 +515,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         }
 
         // Normalize all requests
+        String queue = submissionContext.getQueue();
         for (ResourceRequest amReq : amReqs) {
           SchedulerUtils.normalizeAndValidateRequest(amReq,
-              scheduler.getMaximumResourceCapability(),
-              submissionContext.getQueue(), scheduler, isRecovery, rmContext);
+              scheduler.getMaximumResourceCapability(queue),
+              queue, scheduler, isRecovery, rmContext);
 
           amReq.setCapability(
               scheduler.getNormalizedResource(amReq.getCapability()));
