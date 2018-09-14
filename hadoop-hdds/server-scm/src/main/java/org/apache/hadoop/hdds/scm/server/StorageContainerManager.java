@@ -361,8 +361,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         hParser.printGenericCommandUsage(System.err);
         System.exit(1);
       }
-      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-          LOG);
       StorageContainerManager scm = createSCM(hParser.getRemainingArgs(), conf);
       if (scm != null) {
         scm.start();
@@ -395,9 +393,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
     switch (startOpt) {
     case INIT:
+      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+          LOG);
       terminate(scmInit(conf) ? 0 : 1);
       return null;
     case GENCLUSTERID:
+      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+          LOG);
       System.out.println("Generating new cluster id:");
       System.out.println(StorageInfo.newClusterID());
       terminate(0);
@@ -407,6 +409,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       terminate(0);
       return null;
     default:
+      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+          LOG);
       return new StorageContainerManager(conf);
     }
   }
