@@ -1474,8 +1474,35 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
     ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
-    LOG.info("Returning " + containerStatus);
+    logContainerStatus("Returning ", containerStatus);
     return containerStatus;
+  }
+
+  private void logContainerStatus(String prefix, ContainerStatus status) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(prefix);
+    sb.append("ContainerStatus: [");
+    sb.append("ContainerId: ");
+    sb.append(status.getContainerId()).append(", ");
+    sb.append("ExecutionType: ");
+    sb.append(status.getExecutionType()).append(", ");
+    sb.append("State: ");
+    sb.append(status.getState()).append(", ");
+    sb.append("Capability: ");
+    sb.append(status.getCapability()).append(", ");
+    sb.append("Diagnostics: ");
+    sb.append(LOG.isDebugEnabled() ? status.getDiagnostics() : "...");
+    sb.append(", ");
+    sb.append("ExitStatus: ");
+    sb.append(status.getExitStatus()).append(", ");
+    sb.append("IP: ");
+    sb.append(status.getIPs()).append(", ");
+    sb.append("Host: ");
+    sb.append(status.getHost()).append(", ");
+    sb.append("ContainerSubState: ");
+    sb.append(status.getContainerSubState());
+    sb.append("]");
+    LOG.info(sb.toString());
   }
 
   @Private
