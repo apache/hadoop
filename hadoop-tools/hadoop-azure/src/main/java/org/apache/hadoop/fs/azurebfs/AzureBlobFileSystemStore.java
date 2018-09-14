@@ -41,7 +41,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.xml.bind.DatatypeConverter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -77,6 +76,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -865,7 +865,7 @@ public class AzureBlobFileSystemStore {
         throw new CharacterCodingException();
       }
 
-      String encodedPropertyValue = DatatypeConverter.printBase64Binary(encoder.encode(CharBuffer.wrap(value)).array());
+      String encodedPropertyValue = Base64.encode(encoder.encode(CharBuffer.wrap(value)).array());
       commaSeparatedProperties.append(key)
               .append(AbfsHttpConstants.EQUAL)
               .append(encodedPropertyValue);
@@ -903,7 +903,7 @@ public class AzureBlobFileSystemStore {
           throw new InvalidFileSystemPropertyException(xMsProperties);
         }
 
-        byte[] decodedValue = DatatypeConverter.parseBase64Binary(nameValue[1]);
+        byte[] decodedValue = Base64.decode(nameValue[1]);
 
         final String value;
         try {

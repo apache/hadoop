@@ -39,10 +39,9 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.codec.Charsets;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 /**
  * Represents the shared key credentials used to access an Azure Storage
@@ -52,8 +51,6 @@ public class SharedKeyCredentials {
   private static final int EXPECTED_BLOB_QUEUE_CANONICALIZED_STRING_LENGTH = 300;
   private static final Pattern CRLF = Pattern.compile("\r\n", Pattern.LITERAL);
   private static final String HMAC_SHA256 = "HmacSHA256";
-  private static final Base64 BASE_64 = new Base64();
-
   /**
    * Stores a reference to the RFC1123 date/time pattern.
    */
@@ -73,7 +70,7 @@ public class SharedKeyCredentials {
       throw new IllegalArgumentException("Invalid account key.");
     }
     this.accountName = accountName;
-    this.accountKey = BASE_64.decode(accountKey);
+    this.accountKey = Base64.decode(accountKey);
     initializeMac();
   }
 
@@ -100,7 +97,7 @@ public class SharedKeyCredentials {
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
     }
-    return new String(BASE_64.encode(hmac), Charsets.UTF_8);
+    return Base64.encode(hmac);
   }
 
   /**
