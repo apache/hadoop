@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -984,9 +985,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
               writeValidationFailureCount++;
               LOG.warn("Data validation error for key {}/{}/{}",
                   kv.bucket.getVolumeName(), kv.bucket, kv.key);
-              LOG.warn("Expected: {}, Actual: {}",
-                  DFSUtil.bytes2String(kv.value),
-                  DFSUtil.bytes2String(value));
+              LOG.warn("Expected checksum: {}, Actual checksum: {}",
+                  DigestUtils.md5Hex(kv.value),
+                  DigestUtils.md5Hex(value));
             }
           }
         } catch (IOException | InterruptedException ex) {
