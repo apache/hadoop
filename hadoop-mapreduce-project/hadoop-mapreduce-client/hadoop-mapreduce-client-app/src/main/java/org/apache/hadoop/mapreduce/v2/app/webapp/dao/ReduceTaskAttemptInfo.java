@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -27,7 +25,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.yarn.util.Times;
 
 @XmlRootElement(name = "taskAttempt")
-@XmlAccessorType(XmlAccessType.FIELD)
 public class ReduceTaskAttemptInfo extends TaskAttemptInfo {
 
   protected long shuffleFinishTime;
@@ -39,8 +36,12 @@ public class ReduceTaskAttemptInfo extends TaskAttemptInfo {
   public ReduceTaskAttemptInfo() {
   }
 
-  public ReduceTaskAttemptInfo(TaskAttempt ta, TaskType type) {
-    super(ta, type, false);
+  public ReduceTaskAttemptInfo(TaskAttempt ta) {
+    this(ta, false);
+  }
+
+  public ReduceTaskAttemptInfo(TaskAttempt ta, Boolean isRunning) {
+    super(ta, TaskType.REDUCE, isRunning);
 
     this.shuffleFinishTime = ta.getShuffleFinishTime();
     this.mergeFinishTime = ta.getSortFinishTime();
