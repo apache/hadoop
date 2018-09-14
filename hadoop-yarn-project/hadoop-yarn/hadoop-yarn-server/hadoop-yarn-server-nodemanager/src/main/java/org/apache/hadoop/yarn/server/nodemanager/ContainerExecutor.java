@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
@@ -88,7 +89,7 @@ public abstract class ContainerExecutor implements Configurable {
   /**
    * The relative path to which debug information will be written.
    *
-   * @see ContainerLaunch.ShellScriptBuilder#listDebugInformation
+   * @see ShellScriptBuilder#listDebugInformation
    */
   public static final String DIRECTORY_CONTENTS = "directory.info";
 

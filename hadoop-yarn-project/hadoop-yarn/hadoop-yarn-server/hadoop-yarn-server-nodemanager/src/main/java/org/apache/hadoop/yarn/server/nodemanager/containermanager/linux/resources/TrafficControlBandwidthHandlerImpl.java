@@ -241,7 +241,7 @@ public class TrafficControlBandwidthHandlerImpl
    * Cleanup operations once container is completed - deletes cgroup and
    * removes traffic shaping rule(s).
    * @param containerId of the container that was completed.
-   * @return
+   * @return null
    * @throws ResourceHandlerException
    */
   @Override
