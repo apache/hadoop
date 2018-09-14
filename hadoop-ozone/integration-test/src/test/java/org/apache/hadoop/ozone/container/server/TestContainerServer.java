@@ -22,6 +22,8 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
+import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
 import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -36,12 +38,11 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -70,43 +71,24 @@ public class TestContainerServer {
   static final String TEST_DIR
       = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
 
-  @Test
-  public void testPipeline() throws IOException {
-    EmbeddedChannel channel = null;
-    String containerName = OzoneUtils.getRequestID();
-    try {
-      channel = new EmbeddedChannel(new XceiverServerHandler(
-          new TestContainerDispatcher()));
-      ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(
-              ContainerTestHelper.getTestContainerID(),
-              ContainerTestHelper.createSingleNodePipeline());
-      channel.writeInbound(request);
-      Assert.assertTrue(channel.finish());
-
-      Object responseObject = channel.readOutbound();
-      Assert.assertTrue(responseObject instanceof
-          ContainerCommandResponseProto);
-      ContainerCommandResponseProto  response =
-          (ContainerCommandResponseProto) responseObject;
-      Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-    } finally {
-      if (channel != null) {
-        channel.close();
-      }
-    }
+  private GrpcReplicationService createReplicationService(
+      ContainerSet containerSet) {
+    return new GrpcReplicationService(
+        new OnDemandContainerReplicationSource(containerSet));
   }
 
   @Test
   public void testClientServer() throws Exception {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+    ContainerSet containerSet = new ContainerSet();
     runTestClientServer(1,
         (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
             pipeline.getLeader()
                 .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
-        XceiverClient::new,
-        (dn, conf) -> new XceiverServer(datanodeDetails, conf,
-            new TestContainerDispatcher()),
+        XceiverClientGrpc::new,
+        (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
+            new TestContainerDispatcher(),
+            createReplicationService(containerSet)),
         (dn, p) -> {});
   }
 
@@ -193,8 +175,8 @@ public class TestContainerServer {
 
   @Test
   public void testClientServerWithContainerDispatcher() throws Exception {
-    XceiverServer server = null;
-    XceiverClient client = null;
+    XceiverServerGrpc server = null;
+    XceiverClientGrpc client = null;
 
     try {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
@@ -203,12 +185,14 @@ public class TestContainerServer {
           pipeline.getLeader()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
+      ContainerSet containerSet = new ContainerSet();
       HddsDispatcher dispatcher = new HddsDispatcher(
           conf, mock(ContainerSet.class), mock(VolumeSet.class), null);
       dispatcher.init();
       DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-      server = new XceiverServer(datanodeDetails, conf, dispatcher);
-      client = new XceiverClient(pipeline, conf);
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
+          createReplicationService(containerSet));
+      client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();
       client.connect();

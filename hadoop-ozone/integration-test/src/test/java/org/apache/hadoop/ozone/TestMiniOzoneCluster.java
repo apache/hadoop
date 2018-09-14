@@ -28,7 +28,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachin
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
@@ -100,7 +100,7 @@ public class TestMiniOzoneCluster {
       pipeline.addMember(datanodeDetails);
 
       // Verify client is able to connect to the container
-      try (XceiverClient client = new XceiverClient(pipeline, conf)){
+      try (XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf)){
         client.connect();
         assertTrue(client.isConnected());
       }
