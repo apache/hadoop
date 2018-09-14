@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.diagnostics.ConfigurationValidator;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 /**
 * String Base64 configuration value Validator.
@@ -42,7 +42,7 @@ public class Base64StringConfigurationBasicValidator extends ConfigurationBasicV
       return result;
     }
 
-    if (!Base64.isBase64(configValue)) {
+    if (!Base64.validateIsBase64String(configValue)) {
       throw new InvalidConfigurationValueException(getConfigKey());
     }
     return configValue;

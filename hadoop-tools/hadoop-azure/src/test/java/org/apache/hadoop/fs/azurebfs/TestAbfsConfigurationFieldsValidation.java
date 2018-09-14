@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
@@ -42,7 +43,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_AZURE_BLOCK_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.AZURE_BLOCK_LOCATION_HOST_DEFAULT;
 
-import org.apache.commons.codec.binary.Base64;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -97,10 +97,9 @@ public class TestAbfsConfigurationFieldsValidation {
 
   public TestAbfsConfigurationFieldsValidation() throws Exception {
     super();
-    Base64 base64 = new Base64();
     this.accountName = "testaccount1.blob.core.windows.net";
-    this.encodedString = new String(base64.encode("base64Value".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
-    this.encodedAccountKey = new String(base64.encode("someAccountKey".getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+    this.encodedString = Base64.encode("base64Value".getBytes(Charsets.UTF_8));
+    this.encodedAccountKey = Base64.encode("someAccountKey".getBytes(Charsets.UTF_8));
     Configuration configuration = new Configuration();
     configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
     configuration.set(INT_KEY, "1234565");
