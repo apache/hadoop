@@ -68,7 +68,7 @@ public class TestDataValidate {
     randomKeyGenerator.setNumOfKeys(1);
     randomKeyGenerator.setType(ReplicationType.RATIS);
     randomKeyGenerator.setFactor(ReplicationFactor.THREE);
-    randomKeyGenerator.setKeySize(104857600);
+    randomKeyGenerator.setKeySize(20971520);
     randomKeyGenerator.setValidateWrites(true);
     randomKeyGenerator.call();
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
@@ -84,7 +84,7 @@ public class TestDataValidate {
     randomKeyGenerator.setNumOfVolumes(1);
     randomKeyGenerator.setNumOfBuckets(1);
     randomKeyGenerator.setNumOfKeys(1);
-    randomKeyGenerator.setKeySize(104857600);
+    randomKeyGenerator.setKeySize(20971520);
     randomKeyGenerator.setValidateWrites(true);
     randomKeyGenerator.call();
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
