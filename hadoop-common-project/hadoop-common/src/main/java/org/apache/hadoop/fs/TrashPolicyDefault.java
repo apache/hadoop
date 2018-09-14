@@ -249,7 +249,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       LOG.info("Namenode trash configuration: Deletion interval = "
           + (deletionInterval / MSECS_PER_MINUTE)
           + " minutes, Emptier interval = "
-          + (emptierInterval / MSECS_PER_MINUTE) + " minutes.");
+          + (this.emptierInterval / MSECS_PER_MINUTE) + " minutes.");
     }
 
     @Override
