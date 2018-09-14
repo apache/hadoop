@@ -366,6 +366,29 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Qualify a path to one which uses this FileSystem and, if relative,
+   * made absolute.
+   * @param path to qualify.
+   * @return this path if it contains a scheme and authority and is absolute, or
+   * a new path that includes a path and authority and is fully qualified
+   * @see Path#makeQualified(URI, Path)
+   * @throws IllegalArgumentException if the path has a schema/URI different
+   * from this FileSystem.
+   */
+  @Override
+  public Path makeQualified(Path path) {
+    // To support format: abfs://{dfs.nameservices}/file/path,
+    // path need to be first converted to URI, then get the raw path string,
+    // during which {dfs.nameservices} will be omitted.
+    if (path != null ) {
+      String uriPath = path.toUri().getPath();
+      path = uriPath.isEmpty() ? path : new Path(uriPath);
+    }
+    return super.makeQualified(path);
+  }
+
+
   @Override
   public Path getWorkingDirectory() {
     return this.workingDir;
