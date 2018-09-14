@@ -67,11 +67,14 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     } else {
       System.err.println(error.getMessage().split("\n")[0]);
     }
+    if(error instanceof MissingSubcommandException){
+      System.err.println(((MissingSubcommandException) error).getUsage());
+    }
   }
 
   @Override
   public Void call() throws Exception {
-    throw new MissingSubcommandException();
+    throw new MissingSubcommandException(cmd.getUsageMessage());
   }
 
   public OzoneConfiguration createOzoneConfiguration() {

@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -236,10 +237,10 @@ public class TestOzoneShell {
     assertEquals(userName, volumeInfo.getOwner());
   }
 
-  private void execute(Shell shell, String[] args) {
+  private void execute(Shell ozoneShell, String[] args) {
     List<String> arguments = new ArrayList(Arrays.asList(args));
     LOG.info("Executing shell command with args {}", arguments);
-    CommandLine cmd = shell.getCmd();
+    CommandLine cmd = ozoneShell.getCmd();
 
     IExceptionHandler2<List<Object>> exceptionHandler =
         new IExceptionHandler2<List<Object>>() {
@@ -310,6 +311,29 @@ public class TestOzoneShell {
   }
 
   @Test
+  public void testShellIncompleteCommand() throws Exception {
+    LOG.info("Running testShellIncompleteCommand");
+    String expectedError = "Incomplete command";
+    String[] args = new String[] {}; //executing 'ozone oz'
+
+    executeWithError(shell, args, expectedError,
+        "Usage: ozone oz [-hV] [--verbose] [-D=<String=String>]..." +
+            " [COMMAND]");
+
+    args = new String[] {"volume"}; //executing 'ozone oz volume'
+    executeWithError(shell, args, expectedError,
+        "Usage: ozone oz volume [-hV] [COMMAND]");
+
+    args = new String[] {"bucket"}; //executing 'ozone oz bucket'
+    executeWithError(shell, args, expectedError,
+        "Usage: ozone oz bucket [-hV] [COMMAND]");
+
+    args = new String[] {"key"}; //executing 'ozone oz key'
+    executeWithError(shell, args, expectedError,
+        "Usage: ozone oz key [-hV] [COMMAND]");
+  }
+
+  @Test
   public void testUpdateVolume() throws Exception {
     LOG.info("Running testUpdateVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -352,13 +376,13 @@ public class TestOzoneShell {
    * Execute command, assert exeception message and returns true if error
    * was thrown.
    */
-  private void executeWithError(Shell shell, String[] args,
+  private void executeWithError(Shell ozoneShell, String[] args,
       String expectedError) {
     if (Strings.isNullOrEmpty(expectedError)) {
-      execute(shell, args);
+      execute(ozoneShell, args);
     } else {
       try {
-        execute(shell, args);
+        execute(ozoneShell, args);
         fail("Exception is expected from command execution " + Arrays
             .asList(args));
       } catch (Exception ex) {
@@ -373,6 +397,41 @@ public class TestOzoneShell {
                       "exception [%s] in [%s]",
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
+        }
+      }
+    }
+  }
+
+  /**
+   * Execute command, assert exception message and returns true if error
+   * was thrown and contains the specified usage string.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      String expectedError, String usage) {
+    if (Strings.isNullOrEmpty(expectedError)) {
+      execute(ozoneShell, args);
+    } else {
+      try {
+        execute(ozoneShell, args);
+        fail("Exception is expected from command execution " + Arrays
+            .asList(args));
+      } catch (Exception ex) {
+        if (!Strings.isNullOrEmpty(expectedError)) {
+          Throwable exceptionToCheck = ex;
+          if (exceptionToCheck.getCause() != null) {
+            exceptionToCheck = exceptionToCheck.getCause();
+          }
+          Assert.assertTrue(
+              String.format(
+                  "Error of shell code doesn't contain the " +
+                      "exception [%s] in [%s]",
+                  expectedError, exceptionToCheck.getMessage()),
+              exceptionToCheck.getMessage().contains(expectedError));
+          Assert.assertTrue(
+              exceptionToCheck instanceof MissingSubcommandException);
+          Assert.assertTrue(
+              ((MissingSubcommandException)exceptionToCheck)
+                  .getUsage().contains(usage));
         }
       }
     }

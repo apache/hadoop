@@ -22,8 +22,14 @@ package org.apache.hadoop.hdds.cli;
  */
 public class MissingSubcommandException extends RuntimeException {
 
-  public MissingSubcommandException() {
-    super("Please select a subcommand");
+  private String usage;
+
+  public MissingSubcommandException(String usage) {
+    super("Incomplete command");
+    this.usage = usage;
   }
 
+  public String getUsage() {
+    return usage;
+  }
 }
