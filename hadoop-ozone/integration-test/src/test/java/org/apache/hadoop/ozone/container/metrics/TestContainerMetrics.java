@@ -24,6 +24,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -37,11 +38,12 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerGrpc;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.XceiverClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.container.replication.GrpcReplicationService;
+import org.apache.hadoop.ozone.container.replication.OnDemandContainerReplicationSource;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -54,10 +56,16 @@ import java.util.UUID;
  */
 public class TestContainerMetrics {
 
+  private GrpcReplicationService createReplicationService(
+      ContainerSet containerSet) {
+    return new GrpcReplicationService(
+        new OnDemandContainerReplicationSource(containerSet));
+  }
+
   @Test
   public void testContainerMetrics() throws Exception {
-    XceiverServer server = null;
-    XceiverClient client = null;
+    XceiverServerGrpc server = null;
+    XceiverClientGrpc client = null;
     long containerID = ContainerTestHelper.getTestContainerID();
     String path = GenericTestUtils.getRandomizedTempPath();
 
@@ -81,8 +89,9 @@ public class TestContainerMetrics {
           volumeSet, null);
       dispatcher.setScmId(UUID.randomUUID().toString());
 
-      server = new XceiverServer(datanodeDetails, conf, dispatcher);
-      client = new XceiverClient(pipeline, conf);
+      server = new XceiverServerGrpc(datanodeDetails, conf, dispatcher,
+          createReplicationService(containerSet));
+      client = new XceiverClientGrpc(pipeline, conf);
 
       server.start();
       client.connect();
