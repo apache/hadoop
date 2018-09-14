@@ -98,4 +98,28 @@ public class ITestAzureBlobFileSystemFileStatus extends
     validateStatus(fs, TEST_FOLDER, true);
   }
 
+  @Test
+  public void testAbfsPathWithHost() throws IOException {
+    AzureBlobFileSystem fs = this.getFileSystem();
+    Path pathWithHost1 = new Path("abfs://mycluster/abfs/file1.txt");
+    Path pathwithouthost1 = new Path("/abfs/file1.txt");
+
+    Path pathWithHost2 = new Path("abfs://mycluster/abfs/file2.txt");
+    Path pathwithouthost2 = new Path("/abfs/file2.txt");
+
+    // verify compatibility of this path format
+    fs.create(pathWithHost1);
+    assertTrue(fs.exists(pathwithouthost1));
+
+    fs.create(pathwithouthost2);
+    assertTrue(fs.exists(pathWithHost2));
+
+    // verify get
+    FileStatus fileStatus1 = fs.getFileStatus(pathWithHost1);
+    assertEquals(pathwithouthost1.getName(), fileStatus1.getPath().getName());
+
+    FileStatus fileStatus2 = fs.getFileStatus(pathwithouthost2);
+    assertEquals(pathWithHost2.getName(), fileStatus2.getPath().getName());
+  }
+
 }
