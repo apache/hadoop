@@ -376,9 +376,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     out.println(USAGE + "\n");
   }
 
-  public static StorageContainerManager createSCM(String[] argv,
+  public static StorageContainerManager createSCM(String[] args,
       OzoneConfiguration conf)
       throws IOException {
+    String[] argv = (args == null) ? new String[0] : args;
     if (!HddsUtils.isHddsEnabled(conf)) {
       System.err.println(
           "SCM cannot be started in secure mode or when " + OZONE_ENABLED + "" +
