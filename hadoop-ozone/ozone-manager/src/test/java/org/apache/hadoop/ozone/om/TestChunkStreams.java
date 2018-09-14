@@ -121,6 +121,7 @@ public class TestChunkStreams {
         int tempOffset = offset;
         ChunkInputStream in =
             new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+              private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
 
@@ -131,7 +132,7 @@ public class TestChunkStreams {
 
               @Override
               public long getPos() throws IOException {
-                throw new UnsupportedOperationException();
+                return pos;
               }
 
               @Override
@@ -147,7 +148,9 @@ public class TestChunkStreams {
 
               @Override
               public int read(byte[] b, int off, int len) throws IOException {
-                return in.read(b, off, len);
+                int readLen = in.read(b, off, len);
+                pos += readLen;
+                return readLen;
               }
             };
         inputStreams.add(in);
@@ -175,6 +178,7 @@ public class TestChunkStreams {
         int tempOffset = offset;
         ChunkInputStream in =
             new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+              private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
 
@@ -185,7 +189,7 @@ public class TestChunkStreams {
 
               @Override
               public long getPos() throws IOException {
-                throw new UnsupportedOperationException();
+                return pos;
               }
 
               @Override
@@ -201,7 +205,9 @@ public class TestChunkStreams {
 
               @Override
               public int read(byte[] b, int off, int len) throws IOException {
-                return in.read(b, off, len);
+                int readLen = in.read(b, off, len);
+                pos += readLen;
+                return readLen;
               }
             };
         inputStreams.add(in);
