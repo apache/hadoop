@@ -1447,19 +1447,28 @@
   <name>fs.s3a.s3guard.ddb.max.retries</name>
   <value>9</value>
     <description>
-      Max retries on batched DynamoDB operations before giving up and
-      throwing an IOException.  Each retry is delayed with an exponential
+      Max retries on throttled/incompleted DynamoDB operations
+      before giving up and throwing an IOException.
+      Each retry is delayed with an exponential
       backoff timer which starts at 100 milliseconds and approximately
       doubles each time.  The minimum wait before throwing an exception is
       sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
-      So N = 9 yields at least 51.1 seconds (51,100) milliseconds of blocking
-      before throwing an IOException.
+    </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.throttle.retry.interval</name>
+  <value>100ms</value>
+    <description>
+      Initial interval to retry after a request is throttled events;
+      the back-off policy is exponential until the number of retries of
+      fs.s3a.s3guard.ddb.max.retries is reached.
     </description>
 </property>
 
 <property>
   <name>fs.s3a.s3guard.ddb.background.sleep</name>
-  <value>25</value>
+  <value>25ms</value>
   <description>
     Length (in milliseconds) of pause between each batch of deletes when
     pruning metadata.  Prevents prune operations (which can typically be low

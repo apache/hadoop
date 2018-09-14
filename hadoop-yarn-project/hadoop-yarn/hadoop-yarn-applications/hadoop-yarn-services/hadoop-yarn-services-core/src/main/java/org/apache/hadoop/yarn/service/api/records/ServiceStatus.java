@@ -36,7 +36,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "The current status of a submitted service, returned as a response to the GET API.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ServiceStatus extends BaseResource {

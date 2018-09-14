@@ -43,7 +43,6 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "An Service resource has the following attributes.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonInclude(JsonInclude.Include.NON_NULL)

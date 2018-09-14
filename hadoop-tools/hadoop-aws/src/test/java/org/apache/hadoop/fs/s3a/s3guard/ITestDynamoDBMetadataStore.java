@@ -95,7 +95,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private static DynamoDBMetadataStore ddbmsStatic;
 
-  private static String TEST_DYNAMODB_TABLE_NAME;
+  private static String testDynamoDBTableName;
 
   /**
    * Create a path under the test path provided by
@@ -113,8 +113,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Configuration conf = prepareTestConfiguration(new Configuration());
     assertThatDynamoMetadataStoreImpl(conf);
     Assume.assumeTrue("Test DynamoDB table name should be set to run "
-            + "integration tests.", TEST_DYNAMODB_TABLE_NAME != null);
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, TEST_DYNAMODB_TABLE_NAME);
+            + "integration tests.", testDynamoDBTableName != null);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
 
     s3AContract = new S3AContract(conf);
     s3AContract.init();
@@ -140,10 +140,10 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public static void beforeClassSetup() throws IOException {
     Configuration conf = prepareTestConfiguration(new Configuration());
     assertThatDynamoMetadataStoreImpl(conf);
-    TEST_DYNAMODB_TABLE_NAME = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
+    testDynamoDBTableName = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
     Assume.assumeTrue("Test DynamoDB table name should be set to run "
-        + "integration tests.", TEST_DYNAMODB_TABLE_NAME != null);
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, TEST_DYNAMODB_TABLE_NAME);
+        + "integration tests.", testDynamoDBTableName != null);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
 
     LOG.debug("Creating static ddbms which will be shared between tests.");
     ddbmsStatic = new DynamoDBMetadataStore();

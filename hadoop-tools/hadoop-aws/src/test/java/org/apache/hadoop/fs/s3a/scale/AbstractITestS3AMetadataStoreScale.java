@@ -22,7 +22,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +41,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
  * Could be separated from S3A code, but we're using the S3A scale test
  * framework for convenience.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public abstract class AbstractITestS3AMetadataStoreScale extends
     S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -60,7 +64,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   public abstract MetadataStore createMetadataStore() throws IOException;
 
   @Test
-  public void testPut() throws Throwable {
+  public void test_010_Put() throws Throwable {
     describe("Test workload of put() operations");
 
     // As described in hadoop-aws site docs, count parameter is used for
@@ -83,7 +87,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   }
 
   @Test
-  public void testMoves() throws Throwable {
+  public void test_020_Moves() throws Throwable {
     describe("Test workload of batched move() operations");
 
     // As described in hadoop-aws site docs, count parameter is used for
@@ -140,7 +144,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
    * Create a copy of given list of PathMetadatas with the paths moved from
    * src to dest.
    */
-  private List<PathMetadata> moveMetas(List<PathMetadata> metas, Path src,
+  protected List<PathMetadata> moveMetas(List<PathMetadata> metas, Path src,
       Path dest) throws IOException {
     List<PathMetadata> moved = new ArrayList<>(metas.size());
     for (PathMetadata srcMeta : metas) {
@@ -151,7 +155,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     return moved;
   }
 
-  private Path movePath(Path p, Path src, Path dest) {
+  protected Path movePath(Path p, Path src, Path dest) {
     String srcStr = src.toUri().getPath();
     String pathStr = p.toUri().getPath();
     // Strip off src dir
@@ -160,7 +164,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     return new Path(dest, pathStr);
   }
 
-  private S3AFileStatus copyStatus(S3AFileStatus status) {
+  protected S3AFileStatus copyStatus(S3AFileStatus status) {
     if (status.isDirectory()) {
       return new S3AFileStatus(status.isEmptyDirectory(), status.getPath(),
           status.getOwner());
@@ -185,7 +189,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     return count;
   }
 
-  private void clearMetadataStore(MetadataStore ms, long count)
+  protected void clearMetadataStore(MetadataStore ms, long count)
       throws IOException {
     describe("Recursive deletion");
     NanoTimer deleteTimer = new NanoTimer();
@@ -202,15 +206,15 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
         msecPerOp, op, count));
   }
 
-  private static S3AFileStatus makeFileStatus(Path path) throws IOException {
+  protected static S3AFileStatus makeFileStatus(Path path) throws IOException {
     return new S3AFileStatus(SIZE, ACCESS_TIME, path, BLOCK_SIZE, OWNER);
   }
 
-  private static S3AFileStatus makeDirStatus(Path p) throws IOException {
+  protected static S3AFileStatus makeDirStatus(Path p) throws IOException {
     return new S3AFileStatus(false, p, OWNER);
   }
 
-  private List<Path> metasToPaths(List<PathMetadata> metas) {
+  protected List<Path> metasToPaths(List<PathMetadata> metas) {
     List<Path> paths = new ArrayList<>(metas.size());
     for (PathMetadata meta : metas) {
       paths.add(meta.getFileStatus().getPath());
@@ -225,7 +229,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
    * @param width Number of files (and directories, if depth > 0) per directory.
    * @param paths List to add generated paths to.
    */
-  private static void createDirTree(Path parent, int depth, int width,
+  protected static void createDirTree(Path parent, int depth, int width,
       Collection<PathMetadata> paths) throws IOException {
 
     // Create files

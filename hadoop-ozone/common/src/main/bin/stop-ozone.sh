@@ -64,13 +64,15 @@ if [[ "${OZONE_ENABLED}" != "true" ]]; then
 fi
 
 #---------------------------------------------------------
-# Start hdfs before starting ozone daemons
-if [[ -f "${bin}/stop-dfs.sh" ]]; then
-  "${bin}/stop-dfs.sh"
-else
-  echo "ERROR: Cannot execute ${bin}/stop-dfs.sh." 2>&1
-  exit 1
-fi
+# datanodes (using default workers file)
+
+echo "Stopping datanodes"
+
+hadoop_uservar_su ozone datanode "${HADOOP_HDFS_HOME}/bin/ozone" \
+  --workers \
+  --config "${HADOOP_CONF_DIR}" \
+  --daemon stop \
+  datanode
 
 #---------------------------------------------------------
 # Ozone Manager nodes

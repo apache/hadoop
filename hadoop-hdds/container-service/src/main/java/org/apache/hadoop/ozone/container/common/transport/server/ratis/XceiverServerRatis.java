@@ -182,17 +182,29 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     RaftServerConfigKeys.Rpc
         .setRequestTimeout(properties, serverRequestTimeout);
 
+    // Set the ratis leader election timeout
+    TimeUnit leaderElectionMinTimeoutUnit =
+        OzoneConfigKeys.
+            DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT
+            .getUnit();
+    duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.
+            DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), leaderElectionMinTimeoutUnit);
+    final TimeDuration leaderElectionMinTimeout =
+        TimeDuration.valueOf(duration, leaderElectionMinTimeoutUnit);
+    RaftServerConfigKeys.Rpc
+        .setTimeoutMin(properties, leaderElectionMinTimeout);
+    long leaderElectionMaxTimeout =
+        leaderElectionMinTimeout.toLong(TimeUnit.MILLISECONDS) + 200;
+    RaftServerConfigKeys.Rpc.setTimeoutMax(properties,
+        TimeDuration.valueOf(leaderElectionMaxTimeout, TimeUnit.MILLISECONDS));
     // Enable batch append on raft server
     RaftServerConfigKeys.Log.Appender.setBatchEnabled(properties, true);
 
     // Set the maximum cache segments
     RaftServerConfigKeys.Log.setMaxCachedSegmentNum(properties, 2);
-
-    // Set the ratis leader election timeout
-    RaftServerConfigKeys.Rpc.setTimeoutMin(properties,
-        TimeDuration.valueOf(800, TimeUnit.MILLISECONDS));
-    RaftServerConfigKeys.Rpc.setTimeoutMax(properties,
-        TimeDuration.valueOf(1000, TimeUnit.MILLISECONDS));
 
     // set the node failure timeout
     timeUnit = OzoneConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT
@@ -397,6 +409,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .setAction(PipelineAction.Action.CLOSE)
         .build();
     context.addPipelineActionIfAbsent(action);
+    LOG.debug(
+        "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
+            + ".Reason : " + action.getClosePipeline().getDetailedReason());
   }
 
   void handleNodeSlowness(

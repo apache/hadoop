@@ -20,10 +20,14 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.ratis.RatisHelper;
+import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.slf4j.Logger;
@@ -103,5 +107,14 @@ public interface RatisTestHelper {
         .setNumDatanodes(numDatanodes).build();
     cluster.waitForClusterToBeReady();
     return cluster;
+  }
+
+  static void initXceiverServerRatis(
+      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
+    final RaftPeer p = RatisHelper.toRaftPeer(dd);
+    final OzoneConfiguration conf = new OzoneConfiguration();
+    final RaftClient client =
+        RatisHelper.newRaftClient(rpc, p, RatisHelper.createRetryPolicy(conf));
+    client.groupAdd(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
 }

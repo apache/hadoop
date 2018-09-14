@@ -40,9 +40,6 @@ import io.swagger.annotations.ApiModelProperty;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "Placement constraint details.")
-@javax.annotation.Generated(
-    value = "class io.swagger.codegen.languages.JavaClientCodegen",
-    date = "2018-02-16T10:20:12.927-07:00")
 public class PlacementConstraint implements Serializable {
   private static final long serialVersionUID = 1518017165676511762L;
 

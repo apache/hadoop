@@ -258,7 +258,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         hParser.printGenericCommandUsage(System.err);
         System.exit(1);
       }
-      StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
       OzoneManager om = createOm(hParser.getRemainingArgs(), conf);
       if (om != null) {
         om.start();
@@ -298,6 +297,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     switch (startOpt) {
     case CREATEOBJECTSTORE:
+      StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
       terminate(omInit(conf) ? 0 : 1);
       return null;
     case HELP:
@@ -305,6 +305,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       terminate(0);
       return null;
     default:
+      if (argv == null) {
+        argv = new String[]{};
+      }
+      StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
       return new OzoneManager(conf);
     }
   }
