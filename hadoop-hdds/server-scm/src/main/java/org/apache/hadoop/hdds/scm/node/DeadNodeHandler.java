@@ -57,6 +57,11 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
       EventPublisher publisher) {
     Set<ContainerID> containers =
         node2ContainerMap.getContainers(datanodeDetails.getUuid());
+    if (containers == null) {
+      LOG.info("There's no containers in dead datanode {}, no replica will be"
+          + " removed from the in-memory state.", datanodeDetails.getUuid());
+      return;
+    }
     LOG.info(
         "Datanode {}  is dead. Removing replications from the in-memory state.",
         datanodeDetails.getUuid());
