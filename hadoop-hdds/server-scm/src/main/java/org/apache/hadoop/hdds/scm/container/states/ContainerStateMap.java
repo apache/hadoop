@@ -41,6 +41,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .CONTAINER_EXISTS;
@@ -105,6 +106,7 @@ public class ContainerStateMap {
   private final Map<ContainerID, Set<DatanodeDetails>> contReplicaMap;
   private final static NavigableSet<ContainerID> EMPTY_SET  =
       Collections.unmodifiableNavigableSet(new TreeSet<>());
+  private final Map<ContainerQueryKey, NavigableSet<ContainerID>> resultCache;
 
   // Container State Map lock should be held before calling into
   // Update ContainerAttributes. The consistency of ContainerAttributes is
@@ -127,6 +129,7 @@ public class ContainerStateMap {
 //            new ReentrantLock(),
 //            1000,
 //            300));
+    resultCache = new ConcurrentHashMap<>();
   }
 
   /**
@@ -158,6 +161,10 @@ public class ContainerStateMap {
       if (info.isContainerOpen()) {
         openPipelineMap.insert(info.getPipelineID(), id);
       }
+
+      // Flush the cache of this container type, will be added later when
+      // get container queries are executed.
+      flushCache(info);
       LOG.trace("Created container with {} successfully.", id);
     } finally {
       lock.writeLock().unlock();
@@ -181,10 +188,19 @@ public class ContainerStateMap {
    * @return container info, if found.
    */
   public ContainerInfo getContainerInfo(long containerID) {
+    return getContainerInfo(ContainerID.valueof(containerID));
+  }
+
+  /**
+   * Returns the latest state of Container from SCM's Container State Map.
+   *
+   * @param containerID - ContainerID
+   * @return container info, if found.
+   */
+  public ContainerInfo getContainerInfo(ContainerID containerID) {
     lock.readLock().lock();
     try {
-      ContainerID id = new ContainerID(containerID);
-      return containerMap.get(id);
+      return containerMap.get(containerID);
     } finally {
       lock.readLock().unlock();
     }
@@ -304,6 +320,7 @@ public class ContainerStateMap {
       if (currentInfo == null) {
         throw new SCMException("No such container.", FAILED_TO_FIND_CONTAINER);
       }
+      flushCache(info, currentInfo);
       containerMap.put(info.containerID(), info);
     } finally {
       lock.writeLock().unlock();
@@ -329,6 +346,11 @@ public class ContainerStateMap {
     lock.writeLock().lock();
     try {
       try {
+        // Just flush both old and new data sets from the result cache.
+        ContainerInfo newInfo = new ContainerInfo(info);
+        newInfo.setState(newState);
+        flushCache(newInfo, info);
+
         currentInfo = containerMap.get(id);
 
         if (currentInfo == null) {
@@ -481,6 +503,11 @@ public class ContainerStateMap {
 
     lock.readLock().lock();
     try {
+      ContainerQueryKey queryKey =
+          new ContainerQueryKey(state, owner, factor, type);
+      if(resultCache.containsKey(queryKey)){
+        return resultCache.get(queryKey);
+      }
 
       // If we cannot meet any one condition we return EMPTY_SET immediately.
       // Since when we intersect these sets, the result will be empty if any
@@ -517,6 +544,7 @@ public class ContainerStateMap {
       for (int x = 1; x < sets.length; x++) {
         currentSet = intersectSets(currentSet, sets[x]);
       }
+      resultCache.put(queryKey, currentSet);
       return currentSet;
     } finally {
       lock.readLock().unlock();
@@ -566,4 +594,14 @@ public class ContainerStateMap {
     }
     return sets;
   }
+
+  private void flushCache(ContainerInfo... containerInfos) {
+    for (ContainerInfo containerInfo : containerInfos) {
+      ContainerQueryKey key = new ContainerQueryKey(containerInfo.getState(),
+          containerInfo.getOwner(), containerInfo.getReplicationFactor(),
+          containerInfo.getReplicationType());
+      resultCache.remove(key);
+    }
+  }
+
 }
