@@ -19,7 +19,9 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.math3.util.MathUtils;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  * Container ID is an integer that is a value between 1..MAX_CONTAINER ID.
@@ -48,7 +50,6 @@ public class ContainerID implements Comparable {
    * @return ContainerID.
    */
   public static ContainerID valueof(long containerID) {
-    Preconditions.checkState(containerID > 0);
     return new ContainerID(containerID);
   }
 
@@ -66,28 +67,37 @@ public class ContainerID implements Comparable {
     if (this == o) {
       return true;
     }
+
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
     ContainerID that = (ContainerID) o;
 
-    return id == that.id;
+    return new EqualsBuilder()
+        .append(getId(), that.getId())
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return MathUtils.hash(id);
+    return new HashCodeBuilder(61, 71)
+        .append(getId())
+        .toHashCode();
   }
 
   @Override
   public int compareTo(Object o) {
     Preconditions.checkNotNull(o);
-    if (o instanceof ContainerID) {
-      return Long.compare(((ContainerID) o).getId(), this.getId());
+    if(getClass() != o.getClass()) {
+      throw new ClassCastException("ContainerID class expected. found:" +
+          o.getClass().toString());
     }
-    throw new IllegalArgumentException("Object O, should be an instance " +
-        "of ContainerID");
+
+    ContainerID that = (ContainerID) o;
+    return new CompareToBuilder()
+        .append(this.getId(), that.getId())
+        .build();
   }
 
   @Override

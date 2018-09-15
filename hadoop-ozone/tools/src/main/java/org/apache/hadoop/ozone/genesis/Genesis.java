@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.genesis;
 
+import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -39,15 +40,15 @@ public final class Genesis {
   public static void main(String[] args) throws RunnerException {
     Options opt = new OptionsBuilder()
         .include(BenchMarkContainerStateMap.class.getSimpleName())
-        .include(BenchMarkMetadataStoreReads.class.getSimpleName())
-        .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
-        .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
+//        .include(BenchMarkMetadataStoreReads.class.getSimpleName())
+//        .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
+//        .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
 // Commenting this test out, till we support either a command line or a config
         // file based ability to run tests.
 //        .include(BenchMarkRocksDbStore.class.getSimpleName())
         .warmupIterations(5)
         .measurementIterations(20)
-        .addProfiler(GenesisMemoryProfiler.class)
+        .addProfiler(StackProfiler.class)
         .shouldDoGC(true)
         .forks(1)
         .build();

@@ -202,8 +202,7 @@ public class TestNode2ContainerMap {
     map.insertNewDatanode(key, values);
 
     final int newCount = 100;
-    // This is not a mistake, the treeset seems to be reverse sorted.
-    ContainerID last = values.first();
+    ContainerID last = values.last();
     TreeSet<ContainerID> addedContainers = new TreeSet<>();
     for (int x = 1; x <= newCount; x++) {
       long cTemp = last.getId() + x;
@@ -244,7 +243,7 @@ public class TestNode2ContainerMap {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.last();
+    ContainerID first = values.first();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.
@@ -290,7 +289,7 @@ public class TestNode2ContainerMap {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.last();
+    ContainerID first = values.first();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.

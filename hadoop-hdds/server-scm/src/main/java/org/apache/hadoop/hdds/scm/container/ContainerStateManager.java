@@ -440,7 +440,7 @@ public class ContainerStateManager implements Closeable {
       NavigableSet<ContainerID> searchSet, String owner) {
     // Get the container with space to meet our request.
     for (ContainerID id : searchSet) {
-      ContainerInfo containerInfo = containers.getContainerInfo(id.getId());
+      ContainerInfo containerInfo = containers.getContainerInfo(id);
       if (containerInfo.getAllocatedBytes() + size <= this.containerSize) {
         containerInfo.updateLastUsedTime();
 
@@ -502,7 +502,7 @@ public class ContainerStateManager implements Closeable {
    * @throws IOException
    */
   public ContainerInfo getContainer(ContainerID containerID) {
-    return containers.getContainerInfo(containerID.getId());
+    return containers.getContainerInfo(containerID);
   }
 
   @Override
