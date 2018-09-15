@@ -27,6 +27,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <description>Apache Hadoop Ozone Acceptance Tests</description>
   <name>Apache Hadoop Ozone Acceptance Tests</name>
   <packaging>pom</packaging>
+
+  <properties>
+    <hadoop.component>ozone</hadoop.component>
+    <is.hadoop.component>true</is.hadoop.component>
+  </properties>
+
   <profiles>
     <profile>
       <id>ozone-acceptance-test</id>
