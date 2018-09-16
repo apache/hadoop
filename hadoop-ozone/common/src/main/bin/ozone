@@ -28,26 +28,26 @@ function hadoop_usage
   hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
   hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
   hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in worker mode"
-  hadoop_add_option "--loglevel level" "set the log4j level for this command"
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
+  hadoop_add_option "--loglevel level" "set the log4j level for this command"
   hadoop_add_option "--workers" "turn on worker mode"
 
 
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
-  hadoop_add_subcommand "fs" client "run a filesystem command on ozone file system"
   hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "freon" client "runs an ozone data generator"
+  hadoop_add_subcommand "fs" client "run a filesystem command on Ozone file system. Equivalent to 'hadoop fs'"
+  hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
   hadoop_add_subcommand "genesis" client "runs a collection of ozone benchmarks to help with tuning."
   hadoop_add_subcommand "getozoneconf" client "get ozone config values from configuration"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
-  hadoop_add_subcommand "om" daemon "Ozone Manager"
-  hadoop_add_subcommand "oz" client "command line interface for ozone"
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
+  hadoop_add_subcommand "om" daemon "Ozone Manager"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
+  hadoop_add_subcommand "sh" client "command line interface for object store operations"
   hadoop_add_subcommand "version" client "print the version"
-  hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -100,7 +100,7 @@ function ozonecmd_case
       HDFS_OM_OPTS="${HDFS_OM_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/om-audit-log4j2.properties"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_OPTS}"
     ;;
-    oz)
+    sh | shell)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
     ;;
     noz)

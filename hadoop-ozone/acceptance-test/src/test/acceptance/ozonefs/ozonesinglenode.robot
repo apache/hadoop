@@ -27,23 +27,23 @@ ${PROJECTDIR}           ${CURDIR}/../../../../../..
 
 *** Test Cases ***
 Create volume and bucket
-    Execute on          datanode        ozone oz -createVolume http://ozoneManager/fstest -user bilbo -quota 100TB -root
-    Execute on          datanode        ozone oz -createBucket http://ozoneManager/fstest/bucket1
+    Execute on          datanode        ozone sh -createVolume http://ozoneManager/fstest -user bilbo -quota 100TB -root
+    Execute on          datanode        ozone sh -createBucket http://ozoneManager/fstest/bucket1
 
 Check volume from ozonefs
     ${result} =         Execute on          datanode          ozone fs -ls o3://bucket1.fstest/
 
 Create directory from ozonefs
                         Execute on          datanode          ozone fs -mkdir -p o3://bucket1.fstest/testdir/deep
-    ${result} =         Execute on          ozoneManager      ozone oz -listKey o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+    ${result} =         Execute on          ozoneManager      ozone sh -listKey o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
                                             Should contain    ${result}         testdir/deep
 Test key handling
-                    Execute on          datanode        ozone oz -putKey o3://ozoneManager/fstest/bucket1/key1 -file NOTICE.txt -replicationFactor 1
+                    Execute on          datanode        ozone sh -putKey o3://ozoneManager/fstest/bucket1/key1 -file NOTICE.txt -replicationFactor 1
                     Execute on          datanode        rm -f NOTICE.txt.1
-                    Execute on          datanode        ozone oz -getKey o3://ozoneManager/fstest/bucket1/key1 -file NOTICE.txt.1
+                    Execute on          datanode        ozone sh -getKey o3://ozoneManager/fstest/bucket1/key1 -file NOTICE.txt.1
                     Execute on          datanode        ls -l NOTICE.txt.1
-    ${result} =     Execute on          datanode        ozone oz -infoKey o3://ozoneManager/fstest/bucket1/key1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.keyName=="key1")'
+    ${result} =     Execute on          datanode        ozone sh -infoKey o3://ozoneManager/fstest/bucket1/key1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.keyName=="key1")'
                     Should contain      ${result}       createdOn
-    ${result} =     Execute on          datanode        ozone oz -listKey o3://ozoneManager/fstest/bucket1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
+    ${result} =     Execute on          datanode        ozone sh -listKey o3://ozoneManager/fstest/bucket1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
                     Should Be Equal     ${result}       key1
-                    Execute on          datanode        ozone oz -deleteKey o3://ozoneManager/fstest/bucket1/key1 -v
+                    Execute on          datanode        ozone sh -deleteKey o3://ozoneManager/fstest/bucket1/key1 -v

@@ -34,8 +34,8 @@ import picocli.CommandLine.Command;
  * This class uses dispatch method to make calls
  * to appropriate handlers that execute the ozone functions.
  */
-@Command(name = "ozone oz",
-    description = "Client for the Ozone object store",
+@Command(name = "ozone sh",
+    description = "Shell for Ozone object store",
     subcommands = {
         VolumeCommands.class,
         BucketCommands.class,
