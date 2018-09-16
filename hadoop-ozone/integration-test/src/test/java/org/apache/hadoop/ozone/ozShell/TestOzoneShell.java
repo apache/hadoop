@@ -314,23 +314,23 @@ public class TestOzoneShell {
   public void testShellIncompleteCommand() throws Exception {
     LOG.info("Running testShellIncompleteCommand");
     String expectedError = "Incomplete command";
-    String[] args = new String[] {}; //executing 'ozone oz'
+    String[] args = new String[] {}; //executing 'ozone sh'
 
     executeWithError(shell, args, expectedError,
-        "Usage: ozone oz [-hV] [--verbose] [-D=<String=String>]..." +
+        "Usage: ozone sh [-hV] [--verbose] [-D=<String=String>]..." +
             " [COMMAND]");
 
-    args = new String[] {"volume"}; //executing 'ozone oz volume'
+    args = new String[] {"volume"}; //executing 'ozone sh volume'
     executeWithError(shell, args, expectedError,
-        "Usage: ozone oz volume [-hV] [COMMAND]");
+        "Usage: ozone sh volume [-hV] [COMMAND]");
 
-    args = new String[] {"bucket"}; //executing 'ozone oz bucket'
+    args = new String[] {"bucket"}; //executing 'ozone sh bucket'
     executeWithError(shell, args, expectedError,
-        "Usage: ozone oz bucket [-hV] [COMMAND]");
+        "Usage: ozone sh bucket [-hV] [COMMAND]");
 
-    args = new String[] {"key"}; //executing 'ozone oz key'
+    args = new String[] {"key"}; //executing 'ozone sh key'
     executeWithError(shell, args, expectedError,
-        "Usage: ozone oz key [-hV] [COMMAND]");
+        "Usage: ozone sh key [-hV] [COMMAND]");
   }
 
   @Test
