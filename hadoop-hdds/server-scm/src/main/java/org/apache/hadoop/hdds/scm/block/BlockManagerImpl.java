@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -28,6 +29,9 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.server.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.server.Precheck;
+import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -61,7 +65,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 
 /** Block Manager manages the block access for SCM. */
-public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
+public class BlockManagerImpl implements EventHandler<Boolean>,
+    BlockManager, BlockmanagerMXBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockManagerImpl.class);
   // TODO : FIX ME : Hard coding the owner.
@@ -80,6 +85,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private final int containerProvisionBatchSize;
   private final Random rand;
   private ObjectName mxBean;
+  private ChillModePrecheck chillModePrecheck;
 
   /**
    * Constructor.
@@ -125,6 +131,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
             nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
+    chillModePrecheck = new ChillModePrecheck();
   }
 
   /**
@@ -187,17 +194,11 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       ReplicationType type, ReplicationFactor factor, String owner)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
-
+    preCheck(ScmOps.allocateBlock, chillModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
       throw new SCMException("Unsupported block size: " + size,
           INVALID_BLOCK_SIZE);
-    }
-
-    if (!nodeManager.isOutOfChillMode()) {
-      LOG.warn("Not out of Chill mode.");
-      throw new SCMException("Unable to create block while in chill mode",
-          CHILL_MODE_EXCEPTION);
     }
 
     /*
@@ -429,5 +430,37 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   @Override
   public SCMBlockDeletingService getSCMBlockDeletingService() {
     return this.blockDeletingService;
+  }
+
+  /**
+   * Perform all prechecks for given operations.
+   *
+   * @param operation
+   * @param preChecks prechecks to be performed
+   */
+  public void preCheck(ScmOps operation, Precheck... preChecks)
+      throws SCMException {
+    for (Precheck preCheck : preChecks) {
+      preCheck.check(operation);
+    }
+  }
+
+  @Override
+  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
+    this.chillModePrecheck.setInChillMode(inChillMode);
+  }
+
+  /**
+   * Returns status of scm chill mode determined by CHILL_MODE_STATUS event.
+   * */
+  public boolean isScmInChillMode() {
+    return this.chillModePrecheck.isInChillMode();
+  }
+
+  /**
+   * Get class logger.
+   * */
+  public static Logger getLogger() {
+    return LOG;
   }
 }

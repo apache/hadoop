@@ -231,6 +231,8 @@ public final class SCMEvents {
    */
   public static final TypedEvent<Boolean> START_REPLICATION =
       new TypedEvent<>(Boolean.class);
+  public static final TypedEvent<Boolean> CHILL_MODE_STATUS =
+      new TypedEvent<>(Boolean.class);
 
   /**
    * Private Ctor. Never Constructed.
