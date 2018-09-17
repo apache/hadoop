@@ -44,7 +44,9 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -101,8 +103,20 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testDynamoTableTagging() throws Exception {
-    // setup
     Configuration conf = getConfiguration();
+    // If the region is not set in conf, skip the test.
+    String ddbRegion = conf.get(S3GUARD_DDB_REGION_KEY);
+    Assume.assumeTrue(
+        S3GUARD_DDB_REGION_KEY + " should be set to run this test",
+        ddbRegion != null && !ddbRegion.isEmpty()
+    );
+
+    // setup
+    // clear all table tagging config before this test
+    conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG).keySet().forEach(
+        propKey -> conf.unset(S3GUARD_DDB_TABLE_TAG + propKey)
+    );
+
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
         "testDynamoTableTagging-" + UUID.randomUUID());
     S3GuardTool.Init cmdR = new S3GuardTool.Init(conf);

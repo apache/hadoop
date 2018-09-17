@@ -630,6 +630,12 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testTableTagging() throws IOException {
     final Configuration conf = getFileSystem().getConf();
+
+    // clear all table tagging config before this test
+    conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG).keySet().forEach(
+        propKey -> conf.unset(S3GUARD_DDB_TABLE_TAG + propKey)
+    );
+
     String tableName = "testTableTagging-" + UUID.randomUUID();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, "true");

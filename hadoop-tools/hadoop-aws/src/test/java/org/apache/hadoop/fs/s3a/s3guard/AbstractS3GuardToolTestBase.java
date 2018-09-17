@@ -300,16 +300,18 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testSetCapacityFailFastOnReadWriteOfZero() throws Exception{
     Configuration conf = getConfiguration();
+    String bucket = getFileSystem().getBucket();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, getFileSystem().getBucket());
 
     S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
-    String[] argsR = new String[]{cmdR.getName(), "-read", "0", "s3a://bucket"};
+    String[] argsR =
+        new String[]{cmdR.getName(), "-read", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
         S3GuardTool.SetCapacity.READ_CAP_INVALID, () -> cmdR.run(argsR));
 
     S3GuardTool.SetCapacity cmdW = new S3GuardTool.SetCapacity(conf);
-    String[] argsW = new String[]{cmdW.getName(), "-write", "0",
-        "s3a://bucket"};
+    String[] argsW =
+        new String[]{cmdW.getName(), "-write", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
         S3GuardTool.SetCapacity.WRITE_CAP_INVALID, () -> cmdW.run(argsW));
   }
