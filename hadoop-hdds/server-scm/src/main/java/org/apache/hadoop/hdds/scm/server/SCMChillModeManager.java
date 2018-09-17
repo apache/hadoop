@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +27,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer
     .NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,16 +60,27 @@ public class SCMChillModeManager implements
   private Map<String, ChillModeExitRule> exitRules = new HashMap(1);
   private Configuration config;
   private static final String CONT_EXIT_RULE = "ContainerChillModeRule";
+  private final EventQueue eventPublisher;
 
   SCMChillModeManager(Configuration conf, List<ContainerInfo> allContainers,
-      EventPublisher eventQueue) {
+      EventQueue eventQueue) {
     this.config = conf;
+    this.eventPublisher = eventQueue;
     exitRules
         .put(CONT_EXIT_RULE, new ContainerChillModeRule(config, allContainers));
     if (!conf.getBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT)) {
       exitChillMode(eventQueue);
     }
+    emitChillModeStatus();
+  }
+
+  /**
+   * Emit Chill mode status.
+   */
+  @VisibleForTesting
+  public void emitChillModeStatus() {
+    eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS, inChillMode.get());
   }
 
   private void validateChillModeExitRules(EventPublisher eventQueue) {
@@ -78,11 +92,18 @@ public class SCMChillModeManager implements
     exitChillMode(eventQueue);
   }
 
-  private void exitChillMode(EventPublisher eventQueue) {
+  /**
+   * Exit chill mode. It does following actions:
+   * 1. Set chill mode status to fale.
+   * 2. Emits START_REPLICATION for ReplicationManager.
+   * 3. Cleanup resources.
+   * 4. Emit chill mode status.
+   * @param eventQueue
+   */
+  @VisibleForTesting
+  public void exitChillMode(EventPublisher eventQueue) {
     LOG.info("SCM exiting chill mode.");
     setInChillMode(false);
-    // Emit event to ReplicationManager to start replication.
-    eventQueue.fireEvent(SCMEvents.START_REPLICATION, true);
 
     // TODO: Remove handler registration as there is no need to listen to
     // register events anymore.
@@ -90,6 +111,7 @@ public class SCMChillModeManager implements
     for (ChillModeExitRule e : exitRules.values()) {
       e.cleanup();
     }
+    emitChillModeStatus();
   }
 
   @Override
@@ -106,6 +128,9 @@ public class SCMChillModeManager implements
     return inChillMode.get();
   }
 
+  /**
+   * Set chill mode status.
+   */
   public void setInChillMode(boolean inChillMode) {
     this.inChillMode.set(inChillMode);
   }
@@ -200,4 +225,20 @@ public class SCMChillModeManager implements
     return ((ContainerChillModeRule) exitRules.get(CONT_EXIT_RULE))
         .getCurrentContainerThreshold();
   }
+
+  /**
+   * Operations restricted in SCM chill mode.
+   */
+  public static class ChillModeRestrictedOps {
+    private static EnumSet restrictedOps =  EnumSet.noneOf(ScmOps.class);
+
+    static {
+      restrictedOps.add(ScmOps.allocateBlock);
+    }
+
+    public static boolean isRestrictedInChillMode(ScmOps opName) {
+      return restrictedOps.contains(opName);
+    }
+  }
+
 }

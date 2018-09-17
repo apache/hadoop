@@ -21,7 +21,6 @@ import javax.management.ObjectName;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -33,16 +32,22 @@ import org.slf4j.LoggerFactory;
 /**
  * Event listener to track the current state of replication.
  */
-public class ReplicationActivityStatus
-    implements EventHandler<Boolean>, ReplicationActivityStatusMXBean,
-    Closeable {
+public class ReplicationActivityStatus implements
+    ReplicationActivityStatusMXBean, Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ReplicationActivityStatus.class);
 
   private AtomicBoolean replicationEnabled = new AtomicBoolean();
-
+  private AtomicBoolean replicationStatusSetExternally = new AtomicBoolean();
   private ObjectName jmxObjectName;
+  private ReplicationStatusListener replicationStatusListener;
+  private ChillModeStatusListener chillModeStatusListener;
+
+  public ReplicationActivityStatus(){
+    replicationStatusListener = new ReplicationStatusListener();
+    chillModeStatusListener = new ChillModeStatusListener();
+  }
 
   public boolean isReplicationEnabled() {
     return replicationEnabled.get();
@@ -58,13 +63,6 @@ public class ReplicationActivityStatus
     replicationEnabled.set(true);
   }
 
-  /**
-   * The replication status could be set by async events.
-   */
-  @Override
-  public void onMessage(Boolean enabled, EventPublisher publisher) {
-    replicationEnabled.set(enabled);
-  }
 
   public void start() {
     try {
@@ -83,4 +81,37 @@ public class ReplicationActivityStatus
       MBeans.unregister(jmxObjectName);
     }
   }
+
+  /**
+   * Replication status listener.
+   */
+  class ReplicationStatusListener implements EventHandler<Boolean> {
+    @Override
+    public void onMessage(Boolean status, EventPublisher publisher) {
+      replicationStatusSetExternally.set(true);
+      replicationEnabled.set(status);
+    }
+  }
+
+  /**
+   * Replication status is influenced by Chill mode status as well.
+   */
+  class ChillModeStatusListener implements EventHandler<Boolean> {
+
+    @Override
+    public void onMessage(Boolean inChillMode, EventPublisher publisher) {
+      if (!replicationStatusSetExternally.get()) {
+        replicationEnabled.set(!inChillMode);
+      }
+    }
+  }
+
+  public ReplicationStatusListener getReplicationStatusListener() {
+    return replicationStatusListener;
+  }
+
+  public ChillModeStatusListener getChillModeStatusListener() {
+    return chillModeStatusListener;
+  }
+
 }

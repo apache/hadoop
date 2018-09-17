@@ -250,7 +250,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
-    eventQueue.addHandler(SCMEvents.START_REPLICATION, replicationStatus);
+    eventQueue.addHandler(SCMEvents.START_REPLICATION,
+        replicationStatus.getReplicationStatusListener());
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        replicationStatus.getChillModeStatusListener());
     eventQueue
         .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
     eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
@@ -258,6 +261,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
     eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
         scmChillModeManager);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        (BlockManagerImpl) scmBlockManager);
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,

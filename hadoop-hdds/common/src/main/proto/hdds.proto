@@ -171,6 +171,13 @@ enum ReplicationFactor {
     THREE = 3;
 }
 
+enum ScmOps {
+    allocateBlock = 1;
+    keyBlocksInfoList = 2;
+    getScmInfo = 3;
+    deleteBlock = 4;
+}
+
 /**
  * Block ID that uniquely identify a block by SCM.
  */
