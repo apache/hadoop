@@ -13,11 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-baseURL = "/"
 
-languageCode = "en-us"
-DefaultContentLanguage = "en"
-title = "Ozone"
-theme = "ozonedoc"
-pygmentsCodeFences = true
-pygmentsStyle = "monokailight"
+languageCode: "en-us"
+DefaultContentLanguage: "en"
+title: "Ozone"
+theme: "ozonedoc"
+pygmentsCodeFences: true
+uglyurls: true
+relativeURLs: true
+
+menu:
+  main:
+  - identifier: Starting
+    name: "Getting Started"
+    title: "Getting Started"
+    url: runningviadocker.html
+    weight: 1
+  - identifier: Client
+    name: Client
+    title: Client
+    url: commandshell.html
+    weight: 2
+  - identifier: Tools
+    name: Tools
+    title: Tools
+    url: dozone.html
+    weight: 3

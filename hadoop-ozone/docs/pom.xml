@@ -47,10 +47,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
         <configuration>
           <executable>dev-support/bin/generate-site.sh</executable>
-          <arguments>
-            <argument>-b</argument>
-            <argument>/docs</argument>
-          </arguments>
         </configuration>
       </plugin>
       <plugin>

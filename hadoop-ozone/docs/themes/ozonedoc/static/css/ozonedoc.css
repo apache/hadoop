@@ -23,10 +23,20 @@
 /* Move down content because we have a fixed navbar that is 50px tall */
 body {
   padding-top: 50px;
-  font-size: 150%;
+  font-size: 14pt;
 }
 
+pre {
+  font-size: 14pt;
+}
 
+a {
+  color: #448628;
+}
+
+a:hover {
+  color: #245F0B;
+}
 /*
  * Global add-ons
  */
@@ -86,7 +96,7 @@ body {
 .nav-sidebar  .active > a:hover,
 .nav-sidebar  .active > a:focus {
   color: #fff;
-  background-color: #428bca;
+  background-color: #73B148;
 }
 
 

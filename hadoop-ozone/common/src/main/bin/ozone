@@ -32,7 +32,6 @@ function hadoop_usage
   hadoop_add_option "--loglevel level" "set the log4j level for this command"
   hadoop_add_option "--workers" "turn on worker mode"
 
-
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
