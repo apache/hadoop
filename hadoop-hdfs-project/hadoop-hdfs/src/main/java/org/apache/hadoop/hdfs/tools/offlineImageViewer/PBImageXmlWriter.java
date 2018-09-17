@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.util.LimitInputStream;
 
@@ -62,7 +62,7 @@ import com.google.common.collect.Lists;
 public final class PBImageXmlWriter {
   private final Configuration conf;
   private final PrintStream out;
-  private String[] stringTable;
+  private SerialNumberManager.StringTable stringTable;
 
   public PBImageXmlWriter(Configuration conf, PrintStream out) {
     this.conf = conf;
@@ -396,13 +396,7 @@ public final class PBImageXmlWriter {
   }
 
   private void loadStringTable(InputStream in) throws IOException {
-    StringTableSection s = StringTableSection.parseDelimitedFrom(in);
-    stringTable = new String[s.getNumEntry() + 1];
-    for (int i = 0; i < s.getNumEntry(); ++i) {
-      StringTableSection.Entry e = StringTableSection.Entry
-          .parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
-    }
+    stringTable = FSImageLoader.loadStringTable(in);
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {

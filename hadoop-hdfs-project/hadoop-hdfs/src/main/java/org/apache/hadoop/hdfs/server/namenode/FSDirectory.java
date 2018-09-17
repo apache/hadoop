@@ -60,7 +60,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
@@ -223,6 +222,8 @@ public class FSDirectory implements Closeable {
   private final NameCache<ByteArray> nameCache;
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
+    // used to enable/disable the use of expanded string tables.
+    SerialNumberManager.initialize(conf);
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);

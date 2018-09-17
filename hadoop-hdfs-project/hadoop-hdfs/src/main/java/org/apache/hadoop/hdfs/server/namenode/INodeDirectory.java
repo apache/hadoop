@@ -118,7 +118,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public byte getLocalStoragePolicyID() {
     XAttrFeature f = getXAttrFeature();
-    ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
+    List<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
         .getXAttrs();
     for (XAttr xattr : xattrs) {
       if (BlockStoragePolicySuite.isStoragePolicyXAttr(xattr)) {
