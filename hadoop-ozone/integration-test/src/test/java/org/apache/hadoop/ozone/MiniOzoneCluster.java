@@ -138,8 +138,11 @@ public interface MiniOzoneCluster {
    * Restarts StorageContainerManager instance.
    *
    * @throws IOException
+   * @throws TimeoutException
+   * @throws InterruptedException
    */
-  void restartStorageContainerManager() throws IOException;
+  void restartStorageContainerManager() throws InterruptedException,
+      TimeoutException, IOException;
 
   /**
    * Restarts OzoneManager instance.

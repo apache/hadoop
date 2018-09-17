@@ -25,7 +25,6 @@ import java.util.Set;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -75,9 +74,6 @@ import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
  * Replica and THREE Replica. User can specify how many copies should be made
  * for a ozone key.
  * <p>
- * 5.Pipeline - The pipeline constitute the set of Datanodes on which the
- * open container resides physically.
- * <p>
  * The most common access pattern of this class is to select a container based
  * on all these parameters, for example, when allocating a block we will
  * select a container that belongs to user1, with Ratis replication which can
@@ -92,14 +88,6 @@ public class ContainerStateMap {
   private final ContainerAttribute<String> ownerMap;
   private final ContainerAttribute<ReplicationFactor> factorMap;
   private final ContainerAttribute<ReplicationType> typeMap;
-  // This map constitutes the pipeline to open container mappings.
-  // This map will be queried for the list of open containers on a particular
-  // pipeline and issue a close on corresponding containers in case of
-  // following events:
-  //1. Dead datanode.
-  //2. Datanode out of space.
-  //3. Volume loss or volume out of space.
-  private final ContainerAttribute<PipelineID> openPipelineMap;
 
   private final Map<ContainerID, ContainerInfo> containerMap;
   // Map to hold replicas of given container.
@@ -121,7 +109,6 @@ public class ContainerStateMap {
     ownerMap = new ContainerAttribute<>();
     factorMap = new ContainerAttribute<>();
     typeMap = new ContainerAttribute<>();
-    openPipelineMap = new ContainerAttribute<>();
     containerMap = new HashMap<>();
     lock = new ReentrantReadWriteLock();
     contReplicaMap = new HashMap<>();
@@ -158,9 +145,6 @@ public class ContainerStateMap {
       ownerMap.insert(info.getOwner(), id);
       factorMap.insert(info.getReplicationFactor(), id);
       typeMap.insert(info.getReplicationType(), id);
-      if (info.isContainerOpen()) {
-        openPipelineMap.insert(info.getPipelineID(), id);
-      }
 
       // Flush the cache of this container type, will be added later when
       // get container queries are executed.
@@ -391,11 +375,6 @@ public class ContainerStateMap {
         throw new SCMException("Updating the container map failed.", ex,
             FAILED_TO_CHANGE_CONTAINER_STATE);
       }
-      // In case the container is set to closed state, it needs to be removed
-      // from the pipeline Map.
-      if (!info.isContainerOpen()) {
-        openPipelineMap.remove(info.getPipelineID(), id);
-      }
     } finally {
       lock.writeLock().unlock();
     }
@@ -428,23 +407,6 @@ public class ContainerStateMap {
     lock.readLock().lock();
     try {
       return typeMap.getCollection(type);
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
-  /**
-   * Returns Open containers in the SCM by the Pipeline.
-   *
-   * @param pipelineID - Pipeline id.
-   * @return NavigableSet<ContainerID>
-   */
-  public NavigableSet<ContainerID> getOpenContainerIDsByPipeline(
-      PipelineID pipelineID) {
-    Preconditions.checkNotNull(pipelineID);
-    lock.readLock().lock();
-    try {
-      return openPipelineMap.getCollection(pipelineID);
     } finally {
       lock.readLock().unlock();
     }

@@ -86,6 +86,30 @@ public class Pipeline {
     datanodes = new TreeMap<>();
   }
 
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    Pipeline that = (Pipeline) o;
+
+    return id.equals(that.id)
+            && factor.equals(that.factor)
+            && type.equals(that.type)
+            && lifeCycleState.equals(that.lifeCycleState)
+            && leaderID.equals(that.leaderID);
+
+  }
+
   /**
    * Gets pipeline object from protobuf.
    *

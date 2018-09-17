@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.junit.Assert;
@@ -60,7 +61,8 @@ public class TestDeadNodeHandler {
     Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
     ContainerStateManager containerStateManager = new ContainerStateManager(
         new OzoneConfiguration(),
-        Mockito.mock(Mapping.class)
+        Mockito.mock(Mapping.class),
+        Mockito.mock(PipelineSelector.class)
     );
 
     ContainerInfo container1 =

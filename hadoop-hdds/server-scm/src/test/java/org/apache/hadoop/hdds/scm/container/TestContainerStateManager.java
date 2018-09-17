@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +42,8 @@ public class TestContainerStateManager {
   public void init() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     Mapping mapping = Mockito.mock(Mapping.class);
-    containerStateManager = new ContainerStateManager(conf, mapping);
+    PipelineSelector selector =  Mockito.mock(PipelineSelector.class);
+    containerStateManager = new ContainerStateManager(conf, mapping, selector);
 
   }
 

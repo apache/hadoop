@@ -75,6 +75,7 @@ public class TestContainerReportHandler implements EventPublisher {
     OzoneConfiguration conf = new OzoneConfiguration();
     Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
     Mapping mapping = Mockito.mock(Mapping.class);
+    PipelineSelector selector = Mockito.mock(PipelineSelector.class);
 
     when(mapping.getContainer(anyLong()))
         .thenAnswer(
@@ -87,7 +88,7 @@ public class TestContainerReportHandler implements EventPublisher {
       );
 
     ContainerStateManager containerStateManager =
-        new ContainerStateManager(conf, mapping);
+        new ContainerStateManager(conf, mapping, selector);
 
     when(mapping.getStateManager()).thenReturn(containerStateManager);
 
