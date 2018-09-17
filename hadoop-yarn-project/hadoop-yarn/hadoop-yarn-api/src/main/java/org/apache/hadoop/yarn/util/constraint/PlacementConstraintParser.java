@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.util.constraint;
 
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
@@ -589,6 +590,14 @@ public final class PlacementConstraintParser {
       this.num = number;
     }
 
+    public static SourceTags emptySourceTags() {
+      return new SourceTags("", 0);
+    }
+
+    public boolean isEmpty() {
+      return Strings.isNullOrEmpty(tag) && num == 0;
+    }
+
     public String getTag() {
       return this.tag;
     }
@@ -692,20 +701,47 @@ public final class PlacementConstraintParser {
       // foo=4,Pn
       String[] splitted = specStr.split(
           String.valueOf(EXPRESSION_VAL_DELIM), 2);
-      if (splitted.length != 2) {
+      final SourceTags st;
+      final String exprs;
+      if (splitted.length == 1) {
+        // source tags not specified
+        exprs = splitted[0];
+        st = SourceTags.emptySourceTags();
+      } else if (splitted.length == 2) {
+        exprs = splitted[1];
+        String tagAlloc = splitted[0];
+        st = SourceTags.parseFrom(tagAlloc);
+      } else {
         throw new PlacementConstraintParseException(
             "Unexpected placement constraint expression " + specStr);
       }
 
-      String tagAlloc = splitted[0];
-      SourceTags st = SourceTags.parseFrom(tagAlloc);
-      String exprs = splitted[1];
       AbstractConstraint constraint =
           PlacementConstraintParser.parseExpression(exprs);
 
       result.put(st, constraint.build());
     }
 
+    // Validation
+    Set<SourceTags> sourceTagSet = result.keySet();
+    if (sourceTagSet.stream()
+        .filter(sourceTags -> sourceTags.isEmpty())
+        .findAny()
+        .isPresent()) {
+      // Source tags, e.g foo=3, is optional for a node-attribute constraint,
+      // but when source tags is absent, the parser only accept single
+      // constraint expression to avoid ambiguous semantic. This is because
+      // DS AM is requesting number of containers per the number specified
+      // in the source tags, we do overwrite when there is no source tags
+      // with num_containers argument from commandline. If that is partially
+      // missed in the constraints, we don't know if it is ought to
+      // overwritten or not.
+      if (result.size() != 1) {
+        throw new PlacementConstraintParseException(
+            "Source allocation tags is required for a multi placement"
+                + " constraint expression.");
+      }
+    }
     return result;
   }
 }

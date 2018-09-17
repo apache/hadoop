@@ -501,5 +501,27 @@ public class TestPlacementConstraintParser {
     actualPc2 = valueIt.next();
     Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
     Assert.assertEquals(expectedPc2, actualPc2.getConstraintExpr());
+
+    // A single node attribute constraint w/o source tags
+    result = PlacementConstraintParser
+        .parsePlacementSpec("rm.yarn.io/foo=true");
+    Assert.assertEquals(1, result.size());
+    target = PlacementTargets.nodeAttribute("rm.yarn.io/foo", "true");
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+
+    SourceTags actualSourceTags = result.keySet().iterator().next();
+    Assert.assertTrue(actualSourceTags.isEmpty());
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    // If source tags is not specified for a node-attribute constraint,
+    // then this expression must be single constraint expression.
+    try {
+      PlacementConstraintParser
+          .parsePlacementSpec("rm.yarn.io/foo=true:xyz=1,notin,node,xyz");
+      Assert.fail("Expected a failure!");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof PlacementConstraintParseException);
+    }
   }
 }

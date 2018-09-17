@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Strings;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -527,7 +528,9 @@ public class ApplicationMaster {
       LOG.info("Placement Spec received [{}]", decodedSpec);
 
       this.numTotalContainers = 0;
-      parsePlacementSpecs(decodedSpec);
+      int globalNumOfContainers = Integer
+          .parseInt(cliParser.getOptionValue("num_containers", "0"));
+      parsePlacementSpecs(decodedSpec, globalNumOfContainers);
       LOG.info("Total num containers requested [{}]", numTotalContainers);
 
       if (numTotalContainers == 0) {
@@ -698,11 +701,19 @@ public class ApplicationMaster {
     return true;
   }
 
-  private void parsePlacementSpecs(String decodedSpec) {
+  private void parsePlacementSpecs(String decodedSpec,
+      int globalNumOfContainers) {
     Map<String, PlacementSpec> pSpecs =
         PlacementSpec.parse(decodedSpec);
     this.placementSpecs = new HashMap<>();
     for (PlacementSpec pSpec : pSpecs.values()) {
+      // Use global num of containers when the spec doesn't specify
+      // source tags. This is allowed when using node-attribute constraints.
+      if (Strings.isNullOrEmpty(pSpec.sourceTag)
+          && pSpec.getNumContainers() == 0
+          && globalNumOfContainers > 0) {
+        pSpec.setNumContainers(globalNumOfContainers);
+      }
       this.numTotalContainers += pSpec.getNumContainers();
       this.placementSpecs.put(pSpec.sourceTag, pSpec);
     }
@@ -799,8 +810,9 @@ public class ApplicationMaster {
       placementConstraintMap = new HashMap<>();
       for (PlacementSpec spec : this.placementSpecs.values()) {
         if (spec.constraint != null) {
-          placementConstraintMap.put(
-              Collections.singleton(spec.sourceTag), spec.constraint);
+          Set<String> allocationTags = Strings.isNullOrEmpty(spec.sourceTag) ?
+              Collections.emptySet() : Collections.singleton(spec.sourceTag);
+          placementConstraintMap.put(allocationTags, spec.constraint);
         }
       }
     }
