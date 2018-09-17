@@ -122,7 +122,6 @@ run mkdir "ozone-${HDDS_VERSION}"
 run cd "ozone-${HDDS_VERSION}"
 run cp -p "${ROOT}/LICENSE.txt" .
 run cp -p "${ROOT}/NOTICE.txt" .
-run cp -p "${ROOT}/README.txt" .
 
 # Copy hadoop-common first so that it have always have all dependencies.
 # Remaining projects will copy only libraries which are not present already in 'share' directory.
@@ -162,6 +161,14 @@ cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./
 rm sbin/*all.sh
 rm sbin/*all.cmd
 
+#remove test and java sources
+find . -name "*tests.jar" | xargs rm
+find . -name "*sources.jar" | xargs rm
+find . -name jdiff -type d | xargs rm -rf
+
+#add ozone specific readme
+
+run cp "${ROOT}/hadoop-dist/src/main/ozone/README.txt" README.txt
 #Copy docker compose files
 run cp -p -r "${ROOT}/hadoop-dist/src/main/compose" .
 
@@ -169,5 +176,5 @@ mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn
 mkdir -p ./share/hadoop/hdfs
 echo
-echo "Hadoop Ozone dist layout available at: ${BASEDIR}/ozone"
+echo "Hadoop Ozone dist layout available at: ${BASEDIR}/ozone-${HDDS_VERSION}"
 echo
