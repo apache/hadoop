@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.pipelines.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -39,7 +38,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.Map;
 
 /**
  * Implementation of {@link PipelineManager}.
@@ -59,9 +57,8 @@ public class RatisManagerImpl extends PipelineManager {
    * @param nodeManager
    */
   public RatisManagerImpl(NodeManager nodeManager,
-      ContainerPlacementPolicy placementPolicy, long size, Configuration conf,
-      Node2PipelineMap map, Map<PipelineID, Pipeline> pipelineMap) {
-    super(map, pipelineMap);
+      ContainerPlacementPolicy placementPolicy, long size, Configuration conf) {
+    super();
     this.conf = conf;
     this.nodeManager = nodeManager;
     ratisMembers = new HashSet<>();
@@ -114,7 +111,6 @@ public class RatisManagerImpl extends PipelineManager {
         XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
       client.destroyPipeline();
     }
-    super.closePipeline(pipeline);
     for (DatanodeDetails node : pipeline.getMachines()) {
       // A node should always be the in ratis members list.
       Preconditions.checkArgument(ratisMembers.remove(node));

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -54,8 +55,9 @@ public class TestContainerStateManagerIntegration {
   private MiniOzoneCluster cluster;
   private XceiverClientManager xceiverClientManager;
   private StorageContainerManager scm;
-  private Mapping scmContainerMapping;
+  private ContainerMapping scmContainerMapping;
   private ContainerStateManager containerStateManager;
+  private PipelineSelector selector;
   private String containerOwner = "OZONE";
 
 
@@ -66,8 +68,9 @@ public class TestContainerStateManagerIntegration {
     cluster.waitForClusterToBeReady();
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();
-    scmContainerMapping = scm.getScmContainerManager();
+    scmContainerMapping = (ContainerMapping) scm.getScmContainerManager();
     containerStateManager = scmContainerMapping.getStateManager();
+    selector = scmContainerMapping.getPipelineSelector();
   }
 
   @After
@@ -133,8 +136,7 @@ public class TestContainerStateManagerIntegration {
     // New instance of ContainerStateManager should load all the containers in
     // container store.
     ContainerStateManager stateManager =
-        new ContainerStateManager(conf, scmContainerMapping
-        );
+        new ContainerStateManager(conf, scmContainerMapping, selector);
     int matchCount = stateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),

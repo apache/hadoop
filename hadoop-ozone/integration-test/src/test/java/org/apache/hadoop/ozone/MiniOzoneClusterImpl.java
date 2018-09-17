@@ -85,7 +85,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       LoggerFactory.getLogger(MiniOzoneClusterImpl.class);
 
   private final OzoneConfiguration conf;
-  private final StorageContainerManager scm;
+  private StorageContainerManager scm;
   private final OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
 
@@ -215,9 +215,13 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartStorageContainerManager() throws IOException {
+  public void restartStorageContainerManager()
+      throws TimeoutException, InterruptedException, IOException {
     scm.stop();
+    scm.join();
+    scm = StorageContainerManager.createSCM(null, conf);
     scm.start();
+    waitForClusterToBeReady();
   }
 
   @Override

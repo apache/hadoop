@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
@@ -137,7 +136,7 @@ public class ContainerStateManager implements Closeable {
    */
   @SuppressWarnings("unchecked")
   public ContainerStateManager(Configuration configuration,
-      Mapping containerMapping) {
+      Mapping containerMapping, PipelineSelector pipelineSelector) {
 
     // Initialize the container state machine.
     Set<HddsProtos.LifeCycleState> finalStates = new HashSet();
@@ -159,10 +158,11 @@ public class ContainerStateManager implements Closeable {
     lastUsedMap = new ConcurrentHashMap<>();
     containerCount = new AtomicLong(0);
     containers = new ContainerStateMap();
-    loadExistingContainers(containerMapping);
+    loadExistingContainers(containerMapping, pipelineSelector);
   }
 
-  private void loadExistingContainers(Mapping containerMapping) {
+  private void loadExistingContainers(Mapping containerMapping,
+                                      PipelineSelector pipelineSelector) {
 
     List<ContainerInfo> containerList;
     try {
@@ -184,6 +184,8 @@ public class ContainerStateManager implements Closeable {
       long maxID = 0;
       for (ContainerInfo container : containerList) {
         containers.addContainer(container);
+        pipelineSelector.addContainerToPipeline(
+                container.getPipelineID(), container.getContainerID());
 
         if (maxID < container.getContainerID()) {
           maxID = container.getContainerID();
@@ -303,6 +305,7 @@ public class ContainerStateManager implements Closeable {
         + "replication=%s couldn't be found for the new container. "
         + "Do you have enough nodes?", type, replicationFactor);
 
+    long containerID = containerCount.incrementAndGet();
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setState(HddsProtos.LifeCycleState.ALLOCATED)
         .setPipelineID(pipeline.getId())
@@ -313,11 +316,12 @@ public class ContainerStateManager implements Closeable {
         .setNumberOfKeys(0)
         .setStateEnterTime(Time.monotonicNow())
         .setOwner(owner)
-        .setContainerID(containerCount.incrementAndGet())
+        .setContainerID(containerID)
         .setDeleteTransactionId(0)
         .setReplicationFactor(replicationFactor)
         .setReplicationType(pipeline.getType())
         .build();
+    selector.addContainerToPipeline(pipeline.getId(), containerID);
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
     LOG.trace("New container allocated: {}", containerInfo);
@@ -468,17 +472,6 @@ public class ContainerStateManager implements Closeable {
       LifeCycleState state) {
     return containers.getMatchingContainerIDs(state, owner,
         factor, type);
-  }
-
-  /**
-   * Returns a set of open ContainerIDs that reside on a pipeline.
-   *
-   * @param pipelineID PipelineID of the Containers.
-   * @return Set of containers that match the specific query parameters.
-   */
-  public NavigableSet<ContainerID> getMatchingContainerIDsByPipeline(PipelineID
-      pipelineID) {
-    return containers.getOpenContainerIDsByPipeline(pipelineID);
   }
 
   /**

@@ -16,11 +16,10 @@
  */
 package org.apache.hadoop.hdds.scm.pipelines;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.Map;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
@@ -37,17 +36,53 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
-  private final List<PipelineID> activePipelines;
-  private final Map<PipelineID, Pipeline> pipelineMap;
-  private final AtomicInteger pipelineIndex;
-  private final Node2PipelineMap node2PipelineMap;
+  private final ArrayList<ActivePipelines> activePipelines;
 
-  public PipelineManager(Node2PipelineMap map,
-      Map<PipelineID, Pipeline> pipelineMap) {
-    activePipelines = new LinkedList<>();
-    pipelineIndex = new AtomicInteger(0);
-    this.pipelineMap = pipelineMap;
-    this.node2PipelineMap = map;
+  public PipelineManager() {
+    activePipelines = new ArrayList<>();
+    for (ReplicationFactor factor : ReplicationFactor.values()) {
+      activePipelines.add(factor.ordinal(), new ActivePipelines());
+    }
+  }
+
+  private static class ActivePipelines {
+    private final List<PipelineID> activePipelines;
+    private final AtomicInteger pipelineIndex;
+
+    ActivePipelines() {
+      activePipelines = new LinkedList<>();
+      pipelineIndex = new AtomicInteger(0);
+    }
+
+    void addPipeline(PipelineID pipelineID) {
+      activePipelines.add(pipelineID);
+    }
+
+    void removePipeline(PipelineID pipelineID) {
+      activePipelines.remove(pipelineID);
+    }
+
+    /**
+     * Find a Pipeline that is operational.
+     *
+     * @return - Pipeline or null
+     */
+    PipelineID findOpenPipeline() {
+      if (activePipelines.size() == 0) {
+        LOG.error("No Operational pipelines found. Returning null.");
+        return null;
+      }
+      return activePipelines.get(getNextIndex());
+    }
+
+    /**
+     * gets the next index of the Pipeline to get.
+     *
+     * @return index in the link list to get.
+     */
+    private int getNextIndex() {
+      return pipelineIndex.incrementAndGet() % activePipelines.size();
+    }
   }
 
   /**
@@ -59,44 +94,30 @@ public abstract class PipelineManager {
    * @param replicationFactor - Replication Factor
    * @return a Pipeline.
    */
-  public synchronized final Pipeline getPipeline(
+  public synchronized final PipelineID getPipeline(
       ReplicationFactor replicationFactor, ReplicationType replicationType) {
-    Pipeline pipeline = findOpenPipeline(replicationType, replicationFactor);
-    if (pipeline != null) {
+    PipelineID id =
+        activePipelines.get(replicationFactor.ordinal()).findOpenPipeline();
+    if (id != null) {
       LOG.debug("re-used pipeline:{} for container with " +
               "replicationType:{} replicationFactor:{}",
-          pipeline.getId(), replicationType, replicationFactor);
+          id, replicationType, replicationFactor);
     }
-    if (pipeline == null) {
+    if (id == null) {
       LOG.error("Get pipeline call failed. We are not able to find" +
               " operational pipeline.");
       return null;
     } else {
-      return pipeline;
+      return id;
     }
   }
 
-  /**
-   * This function to get pipeline with given pipeline name.
-   *
-   * @param id
-   * @return a Pipeline.
-   */
-  public synchronized final Pipeline getPipeline(PipelineID id) {
-    Pipeline pipeline = null;
-
-    // 1. Check if pipeline already exists
-    if (pipelineMap.containsKey(id)) {
-      pipeline = pipelineMap.get(id);
-      LOG.debug("Returning pipeline for pipelineName:{}", id);
-      return pipeline;
-    } else {
-      LOG.debug("Unable to find pipeline for pipelineName:{}", id);
-    }
-    return pipeline;
+  void addOpenPipeline(Pipeline pipeline) {
+    activePipelines.get(pipeline.getFactor().ordinal())
+            .addPipeline(pipeline.getId());
   }
 
-  protected int getReplicationCount(ReplicationFactor factor) {
+  protected static int getReplicationCount(ReplicationFactor factor) {
     switch (factor) {
     case ONE:
       return 1;
@@ -117,46 +138,6 @@ public abstract class PipelineManager {
   public abstract void initializePipeline(Pipeline pipeline) throws IOException;
 
   /**
-   * Find a Pipeline that is operational.
-   *
-   * @return - Pipeline or null
-   */
-  private Pipeline findOpenPipeline(
-      ReplicationType type, ReplicationFactor factor) {
-    Pipeline pipeline = null;
-    final int sentinal = -1;
-    if (activePipelines.size() == 0) {
-      LOG.error("No Operational pipelines found. Returning null.");
-      return null;
-    }
-    int startIndex = getNextIndex();
-    int nextIndex = sentinal;
-    for (; startIndex != nextIndex; nextIndex = getNextIndex()) {
-      // Just walk the list in a circular way.
-      PipelineID id =
-          activePipelines
-              .get(nextIndex != sentinal ? nextIndex : startIndex);
-      Pipeline temp = pipelineMap.get(id);
-      // if we find an operational pipeline just return that.
-      if ((temp.getLifeCycleState() == LifeCycleState.OPEN) &&
-          (temp.getFactor() == factor) && (temp.getType() == type)) {
-        pipeline = temp;
-        break;
-      }
-    }
-    return pipeline;
-  }
-
-  /**
-   * gets the next index of the Pipeline to get.
-   *
-   * @return index in the link list to get.
-   */
-  private int getNextIndex() {
-    return pipelineIndex.incrementAndGet() % activePipelines.size();
-  }
-
-  /**
    * Creates a pipeline with a specified replication factor and type.
    * @param replicationFactor - Replication Factor.
    * @param replicationType - Replication Type.
@@ -168,9 +149,6 @@ public abstract class PipelineManager {
       LOG.debug("created new pipeline:{} for container with "
               + "replicationType:{} replicationFactor:{}",
           pipeline.getId(), replicationType, replicationFactor);
-      activePipelines.add(pipeline.getId());
-      pipelineMap.put(pipeline.getId(), pipeline);
-      node2PipelineMap.addPipeline(pipeline);
     }
     return pipeline;
   }
@@ -180,17 +158,15 @@ public abstract class PipelineManager {
    * @param pipeline pipeline to be finalized
    */
   public synchronized void finalizePipeline(Pipeline pipeline) {
-    activePipelines.remove(pipeline.getId());
+    activePipelines.get(pipeline.getFactor().ordinal())
+            .removePipeline(pipeline.getId());
   }
 
   /**
    *
    * @param pipeline
    */
-  public void closePipeline(Pipeline pipeline) throws IOException {
-    pipelineMap.remove(pipeline.getId());
-    node2PipelineMap.removePipeline(pipeline);
-  }
+  public abstract void closePipeline(Pipeline pipeline) throws IOException;
 
   /**
    * list members in the pipeline.

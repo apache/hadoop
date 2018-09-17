@@ -22,7 +22,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.pipelines.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -37,7 +36,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.Map;
 
 /**
  * Standalone Manager Impl to prove that pluggable interface
@@ -58,9 +56,8 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @param containerSize - Container Size.
    */
   public StandaloneManagerImpl(NodeManager nodeManager,
-      ContainerPlacementPolicy placementPolicy, long containerSize,
-      Node2PipelineMap map, Map<PipelineID, Pipeline> pipelineMap) {
-    super(map, pipelineMap);
+      ContainerPlacementPolicy placementPolicy, long containerSize) {
+    super();
     this.nodeManager = nodeManager;
     this.placementPolicy = placementPolicy;
     this.containerSize =  containerSize;
@@ -105,7 +102,6 @@ public class StandaloneManagerImpl extends PipelineManager {
    * Close the pipeline.
    */
   public void closePipeline(Pipeline pipeline) throws IOException {
-    super.closePipeline(pipeline);
     for (DatanodeDetails node : pipeline.getMachines()) {
       // A node should always be the in standalone members list.
       Preconditions.checkArgument(standAloneMembers.remove(node));
