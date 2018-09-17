@@ -20,7 +20,7 @@
 
   var filters = {
     'fmt_bytes': function (v) {
-      var UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'ZB'];
+      var UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB'];
       var prev = 0, i = 0;
       while (Math.floor(v) > 0 && i < UNITS.length) {
         prev = v;
@@ -28,7 +28,7 @@
         i += 1;
       }
 
-      if (i > 0 && i < UNITS.length) {
+      if (i > 0) {
         v = prev;
         i -= 1;
       }
