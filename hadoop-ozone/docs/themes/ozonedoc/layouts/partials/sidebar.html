@@ -12,6 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <div class="col-sm-3 col-md-2 sidebar">
+  <img src="ozone-logo.png" style="max-width: 100%;"/>
   <ul class="nav nav-sidebar">
     {{ $currentPage := . }}
     {{ range .Site.Menus.main }}
@@ -31,7 +32,12 @@
             </li>
         {{ else }}
             <li class="{{ if $currentPage.IsMenuCurrent "main" . }}active{{ end }}">
-                <a href="{{ .URL }}">
+                {{ if eq .URL "/" }}
+                   <a href="index.html">
+                {{ else }}
+                   <a href="{{ .URL }}">
+                {{ end }}
+
                     {{ .Pre }}
                     <span>{{ .Name }}</span>
                 </a>

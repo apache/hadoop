@@ -156,6 +156,8 @@ cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-ser
 # Optional documentation, could be missing
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/ozone/webapps/ozoneManager/
 cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./share/hadoop/hdds/webapps/scm/
+cp -r "${ROOT}/hadoop-ozone/docs/target/classes/webapps/docs" ./
+
 
 rm sbin/*all.sh
 rm sbin/*all.cmd
