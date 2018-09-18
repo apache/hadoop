@@ -291,7 +291,7 @@ public class RawLocalFileSystem extends FileSystem {
       Progressable progress) throws IOException {
     FileStatus status = getFileStatus(f);
     if (status.isDirectory()) {
-      throw new FileAlreadyExistsException("Cannot append to a directory: " + f);
+      throw new IOException("Cannot append to a diretory (=" + f + " )");
     }
     return new FSDataOutputStream(new BufferedOutputStream(
         createOutputStreamWithMode(f, true, null), bufferSize), statistics,

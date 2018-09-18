@@ -18,12 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -32,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test append -if supported
@@ -81,10 +75,15 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
 
   @Test
   public void testAppendNonexistentFile() throws Throwable {
-    //expected
-    handleExpectedException(
-        intercept(Exception.class,
-            () -> getFileSystem().append(target).close()));
+    try {
+      FSDataOutputStream out = getFileSystem().append(target);
+      //got here: trouble
+      out.close();
+      fail("expected a failure");
+    } catch (Exception e) {
+      //expected
+      handleExpectedException(e);
+    }
   }
 
   @Test
@@ -117,9 +116,15 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
 
   @Test
   public void testAppendMissingTarget() throws Throwable {
-    handleExpectedException(
-        intercept(Exception.class,
-            () -> getFileSystem().append(target).close()));
+    try {
+      FSDataOutputStream out = getFileSystem().append(target);
+      //got here: trouble
+      out.close();
+      fail("expected a failure");
+    } catch (Exception e) {
+      //expected
+      handleExpectedException(e);
+    }
   }
 
   @Test
@@ -143,31 +148,5 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
     byte[] bytes = ContractTestUtils.readDataset(getFileSystem(), renamed,
                                                  dataset.length);
     ContractTestUtils.compareByteArrays(dataset, bytes, dataset.length);
-  }
-
-  @Test
-  public void testAppendFileAfterDelete() throws Exception {
-    final FileSystem fs = getFileSystem();
-    final Path filePath = target;
-    fs.create(filePath);
-    fs.delete(filePath, false);
-    intercept(FileNotFoundException.class,
-        () -> fs.append(filePath));
-  }
-
-  @Test
-  public void testAppendDirectory() throws Exception {
-    final FileSystem fs = getFileSystem();
-
-    final Path folderPath = target;
-    fs.mkdirs(folderPath);
-    IOException ex = intercept(IOException.class,
-        () -> fs.append(folderPath));
-    if (ex instanceof FileAlreadyExistsException) {
-      handleExpectedException(ex);
-    } else {
-      handleRelaxedException("Append to a directory",
-          "FileAlreadyExistsException", ex);
-    }
   }
 }
