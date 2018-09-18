@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,5 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-"$DIR/robot.sh" "$DIR/../../src/test/acceptance"
+*** Keywords ***
+
+
+Execute
+    [arguments]                     ${command}
+    ${rc}                           ${output} =                 Run And Return Rc And Output           ${command}
+    Log                             ${output}
+    Should Be Equal As Integers     ${rc}                       0
+    [return]                        ${output}

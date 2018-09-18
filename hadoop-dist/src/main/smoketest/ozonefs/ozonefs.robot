@@ -16,24 +16,20 @@
 *** Settings ***
 Documentation       Ozonefs test
 Library             OperatingSystem
-Suite Setup         Startup Ozone cluster with size          5
-Suite Teardown      Teardown Ozone cluster
 Resource            ../commonlib.robot
 
 *** Variables ***
-${COMPOSEFILE}          ${CURDIR}/docker-compose.yaml
-${PROJECTDIR}           ${CURDIR}/../../../../../..
 
 
 *** Test Cases ***
 Create volume and bucket
-    Execute on          datanode        ozone sh volume create http://ozoneManager/fstest --user bilbo --quota 100TB --root
-    Execute on          datanode        ozone sh bucket create http://ozoneManager/fstest/bucket1
+    Execute             ozone sh volume create http://ozoneManager/fstest --user bilbo --quota 100TB --root
+    Execute             ozone sh bucket create http://ozoneManager/fstest/bucket1
 
 Check volume from ozonefs
-    ${result} =         Execute on          datanode          ozone fs -ls o3://bucket1.fstest/
+    ${result} =         Execute               ozone fs -ls o3://bucket1.fstest/
 
 Create directory from ozonefs
-                        Execute on          datanode          ozone fs -mkdir -p o3://bucket1.fstest/testdir/deep
-    ${result} =         Execute on          ozoneManager      ozone sh key list o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
-                                            Should contain    ${result}         testdir/deep
+                        Execute               ozone fs -mkdir -p o3://bucket1.fstest/testdir/deep
+    ${result} =         Execute               ozone sh key list o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
+                        Should contain    ${result}         testdir/deep
