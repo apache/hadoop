@@ -50,20 +50,20 @@
         <configuration>
           <artifactSet>
             <includes>
-              <include>com.google.guava:guava:jar</include>
-              <include>org.slf4j:slf4j-api:jar</include>
+              <include>com.google.guava:guava</include>
+              <include>org.slf4j:slf4j-api</include>
               <include>com.google.protobuf:protobuf-java</include>
-              <include>com.nimbusds:nimbus-jose-jwt:jar</include>
+              <include>com.nimbusds:nimbus-jose-jwt</include>
               <include>com.github.stephenc.jcip:jcip-annotations</include>
-              <include>com.google.code.findbugs:jsr305:jar</include>
+              <include>com.google.code.findbugs:jsr305</include>
               <include>org.apache.hadoop:hadoop-ozone-client</include>
               <include>org.apache.hadoop:hadoop-hdds-client</include>
               <include>org.apache.hadoop:hadoop-hdds-common</include>
               <include>org.fusesource.leveldbjni:leveldbjni-all</include>
               <include>org.apache.ratis:ratis-server</include>
-              <include>org.apache.ratis:ratis-proto-shaded:jar</include>
+              <include>org.apache.ratis:ratis-proto-shaded</include>
               <include>com.google.auto.value:auto-value-annotations</include>
-              <include>com.squareup:javapoet:jar</include>
+              <include>com.squareup:javapoet</include>
               <include>org.jctools:jctools-core</include>
               <include>org.apache.ratis:ratis-common</include>
               <include>org.apache.ratis:ratis-client</include>
