@@ -129,7 +129,11 @@ introStream.close();
 Here is a complete example of the code that we just wrote. Please note the close functions being called in this program.
 
 {{< highlight java >}}
+// Let us create a client
 OzoneClient ozClient = OzoneClientFactory.getClient();
+
+// Get a reference to the ObjectStore using the client
+ObjectStore objectStore = ozClient.getObjectStore();
 
 // Let us create a volume to store our game assets.
 // This default arguments for creating that volume.

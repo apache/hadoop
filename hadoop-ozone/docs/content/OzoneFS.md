@@ -32,8 +32,8 @@ To create an ozone file system, we have to choose a bucket where the file system
 Please run the following commands to create a volume and bucket, if you don't have them already.
 
 {{< highlight bash >}}
-ozone oz volume create /volume
-ozone oz bucket create /volume/bucket
+ozone sh volume create /volume
+ozone sh bucket create /volume/bucket
 {{< /highlight >}}
 
 Once this is created, please make sure that bucket exists via the listVolume or listBucket commands.
@@ -56,7 +56,7 @@ This will make this bucket to be the default file system for HDFS dfs commands a
 You also need to add the ozone-filesystem.jar file to the classpath:
 
 {{< highlight bash >}}
-export HADOOP_CLASSPATH=/opt/ozone/share/hadoop/ozonefs/hadoop-ozone-filesystem.jar
+export HADOOP_CLASSPATH=/opt/ozone/share/hadoop/ozonefs/hadoop-ozone-filesystem.jar:$HADOOP_CLASSPATH
 {{< /highlight >}}
 
 
