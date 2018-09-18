@@ -256,7 +256,8 @@
       <id>parallel-tests-wasb</id>
       <activation>
         <property>
-          <name>parallel-tests-wasb</name>
+          <name>parallel-tests</name>
+          <value>wasb</value>
         </property>
       </activation>
       <build>
@@ -438,7 +439,8 @@
       <id>parallel-tests-abfs</id>
       <activation>
         <property>
-          <name>parallel-tests-abfs</name>
+          <name>parallel-tests</name>
+          <value>abfs</value>
         </property>
       </activation>
       <build>
@@ -602,6 +604,7 @@
       <activation>
         <property>
           <name>parallel-tests</name>
+          <value>both</value>
         </property>
       </activation>
       <build>
@@ -812,7 +815,7 @@
       <id>sequential-tests</id>
       <activation>
         <property>
-          <name>sequential-tests</name>
+          <name>!parallel-tests</name>
         </property>
       </activation>
       <build>
