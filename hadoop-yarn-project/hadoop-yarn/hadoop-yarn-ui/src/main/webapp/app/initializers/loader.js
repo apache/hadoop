@@ -88,6 +88,9 @@ function updateConfigs(application) {
   var hostname = window.location.hostname;
   var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') + skipTrailingSlash(window.location.pathname);
 
+  window.ENV = window.ENV || {};
+  window.ENV.hosts = window.ENV.hosts || {};
+
   if(!ENV.hosts.rmWebAddress) {
     ENV.hosts.rmWebAddress = rmhost;
     ENV.hosts.protocolScheme = window.location.protocol;
