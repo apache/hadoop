@@ -65,6 +65,9 @@ export default Ember.Controller.extend({
   }.property('model.clusterInfo'),
 
   userInfo: function() {
-    return this.model.userInfo.get('firstObject');
+    if (this.model.userInfo) {
+      return this.model.userInfo.get('firstObject');
+    }
+    return null;
   }.property('model.userInfo'),
 });
