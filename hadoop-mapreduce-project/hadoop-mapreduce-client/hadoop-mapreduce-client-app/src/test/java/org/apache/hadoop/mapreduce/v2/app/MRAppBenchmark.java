@@ -33,7 +33,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -114,7 +116,7 @@ public class MRAppBenchmark {
     }
     
     class ThrottledContainerAllocator extends AbstractService 
-        implements ContainerAllocator {
+        implements ContainerAllocator, RMHeartbeatHandler {
       private int containerCount;
       private Thread thread;
       private BlockingQueue<ContainerAllocatorEvent> eventQueue =
@@ -178,6 +180,15 @@ public class MRAppBenchmark {
           thread.interrupt();
         }
         super.serviceStop();
+      }
+
+      @Override
+      public long getLastHeartbeatTime() {
+        return Time.now();
+      }
+
+      @Override
+      public void runOnNextHeartbeat(Runnable callback) {
       }
     }
   }
@@ -259,7 +270,7 @@ public class MRAppBenchmark {
     });
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;
