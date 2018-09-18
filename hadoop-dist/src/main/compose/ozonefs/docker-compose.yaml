@@ -55,5 +55,5 @@ services:
       env_file:
         - ./docker-config
       environment:
-         HADOOP_CLASSPATH: /opt/ozone/share/hadoop/ozonefs/hadoop-ozone-filesystem.jar
+         HADOOP_CLASSPATH: /opt/ozone/share/hadoop/ozonefs/*.jar
       command: ["watch","-n","100000","ls"]
