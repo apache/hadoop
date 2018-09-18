@@ -682,16 +682,17 @@ class BlockSender implements java.io.Closeable {
           + " at offset " + offset + " for block " + block, e);
       ris.closeChecksumStream();
       if (corruptChecksumOk) {
-        if (checksumOffset < checksumLen) {
+        if (checksumLen > 0) {
           // Just fill the array with zeros.
-          Arrays.fill(buf, checksumOffset, checksumLen, (byte) 0);
+          Arrays.fill(buf, checksumOffset, checksumOffset + checksumLen,
+              (byte) 0);
         }
       } else {
         throw e;
       }
     }
   }
-  
+
   /**
    * Compute checksum for chunks and verify the checksum that is read from
    * the metadata file is correct.
