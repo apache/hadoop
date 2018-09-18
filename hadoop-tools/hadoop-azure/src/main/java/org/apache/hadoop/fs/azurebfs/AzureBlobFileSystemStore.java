@@ -88,6 +88,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.util.Time.now;
 
 /**
@@ -129,6 +130,12 @@ public class AzureBlobFileSystemStore {
     this.userGroupInformation = userGroupInformation;
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+
+    if (AuthType.OAuth == abfsConfiguration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey)
+            && !FileSystemUriSchemes.ABFS_SECURE_SCHEME.equals(uri.getScheme())) {
+      throw new IllegalArgumentException(
+              String.format("Incorrect URI %s, URI scheme must be abfss when authenticating using Oauth.", uri));
+    }
 
     initializeClient(uri, fileSystemName, accountName, isSecure);
   }
