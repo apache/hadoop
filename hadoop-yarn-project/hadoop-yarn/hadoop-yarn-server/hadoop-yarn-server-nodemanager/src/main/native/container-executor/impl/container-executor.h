@@ -271,8 +271,7 @@ int run_docker(const char *command_file);
 /**
  * Run a docker command without a command file
  */
-int exec_docker_command(char *docker_command, char **argv,
-    int argc, int optind);
+int exec_docker_command(char *docker_command, char **argv, int argc);
 
 /*
  * Compile the regex_str and determine if the input string matches.
@@ -292,3 +291,8 @@ struct configuration* get_cfg();
  * Flatten docker launch command
  */
 char* flatten(char **args);
+
+/**
+ * Remove docker container
+ */
+int remove_docker_container(char **argv, int argc);

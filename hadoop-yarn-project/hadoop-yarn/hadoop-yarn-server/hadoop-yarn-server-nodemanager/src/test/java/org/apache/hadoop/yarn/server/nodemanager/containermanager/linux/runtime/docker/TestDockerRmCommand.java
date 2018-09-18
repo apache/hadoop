@@ -29,12 +29,19 @@ import org.junit.Test;
 public class TestDockerRmCommand {
 
   private DockerRmCommand dockerRmCommand;
+  private DockerRmCommand dockerRmCommandWithCgroupArg;
+  private DockerRmCommand dockerRmCommandWithEmptyCgroupArg;
 
   private static final String CONTAINER_NAME = "foo";
+  private static final String CGROUP_HIERARCHY_NAME = "hadoop-yarn";
 
   @Before
   public void setUp() {
-    dockerRmCommand = new DockerRmCommand(CONTAINER_NAME);
+    dockerRmCommand = new DockerRmCommand(CONTAINER_NAME, null);
+    dockerRmCommandWithCgroupArg =
+        new DockerRmCommand(CONTAINER_NAME, CGROUP_HIERARCHY_NAME);
+    dockerRmCommandWithEmptyCgroupArg =
+        new DockerRmCommand(CONTAINER_NAME, "");
   }
 
   @Test
@@ -51,4 +58,30 @@ public class TestDockerRmCommand {
     assertEquals(2, dockerRmCommand.getDockerCommandWithArguments().size());
   }
 
+  @Test
+  public void testGetCommandWithCgroup() {
+    assertEquals("rm", StringUtils.join(",",
+        dockerRmCommandWithCgroupArg.getDockerCommandWithArguments()
+            .get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerRmCommandWithCgroupArg.getDockerCommandWithArguments()
+            .get("name")));
+    assertEquals(CGROUP_HIERARCHY_NAME, StringUtils.join(",",
+        dockerRmCommandWithCgroupArg.getDockerCommandWithArguments()
+            .get("hierarchy")));
+    assertEquals(3,
+        dockerRmCommandWithCgroupArg.getDockerCommandWithArguments().size());
+  }
+
+  @Test
+  public void testGetCommandWithEmptyCgroup() {
+    assertEquals("rm", StringUtils.join(",",
+        dockerRmCommandWithEmptyCgroupArg
+            .getDockerCommandWithArguments().get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerRmCommandWithEmptyCgroupArg
+            .getDockerCommandWithArguments().get("name")));
+    assertEquals(2, dockerRmCommandWithEmptyCgroupArg.
+        getDockerCommandWithArguments().size());
+  }
 }

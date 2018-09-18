@@ -101,6 +101,21 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
+  /**
+   * Returns relative root for cgroups.  Returns null if cGroupsHandler is
+   * not initialized, or if the path is empty.
+   */
+  public static String getCgroupsRelativeRoot() {
+    if (cGroupsHandler == null) {
+      return null;
+    }
+    String cGroupPath = cGroupsHandler.getRelativePathForCGroup("");
+    if (cGroupPath == null || cGroupPath.isEmpty()) {
+      return null;
+    }
+    return cGroupPath.replaceAll("/$", "");
+  }
+
   public static NetworkPacketTaggingHandlerImpl
       getNetworkResourceHandler() {
     return networkPacketTaggingHandlerImpl;

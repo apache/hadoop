@@ -23,6 +23,7 @@
 #include "test/test-container-executor-common.h"
 
 #include <inttypes.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -32,6 +33,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/param.h>
+
 
 static char* username = NULL;
 static char* yarn_username = NULL;
@@ -1224,6 +1227,148 @@ void test_is_empty() {
   }
 }
 
+#define TCE_FAKE_CGROOT TEST_ROOT "/cgroup_root"
+#define TCE_NUM_CG_CONTROLLERS 6
+extern int clean_docker_cgroups_internal(const char *mount_table,
+                                  const char *yarn_hierarchy,
+                                  const char* container_id);
+
+void test_cleaning_docker_cgroups() {
+  const char *controllers[TCE_NUM_CG_CONTROLLERS] = { "blkio", "cpu", "cpuset", "devices", "memory", "systemd" };
+  const char *yarn_hierarchy = "hadoop-yarn";
+  const char *fake_mount_table = TEST_ROOT "/fake_mounts";
+  const char *container_id = "container_1410901177871_0001_01_000005";
+  const char *other_container_id = "container_e17_1410901177871_0001_01_000005";
+  char cgroup_paths[TCE_NUM_CG_CONTROLLERS][PATH_MAX];
+  char container_paths[TCE_NUM_CG_CONTROLLERS][PATH_MAX];
+  char other_container_paths[TCE_NUM_CG_CONTROLLERS][PATH_MAX];
+
+  printf("\nTesting clean_docker_cgroups\n");
+
+  // Setup fake mount table
+  FILE *file;
+  file = fopen(fake_mount_table, "w");
+  if (file == NULL) {
+    printf("Failed to open %s.\n", fake_mount_table);
+    exit(1);
+  }
+  fprintf(file, "rootfs " TEST_ROOT "/fake_root rootfs rw 0 0\n");
+  fprintf(file, "sysfs " TEST_ROOT "/fake_sys sysfs rw,nosuid,nodev,noexec,relatime 0 0\n");
+  fprintf(file, "proc " TEST_ROOT "/fake_proc proc rw,nosuid,nodev,noexec,relatime 0 0\n");
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    fprintf(file, "cgroup %s/%s cgroup rw,nosuid,nodev,noexec,relatime,%s 0 0\n",
+            TCE_FAKE_CGROOT, controllers[i], controllers[i]);
+  }
+  fprintf(file, "/dev/vda " TEST_ROOT "/fake_root ext4 rw,relatime,data=ordered 0 0\n");
+  fclose(file);
+
+  // Test with null inputs
+  int ret = clean_docker_cgroups_internal(NULL, yarn_hierarchy, container_id);
+  if (ret != -1) {
+    printf("FAIL: clean_docker_cgroups_internal with NULL mount table should fail\n");
+    exit(1);
+  }
+  ret = clean_docker_cgroups_internal(fake_mount_table, NULL, container_id);
+  if (ret != -1) {
+    printf("FAIL: clean_docker_cgroups_internal with NULL yarn_hierarchy should fail\n");
+    exit(1);
+  }
+  ret = clean_docker_cgroups_internal(fake_mount_table, yarn_hierarchy, NULL);
+  if (ret != -1) {
+    printf("FAIL: clean_docker_cgroups_internal with NULL container_id should fail\n");
+    exit(1);
+  }
+
+  // Test with invalid container_id
+  ret = clean_docker_cgroups_internal(fake_mount_table, yarn_hierarchy, "not_a_container_123");
+  if (ret != -1) {
+    printf("FAIL: clean_docker_cgroups_internal with invalid container_id should fail\n");
+    exit(1);
+  }
+  if (mkdir(TCE_FAKE_CGROOT, 0755) != 0) {
+    printf("FAIL: failed to mkdir " TCE_FAKE_CGROOT "\n");
+    exit(1);
+  }
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    snprintf(cgroup_paths[i], PATH_MAX, TCE_FAKE_CGROOT "/%s/%s", controllers[i], yarn_hierarchy);
+    if (mkdirs(cgroup_paths[i], 0755) != 0) {
+      printf("FAIL: failed to mkdir %s\n", cgroup_paths[i]);
+      exit(1);
+    }
+  }
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    DIR *dir = NULL;
+    dir = opendir(cgroup_paths[i]);
+    if (dir == NULL) {
+      printf("FAIL: failed to open dir %s\n", cgroup_paths[i]);
+      exit(1);
+    }
+    closedir(dir);
+  }
+  // Test before creating any containers
+  ret = clean_docker_cgroups_internal(fake_mount_table, yarn_hierarchy, container_id);
+  if (ret != 0) {
+    printf("FAIL: failed to clean cgroups: mt=%s, yh=%s, cId=%s\n",
+           fake_mount_table, yarn_hierarchy, container_id);
+  }
+  // make sure hadoop-yarn dirs are still there
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    DIR *dir = NULL;
+    dir = opendir(cgroup_paths[i]);
+    if (dir == NULL) {
+      printf("FAIL: failed to open dir %s\n", cgroup_paths[i]);
+      exit(1);
+    }
+    closedir(dir);
+  }
+  // Create container dirs
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    snprintf(container_paths[i], PATH_MAX, TCE_FAKE_CGROOT "/%s/%s/%s",
+            controllers[i], yarn_hierarchy, container_id);
+    if (mkdirs(container_paths[i], 0755) != 0) {
+      printf("FAIL: failed to mkdir %s\n", container_paths[i]);
+      exit(1);
+    }
+    snprintf(other_container_paths[i], PATH_MAX, TCE_FAKE_CGROOT "/%s/%s/%s",
+            controllers[i], yarn_hierarchy, other_container_id);
+    if (mkdirs(other_container_paths[i], 0755) != 0) {
+      printf("FAIL: failed to mkdir %s\n", other_container_paths[i]);
+      exit(1);
+    }
+  }
+  ret = clean_docker_cgroups_internal(fake_mount_table, yarn_hierarchy, container_id);
+  // make sure hadoop-yarn dirs are still there
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    DIR *dir = NULL;
+    dir = opendir(cgroup_paths[i]);
+    if (dir == NULL) {
+      printf("FAIL: failed to open dir %s\n", cgroup_paths[i]);
+      exit(1);
+    }
+    closedir(dir);
+  }
+  // make sure container dirs deleted
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    DIR *dir = NULL;
+    dir = opendir(container_paths[i]);
+    if (dir != NULL) {
+      printf("FAIL: container cgroup %s not deleted\n", container_paths[i]);
+      exit(1);
+    }
+    closedir(dir);
+  }
+  // make sure other container dirs are still there
+  for (int i = 0; i < TCE_NUM_CG_CONTROLLERS; i++) {
+    DIR *dir = NULL;
+    dir = opendir(other_container_paths[i]);
+    if (dir == NULL) {
+      printf("FAIL: container cgroup %s should not be deleted\n", other_container_paths[i]);
+      exit(1);
+    }
+    closedir(dir);
+  }
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1327,6 +1472,8 @@ int main(int argc, char **argv) {
   test_is_feature_enabled();
 
   test_check_user(0);
+
+  test_cleaning_docker_cgroups();
 
 #ifdef __APPLE__
    printf("OS X: disabling CrashReporter\n");
