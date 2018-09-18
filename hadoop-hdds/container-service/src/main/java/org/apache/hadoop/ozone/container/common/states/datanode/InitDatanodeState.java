@@ -116,7 +116,7 @@ public class InitDatanodeState implements DatanodeState,
   /**
    * Persist DatanodeDetails to datanode.id file.
    */
-  private void persistContainerDatanodeDetails() throws IOException {
+  private void persistContainerDatanodeDetails() {
     String dataNodeIDPath = HddsUtils.getDatanodeIdFilePath(conf);
     if (Strings.isNullOrEmpty(dataNodeIDPath)) {
       LOG.error("A valid file path is needed for config setting {}",
@@ -128,7 +128,15 @@ public class InitDatanodeState implements DatanodeState,
     DatanodeDetails datanodeDetails = this.context.getParent()
         .getDatanodeDetails();
     if (datanodeDetails != null && !idPath.exists()) {
-      ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
+      try {
+        ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
+      } catch (IOException ex) {
+        // As writing DatanodeDetails in to datanodeid file failed, which is
+        // a critical thing, so shutting down the state machine.
+        LOG.error("Writing to {} failed {}", dataNodeIDPath, ex.getMessage());
+        this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
+        return;
+      }
       LOG.info("DatanodeDetails is persisted to {}", dataNodeIDPath);
     }
   }
