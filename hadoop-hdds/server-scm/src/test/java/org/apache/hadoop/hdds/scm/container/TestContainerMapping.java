@@ -206,14 +206,6 @@ public class TestContainerMapping {
   }
 
   @Test
-  public void testChillModeAllocateContainerFails() throws IOException {
-    nodeManager.setChillmode(true);
-    thrown.expectMessage("Unable to create container while in chill mode");
-    mapping.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerOwner);
-  }
-
-  @Test
   public void testContainerCreationLeaseTimeout() throws IOException,
       InterruptedException {
     nodeManager.setChillmode(false);

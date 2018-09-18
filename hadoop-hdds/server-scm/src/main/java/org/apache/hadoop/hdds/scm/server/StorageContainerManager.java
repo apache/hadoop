@@ -65,6 +65,7 @@ import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineCloseHandler;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineActionEventHandler;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -241,29 +242,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     PipelineCloseHandler pipelineCloseHandler =
         new PipelineCloseHandler(scmContainerManager);
 
-    eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
-    eventQueue.addHandler(SCMEvents.NODE_REPORT, nodeReportHandler);
-    eventQueue.addHandler(SCMEvents.CONTAINER_REPORT, containerReportHandler);
-    eventQueue.addHandler(SCMEvents.CONTAINER_ACTIONS, actionsHandler);
-    eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
-    eventQueue.addHandler(SCMEvents.NEW_NODE, newNodeHandler);
-    eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
-    eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
-    eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
-    eventQueue.addHandler(SCMEvents.START_REPLICATION,
-        replicationStatus.getReplicationStatusListener());
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        replicationStatus.getChillModeStatusListener());
-    eventQueue
-        .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
-    eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
-        pipelineActionEventHandler);
-    eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
-    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scmBlockManager);
-
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
             HDDS_SCM_WATCHER_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
@@ -298,6 +276,31 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     blockProtocolServer = new SCMBlockProtocolServer(conf, this);
     clientProtocolServer = new SCMClientProtocolServer(conf, this);
     httpServer = new StorageContainerManagerHttpServer(conf);
+
+    eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
+    eventQueue.addHandler(SCMEvents.NODE_REPORT, nodeReportHandler);
+    eventQueue.addHandler(SCMEvents.CONTAINER_REPORT, containerReportHandler);
+    eventQueue.addHandler(SCMEvents.CONTAINER_ACTIONS, actionsHandler);
+    eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
+    eventQueue.addHandler(SCMEvents.NEW_NODE, newNodeHandler);
+    eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
+    eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
+    eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
+    eventQueue.addHandler(SCMEvents.START_REPLICATION,
+        replicationStatus.getReplicationStatusListener());
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        replicationStatus.getChillModeStatusListener());
+    eventQueue
+        .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
+    eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
+        pipelineActionEventHandler);
+    eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
+    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+        scmChillModeManager);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        (BlockManagerImpl) scmBlockManager);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, clientProtocolServer);
+
     registerMXBean();
   }
 
@@ -828,6 +831,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   public boolean isInChillMode() {
     return scmChillModeManager.getInChillMode();
+  }
+
+  /**
+   * Returns EventPublisher.
+   */
+  public EventPublisher getEventQueue(){
+    return eventQueue;
   }
 
   @VisibleForTesting

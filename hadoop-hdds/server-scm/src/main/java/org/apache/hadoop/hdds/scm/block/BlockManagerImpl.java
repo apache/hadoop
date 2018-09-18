@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.server.ChillModePrecheck;
-import org.apache.hadoop.hdds.scm.server.Precheck;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -190,7 +190,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
       ReplicationType type, ReplicationFactor factor, String owner)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
-    preCheck(ScmOps.allocateBlock, chillModePrecheck);
+    ScmUtils.preCheck(ScmOps.allocateBlock, chillModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
       throw new SCMException("Unsupported block size: " + size,
@@ -415,19 +415,6 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   @Override
   public SCMBlockDeletingService getSCMBlockDeletingService() {
     return this.blockDeletingService;
-  }
-
-  /**
-   * Perform all prechecks for given operations.
-   *
-   * @param operation
-   * @param preChecks prechecks to be performed
-   */
-  public void preCheck(ScmOps operation, Precheck... preChecks)
-      throws SCMException {
-    for (Precheck preCheck : preChecks) {
-      preCheck.check(operation);
-    }
   }
 
   @Override

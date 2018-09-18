@@ -27,15 +27,21 @@ import com.google.protobuf.BlockingService;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -71,13 +77,14 @@ import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
  * The RPC server that listens to requests from clients.
  */
 public class SCMClientProtocolServer implements
-    StorageContainerLocationProtocol {
+    StorageContainerLocationProtocol, EventHandler<Boolean> {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMClientProtocolServer.class);
   private final RPC.Server clientRpcServer;
   private final InetSocketAddress clientRpcAddress;
   private final StorageContainerManager scm;
   private final OzoneConfiguration conf;
+  private ChillModePrecheck chillModePrecheck = new ChillModePrecheck();
 
   public SCMClientProtocolServer(OzoneConfiguration conf,
       StorageContainerManager scm) throws IOException {
@@ -149,6 +156,7 @@ public class SCMClientProtocolServer implements
   public ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType
       replicationType, HddsProtos.ReplicationFactor factor,
       String owner) throws IOException {
+    ScmUtils.preCheck(ScmOps.allocateContainer, chillModePrecheck);
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
 
@@ -167,10 +175,37 @@ public class SCMClientProtocolServer implements
   @Override
   public ContainerWithPipeline getContainerWithPipeline(long containerID)
       throws IOException {
+    if (chillModePrecheck.isInChillMode()) {
+      ContainerInfo contInfo = scm.getScmContainerManager()
+          .getContainer(containerID);
+      if (contInfo.isContainerOpen()) {
+        if (!hasRequiredReplicas(contInfo)) {
+          throw new SCMException("Open container " + containerID + " doesn't"
+              + " have enough replicas to service this operation in "
+              + "Chill mode.", ResultCodes.CHILL_MODE_EXCEPTION);
+        }
+      }
+    }
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
     return scm.getScmContainerManager()
         .getContainerWithPipeline(containerID);
+  }
+
+  /**
+   * Check if container reported replicas are equal or greater than required
+   * replication factor.
+   */
+  private boolean hasRequiredReplicas(ContainerInfo contInfo) {
+    try{
+      return getScm().getScmContainerManager().getStateManager()
+          .getContainerReplicas(contInfo.containerID())
+          .size() >= contInfo.getReplicationFactor().getNumber();
+    } catch (SCMException ex) {
+      // getContainerReplicas throws exception if no replica's exist for given
+      // container.
+      return false;
+    }
   }
 
   @Override
@@ -289,6 +324,22 @@ public class SCMClientProtocolServer implements
   public StorageContainerManager getScm() {
     return scm;
   }
+
+  /**
+   * Set chill mode status based on SCMEvents.CHILL_MODE_STATUS event.
+   */
+  @Override
+  public void onMessage(Boolean inChillMOde, EventPublisher publisher) {
+    chillModePrecheck.setInChillMode(inChillMOde);
+  }
+
+  /**
+   * Set chill mode status based on .
+   */
+  public boolean getChillModeStatus() {
+    return chillModePrecheck.isInChillMode();
+  }
+
 
   /**
    * Query the System for Nodes.
