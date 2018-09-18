@@ -234,6 +234,7 @@ public class SCMChillModeManager implements
 
     static {
       restrictedOps.add(ScmOps.allocateBlock);
+      restrictedOps.add(ScmOps.allocateContainer);
     }
 
     public static boolean isRestrictedInChillMode(ScmOps opName) {

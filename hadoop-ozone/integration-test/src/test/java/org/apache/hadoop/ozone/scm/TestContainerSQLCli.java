@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -59,6 +60,8 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(Parameterized.class)
 public class TestContainerSQLCli {
+
+  private EventQueue eventQueue;
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
@@ -114,12 +117,16 @@ public class TestContainerSQLCli {
         .getDatanodeDetails().getIpAddress();
     cluster.getOzoneManager().stop();
     cluster.getStorageContainerManager().stop();
-
+    eventQueue = new EventQueue();
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
     mapping = new ContainerMapping(conf, nodeManager, 128,
-        new EventQueue());
-    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, null);
-
+        eventQueue);
+    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, eventQueue);
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
+    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
+    GenericTestUtils.waitFor(() -> {
+      return !blockManager.isScmInChillMode();
+    }, 10, 1000 * 15);
     // blockManager.allocateBlock() will create containers if there is none
     // stored in levelDB. The number of containers to create is the value of
     // OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE which we set to 2.

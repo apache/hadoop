@@ -176,6 +176,13 @@ enum ScmOps {
     keyBlocksInfoList = 2;
     getScmInfo = 3;
     deleteBlock = 4;
+    createReplicationPipeline = 5;
+    allocateContainer = 6;
+    getContainer = 7;
+    getContainerWithPipeline = 8;
+    listContainer = 9;
+    deleteContainer = 10;
+    queryNode = 11;
 }
 
 /**

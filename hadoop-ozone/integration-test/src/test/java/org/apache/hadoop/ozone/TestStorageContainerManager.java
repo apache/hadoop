@@ -43,6 +43,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMChillModeManager;
@@ -66,6 +69,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -548,6 +552,57 @@ public class TestStorageContainerManager {
     assertTrue(scm.getCurrentContainerThreshold() >= chillModeCutoff);
     assertTrue(logCapturer.getOutput().contains("SCM exiting chill mode."));
     assertFalse(scm.isInChillMode());
+    cluster.shutdown();
+  }
+
+  @Test
+  public void testSCMChillModeRestrictedOp() throws Exception {
+
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB);
+
+    MiniOzoneClusterImpl cluster = (MiniOzoneClusterImpl) MiniOzoneCluster
+        .newBuilder(conf)
+        .setHbInterval(1000)
+        .setHbProcessorInterval(500)
+        .setStartDataNodes(false)
+        .build();
+
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    assertTrue(scm.isInChillMode());
+
+    LambdaTestUtils.intercept(SCMException.class,
+        "ChillModePrecheck failed for allocateContainer", () -> {
+          scm.getClientProtocolServer()
+              .allocateContainer(ReplicationType.STAND_ALONE,
+                  ReplicationFactor.ONE, "");
+        });
+
+    cluster.startHddsDatanodes();
+    cluster.waitForClusterToBeReady();
+    assertFalse(scm.isInChillMode());
+
+    TestStorageContainerManagerHelper helper =
+        new TestStorageContainerManagerHelper(cluster, conf);
+    helper.createKeys(10, 4096);
+    SCMClientProtocolServer clientProtocolServer = cluster
+        .getStorageContainerManager().getClientProtocolServer();
+
+    final List<ContainerInfo> containers = scm.getScmContainerManager()
+        .getStateManager().getAllContainers();
+    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
+    assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
+    GenericTestUtils.waitFor(() -> {
+      return clientProtocolServer.getChillModeStatus();
+    }, 50, 1000 * 5);
+    assertTrue(clientProtocolServer.getChillModeStatus());
+
+    LambdaTestUtils.intercept(SCMException.class,
+        "Open container " + containers.get(0).getContainerID() + " "
+            + "doesn't have enough replicas to service this operation in Chill"
+            + " mode.", () -> clientProtocolServer
+            .getContainerWithPipeline(containers.get(0).getContainerID()));
     cluster.shutdown();
   }
 

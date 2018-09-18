@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.server;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
@@ -28,15 +29,16 @@ import org.apache.hadoop.hdds.scm.server.SCMChillModeManager.ChillModeRestricted
  * */
 public class ChillModePrecheck implements Precheck<ScmOps> {
 
-  private boolean inChillMode;
+  private AtomicBoolean inChillMode = new AtomicBoolean(true);
   public static final String PRECHECK_TYPE = "ChillModePrecheck";
 
   public boolean check(ScmOps op) throws SCMException {
-    if(inChillMode && ChillModeRestrictedOps.isRestrictedInChillMode(op)) {
+    if (inChillMode.get() && ChillModeRestrictedOps
+        .isRestrictedInChillMode(op)) {
       throw new SCMException("ChillModePrecheck failed for " + op,
           ResultCodes.CHILL_MODE_EXCEPTION);
     }
-    return inChillMode;
+    return inChillMode.get();
   }
 
   @Override
@@ -45,10 +47,10 @@ public class ChillModePrecheck implements Precheck<ScmOps> {
   }
 
   public boolean isInChillMode() {
-    return inChillMode;
+    return inChillMode.get();
   }
 
   public void setInChillMode(boolean inChillMode) {
-    this.inChillMode = inChillMode;
+    this.inChillMode.set(inChillMode);
   }
 }
