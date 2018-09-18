@@ -199,7 +199,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
-  public static final String SNAPSHOT_BIT_JSON = "seBit";
+  public static final String SNAPSHOT_BIT_JSON = "snapshotEnabled";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
