@@ -324,7 +324,7 @@ message AllocateBlockRequest {
 
 message AllocateBlockResponse {
     required Status status = 1;
-    required KeyLocation keyLocation = 2;
+    optional KeyLocation keyLocation = 2;
 }
 
 message CommitKeyRequest {
