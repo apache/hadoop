@@ -120,6 +120,9 @@ public class FSOperations {
     if (fileStatus.getPermission().getErasureCodedBit()) {
       json.put(HttpFSFileSystem.EC_BIT_JSON, true);
     }
+    if (fileStatus.isSnapshotEnabled()) {
+      json.put(HttpFSFileSystem.SNAPSHOT_BIT_JSON, true);
+    }
     return json;
   }
 
