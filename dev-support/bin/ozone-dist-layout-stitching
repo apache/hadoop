@@ -145,11 +145,11 @@ run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${HDDS_VERSION}" 
 
 #shaded ozonefs
 mkdir -p "./share/hadoop/ozonefs"
-cp "${ROOT}/hadoop-ozone/ozonefs/target/hadoop-ozone-filesystem-${HDDS_VERSION}.jar" "./share/hadoop/ozonefs/hadoop-ozone-filesystem.jar"
+cp "${ROOT}/hadoop-ozone/ozonefs/target/hadoop-ozone-filesystem-${HDDS_VERSION}.jar" "./share/hadoop/ozonefs/hadoop-ozone-filesystem-${HDDS_VERSION}.jar"
 
 #shaded datanode service
 mkdir -p "./share/hadoop/ozoneplugin"
-cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}-plugin.jar" "./share/hadoop/ozoneplugin/hadoop-ozone-datanode-plugin.jar"
+cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}-plugin.jar" "./share/hadoop/ozoneplugin/hadoop-ozone-datanode-plugin-${HDDS_VERSION}.jar"
 
 
 # Optional documentation, could be missing
