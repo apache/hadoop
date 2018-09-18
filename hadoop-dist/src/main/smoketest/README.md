@@ -20,11 +20,11 @@ You can run in in any environment after [installing](https://github.com/robotfra
 
 ```
 cd $DIRECTORY_OF_OZONE
-robot smoketest/bascic
+robot smoketest/basic
 ```
 
 The argument of the `robot` could be any robot file or directory.
 
 The current configuration in the robot files (hostnames, ports) are adjusted for the docker-based setup but you can easily modify it for any environment.
 
-The `./test.sh` in this directory can start multiple type of clusters (ozone standalon or ozone + hdfs) and execute the test framework with all of the clusters.
+The `./test.sh` in this directory can start multiple type of clusters (ozone standalone or ozone + hdfs) and execute the test framework with all of the clusters.
