@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -184,7 +185,7 @@ public class MRAppBenchmark {
     }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
@@ -211,6 +212,7 @@ public class MRAppBenchmark {
                     Records.newRecord(RegisterApplicationMasterResponse.class);
                 response.setMaximumResourceCapability(Resource.newInstance(
                   10240, 1));
+                response.setQueue("queue1");
                 return response;
               }
 
@@ -252,6 +254,7 @@ public class MRAppBenchmark {
                 response.setAllocatedContainers(containers);
                 response.setResponseId(request.getResponseId() + 1);
                 response.setNumClusterNodes(350);
+                response.setApplicationPriority(Priority.newInstance(100));
                 return response;
               }
             };
