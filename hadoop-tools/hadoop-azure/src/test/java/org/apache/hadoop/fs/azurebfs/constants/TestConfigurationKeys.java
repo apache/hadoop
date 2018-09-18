@@ -35,7 +35,7 @@ public final class TestConfigurationKeys {
 
   public static final String TEST_CONFIGURATION_FILE_NAME = "azure-test.xml";
   public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
-  public static final int TEST_TIMEOUT = 10 * 60 * 1000;
+  public static final int TEST_TIMEOUT = 15 * 60 * 1000;
 
   private TestConfigurationKeys() {}
 }
