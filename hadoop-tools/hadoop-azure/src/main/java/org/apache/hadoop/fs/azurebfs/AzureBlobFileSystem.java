@@ -101,12 +101,11 @@ public class AzureBlobFileSystem extends FileSystem {
     this.userGroupInformation = UserGroupInformation.getCurrentUser();
     this.user = userGroupInformation.getUserName();
     this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecure(), configuration, userGroupInformation);
-
-    LOG.debug("Initializing NativeAzureFileSystem for {}", uri);
+    final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
 
     this.setWorkingDirectory(this.getHomeDirectory());
 
-    if (abfsStore.getAbfsConfiguration().getCreateRemoteFileSystemDuringInitialization()) {
+    if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       if (!this.fileSystemExists()) {
         try {
           this.createFileSystem();
@@ -116,7 +115,7 @@ public class AzureBlobFileSystem extends FileSystem {
       }
     }
 
-    if (!abfsStore.getAbfsConfiguration().getSkipUserGroupMetadataDuringInitialization()) {
+    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
       this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
     } else {
       //Provide a default group name
@@ -124,15 +123,15 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      this.delegationTokenEnabled = abfsStore.getAbfsConfiguration().isDelegationTokenManagerEnabled();
+      this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();
 
       if (this.delegationTokenEnabled) {
         LOG.debug("Initializing DelegationTokenManager for {}", uri);
-        this.delegationTokenManager = abfsStore.getAbfsConfiguration().getDelegationTokenManager();
+        this.delegationTokenManager = abfsConfiguration.getDelegationTokenManager();
       }
     }
     
-    AbfsClientThrottlingIntercept.initializeSingleton(abfsStore.getAbfsConfiguration().isAutoThrottlingEnabled());
+    AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
   }
 
   @Override

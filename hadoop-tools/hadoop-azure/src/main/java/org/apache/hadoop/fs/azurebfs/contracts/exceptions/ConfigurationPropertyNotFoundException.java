@@ -27,6 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class ConfigurationPropertyNotFoundException extends AzureBlobFileSystemException {
   public ConfigurationPropertyNotFoundException(String property) {
-    super("Configuration property " + property + "not found.");
+    super("Configuration property " + property + " not found.");
   }
 }
