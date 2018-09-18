@@ -476,6 +476,15 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     executorService.awaitTermination(50, TimeUnit.SECONDS);
   }
 
+  @Test
+  public void testCreateStartupShutdownMessage() {
+    //pass null args and method must still return a string beginning with
+    // "STARTUP_MSG"
+    String msg = StringUtils.createStartupShutdownMessage(
+        this.getClass().getName(), "test.host", null);
+    assertTrue(msg.startsWith("STARTUP_MSG:"));
+  }
+
   // Benchmark for StringUtils split
   public static void main(String []args) {
     final String TO_SPLIT = "foo,bar,baz,blah,blah";

@@ -743,7 +743,7 @@ public class StringUtils {
     return toStartupShutdownString("STARTUP_MSG: ", new String[] {
         "Starting " + classname,
         "  host = " + hostname,
-        "  args = " + Arrays.asList(args),
+        "  args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
         "  version = " + VersionInfo.getVersion(),
         "  classpath = " + System.getProperty("java.class.path"),
         "  build = " + VersionInfo.getUrl() + " -r "
