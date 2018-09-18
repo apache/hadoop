@@ -66,6 +66,7 @@ public class TestDockerCommandExecutor {
       "container_e11_1861047502093_13763105_01_000001";
   private static final String MOCK_LOCAL_IMAGE_NAME = "local_image_name";
   private static final String MOCK_IMAGE_NAME = "image_name";
+  private static final String MOCK_CGROUP_HIERARCHY = "hadoop-yarn";
 
   private PrivilegedOperationExecutor mockExecutor;
   private CGroupsHandler mockCGroupsHandler;
@@ -148,7 +149,8 @@ public class TestDockerCommandExecutor {
 
   @Test
   public void testExecuteDockerRm() throws Exception {
-    DockerRmCommand dockerCommand = new DockerRmCommand(MOCK_CONTAINER_ID);
+    DockerRmCommand dockerCommand =
+        new DockerRmCommand(MOCK_CONTAINER_ID, null);
     DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
         env, mockExecutor, false, nmContext);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
@@ -161,6 +163,25 @@ public class TestDockerCommandExecutor {
         privOp.getOperationType().name());
     assertEquals(1, args.size());
     assertEquals(MOCK_CONTAINER_ID, args.get(0));
+  }
+
+  @Test
+  public void testExecuteDockerRmWithCgroup() throws Exception {
+    DockerRmCommand dockerCommand =
+        new DockerRmCommand(MOCK_CONTAINER_ID, MOCK_CGROUP_HIERARCHY);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, mockExecutor, false, nmContext);
+    List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
+        .capturePrivilegedOperations(mockExecutor, 1, true);
+    PrivilegedOperation privOp = ops.get(0);
+    List<String> args = privOp.getArguments();
+    assertEquals(1, ops.size());
+    assertEquals(PrivilegedOperation.OperationType.
+            REMOVE_DOCKER_CONTAINER.name(),
+        privOp.getOperationType().name());
+    assertEquals(2, args.size());
+    assertEquals(MOCK_CGROUP_HIERARCHY, args.get(0));
+    assertEquals(MOCK_CONTAINER_ID, args.get(1));
   }
 
   @Test

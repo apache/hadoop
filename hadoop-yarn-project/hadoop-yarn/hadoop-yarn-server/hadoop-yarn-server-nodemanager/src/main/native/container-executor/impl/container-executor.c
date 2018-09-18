@@ -46,6 +46,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
+#include <sys/param.h>
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -1374,17 +1375,16 @@ int run_docker(const char *command_file) {
   return exit_code;
 }
 
-int exec_docker_command(char *docker_command, char **argv,
-    int argc, int optind) {
+int exec_docker_command(char *docker_command, char **argv, int argc) {
   int i;
   char* docker_binary = get_docker_binary(&CFG);
-  size_t command_size = argc - optind + 2;
+  size_t command_size = argc + 2;
 
-  char **args = alloc_and_clear_memory(command_size + 1, sizeof(char));
+  char **args = alloc_and_clear_memory(command_size + 1, sizeof(char *));
   args[0] = docker_binary;
   args[1] = docker_command;
   for(i = 2; i < command_size; i++) {
-    args[i] = (char *) argv[i];
+    args[i] = (char *) argv[i - 2];
   }
   args[i] = NULL;
 
@@ -2565,4 +2565,147 @@ char* flatten(char **args) {
   return buffer;
 }
 
+int clean_docker_cgroups_internal(const char *mount_table,
+                                  const char *yarn_hierarchy,
+                                  const char* container_id) {
+#ifndef __linux
+  fprintf(LOGFILE, "Failed to clean cgroups, not supported\n");
+  return -1;
+#else
+  const char * cgroup_mount_type = "cgroup";
+  char *mnt_type = NULL;
+  char *mnt_dir = NULL;
+  char *full_path = NULL;
+  char *lineptr = NULL;
+  FILE *fp = NULL;
+  int rc = 0;
+  size_t buf_size = 0;
 
+  if (!mount_table || mount_table[0] == 0) {
+    fprintf(ERRORFILE, "clean_docker_cgroups: Invalid mount table\n");
+    rc = -1;
+    goto cleanup;
+  }
+  if (!yarn_hierarchy || yarn_hierarchy[0] == 0) {
+    fprintf(ERRORFILE, "clean_docker_cgroups: Invalid yarn_hierarchy\n");
+    rc = -1;
+    goto cleanup;
+  }
+  if (!validate_container_id(container_id)) {
+    fprintf(ERRORFILE, "clean_docker_cgroups: Invalid container_id: %s\n",
+            (container_id == NULL) ? "null" : container_id);
+    rc = -1;
+    goto cleanup;
+  }
+  fp = fopen(mount_table, "r");
+  if (fp == NULL) {
+    fprintf(ERRORFILE, "clean_docker_cgroups: failed to open %s, error %d: %s\n",
+            mount_table, errno, strerror(errno));
+    rc = -1;
+    goto cleanup;
+  }
+
+  // Walk /proc/mounts and find cgroup mounts
+  while (getline(&lineptr, &buf_size, fp) != -1) {
+    // Free these from the last iteration, if set
+    free(mnt_type);
+    free(mnt_dir);
+    int ret = 0;
+    ret = sscanf(lineptr, " %ms %ms %*s %*s %*s %*s", &mnt_type, &mnt_dir);
+    if (ret != 2) {
+      fprintf(ERRORFILE, "clean_docker_cgroups: Failed to parse line: %s\n", lineptr);
+      rc = -1;
+      break;
+    }
+    if ((mnt_type == NULL) || (strcmp(mnt_type, cgroup_mount_type) != 0)) {
+      continue;
+    }
+    if ((mnt_dir == NULL) || (mnt_dir[0] == 0)) {
+      fprintf(ERRORFILE, "clean_docker_cgroups: skipping mount entry with invalid mnt_dir\n");
+      continue;
+    }
+
+    free(full_path); // from previous iteration
+    full_path = make_string("%s/%s/%s", mnt_dir, yarn_hierarchy, container_id);
+    if (full_path == NULL) {
+      fprintf(ERRORFILE, "clean_docker_cgroups: Failed to allocate cgroup path.\n");
+      rc = -1;
+      break;
+    }
+
+    // Make sure path is clean
+    if (!verify_path_safety(full_path)) {
+      fprintf(ERRORFILE,
+        "clean_docker_cgroups: skipping invalid path: %s\n", full_path);
+        continue;
+    }
+
+    ret = rmdir(full_path);
+    if ((ret == -1) && (errno != ENOENT)) {
+      fprintf(ERRORFILE, "clean_docker_cgroups: Failed to rmdir cgroup, %s (error=%s)\n",
+        full_path, strerror(errno));
+      rc = -1;
+      continue;
+    }
+  }
+  if (ferror(fp)) {
+    fprintf(ERRORFILE, "clean_docker_cgroups: Error reading %s, error=%d (%s) \n",
+            mount_table, errno, strerror(errno));
+    rc = -1;
+  }
+
+cleanup:
+  free(lineptr);
+  free(mnt_type);
+  free(mnt_dir);
+  free(full_path);
+  if (fp != NULL) {
+    fclose(fp);
+  }
+  return rc;
+#endif
+}
+
+int clean_docker_cgroups(const char *yarn_hierarchy, const char* container_id) {
+  const char *proc_mount_path = "/proc/mounts";
+  return clean_docker_cgroups_internal(proc_mount_path, yarn_hierarchy, container_id);
+}
+
+int remove_docker_container(char**argv, int argc) {
+  int exit_code = 0;
+  const char *yarn_hierarchy = NULL;
+  const char *container_id = NULL;
+
+  int start_index = 0;
+  if (argc == 2) {
+    yarn_hierarchy = argv[0];
+    container_id = argv[1];
+    // Skip the yarn_hierarchy argument for exec_docker_command
+    start_index = 1;
+  }
+
+  pid_t child_pid = fork();
+  if (child_pid == -1) {
+    fprintf (ERRORFILE,
+      "Failed to fork for docker remove command\n");
+    fflush(ERRORFILE);
+    return DOCKER_RUN_FAILED;
+  }
+
+  if (child_pid == 0) { // child
+    int rc = exec_docker_command("rm", argv + start_index, argc - start_index);
+    return rc; // Only get here if exec fails
+
+  } else { // parent
+    exit_code = wait_and_get_exit_code(child_pid);
+    if (exit_code != 0) {
+      exit_code = DOCKER_RUN_FAILED;
+    }
+  }
+
+  // Clean up cgroups if necessary
+  if (yarn_hierarchy != NULL) {
+    exit_code = clean_docker_cgroups(yarn_hierarchy, container_id);
+  }
+  return exit_code;
+}

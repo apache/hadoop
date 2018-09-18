@@ -1347,7 +1347,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           DockerCommandExecutor.getContainerStatus(containerId,
               privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isRemovable(containerStatus)) {
-        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId,
+            ResourceHandlerModule.getCgroupsRelativeRoot());
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
             env, privilegedOperationExecutor, false, nmContext);
       }

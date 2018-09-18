@@ -937,7 +937,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           DockerCommandExecutor.getContainerStatus(containerId, privOpExecutor,
               nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
-        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId,
+            ResourceHandlerModule.getCgroupsRelativeRoot());
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
             null, privOpExecutor, false, nmContext);
       }
