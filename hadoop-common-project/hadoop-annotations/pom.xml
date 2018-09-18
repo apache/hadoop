@@ -53,6 +53,30 @@
         </dependency>
       </dependencies>
     </profile>
+    <profile>
+      <id>jdk10</id>
+      <activation>
+        <jdk>[10,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>org/apache/hadoop/classification/tools/</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <excludePackageNames>org.apache.hadoop.classification.tools</excludePackageNames>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
 </project>

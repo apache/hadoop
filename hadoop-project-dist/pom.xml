@@ -115,15 +115,6 @@
               <packages>org.apache.hadoop*</packages>
             </group>
           </groups>
-          <doclet>org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet</doclet>
-          <docletArtifacts>
-            <docletArtifact>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-annotations</artifactId>
-              <version>${hadoop.version}</version>
-            </docletArtifact>
-          </docletArtifacts>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
 
           <!-- switch on dependency-driven aggregation -->
           <includeDependencySources>false</includeDependencySources>
@@ -413,6 +404,31 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>doclet</id>
+      <activation>
+        <jdk>(,10)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <doclet>org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet</doclet>
+              <docletArtifacts>
+                <docletArtifact>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-annotations</artifactId>
+                  <version>${hadoop.version}</version>
+                </docletArtifact>
+              </docletArtifacts>
+              <useStandardDocletOptions>true</useStandardDocletOptions>
+            </configuration>
           </plugin>
         </plugins>
       </build>
