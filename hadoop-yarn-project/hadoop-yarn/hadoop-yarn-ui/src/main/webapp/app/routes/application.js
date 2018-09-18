@@ -23,7 +23,9 @@ export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
       clusterInfo: this.store.findAll('ClusterInfo', {reload: true}),
-      userInfo: this.store.findAll('cluster-user-info', {reload: true})
+      userInfo: this.store.findAll('cluster-user-info', {reload: true}).catch(function() {
+        return null;
+      })
     });
   },
 
