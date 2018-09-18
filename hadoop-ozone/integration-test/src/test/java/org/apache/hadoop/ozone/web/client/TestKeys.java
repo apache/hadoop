@@ -328,6 +328,7 @@ public class TestKeys {
     cluster.restartHddsDatanode(datanodeIdx);
   }
 
+  @Ignore("Causes a JVm exit")
   @Test
   public void testPutAndGetKeyWithDnRestart() throws Exception {
     runTestPutAndGetKeyWithDnRestart(
