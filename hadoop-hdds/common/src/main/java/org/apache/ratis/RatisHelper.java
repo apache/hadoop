@@ -34,6 +34,7 @@ import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.ratis.shaded.proto.RaftProtos;
+import org.apache.ratis.util.Preconditions;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -47,6 +48,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY;
 
 /**
  * Ratis helper methods.
@@ -162,12 +166,38 @@ public interface RatisHelper {
 
   static RetryPolicy createRetryPolicy(Configuration conf) {
     int maxRetryCount =
-        conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
-            OZONE_CLIENT_MAX_RETRIES_DEFAULT);
+        conf.getInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY,
+            OzoneConfigKeys.
+                DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT);
     long retryInterval = conf.getTimeDuration(OzoneConfigKeys.
-            OZONE_CLIENT_RETRY_INTERVAL, OzoneConfigKeys.
-            OZONE_CLIENT_RETRY_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS.MILLISECONDS);
+        DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY, OzoneConfigKeys.
+        DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT
+        .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    long leaderElectionTimeout = conf.getTimeDuration(
+        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
+        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT
+            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    long clientRequestTimeout = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    long retryCacheTimeout = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT
+            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    Preconditions
+        .assertTrue(maxRetryCount * retryInterval > 5 * leaderElectionTimeout,
+            "Please make sure dfs.ratis.client.request.max.retries * "
+                + "dfs.ratis.client.request.retry.interval > "
+                + "5 * dfs.ratis.leader.election.minimum.timeout.duration");
+    Preconditions.assertTrue(
+        maxRetryCount * (retryInterval + clientRequestTimeout)
+            < retryCacheTimeout,
+        "Please make sure "
+            + "(dfs.ratis.client.request.max.retries * "
+            + "(dfs.ratis.client.request.retry.interval + "
+            + "dfs.ratis.client.request.timeout.duration)) "
+            + "< dfs.ratis.server.retry-cache.timeout.duration");
     TimeDuration sleepDuration =
         TimeDuration.valueOf(retryInterval, TimeUnit.MILLISECONDS);
     RetryPolicy retryPolicy = RetryPolicies
