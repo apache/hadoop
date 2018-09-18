@@ -568,7 +568,7 @@ public class QuorumJournalManager implements JournalManager {
     LOG.info("Selected loggers with >= " + maxAllowedTxns +
         " transactions starting from " + fromTxnId);
     PriorityQueue<EditLogInputStream> allStreams = new PriorityQueue<>(
-        JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
+        responseMap.size(), JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (GetJournaledEditsResponseProto resp : responseMap.values()) {
       long endTxnId = fromTxnId - 1 +
           Math.min(maxAllowedTxns, resp.getTxnCount());

@@ -368,19 +368,22 @@ public class TestObserverNode {
 
     // a status flag, initialized to 0, after reader finished, this will be
     // updated to 1, -1 on error
-    AtomicInteger readStatus = new AtomicInteger(0);
+    final AtomicInteger readStatus = new AtomicInteger(0);
 
     // create a separate thread to make a blocking read.
-    Thread reader = new Thread(() -> {
-      try {
-        // this read call will block until server state catches up. But due to
-        // configuration, this will take a very long time.
-        dfs.getClient().getFileInfo("/");
-        readStatus.set(1);
-        fail("Should have been interrupted before getting here.");
-      } catch (IOException e) {
-        e.printStackTrace();
-        readStatus.set(-1);
+    Thread reader = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          // this read call will block until server state catches up. But due to
+          // configuration, this will take a very long time.
+          dfs.getClient().getFileInfo("/");
+          readStatus.set(1);
+          fail("Should have been interrupted before getting here.");
+        } catch (IOException e) {
+          e.printStackTrace();
+          readStatus.set(-1);
+        }
       }
     });
     reader.start();

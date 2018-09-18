@@ -1032,7 +1032,8 @@ public class TestQuorumJournalManager {
     cluster.getJournalNode(1).stopAndJoin(0);
 
     try {
-      qjm.selectInputStreams(new ArrayList<>(), 1, true, false);
+      qjm.selectInputStreams(new ArrayList<EditLogInputStream>(), 1,
+          true, false);
       fail("");
     } catch (QuorumException qe) {
       GenericTestUtils.assertExceptionContains(

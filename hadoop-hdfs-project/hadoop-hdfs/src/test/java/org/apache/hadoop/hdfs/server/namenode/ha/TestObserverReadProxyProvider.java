@@ -72,7 +72,7 @@ public class TestObserverReadProxyProvider {
     namenodeAddrs = new String[namenodeCount];
     namenodeAnswers = new ClientProtocolAnswer[namenodeCount];
     ClientProtocol[] proxies = new ClientProtocol[namenodeCount];
-    Map<String, ClientProtocol> proxyMap = new HashMap<>();
+    final Map<String, ClientProtocol> proxyMap = new HashMap<>();
     for (int i  = 0; i < namenodeCount; i++) {
       namenodeIDs[i] = "nn" + i;
       namenodeAddrs[i] = "namenode" + i + ".test:8020";

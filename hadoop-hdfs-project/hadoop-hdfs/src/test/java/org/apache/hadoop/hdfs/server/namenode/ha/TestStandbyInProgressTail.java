@@ -441,9 +441,9 @@ public class TestStandbyInProgressTail {
    * Wait up to 1 second until the given NameNode is aware of the existing of
    * all of the provided fileNames.
    */
-  private static void waitForFileInfo(NameNode standbyNN, String... fileNames)
+  private static void waitForFileInfo(final NameNode standbyNN, String... fileNames)
       throws Exception {
-    List<String> remainingFiles = Lists.newArrayList(fileNames);
+    final List<String> remainingFiles = Lists.newArrayList(fileNames);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {

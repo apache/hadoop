@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -50,9 +51,10 @@ class GlobalStateIdContext implements AlignmentContext {
     // For now, only ClientProtocol methods can be coordinated, so only checking
     // against ClientProtocol.
     for (Method method : ClientProtocol.class.getDeclaredMethods()) {
-      if (method.isAnnotationPresent(ReadOnly.class) &&
-          method.getAnnotationsByType(ReadOnly.class)[0].isCoordinated()) {
-        coordinatedMethods.add(method.getName());
+      for (Annotation anno : method.getAnnotations()) {
+        if ((anno instanceof ReadOnly) && ((ReadOnly) anno).isCoordinated()) {
+          coordinatedMethods.add(method.getName());
+        }
       }
     }
   }
