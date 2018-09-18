@@ -376,6 +376,35 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(stati[0].getPath(), statl[0].getPath());
   }
 
+  private void testFileStatusAttr() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory
+      Path path = new Path("/tmp/tmp-snap-test");
+      DistributedFileSystem distributedFs = (DistributedFileSystem) FileSystem
+          .get(path.toUri(), this.getProxiedFSConf());
+      distributedFs.mkdirs(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      assertFalse("Snapshot should be disallowed by default",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Allow snapshot
+      distributedFs.allowSnapshot(path);
+      // Check FileStatus
+      assertTrue("Snapshot enabled bit is not set in FileStatus",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Disallow snapshot
+      distributedFs.disallowSnapshot(path);
+      // Check FileStatus
+      assertFalse("Snapshot enabled bit is not cleared in FileStatus",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Cleanup
+      fs.delete(path, true);
+      fs.close();
+      distributedFs.close();
+    }
+  }
+
   private static void assertSameListing(FileSystem expected, FileSystem
       actual, Path p) throws IOException {
     // Consume all the entries from both iterators
@@ -1041,7 +1070,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
     GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
-    CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT
+    CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
+    FILE_STATUS_ATTR
   }
 
   private void operation(Operation op) throws Exception {
@@ -1138,6 +1168,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case DELETE_SNAPSHOT:
       testDeleteSnapshot();
+      break;
+    case FILE_STATUS_ATTR:
+      testFileStatusAttr();
       break;
     }
   }
