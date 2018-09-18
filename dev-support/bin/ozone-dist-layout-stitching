@@ -169,8 +169,9 @@ find . -name jdiff -type d | xargs rm -rf
 #add ozone specific readme
 
 run cp "${ROOT}/hadoop-dist/src/main/ozone/README.txt" README.txt
-#Copy docker compose files
+#Copy docker compose files and robot tests
 run cp -p -r "${ROOT}/hadoop-dist/src/main/compose" .
+run cp -p -r "${ROOT}/hadoop-dist/src/main/smoketest" .
 
 mkdir -p ./share/hadoop/mapreduce
 mkdir -p ./share/hadoop/yarn

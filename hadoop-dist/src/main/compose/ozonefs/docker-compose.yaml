@@ -19,7 +19,7 @@ services:
    datanode:
       image: apache/hadoop-runner
       volumes:
-        - ${OZONEDIR}:/opt/hadoop
+        - ../..:/opt/hadoop
       ports:
         - 9864
       command: ["/opt/hadoop/bin/ozone","datanode"]
@@ -29,7 +29,7 @@ services:
       image: apache/hadoop-runner
       hostname: ozoneManager
       volumes:
-         - ${OZONEDIR}:/opt/hadoop
+         - ../..:/opt/hadoop
       ports:
          - 9874
       environment:
@@ -40,7 +40,7 @@ services:
    scm:
       image: apache/hadoop-runner
       volumes:
-         - ${OZONEDIR}:/opt/hadoop
+         - ../..:/opt/hadoop
       ports:
          - 9876
       env_file:
@@ -51,7 +51,7 @@ services:
    hadooplast:
       image: flokkr/hadoop:3.1.0
       volumes:
-        - ${OZONEDIR}:/opt/ozone
+        - ../..:/opt/ozone
       env_file:
         - ./docker-config
       environment:

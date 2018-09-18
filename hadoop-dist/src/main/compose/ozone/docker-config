@@ -15,6 +15,7 @@
 # limitations under the License.
 
 OZONE-SITE.XML_ozone.om.address=ozoneManager
+OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
