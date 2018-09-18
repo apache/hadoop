@@ -182,6 +182,19 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     RaftServerConfigKeys.Rpc
         .setRequestTimeout(properties, serverRequestTimeout);
 
+    // set timeout for a retry cache entry
+    timeUnit =
+        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT
+            .getUnit();
+    duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration retryCacheTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
+    RaftServerConfigKeys.RetryCache
+        .setExpiryTime(properties, retryCacheTimeout);
+
     // Set the ratis leader election timeout
     TimeUnit leaderElectionMinTimeoutUnit =
         OzoneConfigKeys.

@@ -75,6 +75,19 @@ public final class ScmConfigKeys {
   public static final TimeDuration
       DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT =
       TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
+  public static final String DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY =
+      "dfs.ratis.client.request.max.retries";
+  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT = 180;
+  public static final String DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY =
+      "dfs.ratis.client.request.retry.interval";
+  public static final TimeDuration
+      DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT =
+      TimeDuration.valueOf(100, TimeUnit.MILLISECONDS);
+  public static final String DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY =
+      "dfs.ratis.server.retry-cache.timeout.duration";
+  public static final TimeDuration
+      DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT =
+      TimeDuration.valueOf(600000, TimeUnit.MILLISECONDS);
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       "dfs.ratis.server.request.timeout.duration";
   public static final TimeDuration
