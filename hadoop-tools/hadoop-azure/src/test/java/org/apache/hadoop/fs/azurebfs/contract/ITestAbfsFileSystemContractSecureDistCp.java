@@ -38,6 +38,11 @@ public class ITestAbfsFileSystemContractSecureDistCp extends AbstractContractDis
   }
 
   @Override
+  protected Configuration createConfiguration() {
+    return binding.getRawConfiguration();
+  }
+
+  @Override
   protected AbfsFileSystemContract createContract(Configuration conf) {
     return new AbfsFileSystemContract(conf, true);
   }
