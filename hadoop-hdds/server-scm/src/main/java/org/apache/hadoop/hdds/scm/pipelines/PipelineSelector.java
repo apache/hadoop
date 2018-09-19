@@ -62,6 +62,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .FAILED_TO_CHANGE_PIPELINE_STATE;
+import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes.FAILED_TO_FIND_ACTIVE_PIPELINE;
 import static org.apache.hadoop.hdds.server
         .ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone
@@ -285,6 +286,9 @@ public class PipelineSelector {
       // try to return a pipeline from already allocated pipelines
       PipelineID pipelineId =
               manager.getPipeline(replicationFactor, replicationType);
+      if (pipelineId == null) {
+        throw new SCMException(FAILED_TO_FIND_ACTIVE_PIPELINE);
+      }
       pipeline = pipelineMap.get(pipelineId);
       Preconditions.checkArgument(pipeline.getLifeCycleState() ==
               LifeCycleState.OPEN);
