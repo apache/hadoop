@@ -2158,6 +2158,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       String fromSnapshot, String toSnapshot) throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
+      Preconditions.checkArgument(fromSnapshot != null,
+          "null fromSnapshot");
+      Preconditions.checkArgument(toSnapshot != null,
+          "null toSnapshot");
       return namenode
           .getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
     } catch (RemoteException re) {
