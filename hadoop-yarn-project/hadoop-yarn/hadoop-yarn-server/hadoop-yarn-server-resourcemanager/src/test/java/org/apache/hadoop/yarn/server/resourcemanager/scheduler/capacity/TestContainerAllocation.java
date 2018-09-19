@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -59,7 +60,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -982,6 +986,70 @@ public class TestContainerAllocation {
     Assert.assertEquals(4, um.getNumActiveUsers());
     Assert.assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
     Assert.assertEquals(2, lq.getMetrics().getAppsPending());
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testUnreserveWhenClusterResourceHasEmptyResourceType()
+      throws Exception {
+    /**
+     * Test case:
+     * Create a cluster with two nodes whose node resource both are
+     * <8GB, 8core, 0>, create queue "a" whose max-resource is <8GB, 8 core, 0>,
+     * submit app1 to queue "a" whose am use <1GB, 1 core, 0> and launch on nm1,
+     * submit app2 to queue "b" whose am use <1GB, 1 core, 0> and launch on nm1,
+     * app1 asks two <7GB, 1core> containers and nm1 do 1 heartbeat,
+     * then scheduler reserves one container on nm1.
+     *
+     * After nm2 do next node heartbeat, scheduler should unreserve the reserved
+     * container on nm1 then allocate a container on nm2.
+     */
+    TestResourceUtils.addNewTypesToResources("resource1");
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+    newConf
+        .setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
+    // Set maximum capacity of queue "a" to 50
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 50);
+    MockRM rm1 = new MockRM(newConf);
+
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
+    nodeLabelsManager.init(newConf);
+    rm1.getRMContext().setNodeLabelManager(nodeLabelsManager);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
+
+    // launch an app to queue "a", AM container should be launched on nm1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch another app to queue "b", AM container should be launched on nm1
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 7 * GB, 2, new ArrayList<ContainerId>());
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // Do nm1 heartbeats 1 times, will reserve a container on nm1 for app1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    // Do nm2 heartbeats 1 times, will unreserve a container on nm1
+    // and allocate a container on nm2 for app1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
     rm1.close();
   }
 }
