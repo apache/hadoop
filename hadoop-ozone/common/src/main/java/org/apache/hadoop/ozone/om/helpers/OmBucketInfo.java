@@ -167,7 +167,7 @@ public final class OmBucketInfo implements Auditable {
     private StorageType storageType;
     private long creationTime;
 
-    Builder() {
+    public Builder() {
       //Default values
       this.acls = new LinkedList<>();
       this.isVersionEnabled = false;
