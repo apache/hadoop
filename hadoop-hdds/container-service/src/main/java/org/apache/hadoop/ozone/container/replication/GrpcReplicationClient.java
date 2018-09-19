@@ -157,8 +157,8 @@ public class GrpcReplicationClient {
     public void onCompleted() {
       try {
         stream.close();
-        response.complete(outputPath);
         LOG.info("Container is downloaded to {}", outputPath);
+        response.complete(outputPath);
       } catch (IOException e) {
         response.completeExceptionally(e);
       }
