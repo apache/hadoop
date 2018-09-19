@@ -191,6 +191,9 @@ public class TestAccountConfiguration {
         abfsConf.getLong(globalKey, 0), 1);
   }
 
+  /**
+   * Dummy type used for testing handling of enums in configuration.
+   */
   public enum GetEnumType {
     TRUE, FALSE
   }
@@ -226,12 +229,21 @@ public class TestAccountConfiguration {
         abfsConf.getEnum(globalKey, GetEnumType.FALSE), GetEnumType.TRUE);
   }
 
+  /**
+   * Dummy type used for testing handling of classes in configuration.
+   */
   interface GetClassInterface {
   }
 
+  /**
+   * Dummy type used for testing handling of classes in configuration.
+   */
   private class GetClassImpl0 implements GetClassInterface {
   }
 
+  /**
+   * Dummy type used for testing handling of classes in configuration.
+   */
   private class GetClassImpl1 implements GetClassInterface {
   }
 

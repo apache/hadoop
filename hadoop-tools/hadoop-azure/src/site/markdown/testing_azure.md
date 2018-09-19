@@ -578,15 +578,15 @@ provide the details and summary of the operation.
 
 ## Testing the Azure ABFS Client
 
-Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to 
-big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS 
+Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
+big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
 schemes target the ADLS Gen 2 REST API, and the WASB and WASBS schemes target
 the Azure Blob Storage REST API.  ADLS Gen 2 offers better performance and
-scalability.  ADLS Gen 2 also offers authentication and authorization compatible 
-with the Hadoop Distributed File System permissions model when hierarchical 
+scalability.  ADLS Gen 2 also offers authentication and authorization compatible
+with the Hadoop Distributed File System permissions model when hierarchical
 namespace is enabled for the storage account.  Furthermore, the metadata and data
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
- 
+
 In order to test ABFS, please add the following configuration to your
 `src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS
@@ -610,7 +610,7 @@ credentials.
     <name>fs.azure.wasb.account.name</name>
     <value>{ACCOUNT_NAME}.blob.core.windows.net</value>
   </property>
-  
+
   <property>
     <name>fs.azure.account.key.{ACCOUNT_NAME}.blob.core.windows.net</name>
     <value>{ACCOUNT_ACCESS_KEY}</value>
@@ -641,7 +641,7 @@ hierarchical namespace enabled, and set the following configuration settings:
 <property>
   <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
   <value>{AUTH TYPE}</value>
-  <description>The authorization type can be SharedKey, OAuth, or Custom. The 
+  <description>The authorization type can be SharedKey, OAuth, or Custom. The
   default is SharedKey.</description>
 </property>
 

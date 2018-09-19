@@ -35,7 +35,7 @@ import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.writeStringT
 /**
  * Because FileSystem.Statistics is per FileSystem, so statistics can not be ran in
  * parallel, hence in this test file, force them to run in sequential.
- * */
+ */
 public class ITestNativeFileSystemStatistics extends AbstractWasbTestWithTimeout{
 
   @Test
