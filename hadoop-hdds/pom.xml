@@ -93,6 +93,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>**/hs_err*.log</exclude>
             <exclude>**/target/**</exclude>
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
@@ -100,13 +101,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/resources/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>src/main/resources/webapps/static/angular-route-1.6.4.min.js</exclude>
             <exclude>src/main/resources/webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css.map</exclude>
-            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js.map</exclude>
-            <exclude>src/test/resources/incorrect.container</exclude>
+            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
             <exclude>src/test/resources/incorrect.checksum.container</exclude>
+            <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/test.db.ini</exclude>
           </excludes>
         </configuration>
