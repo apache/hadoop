@@ -21,12 +21,15 @@ package org.apache.hadoop.ozone.container.common.transport.server;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.
+    StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
@@ -128,8 +131,13 @@ public final class XceiverServerGrpc implements XceiverServerSpi {
 
   @Override
   public void submitRequest(ContainerCommandRequestProto request,
-      HddsProtos.PipelineID pipelineID) {
-    storageContainer.dispatch(request);
+      HddsProtos.PipelineID pipelineID) throws IOException {
+    ContainerProtos.ContainerCommandResponseProto response =
+        storageContainer.dispatch(request);
+    if (response.getResult() != ContainerProtos.Result.SUCCESS) {
+      throw new StorageContainerException(response.getMessage(),
+          response.getResult());
+    }
   }
 
   @Override

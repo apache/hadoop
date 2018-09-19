@@ -74,7 +74,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -319,39 +318,35 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     return server;
   }
 
-  private void processReply(RaftClientReply reply) {
-
+  private void processReply(RaftClientReply reply) throws IOException {
     // NotLeader exception is thrown only when the raft server to which the
     // request is submitted is not the leader. The request will be rejected
-    // and will eventually be executed once the request comnes via the leader
+    // and will eventually be executed once the request comes via the leader
     // node.
     NotLeaderException notLeaderException = reply.getNotLeaderException();
     if (notLeaderException != null) {
-      LOG.info(reply.getNotLeaderException().getLocalizedMessage());
+      throw notLeaderException;
     }
     StateMachineException stateMachineException =
         reply.getStateMachineException();
     if (stateMachineException != null) {
-      // In case the request could not be completed, StateMachine Exception
-      // will be thrown. For now, Just log the message.
-      // If the container could not be closed, SCM will come to know
-      // via containerReports. CloseContainer should be re tried via SCM.
-      LOG.error(stateMachineException.getLocalizedMessage());
+      throw stateMachineException;
     }
   }
 
   @Override
-  public void submitRequest(
-      ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID)
-      throws IOException {
-    // ReplicationLevel.MAJORITY ensures the transactions corresponding to
-    // the request here are applied on all the raft servers.
+  public void submitRequest(ContainerCommandRequestProto request,
+      HddsProtos.PipelineID pipelineID) throws IOException {
+    RaftClientReply reply;
     RaftClientRequest raftClientRequest =
         createRaftClientRequest(request, pipelineID,
             RaftClientRequest.writeRequestType(replicationLevel));
-    CompletableFuture<RaftClientReply> reply =
-        server.submitClientRequestAsync(raftClientRequest);
-    reply.thenAccept(this::processReply);
+    try {
+      reply = server.submitClientRequestAsync(raftClientRequest).get();
+    } catch (Exception e) {
+      throw new IOException(e.getMessage(), e);
+    }
+    processReply(reply);
   }
 
   private RaftClientRequest createRaftClientRequest(
