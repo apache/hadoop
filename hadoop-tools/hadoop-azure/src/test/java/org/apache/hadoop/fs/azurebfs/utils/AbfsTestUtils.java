@@ -31,9 +31,9 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
 
-  /*
-  * Some Utils for ABFS tests.
-  * */
+/**
+ * Some Utils for ABFS tests.
+ */
 public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
     private static final Logger LOG =
             LoggerFactory.getLogger(AbfsTestUtils.class);

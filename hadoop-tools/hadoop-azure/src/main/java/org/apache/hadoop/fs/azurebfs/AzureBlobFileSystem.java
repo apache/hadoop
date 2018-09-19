@@ -130,7 +130,7 @@ public class AzureBlobFileSystem extends FileSystem {
         this.delegationTokenManager = abfsConfiguration.getDelegationTokenManager();
       }
     }
-    
+
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
   }
 
@@ -380,7 +380,7 @@ public class AzureBlobFileSystem extends FileSystem {
     // To support format: abfs://{dfs.nameservices}/file/path,
     // path need to be first converted to URI, then get the raw path string,
     // during which {dfs.nameservices} will be omitted.
-    if (path != null ) {
+    if (path != null) {
       String uriPath = path.toUri().getPath();
       path = uriPath.isEmpty() ? path : new Path(uriPath);
     }
@@ -581,8 +581,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "modifyAclEntries is only supported by storage accounts " +
-                      "with the hierarchical namespace enabled.");
+          "modifyAclEntries is only supported by storage accounts with the "
+          + "hierarchical namespace enabled.");
     }
 
     if (aclSpec == null || aclSpec.isEmpty()) {
@@ -612,8 +612,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "removeAclEntries is only supported by storage accounts " +
-                      "with the hierarchical namespace enabled.");
+          "removeAclEntries is only supported by storage accounts with the "
+          + "hierarchical namespace enabled.");
     }
 
     if (aclSpec == null || aclSpec.isEmpty()) {
@@ -639,8 +639,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "removeDefaultAcl is only supported by storage accounts" +
-                      " with the hierarchical namespace enabled.");
+          "removeDefaultAcl is only supported by storage accounts with the "
+          + "hierarchical namespace enabled.");
     }
 
     try {
@@ -664,8 +664,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "removeAcl is only supported by storage accounts" +
-                      " with the hierarchical namespace enabled.");
+          "removeAcl is only supported by storage accounts with the "
+          + "hierarchical namespace enabled.");
     }
 
     try {
@@ -692,8 +692,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "setAcl is only supported by storage accounts" +
-                      " with the hierarchical namespace enabled.");
+          "setAcl is only supported by storage accounts with the hierarchical "
+          + "namespace enabled.");
     }
 
     if (aclSpec == null || aclSpec.size() == 0) {
@@ -720,8 +720,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     if (!getIsNamespaceEnabeld()) {
       throw new UnsupportedOperationException(
-              "getAclStatus is only supported by storage accounts" +
-                      " with the hierarchical namespace enabled.");
+          "getAclStatus is only supported by storage account with the "
+          + "hierarchical namespace enabled.");
     }
 
     try {

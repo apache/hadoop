@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.File;
+import java.nio.charset.Charset;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,7 +75,8 @@ public class TestShellDecryptionKeyProvider {
     // Create a simple script which echoes the given key plus the given
     // expected result (so that we validate both script input and output)
     File scriptFile = new File(TEST_ROOT_DIR, "testScript.cmd");
-    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult);
+    FileUtils.writeStringToFile(scriptFile, "@echo %1 " + expectedResult,
+        Charset.forName("UTF-8"));
 
     ShellDecryptionKeyProvider provider = new ShellDecryptionKeyProvider();
     Configuration conf = new Configuration();

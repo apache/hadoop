@@ -249,7 +249,6 @@ public class AbfsConfiguration{
    * @param defaultValue Class returned if none is configured
    * @param xface Interface shared by all possible values
    * @return Highest-precedence Class object that was found
-   * @throws IOException
    */
   public <U> Class<? extends U> getClass(String name, Class<? extends U> defaultValue, Class<U> xface) {
     return rawConfig.getClass(accountConf(name),
@@ -263,7 +262,6 @@ public class AbfsConfiguration{
    * @param name Account-agnostic configuration key
    * @param defaultValue Value returned if none is configured
    * @return value in String form if one exists, else null
-   * @throws IOException
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     return rawConfig.getEnum(accountConf(name),
