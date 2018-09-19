@@ -759,6 +759,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     unregisterMXBean();
+    // Event queue must be stopped before the DB store is closed at the end.
+    try {
+      LOG.info("Stopping SCM Event Queue.");
+      eventQueue.close();
+    } catch (Exception ex) {
+      LOG.error("SCM Event Queue stop failed", ex);
+    }
     IOUtils.cleanupWithLogger(LOG, scmContainerManager);
   }
 
