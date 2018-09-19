@@ -281,6 +281,52 @@ public class TestContainerMapping {
   }
 
   @Test
+  public void testListContainerAfterReport() throws Exception {
+    ContainerInfo info1 = createContainer();
+    ContainerInfo info2 = createContainer();
+    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
+        new ArrayList<>();
+    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
+        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+    long cID1 = info1.getContainerID();
+    long cID2 = info2.getContainerID();
+    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
+        .setSize(1000000000L)
+        .setUsed(987654321L)
+        .setKeyCount(100000000L)
+        .setReadBytes(1000000000L)
+        .setWriteBytes(1000000000L)
+        .setContainerID(cID1);
+    reports.add(ciBuilder.build());
+
+    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea54a9")
+        .setSize(1000000000L)
+        .setUsed(123456789L)
+        .setKeyCount(200000000L)
+        .setReadBytes(3000000000L)
+        .setWriteBytes(4000000000L)
+        .setContainerID(cID2);
+    reports.add(ciBuilder.build());
+
+    ContainerReportsProto.Builder crBuilder = ContainerReportsProto
+        .newBuilder();
+    crBuilder.addAllReports(reports);
+
+    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
+
+    List<ContainerInfo> list = mapping.listContainer(0, 50);
+    Assert.assertEquals(2, list.stream().filter(
+        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2).count());
+    Assert.assertEquals(300000000L, list.stream().filter(
+        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2)
+        .mapToLong(x -> x.getNumberOfKeys()).sum());
+    Assert.assertEquals(1111111110L, list.stream().filter(
+        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2)
+        .mapToLong(x -> x.getUsedBytes()).sum());
+  }
+
+  @Test
   public void testCloseContainer() throws IOException {
     ContainerInfo info = createContainer();
     mapping.updateContainerState(info.getContainerID(),
