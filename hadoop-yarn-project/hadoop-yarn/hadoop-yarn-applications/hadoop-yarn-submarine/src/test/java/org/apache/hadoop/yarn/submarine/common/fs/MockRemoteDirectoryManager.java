@@ -53,7 +53,7 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   @Override
   public Path getJobCheckpointDir(String jobName, boolean create)
       throws IOException {
-    return null;
+    return new Path("s3://generated_checkpoint_dir");
   }
 
   @Override
@@ -79,5 +79,10 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   @Override
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.getLocal(new Configuration());
+  }
+
+  @Override
+  public Path getUserRootFolder() throws IOException {
+    return new Path("s3://generated_root_dir");
   }
 }

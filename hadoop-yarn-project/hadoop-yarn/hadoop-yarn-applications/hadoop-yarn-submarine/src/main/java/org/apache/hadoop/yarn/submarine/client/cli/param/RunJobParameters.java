@@ -37,6 +37,8 @@ public class RunJobParameters extends RunParameters {
   private Resource workerResource;
   private Resource psResource;
   private boolean tensorboardEnabled;
+  private Resource tensorboardResource;
+  private String tensorboardDockerImage;
   private String workerLaunchCmd;
   private String psLaunchCmd;
 
@@ -69,19 +71,23 @@ public class RunJobParameters extends RunParameters {
     // When distributed training is required
     if (nWorkers >= 2 && nPS > 0) {
       distributed = true;
-    } else if (nWorkers == 1 && nPS > 0) {
+    } else if (nWorkers <= 1 && nPS > 0) {
       throw new ParseException("Only specified one worker but non-zero PS, "
           + "please double check.");
     }
 
-    String workerResourceStr = parsedCommandLine.getOptionValue(
-        CliConstants.WORKER_RES);
-    if (workerResourceStr == null) {
-      throw new ParseException("--" + CliConstants.WORKER_RES + " is absent.");
+    workerResource = null;
+    if (nWorkers > 0) {
+      String workerResourceStr = parsedCommandLine.getOptionValue(
+          CliConstants.WORKER_RES);
+      if (workerResourceStr == null) {
+        throw new ParseException(
+            "--" + CliConstants.WORKER_RES + " is absent.");
+      }
+      workerResource = CliUtils.createResourceFromString(
+          workerResourceStr,
+          clientContext.getOrCreateYarnClient().getResourceTypeInfo());
     }
-    Resource workerResource = CliUtils.createResourceFromString(
-        workerResourceStr,
-        clientContext.getOrCreateYarnClient().getResourceTypeInfo());
 
     Resource psResource = null;
     if (nPS > 0) {
@@ -94,9 +100,19 @@ public class RunJobParameters extends RunParameters {
     }
 
     boolean tensorboard = false;
-    if (parsedCommandLine.getOptionValue(CliConstants.TENSORBOARD) != null) {
-      tensorboard = Boolean.parseBoolean(
-          parsedCommandLine.getOptionValue(CliConstants.TENSORBOARD));
+    if (parsedCommandLine.hasOption(CliConstants.TENSORBOARD)) {
+      tensorboard = true;
+      String tensorboardResourceStr = parsedCommandLine.getOptionValue(
+          CliConstants.TENSORBOARD_RESOURCES);
+      if (tensorboardResourceStr == null || tensorboardResourceStr.isEmpty()) {
+        tensorboardResourceStr = CliConstants.TENSORBOARD_DEFAULT_RESOURCES;
+      }
+      tensorboardResource = CliUtils.createResourceFromString(
+          tensorboardResourceStr,
+          clientContext.getOrCreateYarnClient().getResourceTypeInfo());
+      tensorboardDockerImage = parsedCommandLine.getOptionValue(
+          CliConstants.TENSORBOARD_DOCKER_IMAGE);
+      this.setTensorboardResource(tensorboardResource);
     }
 
     if (parsedCommandLine.hasOption(CliConstants.WAIT_JOB_FINISH)) {
@@ -115,7 +131,7 @@ public class RunJobParameters extends RunParameters {
 
     this.setInputPath(input).setCheckpointPath(jobDir).setNumPS(nPS).setNumWorkers(nWorkers)
         .setPSLaunchCmd(psLaunchCommand).setWorkerLaunchCmd(workerLaunchCmd)
-        .setPsResource(psResource).setWorkerResource(workerResource)
+        .setPsResource(psResource)
         .setTensorboardEnabled(tensorboard);
 
     super.updateParametersByParsedCommandline(parsedCommandLine,
@@ -218,5 +234,17 @@ public class RunJobParameters extends RunParameters {
 
   public boolean isDistributed() {
     return distributed;
+  }
+
+  public Resource getTensorboardResource() {
+    return tensorboardResource;
+  }
+
+  public void setTensorboardResource(Resource tensorboardResource) {
+    this.tensorboardResource = tensorboardResource;
+  }
+
+  public String getTensorboardDockerImage() {
+    return tensorboardDockerImage;
   }
 }

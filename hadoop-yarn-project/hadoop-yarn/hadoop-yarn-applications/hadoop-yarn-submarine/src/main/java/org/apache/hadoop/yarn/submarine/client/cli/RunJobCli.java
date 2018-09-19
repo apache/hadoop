@@ -89,8 +89,16 @@ public class RunJobCli extends AbstractCli {
     options.addOption(CliConstants.DOCKER_IMAGE, true, "Docker image name/tag");
     options.addOption(CliConstants.QUEUE, true,
         "Name of queue to run the job, by default it uses default queue");
-    options.addOption(CliConstants.TENSORBOARD, true,
-        "Should we run TensorBoard" + " for this job? By default it's true");
+    options.addOption(CliConstants.TENSORBOARD, false,
+        "Should we run TensorBoard"
+            + " for this job? By default it's disabled");
+    options.addOption(CliConstants.TENSORBOARD_RESOURCES, true,
+        "Specify resources of Tensorboard, by default it is "
+            + CliConstants.TENSORBOARD_DEFAULT_RESOURCES);
+    options.addOption(CliConstants.TENSORBOARD_DOCKER_IMAGE, true,
+        "Specify Tensorboard docker image. when this is not "
+            + "specified, Tensorboard " + "uses --" + CliConstants.DOCKER_IMAGE
+            + " as default.");
     options.addOption(CliConstants.WORKER_LAUNCH_CMD, true,
         "Commandline of worker, arguments will be "
             + "directly used to launch the worker");
@@ -144,8 +152,37 @@ public class RunJobCli extends AbstractCli {
       throw e;
     }
 
+    // Set default job dir / saved model dir, etc.
+    setDefaultDirs();
+
     // replace patterns
     replacePatternsInParameters();
+  }
+
+  private void setDefaultDirs() throws IOException {
+    // Create directories if needed
+    String jobDir = parameters.getCheckpointPath();
+    if (null == jobDir) {
+      if (parameters.getNumWorkers() > 0) {
+        jobDir = clientContext.getRemoteDirectoryManager().getJobCheckpointDir(
+            parameters.getName(), true).toString();
+      } else {
+        // when #workers == 0, it means we only launch TB. In that case,
+        // point job dir to root dir so all job's metrics will be shown.
+        jobDir = clientContext.getRemoteDirectoryManager().getUserRootFolder()
+            .toString();
+      }
+      parameters.setCheckpointPath(jobDir);
+    }
+
+    if (parameters.getNumWorkers() > 0) {
+      // Only do this when #worker > 0
+      String savedModelDir = parameters.getSavedModelPath();
+      if (null == savedModelDir) {
+        savedModelDir = jobDir;
+        parameters.setSavedModelPath(savedModelDir);
+      }
+    }
   }
 
   private void storeJobInformation(String jobName, ApplicationId applicationId,
@@ -198,7 +235,7 @@ public class RunJobCli extends AbstractCli {
   }
 
   @VisibleForTesting
-  RunJobParameters getRunJobParameters() {
+  public RunJobParameters getRunJobParameters() {
     return parameters;
   }
 }

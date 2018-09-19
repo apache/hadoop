@@ -40,10 +40,23 @@ public class YarnServiceUtils {
     YarnServiceUtils.stubServiceClient = stubServiceClient;
   }
 
+  public static String getDNSName(String serviceName, String componentName,
+      int index, String userName, String domain, int port) {
+    return componentName + "-" + index + getDNSNameCommonSuffix(serviceName,
+        userName, domain, port);
+  }
+
+  private static String getDNSNameCommonSuffix(String serviceName,
+      String userName, String domain, int port) {
+    String commonEndpointSuffix =
+        "." + serviceName + "." + userName + "." + domain + ":" + port;
+    return commonEndpointSuffix;
+  }
+
   public static String getTFConfigEnv(String curCommponentName, int nWorkers,
       int nPs, String serviceName, String userName, String domain) {
-    String commonEndpointSuffix =
-        "." + serviceName + "." + userName + "." + domain + ":8000";
+    String commonEndpointSuffix = getDNSNameCommonSuffix(serviceName, userName,
+        domain, 8000);
 
     String json = "{\\\"cluster\\\":{";
 
@@ -58,7 +71,14 @@ public class YarnServiceUtils {
             + " \\\"index\\\":" + '$' + Envs.TASK_INDEX_ENV + "},";
     String environment = "\\\"environment\\\":\\\"cloud\\\"}";
 
-    return json + master + worker + ps + task + environment;
+    StringBuilder sb = new StringBuilder();
+    sb.append(json);
+    sb.append(master);
+    sb.append(worker);
+    sb.append(ps);
+    sb.append(task);
+    sb.append(environment);
+    return sb.toString();
   }
 
   private static String getComponentArrayJson(String componentName, int count,

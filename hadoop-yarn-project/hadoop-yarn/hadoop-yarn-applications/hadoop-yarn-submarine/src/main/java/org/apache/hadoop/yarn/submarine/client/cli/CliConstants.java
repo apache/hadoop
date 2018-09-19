@@ -35,6 +35,10 @@ public class CliConstants {
   public static final String DOCKER_IMAGE = "docker_image";
   public static final String QUEUE = "queue";
   public static final String TENSORBOARD = "tensorboard";
+  public static final String TENSORBOARD_RESOURCES = "tensorboard_resources";
+  public static final String TENSORBOARD_DEFAULT_RESOURCES =
+      "memory=4G,vcores=1";
+
   public static final String WORKER_LAUNCH_CMD = "worker_launch_cmd";
   public static final String SERVING_LAUNCH_CMD = "serving_launch_cmd";
   public static final String PS_LAUNCH_CMD = "ps_launch_cmd";
@@ -45,4 +49,6 @@ public class CliConstants {
   public static final String WAIT_JOB_FINISH = "wait_job_finish";
   public static final String PS_DOCKER_IMAGE = "ps_docker_image";
   public static final String WORKER_DOCKER_IMAGE = "worker_docker_image";
+  public static final String TENSORBOARD_DOCKER_IMAGE =
+      "tensorboard_docker_image";
 }
