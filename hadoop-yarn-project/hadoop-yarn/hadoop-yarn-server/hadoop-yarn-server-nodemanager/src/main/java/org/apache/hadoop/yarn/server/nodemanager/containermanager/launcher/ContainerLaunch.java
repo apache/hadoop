@@ -250,12 +250,13 @@ public class ContainerLaunch implements Callable<Integer> {
       // accessible by users
       pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
+      List<String> localDirsForRead = dirsHandler.getLocalDirsForRead();
       List<String> logDirs = dirsHandler.getLogDirs();
-      List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> filecacheDirs = getNMFilecacheDirs(localDirsForRead);
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
-      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirsForRead);
       List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
           appIdStr);
 
