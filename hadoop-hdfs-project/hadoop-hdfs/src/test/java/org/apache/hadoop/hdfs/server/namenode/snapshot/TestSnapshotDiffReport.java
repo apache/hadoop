@@ -245,6 +245,12 @@ public class TestSnapshotDiffReport {
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
 
+    try {
+      report = hdfs.getSnapshotDiffReport(subsubsub1, null, "s2");
+      fail("Expect exception when providing null fromSnapshot ");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("null fromSnapshot", e);
+    }
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
