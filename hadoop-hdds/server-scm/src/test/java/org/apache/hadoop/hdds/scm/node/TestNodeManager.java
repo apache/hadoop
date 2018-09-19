@@ -286,7 +286,8 @@ public class TestNodeManager {
         TestUtils.createStorageReport(dnId, storagePath, 100, 10, 90, null);
     try (SCMNodeManager nodemanager = createNodeManager(conf)) {
       nodemanager.register(datanodeDetails,
-          TestUtils.createNodeReport(report));
+          TestUtils.createNodeReport(report),
+          TestUtils.getRandomPipelineReports());
       List<SCMCommand> command = nodemanager.processHeartbeat(datanodeDetails);
       Assert.assertTrue(nodemanager.getAllNodes().contains(datanodeDetails));
       Assert.assertTrue("On regular HB calls, SCM responses a "
@@ -1122,7 +1123,8 @@ public class TestNodeManager {
       eq.addHandler(DATANODE_COMMAND, nodemanager);
 
       nodemanager
-          .register(datanodeDetails, TestUtils.createNodeReport(report));
+          .register(datanodeDetails, TestUtils.createNodeReport(report),
+                  TestUtils.getRandomPipelineReports());
       eq.fireEvent(DATANODE_COMMAND,
           new CommandForDatanode<>(datanodeDetails.getUuid(),
               new CloseContainerCommand(1L, ReplicationType.STAND_ALONE,

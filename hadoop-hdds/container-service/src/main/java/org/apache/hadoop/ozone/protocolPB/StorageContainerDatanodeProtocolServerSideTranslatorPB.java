@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisterRequestProto;
@@ -76,8 +78,9 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       ContainerReportsProto containerRequestProto = request
           .getContainerReport();
       NodeReportProto dnNodeReport = request.getNodeReport();
+      PipelineReportsProto pipelineReport = request.getPipelineReports();
       return impl.register(request.getDatanodeDetails(), dnNodeReport,
-          containerRequestProto);
+          containerRequestProto, pipelineReport);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

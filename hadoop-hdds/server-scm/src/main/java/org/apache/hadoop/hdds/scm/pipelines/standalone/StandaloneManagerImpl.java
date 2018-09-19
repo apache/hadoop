@@ -74,18 +74,19 @@ public class StandaloneManagerImpl extends PipelineManager {
   public Pipeline allocatePipeline(ReplicationFactor factor) {
     List<DatanodeDetails> newNodesList = new LinkedList<>();
     List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
-    int count = getReplicationCount(factor);
     for (DatanodeDetails datanode : datanodes) {
       Preconditions.checkNotNull(datanode);
       if (!standAloneMembers.contains(datanode)) {
         newNodesList.add(datanode);
-        if (newNodesList.size() == count) {
+        if (newNodesList.size() == factor.getNumber()) {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           standAloneMembers.addAll(newNodesList);
-          PipelineID pipelineID = PipelineID.randomId();
+          // Standalone pipeline use node id as pipeline
+          PipelineID pipelineID =
+                  PipelineID.valueOf(newNodesList.get(0).getUuid());
           LOG.info("Allocating a new standalone pipeline of size: {} id: {}",
-              count, pipelineID);
+              factor.getNumber(), pipelineID);
           return PipelineSelector.newPipelineFromNodes(newNodesList,
               ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineID);
         }
@@ -98,6 +99,17 @@ public class StandaloneManagerImpl extends PipelineManager {
     // Nothing to be done for standalone pipeline
   }
 
+  public void processPipelineReport(Pipeline pipeline, DatanodeDetails dn) {
+    super.processPipelineReport(pipeline, dn);
+    standAloneMembers.add(dn);
+  }
+
+  public synchronized boolean finalizePipeline(Pipeline pipeline) {
+    activePipelines.get(pipeline.getFactor().ordinal())
+            .removePipeline(pipeline.getId());
+    return false;
+  }
+
   /**
    * Close the pipeline.
    */
@@ -106,29 +118,5 @@ public class StandaloneManagerImpl extends PipelineManager {
       // A node should always be the in standalone members list.
       Preconditions.checkArgument(standAloneMembers.remove(node));
     }
-  }
-
-  /**
-   * list members in the pipeline .
-   *
-   * @param pipelineID
-   * @return the datanode
-   */
-  @Override
-  public List<DatanodeDetails> getMembers(PipelineID pipelineID)
-      throws IOException {
-    return null;
-  }
-
-  /**
-   * Update the datanode list of the pipeline.
-   *
-   * @param pipelineID
-   * @param newDatanodes
-   */
-  @Override
-  public void updatePipeline(PipelineID pipelineID, List<DatanodeDetails>
-      newDatanodes) throws IOException {
-
   }
 }

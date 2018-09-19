@@ -73,20 +73,19 @@ public class RatisManagerImpl extends PipelineManager {
   public Pipeline allocatePipeline(ReplicationFactor factor) {
     List<DatanodeDetails> newNodesList = new LinkedList<>();
     List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
-    int count = getReplicationCount(factor);
     //TODO: Add Raft State to the Nodes, so we can query and skip nodes from
     // data from datanode instead of maintaining a set.
     for (DatanodeDetails datanode : datanodes) {
       Preconditions.checkNotNull(datanode);
       if (!ratisMembers.contains(datanode)) {
         newNodesList.add(datanode);
-        if (newNodesList.size() == count) {
+        if (newNodesList.size() == factor.getNumber()) {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           ratisMembers.addAll(newNodesList);
           PipelineID pipelineID = PipelineID.randomId();
           LOG.info("Allocating a new ratis pipeline of size: {} id: {}",
-              count, pipelineID);
+                  factor.getNumber(), pipelineID);
           return PipelineSelector.newPipelineFromNodes(newNodesList,
               ReplicationType.RATIS, factor, pipelineID);
         }
@@ -103,6 +102,17 @@ public class RatisManagerImpl extends PipelineManager {
     }
   }
 
+  public void processPipelineReport(Pipeline pipeline, DatanodeDetails dn) {
+    super.processPipelineReport(pipeline, dn);
+    ratisMembers.add(dn);
+  }
+
+  public synchronized boolean finalizePipeline(Pipeline pipeline) {
+    activePipelines.get(pipeline.getFactor().ordinal())
+            .removePipeline(pipeline.getId());
+    return true;
+  }
+
   /**
    * Close the pipeline.
    */
@@ -115,30 +125,5 @@ public class RatisManagerImpl extends PipelineManager {
       // A node should always be the in ratis members list.
       Preconditions.checkArgument(ratisMembers.remove(node));
     }
-  }
-
-  /**
-   * list members in the pipeline .
-   *
-   * @param pipelineID
-   * @return the datanode
-   */
-  @Override
-  public List<DatanodeDetails> getMembers(PipelineID pipelineID)
-      throws IOException {
-    return null;
-  }
-
-  /**
-   * Update the datanode list of the pipeline.
-   *
-   * @param pipelineID
-   * @param newDatanodes
-   */
-  @Override
-  public void updatePipeline(PipelineID pipelineID,
-                             List<DatanodeDetails> newDatanodes)
-      throws IOException {
-
   }
 }

@@ -16,19 +16,15 @@
  *
  */
 
-package org.apache.hadoop.hdds.scm.pipelines;
+package org.apache.hadoop.hdds.scm.node.states;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This data structure maintains the list of pipelines which the given datanode is a part of. This
@@ -36,33 +32,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>TODO: this information needs to be regenerated from pipeline reports on SCM restart
  */
-public class Node2PipelineMap {
-  private final Map<UUID, Set<PipelineID>> dn2PipelineMap;
+public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
 
   /** Constructs a Node2PipelineMap Object. */
   public Node2PipelineMap() {
-    dn2PipelineMap = new ConcurrentHashMap<>();
-  }
-
-  /**
-   * Returns true if this a datanode that is already tracked by Node2PipelineMap.
-   *
-   * @param datanodeID - UUID of the Datanode.
-   * @return True if this is tracked, false if this map does not know about it.
-   */
-  private boolean isKnownDatanode(UUID datanodeID) {
-    Preconditions.checkNotNull(datanodeID);
-    return dn2PipelineMap.containsKey(datanodeID);
-  }
-
-  /**
-   * Removes datanode Entry from the map.
-   *
-   * @param datanodeID - Datanode ID.
-   */
-  public synchronized void removeDatanode(UUID datanodeID) {
-    Preconditions.checkNotNull(datanodeID);
-    dn2PipelineMap.computeIfPresent(datanodeID, (k, v) -> null);
+    super();
   }
 
   /**
@@ -72,9 +46,7 @@ public class Node2PipelineMap {
    * @return Set of pipelines or Null.
    */
   public Set<PipelineID> getPipelines(UUID datanode) {
-    Preconditions.checkNotNull(datanode);
-    final Set<PipelineID> s = dn2PipelineMap.get(datanode);
-    return s != null? Collections.unmodifiableSet(s): Collections.emptySet();
+    return getObjects(datanode);
   }
 
   /**
@@ -85,7 +57,7 @@ public class Node2PipelineMap {
   public synchronized void addPipeline(Pipeline pipeline) {
     for (DatanodeDetails details : pipeline.getDatanodes().values()) {
       UUID dnId = details.getUuid();
-      dn2PipelineMap.computeIfAbsent(dnId, k -> new HashSet<>())
+      dn2ObjectMap.computeIfAbsent(dnId, k -> new HashSet<>())
           .add(pipeline.getId());
     }
   }
@@ -93,16 +65,11 @@ public class Node2PipelineMap {
   public synchronized void removePipeline(Pipeline pipeline) {
     for (DatanodeDetails details : pipeline.getDatanodes().values()) {
       UUID dnId = details.getUuid();
-      dn2PipelineMap.computeIfPresent(
-          dnId,
+      dn2ObjectMap.computeIfPresent(dnId,
           (k, v) -> {
             v.remove(pipeline.getId());
             return v;
           });
     }
-  }
-
-  public Map<UUID, Set<PipelineID>> getDn2PipelineMap() {
-    return Collections.unmodifiableMap(dn2PipelineMap);
   }
 }

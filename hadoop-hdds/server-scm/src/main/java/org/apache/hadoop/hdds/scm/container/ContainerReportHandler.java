@@ -89,20 +89,20 @@ public class ContainerReportHandler implements
           .map(ContainerID::new)
           .collect(Collectors.toSet());
 
-      ReportResult reportResult = node2ContainerMap
+      ReportResult<ContainerID> reportResult = node2ContainerMap
           .processReport(datanodeOrigin.getUuid(), containerIds);
 
       //we have the report, so we can update the states for the next iteration.
       node2ContainerMap
           .setContainersForDatanode(datanodeOrigin.getUuid(), containerIds);
 
-      for (ContainerID containerID : reportResult.getMissingContainers()) {
+      for (ContainerID containerID : reportResult.getMissingEntries()) {
         containerStateManager
             .removeContainerReplica(containerID, datanodeOrigin);
         checkReplicationState(containerID, publisher);
       }
 
-      for (ContainerID containerID : reportResult.getNewContainers()) {
+      for (ContainerID containerID : reportResult.getNewEntries()) {
         containerStateManager.addContainerReplica(containerID, datanodeOrigin);
         checkReplicationState(containerID, publisher);
       }

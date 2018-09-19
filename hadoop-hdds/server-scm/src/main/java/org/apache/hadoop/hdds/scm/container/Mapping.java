@@ -25,13 +25,12 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This is
@@ -138,15 +137,5 @@ public interface Mapping extends Closeable {
       String owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) throws IOException;
 
-  /**
-   * Handle a pipeline close event.
-   * @param pipelineID pipeline id
-   */
-  void handlePipelineClose(PipelineID pipelineID);
-
-  /**
-   * Get set of pipeline for a specific datanode.
-   * @param datanodeDetails datanode for which pipelines needs to be fetched.
-   */
-  Set<PipelineID> getPipelineOnDatanode(DatanodeDetails datanodeDetails);
+  PipelineSelector getPipelineSelector();
 }

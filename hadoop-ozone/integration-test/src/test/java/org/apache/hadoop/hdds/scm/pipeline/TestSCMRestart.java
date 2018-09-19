@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -87,7 +88,7 @@ public class TestSCMRestart {
   }
 
   @Test
-  public void testPipelineWithScmRestart() {
+  public void testPipelineWithScmRestart() throws IOException {
     // After restart make sure that the pipeline are still present
     Pipeline ratisPipeline1AfterRestart = newMapping.getPipelineSelector()
             .getPipeline(ratisPipeline1.getId());
@@ -97,5 +98,22 @@ public class TestSCMRestart {
     Assert.assertNotSame(ratisPipeline2AfterRestart, ratisPipeline2);
     Assert.assertEquals(ratisPipeline1AfterRestart, ratisPipeline1);
     Assert.assertEquals(ratisPipeline2AfterRestart, ratisPipeline2);
+
+    for (DatanodeDetails dn : ratisPipeline1.getMachines()) {
+      Assert.assertEquals(dn, ratisPipeline1AfterRestart.getDatanodes()
+              .get(dn.getUuidString()));
+    }
+
+    for (DatanodeDetails dn : ratisPipeline2.getMachines()) {
+      Assert.assertEquals(dn, ratisPipeline2AfterRestart.getDatanodes()
+              .get(dn.getUuidString()));
+    }
+
+    // Try creating a new ratis pipeline, it should be from the same pipeline
+    // as was before restart
+    Pipeline newRatisPipeline =
+            newMapping.allocateContainer(RATIS, THREE, "Owner1")
+                    .getPipeline();
+    Assert.assertEquals(newRatisPipeline.getId(), ratisPipeline1.getId());
   }
 }

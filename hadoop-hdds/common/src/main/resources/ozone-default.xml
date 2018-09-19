@@ -224,6 +224,14 @@
       received from SCM to SCM. Unit could be defined with postfix
       (ns,ms,s,m,h,d)</description>
   </property>
+  <property>
+    <name>hdds.pipeline.report.interval</name>
+    <value>60000ms</value>
+    <tag>OZONE, PIPELINE, MANAGEMENT</tag>
+    <description>Time interval of the datanode to send pipeline report. Each
+      datanode periodically send pipeline report to SCM. Unit could be
+      defined with postfix (ns,ms,s,m,h,d)</description>
+  </property>
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>

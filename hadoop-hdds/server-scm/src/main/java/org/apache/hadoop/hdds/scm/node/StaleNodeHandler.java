@@ -19,16 +19,12 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.Mapping;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
-import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Set;
 
 /**
  * Handles Stale node event.
@@ -37,22 +33,17 @@ public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
   static final Logger LOG = LoggerFactory.getLogger(StaleNodeHandler.class);
 
   private final Node2ContainerMap node2ContainerMap;
-  private final Mapping containerManager;
+  private final PipelineSelector pipelineSelector;
 
   public StaleNodeHandler(Node2ContainerMap node2ContainerMap,
-      Mapping containerManager) {
+      PipelineSelector pipelineSelector) {
     this.node2ContainerMap = node2ContainerMap;
-    this.containerManager = containerManager;
+    this.pipelineSelector = pipelineSelector;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
-    Set<PipelineID> pipelineIDs =
-        containerManager.getPipelineOnDatanode(datanodeDetails);
-    for (PipelineID id : pipelineIDs) {
-      LOG.info("closing pipeline {}.", id);
-      publisher.fireEvent(SCMEvents.PIPELINE_CLOSE, id);
-    }
+    pipelineSelector.handleStaleNode(datanodeDetails);
   }
 }

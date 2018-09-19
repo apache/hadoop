@@ -18,6 +18,8 @@ package org.apache.hadoop.hdds.scm.pipelines;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PipelineManager.class);
-  private final ArrayList<ActivePipelines> activePipelines;
+  protected final ArrayList<ActivePipelines> activePipelines;
 
   public PipelineManager() {
     activePipelines = new ArrayList<>();
@@ -45,7 +47,10 @@ public abstract class PipelineManager {
     }
   }
 
-  private static class ActivePipelines {
+  /**
+   * List of active pipelines.
+   */
+  public static class ActivePipelines {
     private final List<PipelineID> activePipelines;
     private final AtomicInteger pipelineIndex;
 
@@ -55,10 +60,12 @@ public abstract class PipelineManager {
     }
 
     void addPipeline(PipelineID pipelineID) {
-      activePipelines.add(pipelineID);
+      if (!activePipelines.contains(pipelineID)) {
+        activePipelines.add(pipelineID);
+      }
     }
 
-    void removePipeline(PipelineID pipelineID) {
+    public void removePipeline(PipelineID pipelineID) {
       activePipelines.remove(pipelineID);
     }
 
@@ -117,17 +124,6 @@ public abstract class PipelineManager {
             .addPipeline(pipeline.getId());
   }
 
-  protected static int getReplicationCount(ReplicationFactor factor) {
-    switch (factor) {
-    case ONE:
-      return 1;
-    case THREE:
-      return 3;
-    default:
-      throw new IllegalArgumentException("Unexpected replication count");
-    }
-  }
-
   public abstract Pipeline allocatePipeline(
       ReplicationFactor replicationFactor);
 
@@ -136,6 +132,14 @@ public abstract class PipelineManager {
    * TODO: move the initialization to Ozone Client later
    */
   public abstract void initializePipeline(Pipeline pipeline) throws IOException;
+
+  public void processPipelineReport(Pipeline pipeline, DatanodeDetails dn) {
+    if (pipeline.addMember(dn)
+        &&(pipeline.getDatanodes().size() == pipeline.getFactor().getNumber())
+        && pipeline.getLifeCycleState() == HddsProtos.LifeCycleState.OPEN) {
+      addOpenPipeline(pipeline);
+    }
+  }
 
   /**
    * Creates a pipeline with a specified replication factor and type.
@@ -157,27 +161,11 @@ public abstract class PipelineManager {
    * Remove the pipeline from active allocation.
    * @param pipeline pipeline to be finalized
    */
-  public synchronized void finalizePipeline(Pipeline pipeline) {
-    activePipelines.get(pipeline.getFactor().ordinal())
-            .removePipeline(pipeline.getId());
-  }
+  public abstract boolean finalizePipeline(Pipeline pipeline);
 
   /**
    *
    * @param pipeline
    */
   public abstract void closePipeline(Pipeline pipeline) throws IOException;
-
-  /**
-   * list members in the pipeline.
-   * @return the datanode
-   */
-  public abstract List<DatanodeDetails> getMembers(PipelineID pipelineID)
-      throws IOException;
-
-  /**
-   * Update the datanode list of the pipeline.
-   */
-  public abstract void updatePipeline(PipelineID pipelineID,
-      List<DatanodeDetails> newDatanodes) throws IOException;
 }

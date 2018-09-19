@@ -98,7 +98,7 @@ public class TestNode2PipelineMap {
 
     // get pipeline details by dnid
     Set<PipelineID> pipelines = mapping.getPipelineSelector()
-        .getPipelineId(dns.get(0).getUuid());
+        .getPipelineByDnID(dns.get(0).getUuid());
     Assert.assertEquals(1, pipelines.size());
     pipelines.forEach(p -> Assert.assertEquals(p,
         ratisContainer.getPipeline().getId()));

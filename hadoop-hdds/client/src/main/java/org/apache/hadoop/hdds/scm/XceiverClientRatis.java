@@ -110,7 +110,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
     callRatisRpc(pipeline.getMachines(), (raftClient, peer) -> raftClient
-        .groupRemove(group.getGroupId(), peer.getId()));
+        .groupRemove(group.getGroupId(), true, peer.getId()));
   }
 
   /**

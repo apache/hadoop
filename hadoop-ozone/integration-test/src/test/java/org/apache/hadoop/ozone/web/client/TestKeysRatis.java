@@ -26,7 +26,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.rules.Timeout;
 
 import static org.apache.hadoop.ozone.web.client
@@ -83,7 +82,6 @@ public class TestKeysRatis {
         getMultiPartKey(delimiter)));
   }
 
-  @Ignore("disabling for now, datanodes restart with ratis is buggy")
   @Test
   public void testPutAndGetKeyWithDnRestart() throws Exception {
     runTestPutAndGetKeyWithDnRestart(
