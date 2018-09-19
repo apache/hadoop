@@ -40,7 +40,12 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .ReplicateContainerCommandHandler;
+import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.container.replication.ContainerReplicator;
+import org.apache.hadoop.ozone.container.replication.DownloadAndImportReplicator;
+import org.apache.hadoop.ozone.container.replication.ReplicationSupervisor;
+import org.apache.hadoop.ozone.container.replication.SimpleContainerDownloader;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -69,6 +74,7 @@ public class DatanodeStateMachine implements Closeable {
   private AtomicLong nextHB;
   private Thread stateMachineThread = null;
   private Thread cmdProcessThread = null;
+  private final ReplicationSupervisor supervisor;
 
   /**
    * Constructs a a datanode state machine.
@@ -89,14 +95,21 @@ public class DatanodeStateMachine implements Closeable {
         new OzoneConfiguration(conf), context);
     nextHB = new AtomicLong(Time.monotonicNow());
 
+    ContainerReplicator replicator =
+        new DownloadAndImportReplicator(container.getContainerSet(),
+            container.getDispatcher(),
+            new SimpleContainerDownloader(conf), new TarContainerPacker());
+
+    supervisor =
+        new ReplicationSupervisor(container.getContainerSet(), replicator, 10);
+
     // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
         .addHandler(new CloseContainerCommandHandler())
         .addHandler(new DeleteBlocksCommandHandler(container.getContainerSet(),
             conf))
-        .addHandler(new ReplicateContainerCommandHandler(conf,
-            container.getContainerSet(), container.getDispatcher()))
+        .addHandler(new ReplicateContainerCommandHandler(conf, supervisor))
         .setConnectionManager(connectionManager)
         .setContainer(container)
         .setContext(context)
@@ -295,6 +308,7 @@ public class DatanodeStateMachine implements Closeable {
   public void startDaemon() {
     Runnable startStateMachineTask = () -> {
       try {
+        supervisor.start();
         start();
         LOG.info("Ozone container server started.");
       } catch (Exception ex) {
@@ -323,6 +337,7 @@ public class DatanodeStateMachine implements Closeable {
    */
   public synchronized void stopDaemon() {
     try {
+      supervisor.stop();
       context.setState(DatanodeStates.SHUTDOWN);
       reportManager.shutdown();
       this.close();
