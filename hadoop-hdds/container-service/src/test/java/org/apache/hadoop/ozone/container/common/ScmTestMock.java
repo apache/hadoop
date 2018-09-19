@@ -18,6 +18,10 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatus;
 import org.apache.hadoop.hdds.scm.VersionInfo;
@@ -214,8 +218,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   public StorageContainerDatanodeProtocolProtos
       .SCMRegisteredResponseProto register(
           DatanodeDetailsProto datanodeDetailsProto, NodeReportProto nodeReport,
-          StorageContainerDatanodeProtocolProtos.ContainerReportsProto
-              containerReportsRequestProto)
+          ContainerReportsProto containerReportsRequestProto,
+          PipelineReportsProto pipelineReportsProto)
       throws IOException {
     rpcCount.incrementAndGet();
     updateNodeReport(datanodeDetailsProto, nodeReport);

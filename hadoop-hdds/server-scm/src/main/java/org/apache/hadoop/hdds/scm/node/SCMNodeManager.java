@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -363,7 +365,8 @@ public class SCMNodeManager
    */
   @Override
   public RegisteredCommand register(
-      DatanodeDetails datanodeDetails, NodeReportProto nodeReport) {
+      DatanodeDetails datanodeDetails, NodeReportProto nodeReport,
+      PipelineReportsProto pipelineReportsProto) {
 
     InetAddress dnAddress = Server.getRemoteIp();
     if (dnAddress != null) {

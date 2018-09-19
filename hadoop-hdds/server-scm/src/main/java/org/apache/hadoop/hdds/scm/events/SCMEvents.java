@@ -27,9 +27,12 @@ import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .DeleteBlockCommandStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
-import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler.CloseContainerRetryableReq;
+import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
+        .CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+        .PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -72,8 +75,7 @@ public final class SCMEvents {
 
   /**
    * ContainerReports are send out by Datanodes. This report is received by
-   * SCMDatanodeHeartbeatDispatcher and Container_Report Event
-   * isTestSCMDatanodeHeartbeatDispatcher generated.
+   * SCMDatanodeHeartbeatDispatcher and Container_Report Event is generated.
    */
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
@@ -85,6 +87,13 @@ public final class SCMEvents {
   public static final TypedEvent<ContainerActionsFromDatanode>
       CONTAINER_ACTIONS = new TypedEvent<>(ContainerActionsFromDatanode.class,
       "Container_Actions");
+
+  /**
+   * PipelineReports are send out by Datanodes. This report is received by
+   * SCMDatanodeHeartbeatDispatcher and Pipeline_Report Event is generated.
+   */
+  public static final TypedEvent<PipelineReportFromDatanode> PIPELINE_REPORT =
+          new TypedEvent<>(PipelineReportFromDatanode.class, "Pipeline_Report");
 
   /**
    * PipelineActions are sent by Datanode. This event is received by

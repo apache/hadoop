@@ -19,17 +19,18 @@
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ClosePipelineInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -68,6 +69,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -96,12 +99,12 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
 
-  private XceiverServerRatis(DatanodeDetails dd, int port, String storageDir,
+  private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext context)
       throws IOException {
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
-    RaftProperties serverProperties = newRaftProperties(conf, storageDir);
+    RaftProperties serverProperties = newRaftProperties(conf);
     final int numWriteChunkThreads = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT);
@@ -118,15 +121,13 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         new ContainerStateMachine(dispatcher, chunkExecutor, this);
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
-        .setGroup(RatisHelper.emptyRaftGroup())
         .setProperties(serverProperties)
         .setStateMachine(stateMachine)
         .build();
   }
 
 
-  private RaftProperties newRaftProperties(Configuration conf,
-      String storageDir) {
+  private RaftProperties newRaftProperties(Configuration conf) {
     final RaftProperties properties = new RaftProperties();
 
     // Set rpc type
@@ -235,6 +236,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     nodeFailureTimeoutMs = nodeFailureTimeout.toLong(TimeUnit.MILLISECONDS);
 
     // Set the ratis storage directory
+    String storageDir = HddsServerUtil.getOzoneDatanodeRatisDirectory(conf);
     RaftServerConfigKeys.setStorageDir(properties, new File(storageDir));
 
     // For grpc set the maximum message size
@@ -253,23 +255,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public static XceiverServerRatis newXceiverServerRatis(
       DatanodeDetails datanodeDetails, Configuration ozoneConf,
       ContainerDispatcher dispatcher, StateContext context) throws IOException {
-    final String ratisDir = File.separator + "ratis";
     int localPort = ozoneConf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT);
-    String storageDir = ozoneConf.get(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR);
-
-    if (Strings.isNullOrEmpty(storageDir)) {
-      storageDir = ozoneConf.get(OzoneConfigKeys
-          .OZONE_METADATA_DIRS);
-      Preconditions.checkNotNull(storageDir, "ozone.metadata.dirs " +
-          "cannot be null, Please check your configs.");
-      storageDir = storageDir.concat(ratisDir);
-      LOG.warn("Storage directory for Ratis is not configured. Mapping Ratis " +
-              "storage under {}. It is a good idea to map this to an SSD disk.",
-          storageDir);
-    }
 
     // Get an available port on current node and
     // use that as the container port
@@ -282,13 +270,6 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         socket.bind(address);
         localPort = socket.getLocalPort();
         LOG.info("Found a free port for the server : {}", localPort);
-        // If we have random local ports configured this means that it
-        // probably running under MiniOzoneCluster. Ratis locks the storage
-        // directories, so we need to pass different local directory for each
-        // local instance. So we map ratis directories under datanode ID.
-        storageDir =
-            storageDir.concat(File.separator +
-                datanodeDetails.getUuidString());
       } catch (IOException e) {
         LOG.error("Unable find a random free port for the server, "
             + "fallback to use default port {}", localPort, e);
@@ -296,7 +277,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     }
     datanodeDetails.setPort(
         DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
-    return new XceiverServerRatis(datanodeDetails, localPort, storageDir,
+    return new XceiverServerRatis(datanodeDetails, localPort,
         dispatcher, ozoneConf, context);
   }
 
@@ -363,7 +344,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public void submitRequest(
       ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID)
       throws IOException {
-    // ReplicationLevel.ALL ensures the transactions corresponding to
+    // ReplicationLevel.MAJORITY ensures the transactions corresponding to
     // the request here are applied on all the raft servers.
     RaftClientRequest raftClientRequest =
         createRaftClientRequest(request, pipelineID,
@@ -427,13 +408,27 @@ public final class XceiverServerRatis implements XceiverServerSpi {
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
   }
 
-  void handleNodeSlowness(
-      RaftGroup group, RoleInfoProto roleInfoProto) {
+  @Override
+  public List<PipelineReport> getPipelineReport() {
+    try {
+      Iterable<RaftGroupId> gids = server.getGroupIds();
+      List<PipelineReport> reports = new ArrayList<>();
+      for (RaftGroupId groupId : gids) {
+        reports.add(PipelineReport.newBuilder()
+                .setPipelineID(PipelineID.valueOf(groupId).getProtobuf())
+                .build());
+      }
+      return reports;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  void handleNodeSlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
     handlePipelineFailure(group.getGroupId(), roleInfoProto);
   }
 
-  void handleNoLeader(
-      RaftGroup group, RoleInfoProto roleInfoProto) {
+  void handleNoLeader(RaftGroup group, RoleInfoProto roleInfoProto) {
     handlePipelineFailure(group.getGroupId(), roleInfoProto);
   }
 }

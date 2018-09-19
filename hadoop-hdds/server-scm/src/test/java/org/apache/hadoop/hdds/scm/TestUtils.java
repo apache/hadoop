@@ -17,6 +17,8 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
@@ -139,7 +141,8 @@ public final class TestUtils {
   public static DatanodeDetails createRandomDatanodeAndRegister(
       SCMNodeManager nodeManager) {
     return getDatanodeDetails(
-        nodeManager.register(randomDatanodeDetails(), null));
+        nodeManager.register(randomDatanodeDetails(), null,
+                getRandomPipelineReports()));
   }
 
   /**
@@ -297,6 +300,11 @@ public final class TestUtils {
       containerInfos.add(getRandomContainerInfo(i));
     }
     return getContainerReports(containerInfos);
+  }
+
+
+  public static PipelineReportsProto getRandomPipelineReports() {
+    return PipelineReportsProto.newBuilder().build();
   }
 
   /**

@@ -28,7 +28,7 @@ import java.util.UUID;
  * in Ratis as RaftGroupId, GroupID is used by the datanodes to initialize
  * the ratis group they are part of.
  */
-public class PipelineID {
+public final class PipelineID implements Comparable<PipelineID> {
 
   private UUID id;
   private RaftGroupId groupId;
@@ -42,8 +42,12 @@ public class PipelineID {
     return new PipelineID(UUID.randomUUID());
   }
 
+  public static PipelineID valueOf(UUID id) {
+    return new PipelineID(id);
+  }
+
   public static PipelineID valueOf(RaftGroupId groupId) {
-    return new PipelineID(groupId.getUuid());
+    return valueOf(groupId.getUuid());
   }
 
   public RaftGroupId getRaftGroupID() {
@@ -65,6 +69,11 @@ public class PipelineID {
   @Override
   public String toString() {
     return "pipelineId=" + id;
+  }
+
+  @Override
+  public int compareTo(PipelineID o) {
+    return this.id.compareTo(o.id);
   }
 
   @Override

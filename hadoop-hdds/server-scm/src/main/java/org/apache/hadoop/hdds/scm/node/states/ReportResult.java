@@ -19,83 +19,92 @@
 
 package org.apache.hadoop.hdds.scm.node.states;
 
-import org.apache.hadoop.hdds.scm.container.ContainerID;
-
 import java.util.Collections;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
 
 /**
- * A Container Report gets processsed by the Node2Container and returns
- * Report Result class.
+ * A Container/Pipeline Report gets processed by the
+ * Node2Container/Node2Pipeline and returns Report Result class.
  */
-public class ReportResult {
-  private Node2ContainerMap.ReportStatus status;
-  private Set<ContainerID> missingContainers;
-  private Set<ContainerID> newContainers;
+public final class ReportResult<T> {
+  private ReportStatus status;
+  private Set<T> missingEntries;
+  private Set<T> newEntries;
 
-  ReportResult(Node2ContainerMap.ReportStatus status,
-      Set<ContainerID> missingContainers,
-      Set<ContainerID> newContainers) {
+  private ReportResult(ReportStatus status,
+      Set<T> missingEntries,
+      Set<T> newEntries) {
     this.status = status;
-    Preconditions.checkNotNull(missingContainers);
-    Preconditions.checkNotNull(newContainers);
-    this.missingContainers = missingContainers;
-    this.newContainers = newContainers;
+    Preconditions.checkNotNull(missingEntries);
+    Preconditions.checkNotNull(newEntries);
+    this.missingEntries = missingEntries;
+    this.newEntries = newEntries;
   }
 
-  public Node2ContainerMap.ReportStatus getStatus() {
+  public ReportStatus getStatus() {
     return status;
   }
 
-  public Set<ContainerID> getMissingContainers() {
-    return missingContainers;
+  public Set<T> getMissingEntries() {
+    return missingEntries;
   }
 
-  public Set<ContainerID> getNewContainers() {
-    return newContainers;
+  public Set<T> getNewEntries() {
+    return newEntries;
   }
 
-  static class ReportResultBuilder {
-    private Node2ContainerMap.ReportStatus status;
-    private Set<ContainerID> missingContainers;
-    private Set<ContainerID> newContainers;
+  /**
+   * Result after processing report for node2Object map.
+   * @param <T>
+   */
+  public static class ReportResultBuilder<T> {
+    private ReportStatus status;
+    private Set<T> missingEntries;
+    private Set<T> newEntries;
 
-    static ReportResultBuilder newBuilder() {
-      return new ReportResultBuilder();
-    }
-
-    public ReportResultBuilder setStatus(
-        Node2ContainerMap.ReportStatus newstatus) {
-      this.status = newstatus;
+    public ReportResultBuilder<T> setStatus(
+        ReportStatus newStatus) {
+      this.status = newStatus;
       return this;
     }
 
-    public ReportResultBuilder setMissingContainers(
-        Set<ContainerID> missingContainersLit) {
-      this.missingContainers = missingContainersLit;
+    public ReportResultBuilder<T> setMissingEntries(
+        Set<T> missingEntriesList) {
+      this.missingEntries = missingEntriesList;
       return this;
     }
 
-    public ReportResultBuilder setNewContainers(
-        Set<ContainerID> newContainersList) {
-      this.newContainers = newContainersList;
+    public ReportResultBuilder<T> setNewEntries(
+        Set<T> newEntriesList) {
+      this.newEntries = newEntriesList;
       return this;
     }
 
-    ReportResult build() {
+    public ReportResult<T> build() {
 
-      Set<ContainerID> nullSafeMissingContainers = this.missingContainers;
-      Set<ContainerID> nullSafeNewContainers = this.newContainers;
-      if (nullSafeNewContainers == null) {
-        nullSafeNewContainers = Collections.emptySet();
+      Set<T> nullSafeMissingEntries = this.missingEntries;
+      Set<T> nullSafeNewEntries = this.newEntries;
+      if (nullSafeNewEntries == null) {
+        nullSafeNewEntries = Collections.emptySet();
       }
-      if (nullSafeMissingContainers == null) {
-        nullSafeMissingContainers = Collections.emptySet();
+      if (nullSafeMissingEntries == null) {
+        nullSafeMissingEntries = Collections.emptySet();
       }
-      return new ReportResult(status, nullSafeMissingContainers,
-          nullSafeNewContainers);
+      return new ReportResult<T>(status, nullSafeMissingEntries,
+              nullSafeNewEntries);
     }
+  }
+
+  /**
+   * Results possible from processing a report.
+   */
+  public enum ReportStatus {
+    ALL_IS_WELL,
+    MISSING_ENTRIES,
+    NEW_ENTRIES_FOUND,
+    MISSING_AND_NEW_ENTRIES_FOUND,
+    NEW_DATANODE_FOUND,
   }
 }

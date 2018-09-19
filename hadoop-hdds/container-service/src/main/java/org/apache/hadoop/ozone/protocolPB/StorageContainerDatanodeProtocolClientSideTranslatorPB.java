@@ -20,6 +20,8 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
@@ -149,12 +151,14 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   @Override
   public SCMRegisteredResponseProto register(
       DatanodeDetailsProto datanodeDetailsProto, NodeReportProto nodeReport,
-      ContainerReportsProto containerReportsRequestProto)
+      ContainerReportsProto containerReportsRequestProto,
+      PipelineReportsProto pipelineReportsProto)
       throws IOException {
     SCMRegisterRequestProto.Builder req =
         SCMRegisterRequestProto.newBuilder();
     req.setDatanodeDetails(datanodeDetailsProto);
     req.setContainerReport(containerReportsRequestProto);
+    req.setPipelineReports(pipelineReportsProto);
     req.setNodeReport(nodeReport);
     final SCMRegisteredResponseProto response;
     try {

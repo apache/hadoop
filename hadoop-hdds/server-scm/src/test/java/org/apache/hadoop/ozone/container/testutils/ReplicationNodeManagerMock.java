@@ -17,6 +17,8 @@
 package org.apache.hadoop.ozone.container.testutils;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.CommandQueue;
@@ -252,7 +254,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   @Override
   public RegisteredCommand register(DatanodeDetails dd,
-                                    NodeReportProto nodeReport) {
+                                    NodeReportProto nodeReport,
+                                    PipelineReportsProto pipelineReportsProto) {
     return null;
   }
 

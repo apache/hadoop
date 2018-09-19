@@ -17,22 +17,36 @@
 
 package org.apache.hadoop.hdds.scm.pipelines;
 
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles pipeline close event.
  */
 public class PipelineCloseHandler implements EventHandler<PipelineID> {
-  private final Mapping mapping;
-  public PipelineCloseHandler(Mapping mapping) {
-    this.mapping = mapping;
+  private static final Logger LOG = LoggerFactory
+          .getLogger(PipelineCloseHandler.class);
+
+  private final PipelineSelector pipelineSelector;
+  public PipelineCloseHandler(PipelineSelector pipelineSelector) {
+    this.pipelineSelector = pipelineSelector;
   }
 
   @Override
   public void onMessage(PipelineID pipelineID, EventPublisher publisher) {
-    mapping.handlePipelineClose(pipelineID);
+    Pipeline pipeline = pipelineSelector.getPipeline(pipelineID);
+    try {
+      if (pipeline != null) {
+        pipelineSelector.finalizePipeline(pipeline);
+      } else {
+        LOG.debug("pipeline:{} not found", pipelineID);
+      }
+    } catch (Exception e) {
+      LOG.info("failed to close pipeline:{}", pipelineID, e);
+    }
   }
 }

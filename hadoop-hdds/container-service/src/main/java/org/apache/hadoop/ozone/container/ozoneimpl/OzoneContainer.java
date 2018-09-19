@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
@@ -162,6 +164,16 @@ public class OzoneContainer {
   public StorageContainerDatanodeProtocolProtos.ContainerReportsProto
       getContainerReport() throws IOException {
     return this.containerSet.getContainerReport();
+  }
+
+  public PipelineReportsProto getPipelineReport() {
+    PipelineReportsProto.Builder pipelineReportsProto =
+            PipelineReportsProto.newBuilder();
+    for (XceiverServerSpi serverInstance : server) {
+      pipelineReportsProto
+              .addAllPipelineReport(serverInstance.getPipelineReport());
+    }
+    return pipelineReportsProto.build();
   }
 
   /**

@@ -64,6 +64,7 @@ import org.apache.hadoop.hdds.scm.node.StaleNodeHandler;
 import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineCloseHandler;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineActionEventHandler;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineReportHandler;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -217,13 +218,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new CloseContainerEventHandler(scmContainerManager);
     NodeReportHandler nodeReportHandler =
         new NodeReportHandler(scmNodeManager);
-
+    PipelineReportHandler pipelineReportHandler =
+            new PipelineReportHandler(
+                    scmContainerManager.getPipelineSelector());
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
     NewNodeHandler newNodeHandler = new NewNodeHandler(node2ContainerMap);
     StaleNodeHandler staleNodeHandler =
-        new StaleNodeHandler(node2ContainerMap, scmContainerManager);
+        new StaleNodeHandler(node2ContainerMap,
+                scmContainerManager.getPipelineSelector());
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(node2ContainerMap,
         getScmContainerManager().getStateManager());
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
@@ -240,7 +244,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new PipelineActionEventHandler();
 
     PipelineCloseHandler pipelineCloseHandler =
-        new PipelineCloseHandler(scmContainerManager);
+        new PipelineCloseHandler(scmContainerManager.getPipelineSelector());
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
@@ -300,6 +304,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
         (BlockManagerImpl) scmBlockManager);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, clientProtocolServer);
+    eventQueue.addHandler(SCMEvents.PIPELINE_REPORT, pipelineReportHandler);
 
     registerMXBean();
   }
