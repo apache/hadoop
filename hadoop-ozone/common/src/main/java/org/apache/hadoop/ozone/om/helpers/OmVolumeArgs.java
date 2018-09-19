@@ -151,7 +151,7 @@ public final class OmVolumeArgs implements Auditable{
     /**
      * Constructs a builder.
      */
-    Builder() {
+    public Builder() {
       keyValueMap = new HashMap<>();
       aclMap = new OmOzoneAclMap();
     }
