@@ -530,7 +530,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             currentResoureLimits.getAmountNeededUnreserve());
 
     boolean needToUnreserve =
-        rc.isAnyMajorResourceAboveZero(resourceNeedToUnReserve);
+        Resources.greaterThan(rc, clusterResource,
+            resourceNeedToUnReserve, Resources.none());
 
     RMContainer unreservedContainer = null;
     boolean reservationsContinueLooking =
