@@ -374,7 +374,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         hParser.printGenericCommandUsage(System.err);
         System.exit(1);
       }
-      StorageContainerManager scm = createSCM(hParser.getRemainingArgs(), conf);
+      StorageContainerManager scm = createSCM(
+          hParser.getRemainingArgs(), conf, true);
       if (scm != null) {
         scm.start();
         scm.join();
@@ -389,9 +390,37 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     out.println(USAGE + "\n");
   }
 
-  public static StorageContainerManager createSCM(String[] args,
-      OzoneConfiguration conf)
-      throws IOException {
+  /**
+   * Create an SCM instance based on the supplied command-line arguments.
+   *
+   * This method is intended for unit tests only. It suppresses the
+   * startup/shutdown message and skips registering Unix signal
+   * handlers.
+   *
+   * @param args command line arguments.
+   * @param conf HDDS configuration
+   * @return SCM instance
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public static StorageContainerManager createSCM(
+      String[] args, OzoneConfiguration conf) throws IOException {
+    return createSCM(args, conf, false);
+  }
+
+  /**
+   * Create an SCM instance based on the supplied command-line arguments.
+   *
+   * @param args command-line arguments.
+   * @param conf HDDS configuration
+   * @param printBanner if true, then log a verbose startup message.
+   * @return SCM instance
+   * @throws IOException
+   */
+  private static StorageContainerManager createSCM(
+      String[] args,
+      OzoneConfiguration conf,
+      boolean printBanner) throws IOException {
     String[] argv = (args == null) ? new String[0] : args;
     if (!HddsUtils.isHddsEnabled(conf)) {
       System.err.println(
@@ -407,13 +436,17 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
     switch (startOpt) {
     case INIT:
-      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-          LOG);
+      if (printBanner) {
+        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+            LOG);
+      }
       terminate(scmInit(conf) ? 0 : 1);
       return null;
     case GENCLUSTERID:
-      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-          LOG);
+      if (printBanner) {
+        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+            LOG);
+      }
       System.out.println("Generating new cluster id:");
       System.out.println(StorageInfo.newClusterID());
       terminate(0);
@@ -423,8 +456,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       terminate(0);
       return null;
     default:
-      StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-          LOG);
+      if (printBanner) {
+        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
+            LOG);
+      }
       return new StorageContainerManager(conf);
     }
   }
