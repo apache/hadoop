@@ -588,11 +588,10 @@ public class TestStorageContainerManager {
     helper.createKeys(10, 4096);
     SCMClientProtocolServer clientProtocolServer = cluster
         .getStorageContainerManager().getClientProtocolServer();
-
+    assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
     final List<ContainerInfo> containers = scm.getScmContainerManager()
         .getStateManager().getAllContainers();
     scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
-    assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
     GenericTestUtils.waitFor(() -> {
       return clientProtocolServer.getChillModeStatus();
     }, 50, 1000 * 5);
