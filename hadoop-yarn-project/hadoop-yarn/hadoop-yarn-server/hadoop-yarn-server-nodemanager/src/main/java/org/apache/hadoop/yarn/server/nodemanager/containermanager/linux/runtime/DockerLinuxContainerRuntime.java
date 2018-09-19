@@ -1282,7 +1282,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
             DockerInspectCommand.STATUS_TEMPLATE,
             DockerInspectCommand.STOPSIGNAL_TEMPLATE}, delimiter);
     try {
-      String output = executeDockerInspect(containerId, inspectCommand);
+      String output = executeDockerInspect(containerId, inspectCommand).trim();
 
       if (!output.isEmpty()) {
         String[] statusAndSignal = StringUtils.split(output, delimiter);
