@@ -132,7 +132,6 @@ public class TestCloseContainerByPipeline {
     // Make sure the closeContainerCommandHandler is Invoked
     Assert.assertTrue(
         closeContainerHandler.getInvocationCount() > lastInvocationCount);
-
   }
 
   @Test
@@ -190,6 +189,7 @@ public class TestCloseContainerByPipeline {
     Assert.assertFalse((logCapturer.getOutput().contains(
         "submitting CloseContainer request over RATIS server for container "
             + containerID)));
+    logCapturer.stopCapturing();
   }
 
   @Test
@@ -239,13 +239,14 @@ public class TestCloseContainerByPipeline {
       Assert.assertTrue(isContainerClosed(cluster,
           containerID, datanodeDetails));
     }
+    // Make sure it was really closed via Ratis not STAND_ALONE server
     Assert.assertFalse(logCapturer.getOutput().contains(
         "submitting CloseContainer request over STAND_ALONE "
             + "server for container " + containerID));
-    // Make sure it was really closed via StandAlone not Ratis server
     Assert.assertTrue((logCapturer.getOutput().contains(
         "submitting CloseContainer request over RATIS server for container "
             + containerID)));
+    logCapturer.stopCapturing();
   }
 
   private Boolean isContainerClosed(MiniOzoneCluster cluster, long containerID,

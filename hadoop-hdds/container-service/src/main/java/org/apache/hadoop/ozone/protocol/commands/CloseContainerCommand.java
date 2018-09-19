@@ -30,25 +30,13 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 public class CloseContainerCommand
     extends SCMCommand<CloseContainerCommandProto> {
 
-  private long containerID;
   private HddsProtos.ReplicationType replicationType;
   private PipelineID pipelineID;
 
   public CloseContainerCommand(long containerID,
       HddsProtos.ReplicationType replicationType,
       PipelineID pipelineID) {
-    super();
-    this.containerID = containerID;
-    this.replicationType = replicationType;
-    this.pipelineID = pipelineID;
-  }
-
-  // Should be called only for protobuf conversion
-  private CloseContainerCommand(long containerID,
-      HddsProtos.ReplicationType replicationType,
-      PipelineID pipelineID, long id) {
-    super(id);
-    this.containerID = containerID;
+    super(containerID);
     this.replicationType = replicationType;
     this.pipelineID = pipelineID;
   }
@@ -75,7 +63,7 @@ public class CloseContainerCommand
 
   public CloseContainerCommandProto getProto() {
     return CloseContainerCommandProto.newBuilder()
-        .setContainerID(containerID)
+        .setContainerID(getId())
         .setCmdId(getId())
         .setReplicationType(replicationType)
         .setPipelineID(pipelineID.getProtobuf())
@@ -85,13 +73,12 @@ public class CloseContainerCommand
   public static CloseContainerCommand getFromProtobuf(
       CloseContainerCommandProto closeContainerProto) {
     Preconditions.checkNotNull(closeContainerProto);
-    return new CloseContainerCommand(closeContainerProto.getContainerID(),
+    return new CloseContainerCommand(closeContainerProto.getCmdId(),
         closeContainerProto.getReplicationType(),
-        PipelineID.getFromProtobuf(closeContainerProto.getPipelineID()),
-        closeContainerProto.getCmdId());
+        PipelineID.getFromProtobuf(closeContainerProto.getPipelineID()));
   }
 
   public long getContainerID() {
-    return containerID;
+    return getId();
   }
 }

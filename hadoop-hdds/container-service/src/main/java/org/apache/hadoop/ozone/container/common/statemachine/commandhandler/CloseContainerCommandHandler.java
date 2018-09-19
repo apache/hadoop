@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
+import org.apache.ratis.protocol.NotLeaderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,9 +90,21 @@ public class CloseContainerCommandHandler implements CommandHandler {
       // submit the close container request for the XceiverServer to handle
       container.submitContainerRequest(
           request.build(), replicationType, pipelineID);
-      cmdExecuted = true;
     } catch (Exception e) {
-      LOG.error("Can't close container " + containerID, e);
+      if (e instanceof NotLeaderException) {
+        // If the particular datanode is not the Ratis leader, the close
+        // container command will not be executed by the follower but will be
+        // executed by Ratis stateMachine transactions via leader to follower.
+        // There can also be case where the datanode is in candidate state.
+        // In these situations, NotLeaderException is thrown. Remove the status
+        // from cmdStatus Map here so that it will be retried only by SCM if the
+        // leader could not not close the container after a certain time.
+        context.removeCommandStatus(containerID);
+        LOG.info(e.getLocalizedMessage());
+      } else {
+        LOG.error("Can't close container " + containerID, e);
+        cmdExecuted = false;
+      }
     } finally {
       updateCommandStatus(context, command, cmdExecuted, LOG);
       long endTime = Time.monotonicNow();
