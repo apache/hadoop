@@ -20,17 +20,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>ozone-0.2.1-alpha</version>
     <relativePath>../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.2.1-alpha</version>
   <description>Apache Hadoop Ozone Project</description>
   <name>Apache Hadoop Ozone</name>
   <packaging>pom</packaging>
 
   <properties>
-    <ozone.version>0.2.1-SNAPSHOT</ozone.version>
+    <ozone.version>0.2.1-alpha</ozone.version>
     <ozone.release>Acadia</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
   </properties>
