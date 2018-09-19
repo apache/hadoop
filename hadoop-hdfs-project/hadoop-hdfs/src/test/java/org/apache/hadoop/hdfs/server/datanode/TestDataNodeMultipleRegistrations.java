@@ -250,7 +250,7 @@ public class TestDataNodeMultipleRegistrations {
     try {
       cluster.startDataNodes(conf, 1, true, null, null);
       // let the initialization be complete
-      Thread.sleep(10000);
+      cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
       assertTrue("Datanode should be running", dn.isDatanodeUp());
       assertEquals("Only one BPOfferService should be running", 1,
@@ -274,7 +274,7 @@ public class TestDataNodeMultipleRegistrations {
     try {
       cluster.startDataNodes(conf, 1, true, null, null);
       // let the initialization be complete
-      Thread.sleep(10000);
+      cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
       assertTrue("Datanode should be running", dn.isDatanodeUp());
       assertEquals("BPOfferService should be running", 1,
