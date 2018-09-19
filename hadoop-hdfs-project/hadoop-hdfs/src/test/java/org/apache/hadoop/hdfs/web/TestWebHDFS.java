@@ -743,6 +743,12 @@ public class TestWebHDFS {
       Assert.assertTrue(diffReport.getDiffList().contains(entry3));
       Assert.assertTrue(diffReport.getDiffList().contains(entry4));
       Assert.assertEquals(diffReport.getDiffList().size(), 5);
+
+      // Test with fromSnapshot and toSnapshot as null.
+      diffReport = webHdfs.getSnapshotDiffReport(foo, null, "s2");
+      Assert.assertEquals(diffReport.getDiffList().size(), 0);
+      diffReport = webHdfs.getSnapshotDiffReport(foo, "s1", null);
+      Assert.assertEquals(diffReport.getDiffList().size(), 5);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
