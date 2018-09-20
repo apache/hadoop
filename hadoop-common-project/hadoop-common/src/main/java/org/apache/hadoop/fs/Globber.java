@@ -245,7 +245,18 @@ class Globber {
               // incorrectly conclude that /a/b was a file and should not match
               // /a/*/*.  So we use getFileStatus of the path we just listed to
               // disambiguate.
-              if (!getFileStatus(candidate.getPath()).isDirectory()) {
+              Path path = candidate.getPath();
+              FileStatus status = getFileStatus(path);
+              if (status == null) {
+                // null means the file was not found
+                LOG.warn("File/directory {} not found:"
+                    + " it may have been deleted."
+                    + " If this is an object store, this can be a sign of"
+                    + " eventual consistency problems.",
+                    path);
+                continue;
+              }
+              if (!status.isDirectory()) {
                 continue;
               }
             }
