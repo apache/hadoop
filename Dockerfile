@@ -15,7 +15,8 @@
 # limitations under the License.
 
 FROM openjdk:8-jdk
-RUN apt-get update && apt-get install -y jq curl python sudo && apt-get clean
+RUN apt-get update && apt-get install -y jq curl python python-pip sudo && apt-get clean
+RUN pip install robotframework
 RUN wget -O /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
 RUN chmod +x /usr/local/bin/dumb-init
 RUN mkdir -p /etc/security/keytabs && chmod -R a+wr /etc/security/keytabs 
