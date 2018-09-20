@@ -48,10 +48,10 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.OpenContainerBlockMap;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -62,13 +62,13 @@ import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.SmallFileUtils;
 import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
-import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
+import org.apache.hadoop.ozone.container.keyvalue.impl.BlockManagerImpl;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.ChunkManager;
-import org.apache.hadoop.ozone.container.keyvalue.interfaces.KeyManager;
+import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
     .BlockDeletingService;
 import org.apache.hadoop.util.AutoCloseableLock;
@@ -117,7 +117,7 @@ public class KeyValueHandler extends Handler {
       KeyValueHandler.class);
 
   private final ContainerType containerType;
-  private final KeyManager keyManager;
+  private final BlockManager blockManager;
   private final ChunkManager chunkManager;
   private final BlockDeletingService blockDeletingService;
   private final VolumeChoosingPolicy volumeChoosingPolicy;
@@ -129,7 +129,7 @@ public class KeyValueHandler extends Handler {
       VolumeSet volSet, ContainerMetrics metrics) {
     super(config, contSet, volSet, metrics);
     containerType = ContainerType.KeyValueContainer;
-    keyManager = new KeyManagerImpl(config);
+    blockManager = new BlockManagerImpl(config);
     chunkManager = new ChunkManagerImpl();
     long svcInterval = config
         .getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
@@ -187,13 +187,13 @@ public class KeyValueHandler extends Handler {
       return handleUnsupportedOp(request);
     case CloseContainer:
       return handleCloseContainer(request, kvContainer);
-    case PutKey:
-      return handlePutKey(request, kvContainer);
-    case GetKey:
-      return handleGetKey(request, kvContainer);
-    case DeleteKey:
-      return handleDeleteKey(request, kvContainer);
-    case ListKey:
+    case PutBlock:
+      return handlePutBlock(request, kvContainer);
+    case GetBlock:
+      return handleGetBlock(request, kvContainer);
+    case DeleteBlock:
+      return handleDeleteBlock(request, kvContainer);
+    case ListBlock:
       return handleUnsupportedOp(request);
     case ReadChunk:
       return handleReadChunk(request, kvContainer);
@@ -222,8 +222,8 @@ public class KeyValueHandler extends Handler {
   }
 
   @VisibleForTesting
-  public KeyManager getKeyManager() {
-    return this.keyManager;
+  public BlockManager getBlockManager() {
+    return this.blockManager;
   }
 
   /**
@@ -413,7 +413,7 @@ public class KeyValueHandler extends Handler {
       // remove the container from open block map once, all the blocks
       // have been committed and the container is closed
       kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
-      commitPendingKeys(kvContainer);
+      commitPendingBlocks(kvContainer);
       kvContainer.close();
       // make sure the the container open keys from BlockMap gets removed
       openContainerBlockMap.removeContainer(kvData.getContainerID());
@@ -429,13 +429,13 @@ public class KeyValueHandler extends Handler {
   }
 
   /**
-   * Handle Put Key operation. Calls KeyManager to process the request.
+   * Handle Put Block operation. Calls BlockManager to process the request.
    */
-  ContainerCommandResponseProto handlePutKey(
+  ContainerCommandResponseProto handlePutBlock(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
     long blockLength;
-    if (!request.hasPutKey()) {
+    if (!request.hasPutBlock()) {
       LOG.debug("Malformed Put Key request. trace ID: {}",
           request.getTraceID());
       return ContainerUtils.malformedRequest(request);
@@ -444,11 +444,11 @@ public class KeyValueHandler extends Handler {
     try {
       checkContainerOpen(kvContainer);
 
-      KeyData keyData = KeyData.getFromProtoBuf(
-          request.getPutKey().getKeyData());
-      long numBytes = keyData.getProtoBufMessage().toByteArray().length;
-      blockLength = commitKey(keyData, kvContainer);
-      metrics.incContainerBytesStats(Type.PutKey, numBytes);
+      BlockData blockData = BlockData.getFromProtoBuf(
+          request.getPutBlock().getBlockData());
+      long numBytes = blockData.getProtoBufMessage().toByteArray().length;
+      blockLength = commitKey(blockData, kvContainer);
+      metrics.incContainerBytesStats(Type.PutBlock, numBytes);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -457,46 +457,46 @@ public class KeyValueHandler extends Handler {
           request);
     }
 
-    return KeyUtils.putKeyResponseSuccess(request, blockLength);
+    return BlockUtils.putBlockResponseSuccess(request, blockLength);
   }
 
-  private void commitPendingKeys(KeyValueContainer kvContainer)
+  private void commitPendingBlocks(KeyValueContainer kvContainer)
       throws IOException {
     long containerId = kvContainer.getContainerData().getContainerID();
-    List<KeyData> pendingKeys =
-        this.openContainerBlockMap.getOpenKeys(containerId);
-    for(KeyData keyData : pendingKeys) {
-      commitKey(keyData, kvContainer);
+    List<BlockData> pendingBlocks =
+        this.openContainerBlockMap.getOpenBlocks(containerId);
+    for(BlockData blockData : pendingBlocks) {
+      commitKey(blockData, kvContainer);
     }
   }
 
-  private long commitKey(KeyData keyData, KeyValueContainer kvContainer)
+  private long commitKey(BlockData blockData, KeyValueContainer kvContainer)
       throws IOException {
-    Preconditions.checkNotNull(keyData);
-    long length = keyManager.putKey(kvContainer, keyData);
+    Preconditions.checkNotNull(blockData);
+    long length = blockManager.putBlock(kvContainer, blockData);
     //update the open key Map in containerManager
-    this.openContainerBlockMap.removeFromKeyMap(keyData.getBlockID());
+    this.openContainerBlockMap.removeFromBlockMap(blockData.getBlockID());
     return length;
   }
   /**
-   * Handle Get Key operation. Calls KeyManager to process the request.
+   * Handle Get Block operation. Calls BlockManager to process the request.
    */
-  ContainerCommandResponseProto handleGetKey(
+  ContainerCommandResponseProto handleGetBlock(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
-    if (!request.hasGetKey()) {
+    if (!request.hasGetBlock()) {
       LOG.debug("Malformed Get Key request. trace ID: {}",
           request.getTraceID());
       return ContainerUtils.malformedRequest(request);
     }
 
-    KeyData responseData;
+    BlockData responseData;
     try {
       BlockID blockID = BlockID.getFromProtobuf(
-          request.getGetKey().getBlockID());
-      responseData = keyManager.getKey(kvContainer, blockID);
+          request.getGetBlock().getBlockID());
+      responseData = blockManager.getBlock(kvContainer, blockID);
       long numBytes = responseData.getProtoBufMessage().toByteArray().length;
-      metrics.incContainerBytesStats(Type.GetKey, numBytes);
+      metrics.incContainerBytesStats(Type.GetBlock, numBytes);
 
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -506,12 +506,12 @@ public class KeyValueHandler extends Handler {
           request);
     }
 
-    return KeyUtils.getKeyDataResponse(request, responseData);
+    return BlockUtils.getBlockDataResponse(request, responseData);
   }
 
   /**
    * Handles GetCommittedBlockLength operation.
-   * Calls KeyManager to process the request.
+   * Calls BlockManager to process the request.
    */
   ContainerCommandResponseProto handleGetCommittedBlockLength(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
@@ -530,7 +530,7 @@ public class KeyValueHandler extends Handler {
         String msg = "Block " + blockID + " is not committed yet.";
         throw new StorageContainerException(msg, BLOCK_NOT_COMMITTED);
       }
-      blockLength = keyManager.getCommittedBlockLength(kvContainer, blockID);
+      blockLength = blockManager.getCommittedBlockLength(kvContainer, blockID);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -539,16 +539,16 @@ public class KeyValueHandler extends Handler {
               IO_EXCEPTION), request);
     }
 
-    return KeyUtils.getBlockLengthResponse(request, blockLength);
+    return BlockUtils.getBlockLengthResponse(request, blockLength);
   }
 
   /**
-   * Handle Delete Key operation. Calls KeyManager to process the request.
+   * Handle Delete Block operation. Calls BlockManager to process the request.
    */
-  ContainerCommandResponseProto handleDeleteKey(
+  ContainerCommandResponseProto handleDeleteBlock(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
 
-    if (!request.hasDeleteKey()) {
+    if (!request.hasDeleteBlock()) {
       LOG.debug("Malformed Delete Key request. trace ID: {}",
           request.getTraceID());
       return ContainerUtils.malformedRequest(request);
@@ -558,9 +558,9 @@ public class KeyValueHandler extends Handler {
       checkContainerOpen(kvContainer);
 
       BlockID blockID = BlockID.getFromProtobuf(
-          request.getDeleteKey().getBlockID());
+          request.getDeleteBlock().getBlockID());
 
-      keyManager.deleteKey(kvContainer, blockID);
+      blockManager.deleteBlock(kvContainer, blockID);
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
     } catch (IOException ex) {
@@ -569,7 +569,7 @@ public class KeyValueHandler extends Handler {
           request);
     }
 
-    return KeyUtils.getKeyResponseSuccess(request);
+    return BlockUtils.getBlockResponseSuccess(request);
   }
 
   /**
@@ -698,7 +698,7 @@ public class KeyValueHandler extends Handler {
 
   /**
    * Handle Put Small File operation. Writes the chunk and associated key
-   * using a single RPC. Calls KeyManager and ChunkManager to process the
+   * using a single RPC. Calls BlockManager and ChunkManager to process the
    * request.
    */
   ContainerCommandResponseProto handlePutSmallFile(
@@ -715,11 +715,11 @@ public class KeyValueHandler extends Handler {
     try {
       checkContainerOpen(kvContainer);
 
-      BlockID blockID = BlockID.getFromProtobuf(putSmallFileReq.getKey()
-          .getKeyData().getBlockID());
-      KeyData keyData = KeyData.getFromProtoBuf(
-          putSmallFileReq.getKey().getKeyData());
-      Preconditions.checkNotNull(keyData);
+      BlockID blockID = BlockID.getFromProtobuf(putSmallFileReq.getBlock()
+          .getBlockData().getBlockID());
+      BlockData blockData = BlockData.getFromProtoBuf(
+          putSmallFileReq.getBlock().getBlockData());
+      Preconditions.checkNotNull(blockData);
 
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(
           putSmallFileReq.getChunkInfo());
@@ -732,8 +732,8 @@ public class KeyValueHandler extends Handler {
 
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
-      keyData.setChunks(chunks);
-      keyManager.putKey(kvContainer, keyData);
+      blockData.setChunks(chunks);
+      blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
 
     } catch (StorageContainerException ex) {
@@ -749,7 +749,7 @@ public class KeyValueHandler extends Handler {
 
   /**
    * Handle Get Small File operation. Gets a data stream using a key. This
-   * helps in reducing the RPC overhead for small files. Calls KeyManager and
+   * helps in reducing the RPC overhead for small files. Calls BlockManager and
    * ChunkManager to process the request.
    */
   ContainerCommandResponseProto handleGetSmallFile(
@@ -764,9 +764,9 @@ public class KeyValueHandler extends Handler {
     GetSmallFileRequestProto getSmallFileReq = request.getGetSmallFile();
 
     try {
-      BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getKey()
+      BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getBlock()
           .getBlockID());
-      KeyData responseData = keyManager.getKey(kvContainer, blockID);
+      BlockData responseData = blockManager.getBlock(kvContainer, blockID);
 
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;

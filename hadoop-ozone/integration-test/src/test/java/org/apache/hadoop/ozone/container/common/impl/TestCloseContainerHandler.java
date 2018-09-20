@@ -25,12 +25,12 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.junit.AfterClass;
@@ -71,14 +71,14 @@ public class TestCloseContainerHandler {
 
   private final static String DATANODE_UUID = UUID.randomUUID().toString();
 
-  private static final String baseDir = MiniDFSCluster.getBaseDirectory();
-  private static final String volume1 = baseDir + "disk1";
-  private static final String volume2 = baseDir + "disk2";
+  private static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
+  private static final String VOLUME_1 = BASE_DIR + "disk1";
+  private static final String VOLUME_2 = BASE_DIR + "disk2";
 
   @BeforeClass
   public static void setup() throws Exception {
     conf = new Configuration();
-    String dataDirKey = volume1 + "," + volume2;
+    String dataDirKey = VOLUME_1 + "," + VOLUME_2;
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirKey);
     containerSet = new ContainerSet();
     DatanodeDetails datanodeDetails =
@@ -160,31 +160,31 @@ public class TestCloseContainerHandler {
         getTestBlockID(testContainerID);
     Pipeline pipeline = createSingleNodePipeline();
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
-    // the key should exist in the map
+    // the block should exist in the map
     Assert.assertNotNull(
-        openContainerBlockMap.getKeyDataMap(testContainerID)
+        openContainerBlockMap.getBlockDataMap(testContainerID)
             .get(blockID.getLocalID()));
-    KeyData keyData = new KeyData(blockID);
+    BlockData blockData = new BlockData(blockID);
     List<ContainerProtos.ChunkInfo> chunkProtoList = new LinkedList<>();
     for (ChunkInfo i : chunkList) {
       chunkProtoList.add(i.getProtoBufMessage());
     }
-    keyData.setChunks(chunkProtoList);
-    ContainerProtos.PutKeyRequestProto.Builder putKeyRequestProto =
-        ContainerProtos.PutKeyRequestProto.newBuilder();
-    putKeyRequestProto.setKeyData(keyData.getProtoBufMessage());
+    blockData.setChunks(chunkProtoList);
+    ContainerProtos.PutBlockRequestProto.Builder putBlockRequestProto =
+        ContainerProtos.PutBlockRequestProto.newBuilder();
+    putBlockRequestProto.setBlockData(blockData.getProtoBufMessage());
     ContainerProtos.ContainerCommandRequestProto.Builder request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder();
-    request.setCmdType(ContainerProtos.Type.PutKey);
+    request.setCmdType(ContainerProtos.Type.PutBlock);
     request.setContainerID(blockID.getContainerID());
-    request.setPutKey(putKeyRequestProto);
+    request.setPutBlock(putBlockRequestProto);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     dispatcher.dispatch(request.build());
 
-    //the open key should be removed from Map
+    //the open block should be removed from Map
     Assert.assertNull(
-        openContainerBlockMap.getKeyDataMap(testContainerID));
+        openContainerBlockMap.getBlockDataMap(testContainerID));
   }
 
   @Test
@@ -197,10 +197,10 @@ public class TestCloseContainerHandler {
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
     // the key should exist in the map
     Assert.assertNotNull(
-        openContainerBlockMap.getKeyDataMap(testContainerID)
+        openContainerBlockMap.getBlockDataMap(testContainerID)
             .get(blockID.getLocalID()));
     Assert.assertTrue(
-        openContainerBlockMap.getKeyDataMap(testContainerID)
+        openContainerBlockMap.getBlockDataMap(testContainerID)
             .get(blockID.getLocalID()).getChunks().size() == 3);
     ContainerProtos.DeleteChunkRequestProto.Builder deleteChunkProto =
         ContainerProtos.DeleteChunkRequestProto.newBuilder();
@@ -220,7 +220,7 @@ public class TestCloseContainerHandler {
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertTrue(
-        openContainerBlockMap.getKeyDataMap(testContainerID)
+        openContainerBlockMap.getBlockDataMap(testContainerID)
             .get(blockID.getLocalID()).getChunks().size() == 2);
 
   }
@@ -235,14 +235,14 @@ public class TestCloseContainerHandler {
     List<ChunkInfo> chunkList = writeChunkBuilder(blockID, pipeline, 3);
 
     Container container = containerSet.getContainer(testContainerID);
-    KeyData keyData = openContainerBlockMap.
-        getKeyDataMap(testContainerID).get(blockID.getLocalID());
+    BlockData blockData = openContainerBlockMap.
+        getBlockDataMap(testContainerID).get(blockID.getLocalID());
     // the key should exist in the map
     Assert.assertNotNull(
-        openContainerBlockMap.getKeyDataMap(testContainerID)
+        openContainerBlockMap.getBlockDataMap(testContainerID)
             .get(blockID.getLocalID()));
     Assert.assertTrue(
-        keyData.getChunks().size() == chunkList.size());
+        blockData.getChunks().size() == chunkList.size());
     ContainerProtos.ContainerCommandRequestProto.Builder request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CloseContainer);
@@ -253,8 +253,9 @@ public class TestCloseContainerHandler {
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertNull(
-        openContainerBlockMap.getKeyDataMap(testContainerID));
+        openContainerBlockMap.getBlockDataMap(testContainerID));
     // Make sure the key got committed
-    Assert.assertNotNull(handler.getKeyManager().getKey(container, blockID));
+    Assert.assertNotNull(handler.getBlockManager()
+        .getBlock(container, blockID));
   }
 }

@@ -1209,8 +1209,8 @@ public class TestOzoneManager {
   //Disabling this test
   @Ignore("Disabling this test until Open Key is fixed.")
   public void testExpiredOpenKey() throws Exception {
-//    BackgroundService openKeyCleanUpService = ((KeyManagerImpl)cluster
-//        .getOzoneManager().getKeyManager()).getOpenKeyCleanupService();
+//    BackgroundService openKeyCleanUpService = ((BlockManagerImpl)cluster
+//        .getOzoneManager().getBlockManager()).getOpenKeyCleanupService();
 
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);

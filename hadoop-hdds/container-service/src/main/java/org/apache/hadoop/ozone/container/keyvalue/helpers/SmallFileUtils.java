@@ -69,7 +69,7 @@ public final class SmallFileUtils {
         ContainerProtos.ReadChunkResponseProto.newBuilder();
     readChunkresponse.setChunkData(info.getProtoBufMessage());
     readChunkresponse.setData(ByteString.copyFrom(data));
-    readChunkresponse.setBlockID(msg.getGetSmallFile().getKey().getBlockID());
+    readChunkresponse.setBlockID(msg.getGetSmallFile().getBlock().getBlockID());
 
     ContainerProtos.GetSmallFileResponseProto.Builder getSmallFile =
         ContainerProtos.GetSmallFileResponseProto.newBuilder();

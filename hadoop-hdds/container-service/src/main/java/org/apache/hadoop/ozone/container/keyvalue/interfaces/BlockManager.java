@@ -19,55 +19,55 @@ package org.apache.hadoop.ozone.container.keyvalue.interfaces;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 
 import java.io.IOException;
 import java.util.List;
 
 /**
- * KeyManager is for performing key related operations on the container.
+ * BlockManager is for performing key related operations on the container.
  */
-public interface KeyManager {
+public interface BlockManager {
 
   /**
-   * Puts or overwrites a key.
+   * Puts or overwrites a block.
    *
-   * @param container - Container for which key need to be added.
-   * @param data     - Key Data.
-   * @return length of the Key.
+   * @param container - Container for which block need to be added.
+   * @param data     - Block Data.
+   * @return length of the Block.
    * @throws IOException
    */
-  long putKey(Container container, KeyData data) throws IOException;
+  long putBlock(Container container, BlockData data) throws IOException;
 
   /**
-   * Gets an existing key.
+   * Gets an existing block.
    *
-   * @param container - Container from which key need to be get.
-   * @param blockID - BlockID of the Key.
-   * @return Key Data.
+   * @param container - Container from which block need to be get.
+   * @param blockID - BlockID of the Block.
+   * @return Block Data.
    * @throws IOException
    */
-  KeyData getKey(Container container, BlockID blockID) throws IOException;
+  BlockData getBlock(Container container, BlockID blockID) throws IOException;
 
   /**
-   * Deletes an existing Key.
+   * Deletes an existing block.
    *
-   * @param container - Container from which key need to be deleted.
+   * @param container - Container from which block need to be deleted.
    * @param blockID - ID of the block.
    * @throws StorageContainerException
    */
-  void deleteKey(Container container, BlockID blockID) throws IOException;
+  void deleteBlock(Container container, BlockID blockID) throws IOException;
 
   /**
-   * List keys in a container.
+   * List blocks in a container.
    *
-   * @param container - Container from which keys need to be listed.
-   * @param startLocalID  - Key to start from, 0 to begin.
-   * @param count    - Number of keys to return.
-   * @return List of Keys that match the criteria.
+   * @param container - Container from which blocks need to be listed.
+   * @param startLocalID  - Block to start from, 0 to begin.
+   * @param count    - Number of blocks to return.
+   * @return List of Blocks that match the criteria.
    */
-  List<KeyData> listKey(Container container, long startLocalID, int count)
+  List<BlockData> listBlock(Container container, long startLocalID, int count)
       throws IOException;
 
   /**

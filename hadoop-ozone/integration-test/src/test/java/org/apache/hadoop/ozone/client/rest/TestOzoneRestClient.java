@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueBlockIterator;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.junit.AfterClass;
@@ -469,9 +469,9 @@ public class TestOzoneRestClient {
         containerID, new File(containerPath));
     long valueLength = 0;
     while (keyValueBlockIterator.hasNext()) {
-      KeyData keyData = keyValueBlockIterator.nextBlock();
-      if (keyData.getBlockID().getLocalID() == localID) {
-        List<ContainerProtos.ChunkInfo> chunks = keyData.getChunks();
+      BlockData blockData = keyValueBlockIterator.nextBlock();
+      if (blockData.getBlockID().getLocalID() == localID) {
+        List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
         for (ContainerProtos.ChunkInfo chunk : chunks) {
           valueLength += chunk.getLen();
         }

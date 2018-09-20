@@ -31,7 +31,7 @@ import java.util.ArrayList;
 /**
  * Helper class to convert Protobuf to Java classes.
  */
-public class KeyData {
+public class BlockData {
   private final BlockID blockID;
   private final Map<String, String> metadata;
 
@@ -43,9 +43,10 @@ public class KeyData {
    * When #elements == 1, chunkList refers to the only element.
    * When #elements > 1, chunkList refers to the list.
    *
-   * Please note : when we are working with keys, we don't care what they point
-   * to. So we We don't read chunkinfo nor validate them. It is responsibility
-   * of higher layer like ozone. We just read and write data from network.
+   * Please note : when we are working with blocks, we don't care what they
+   * point to. So we We don't read chunkinfo nor validate them. It is
+   * responsibility of higher layer like ozone. We just read and write data
+   * from network.
    */
   private Object chunkList;
 
@@ -55,44 +56,45 @@ public class KeyData {
   private long size;
 
   /**
-   * Constructs a KeyData Object.
+   * Constructs a BlockData Object.
    *
    * @param blockID
    */
-  public KeyData(BlockID blockID) {
+  public BlockData(BlockID blockID) {
     this.blockID = blockID;
     this.metadata = new TreeMap<>();
     this.size = 0;
   }
 
   /**
-   * Returns a keyData object from the protobuf data.
+   * Returns a blockData object from the protobuf data.
    *
    * @param data - Protobuf data.
-   * @return - KeyData
+   * @return - BlockData
    * @throws IOException
    */
-  public static KeyData getFromProtoBuf(ContainerProtos.KeyData data) throws
+  public static BlockData getFromProtoBuf(ContainerProtos.BlockData data) throws
       IOException {
-    KeyData keyData = new KeyData(BlockID.getFromProtobuf(data.getBlockID()));
+    BlockData blockData = new BlockData(
+        BlockID.getFromProtobuf(data.getBlockID()));
     for (int x = 0; x < data.getMetadataCount(); x++) {
-      keyData.addMetadata(data.getMetadata(x).getKey(),
+      blockData.addMetadata(data.getMetadata(x).getKey(),
           data.getMetadata(x).getValue());
     }
-    keyData.setChunks(data.getChunksList());
+    blockData.setChunks(data.getChunksList());
     if (data.hasSize()) {
-      Preconditions.checkArgument(data.getSize() == keyData.getSize());
+      Preconditions.checkArgument(data.getSize() == blockData.getSize());
     }
-    return keyData;
+    return blockData;
   }
 
   /**
-   * Returns a Protobuf message from KeyData.
+   * Returns a Protobuf message from BlockData.
    * @return Proto Buf Message.
    */
-  public ContainerProtos.KeyData getProtoBufMessage() {
-    ContainerProtos.KeyData.Builder builder =
-        ContainerProtos.KeyData.newBuilder();
+  public ContainerProtos.BlockData getProtoBufMessage() {
+    ContainerProtos.BlockData.Builder builder =
+        ContainerProtos.BlockData.newBuilder();
     builder.setBlockID(this.blockID.getDatanodeBlockIDProtobuf());
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       ContainerProtos.KeyValue.Builder keyValBuilder =

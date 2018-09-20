@@ -103,10 +103,10 @@ import java.util.stream.Collectors;
  * implementation. For example, synchronization between writeChunk and
  * createContainer in {@link ContainerStateMachine}.
  *
- * PutKey is synchronized with WriteChunk operations, PutKey for a block is
- * executed only after all the WriteChunk preceding the PutKey have finished.
+ * PutBlock is synchronized with WriteChunk operations, PutBlock for a block is
+ * executed only after all the WriteChunk preceding the PutBlock have finished.
  *
- * CloseContainer is synchronized with WriteChunk and PutKey operations,
+ * CloseContainer is synchronized with WriteChunk and PutBlock operations,
  * CloseContainer for a container is processed after all the preceding write
  * operations for the container have finished.
  * */
@@ -443,7 +443,7 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   /**
    * This class maintains maps and provide utilities to enforce synchronization
-   * among createContainer, writeChunk, putKey and closeContainer.
+   * among createContainer, writeChunk, putBlock and closeContainer.
    */
   private class StateMachineHelper {
 
@@ -453,7 +453,7 @@ public class ContainerStateMachine extends BaseStateMachine {
     private final ConcurrentHashMap<Long, CommitChunkFutureMap>
         block2ChunkMap;
 
-    // Map for putKey futures
+    // Map for putBlock futures
     private final ConcurrentHashMap<Long, CompletableFuture<Message>>
         blockCommitMap;
 
@@ -505,11 +505,11 @@ public class ContainerStateMachine extends BaseStateMachine {
     // The following section handles applyTransaction transactions
     // on a container
 
-    private CompletableFuture<Message> handlePutKey(
+    private CompletableFuture<Message> handlePutBlock(
         ContainerCommandRequestProto requestProto) {
       List<CompletableFuture<Message>> futureList = new ArrayList<>();
       long localId =
-          requestProto.getPutKey().getKeyData().getBlockID().getLocalID();
+          requestProto.getPutBlock().getBlockData().getBlockID().getLocalID();
       // Need not wait for create container future here as it has already
       // finished.
       if (block2ChunkMap.get(localId) != null) {
@@ -518,18 +518,18 @@ public class ContainerStateMachine extends BaseStateMachine {
       CompletableFuture<Message> effectiveFuture =
           runCommandAfterFutures(futureList, requestProto);
 
-      CompletableFuture<Message> putKeyFuture =
+      CompletableFuture<Message> putBlockFuture =
           effectiveFuture.thenApply(message -> {
             blockCommitMap.remove(localId);
             return message;
           });
-      blockCommitMap.put(localId, putKeyFuture);
-      return putKeyFuture;
+      blockCommitMap.put(localId, putBlockFuture);
+      return putBlockFuture;
     }
 
     // Close Container should be executed only if all pending WriteType
     // container cmds get executed. Transactions which can return a future
-    // are WriteChunk and PutKey.
+    // are WriteChunk and PutBlock.
     private CompletableFuture<Message> handleCloseContainer(
         ContainerCommandRequestProto requestProto) {
       List<CompletableFuture<Message>> futureList = new ArrayList<>();
@@ -539,7 +539,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       block2ChunkMap.values().forEach(b -> futureList.addAll(b.getAll()));
       futureList.addAll(blockCommitMap.values());
 
-      // There are pending write Chunk/PutKey type requests
+      // There are pending write Chunk/PutBlock type requests
       // Queue this closeContainer request behind all these requests
       CompletableFuture<Message> closeContainerFuture =
           runCommandAfterFutures(futureList, requestProto);
@@ -615,8 +615,8 @@ public class ContainerStateMachine extends BaseStateMachine {
         return handleChunkCommit(requestProto, index);
       case CloseContainer:
         return handleCloseContainer(requestProto);
-      case PutKey:
-        return handlePutKey(requestProto);
+      case PutBlock:
+        return handlePutBlock(requestProto);
       case CreateContainer:
         return handleCreateContainer(requestProto);
       default:

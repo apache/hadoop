@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.container.common.helpers
     .DeletedContainerBlocksSummary;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
@@ -199,7 +199,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
     }
 
     int newDeletionBlocks = 0;
-    MetadataStore containerDB = KeyUtils.getDB(containerData, conf);
+    MetadataStore containerDB = BlockUtils.getDB(containerData, conf);
     for (Long blk : delTX.getLocalIDList()) {
       BatchOperation batch = new BatchOperation();
       byte[] blkBytes = Longs.toByteArray(blk);

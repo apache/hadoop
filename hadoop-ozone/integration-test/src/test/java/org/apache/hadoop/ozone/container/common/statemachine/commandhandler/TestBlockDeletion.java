@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -69,6 +69,9 @@ import static org.apache.hadoop.hdds
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 
+/**
+ * Tests for Block deletion.
+ */
 public class TestBlockDeletion {
   private static OzoneConfiguration conf = null;
   private static ObjectStore store;
@@ -229,7 +232,7 @@ public class TestBlockDeletion {
       throws IOException {
     return OzoneTestUtils.performOperationOnKeyContainers((blockID) -> {
       try {
-        MetadataStore db = KeyUtils.getDB((KeyValueContainerData)
+        MetadataStore db = BlockUtils.getDB((KeyValueContainerData)
                 dnContainerSet.getContainer(blockID.getContainerID())
                     .getContainerData(), conf);
         Assert.assertNotNull(db.get(Longs.toByteArray(blockID.getLocalID())));
@@ -244,7 +247,7 @@ public class TestBlockDeletion {
       throws IOException {
     return OzoneTestUtils.performOperationOnKeyContainers((blockID) -> {
       try {
-        MetadataStore db = KeyUtils.getDB((KeyValueContainerData)
+        MetadataStore db = BlockUtils.getDB((KeyValueContainerData)
             dnContainerSet.getContainer(blockID.getContainerID())
                 .getContainerData(), conf);
         Assert.assertNull(db.get(Longs.toByteArray(blockID.getLocalID())));

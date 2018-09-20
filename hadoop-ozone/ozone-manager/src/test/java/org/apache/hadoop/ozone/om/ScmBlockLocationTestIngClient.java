@@ -102,7 +102,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
   }
 
   /**
-   * Returns Fake blocks to the KeyManager so we get blocks in the Database.
+   * Returns Fake blocks to the BlockManager so we get blocks in the Database.
    * @param size - size of the block.
    * @param type Replication Type
    * @param factor - Replication factor

@@ -142,31 +142,31 @@ public class TestKeyValueHandler {
     Mockito.verify(handler, times(1)).handleCloseContainer(
         any(ContainerCommandRequestProto.class), any());
 
-    // Test Put Key Request handling
-    ContainerCommandRequestProto putKeyRequest =
-        getDummyCommandRequestProto(ContainerProtos.Type.PutKey);
-    dispatcher.dispatch(putKeyRequest);
-    Mockito.verify(handler, times(1)).handlePutKey(
+    // Test Put Block Request handling
+    ContainerCommandRequestProto putBlockRequest =
+        getDummyCommandRequestProto(ContainerProtos.Type.PutBlock);
+    dispatcher.dispatch(putBlockRequest);
+    Mockito.verify(handler, times(1)).handlePutBlock(
         any(ContainerCommandRequestProto.class), any());
 
-    // Test Get Key Request handling
-    ContainerCommandRequestProto getKeyRequest =
-        getDummyCommandRequestProto(ContainerProtos.Type.GetKey);
-    dispatcher.dispatch(getKeyRequest);
-    Mockito.verify(handler, times(1)).handleGetKey(
+    // Test Get Block Request handling
+    ContainerCommandRequestProto getBlockRequest =
+        getDummyCommandRequestProto(ContainerProtos.Type.GetBlock);
+    dispatcher.dispatch(getBlockRequest);
+    Mockito.verify(handler, times(1)).handleGetBlock(
         any(ContainerCommandRequestProto.class), any());
 
-    // Test Delete Key Request handling
-    ContainerCommandRequestProto deleteKeyRequest =
-        getDummyCommandRequestProto(ContainerProtos.Type.DeleteKey);
-    dispatcher.dispatch(deleteKeyRequest);
-    Mockito.verify(handler, times(1)).handleDeleteKey(
+    // Test Delete Block Request handling
+    ContainerCommandRequestProto deleteBlockRequest =
+        getDummyCommandRequestProto(ContainerProtos.Type.DeleteBlock);
+    dispatcher.dispatch(deleteBlockRequest);
+    Mockito.verify(handler, times(1)).handleDeleteBlock(
         any(ContainerCommandRequestProto.class), any());
 
-    // Test List Key Request handling
-    ContainerCommandRequestProto listKeyRequest =
-        getDummyCommandRequestProto(ContainerProtos.Type.ListKey);
-    dispatcher.dispatch(listKeyRequest);
+    // Test List Block Request handling
+    ContainerCommandRequestProto listBlockRequest =
+        getDummyCommandRequestProto(ContainerProtos.Type.ListBlock);
+    dispatcher.dispatch(listBlockRequest);
     Mockito.verify(handler, times(2)).handleUnsupportedOp(
         any(ContainerCommandRequestProto.class));
 

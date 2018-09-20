@@ -40,7 +40,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -241,18 +241,18 @@ public final class ContainerTestHelper {
     setDataChecksum(info, data);
 
 
-    ContainerProtos.PutKeyRequestProto.Builder putRequest =
-        ContainerProtos.PutKeyRequestProto.newBuilder();
+    ContainerProtos.PutBlockRequestProto.Builder putRequest =
+        ContainerProtos.PutBlockRequestProto.newBuilder();
 
-    KeyData keyData = new KeyData(blockID);
+    BlockData blockData = new BlockData(blockID);
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
     newList.add(info.getProtoBufMessage());
-    keyData.setChunks(newList);
-    putRequest.setKeyData(keyData.getProtoBufMessage());
+    blockData.setChunks(newList);
+    putRequest.setBlockData(blockData.getProtoBufMessage());
 
     smallFileRequest.setChunkInfo(info.getProtoBufMessage());
     smallFileRequest.setData(ByteString.copyFrom(data));
-    smallFileRequest.setKey(putRequest);
+    smallFileRequest.setBlock(putRequest);
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -266,17 +266,17 @@ public final class ContainerTestHelper {
 
 
   public static ContainerCommandRequestProto getReadSmallFileRequest(
-      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKey)
+      Pipeline pipeline, ContainerProtos.PutBlockRequestProto putKey)
       throws Exception {
     ContainerProtos.GetSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.GetSmallFileRequestProto.newBuilder();
-    ContainerCommandRequestProto getKey = getKeyRequest(pipeline, putKey);
-    smallFileRequest.setKey(getKey.getGetKey());
+    ContainerCommandRequestProto getKey = getBlockRequest(pipeline, putKey);
+    smallFileRequest.setBlock(getKey.getGetBlock());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.GetSmallFile);
-    request.setContainerID(getKey.getGetKey().getBlockID().getContainerID());
+    request.setContainerID(getKey.getGetBlock().getBlockID().getContainerID());
     request.setGetSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
@@ -421,58 +421,58 @@ public final class ContainerTestHelper {
   }
 
   /**
-   * Returns the PutKeyRequest for test purpose.
+   * Returns the PutBlockRequest for test purpose.
    * @param pipeline - pipeline.
    * @param writeRequest - Write Chunk Request.
    * @return - Request
    */
-  public static ContainerCommandRequestProto getPutKeyRequest(
+  public static ContainerCommandRequestProto getPutBlockRequest(
       Pipeline pipeline, ContainerProtos.WriteChunkRequestProto writeRequest) {
-    LOG.trace("putKey: {} to pipeline={}",
+    LOG.trace("putBlock: {} to pipeline={}",
         writeRequest.getBlockID());
 
-    ContainerProtos.PutKeyRequestProto.Builder putRequest =
-        ContainerProtos.PutKeyRequestProto.newBuilder();
+    ContainerProtos.PutBlockRequestProto.Builder putRequest =
+        ContainerProtos.PutBlockRequestProto.newBuilder();
 
-    KeyData keyData = new KeyData(
+    BlockData blockData = new BlockData(
         BlockID.getFromProtobuf(writeRequest.getBlockID()));
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
     newList.add(writeRequest.getChunkData());
-    keyData.setChunks(newList);
-    putRequest.setKeyData(keyData.getProtoBufMessage());
+    blockData.setChunks(newList);
+    putRequest.setBlockData(blockData.getProtoBufMessage());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
-    request.setCmdType(ContainerProtos.Type.PutKey);
-    request.setContainerID(keyData.getContainerID());
-    request.setPutKey(putRequest);
+    request.setCmdType(ContainerProtos.Type.PutBlock);
+    request.setContainerID(blockData.getContainerID());
+    request.setPutBlock(putRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     return request.build();
   }
 
   /**
-   * Gets a GetKeyRequest for test purpose.
+   * Gets a GetBlockRequest for test purpose.
    * @param  pipeline - pipeline
-   * @param putKeyRequest - putKeyRequest.
+   * @param putBlockRequest - putBlockRequest.
    * @return - Request
    * immediately.
    */
-  public static ContainerCommandRequestProto getKeyRequest(
-      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
+  public static ContainerCommandRequestProto getBlockRequest(
+      Pipeline pipeline, ContainerProtos.PutBlockRequestProto putBlockRequest) {
     ContainerProtos.DatanodeBlockID blockID =
-        putKeyRequest.getKeyData().getBlockID();
+        putBlockRequest.getBlockData().getBlockID();
     LOG.trace("getKey: blockID={}", blockID);
 
-    ContainerProtos.GetKeyRequestProto.Builder getRequest =
-        ContainerProtos.GetKeyRequestProto.newBuilder();
+    ContainerProtos.GetBlockRequestProto.Builder getRequest =
+        ContainerProtos.GetBlockRequestProto.newBuilder();
     getRequest.setBlockID(blockID);
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
-    request.setCmdType(ContainerProtos.Type.GetKey);
+    request.setCmdType(ContainerProtos.Type.GetBlock);
     request.setContainerID(blockID.getContainerID());
-    request.setGetKey(getRequest);
+    request.setGetBlock(getRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     return request.build();
@@ -484,32 +484,32 @@ public final class ContainerTestHelper {
    * @param request - Request
    * @param response - Response
    */
-  public static void verifyGetKey(ContainerCommandRequestProto request,
+  public static void verifyGetBlock(ContainerCommandRequestProto request,
       ContainerCommandResponseProto response, int expectedChunksCount) {
     Assert.assertEquals(request.getTraceID(), response.getTraceID());
     Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     Assert.assertEquals(expectedChunksCount,
-        response.getGetKey().getKeyData().getChunksCount());
+        response.getGetBlock().getBlockData().getChunksCount());
   }
 
   /**
    * @param pipeline - pipeline.
-   * @param putKeyRequest - putKeyRequest.
+   * @param putBlockRequest - putBlockRequest.
    * @return - Request
    */
-  public static ContainerCommandRequestProto getDeleteKeyRequest(
-      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
-    ContainerProtos.DatanodeBlockID blockID = putKeyRequest.getKeyData()
+  public static ContainerCommandRequestProto getDeleteBlockRequest(
+      Pipeline pipeline, ContainerProtos.PutBlockRequestProto putBlockRequest) {
+    ContainerProtos.DatanodeBlockID blockID = putBlockRequest.getBlockData()
         .getBlockID();
-    LOG.trace("deleteKey: name={}", blockID);
-    ContainerProtos.DeleteKeyRequestProto.Builder delRequest =
-        ContainerProtos.DeleteKeyRequestProto.newBuilder();
+    LOG.trace("deleteBlock: name={}", blockID);
+    ContainerProtos.DeleteBlockRequestProto.Builder delRequest =
+        ContainerProtos.DeleteBlockRequestProto.newBuilder();
     delRequest.setBlockID(blockID);
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
-    request.setCmdType(ContainerProtos.Type.DeleteKey);
+    request.setCmdType(ContainerProtos.Type.DeleteBlock);
     request.setContainerID(blockID.getContainerID());
-    request.setDeleteKey(delRequest);
+    request.setDeleteBlock(delRequest);
     request.setTraceID(UUID.randomUUID().toString());
     request.setDatanodeUuid(pipeline.getLeader().getUuidString());
     return request.build();

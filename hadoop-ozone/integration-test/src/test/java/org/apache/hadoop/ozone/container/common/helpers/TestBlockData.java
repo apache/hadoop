@@ -33,19 +33,20 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Tests to test block deleting service.
  */
-public class TestKeyData {
-  static final Logger LOG = LoggerFactory.getLogger(TestKeyData.class);
+public class TestBlockData {
+  static final Logger LOG = LoggerFactory.getLogger(TestBlockData.class);
   @Rule
   public TestRule timeout = new Timeout(10000);
 
-  static ContainerProtos.ChunkInfo buildChunkInfo(String name, long offset, long len) {
+  static ContainerProtos.ChunkInfo buildChunkInfo(String name, long offset,
+      long len) {
     return ContainerProtos.ChunkInfo.newBuilder()
         .setChunkName(name).setOffset(offset).setLen(len).build();
   }
 
   @Test
   public void testAddAndRemove() {
-    final KeyData computed = new KeyData(null);
+    final BlockData computed = new BlockData(null);
     final List<ContainerProtos.ChunkInfo> expected = new ArrayList<>();
 
     assertChunks(expected, computed);
@@ -55,20 +56,23 @@ public class TestKeyData {
       offset += assertAddChunk(expected, computed, offset);
     }
 
-    for(; !expected.isEmpty(); ) {
+    for(; !expected.isEmpty();) {
       removeChunk(expected, computed);
     }
   }
 
   private static int chunkCount = 0;
-  static ContainerProtos.ChunkInfo addChunk(List<ContainerProtos.ChunkInfo> expected, long offset) {
+  static ContainerProtos.ChunkInfo addChunk(
+      List<ContainerProtos.ChunkInfo> expected, long offset) {
     final long length = ThreadLocalRandom.current().nextLong(1000);
-    final ContainerProtos.ChunkInfo info = buildChunkInfo("c" + ++chunkCount, offset, length);
+    final ContainerProtos.ChunkInfo info =
+        buildChunkInfo("c" + ++chunkCount, offset, length);
     expected.add(info);
     return info;
   }
 
-  static long assertAddChunk(List<ContainerProtos.ChunkInfo> expected, KeyData computed, long offset) {
+  static long assertAddChunk(List<ContainerProtos.ChunkInfo> expected,
+      BlockData computed, long offset) {
     final ContainerProtos.ChunkInfo info = addChunk(expected, offset);
     LOG.info("addChunk: " + toString(info));
     computed.addChunk(info);
@@ -77,7 +81,8 @@ public class TestKeyData {
   }
 
 
-  static void removeChunk(List<ContainerProtos.ChunkInfo> expected, KeyData computed) {
+  static void removeChunk(List<ContainerProtos.ChunkInfo> expected,
+      BlockData computed) {
     final int i = ThreadLocalRandom.current().nextInt(expected.size());
     final ContainerProtos.ChunkInfo info = expected.remove(i);
     LOG.info("removeChunk: " + toString(info));
@@ -85,10 +90,13 @@ public class TestKeyData {
     assertChunks(expected, computed);
   }
 
-  static void assertChunks(List<ContainerProtos.ChunkInfo> expected, KeyData computed) {
+  static void assertChunks(List<ContainerProtos.ChunkInfo> expected,
+      BlockData computed) {
     final List<ContainerProtos.ChunkInfo> computedChunks = computed.getChunks();
-    Assert.assertEquals("expected=" + expected + "\ncomputed=" + computedChunks, expected, computedChunks);
-    Assert.assertEquals(expected.stream().mapToLong(i -> i.getLen()).sum(), computed.getSize());
+    Assert.assertEquals("expected=" + expected + "\ncomputed=" +
+        computedChunks, expected, computedChunks);
+    Assert.assertEquals(expected.stream().mapToLong(i -> i.getLen()).sum(),
+        computed.getSize());
   }
 
   static String toString(ContainerProtos.ChunkInfo info) {
@@ -96,14 +104,14 @@ public class TestKeyData {
   }
 
   static String toString(List<ContainerProtos.ChunkInfo> infos) {
-    return infos.stream().map(TestKeyData::toString)
+    return infos.stream().map(TestBlockData::toString)
         .reduce((left, right) -> left + ", " + right)
         .orElse("");
   }
 
   @Test
   public void testSetChunks() {
-    final KeyData computed = new KeyData(null);
+    final BlockData computed = new BlockData(null);
     final List<ContainerProtos.ChunkInfo> expected = new ArrayList<>();
 
     assertChunks(expected, computed);

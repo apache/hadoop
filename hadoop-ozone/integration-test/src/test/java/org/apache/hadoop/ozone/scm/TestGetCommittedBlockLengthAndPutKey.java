@@ -107,7 +107,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // Now, explicitly make a putKey request for the block.
     ContainerProtos.ContainerCommandRequestProto putKeyRequest =
         ContainerTestHelper
-            .getPutKeyRequest(pipeline, writeChunkRequest.getWriteChunk());
+            .getPutBlockRequest(pipeline, writeChunkRequest.getWriteChunk());
     client.sendCommand(putKeyRequest);
     response = ContainerProtocolCalls
         .getCommittedBlockLength(client, blockID, traceID);
@@ -155,7 +155,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
   }
 
   @Test
-  public void tesGetCommittedBlockLengthForInvalidBlock() throws Exception {
+  public void testGetCommittedBlockLengthForInvalidBlock() throws Exception {
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
         .allocateContainer(xceiverClientManager.getType(),
@@ -174,7 +174,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
       ContainerProtocolCalls.getCommittedBlockLength(client, blockID, traceID);
       Assert.fail("Expected exception not thrown");
     } catch (StorageContainerException sce) {
-      Assert.assertTrue(sce.getMessage().contains("Unable to find the key"));
+      Assert.assertTrue(sce.getMessage().contains("Unable to find the block"));
     }
     xceiverClientManager.releaseClient(client);
   }
@@ -216,7 +216,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
 
   @Test
   public void tesPutKeyResposne() throws Exception {
-    ContainerProtos.PutKeyResponseProto response;
+    ContainerProtos.PutBlockResponseProto response;
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
         .allocateContainer(xceiverClientManager.getType(),
@@ -239,8 +239,8 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // Now, explicitly make a putKey request for the block.
     ContainerProtos.ContainerCommandRequestProto putKeyRequest =
         ContainerTestHelper
-            .getPutKeyRequest(pipeline, writeChunkRequest.getWriteChunk());
-    response = client.sendCommand(putKeyRequest).getPutKey();
+            .getPutBlockRequest(pipeline, writeChunkRequest.getWriteChunk());
+    response = client.sendCommand(putKeyRequest).getPutBlock();
     // make sure the block ids in the request and response are same.
     // This will also ensure that closing the container committed the block
     // on the Datanodes.

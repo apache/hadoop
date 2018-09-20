@@ -49,7 +49,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
@@ -293,7 +293,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.
     try {
-      MetadataStore db = KeyUtils.getDB(containerData, config);
+      MetadataStore db = BlockUtils.getDB(containerData, config);
       db.compactDB();
     } catch (StorageContainerException ex) {
       throw ex;

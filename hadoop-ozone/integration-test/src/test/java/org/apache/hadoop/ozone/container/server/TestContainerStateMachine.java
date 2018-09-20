@@ -89,7 +89,7 @@ public class TestContainerStateMachine {
 
     // add putKey request
     ContainerCommandRequestProto putKeyProto = ContainerTestHelper
-            .getPutKeyRequest(pipeline, writeChunkProto.getWriteChunk());
+            .getPutBlockRequest(pipeline, writeChunkProto.getWriteChunk());
     RaftClientRequest putKeyRequest = getRaftClientRequest(putKeyProto);
 
     TransactionContext createContainerCtxt =

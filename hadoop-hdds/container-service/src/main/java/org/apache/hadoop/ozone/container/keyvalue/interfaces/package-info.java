@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.container.keyvalue.impl;
+package org.apache.hadoop.ozone.container.keyvalue.interfaces;
 /**
- * Chunk manager and block manager implementations for keyvalue container type.
+ * Chunk manager and block manager interfaces for keyvalue container type.
  */

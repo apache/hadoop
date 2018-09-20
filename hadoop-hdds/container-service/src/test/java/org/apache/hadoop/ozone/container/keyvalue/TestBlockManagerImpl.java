@@ -23,13 +23,13 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
-import org.apache.hadoop.ozone.container.keyvalue.impl.KeyManagerImpl;
+import org.apache.hadoop.ozone.container.keyvalue.impl.BlockManagerImpl;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.mock;
 /**
  * This class is used to test key related operations on the container.
  */
-public class TestKeyManagerImpl {
+public class TestBlockManagerImpl {
 
   private OzoneConfiguration config;
   private String scmId = UUID.randomUUID().toString();
@@ -58,8 +58,8 @@ public class TestKeyManagerImpl {
   private RoundRobinVolumeChoosingPolicy volumeChoosingPolicy;
   private KeyValueContainerData keyValueContainerData;
   private KeyValueContainer keyValueContainer;
-  private KeyData keyData;
-  private KeyManagerImpl keyManager;
+  private BlockData blockData;
+  private BlockManagerImpl blockManager;
   private BlockID blockID;
 
   @Rule
@@ -88,104 +88,124 @@ public class TestKeyManagerImpl {
 
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
-    // Creating KeyData
+    // Creating BlockData
     blockID = new BlockID(1L, 1L);
-    keyData = new KeyData(blockID);
-    keyData.addMetadata("VOLUME", "ozone");
-    keyData.addMetadata("OWNER", "hdfs");
+    blockData = new BlockData(blockID);
+    blockData.addMetadata("VOLUME", "ozone");
+    blockData.addMetadata("OWNER", "hdfs");
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
         .getLocalID(), 0), 0, 1024);
     chunkList.add(info.getProtoBufMessage());
-    keyData.setChunks(chunkList);
+    blockData.setChunks(chunkList);
 
     // Create KeyValueContainerManager
-    keyManager = new KeyManagerImpl(config);
+    blockManager = new BlockManagerImpl(config);
 
   }
 
   @Test
-  public void testPutAndGetKey() throws Exception {
+  public void testPutAndGetBlock() throws Exception {
     assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
-    //Put Key
-    keyManager.putKey(keyValueContainer, keyData);
+    //Put Block
+    blockManager.putBlock(keyValueContainer, blockData);
 
     assertEquals(1, keyValueContainer.getContainerData().getKeyCount());
-    //Get Key
-    KeyData fromGetKeyData = keyManager.getKey(keyValueContainer,
-        keyData.getBlockID());
+    //Get Block
+    BlockData fromGetBlockData = blockManager.getBlock(keyValueContainer,
+        blockData.getBlockID());
 
-    assertEquals(keyData.getContainerID(), fromGetKeyData.getContainerID());
-    assertEquals(keyData.getLocalID(), fromGetKeyData.getLocalID());
-    assertEquals(keyData.getChunks().size(), fromGetKeyData.getChunks().size());
-    assertEquals(keyData.getMetadata().size(), fromGetKeyData.getMetadata()
+    assertEquals(blockData.getContainerID(), fromGetBlockData.getContainerID());
+    assertEquals(blockData.getLocalID(), fromGetBlockData.getLocalID());
+    assertEquals(blockData.getChunks().size(),
+        fromGetBlockData.getChunks().size());
+    assertEquals(blockData.getMetadata().size(), fromGetBlockData.getMetadata()
         .size());
 
   }
 
 
   @Test
-  public void testDeleteKey() throws Exception {
+  public void testDeleteBlock() throws Exception {
     try {
-      assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
-      //Put Key
-      keyManager.putKey(keyValueContainer, keyData);
-      assertEquals(1, keyValueContainer.getContainerData().getKeyCount());
-      //Delete Key
-      keyManager.deleteKey(keyValueContainer, blockID);
-      assertEquals(0, keyValueContainer.getContainerData().getKeyCount());
+      assertEquals(0,
+          keyValueContainer.getContainerData().getKeyCount());
+      //Put Block
+      blockManager.putBlock(keyValueContainer, blockData);
+      assertEquals(1,
+          keyValueContainer.getContainerData().getKeyCount());
+      //Delete Block
+      blockManager.deleteBlock(keyValueContainer, blockID);
+      assertEquals(0,
+          keyValueContainer.getContainerData().getKeyCount());
       try {
-        keyManager.getKey(keyValueContainer, blockID);
-        fail("testDeleteKey");
+        blockManager.getBlock(keyValueContainer, blockID);
+        fail("testDeleteBlock");
       } catch (StorageContainerException ex) {
-        GenericTestUtils.assertExceptionContains("Unable to find the key", ex);
+        GenericTestUtils.assertExceptionContains(
+            "Unable to find the block", ex);
       }
     } catch (IOException ex) {
-      fail("testDeleteKey failed");
+      fail("testDeleteBlock failed");
     }
   }
 
   @Test
-  public void testListKey() throws Exception {
+  public void testListBlock() throws Exception {
     try {
-      keyManager.putKey(keyValueContainer, keyData);
-      List<KeyData> listKeyData = keyManager.listKey(
+      blockManager.putBlock(keyValueContainer, blockData);
+      List<BlockData> listBlockData = blockManager.listBlock(
           keyValueContainer, 1, 10);
-      assertNotNull(listKeyData);
-      assertTrue(listKeyData.size() == 1);
+      assertNotNull(listBlockData);
+      assertTrue(listBlockData.size() == 1);
 
       for (long i = 2; i <= 10; i++) {
         blockID = new BlockID(1L, i);
-        keyData = new KeyData(blockID);
-        keyData.addMetadata("VOLUME", "ozone");
-        keyData.addMetadata("OWNER", "hdfs");
+        blockData = new BlockData(blockID);
+        blockData.addMetadata("VOLUME", "ozone");
+        blockData.addMetadata("OWNER", "hdfs");
         List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
         ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
             .getLocalID(), 0), 0, 1024);
         chunkList.add(info.getProtoBufMessage());
-        keyData.setChunks(chunkList);
-        keyManager.putKey(keyValueContainer, keyData);
+        blockData.setChunks(chunkList);
+        blockManager.putBlock(keyValueContainer, blockData);
       }
 
-      listKeyData = keyManager.listKey(
+      listBlockData = blockManager.listBlock(
           keyValueContainer, 1, 10);
-      assertNotNull(listKeyData);
-      assertTrue(listKeyData.size() == 10);
+      assertNotNull(listBlockData);
+      assertTrue(listBlockData.size() == 10);
 
     } catch (IOException ex) {
-      fail("testListKey failed");
+      fail("testListBlock failed");
     }
   }
 
   @Test
-  public void testGetNoSuchKey() throws Exception {
+  public void testGetNoSuchBlock() throws Exception {
     try {
-      keyData = new KeyData(new BlockID(1L, 2L));
-      keyManager.getKey(keyValueContainer, new BlockID(1L, 2L));
-      fail("testGetNoSuchKey failed");
-    } catch (StorageContainerException ex) {
-      GenericTestUtils.assertExceptionContains("Unable to find the key.", ex);
-      assertEquals(ContainerProtos.Result.NO_SUCH_KEY, ex.getResult());
+      assertEquals(0,
+          keyValueContainer.getContainerData().getKeyCount());
+      //Put Block
+      blockManager.putBlock(keyValueContainer, blockData);
+      assertEquals(1,
+          keyValueContainer.getContainerData().getKeyCount());
+      //Delete Block
+      blockManager.deleteBlock(keyValueContainer, blockID);
+      assertEquals(0,
+          keyValueContainer.getContainerData().getKeyCount());
+      try {
+        //Since the block has been deleted, we should not be able to find it
+        blockManager.getBlock(keyValueContainer, blockID);
+        fail("testGetNoSuchBlock failed");
+      } catch (StorageContainerException ex) {
+        GenericTestUtils.assertExceptionContains(
+            "Unable to find the block", ex);
+        assertEquals(ContainerProtos.Result.NO_SUCH_BLOCK, ex.getResult());
+      }
+    } catch (IOException ex) {
+      fail("testGetNoSuchBlock failed");
     }
   }
 }

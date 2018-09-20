@@ -326,8 +326,8 @@ public final class HddsUtils {
     switch (proto.getCmdType()) {
     case ReadContainer:
     case ReadChunk:
-    case ListKey:
-    case GetKey:
+    case ListBlock:
+    case GetBlock:
     case GetSmallFile:
     case ListContainer:
     case ListChunk:
@@ -340,8 +340,8 @@ public final class HddsUtils {
     case CreateContainer:
     case DeleteChunk:
     case DeleteContainer:
-    case DeleteKey:
-    case PutKey:
+    case DeleteBlock:
+    case PutBlock:
     case PutSmallFile:
     default:
       return false;

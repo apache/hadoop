@@ -28,14 +28,14 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume
     .RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.utils.MetadataStore;
@@ -117,11 +117,11 @@ public class TestKeyValueContainer {
     addBlocks(blockCount);
     blockIterator = keyValueContainer.blockIterator();
     assertTrue(blockIterator.hasNext());
-    KeyData keyData;
+    BlockData blockData;
     int blockCounter = 0;
     while(blockIterator.hasNext()) {
-      keyData = blockIterator.nextBlock();
-      assertEquals(blockCounter++, keyData.getBlockID().getLocalID());
+      blockData = blockIterator.nextBlock();
+      assertEquals(blockCounter++, blockData.getBlockID().getLocalID());
     }
     assertEquals(blockCount, blockCounter);
   }
@@ -129,20 +129,20 @@ public class TestKeyValueContainer {
   private void addBlocks(int count) throws Exception {
     long containerId = keyValueContainerData.getContainerID();
 
-    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainer
+    MetadataStore metadataStore = BlockUtils.getDB(keyValueContainer
         .getContainerData(), conf);
     for (int i=0; i < count; i++) {
-      // Creating KeyData
+      // Creating BlockData
       BlockID blockID = new BlockID(containerId, i);
-      KeyData keyData = new KeyData(blockID);
-      keyData.addMetadata("VOLUME", "ozone");
-      keyData.addMetadata("OWNER", "hdfs");
+      BlockData blockData = new BlockData(blockID);
+      blockData.addMetadata("VOLUME", "ozone");
+      blockData.addMetadata("OWNER", "hdfs");
       List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
       ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
           .getLocalID(), 0), 0, 1024);
       chunkList.add(info.getProtoBufMessage());
-      keyData.setChunks(chunkList);
-      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), keyData
+      blockData.setChunks(chunkList);
+      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), blockData
           .getProtoBufMessage().toByteArray());
     }
 
@@ -189,7 +189,7 @@ public class TestKeyValueContainer {
 
     int numberOfKeysToWrite = 12;
     //write one few keys to check the key count after import
-    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainerData, conf);
+    MetadataStore metadataStore = BlockUtils.getDB(keyValueContainerData, conf);
     for (int i = 0; i < numberOfKeysToWrite; i++) {
       metadataStore.put(("test" + i).getBytes(), "test".getBytes());
     }

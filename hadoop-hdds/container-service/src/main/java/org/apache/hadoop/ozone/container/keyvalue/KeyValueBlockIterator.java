@@ -21,12 +21,12 @@ package org.apache.hadoop.ozone.container.keyvalue;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.interfaces.BlockIterator;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocationUtil;
 import org.apache.hadoop.utils.MetaStoreIterator;
 import org.apache.hadoop.utils.MetadataKeyFilters;
@@ -48,7 +48,7 @@ import java.util.NoSuchElementException;
  * {@link MetadataKeyFilters#getNormalKeyFilter()}
  */
 @InterfaceAudience.Public
-public class KeyValueBlockIterator implements BlockIterator<KeyData> {
+public class KeyValueBlockIterator implements BlockIterator<BlockData> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       KeyValueBlockIterator.class);
@@ -57,7 +57,7 @@ public class KeyValueBlockIterator implements BlockIterator<KeyData> {
   private static KeyPrefixFilter defaultBlockFilter = MetadataKeyFilters
       .getNormalKeyFilter();
   private KeyPrefixFilter blockFilter;
-  private KeyData nextBlock;
+  private BlockData nextBlock;
   private long containerId;
 
   /**
@@ -91,7 +91,7 @@ public class KeyValueBlockIterator implements BlockIterator<KeyData> {
         containerData;
     keyValueContainerData.setDbFile(KeyValueContainerLocationUtil
         .getContainerDBFile(metdataPath, containerId));
-    MetadataStore metadataStore = KeyUtils.getDB(keyValueContainerData, new
+    MetadataStore metadataStore = BlockUtils.getDB(keyValueContainerData, new
         OzoneConfiguration());
     blockIterator = metadataStore.iterator();
     blockFilter = filter;
@@ -103,9 +103,9 @@ public class KeyValueBlockIterator implements BlockIterator<KeyData> {
    * @throws IOException
    */
   @Override
-  public KeyData nextBlock() throws IOException, NoSuchElementException {
+  public BlockData nextBlock() throws IOException, NoSuchElementException {
     if (nextBlock != null) {
-      KeyData currentBlock = nextBlock;
+      BlockData currentBlock = nextBlock;
       nextBlock = null;
       return currentBlock;
     }
@@ -124,7 +124,7 @@ public class KeyValueBlockIterator implements BlockIterator<KeyData> {
     if (blockIterator.hasNext()) {
       KeyValue block = blockIterator.next();
       if (blockFilter.filterKey(null, block.getKey(), null)) {
-        nextBlock = KeyUtils.getKeyData(block.getValue());
+        nextBlock = BlockUtils.getBlockData(block.getValue());
         LOG.trace("Block matching with filter found: blockID is : {} for " +
             "containerID {}", nextBlock.getLocalID(), containerId);
         return true;

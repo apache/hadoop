@@ -49,13 +49,13 @@ package hadoop.hdds.datanode;
  *  5. ListContainer - Returns the list of containers on this
  *     datanode. This will be used by tests and tools.
  *
- *  6. PutKey - Given a valid container, creates a key.
+ *  6. PutBlock - Given a valid container, creates a block.
  *
- *  7. GetKey - Allows user to read the metadata of a Key.
+ *  7. GetBlock - Allows user to read the metadata of a block.
  *
- *  8. DeleteKey - Deletes a given key.
+ *  8. DeleteBlock - Deletes a given block.
  *
- *  9. ListKey - Returns a list of keys that are present inside
+ *  9. ListBlock - Returns a list of blocks that are present inside
  *      a given container.
  *
  *  10. ReadChunk - Allows us to read a chunk.
@@ -64,13 +64,13 @@ package hadoop.hdds.datanode;
  *
  *  12. WriteChunk - Allows us to write a chunk
  *
- *  13. ListChunk - Given a Container/Key returns the list of Chunks.
+ *  13. ListChunk - Given a Container/Block returns the list of Chunks.
  *
  *  14. CompactChunk - Re-writes a chunk based on Offsets.
  *
- *  15. PutSmallFile - A single RPC that combines both putKey and WriteChunk.
+ *  15. PutSmallFile - A single RPC that combines both putBlock and WriteChunk.
  *
- *  16. GetSmallFile - A single RPC that combines both getKey and ReadChunk.
+ *  16. GetSmallFile - A single RPC that combines both getBlock and ReadChunk.
  *
  *  17. CloseContainer - Closes an open container and makes it immutable.
  *
@@ -84,10 +84,10 @@ enum Type {
   DeleteContainer = 4;
   ListContainer = 5;
 
-  PutKey = 6;
-  GetKey = 7;
-  DeleteKey = 8;
-  ListKey = 9;
+  PutBlock = 6;
+  GetBlock = 7;
+  DeleteBlock = 8;
+  ListBlock = 9;
 
   ReadChunk = 10;
   DeleteChunk = 11;
@@ -95,7 +95,7 @@ enum Type {
   ListChunk = 13;
   CompactChunk = 14;
 
-  /** Combines Key and Chunk Operation into Single RPC. */
+  /** Combines Block and Chunk Operation into Single RPC. */
   PutSmallFile = 15;
   GetSmallFile = 16;
   CloseContainer = 17;
@@ -115,7 +115,7 @@ enum Result {
   CONTAINER_NOT_FOUND = 9;
   IO_EXCEPTION = 10;
   UNABLE_TO_READ_METADATA_DB = 11;
-  NO_SUCH_KEY = 12;
+  NO_SUCH_BLOCK = 12;
   OVERWRITE_FLAG_REQUIRED = 13;
   UNABLE_TO_FIND_DATA_DIR = 14;
   INVALID_WRITE_SIZE = 15;
@@ -185,10 +185,10 @@ message ContainerCommandRequestProto {
   optional   ListContainerRequestProto listContainer = 9;
   optional   CloseContainerRequestProto closeContainer = 10;
 
-  optional   PutKeyRequestProto putKey = 11;
-  optional   GetKeyRequestProto getKey = 12;
-  optional   DeleteKeyRequestProto deleteKey = 13;
-  optional   ListKeyRequestProto listKey = 14;
+  optional   PutBlockRequestProto putBlock = 11;
+  optional   GetBlockRequestProto getBlock = 12;
+  optional   DeleteBlockRequestProto deleteBlock = 13;
+  optional   ListBlockRequestProto listBlock = 14;
 
   optional   ReadChunkRequestProto readChunk = 15;
   optional   WriteChunkRequestProto writeChunk = 16;
@@ -215,10 +215,10 @@ message ContainerCommandResponseProto {
   optional   ListContainerResponseProto listContainer = 9;
   optional   CloseContainerResponseProto closeContainer = 10;
 
-  optional   PutKeyResponseProto putKey = 11;
-  optional   GetKeyResponseProto getKey = 12;
-  optional   DeleteKeyResponseProto deleteKey = 13;
-  optional   ListKeyResponseProto listKey = 14;
+  optional   PutBlockResponseProto putBlock = 11;
+  optional   GetBlockResponseProto getBlock = 12;
+  optional   DeleteBlockResponseProto deleteBlock = 13;
+  optional   ListBlockResponseProto listBlock = 14;
 
   optional   WriteChunkResponseProto writeChunk = 15;
   optional   ReadChunkResponseProto readChunk = 16;
@@ -294,7 +294,7 @@ message CloseContainerResponseProto {
   optional int64 containerID = 2;
 }
 
-message KeyData {
+message BlockData {
   required DatanodeBlockID blockID = 1;
   optional int64 flags = 2; // for future use.
   repeated KeyValue metadata = 3;
@@ -302,25 +302,25 @@ message KeyData {
   optional int64 size = 5;
 }
 
-// Key Messages.
-message  PutKeyRequestProto {
-  required KeyData keyData = 1;
+// Block Messages.
+message  PutBlockRequestProto {
+  required BlockData blockData = 1;
 }
 
-message  PutKeyResponseProto {
+message  PutBlockResponseProto {
   required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
-message  GetKeyRequestProto  {
+message  GetBlockRequestProto  {
   required DatanodeBlockID blockID = 1;
 }
 
-message  GetKeyResponseProto  {
-  required KeyData keyData = 1;
+message  GetBlockResponseProto  {
+  required BlockData blockData = 1;
 }
 
 
-message  DeleteKeyRequestProto {
+message  DeleteBlockRequestProto {
   required DatanodeBlockID blockID = 1;
 }
 
@@ -333,17 +333,17 @@ message  GetCommittedBlockLengthResponseProto {
   required int64 blockLength = 2;
 }
 
-message   DeleteKeyResponseProto {
+message   DeleteBlockResponseProto {
 }
 
-message  ListKeyRequestProto {
+message  ListBlockRequestProto {
   optional int64 startLocalID = 2;
   required uint32 count = 3;
 
 }
 
-message  ListKeyResponseProto {
-  repeated KeyData keyData = 1;
+message  ListBlockResponseProto {
+  repeated BlockData blockData = 1;
 }
 
 // Chunk Operations
@@ -401,11 +401,11 @@ message  ListChunkResponseProto {
   repeated ChunkInfo chunkData = 1;
 }
 
-/** For small file access combines write chunk and putKey into a single
+/** For small file access combines write chunk and putBlock into a single
 RPC */
 
 message PutSmallFileRequestProto {
-  required PutKeyRequestProto key = 1;
+  required PutBlockRequestProto block = 1;
   required ChunkInfo chunkInfo = 2;
   required bytes data = 3;
 }
@@ -416,7 +416,7 @@ message PutSmallFileResponseProto {
 }
 
 message GetSmallFileRequestProto {
-  required GetKeyRequestProto key = 1;
+  required GetBlockRequestProto block = 1;
 }
 
 message GetSmallFileResponseProto {

@@ -54,7 +54,7 @@ public class BucketManagerImpl implements BucketManager {
 
   /**
    * MetadataDB is maintained in MetadataManager and shared between
-   * BucketManager and VolumeManager. (and also by KeyManager)
+   * BucketManager and VolumeManager. (and also by BlockManager)
    *
    * BucketManager uses MetadataDB to store bucket level information.
    *

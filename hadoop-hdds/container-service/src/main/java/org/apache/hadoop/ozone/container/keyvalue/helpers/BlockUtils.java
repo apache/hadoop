@@ -26,15 +26,15 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .GetKeyResponseProto;
+    .GetBlockResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     GetCommittedBlockLengthResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
-    PutKeyResponseProto;
+    PutBlockResponseProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.utils.MetadataStore;
@@ -42,17 +42,17 @@ import org.apache.hadoop.utils.MetadataStore;
 import java.io.IOException;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.NO_SUCH_KEY;
+    .Result.NO_SUCH_BLOCK;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNABLE_TO_READ_METADATA_DB;
 
 /**
- * Utils functions to help key functions.
+ * Utils functions to help block functions.
  */
-public final class KeyUtils {
+public final class BlockUtils {
 
   /** Never constructed. **/
-  private KeyUtils() {
+  private BlockUtils() {
 
   }
   /**
@@ -108,64 +108,64 @@ public final class KeyUtils {
   }
 
   /**
-   * Parses the {@link KeyData} from a bytes array.
+   * Parses the {@link BlockData} from a bytes array.
    *
-   * @param bytes key data in bytes.
-   * @return key data.
+   * @param bytes Block data in bytes.
+   * @return Block data.
    * @throws IOException if the bytes array is malformed or invalid.
    */
-  public static KeyData getKeyData(byte[] bytes) throws IOException {
+  public static BlockData getBlockData(byte[] bytes) throws IOException {
     try {
-      ContainerProtos.KeyData keyData = ContainerProtos.KeyData.parseFrom(
+      ContainerProtos.BlockData blockData = ContainerProtos.BlockData.parseFrom(
           bytes);
-      KeyData data = KeyData.getFromProtoBuf(keyData);
+      BlockData data = BlockData.getFromProtoBuf(blockData);
       return data;
     } catch (IOException e) {
-      throw new StorageContainerException("Failed to parse key data from the" +
-          " bytes array.", NO_SUCH_KEY);
+      throw new StorageContainerException("Failed to parse block data from " +
+          "the bytes array.", NO_SUCH_BLOCK);
     }
   }
 
   /**
-   * Returns putKey response success.
+   * Returns putBlock response success.
    * @param msg - Request.
    * @return Response.
    */
-  public static ContainerCommandResponseProto putKeyResponseSuccess(
+  public static ContainerCommandResponseProto putBlockResponseSuccess(
       ContainerCommandRequestProto msg, long blockLength) {
     GetCommittedBlockLengthResponseProto.Builder
         committedBlockLengthResponseBuilder =
         getCommittedBlockLengthResponseBuilder(blockLength,
-            msg.getPutKey().getKeyData().getBlockID());
-    PutKeyResponseProto.Builder putKeyResponse =
-        PutKeyResponseProto.newBuilder();
+            msg.getPutBlock().getBlockData().getBlockID());
+    PutBlockResponseProto.Builder putKeyResponse =
+        PutBlockResponseProto.newBuilder();
     putKeyResponse
         .setCommittedBlockLength(committedBlockLengthResponseBuilder);
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
         ContainerUtils.getSuccessResponseBuilder(msg);
-    builder.setPutKey(putKeyResponse);
+    builder.setPutBlock(putKeyResponse);
     return builder.build();
   }
   /**
-   * Returns successful keyResponse.
+   * Returns successful blockResponse.
    * @param msg - Request.
    * @return Response.
    */
-  public static ContainerCommandResponseProto getKeyResponseSuccess(
+  public static ContainerCommandResponseProto getBlockResponseSuccess(
       ContainerCommandRequestProto msg) {
     return ContainerUtils.getSuccessResponse(msg);
   }
 
 
-  public static ContainerCommandResponseProto getKeyDataResponse(
-      ContainerCommandRequestProto msg, KeyData data) {
-    GetKeyResponseProto.Builder getKey = ContainerProtos
-        .GetKeyResponseProto
+  public static ContainerCommandResponseProto getBlockDataResponse(
+      ContainerCommandRequestProto msg, BlockData data) {
+    GetBlockResponseProto.Builder getBlock = ContainerProtos
+        .GetBlockResponseProto
         .newBuilder();
-    getKey.setKeyData(data.getProtoBufMessage());
+    getBlock.setBlockData(data.getProtoBufMessage());
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
         ContainerUtils.getSuccessResponseBuilder(msg);
-    builder.setGetKey(getKey);
+    builder.setGetBlock(getBlock);
     return  builder.build();
   }
 
@@ -187,8 +187,8 @@ public final class KeyUtils {
   }
 
   private static GetCommittedBlockLengthResponseProto.Builder
-  getCommittedBlockLengthResponseBuilder(
-      long blockLength, ContainerProtos.DatanodeBlockID blockID) {
+          getCommittedBlockLengthResponseBuilder(long blockLength,
+      ContainerProtos.DatanodeBlockID blockID) {
     ContainerProtos.GetCommittedBlockLengthResponseProto.Builder
         getCommittedBlockLengthResponseBuilder = ContainerProtos.
         GetCommittedBlockLengthResponseProto.newBuilder();
