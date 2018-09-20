@@ -78,7 +78,9 @@ Execute command takes a plan command executes it against the datanode that plan 
 `hdfs diskbalancer -execute /system/diskbalancer/nodename.plan.json`
 
 This executes the plan by reading datanode’s address from the plan file.
-
+When DiskBalancer executes the plan, it is the beginning of an asynchronous process that can take a long time.
+So, query command can help to get the current status of execute command.
+ 
 | COMMAND\_OPTION    | Description |
 |:---- |:---- |
 | `-skipDateCheck` |  Skip date check and force execute the plan.|
