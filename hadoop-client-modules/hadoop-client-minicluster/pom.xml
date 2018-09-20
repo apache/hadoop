@@ -318,6 +318,10 @@
           <groupId>commons-net</groupId>
           <artifactId>commons-net</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>dnsjava</groupId>
+          <artifactId>dnsjava</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module
@@ -773,19 +777,6 @@
                         <exclude>ehcache-core.xsd</exclude>
                       </excludes>
                     </filter>
-
-                   <!-- remove utility classes which are not required from
-                        dnsjava -->
-                    <filter>
-                      <artifact>dnsjava:dnsjava</artifact>
-                      <excludes>
-                        <excldue>dig*</excldue>
-                        <exclude>jnamed*</exclude>
-                        <exlcude>lookup*</exlcude>
-                        <exclude>update*</exclude>
-                      </excludes>
-                    </filter>
-
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->

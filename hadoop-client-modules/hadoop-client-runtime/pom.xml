@@ -212,6 +212,17 @@
                         <exclude>ccache.txt</exclude>
                       </excludes>
                     </filter>
+                    <!-- remove utility classes which are not required from
+                         dnsjava -->
+                    <filter>
+                      <artifact>dnsjava:dnsjava</artifact>
+                      <excludes>
+                        <exclude>dig*</exclude>
+                        <exclude>jnamed*</exclude>
+                        <exclude>lookup*</exclude>
+                        <exclude>update*</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
