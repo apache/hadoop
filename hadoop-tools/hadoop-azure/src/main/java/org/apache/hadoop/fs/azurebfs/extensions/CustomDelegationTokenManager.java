@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
@@ -28,6 +30,8 @@ import org.apache.hadoop.security.token.Token;
 /**
  * Interface for Managing the Delegation tokens.
  */
+@InterfaceAudience.LimitedPrivate("authorization-subsystems")
+@InterfaceStability.Unstable
 public interface CustomDelegationTokenManager {
 
   /**
