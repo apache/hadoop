@@ -59,7 +59,7 @@ public class SCMConnectionManager
 
   private final int rpcTimeout;
   private final Configuration conf;
-  private final ObjectName jmxBean;
+  private ObjectName jmxBean;
 
   public SCMConnectionManager(Configuration conf) {
     this.mapLock = new ReentrantReadWriteLock();
@@ -191,7 +191,10 @@ public class SCMConnectionManager
   public void close() throws IOException {
     getValues().forEach(endpointStateMachine
         -> IOUtils.cleanupWithLogger(LOG, endpointStateMachine));
-    MBeans.unregister(jmxBean);
+    if (jmxBean != null) {
+      MBeans.unregister(jmxBean);
+      jmxBean = null;
+    }
   }
 
   @Override
