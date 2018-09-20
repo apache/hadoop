@@ -35,8 +35,8 @@ import org.apache.hadoop.conf.Configuration;
  * This class will be dynamically loaded, initialized, and invoked to provide
  * AAD Access Tokens and their Expiry.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.LimitedPrivate("authorization-subsystems")
+@InterfaceStability.Unstable
 public interface CustomTokenProviderAdaptee {
 
   /**

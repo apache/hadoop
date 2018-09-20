@@ -16,6 +16,17 @@
  * limitations under the License.
  */
 
-@InterfaceAudience.Public
+/**
+ * This package is for extension points under ABFS;
+ * There are no stability guarantees as these extension points are
+ * deep inside the ABFS implementation code.
+ *
+ * Note, however: this is how the ABFS client integrates with
+ * authorization services and other aspects of Azure's infrastructure.
+ * Do not change these APIs without good reason or detailed discussion.
+ */
+@InterfaceAudience.LimitedPrivate("authorization-subsystems")
+@InterfaceStability.Unstable
 package org.apache.hadoop.fs.azurebfs.extensions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
