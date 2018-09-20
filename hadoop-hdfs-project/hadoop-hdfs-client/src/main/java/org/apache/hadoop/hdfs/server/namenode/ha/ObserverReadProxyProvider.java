@@ -28,12 +28,10 @@ import java.util.List;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -41,8 +39,6 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,49 +177,6 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     return lastProxy;
   }
 
-  private static <T extends ClientProtocol> HAServiceState getServiceState(
-      NNProxyInfo<T> pi) {
-    // TODO: should introduce new ClientProtocol method to verify the
-    // underlying service state, which does not require superuser access
-    // The is a workaround
-    IOException ioe = null;
-    try {
-      // Verify write access first
-      pi.proxy.reportBadBlocks(new LocatedBlock[0]);
-      return HAServiceState.ACTIVE; // Only active NameNode allows write
-    } catch (RemoteException re) {
-      IOException sbe = re.unwrapRemoteException(StandbyException.class);
-      if (!(sbe instanceof StandbyException)) {
-        ioe = re;
-      }
-    } catch (IOException e) {
-      ioe = e;
-    }
-    if (ioe != null) {
-      LOG.warn("Failed to connect to {}", pi.getAddress(), ioe);
-      return HAServiceState.STANDBY; // Just assume standby in this case
-                                     // Anything besides observer is fine
-    }
-    // Verify read access
-    // For now we assume only Observer nodes allow reads
-    // Stale reads on StandbyNode should be turned off
-    try {
-      pi.proxy.checkAccess("/", FsAction.READ);
-      return HAServiceState.OBSERVER;
-    } catch (RemoteException re) {
-      IOException sbe = re.unwrapRemoteException(StandbyException.class);
-      if (!(sbe instanceof StandbyException)) {
-        ioe = re;
-      }
-    } catch (IOException e) {
-      ioe = e;
-    }
-    if (ioe != null) {
-      LOG.warn("Failed to connect to {}", pi.getAddress(), ioe);
-    }
-    return HAServiceState.STANDBY;
-  }
-
   /**
    * Return the currently used proxy. If there is none, first calls
    * {@link #changeProxy(NNProxyInfo)} to initialize one.
@@ -254,7 +207,7 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     currentProxy = null;
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
-    currentProxy.setCachedState(getServiceState(currentProxy));
+    currentProxy.refreshCachedState();
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);

@@ -25,12 +25,16 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.ha.ClientHAProxyFactory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +66,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * Create proxy objects with {@link ClientProtocol} to communicate with a remote
- * NN. Generally use {@link NameNodeProxiesClient#createProxyWithClientProtocol(
+ * Create proxy objects with {@link ClientProtocol} and
+ * {@link HAServiceProtocol} to communicate with a remote NN. For the former,
+ * generally use {@link NameNodeProxiesClient#createProxyWithClientProtocol(
  * Configuration, URI, AtomicBoolean)}, which will create either an HA- or
  * non-HA-enabled client proxy as appropriate.
  *
@@ -75,6 +80,11 @@ public class NameNodeProxiesClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       NameNodeProxiesClient.class);
+
+  /** Maximum # of retries for HAProxy with HAServiceProtocol. */
+  private static final int MAX_RETRIES = 3;
+  /** Initial retry delay for HAProxy with HAServiceProtocol. */
+  private static final int DELAY_MILLISECONDS = 200;
 
   /**
    * Wrapper for a client proxy as well as its associated service ID.
@@ -341,6 +351,33 @@ public class NameNodeProxiesClient {
       throws IOException {
     return createProxyWithAlignmentContext(address, conf, ugi, withRetries,
         fallbackToSimpleAuth, null);
+  }
+
+  /**
+   * Creates a non-HA proxy object with {@link HAServiceProtocol} to the
+   * given NameNode address, using the provided configuration. The proxy will
+   * use the RPC timeout configuration specified via {@link
+   * org.apache.hadoop.fs.CommonConfigurationKeys#IPC_CLIENT_RPC_TIMEOUT_KEY}.
+   * Upon failures, this will retry up to certain times with {@link RetryProxy}.
+   *
+   * @param address the NameNode address
+   * @param conf the configuration to be used
+   * @return a non-HA proxy with {@link HAServiceProtocol}.
+   */
+  public static HAServiceProtocol createNonHAProxyWithHAServiceProtocol(
+      InetSocketAddress address, Configuration conf) throws IOException {
+    RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
+        MAX_RETRIES, DELAY_MILLISECONDS, TimeUnit.MILLISECONDS);
+
+    HAServiceProtocol proxy =
+        new HAServiceProtocolClientSideTranslatorPB(
+            address, conf, NetUtils.getDefaultSocketFactory(conf),
+            Client.getRpcTimeout(conf));
+    return (HAServiceProtocol) RetryProxy.create(
+        HAServiceProtocol.class,
+        new DefaultFailoverProxyProvider<>(HAServiceProtocol.class, proxy),
+        timeoutPolicy
+    );
   }
 
   public static ClientProtocol createProxyWithAlignmentContext(
