@@ -56,15 +56,25 @@ public class FileStatus implements Writable, Comparable<Object>,
   private Path symlink;
   private Set<AttrFlags> attr;
 
-  private enum AttrFlags {
+  public enum AttrFlags {
     HAS_ACL,
     HAS_CRYPT,
     HAS_EC,
     SNAPSHOT_ENABLED
   }
-  private static final Set<AttrFlags> NONE = Collections.<AttrFlags>emptySet();
-  private static Set<AttrFlags> flags(boolean acl, boolean crypt, boolean ec) {
-    if (!(acl || crypt || ec)) {
+  public static final Set<AttrFlags> NONE = Collections.<AttrFlags>emptySet();
+
+  /**
+   * Convert boolean attributes to a set of flags.
+   * @param acl   See {@link AttrFlags#HAS_ACL}.
+   * @param crypt See {@link AttrFlags#HAS_CRYPT}.
+   * @param ec    See {@link AttrFlags#HAS_EC}.
+   * @param sn    See {@link AttrFlags#SNAPSHOT_ENABLED}.
+   * @return converted set of flags.
+   */
+  public static Set<AttrFlags> flags(boolean acl, boolean crypt,
+      boolean ec, boolean sn) {
+    if (!(acl || crypt || ec || sn)) {
       return NONE;
     }
     EnumSet<AttrFlags> ret = EnumSet.noneOf(AttrFlags.class);
@@ -76,6 +86,9 @@ public class FileStatus implements Writable, Comparable<Object>,
     }
     if (ec) {
       ret.add(AttrFlags.HAS_EC);
+    }
+    if (sn) {
+      ret.add(AttrFlags.SNAPSHOT_ENABLED);
     }
     return ret;
   }
@@ -136,7 +149,7 @@ public class FileStatus implements Writable, Comparable<Object>,
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
     this.path = path;
-    attr = flags(hasAcl, isEncrypted, isErasureCoded);
+    attr = flags(hasAcl, isEncrypted, isErasureCoded, false);
 
     // The variables isdir and symlink indicate the type:
     // 1. isdir implies directory, in which case symlink must be null.
@@ -480,7 +493,8 @@ public class FileStatus implements Writable, Comparable<Object>,
     setGroup(other.getGroup());
     setSymlink((other.isSymlink() ? other.getSymlink() : null));
     setPath(other.getPath());
-    attr = flags(other.hasAcl(), other.isEncrypted(), other.isErasureCoded());
+    attr = flags(other.hasAcl(), other.isEncrypted(), other.isErasureCoded(),
+        other.isSnapshotEnabled());
     assert !(isDirectory() && isSymlink()) : "A directory cannot be a symlink";
   }
 
