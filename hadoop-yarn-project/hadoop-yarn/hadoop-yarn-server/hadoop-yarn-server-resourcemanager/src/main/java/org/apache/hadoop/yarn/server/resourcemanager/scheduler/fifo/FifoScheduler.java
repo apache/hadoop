@@ -836,7 +836,7 @@ public class FifoScheduler extends
 
   @Lock(FifoScheduler.class)
   @Override
-  protected synchronized void completedContainerInternal(
+  protected synchronized void completeGuaranteedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
 

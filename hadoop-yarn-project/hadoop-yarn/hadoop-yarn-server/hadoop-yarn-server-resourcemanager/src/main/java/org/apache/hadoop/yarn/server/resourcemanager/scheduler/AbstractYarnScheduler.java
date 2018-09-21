@@ -677,25 +677,12 @@ public abstract class AbstractYarnScheduler
     }
 
     if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-      completedContainerInternal(rmContainer, containerStatus, event);
+      completeGuaranteedContainerInternal(rmContainer, containerStatus, event);
       completeOustandingUpdatesWhichAreReserved(
           rmContainer, containerStatus, event);
     } else {
-      ContainerId containerId = rmContainer.getContainerId();
-      // Inform the container
-      rmContainer.handle(
-          new RMContainerFinishedEvent(containerId, containerStatus, event));
-      SchedulerApplicationAttempt schedulerAttempt =
-          getCurrentAttemptForContainer(containerId);
-      if (schedulerAttempt != null) {
-        schedulerAttempt.removeRMContainer(containerId);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed container: " + rmContainer.getContainerId() +
-            " in state: " + rmContainer.getState() + " event:" + event);
-      }
-      getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
-          rmContainer.getContainerId(), false);
+      completeOpportunisticContainerInternal(rmContainer, containerStatus,
+          event);
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -703,6 +690,12 @@ public abstract class AbstractYarnScheduler
     // happened. Simply add the ResourceRequest back again so that requester
     // doesn't need to do anything conditionally.
     recoverResourceRequestForContainer(rmContainer);
+  }
+
+  protected void completeOpportunisticContainerInternal(
+      RMContainer rmContainer, ContainerStatus containerStatus,
+      RMContainerEventType event) {
+    completeGuaranteedContainerInternal(rmContainer, containerStatus, event);
   }
 
   // Optimization:
@@ -722,7 +715,7 @@ public abstract class AbstractYarnScheduler
             .getReservedSchedulerKey().getContainerToUpdate();
         if (containerToUpdate != null &&
             containerToUpdate.equals(containerStatus.getContainerId())) {
-          completedContainerInternal(resContainer,
+          completeGuaranteedContainerInternal(resContainer,
               ContainerStatus.newInstance(resContainer.getContainerId(),
                   containerStatus.getState(), containerStatus
                       .getDiagnostics(),
@@ -732,8 +725,9 @@ public abstract class AbstractYarnScheduler
     }
   }
 
-  // clean up a completed container
-  protected abstract void completedContainerInternal(RMContainer rmContainer,
+  // clean up a completed guaranteed container
+  protected abstract void completeGuaranteedContainerInternal(
+      RMContainer rmContainer,
       ContainerStatus containerStatus, RMContainerEventType event);
 
   protected void releaseContainers(List<ContainerId> containers,

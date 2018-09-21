@@ -89,6 +89,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -2066,7 +2067,29 @@ public class CapacityScheduler extends
   }
 
   @Override
-  protected void completedContainerInternal(
+  protected void completeOpportunisticContainerInternal(
+      RMContainer rmContainer, ContainerStatus containerStatus,
+      RMContainerEventType event) {
+    ContainerId containerId = rmContainer.getContainerId();
+    // Inform the container
+    rmContainer.handle(
+        new RMContainerFinishedEvent(containerId, containerStatus, event));
+    SchedulerApplicationAttempt schedulerAttempt =
+        getCurrentAttemptForContainer(containerId);
+    if (schedulerAttempt != null) {
+      schedulerAttempt.removeRMContainer(containerId);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Completed OPPORTUNISTIC container: " +
+          rmContainer.getContainerId() + " in state: " +
+          rmContainer.getState() + " event:" + event);
+    }
+    getSchedulerNode(rmContainer.getNodeId()).releaseContainer(
+        rmContainer.getContainerId(), false);
+  }
+
+  @Override
+  protected void completeGuaranteedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
     Container container = rmContainer.getContainer();

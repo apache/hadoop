@@ -719,11 +719,14 @@ public class FairScheduler extends
     }
   }
 
-  /**
-   * Clean up a completed container.
-   */
   @Override
-  protected void completedContainerInternal(
+  protected void completeGuaranteedContainerInternal(
+      RMContainer rmContainer, ContainerStatus containerStatus,
+      RMContainerEventType event) {
+    completeContainerInternal(rmContainer, containerStatus, event);
+  }
+
+  private void completeContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
       RMContainerEventType event) {
     writeLock.lock();

@@ -3194,6 +3194,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers1.get(0).getExecutionType());
+      assertEquals(1,
+          scheduler.getRootQueueMetrics().getAllocatedContainers());
 
       // node utilization is low after the container is launched on the node
       ContainerStatus containerStatus = ContainerStatus.newInstance(
@@ -3235,6 +3237,29 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       // OPPORTUNISTIC container allocation.
       assertTrue("No reservation should be made.",
           scheduler.getNode(node.getNodeID()).getReservedContainer() == null);
+
+      assertEquals(3,
+          scheduler.getRootQueueMetrics().getAllocatedContainers());
+      assertEquals(3200 + 512 + 1024,
+          scheduler.getRootQueueMetrics().getAllocatedMB());
+      assertEquals(3,
+          scheduler.getRootQueueMetrics().getAllocatedVirtualCores());
+
+      // now the OPPORTUNISTIC container finishes
+      List<ContainerStatus> finishedContainers = Collections.singletonList(
+          ContainerStatus.newInstance(allocatedContainers3.get(0).getId(),
+              ContainerState.COMPLETE, "", ContainerExitStatus.SUCCESS));
+      node.updateContainersAndNodeUtilization(
+          new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
+          ResourceUtilization.newInstance(1024, 0, 0.1f));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node));
+
+      assertEquals(2,
+          scheduler.getRootQueueMetrics().getAllocatedContainers());
+      assertEquals(3200 + 512,
+          scheduler.getRootQueueMetrics().getAllocatedMB());
+      assertEquals(2,
+          scheduler.getRootQueueMetrics().getAllocatedVirtualCores());
     } finally {
       conf.setBoolean(YarnConfiguration.RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED,
           false);
