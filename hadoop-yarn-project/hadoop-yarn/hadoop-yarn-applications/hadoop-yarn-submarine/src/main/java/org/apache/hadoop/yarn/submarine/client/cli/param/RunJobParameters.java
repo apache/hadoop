@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.submarine.client.cli.CliUtils;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Parameters used to run a job
@@ -41,6 +43,7 @@ public class RunJobParameters extends RunParameters {
   private String tensorboardDockerImage;
   private String workerLaunchCmd;
   private String psLaunchCmd;
+  private List<Quicklink> quicklinks = new ArrayList<>();
 
   private String psDockerImage = null;
   private String workerDockerImage = null;
@@ -117,6 +120,17 @@ public class RunJobParameters extends RunParameters {
 
     if (parsedCommandLine.hasOption(CliConstants.WAIT_JOB_FINISH)) {
       this.waitJobFinish = true;
+    }
+
+    // Quicklinks
+    String[] quicklinkStrs = parsedCommandLine.getOptionValues(
+        CliConstants.QUICKLINK);
+    if (quicklinkStrs != null) {
+      for (String ql : quicklinkStrs) {
+        Quicklink quicklink = new Quicklink();
+        quicklink.parse(ql);
+        quicklinks.add(quicklink);
+      }
     }
 
     psDockerImage = parsedCommandLine.getOptionValue(
@@ -246,5 +260,9 @@ public class RunJobParameters extends RunParameters {
 
   public String getTensorboardDockerImage() {
     return tensorboardDockerImage;
+  }
+
+  public List<Quicklink> getQuicklinks() {
+    return quicklinks;
   }
 }

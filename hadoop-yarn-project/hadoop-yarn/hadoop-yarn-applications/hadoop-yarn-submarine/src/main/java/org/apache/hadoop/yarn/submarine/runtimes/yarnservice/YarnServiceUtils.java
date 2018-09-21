@@ -16,10 +16,20 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.submarine.common.Envs;
+import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class YarnServiceUtils {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnServiceUtils.class);
+
   // This will be true only in UT.
   private static ServiceClient stubServiceClient = null;
 
@@ -40,10 +50,10 @@ public class YarnServiceUtils {
     YarnServiceUtils.stubServiceClient = stubServiceClient;
   }
 
-  public static String getDNSName(String serviceName, String componentName,
-      int index, String userName, String domain, int port) {
-    return componentName + "-" + index + getDNSNameCommonSuffix(serviceName,
-        userName, domain, port);
+  public static String getDNSName(String serviceName,
+      String componentInstanceName, String userName, String domain, int port) {
+    return componentInstanceName + getDNSNameCommonSuffix(serviceName, userName,
+        domain, port);
   }
 
   private static String getDNSNameCommonSuffix(String serviceName,
@@ -66,12 +76,18 @@ public class YarnServiceUtils {
         commonEndpointSuffix) + ",";
     String ps = getComponentArrayJson("ps", nPs, commonEndpointSuffix) + "},";
 
-    String task =
-        "\\\"task\\\":{" + " \\\"type\\\":\\\"" + curCommponentName + "\\\","
-            + " \\\"index\\\":" + '$' + Envs.TASK_INDEX_ENV + "},";
+    StringBuilder sb = new StringBuilder();
+    sb.append("\\\"task\\\":{");
+    sb.append(" \\\"type\\\":\\\"");
+    sb.append(curCommponentName);
+    sb.append("\\\",");
+    sb.append(" \\\"index\\\":");
+    sb.append('$');
+    sb.append(Envs.TASK_INDEX_ENV + "},");
+    String task = sb.toString();
     String environment = "\\\"environment\\\":\\\"cloud\\\"}";
 
-    StringBuilder sb = new StringBuilder();
+    sb = new StringBuilder();
     sb.append(json);
     sb.append(master);
     sb.append(worker);
@@ -79,6 +95,21 @@ public class YarnServiceUtils {
     sb.append(task);
     sb.append(environment);
     return sb.toString();
+  }
+
+  public static void addQuicklink(Service serviceSpec, String label,
+      String link) {
+    Map<String, String> quicklinks = serviceSpec.getQuicklinks();
+    if (null == quicklinks) {
+      quicklinks = new HashMap<>();
+      serviceSpec.setQuicklinks(quicklinks);
+    }
+
+    if (SubmarineLogs.isVerbose()) {
+      LOG.info("Added quicklink, " + label + "=" + link);
+    }
+
+    quicklinks.put(label, link);
   }
 
   private static String getComponentArrayJson(String componentName, int count,

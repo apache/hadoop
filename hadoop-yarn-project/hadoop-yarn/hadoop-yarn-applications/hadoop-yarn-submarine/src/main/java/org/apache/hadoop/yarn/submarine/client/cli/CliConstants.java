@@ -49,6 +49,7 @@ public class CliConstants {
   public static final String WAIT_JOB_FINISH = "wait_job_finish";
   public static final String PS_DOCKER_IMAGE = "ps_docker_image";
   public static final String WORKER_DOCKER_IMAGE = "worker_docker_image";
+  public static final String QUICKLINK = "quicklink";
   public static final String TENSORBOARD_DOCKER_IMAGE =
       "tensorboard_docker_image";
 }

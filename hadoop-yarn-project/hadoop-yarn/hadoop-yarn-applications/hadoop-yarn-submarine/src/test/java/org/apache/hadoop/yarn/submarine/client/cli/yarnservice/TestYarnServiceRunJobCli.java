@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.yarnservice;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -100,6 +101,32 @@ public class TestYarnServiceRunJobCli {
     Assert.assertTrue(SubmarineLogs.isVerbose());
   }
 
+  private void verifyQuicklink(Service serviceSpec,
+      Map<String, String> expectedQuicklinks) {
+    Map<String, String> actualQuicklinks = serviceSpec.getQuicklinks();
+    if (actualQuicklinks == null || actualQuicklinks.isEmpty()) {
+      Assert.assertTrue(
+          expectedQuicklinks == null || expectedQuicklinks.isEmpty());
+      return;
+    }
+
+    Assert.assertEquals(expectedQuicklinks.size(), actualQuicklinks.size());
+    for (Map.Entry<String, String> expectedEntry : expectedQuicklinks
+        .entrySet()) {
+      Assert.assertTrue(actualQuicklinks.containsKey(expectedEntry.getKey()));
+
+      // $USER could be changed in different environment. so replace $USER by
+      // "user"
+      String expectedValue = expectedEntry.getValue();
+      String actualValue = actualQuicklinks.get(expectedEntry.getKey());
+
+      String userName = System.getProperty("user.name");
+      actualValue = actualValue.replaceAll(userName, "username");
+
+      Assert.assertEquals(expectedValue, actualValue);
+    }
+  }
+
   @Test
   public void testBasicRunJobForDistributedTraining() throws Exception {
     MockClientContext mockClientContext =
@@ -120,6 +147,8 @@ public class TestYarnServiceRunJobCli {
     Assert.assertEquals(3, serviceSpec.getComponents().size());
 
     commonVerifyDistributedTrainingSpec(serviceSpec);
+
+    verifyQuicklink(serviceSpec, null);
   }
 
   @Test
@@ -147,6 +176,10 @@ public class TestYarnServiceRunJobCli {
 
     verifyTensorboardComponent(runJobCli, serviceSpec,
         Resources.createResource(4096, 1));
+
+    verifyQuicklink(serviceSpec, ImmutableMap
+        .of(YarnServiceJobSubmitter.TENSORBOARD_QUICKLINK_LABEL,
+            "http://tensorboard-0.my-job.username.null:6006"));
   }
 
   @Test
@@ -232,6 +265,9 @@ public class TestYarnServiceRunJobCli {
 
     verifyTensorboardComponent(runJobCli, serviceSpec,
         Resources.createResource(2048, 2));
+    verifyQuicklink(serviceSpec, ImmutableMap
+        .of(YarnServiceJobSubmitter.TENSORBOARD_QUICKLINK_LABEL,
+            "http://tensorboard-0.my-job.username.null:6006"));
   }
 
   private void commonTestSingleNodeTraining(Service serviceSpec)
@@ -371,5 +407,63 @@ public class TestYarnServiceRunJobCli {
     Assert.assertTrue(jobInfo.size() > 0);
     Assert.assertEquals(jobInfo.get(StorageKeyConstants.INPUT_PATH),
         "s3://input");
+  }
+
+  @Test
+  public void testAddQuicklinksWithoutTensorboard() throws Exception {
+    MockClientContext mockClientContext =
+        YarnServiceCliTestUtils.getMockClientContext();
+    RunJobCli runJobCli = new RunJobCli(mockClientContext);
+    Assert.assertFalse(SubmarineLogs.isVerbose());
+
+    runJobCli.run(
+        new String[] { "--name", "my-job", "--docker_image", "tf-docker:1.1.0",
+            "--input_path", "s3://input", "--checkpoint_path", "s3://output",
+            "--num_workers", "3", "--num_ps", "2", "--worker_launch_cmd",
+            "python run-job.py", "--worker_resources", "memory=2048M,vcores=2",
+            "--ps_resources", "memory=4096M,vcores=4", "--ps_docker_image",
+            "ps.image", "--worker_docker_image", "worker.image",
+            "--ps_launch_cmd", "python run-ps.py", "--verbose", "--quicklink",
+            "AAA=http://master-0:8321", "--quicklink",
+            "BBB=http://worker-0:1234" });
+    Service serviceSpec = getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    Assert.assertEquals(3, serviceSpec.getComponents().size());
+
+    commonVerifyDistributedTrainingSpec(serviceSpec);
+
+    verifyQuicklink(serviceSpec, ImmutableMap
+        .of("AAA", "http://master-0.my-job.username.null:8321", "BBB",
+            "http://worker-0.my-job.username.null:1234"));
+  }
+
+  @Test
+  public void testAddQuicklinksWithTensorboard() throws Exception {
+    MockClientContext mockClientContext =
+        YarnServiceCliTestUtils.getMockClientContext();
+    RunJobCli runJobCli = new RunJobCli(mockClientContext);
+    Assert.assertFalse(SubmarineLogs.isVerbose());
+
+    runJobCli.run(
+        new String[] { "--name", "my-job", "--docker_image", "tf-docker:1.1.0",
+            "--input_path", "s3://input", "--checkpoint_path", "s3://output",
+            "--num_workers", "3", "--num_ps", "2", "--worker_launch_cmd",
+            "python run-job.py", "--worker_resources", "memory=2048M,vcores=2",
+            "--ps_resources", "memory=4096M,vcores=4", "--ps_docker_image",
+            "ps.image", "--worker_docker_image", "worker.image",
+            "--ps_launch_cmd", "python run-ps.py", "--verbose", "--quicklink",
+            "AAA=http://master-0:8321", "--quicklink",
+            "BBB=http://worker-0:1234", "--tensorboard" });
+    Service serviceSpec = getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    Assert.assertEquals(4, serviceSpec.getComponents().size());
+
+    commonVerifyDistributedTrainingSpec(serviceSpec);
+
+    verifyQuicklink(serviceSpec, ImmutableMap
+        .of("AAA", "http://master-0.my-job.username.null:8321", "BBB",
+            "http://worker-0.my-job.username.null:1234",
+            YarnServiceJobSubmitter.TENSORBOARD_QUICKLINK_LABEL,
+            "http://tensorboard-0.my-job.username.null:6006"));
   }
 }

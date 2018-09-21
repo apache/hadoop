@@ -117,6 +117,14 @@ public class RunJobCli extends AbstractCli {
     options.addOption(CliConstants.WORKER_DOCKER_IMAGE, true,
         "Specify docker image for WORKER, when this is not specified, WORKER "
             + "uses --" + CliConstants.DOCKER_IMAGE + " as default.");
+    options.addOption(CliConstants.QUICKLINK, true, "Specify quicklink so YARN"
+        + "web UI shows link to given role instance and port. When "
+        + "--tensorboard is speciied, quicklink to tensorboard instance will "
+        + "be added automatically. The format of quick link is: "
+        + "Quick_link_label=http(or https)://role-name:port. For example, "
+        + "if want to link to first worker's 7070 port, and text of quicklink "
+        + "is Notebook_UI, user need to specify --quicklink "
+        + "Notebook_UI=https://master-0:7070");
     options.addOption("h", "help", false, "Print help");
     return options;
   }
