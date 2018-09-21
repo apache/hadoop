@@ -60,58 +60,6 @@ public interface StreamCapabilities {
   String UNBUFFER = "in:unbuffer";
 
   /**
-   * Does the Filesystem support get/set ACLs and related methods?
-   */
-  String FS_ACLS = "fs:acls";
-
-  /**
-   * Does the Filesystem support append operations?
-   */
-  String FS_APPEND = "fs:append";
-
-  /**
-   * Does the FS support {@code concat()}?
-   */
-  String FS_CONCAT = "fs:concat";
-
-  /**
-   * Does the FS support {@code setPermission(Path, FsPermission)}
-   * and related methods?
-   */
-  String FS_PERMISSIONS = "fs:permissions";
-
-  /**
-   * Does the FS support path handles??
-   */
-  String FS_PATHHANDLES = "fs:pathhandles";
-
-  /**
-   * Does the FS support snapshot?
-   */
-  String FS_SNAPSHOTS = "fs:snapshots";
-
-  /**
-   * Does the FS support storage policies?
-   */
-  String FS_STORAGEPOLICY = "fs:storagepolicy";
-
-  /**
-   * Does the FS support symlinks?
-   */
-  String FS_SYMLINKS = "fs:symlinks";
-
-  /**
-   * Does the FS support truncate()?
-   */
-  String FS_TRUNCATE = "fs:truncate";
-
-  /**
-   * Does the Filesystem support XAttributes
-   * {@code setXAttr(Path, String, byte[])} and related methods?
-   */
-  String FS_XATTRS = "fs:xattrs";
-
-  /**
    * Capabilities that a stream can support and be queried for.
    */
   @Deprecated

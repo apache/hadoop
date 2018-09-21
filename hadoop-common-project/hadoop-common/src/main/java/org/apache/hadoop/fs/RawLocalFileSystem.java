@@ -1065,18 +1065,19 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_APPEND:
-    case StreamCapabilities.FS_CONCAT:
-    case StreamCapabilities.FS_PERMISSIONS:
-    case StreamCapabilities.FS_PATHHANDLES:
-    case StreamCapabilities.FS_SYMLINKS:
-    case StreamCapabilities.FS_TRUNCATE:
+    case PathCapabilities.FS_APPEND:
+    case PathCapabilities.FS_CONCAT:
+    case PathCapabilities.FS_PATHHANDLES:
+    case PathCapabilities.FS_PERMISSIONS:
+    case PathCapabilities.FS_TRUNCATE:
       return true;
+    case PathCapabilities.FS_SYMLINKS:
+      return FileSystem.areSymlinksEnabled();
     default:
-      return super.hasPathCapability(p, capability);
+      return superCapability;
     }
   }
 }

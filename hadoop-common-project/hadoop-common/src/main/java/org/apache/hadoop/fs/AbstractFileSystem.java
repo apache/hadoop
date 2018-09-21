@@ -56,6 +56,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1373,6 +1374,9 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   public boolean hasPathCapability(final Path path,
       final String capability)
       throws IOException {
+    Preconditions.checkArgument(capability != null && !capability.isEmpty(),
+        "null/empty capability");
+    makeQualified(path);
     return false;
   }
 }

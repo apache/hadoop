@@ -34,10 +34,10 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -1499,28 +1499,30 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   /**
-   * This filesystem's capabilities must be in sync with that of HDFS.
-   * @param path path to query the capability of.
-   * @param capability string to query the stream support for.
-   * @return true if a capability is supported.
+   * This filesystem's capabilities must be in sync with that of 
+   * {@code DistributedFileSystem.hasPathCapability()} except
+   * where the feature is not exposed (e.g. symlinks).
+   * {@inheritDoc}
    */
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
+    
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_ACLS:
-    case StreamCapabilities.FS_APPEND:
-    case StreamCapabilities.FS_CONCAT:
-    case StreamCapabilities.FS_PERMISSIONS:
-    case StreamCapabilities.FS_SNAPSHOTS:
-    case StreamCapabilities.FS_STORAGEPOLICY:
-    case StreamCapabilities.FS_SYMLINKS:
-    case StreamCapabilities.FS_XATTRS:
+    case PathCapabilities.FS_ACLS:
+    case PathCapabilities.FS_APPEND:
+    case PathCapabilities.FS_CONCAT:
+    case PathCapabilities.FS_PERMISSIONS:
+    case PathCapabilities.FS_SNAPSHOTS:
+    case PathCapabilities.FS_STORAGEPOLICY:
+    case PathCapabilities.FS_XATTRS:
       return true;
+    case PathCapabilities.FS_SYMLINKS:
+      return false;
     default:
-      return super.hasPathCapability(p, capability);
+      return superCapability;
     }
   }
 }

@@ -58,7 +58,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -1036,15 +1036,16 @@ public class AdlFileSystem extends FileSystem {
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_ACLS:
-    case StreamCapabilities.FS_APPEND:
-    case StreamCapabilities.FS_CONCAT:
-    case StreamCapabilities.FS_PERMISSIONS:
+    case PathCapabilities.FS_ACLS:
+    case PathCapabilities.FS_APPEND:
+    case PathCapabilities.FS_CONCAT:
+    case PathCapabilities.FS_PERMISSIONS:
       return true;
     default:
-      return super.hasPathCapability(p, capability);
+      return superCapability;
     }
   }
 }

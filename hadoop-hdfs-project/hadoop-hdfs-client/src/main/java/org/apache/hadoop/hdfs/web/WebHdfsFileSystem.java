@@ -76,8 +76,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -1121,6 +1121,11 @@ public class WebHdfsFileSystem extends FileSystem
     ).run();
   }
 
+  @Override
+  public boolean supportsSymlinks() {
+    return true;
+  }
+
   /**
    * Create a symlink pointing to the destination path.
    */
@@ -2025,20 +2030,24 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_ACLS:
-    case StreamCapabilities.FS_APPEND:
-    case StreamCapabilities.FS_CONCAT:
-    case StreamCapabilities.FS_PERMISSIONS:
-    case StreamCapabilities.FS_SNAPSHOTS:
-    case StreamCapabilities.FS_STORAGEPOLICY:
-    case StreamCapabilities.FS_SYMLINKS:
-    case StreamCapabilities.FS_XATTRS:
+    case PathCapabilities.FS_ACLS:
+    case PathCapabilities.FS_APPEND:
+    case PathCapabilities.FS_CHECKSUMS:
+    case PathCapabilities.FS_CONCAT:
+    case PathCapabilities.FS_PERMISSIONS:
+    case PathCapabilities.FS_SNAPSHOTS:
+    case PathCapabilities.FS_STORAGEPOLICY:
+    case PathCapabilities.FS_XATTRS:
+      return true;
+    case PathCapabilities.FS_SYMLINKS:
+      // there's no checking of the {symlinksEnabled} flag in this class,\
+      // so always return true.
       return true;
     default:
-      return super.hasPathCapability(p, capability);
+      return superCapability;
     }
   }
 

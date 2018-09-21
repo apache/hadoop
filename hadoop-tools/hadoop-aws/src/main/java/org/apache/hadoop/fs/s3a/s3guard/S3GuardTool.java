@@ -1157,7 +1157,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       } else {
         println(out, "Filesystem %s is not using S3Guard", fsUri);
       }
-      boolean magic = fs.hasCapability(
+      boolean magic = fs.hasPathCapability(
+          new Path(s3Path),
           CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER);
       println(out, "The \"magic\" committer %s supported",
           magic ? "is" : "is not");

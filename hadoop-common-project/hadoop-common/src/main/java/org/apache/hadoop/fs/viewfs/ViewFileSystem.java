@@ -52,10 +52,10 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -948,7 +948,7 @@ public class ViewFileSystem extends FileSystem {
     Path p = makeQualified(path);
 
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_CONCAT:
+    case PathCapabilities.FS_CONCAT:
       // concat is not supported, as it may be invoked across filesystems.
       return false;
     default:

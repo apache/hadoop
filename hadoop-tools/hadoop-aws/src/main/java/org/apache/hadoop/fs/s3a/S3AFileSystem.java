@@ -99,6 +99,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
@@ -3603,20 +3604,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
-  public boolean hasPathCapability(final Path path, final String capability) {
-    // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
-    return hasCapability(capability);
-  }
-
-  /**
-   * Return the capabilities of this filesystem instance.
-   * @param capability string to query the stream support for.
-   * @return whether the FS instance has the capability.
-   */
-  @Override
-  public boolean hasCapability(String capability) {
-
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // delegate to parent simply to validate arguments.
+    super.hasPathCapability(path, capability);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
@@ -3627,7 +3618,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // select is only supported if enabled
       return selectBinding.isEnabled();
 
+    case PathCapabilities.FS_CHECKSUMS:
+      // capability depends on FS configuration
+      return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
+          ETAG_CHECKSUM_ENABLED_DEFAULT);
+      
     default:
+      return false;
+    }
+  }
+
+  /**
+   * Return the capabilities of this filesystem instance.
+   * 
+   * This has been supplanted by {@link #hasPathCapability(Path, String)}.
+   * @param capability string to query the stream support for.
+   * @return whether the FS instance has the capability.
+   */
+  @Deprecated
+  @Override
+  public boolean hasCapability(String capability) {
+    try {
+      return hasPathCapability(workingDir, capability);
+    } catch (IOException ex) {
+      // should never happen, so log and downgrade.
+      LOG.debug("Ignoring exception on hasCapability({}})", capability, ex);
       return false;
     }
   }

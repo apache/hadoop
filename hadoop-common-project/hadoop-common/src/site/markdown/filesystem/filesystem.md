@@ -1472,12 +1472,7 @@ public interface PathCapabilities {
 }
 ```
 
-### `boolean hasPathCapability(path, capability)`
-
-Probe for a filesystem instance offering a specific capability under the
-given path.
-
-There are a numbe of goals here goals here:
+There are a number of goals here:
 
 1. Allow callers to probe for optional filesystem operations without actually
 having to invoke them.
@@ -1485,8 +1480,13 @@ having to invoke them.
 whether or not they are active for the specific instance.
 1. Allow for fileystem connectors which work with object stores to expose the
 fundamental difference in semantics of these stores (e.g: files not visible
-until closed, file rename being O(data)), directory rename being non-atomic, 
+until closed, file rename being `O(data)`), directory rename being non-atomic, 
 etc.
+
+### Available Capabilities
+
+Capabilities are defined with a store prefix and an arbitrary (but hopefully
+meaningful) string.
 
 All custom filesystem-specific capabilities MUST be given the prefix of that
 filesystem schema. The standard schemas are:
@@ -1496,16 +1496,29 @@ filesystem schema. The standard schemas are:
 
 The exact set of operations and their names are evolving.
 
+Consult the javadocs for `org.apache.hadoop.fs.PathCapabilities` for the
+standard set of capabilities.
+
+Individual filesystems may offer their own set of capabilities which
+can be probed for. These begin with the same prefix as the filesystem schema,
+such as `hdfs:` or `s3a:`.
+
+### `boolean hasPathCapability(path, capability)`
+
+Probe for a filesystem instance offering a specific capability under the
+given path.
+
 #### Postconditions
 
 ```python
-if fs_supports_the_feature(capability):
+if fs_supports_the_feature(path, capability):
   return True
 else:
   return False
 ```
 
-Return: `True`, iff the specific capability is known to be available.
+Return: `True`, iff the specific capability is, the the best of the 
+knowledge of the client application, available.
 
 A filesystem instance *MUST NOT* return `True` for any capability unless it is
 known to be supported by that specific instance. As a result, if a caller
@@ -1515,37 +1528,75 @@ are available.
 If the probe returns `False` then it can mean one of:
 
 1. The capability is unknown.
-1. The capability is known, but not available on this instance.
-1. The capability is known but the connector does not know if it is supported by
-this specific instance.
+1. The capability is known, but known to be unavailable on this instance.
 
 This predicate is intended to be low cost. If it requires remote calls other
 than path/link resolution, it SHOULD conclude that the availability
 of the feature is unknown and return `False`.
-The predicate MUST also be side-effect
 
+The predicate MUST also be side-effect free.
 
-*Note*: There is no requirement that the existence of the path must be checked;
+*Validity of paths*
+There is no requirement that the existence of the path must be checked;
 the parameter exists so that any filesystem which relays operations to other
-filesystems (e.g viewfs) can resolve and relay it to the nested filesystem.
+filesystems (e.g `viewfs`) can resolve and relay it to the nested filesystem.
+Consider the call to be *relatively* lightweight.
 
-/**
- * .
- * If the function returns {@code true}, the filesystem is explicitly
- * declaring that the capability is available.
- * If the function returns {@code false}, it can mean one of:
- * <ul>
- *   <li>The capability is not known.</li>
- *   <li>The capability is known but it is not supported.</li>
- *   <li>The capability is known but the filesystem does not know if it
- *   is supported under the supplied path it.</li>
- * </ul>
- * The core guarantee which a caller can rely on is: if the predicate
- * returns true, then the specific operation/behavior can be expected to be
- * supported.
- * @param path path to query the capability of.
- * @param capability string to query the stream support for.
- * @return true if the capability is supported under that part of the FS.
- * @throws IOException this should not be raised, except on problems
- * resolving paths or relaying the call.
- */
+Because of this, it may be that while the filesystem declares that
+it supports a capability under a path, the actual invocation of the operation
+may fail for other reasons.
+
+As an example, while a filesystem may support `append()` under a path, 
+if invoked on a directory, the call may fail. 
+
+That is for a path `root = new Path("/")`: the capabilities call may succeed
+
+```java
+fs.hasCapabilities(root, "fs:append") == true
+```
+
+But a subsequent call to the operation on that specific path may fail,
+because the root path is a directory
+```java
+fs.append(root)
+```
+
+The `hasCapabilities(path, capability)` probe is therefore declaring that
+the operation will not be rejected as unsupported, not that a specific invocation
+will be considered valid.
+
+*Duration of availability*
+
+As the state of a remote store changes,so may path capabilities. This 
+may be due to changes in the local state of the fileystem (e.g. symbolic links
+or mount points changing), or changes in its functionality (e.g. a feature
+becoming availaible/unavailable due to operational changes, system upgrades, etc.)  
+
+*Capabilities which must be invoked to determine availablity*
+
+Some operations may be known by the filesystem client, and believed to be available,
+but may actually fail when invoked due to the state of the underlying
+filesystem —state which is cannot be determined except by attempting
+side-effecting operations.
+
+A key example of this is symbolic links and the local filesystem.
+The filesystem declares that it supports this unless symbolic links are explicitly
+disabled —when invoked they may actually fail.
+
+### Implementors Notes
+
+Implementors MUST NOT return `true` for any capability which is not guaranteed
+to be supported. To return `true` indicates that the implementation/deployment
+of the filesystem does, to the best of the knowledge of the filesystem client,
+offer the desired operations *and semantics* queried for.
+
+For performance reasons, implementations SHOULD NOT check the path for
+existence, unless it needs to resolve symbolic links in parts of the path
+to determine whether a feature is present.This required of `FileContext`
+and `viewfs`. It may also be needed to 
+
+Individual filesystems MUST NOT define new `fs:`-prefixed capabilities.
+Instead they MUST do one of the following:
+
+* Define and stabilize new cross-filesystem capability flags (preferred).
+* Use the schema of the filesystem to as a prefix for their own options.

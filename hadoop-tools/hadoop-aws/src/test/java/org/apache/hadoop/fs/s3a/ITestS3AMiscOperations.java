@@ -31,6 +31,7 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
@@ -142,6 +143,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
     LOG.info("Checksum for {}: {}", file1, checksum1);
+    assertTrue("FS checksum support disabled",
+        fs.hasPathCapability(file1, PathCapabilities.FS_CHECKSUMS));
     assertNotNull("Null file 1 checksum", checksum1);
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums", checksum1,
@@ -159,6 +162,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     final S3AFileSystem fs = getFileSystem();
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
+    assertFalse("FS checksum support enabled",
+        fs.hasPathCapability(file1, PathCapabilities.FS_CHECKSUMS));
     assertNull("Checksums are being generated", checksum1);
   }
 

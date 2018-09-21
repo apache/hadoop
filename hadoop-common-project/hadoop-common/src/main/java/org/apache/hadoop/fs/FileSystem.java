@@ -710,6 +710,7 @@ public abstract class FileSystem extends Configured
    *
    */
   protected void checkPath(Path path) {
+    Preconditions.checkArgument(path != null, "null path");
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     if (thatScheme == null)                // fs is relative
@@ -3219,20 +3220,18 @@ public abstract class FileSystem extends Configured
    * of the capabilities of actual implementations.
    * Unless it has a way to explicitly determine the capabilities,
    * this method returns false.
-   * @param path path to query the capability of.
-   * @param capability string to query the stream support for.
-   * @return false
-   * @throws IOException this should not be raised, except on problems
-   * resolving paths or relaying the call.
+   * {@inheritDoc}
    */
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
+    Preconditions.checkArgument(capability != null && !capability.isEmpty(),
+        "null/empty capability");
     // qualify the path to make sure that it refers to the current FS.
     makeQualified(path);
     switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.FS_SYMLINKS:
+    case PathCapabilities.FS_SYMLINKS:
       // delegate to the existing supportsSymlinks() call.
-      return supportsSymlinks();
+      return supportsSymlinks() && areSymlinksEnabled();
     default:
       // the feature is not implemented.
       return false;

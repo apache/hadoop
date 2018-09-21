@@ -899,7 +899,25 @@ public class HarFileSystem extends FileSystem {
     throws IOException {
     throw new IOException("Har: setPermission not allowed");
   }
-  
+
+  /**
+   * Declare that this filesystem connector is always read only.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // query the superclass, which triggers argument validation.
+    super.hasPathCapability(path, capability);
+
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case PathCapabilities.FS_READ_ONLY_CONNECTOR:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /**
    * Hadoop archives input stream. This input stream fakes EOF 
    * since archive files are part of bigger part files.

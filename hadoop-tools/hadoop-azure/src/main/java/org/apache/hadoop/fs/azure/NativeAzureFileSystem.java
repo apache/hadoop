@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -3871,12 +3872,16 @@ public class NativeAzureFileSystem extends FileSystem {
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
+    // query the superclass, which triggers argument validation.
+    boolean superCapability = super.hasPathCapability(path, capability);
     switch (capability) {
-    case StreamCapabilities.FS_PERMISSIONS:
+    case PathCapabilities.FS_PERMISSIONS:
       return true;
+    // Append support is dynamic
+    case PathCapabilities.FS_APPEND:
+      return appendSupportEnabled;
     default:
-      return super.hasPathCapability(p, capability);
+      return superCapability;
     }
   }
 }
