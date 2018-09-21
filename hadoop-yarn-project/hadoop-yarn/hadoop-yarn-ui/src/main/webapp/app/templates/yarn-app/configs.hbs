@@ -16,10 +16,11 @@
  * limitations under the License.
 }}
 
-<div class="col-md-12">
-  {{metrics-table metrics=model.metrics type="Service"}}
+<div class="col-md-12" style="margin-bottom: 15px;">
+  <div class="col-md-12">
+    {{metrics-table metrics=model.metrics type="Service"}}
+  </div>
 </div>
-
 {{#if model.configs}}
   <div class="col-md-12">
     <div class="panel panel-default">
