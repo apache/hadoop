@@ -42,9 +42,10 @@ export default Ember.Controller.extend({
       getCellContent: function(row) {
         var component = row.get('component');
         var instance = row.get('instanceName');
+        var containerId = row.get('containerId');
         return {
           text: instance,
-          href: `#/yarn-component-instance/${component}/instances/${instance}/info?appid=${appId}&&service=${serviceName}`
+          href: `#/yarn-component-instance/${component}/instances/${instance}/info?appid=${appId}&service=${serviceName}&containerid=${containerId}`
         };
       }
     }, {
