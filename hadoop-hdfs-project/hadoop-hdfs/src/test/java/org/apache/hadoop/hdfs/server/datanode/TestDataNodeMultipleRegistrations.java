@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
@@ -31,6 +30,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -38,9 +38,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.RunningState;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -293,12 +295,22 @@ public class TestDataNodeMultipleRegistrations {
       cluster.restartNameNode(0, false);
       cluster.restartNameNode(1, false);
       cluster.restartDataNode(dnProp);
-      
-      // let the initialization be complete
-      Thread.sleep(10000);
-      dn = cluster.getDataNodes().get(0);
-      assertFalse("Datanode should have shutdown as only service failed",
-          dn.isDatanodeUp());
+      final DataNode restartedDn = cluster.getDataNodes().get(0);
+
+      // Wait till datanode confirms FAILED running state.
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          for (BPOfferService bp : restartedDn.getAllBpOs()) {
+            for (BPServiceActor ba : bp.getBPServiceActors()) {
+              if (!ba.getRunningState().equals(RunningState.FAILED.name())) {
+                return false;
+              }
+            }
+          }
+          return true;
+        }
+      }, 500, 10000);
     } finally {
       cluster.shutdown();
     }
