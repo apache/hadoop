@@ -156,9 +156,10 @@ public class AbfsRestOperation {
                 client.getAccessToken());
       }
 
+      AbfsClientThrottlingIntercept.sendingRequest(operationType);
+
       if (hasRequestBody) {
         // HttpUrlConnection requires
-        AbfsClientThrottlingIntercept.sendingRequest(operationType);
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
       }
 

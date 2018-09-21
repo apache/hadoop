@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
@@ -37,6 +40,7 @@ import org.slf4j.LoggerFactory;
 public final class AbfsClientThrottlingIntercept {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingIntercept.class);
+  private static final String RANGE_PREFIX = "bytes=";
   private static AbfsClientThrottlingIntercept singleton = null;
   private AbfsClientThrottlingAnalyzer readThrottler = null;
   private AbfsClientThrottlingAnalyzer writeThrottler = null;
@@ -82,7 +86,8 @@ public final class AbfsClientThrottlingIntercept {
         }
         break;
       case ReadFile:
-        contentLength = abfsHttpOperation.getBytesReceived();
+        String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
+        contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           singleton.readThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
@@ -113,5 +118,18 @@ public final class AbfsClientThrottlingIntercept {
       default:
         break;
     }
+  }
+
+  private static long getContentLengthIfKnown(String range) {
+    long contentLength = 0;
+    // Format is "bytes=%d-%d"
+    if (range != null && range.startsWith(RANGE_PREFIX)) {
+      String[] offsets = range.substring(RANGE_PREFIX.length()).split("-");
+      if (offsets.length == 2) {
+        contentLength = Long.parseLong(offsets[1]) - Long.parseLong(offsets[0])
+                + 1;
+      }
+    }
+    return contentLength;
   }
 }
