@@ -52,8 +52,11 @@ import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateS
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
@@ -430,6 +433,36 @@ public final class FederationStateStoreFacade {
         stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
     return response.getApplicationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
+   *
+   * @return the mapping of all submitted application to it's home sub-cluster
+   * @throws YarnException if the request is invalid/fails
+   */
+  public List<ApplicationHomeSubCluster> getApplicationsHomeSubCluster()
+      throws YarnException {
+    GetApplicationsHomeSubClusterResponse response =
+        stateStore.getApplicationsHomeSubCluster(
+            GetApplicationsHomeSubClusterRequest.newInstance());
+    return response.getAppsHomeSubClusters();
+  }
+
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation is
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param applicationId the application to delete the home sub-cluster of
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void deleteApplicationHomeSubCluster(ApplicationId applicationId)
+      throws YarnException {
+    stateStore.deleteApplicationHomeSubCluster(
+        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
+    return;
   }
 
   /**

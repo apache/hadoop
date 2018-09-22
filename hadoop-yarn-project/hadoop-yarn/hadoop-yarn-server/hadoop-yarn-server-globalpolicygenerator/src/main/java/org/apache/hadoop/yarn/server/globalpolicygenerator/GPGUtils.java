@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -49,15 +50,19 @@ public final class GPGUtils {
    * Performs an invocation of the the remote RMWebService.
    */
   public static <T> T invokeRMWebService(Configuration conf, String webAddr,
-      String path, final Class<T> returnType) {
+      String path, final Class<T> returnType, String deSelectParam) {
     Client client = Client.create();
     T obj = null;
 
-    WebResource webResource = client.resource(webAddr);
+    WebResource webResource =
+        client.resource(webAddr).path("ws/v1/cluster").path(path);
+    if (deSelectParam != null) {
+      webResource = webResource.queryParam(RMWSConsts.DESELECTS, deSelectParam);
+    }
     ClientResponse response = null;
     try {
-      response = webResource.path("ws/v1/cluster").path(path)
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      response = webResource.accept(MediaType.APPLICATION_XML)
+          .get(ClientResponse.class);
       if (response.getStatus() == SC_OK) {
         obj = response.getEntity(returnType);
       } else {
@@ -71,6 +76,14 @@ public final class GPGUtils {
       }
       client.destroy();
     }
+  }
+
+  /**
+   * Performs an invocation of the the remote RMWebService.
+   */
+  public static <T> T invokeRMWebService(Configuration conf, String webAddr,
+      String path, final Class<T> returnType) {
+    return invokeRMWebService(conf, webAddr, path, returnType, null);
   }
 
   /**
