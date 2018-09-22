@@ -26,6 +26,7 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -33,6 +34,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 /**
  * GPGUtils contains utility functions for the GPG.
@@ -53,11 +55,15 @@ public final class GPGUtils {
    * @param returnType return type.
    * @return response entity.
    */
-  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType) {
+  public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
+      String deSelectParam) {
     Client client = Client.create();
     T obj;
 
     WebResource webResource = client.resource(webAddr);
+    if (deSelectParam != null) {
+      webResource = webResource.queryParam(RMWSConsts.DESELECTS, deSelectParam);
+    }
     ClientResponse response = null;
     try {
       response = webResource.path("ws/v1/cluster").path(path)
@@ -76,6 +82,14 @@ public final class GPGUtils {
       }
       client.destroy();
     }
+  }
+
+  /**
+   * Performs an invocation of the remote RMWebService.
+   */
+  public static <T> T invokeRMWebService(String webAddr,
+      String path, final Class<T> returnType) {
+    return invokeRMWebService(webAddr, path, returnType, null);
   }
 
   /**

@@ -51,38 +51,7 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
@@ -840,6 +809,33 @@ public final class FederationStateStoreFacade {
           "Unable to insert the ApplicationId %s into the FederationStateStore.", applicationId);
       throw new YarnException(msg, e);
     }
+  }
+
+  /**
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
+   *
+   * @return the mapping of all submitted application to it's home sub-cluster
+   * @throws YarnException if the request is invalid/fails
+   */
+  public List<ApplicationHomeSubCluster> getApplicationsHomeSubCluster() throws YarnException {
+    GetApplicationsHomeSubClusterResponse response = stateStore.getApplicationsHomeSubCluster(
+        GetApplicationsHomeSubClusterRequest.newInstance());
+    return response.getAppsHomeSubClusters();
+  }
+
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation is
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param applicationId the application to delete the home sub-cluster of
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void deleteApplicationHomeSubCluster(ApplicationId applicationId)
+      throws YarnException {
+    stateStore.deleteApplicationHomeSubCluster(
+    DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
   }
 
   /**

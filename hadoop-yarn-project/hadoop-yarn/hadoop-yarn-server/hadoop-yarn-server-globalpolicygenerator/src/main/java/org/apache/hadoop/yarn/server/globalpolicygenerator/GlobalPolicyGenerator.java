@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.ApplicationCleaner;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.PolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner.SubClusterCleaner;
 import org.slf4j.Logger;
@@ -68,6 +69,7 @@ public class GlobalPolicyGenerator extends CompositeService {
   // Scheduler service that runs tasks periodically
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
+  private ApplicationCleaner applicationCleaner;
   private PolicyGenerator policyGenerator;
 
   public GlobalPolicyGenerator() {
@@ -105,6 +107,12 @@ public class GlobalPolicyGenerator extends CompositeService {
         conf.getInt(YarnConfiguration.GPG_SCHEDULED_EXECUTOR_THREADS,
             YarnConfiguration.DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS));
     this.subClusterCleaner = new SubClusterCleaner(conf, this.gpgContext);
+
+    this.applicationCleaner = FederationStateStoreFacade.createInstance(conf,
+        YarnConfiguration.GPG_APPCLEANER_CLASS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_CLASS, ApplicationCleaner.class);
+    this.applicationCleaner.init(conf, this.gpgContext);
+
     this.policyGenerator = new PolicyGenerator(conf, this.gpgContext);
 
     DefaultMetricsSystem.initialize(METRICS_NAME);
@@ -123,7 +131,7 @@ public class GlobalPolicyGenerator extends CompositeService {
 
     super.serviceStart();
 
-    // Scheduler SubClusterCleaner service
+    // Schedule SubClusterCleaner service
     Configuration config = getConfig();
     long scCleanerIntervalMs = config.getTimeDuration(
         YarnConfiguration.GPG_SUBCLUSTER_CLEANER_INTERVAL_MS,
@@ -133,6 +141,16 @@ public class GlobalPolicyGenerator extends CompositeService {
           0, scCleanerIntervalMs, TimeUnit.MILLISECONDS);
       LOG.info("Scheduled sub-cluster cleaner with interval: {}",
           DurationFormatUtils.formatDurationISO(scCleanerIntervalMs));
+    }
+
+    // Schedule ApplicationCleaner service
+    long appCleanerIntervalMs = config.getLong(YarnConfiguration.GPG_APPCLEANER_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_INTERVAL_MS);
+    if (appCleanerIntervalMs > 0) {
+      this.scheduledExecutorService.scheduleAtFixedRate(this.applicationCleaner,
+      0, appCleanerIntervalMs, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled application cleaner with interval: {}",
+          DurationFormatUtils.formatDurationISO(appCleanerIntervalMs));
     }
 
     // Schedule PolicyGenerator
