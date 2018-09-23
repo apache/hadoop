@@ -603,7 +603,9 @@
       fs.s3a.*.server-side-encryption.key
       fs.azure.account.key.*
       credential$
-      oauth.*token$
+      oauth.*secret
+      oauth.*password
+      oauth.*token
       hadoop.security.sensitive-config-keys
   </value>
   <description>A comma-separated or multi-line list of regular expressions to
@@ -1619,6 +1621,18 @@
 
 <!-- Azure file system properties -->
 <property>
+  <name>fs.AbstractFileSystem.wasb.impl</name>
+  <value>org.apache.hadoop.fs.azure.Wasb</value>
+  <description>AbstractFileSystem implementation class of wasb://</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.wasbs.impl</name>
+  <value>org.apache.hadoop.fs.azure.Wasbs</value>
+  <description>AbstractFileSystem implementation class of wasbs://</description>
+</property>
+
+<property>
   <name>fs.wasb.impl</name>
   <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
   <description>The implementation class of the Native Azure Filesystem</description>
@@ -1639,6 +1653,31 @@
     SAS keys to communicate with Azure storage.
   </description>
 </property>
+
+<property>
+  <name>fs.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem</value>
+  <description>The implementation class of the Azure Blob Filesystem</description>
+</property>
+
+<property>
+  <name>fs.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
+  <description>The implementation class of the Secure Azure Blob Filesystem</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.Abfs</value>
+  <description>AbstractFileSystem implementation class of abfs://</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.Abfss</value>
+  <description>AbstractFileSystem implementation class of abfss://</description>
+</property>
+
 <property>
   <name>fs.azure.local.sas.key.mode</name>
   <value>false</value>

@@ -22,6 +22,7 @@ make-build-debug
 # Filesystem contract test options and credentials
 auth-keys.xml
 azure-auth-keys.xml
+azure-bfs-auth-keys.xml
 
 # External tool builders
 */.externalToolBuilders

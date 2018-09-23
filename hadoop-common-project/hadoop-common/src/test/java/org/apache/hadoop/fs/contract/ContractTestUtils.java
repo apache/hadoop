@@ -187,8 +187,11 @@ public class ContractTestUtils extends Assert {
           (short) 1,
           buffersize);
     }
-    out.write(src, 0, len);
-    out.close();
+    try {
+      out.write(src, 0, len);
+    } finally {
+      out.close();
+    }
     assertFileHasLength(fs, path, len);
   }
 
@@ -1019,6 +1022,18 @@ public class ContractTestUtils extends Assert {
     assertTrue("Path " + subdir
                       + " not found in directory " + dir + ":" + builder,
                       found);
+  }
+
+  /**
+   * Execute {@link FileSystem#mkdirs(Path)}; expect {@code true} back.
+   * (Note: does not work for localFS if the directory already exists)
+   * Does not perform any validation of the created directory.
+   * @param fs filesystem
+   * @param dir directory to create
+   * @throws IOException IO Problem
+   */
+  public static void assertMkdirs(FileSystem fs, Path dir) throws IOException {
+    assertTrue("mkdirs(" + dir + ") returned false", fs.mkdirs(dir));
   }
 
   /**

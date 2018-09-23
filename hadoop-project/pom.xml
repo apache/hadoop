@@ -1211,6 +1211,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.htrace</groupId>
+        <artifactId>htrace-core</artifactId>
+        <version>3.1.0-incubating</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core4</artifactId>
         <version>4.1.0-incubating</version>
       </dependency>
@@ -1343,6 +1348,19 @@
         <artifactId>azure-storage</artifactId>
         <version>7.0.0</version>
      </dependency>
+
+      <!--Wildfly openssl dependency is introduced by HADOOP-15669-->
+      <dependency>
+        <groupId>org.wildfly.openssl</groupId>
+        <artifactId>wildfly-openssl</artifactId>
+        <version>1.0.4.Final</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.threadly</groupId>
+        <artifactId>threadly</artifactId>
+        <version>4.9.0</version>
+      </dependency>
 
       <dependency>
         <groupId>com.aliyun.oss</groupId>
