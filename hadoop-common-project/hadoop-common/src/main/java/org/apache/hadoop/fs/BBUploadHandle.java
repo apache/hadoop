@@ -19,9 +19,14 @@ package org.apache.hadoop.fs;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Byte array backed upload handle.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class BBUploadHandle implements UploadHandle {
 
   private static final long serialVersionUID = 0x69d5509b;

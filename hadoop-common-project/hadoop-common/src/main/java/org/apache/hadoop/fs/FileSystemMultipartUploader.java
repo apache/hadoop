@@ -28,6 +28,8 @@ import com.google.common.base.Preconditions;
 
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -44,6 +46,8 @@ import static org.apache.hadoop.fs.Path.mergePaths;
  *   and then delete the temp directory.</li>
  * </ul>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class FileSystemMultipartUploader extends MultipartUploader {
 
   private final FileSystem fs;

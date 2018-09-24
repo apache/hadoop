@@ -38,6 +38,8 @@ import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BBPartHandle;
 import org.apache.hadoop.fs.BBUploadHandle;
@@ -55,6 +57,8 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
  * MultipartUploader for S3AFileSystem. This uses the S3 multipart
  * upload mechanism.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class S3AMultipartUploader extends MultipartUploader {
 
   private final S3AFileSystem s3a;
