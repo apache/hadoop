@@ -43,6 +43,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>integration-test</module>
     <module>objectstore-service</module>
     <module>datanode</module>
+    <module>s3gateway</module>
     <module>dist</module>
     <module>docs</module>
   </modules>

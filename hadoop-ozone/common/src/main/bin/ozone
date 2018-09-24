@@ -44,6 +44,7 @@ function hadoop_usage
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "om" daemon "Ozone Manager"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
+  hadoop_add_subcommand "s3g" daemon "run the S3 compatible REST gateway"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "sh" client "command line interface for object store operations"
   hadoop_add_subcommand "version" client "print the version"
@@ -114,7 +115,11 @@ function ozonecmd_case
       hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-server-scm"
-
+    ;;
+    s3g)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.s3.Gateway'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-s3gateway"
     ;;
     fs)
       HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
