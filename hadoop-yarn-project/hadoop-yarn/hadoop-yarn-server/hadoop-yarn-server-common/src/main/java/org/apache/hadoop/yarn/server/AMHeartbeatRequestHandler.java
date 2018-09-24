@@ -47,6 +47,9 @@ public class AMHeartbeatRequestHandler extends Thread {
   // Indication flag for the thread to keep running
   private volatile boolean keepRunning;
 
+  // For unit test draining
+  private volatile boolean isThreadWaiting;
+
   private Configuration conf;
   private ApplicationId applicationId;
 
@@ -61,6 +64,7 @@ public class AMHeartbeatRequestHandler extends Thread {
     this.setUncaughtExceptionHandler(
         new HeartBeatThreadUncaughtExceptionHandler());
     this.keepRunning = true;
+    this.isThreadWaiting = false;
 
     this.conf = conf;
     this.applicationId = applicationId;
@@ -82,12 +86,15 @@ public class AMHeartbeatRequestHandler extends Thread {
     while (keepRunning) {
       AsyncAllocateRequestInfo requestInfo;
       try {
-        requestInfo = requestQueue.take();
+        this.isThreadWaiting = true;
+        requestInfo = this.requestQueue.take();
+        this.isThreadWaiting = false;
+
         if (requestInfo == null) {
           throw new YarnException(
               "Null requestInfo taken from request queue");
         }
-        if (!keepRunning) {
+        if (!this.keepRunning) {
           break;
         }
 
@@ -98,7 +105,7 @@ public class AMHeartbeatRequestHandler extends Thread {
           throw new YarnException("Null allocateRequest from requestInfo");
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Sending Heartbeat to Unmanaged AM. AskList:"
+          LOG.debug("Sending Heartbeat to RM. AskList:"
               + ((request.getAskList() == null) ? " empty"
                   : request.getAskList().size()));
         }
@@ -178,6 +185,16 @@ public class AMHeartbeatRequestHandler extends Thread {
     } catch (InterruptedException ex) {
       // Should not happen as we have MAX_INT queue length
       LOG.debug("Interrupted while waiting to put on response queue", ex);
+    }
+  }
+
+  @VisibleForTesting
+  public void drainHeartbeatThread() {
+    while (!this.isThreadWaiting || this.requestQueue.size() > 0) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+      }
     }
   }
 

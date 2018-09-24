@@ -189,8 +189,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
   private HashSet<ApplicationId> applicationMap = new HashSet<>();
   private HashSet<ApplicationId> keepContainerOnUams = new HashSet<>();
-  private HashMap<ApplicationAttemptId,
-      List<ContainerId>> applicationContainerIdMap = new HashMap<>();
+  private HashMap<ApplicationId, List<ContainerId>> applicationContainerIdMap =
+      new HashMap<>();
+  private int rmId;
   private AtomicInteger containerIndex = new AtomicInteger(0);
   private Configuration conf;
   private int subClusterId;
@@ -202,6 +203,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   private boolean isRunning;
 
   private boolean shouldReRegisterNext = false;
+
+  private boolean shouldWaitForSyncNextAllocate = false;
 
   // For unit test synchronization
   private static Object syncObj = new Object();
@@ -218,6 +221,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   public MockResourceManagerFacade(Configuration conf, int startContainerIndex,
       int subClusterId, boolean isRunning) {
     this.conf = conf;
+    this.rmId = startContainerIndex;
     this.containerIndex.set(startContainerIndex);
     this.subClusterId = subClusterId;
     this.isRunning = isRunning;
@@ -259,17 +263,17 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     validateRunning();
     ApplicationAttemptId attemptId = getAppIdentifier();
     LOG.info("Registering application attempt: " + attemptId);
+    ApplicationId appId = attemptId.getApplicationId();
 
     List<Container> containersFromPreviousAttempt = null;
 
     synchronized (applicationContainerIdMap) {
-      if (applicationContainerIdMap.containsKey(attemptId)) {
-        if (keepContainerOnUams.contains(attemptId.getApplicationId())) {
+      if (applicationContainerIdMap.containsKey(appId)) {
+        if (keepContainerOnUams.contains(appId)) {
           // For UAM with the keepContainersFromPreviousAttempt flag, return all
           // running containers
           containersFromPreviousAttempt = new ArrayList<>();
-          for (ContainerId containerId : applicationContainerIdMap
-              .get(attemptId)) {
+          for (ContainerId containerId : applicationContainerIdMap.get(appId)) {
             containersFromPreviousAttempt.add(Container.newInstance(containerId,
                 null, null, null, null, null));
           }
@@ -279,7 +283,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         }
       } else {
         // Keep track of the containers that are returned to this application
-        applicationContainerIdMap.put(attemptId, new ArrayList<ContainerId>());
+        applicationContainerIdMap.put(appId, new ArrayList<ContainerId>());
       }
     }
 
@@ -314,6 +318,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     ApplicationAttemptId attemptId = getAppIdentifier();
     LOG.info("Finishing application attempt: " + attemptId);
+    ApplicationId appId = attemptId.getApplicationId();
 
     if (shouldReRegisterNext) {
       String message = "AM is not registered, should re-register.";
@@ -324,8 +329,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
       Assert.assertTrue("The application id is NOT registered: " + attemptId,
-          applicationContainerIdMap.containsKey(attemptId));
-      applicationContainerIdMap.remove(attemptId);
+          applicationContainerIdMap.containsKey(appId));
+      applicationContainerIdMap.remove(appId);
     }
 
     return FinishApplicationMasterResponse.newInstance(
@@ -350,11 +355,27 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     ApplicationAttemptId attemptId = getAppIdentifier();
     LOG.info("Allocate from application attempt: " + attemptId);
+    ApplicationId appId = attemptId.getApplicationId();
 
     if (shouldReRegisterNext) {
       String message = "AM is not registered, should re-register.";
       LOG.warn(message);
       throw new ApplicationMasterNotRegisteredException(message);
+    }
+
+    // Wait for signal for certain test cases
+    synchronized (syncObj) {
+      if (shouldWaitForSyncNextAllocate) {
+        shouldWaitForSyncNextAllocate = false;
+
+        LOG.info("Allocate call in RM start waiting");
+        try {
+          syncObj.wait();
+          LOG.info("Allocate call in RM wait finished");
+        } catch (InterruptedException e) {
+          LOG.info("Allocate call in RM wait interrupted", e);
+        }
+      }
     }
 
     ArrayList<Container> containerList = new ArrayList<Container>();
@@ -381,9 +402,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
             // will need it in future
             Assert.assertTrue(
                 "The application id is Not registered before allocate(): "
-                    + attemptId,
-                applicationContainerIdMap.containsKey(attemptId));
-            List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
+                    + appId,
+                applicationContainerIdMap.containsKey(appId));
+            List<ContainerId> ids = applicationContainerIdMap.get(appId);
             ids.add(containerId);
           }
         }
@@ -395,12 +416,10 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         && request.getReleaseList().size() > 0) {
       LOG.info("Releasing containers: " + request.getReleaseList().size());
       synchronized (applicationContainerIdMap) {
-        Assert
-            .assertTrue(
-                "The application id is not registered before allocate(): "
-                    + attemptId,
-                applicationContainerIdMap.containsKey(attemptId));
-        List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
+        Assert.assertTrue(
+            "The application id is not registered before allocate(): " + appId,
+            applicationContainerIdMap.containsKey(appId));
+        List<ContainerId> ids = applicationContainerIdMap.get(appId);
 
         for (ContainerId id : request.getReleaseList()) {
           boolean found = false;
@@ -426,12 +445,19 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         + " for application attempt: " + conf.get("AMRMTOKEN"));
 
     // Always issue a new AMRMToken as if RM rolled master key
-    Token newAMRMToken = Token.newInstance(new byte[0], "", new byte[0], "");
+    Token newAMRMToken = Token.newInstance(new byte[0],
+        Integer.toString(this.rmId), new byte[0], "");
 
     return AllocateResponse.newInstance(0, completedList, containerList,
         new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC, 1, null,
         new ArrayList<NMToken>(), newAMRMToken,
         new ArrayList<UpdatedContainer>());
+  }
+
+  public void setWaitForSyncNextAllocate(boolean wait) {
+    synchronized (syncObj) {
+      shouldWaitForSyncNextAllocate = wait;
+    }
   }
 
   @Override
@@ -624,14 +650,14 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     validateRunning();
 
-    ApplicationAttemptId attemptId = request.getApplicationAttemptId();
+    ApplicationId appId = request.getApplicationAttemptId().getApplicationId();
     List<ContainerReport> containers = new ArrayList<>();
     synchronized (applicationContainerIdMap) {
       // Return the list of running containers that were being tracked for this
       // application
-      Assert.assertTrue("The application id is NOT registered: " + attemptId,
-          applicationContainerIdMap.containsKey(attemptId));
-      List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
+      Assert.assertTrue("The application id is NOT registered: " + appId,
+          applicationContainerIdMap.containsKey(appId));
+      List<ContainerId> ids = applicationContainerIdMap.get(appId);
       for (ContainerId c : ids) {
         containers.add(ContainerReport.newInstance(c, null, null, null, 0, 0,
             null, null, 0, null, null));

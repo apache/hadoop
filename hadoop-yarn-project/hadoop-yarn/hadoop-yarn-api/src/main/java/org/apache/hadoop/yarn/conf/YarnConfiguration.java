@@ -3221,6 +3221,11 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.federation.resolver."
           + "DefaultSubClusterResolverImpl";
 
+  // the maximum wait time for the first async heartbeat response
+  public static final String FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS =
+      FEDERATION_PREFIX + "amrmproxy.hb.maximum.wait.ms";
+  public static final long DEFAULT_FEDERATION_AMRMPROXY_HB_MAX_WAIT_MS = 5000;
+
   // AMRMProxy split-merge timeout for active sub-clusters. We will not route
   // new asks to expired sub-clusters.
   public static final String FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =

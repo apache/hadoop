@@ -225,6 +225,10 @@ public class UnmanagedApplicationManager {
       LOG.debug("RegisterUAM returned existing NM token for node "
           + nmToken.getNodeId());
     }
+    LOG.info(
+        "RegisterUAM returned {} existing running container and {} NM tokens",
+        response.getContainersFromPreviousAttempts().size(),
+        response.getNMTokensFromPreviousAttempts().size());
 
     // Only when register succeed that we start the heartbeat thread
     this.heartbeatHandler.setDaemon(true);
@@ -515,5 +519,15 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   public int getRequestQueueSize() {
     return this.heartbeatHandler.getRequestQueueSize();
+  }
+
+  @VisibleForTesting
+  protected void setHandlerThread(AMHeartbeatRequestHandler thread) {
+    this.heartbeatHandler = thread;
+  }
+
+  @VisibleForTesting
+  protected void drainHeartbeatThread() {
+    this.heartbeatHandler.drainHeartbeatThread();
   }
 }

@@ -407,4 +407,19 @@ public class UnmanagedAMPoolManager extends AbstractService {
     return this.unmanagedAppMasterMap.get(uamId).getAMRMClientRelayer();
   }
 
+  @VisibleForTesting
+  public int getRequestQueueSize(String uamId) throws YarnException {
+    if (!this.unmanagedAppMasterMap.containsKey(uamId)) {
+      throw new YarnException("UAM " + uamId + " does not exist");
+    }
+    return this.unmanagedAppMasterMap.get(uamId).getRequestQueueSize();
+  }
+
+  @VisibleForTesting
+  public void drainUAMHeartbeats() {
+    for (UnmanagedApplicationManager uam : this.unmanagedAppMasterMap
+        .values()) {
+      uam.drainHeartbeatThread();
+    }
+  }
 }
