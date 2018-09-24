@@ -1107,6 +1107,108 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
+  public void testAllowSnapshot() throws Exception {
+    createHttpFSServer(false, false);
+    // Create a test directory
+    String pathString = "/tmp/tmp-snap-allow-test";
+    createDirWithHttp(pathString, "700", null);
+
+    Path path = new Path(pathString);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        path.toUri(), TestHdfsHelper.getHdfsConf());
+    // FileStatus should have snapshot enabled bit unset by default
+    Assert.assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Send a request with ALLOWSNAPSHOT API
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=ALLOWSNAPSHOT",
+        pathString, user));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // FileStatus should have snapshot enabled bit set
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Clean up
+    dfs.delete(path, true);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testDisallowSnapshot() throws Exception {
+    createHttpFSServer(false, false);
+    // Create a test directory
+    String pathString = "/tmp/tmp-snap-disallow-test";
+    createDirWithHttp(pathString, "700", null);
+
+    Path path = new Path(pathString);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        path.toUri(), TestHdfsHelper.getHdfsConf());
+    // Allow snapshot
+    dfs.allowSnapshot(path);
+    // FileStatus should have snapshot enabled bit set so far
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Send a request with DISALLOWSNAPSHOT API
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=DISALLOWSNAPSHOT",
+        pathString, user));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // FileStatus should not have snapshot enabled bit set
+    Assert.assertFalse(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Clean up
+    dfs.delete(path, true);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testDisallowSnapshotException() throws Exception {
+    createHttpFSServer(false, false);
+    // Create a test directory
+    String pathString = "/tmp/tmp-snap-disallow-exception-test";
+    createDirWithHttp(pathString, "700", null);
+
+    Path path = new Path(pathString);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        path.toUri(), TestHdfsHelper.getHdfsConf());
+    // Allow snapshot
+    dfs.allowSnapshot(path);
+    // FileStatus should have snapshot enabled bit set so far
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Create some snapshots
+    dfs.createSnapshot(path, "snap-01");
+    dfs.createSnapshot(path, "snap-02");
+    // Send a request with DISALLOWSNAPSHOT API
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1{0}?user.name={1}&op=DISALLOWSNAPSHOT",
+        pathString, user));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    // Should not return HTTP_OK
+    Assert.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // FileStatus should still have snapshot enabled bit set
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Clean up
+    dfs.deleteSnapshot(path, "snap-02");
+    dfs.deleteSnapshot(path, "snap-01");
+    dfs.delete(path, true);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
   public void testCreateSnapshot() throws Exception {
     createHttpFSServer(false, false);
     final HttpURLConnection conn = snapshotTestPreconditions("PUT",

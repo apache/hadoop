@@ -230,6 +230,7 @@ public class HttpFSFileSystem extends FileSystem
     REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
     GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
     SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
+    ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT);
 
@@ -1409,6 +1410,22 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.UNSETSTORAGEPOLICY.toString());
     HttpURLConnection conn = getConnection(
         Operation.UNSETSTORAGEPOLICY.getMethod(), params, src, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void allowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.ALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.ALLOWSNAPSHOT.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void disallowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.DISALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.DISALLOWSNAPSHOT.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 

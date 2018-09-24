@@ -40,6 +40,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
@@ -1071,6 +1073,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
     GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
+    ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR
   }
 
@@ -1169,6 +1172,14 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case DELETE_SNAPSHOT:
       testDeleteSnapshot();
       break;
+    case ALLOW_SNAPSHOT:
+      testAllowSnapshot();
+      break;
+    case DISALLOW_SNAPSHOT:
+      testDisallowSnapshot();
+      break;
+    case DISALLOW_SNAPSHOT_EXCEPTION:
+      testDisallowSnapshotException();
     case FILE_STATUS_ATTR:
       testFileStatusAttr();
       break;
@@ -1251,17 +1262,24 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     testCreateSnapshot("snap-with-name");
   }
 
-  private void createSnapshotTestsPreconditions(Path snapshottablePath)
-      throws Exception {
+  private void createSnapshotTestsPreconditions(Path snapshottablePath,
+      Boolean allowSnapshot) throws Exception {
     //Needed to get a DistributedFileSystem instance, in order to
     //call allowSnapshot on the newly created directory
     DistributedFileSystem distributedFs = (DistributedFileSystem)
         FileSystem.get(snapshottablePath.toUri(), this.getProxiedFSConf());
     distributedFs.mkdirs(snapshottablePath);
-    distributedFs.allowSnapshot(snapshottablePath);
+    if (allowSnapshot) {
+      distributedFs.allowSnapshot(snapshottablePath);
+    }
     Path subdirPath = new Path("/tmp/tmp-snap-test/subdir");
     distributedFs.mkdirs(subdirPath);
+  }
 
+  private void createSnapshotTestsPreconditions(Path snapshottablePath)
+      throws Exception {
+    // Allow snapshot by default for snapshot test
+    createSnapshotTestsPreconditions(snapshottablePath, true);
   }
 
   private void cleanSnapshotTests(Path snapshottablePath,
@@ -1308,6 +1326,114 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       assertTrue("There should be no snapshot anymore.",
           snapshotItems.length == 0);
       fs.delete(snapshottablePath, true);
+    }
+  }
+
+  private void testAllowSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot disallowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path, false);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      assertFalse("Snapshot should be disallowed by default",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Allow snapshot
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.allowSnapshot(path);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.allowSnapshot(path);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support allowSnapshot");
+      }
+      // Check FileStatus
+      assertTrue("allowSnapshot failed",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Cleanup
+      fs.delete(path, true);
+    }
+  }
+
+  private void testDisallowSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot allowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      assertTrue("Snapshot should be allowed by DFS",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Disallow snapshot
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.disallowSnapshot(path);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.disallowSnapshot(path);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support disallowSnapshot");
+      }
+      // Check FileStatus
+      assertFalse("disallowSnapshot failed",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Cleanup
+      fs.delete(path, true);
+    }
+  }
+
+  private void testDisallowSnapshotException() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot allowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      assertTrue("Snapshot should be allowed by DFS",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Create some snapshots
+      fs.createSnapshot(path, "snap-01");
+      fs.createSnapshot(path, "snap-02");
+      // Disallow snapshot
+      boolean disallowSuccess = false;
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        try {
+          httpFS.disallowSnapshot(path);
+          disallowSuccess = true;
+        } catch (SnapshotException e) {
+          // Expect SnapshotException
+        }
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        try {
+          webHdfsFileSystem.disallowSnapshot(path);
+          disallowSuccess = true;
+        } catch (SnapshotException e) {
+          // Expect SnapshotException
+        }
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support disallowSnapshot");
+      }
+      if (disallowSuccess) {
+        Assert.fail("disallowSnapshot doesn't throw SnapshotException when "
+            + "disallowing snapshot on a directory with at least one snapshot");
+      }
+      // Check FileStatus, should still be enabled since
+      // disallow snapshot should fail
+      assertTrue("disallowSnapshot should not have succeeded",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      // Cleanup
+      fs.deleteSnapshot(path, "snap-02");
+      fs.deleteSnapshot(path, "snap-01");
+      fs.delete(path, true);
     }
   }
 }

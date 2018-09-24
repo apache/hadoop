@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -1471,6 +1472,78 @@ public class FSOperations {
     @Override
     public Void execute(FileSystem fs) throws IOException {
       fs.unsetStoragePolicy(path);
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs an allowSnapshot operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSAllowSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates a allowSnapshot executor.
+     * @param path directory path to allow snapshot.
+     */
+    public FSAllowSnapshot(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.allowSnapshot(path);
+      } else {
+        throw new UnsupportedOperationException("allowSnapshot is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs an disallowSnapshot operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSDisallowSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates a disallowSnapshot executor.
+     * @param path directory path to allow snapshot.
+     */
+    public FSDisallowSnapshot(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        dfs.disallowSnapshot(path);
+      } else {
+        throw new UnsupportedOperationException("disallowSnapshot is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
       return null;
     }
   }

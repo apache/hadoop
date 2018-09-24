@@ -101,6 +101,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.SETSTORAGEPOLICY,
         new Class[] {PolicyNameParam.class});
     PARAMS_DEF.put(Operation.UNSETSTORAGEPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.ALLOWSNAPSHOT, new Class[] {});
+    PARAMS_DEF.put(Operation.DISALLOWSNAPSHOT, new Class[] {});
     PARAMS_DEF.put(Operation.CREATESNAPSHOT,
             new Class[] {SnapshotNameParam.class});
     PARAMS_DEF.put(Operation.DELETESNAPSHOT,

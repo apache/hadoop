@@ -600,6 +600,22 @@ public class HttpFSServer {
         }
         break;
       }
+      case ALLOWSNAPSHOT: {
+        FSOperations.FSAllowSnapshot command =
+            new FSOperations.FSAllowSnapshot(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] allowed snapshot", path);
+        response = Response.ok().build();
+        break;
+      }
+      case DISALLOWSNAPSHOT: {
+        FSOperations.FSDisallowSnapshot command =
+            new FSOperations.FSDisallowSnapshot(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] disallowed snapshot", path);
+        response = Response.ok().build();
+        break;
+      }
       case CREATESNAPSHOT: {
         String snapshotName = params.get(SnapshotNameParam.NAME,
             SnapshotNameParam.class);
