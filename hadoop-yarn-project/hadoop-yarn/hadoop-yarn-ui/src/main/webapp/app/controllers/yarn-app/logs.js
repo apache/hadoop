@@ -253,5 +253,10 @@ export default Ember.Controller.extend({
       }
       return lines.slice(lines.length - 10).join("\n");
     }
-  )
+  ),
+
+  isLogAggregationNotSucceeded: Ember.computed("model.app", function() {
+    const logAggregationStatus = this.get("model.app.logAggregationStatus");
+    return logAggregationStatus !== "SUCCEEDED";
+  })
 });
