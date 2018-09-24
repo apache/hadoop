@@ -44,6 +44,8 @@ public final class AMRMClientUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(AMRMClientUtils.class);
 
+  public static final int PRE_REGISTER_RESPONSE_ID = -1;
+
   public static final String APP_ALREADY_REGISTERED_MESSAGE =
       "Application Master is already registered : ";
 
@@ -143,4 +145,10 @@ public final class AMRMClientUtils {
       return -1;
     }
   }
+
+  public static int getNextResponseId(int responseId) {
+    // Loop between 0 to Integer.MAX_VALUE
+    return (responseId + 1) & Integer.MAX_VALUE;
+  }
+
 }
