@@ -179,7 +179,7 @@ The following properties should be set in yarn-site.xml:
     <value></value>
     <description>
       Optional. A comma-separated list of users who are allowed to request
-      privileged contains if privileged containers are allowed.
+      privileged containers if privileged containers are allowed.
     </description>
   </property>
 
