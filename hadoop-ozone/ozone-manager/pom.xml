@@ -28,11 +28,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <name>Apache Hadoop Ozone Manager Server</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
-
   <dependencies>
 
     <dependency>
@@ -63,28 +58,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy web resources</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy toDir="${project.build.directory}/webapps">
-                  <fileset dir="${basedir}/src/main/webapps">
-                    <exclude name="**/proto-web.xml"/>
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -93,19 +66,20 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <goals>
               <goal>unpack</goal>
             </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-hdds-server-framework</artifactId>
+                  <outputDirectory>${project.build.outputDirectory}
+                  </outputDirectory>
+                  <includes>webapps/static/**/*.*</includes>
+                </artifactItem>
+              </artifactItems>
+              <overWriteSnapshots>true</overWriteSnapshots>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <artifactItems>
-            <artifactItem>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-hdds-server-framework</artifactId>
-              <outputDirectory>${project.build.directory}/</outputDirectory>
-              <includes>webapps/static/**/*.*</includes>
-            </artifactItem>
-          </artifactItems>
-          <overWriteSnapshots>true</overWriteSnapshots>
-        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -30,8 +30,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hdds.version>0.3.0-SNAPSHOT</hdds.version>
-    <hadoop.component>hdds</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
     <log4j2.version>2.11.0</log4j2.version>
     <disruptor.version>3.4.2</disruptor.version>
     <declared.hdds.version>${hdds.version}</declared.hdds.version>

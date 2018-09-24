@@ -21,6 +21,8 @@ VERSION=$1
 # project.build.directory
 BASEDIR=$2
 
+## @audience     private
+## @stability    evolving
 function run()
 {
   declare res

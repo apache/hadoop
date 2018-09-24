@@ -19,9 +19,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project-dist</artifactId>
+    <artifactId>hadoop-project</artifactId>
     <version>3.2.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project-dist</relativePath>
+    <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
   <version>0.3.0-SNAPSHOT</version>
@@ -42,6 +42,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>ozonefs</module>
     <module>integration-test</module>
     <module>objectstore-service</module>
+    <module>datanode</module>
+    <module>dist</module>
     <module>docs</module>
   </modules>
 
@@ -160,6 +162,25 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-classpath-descriptor</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <attach>true</attach>
+              <prefix>$HDDS_LIB_JARS_DIR</prefix>
+              <outputFilterFile>true</outputFilterFile>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

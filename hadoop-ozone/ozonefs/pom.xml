@@ -28,8 +28,6 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
   <build>

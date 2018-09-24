@@ -28,37 +28,23 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <name>Apache Hadoop Ozone Integration Tests</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
-
   <dependencies>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-ozone-manager</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-objectstore-service</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-client</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone-tools</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

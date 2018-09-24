@@ -618,6 +618,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-datanode</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-integration-test</artifactId>
         <version>${hdds.version}</version>
         <type>test-jar</type>

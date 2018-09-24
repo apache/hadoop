@@ -176,7 +176,6 @@
                     </argument>
                     <argument>${project.version}</argument>
                     <argument>${project.build.directory}</argument>
-                    <argument>${hdds.version}</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -215,123 +214,6 @@
                     <argument>${basedir}/../dev-support/bin/dist-tar-stitching
                     </argument>
                     <argument>${project.version}</argument>
-                    <argument>${project.build.directory}</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>hdds</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-ozone-ozone-manager</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdds-server-scm</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdds-tools</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdds-container-service</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-ozone-objectstore-service</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-ozone-tools</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-ozone-docs</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-ozone-filesystem</artifactId>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-resources-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>copy-dockerfile</id>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <phase>prepare-package</phase>
-                <configuration>
-                  <outputDirectory>${project.build.directory}</outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>src/main/docker</directory>
-                      <filtering>true</filtering>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>dist-ozone</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <executable>${shell-executable}</executable>
-                  <workingDirectory>${project.build.directory}
-                  </workingDirectory>
-                  <arguments>
-                    <argument>
-                      ${basedir}/../dev-support/bin/ozone-dist-layout-stitching
-                    </argument>
-                    <argument>${project.version}</argument>
-                    <argument>${project.build.directory}</argument>
-                    <argument>${hdds.version}</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-              <execution>
-                <id>tar-ozone</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <executable>${shell-executable}</executable>
-                  <workingDirectory>${project.build.directory}
-                  </workingDirectory>
-                  <arguments>
-                    <argument>${basedir}/../dev-support/bin/ozone-dist-tar-stitching
-                    </argument>
-                    <argument>${hdds.version}</argument>
                     <argument>${project.build.directory}</argument>
                   </arguments>
                 </configuration>

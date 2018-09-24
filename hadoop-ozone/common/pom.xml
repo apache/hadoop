@@ -28,11 +28,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <name>Apache Hadoop Ozone Common</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
-
   <dependencies>
 
   </dependencies>

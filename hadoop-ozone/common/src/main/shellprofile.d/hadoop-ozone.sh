@@ -19,27 +19,3 @@ if [[ "${HADOOP_SHELL_EXECNAME}" = ozone ]]; then
 fi
 
 
-## @description  Profile for hdds/ozone components.
-## @audience     private
-## @stability    evolving
-function _ozone_hadoop_classpath
-{
-  #
-  # get all of the ozone jars+config in the path
-  #
-
-  if [[ -d "${HADOOP_HDFS_HOME}/${HDDS_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_DIR}"
-  fi
-
-  if [[ -d "${HADOOP_HDFS_HOME}/${HDDS_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_DIR}"
-  fi
-
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONEFS_DIR}"'/*'
-
-}

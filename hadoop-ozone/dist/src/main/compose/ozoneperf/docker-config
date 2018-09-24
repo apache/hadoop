@@ -33,4 +33,3 @@ HADOOP_OPTS=-javaagent:/opt/jmxpromo.jar=port=0:consulHost=consul:consulMode=nod
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
 LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
-

@@ -28,21 +28,33 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <name>Apache Hadoop Ozone Tools</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-client</artifactId>
-      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-filesystem</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -58,6 +70,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
       <version>1.19</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-integration-test</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
   <build>
