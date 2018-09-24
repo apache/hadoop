@@ -1507,7 +1507,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.logAggregationStartTime = System.currentTimeMillis();
+      app.logAggregationStartTime = app.systemClock.getTime();
       for (NodeId nodeId : app.getRanNodes()) {
         app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
@@ -1767,7 +1767,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     try {
       this.readLock.lock();
       if (!isLogAggregationFinished() && isAppInFinalState(this) &&
-          System.currentTimeMillis() > this.logAggregationStartTime
+          systemClock.getTime() > this.logAggregationStartTime
           + this.logAggregationStatusTimeout) {
         for (Entry<NodeId, LogAggregationReport> output :
             logAggregationStatus.entrySet()) {
@@ -2060,7 +2060,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     String appViewACLs = submissionContext.getAMContainerSpec()
         .getApplicationACLs().get(ApplicationAccessType.VIEW_APP);
     rmContext.getSystemMetricsPublisher().appACLsUpdated(
-        this, appViewACLs, System.currentTimeMillis());
+        this, appViewACLs, systemClock.getTime());
   }
 
   @Private
