@@ -102,9 +102,9 @@
 
             {{#if model.serviceName}}
               {{#if model.quicklinks}}
-              <div class="btn-group">
+              <div class="btn-group quick-links">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Quick links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="glyphicon glyphicon-option-vertical" />
+                  <i class="glyphicon glyphicon-option-vertical" /> Quicklinks
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
                   {{#each model.quicklinks as |link|}}
@@ -115,7 +115,7 @@
               {{/if}}
             {{/if}}
           </div>
-          <div>
+          <div class="btn-group">
             <span title="Queue" class="yarn-tooltip">
               <i class="glyphicon glyphicon-tasks glyphicon-gray" /> {{model.app.queue}}
             </span>
