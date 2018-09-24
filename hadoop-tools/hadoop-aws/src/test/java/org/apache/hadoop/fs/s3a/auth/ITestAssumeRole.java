@@ -87,22 +87,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   private S3AFileSystem roleFS;
 
   /**
-   * Duration range exception text on SDKs which check client-side.
+   * Error code from STS server.
    */
-  protected static final String E_DURATION_RANGE_1
-      = "Assume Role session duration should be in the range of 15min - 1Hr";
-
-  /**
-   * Duration range too high text on SDKs which check on the server.
-   */
-  protected static final String E_DURATION_RANGE_2
-      = "Member must have value less than or equal to 43200";
-
-  /**
-   * Duration range too low text on SDKs which check on the server.
-   */
-  protected static final String E_DURATION_RANGE_3
-      = "Member must have value greater than or equal to 900";
+  protected static final String VALIDATION_ERROR
+      = "ValidationError";
 
   @Override
   public void setup() throws Exception {
@@ -168,7 +156,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
     interceptClosing(AWSSecurityTokenServiceException.class,
-        E_BAD_ROLE,
+        "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
@@ -177,8 +165,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Attemnpt to create the FS with an invalid ARN");
     Configuration conf = createAssumedRoleConfig();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
-    expectFileSystemCreateFailure(conf, AccessDeniedException.class,
-        E_BAD_ROLE);
+    expectFileSystemCreateFailure(conf, AccessDeniedException.class, "");
   }
 
   @Test
@@ -284,7 +271,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       new Path(getFileSystem().getUri()).getFileSystem(conf).close();
       LOG.info("Successfully created token of a duration >3h");
     } catch (IOException ioe) {
-      assertExceptionContains(E_DURATION_RANGE_1, ioe);
+      assertExceptionContains(VALIDATION_ERROR, ioe);
     }
   }
 
@@ -293,8 +280,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * with the ability to extend durations deployed in March 2018.
    * with the later SDKs, the checks go server-side and
    * later SDKs will remove the client side checks.
-   * This test asks for a duration which will still be rejected, and
-   * looks for either of the error messages raised.
+   * This test doesn't look into the details of the exception
+   * to avoid being too brittle.
    */
   @Test
   public void testAssumeRoleThirtySixHourSessionDuration() throws Exception {
@@ -304,21 +291,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.setInt(ASSUMED_ROLE_SESSION_DURATION, 36 * 60 * 60);
     IOException ioe = expectFileSystemCreateFailure(conf,
         IOException.class, null);
-    assertIsRangeException(ioe);
-  }
-
-  /**
-   * Look for either the client-side or STS-side range exception
-   * @param e exception
-   * @throws Exception the exception, if its text doesn't match
-   */
-  private void assertIsRangeException(final Exception e) throws Exception {
-    String message = e.toString();
-    if (!message.contains(E_DURATION_RANGE_1)
-        && !message.contains(E_DURATION_RANGE_2)
-        && !message.contains(E_DURATION_RANGE_3)) {
-      throw e;
-    }
   }
 
   /**
@@ -354,9 +326,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "30s");
-    Exception ex = interceptClosing(Exception.class, "",
+    interceptClosing(AWSSecurityTokenServiceException.class, "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
-    assertIsRangeException(ex);
   }
 
   @Test
