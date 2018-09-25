@@ -302,6 +302,28 @@ public class SCMClientProtocolServer implements
   }
 
   /**
+   * Check if SCM is in chill mode.
+   *
+   * @return Returns true if SCM is in chill mode else returns false.
+   * @throws IOException
+   */
+  @Override
+  public boolean inChillMode() throws IOException {
+    return scm.isInChillMode();
+  }
+
+  /**
+   * Force SCM out of Chill mode.
+   *
+   * @return returns true if operation is successful.
+   * @throws IOException
+   */
+  @Override
+  public boolean forceExitChillMode() throws IOException {
+    return scm.exitChillMode();
+  }
+
+  /**
    * Queries a list of Node that match a set of statuses.
    *
    * <p>For example, if the nodeStatuses is HEALTHY and RAFT_MEMBER, then

@@ -887,6 +887,14 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return eventQueue;
   }
 
+  /**
+   * Force SCM out of chill mode.
+   */
+  public boolean exitChillMode() {
+    scmChillModeManager.exitChillMode(eventQueue);
+    return true;
+  }
+
   @VisibleForTesting
   public double getCurrentContainerThreshold() {
     return scmChillModeManager.getCurrentContainerThreshold();
