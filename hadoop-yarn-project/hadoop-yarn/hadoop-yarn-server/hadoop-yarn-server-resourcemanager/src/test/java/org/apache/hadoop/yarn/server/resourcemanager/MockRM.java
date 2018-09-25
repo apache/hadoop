@@ -599,6 +599,15 @@ public class MockRM extends ResourceManager {
           true, false, false, null, 0, null, true, null);
   }
 
+  public RMApp submitApp(Resource resource, String name, String user,
+      Map<ApplicationAccessType, String> acls, boolean unManaged, String queue)
+      throws Exception {
+    return submitApp(resource, name, user, acls, unManaged, queue,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, false, null, 0, null, true, null);
+  }
+
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, String queue, 
       boolean waitForAccepted) throws Exception {

@@ -456,6 +456,25 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(4, rmAppState.size());
   }
 
+  @Test(timeout = 60000)
+  public void testUnManagedRMRestart() throws Exception {
+    // Create RM
+    MockRM rm1 = createMockRM(conf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
+    rm1.start();
+    // create app and launch the AM
+    RMApp app0 =
+        rm1.submitApp(null, "name", "user", new HashMap<>(), true, "default");
+    rm1.killApp(app0.getApplicationId());
+    rm1.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+    // start new RM
+    MockRM rm2 = createMockRM(conf, memStore);
+    rm2.start();
+    Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+    rm1.stop();
+    rm2.stop();
+  }
+
   @Test (timeout = 60000)
   public void testRMRestartAppRunningAMFailed() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,

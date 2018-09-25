@@ -306,6 +306,7 @@ public abstract class RMStateStore extends AbstractService {
       context.setPriority(srcCtx.getPriority());
       context.setApplicationTags(srcCtx.getApplicationTags());
       context.setApplicationType(srcCtx.getApplicationType());
+      context.setUnmanagedAM(srcCtx.getUnmanagedAM());
       ContainerLaunchContextPBImpl amContainerSpec =
               new ContainerLaunchContextPBImpl();
       amContainerSpec.setApplicationACLs(
