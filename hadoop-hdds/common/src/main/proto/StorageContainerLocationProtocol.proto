@@ -150,6 +150,21 @@ message  PipelineResponseProto {
   optional string errorMessage = 3;
 }
 
+
+message InChillModeRequestProto {
+}
+
+message InChillModeResponseProto {
+  required bool inChillMode = 1;
+}
+
+message ForceExitChillModeRequestProto {
+}
+
+message ForceExitChillModeResponseProto {
+  required bool exitedChillMode = 1;
+}
+
 /**
  * Protocol used from an HDFS node to StorageContainerManager.  See the request
  * and response messages for details of the RPC calls.
@@ -209,4 +224,16 @@ service StorageContainerLocationProtocolService {
   */
   rpc getScmInfo(GetScmInfoRequestProto)
       returns (GetScmInfoRespsonseProto);
+
+  /**
+  *  Checks if SCM is in ChillMode.
+  */
+  rpc inChillMode(InChillModeRequestProto)
+  returns (InChillModeResponseProto);
+
+  /**
+  *  Returns information about SCM.
+  */
+  rpc forceExitChillMode(ForceExitChillModeRequestProto)
+  returns (ForceExitChillModeResponseProto);
 }
