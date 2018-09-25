@@ -19,7 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+import org.junit.Assume;
 
 /**
  * Contract test for distCp operation.
@@ -29,6 +31,7 @@ public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTes
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {
     binding = new ABFSContractTestBinding();
+    Assume.assumeTrue(binding.getAuthType() != AuthType.OAuth);
   }
 
   @Override

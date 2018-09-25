@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -42,6 +43,8 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizationException;
+import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
@@ -154,6 +157,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = ABFS_EXTERNAL_AUTHORIZATION_CLASS,
+      DefaultValue = "")
+  private String abfsExternalAuthorizationClass;
 
   private Map<String, String> storageAccountKeys;
 
@@ -488,6 +495,35 @@ public class AbfsConfiguration{
       throw new TokenAccessProviderException(String.format(
               "Invalid auth type: %s is being used, expecting OAuth", authType));
     }
+  }
+
+  public String getAbfsExternalAuthorizationClass() {
+    return this.abfsExternalAuthorizationClass;
+  }
+
+  public AbfsAuthorizer getAbfsAuthorizer() throws IOException {
+    String authClassName = getAbfsExternalAuthorizationClass();
+    AbfsAuthorizer authorizer = null;
+
+    try {
+      if (authClassName != null && !authClassName.isEmpty()) {
+        @SuppressWarnings("unchecked")
+        Class<AbfsAuthorizer> authClass = (Class<AbfsAuthorizer>) rawConfig.getClassByName(authClassName);
+        authorizer = authClass.getConstructor(new Class[] {Configuration.class}).newInstance(rawConfig);
+        authorizer.init();
+      }
+    } catch (
+        IllegalAccessException
+        | InstantiationException
+        | ClassNotFoundException
+        | IllegalArgumentException
+        | InvocationTargetException
+        | NoSuchMethodException
+        | SecurityException
+        | AbfsAuthorizationException e) {
+      throw new IOException(e);
+    }
+    return authorizer;
   }
 
   void validateStorageAccountKeys() throws InvalidConfigurationValueException {
