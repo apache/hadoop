@@ -69,7 +69,7 @@ NodeManager hosts. A simple way to load an image is by issuing a Docker pull
 request. For example:
 
 ```
-    sudo docker pull images/hadoop-docker:latest
+    sudo docker pull library/openjdk:8
 ```
 
 The following properties should be set in yarn-site.xml:
@@ -665,32 +665,64 @@ repo.
 Example: MapReduce
 ------------------
 
+This example assumes that Hadoop is installed to `/usr/local/hadoop`.
+
+Additionally, `docker.allowed.ro-mounts` in `container-executor.cfg` has been
+updated to include the directories: `/usr/local/hadoop,/etc/passwd,/etc/group`.
+
 To submit the pi job to run in Docker containers, run the following commands:
 
 ```
-    vars="YARN_CONTAINER_RUNTIME_TYPE=docker,YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker"
-    hadoop jar hadoop-examples.jar pi -Dyarn.app.mapreduce.am.env=$vars \
-        -Dmapreduce.map.env=$vars -Dmapreduce.reduce.env=$vars 10 100
+  HADOOP_HOME=/usr/local/hadoop
+  YARN_EXAMPLES_JAR=$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar
+  MOUNTS="$HADOOP_HOME:$HADOOP_HOME:ro,/etc/passwd:/etc/passwd:ro,/etc/group:/etc/group:ro"
+  IMAGE_ID="library/openjdk:8"
+
+  export YARN_CONTAINER_RUNTIME_TYPE=docker
+  export YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID
+  export YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS
+
+  yarn jar $YARN_EXAMPLES_JAR pi \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    -Dmapreduce.map.env.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    -Dmapreduce.reduce.env.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    1 40000
 ```
 
 Note that the application master, map tasks, and reduce tasks are configured
-independently. In this example, we are using the hadoop-docker image for all
-three.
+independently. In this example, we are using the `openjdk:8` image for all three.
 
 Example: Spark
 --------------
 
+This example assumes that Hadoop is installed to `/usr/local/hadoop` and Spark
+is installed to `/usr/local/spark`.
+
+Additionally, `docker.allowed.ro-mounts` in `container-executor.cfg` has been
+updated to include the directories: `/usr/local/hadoop,/etc/passwd,/etc/group`.
+
 To run a Spark shell in Docker containers, run the following command:
 
 ```
-    spark-shell --master yarn --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
-        --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker \
-        --conf spark.yarn.AppMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=hadoop-docker \
-        --conf spark.yarn.AppMasterEnv.YARN_CONTAINER_RUNTIME_TYPE=docker
+  HADOOP_HOME=/usr/local/hadoop
+  SPARK_HOME=/usr/local/spark
+  MOUNTS="$HADOOP_HOME:$HADOOP_HOME:ro,/etc/passwd:/etc/passwd:ro,/etc/group:/etc/group:ro"
+  IMAGE_ID="library/openjdk:8"
+
+  $SPARK_HOME/bin/spark-shell --master yarn \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    --conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$IMAGE_ID \
+    --conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS=$MOUNTS
 ```
 
 Note that the application master and executors are configured
-independently. In this example, we are using the hadoop-docker image for both.
+independently. In this example, we are using the `openjdk:8` image for both.
 
 Docker Container ENTRYPOINT Support
 ------------------------------------
