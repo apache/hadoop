@@ -315,6 +315,7 @@ public class TestSFTPFileSystem {
     java.nio.file.Path path = (local).pathToFile(file).toPath();
     long accessTime1 = Files.readAttributes(path, BasicFileAttributes.class)
         .lastAccessTime().toMillis();
+    // SFTPFileSystem doesn't have milliseconds. Excluding it.
     accessTime1 = (accessTime1 / 1000) * 1000;
     long accessTime2 = sftpFs.getFileStatus(file).getAccessTime();
     assertEquals(accessTime1, accessTime2);
@@ -325,6 +326,8 @@ public class TestSFTPFileSystem {
     Path file = touch(localFs, name.getMethodName().toLowerCase() + "1");
     java.io.File localFile = ((LocalFileSystem) localFs).pathToFile(file);
     long modifyTime1 = localFile.lastModified();
+    // SFTPFileSystem doesn't have milliseconds. Excluding it.
+    modifyTime1 = (modifyTime1 / 1000) * 1000;
     long modifyTime2 = sftpFs.getFileStatus(file).getModificationTime();
     assertEquals(modifyTime1, modifyTime2);
   }
