@@ -91,7 +91,8 @@ public class ListKeyHandler extends Handler {
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
-    Iterator<OzoneKey> keyIterator = bucket.listKeys(prefix, startKey);
+    Iterator<? extends OzoneKey> keyIterator = bucket.listKeys(prefix,
+        startKey);
     List<KeyInfo> keyInfos = new ArrayList<>();
 
     while (maxKeys > 0 && keyIterator.hasNext()) {

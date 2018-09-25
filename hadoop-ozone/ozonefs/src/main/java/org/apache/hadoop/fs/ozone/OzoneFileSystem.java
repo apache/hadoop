@@ -638,7 +638,7 @@ public class OzoneFileSystem extends FileSystem {
     private final Path path;
     private final FileStatus status;
     private String pathKey;
-    private Iterator<OzoneKey> keyIterator;
+    private Iterator<? extends OzoneKey> keyIterator;
 
     OzoneListingIterator(Path path)
         throws IOException {

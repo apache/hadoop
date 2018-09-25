@@ -82,7 +82,7 @@ public class GenericCli implements Callable<Void>, GenericParentCommand {
     if (configurationOverrides != null) {
       for (Entry<String, String> entry : configurationOverrides.entrySet()) {
         ozoneConf
-            .set(entry.getKey(), configurationOverrides.get(entry.getValue()));
+            .set(entry.getKey(), entry.getValue());
       }
     }
     return ozoneConf;
