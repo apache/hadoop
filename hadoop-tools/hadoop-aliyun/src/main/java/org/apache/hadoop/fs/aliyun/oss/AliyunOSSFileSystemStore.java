@@ -149,7 +149,7 @@ public class AliyunOSSFileSystemStore {
           "null or empty. Please set proper endpoint with 'fs.oss.endpoint'.");
     }
     CredentialsProvider provider =
-        AliyunOSSUtils.getCredentialsProvider(conf);
+        AliyunOSSUtils.getCredentialsProvider(uri, conf);
     ossClient = new OSSClient(endPoint, provider, clientConf);
     uploadPartSize = AliyunOSSUtils.getMultipartSizeProperty(conf,
         MULTIPART_UPLOAD_PART_SIZE_KEY, MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
@@ -168,6 +168,8 @@ public class AliyunOSSFileSystemStore {
       multipartThreshold = 1024 * 1024 * 1024;
     }
 
+    bucketName = uri.getHost();
+
     String cannedACLName = conf.get(CANNED_ACL_KEY, CANNED_ACL_DEFAULT);
     if (StringUtils.isNotEmpty(cannedACLName)) {
       CannedAccessControlList cannedACL =
@@ -176,7 +178,6 @@ public class AliyunOSSFileSystemStore {
     }
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
-    bucketName = uri.getHost();
   }
 
   /**
