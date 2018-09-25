@@ -305,7 +305,7 @@ public class TestBuckets {
           .build();
       vol.createBucket(bucketName, bucketArgs);
     }
-    Iterator<OzoneBucket> bucketIterator = vol.listBuckets(null);
+    Iterator<? extends OzoneBucket> bucketIterator = vol.listBuckets(null);
     int count = 0;
 
     while (bucketIterator.hasNext()) {
@@ -324,7 +324,7 @@ public class TestBuckets {
     client.close();
   }
 
-  private static int getSize(Iterator<OzoneBucket> bucketIterator) {
+  private static int getSize(Iterator<? extends OzoneBucket> bucketIterator) {
     int count = 0;
     while (bucketIterator.hasNext()) {
       count++;

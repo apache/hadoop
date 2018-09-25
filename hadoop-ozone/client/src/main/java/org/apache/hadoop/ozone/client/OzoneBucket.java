@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -119,6 +119,23 @@ public class OzoneBucket {
     this.defaultReplicationType = ReplicationType.valueOf(conf.get(
         OzoneConfigKeys.OZONE_REPLICATION_TYPE,
         OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+  }
+
+  @VisibleForTesting
+  OzoneBucket(String volumeName, String name,
+      ReplicationFactor defaultReplication,
+      ReplicationType defaultReplicationType,
+      List<OzoneAcl> acls, StorageType storageType, Boolean versioning,
+      long creationTime) {
+    this.proxy = null;
+    this.volumeName = volumeName;
+    this.name = name;
+    this.defaultReplication = defaultReplication;
+    this.defaultReplicationType = defaultReplicationType;
+    this.acls = acls;
+    this.storageType = storageType;
+    this.versioning = versioning;
+    this.creationTime = creationTime;
   }
 
   /**
@@ -273,7 +290,7 @@ public class OzoneBucket {
    * @param keyPrefix Bucket prefix to match
    * @return {@code Iterator<OzoneKey>}
    */
-  public Iterator<OzoneKey> listKeys(String keyPrefix) {
+  public Iterator<? extends OzoneKey> listKeys(String keyPrefix) {
     return listKeys(keyPrefix, null);
   }
 
@@ -287,7 +304,8 @@ public class OzoneBucket {
    * @param prevKey Keys will be listed after this key name
    * @return {@code Iterator<OzoneKey>}
    */
-  public Iterator<OzoneKey> listKeys(String keyPrefix, String prevKey) {
+  public Iterator<? extends OzoneKey> listKeys(String keyPrefix,
+      String prevKey) {
     return new KeyIterator(keyPrefix, prevKey);
   }
 

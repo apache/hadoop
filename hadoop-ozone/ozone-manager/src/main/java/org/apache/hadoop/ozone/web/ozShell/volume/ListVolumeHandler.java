@@ -89,7 +89,7 @@ public class ListVolumeHandler extends Handler {
           "the length should be a positive number");
     }
 
-    Iterator<OzoneVolume> volumeIterator;
+    Iterator<? extends OzoneVolume> volumeIterator;
     if(userName != null) {
       volumeIterator = client.getObjectStore()
           .listVolumesByUser(userName, prefix, startVolume);

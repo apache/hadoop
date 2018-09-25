@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.ozone.s3;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,21 +38,29 @@ public class Gateway extends GenericCli {
 
   private static final Logger LOG = LoggerFactory.getLogger(Gateway.class);
 
+  private S3GatewayHttpServer httpServer;
+
   public static void main(String[] args) throws Exception {
     new Gateway().run(args);
   }
 
   @Override
   public Void call() throws Exception {
+    OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
+    OzoneConfigurationHolder.setConfiguration(ozoneConfiguration);
+    httpServer = new S3GatewayHttpServer(ozoneConfiguration, "s3gateway");
     start();
     return null;
   }
 
-  public void start() {
+  public void start() throws IOException {
     LOG.info("Starting Ozone S3 gateway");
+    httpServer.start();
   }
 
-  public void stop() {
-    LOG.info("Stoping Ozone S3 gateway");
+  public void stop() throws Exception {
+    LOG.info("Stopping Ozone S3 gateway");
+    httpServer.stop();
   }
+
 }
