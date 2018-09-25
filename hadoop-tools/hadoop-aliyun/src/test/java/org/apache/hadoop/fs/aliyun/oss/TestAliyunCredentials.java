@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.aliyun.oss;
 
 import com.aliyun.oss.common.auth.Credentials;
+import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.auth.InvalidCredentialsException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.aliyun.oss.contract.AliyunOSSContract;
@@ -27,9 +28,15 @@ import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_ID;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_SECRET;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ASSUMED_ROLE_SESSION_NAME;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ASSUMED_ROLE_STS_ENDPOINT;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.CREDENTIALS_PROVIDER_KEY;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ROLE_ARN;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.SECURITY_TOKEN;
 
 /**
@@ -63,16 +70,54 @@ public class TestAliyunCredentials extends AbstractFSContractTestBase {
     validateCredential(conf);
   }
 
-  private void validateCredential(Configuration conf) {
+  @Test
+  public void testCredentialMissingRoleArn() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
+    conf.set(ROLE_ARN, "");
+    validateCredential(conf);
+  }
+
+  @Test
+  public void testCredentialMissingStsEndpoint() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
+    conf.set(ASSUMED_ROLE_STS_ENDPOINT, "");
+    validateCredential(conf);
+  }
+
+  @Test
+  public void testCredentialInvalidSessionName() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(CREDENTIALS_PROVIDER_KEY, AssumedRoleCredentialProvider.NAME);
+    conf.set(ASSUMED_ROLE_SESSION_NAME, "hadoop oss");
+    validateCredential(conf);
+  }
+
+  private void validateCredential(URI uri, Configuration conf) {
     try {
-      AliyunCredentialsProvider provider
-          = new AliyunCredentialsProvider(conf);
+      CredentialsProvider provider =
+          AliyunOSSUtils.getCredentialsProvider(uri, conf);
       Credentials credentials = provider.getCredentials();
       fail("Expected a CredentialInitializationException, got " + credentials);
     } catch (InvalidCredentialsException expected) {
       // expected
     } catch (IOException e) {
-      fail("Unexpected exception.");
+      Throwable cause = e.getCause();
+      if (cause instanceof InvocationTargetException) {
+        boolean isInstance =
+            ((InvocationTargetException)cause).getTargetException()
+                instanceof InvalidCredentialsException;
+        if (!isInstance) {
+          fail("Unexpected exception.");
+        }
+      } else {
+        fail("Unexpected exception.");
+      }
     }
+  }
+
+  private void validateCredential(Configuration conf) {
+    validateCredential(null, conf);
   }
 }

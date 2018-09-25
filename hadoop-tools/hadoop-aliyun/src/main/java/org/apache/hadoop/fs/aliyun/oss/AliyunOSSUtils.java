@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 
 import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.google.common.base.Preconditions;
@@ -95,13 +96,14 @@ final public class AliyunOSSUtils {
    * Create credential provider specified by configuration, or create default
    * credential provider if not specified.
    *
+   * @param uri uri passed by caller
    * @param conf configuration
    * @return a credential provider
    * @throws IOException on any problem. Class construction issues may be
    * nested inside the IOE.
    */
-  public static CredentialsProvider getCredentialsProvider(Configuration conf)
-      throws IOException {
+  public static CredentialsProvider getCredentialsProvider(
+      URI uri, Configuration conf) throws IOException {
     CredentialsProvider credentials;
 
     String className = conf.getTrimmed(CREDENTIALS_PROVIDER_KEY);
@@ -117,7 +119,7 @@ final public class AliyunOSSUtils {
         try {
           credentials =
               (CredentialsProvider)credClass.getDeclaredConstructor(
-                  Configuration.class).newInstance(conf);
+                  URI.class, Configuration.class).newInstance(uri, conf);
         } catch (NoSuchMethodException | SecurityException e) {
           credentials =
               (CredentialsProvider)credClass.getDeclaredConstructor()
