@@ -55,6 +55,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <groupId>io.dropwizard.metrics</groupId>
           <artifactId>metrics-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcprov-jdk15on</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -108,7 +112,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.49</version>
+      <version>1.54</version>
     </dependency>
   </dependencies>
 
