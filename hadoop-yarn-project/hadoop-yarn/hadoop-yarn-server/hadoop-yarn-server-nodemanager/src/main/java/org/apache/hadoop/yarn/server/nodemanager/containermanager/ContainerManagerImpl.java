@@ -1836,6 +1836,7 @@ public class ContainerManagerImpl extends CompositeService implements
   public void reInitializeContainer(ContainerId containerId,
       ContainerLaunchContext reInitLaunchContext, boolean autoCommit)
       throws YarnException {
+    LOG.debug("{} requested reinit", containerId);
     Container container = preReInitializeOrLocalizeCheck(containerId,
         ReInitOp.RE_INIT);
     ResourceSet resourceSet = new ResourceSet();

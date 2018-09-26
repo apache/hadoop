@@ -94,20 +94,24 @@ public class MockRunningServiceContext extends ServiceContext {
         return mockLaunchService;
       }
 
-      @Override public ServiceUtils.ProcessTerminationHandler
-      getTerminationHandler() {
+      @Override
+      public ServiceUtils.ProcessTerminationHandler getTerminationHandler() {
         return new
-        ServiceUtils.ProcessTerminationHandler() {
-          public void terminate(int exitCode) {
-          }
-        };
+            ServiceUtils.ProcessTerminationHandler() {
+              public void terminate(int exitCode) {
+              }
+            };
+      }
+
+      @Override
+      protected ServiceManager createServiceManager() {
+        return ServiceTestUtils.createServiceManager(
+            MockRunningServiceContext.this);
       }
     };
 
 
     this.scheduler.init(fsWatcher.getConf());
-
-    ServiceTestUtils.createServiceManager(this);
 
     doNothing().when(mockLaunchService).
         reInitCompInstance(anyObject(), anyObject(), anyObject(), anyObject());

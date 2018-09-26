@@ -384,6 +384,7 @@ public class ServiceTestUtils {
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
         fs = new SliderFileSystem(conf);
+        fs.setAppDir(new Path(serviceBasePath.toString()));
       } catch (IOException e) {
         Throwables.propagate(e);
       }
@@ -532,7 +533,6 @@ public class ServiceTestUtils {
     GenericTestUtils.waitFor(() -> {
       try {
         Service retrievedApp = client.getStatus(exampleApp.getName());
-        System.out.println(retrievedApp);
         return retrievedApp.getState() == desiredState;
       } catch (Exception e) {
         e.printStackTrace();

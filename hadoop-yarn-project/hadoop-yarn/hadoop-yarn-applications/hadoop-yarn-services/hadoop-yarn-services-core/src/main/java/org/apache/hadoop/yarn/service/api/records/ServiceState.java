@@ -29,5 +29,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @ApiModel(description = "The current state of an service.")
 public enum ServiceState {
   ACCEPTED, STARTED, STABLE, STOPPED, FAILED, FLEX, UPGRADING,
-  UPGRADING_AUTO_FINALIZE, EXPRESS_UPGRADING, SUCCEEDED;
+  UPGRADING_AUTO_FINALIZE, EXPRESS_UPGRADING, SUCCEEDED, CANCEL_UPGRADING;
+
+  public static boolean isUpgrading(ServiceState state) {
+    return state.equals(UPGRADING) || state.equals(UPGRADING_AUTO_FINALIZE)
+        || state.equals(EXPRESS_UPGRADING);
+  }
 }

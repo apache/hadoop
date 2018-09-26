@@ -723,4 +723,24 @@ public class ApiServiceClient extends AppAdminClient {
     }
     return null;
   }
+
+  @Override
+  public int actionCancelUpgrade(
+      String appName) throws IOException, YarnException {
+    int result;
+    try {
+      Service service = new Service();
+      service.setName(appName);
+      service.setState(ServiceState.CANCEL_UPGRADING);
+      String buffer = jsonSerDeser.toJson(service);
+      LOG.info("Cancel upgrade in progress. Please wait..");
+      ClientResponse response = getApiClient(getServicePath(appName))
+          .put(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Failed to cancel upgrade: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
 }

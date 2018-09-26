@@ -2143,6 +2143,8 @@ public class TestYarnCLI {
     pw.println("                                          the upgrade of the application");
     pw.println("                                          with the ability to finalize the");
     pw.println("                                          upgrade automatically.");
+    pw.println(" -cancel                                  Works with -upgrade option to");
+    pw.println("                                          cancel current upgrade.");
     pw.println(" -changeQueue <Queue Name>                Moves application to a new");
     pw.println("                                          queue. ApplicationId can be");
     pw.println("                                          passed using 'appId' option.");
