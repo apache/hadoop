@@ -257,12 +257,12 @@ public abstract class AbstractAbfsIntegrationTest extends
     return abfsConfig.getRawConfiguration();
   }
 
-  public AuthType getAuthType() {
-    return this.authType;
-  }
-
   protected boolean isIPAddress() {
     return isIPAddress;
+  }
+
+  protected AuthType getAuthType() {
+    return this.authType;
   }
 
   /**
