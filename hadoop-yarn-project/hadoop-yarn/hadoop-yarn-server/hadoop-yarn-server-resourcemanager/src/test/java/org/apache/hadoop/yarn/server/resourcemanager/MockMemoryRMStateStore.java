@@ -105,7 +105,6 @@ public class MockMemoryRMStateStore extends MemoryRMStateStore {
         oldAppSubCtxt.getAMContainerResourceRequests());
     context.setLogAggregationContext(oldAppSubCtxt.getLogAggregationContext());
     context.setApplicationType(oldAppSubCtxt.getApplicationType());
-    context.setNodeLabelExpression(oldAppSubCtxt.getNodeLabelExpression());
     this.appSubCtxtCopy.put(oldAppSubCtxt.getApplicationId(), context);
   }
 
