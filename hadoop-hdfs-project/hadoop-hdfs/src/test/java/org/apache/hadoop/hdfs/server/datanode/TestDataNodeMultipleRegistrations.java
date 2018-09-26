@@ -310,7 +310,7 @@ public class TestDataNodeMultipleRegistrations {
           }
           return true;
         }
-      }, 500, 10000);
+      }, 500, 20000);
     } finally {
       cluster.shutdown();
     }
