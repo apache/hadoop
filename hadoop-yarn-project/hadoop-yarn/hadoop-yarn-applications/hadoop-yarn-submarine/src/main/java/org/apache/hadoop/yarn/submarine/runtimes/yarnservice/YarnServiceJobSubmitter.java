@@ -102,13 +102,6 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
     }
   }
 
-  private boolean needHdfs(String content) {
-    if (content != null && content.contains("hdfs://")) {
-      return true;
-    }
-    return false;
-  }
-
   private void addHdfsClassPathIfNeeded(RunJobParameters parameters,
       PrintWriter fw, Component comp) throws IOException {
     // Find envs to use HDFS
@@ -128,11 +121,14 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
 
     boolean lackingEnvs = false;
 
-    if (needHdfs(parameters.getInputPath()) || needHdfs(
-        parameters.getPSLaunchCmd()) || needHdfs(
-        parameters.getWorkerLaunchCmd()) || hadoopEnv) {
+    if ((parameters.getInputPath() != null && parameters.getInputPath()
+        .contains("hdfs://")) || (parameters.getCheckpointPath() != null
+        && parameters.getCheckpointPath().contains("hdfs://")) || (
+        parameters.getSavedModelPath() != null && parameters.getSavedModelPath()
+            .contains("hdfs://")) || hadoopEnv) {
       // HDFS is asked either in input or output, set LD_LIBRARY_PATH
       // and classpath
+
       if (hdfsHome != null) {
         // Unset HADOOP_HOME/HADOOP_YARN_HOME to make sure host machine's envs
         // won't pollute docker's env.
