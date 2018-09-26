@@ -37,7 +37,7 @@ When service level authentication is turned on, end users must authenticate them
 
 Ensure that HDFS and YARN daemons run as different Unix users, e.g. `hdfs` and `yarn`. Also, ensure that the MapReduce JobHistory server runs as different user such as `mapred`.
 
-It's recommended to have them share a Unix group, for e.g. `hadoop`. See also "[Mapping from user to group](#Mapping_from_user_to_group)" for group management.
+It's recommended to have them share a Unix group, e.g. `hadoop`. See also "[Mapping from user to group](#Mapping_from_user_to_group)" for group management.
 
 | User:Group    | Daemons                                             |
 |:--------------|:----------------------------------------------------|
