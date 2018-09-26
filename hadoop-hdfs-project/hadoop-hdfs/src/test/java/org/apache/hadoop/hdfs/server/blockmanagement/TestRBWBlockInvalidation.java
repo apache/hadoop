@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -243,6 +245,42 @@ public class TestRBWBlockInvalidation {
       cluster.shutdown();
     }
 
+  }
+
+  @Test
+  public void testRWRShouldNotAddedOnDNRestart() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
+        "false");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2).build()) {
+      Path path = new Path("/testRBW");
+      FSDataOutputStream out = cluster.getFileSystem().create(path, (short) 2);
+      out.writeBytes("old gs data\n");
+      out.hflush();
+      // stop one datanode
+      DataNodeProperties dnProp = cluster.stopDataNode(0);
+      String dnAddress = dnProp.getDatanode().getXferAddress().toString();
+      if (dnAddress.startsWith("/")) {
+        dnAddress = dnAddress.substring(1);
+      }
+      //Write some more data after DN stopped.
+      out.writeBytes("old gs data\n");
+      out.hflush();
+      cluster.restartDataNode(dnProp, true);
+      // wait till the block report comes
+      Thread.sleep(3000);
+      // check the block locations, this should not contain restarted datanode
+      BlockLocation[] locations = cluster.getFileSystem()
+          .getFileBlockLocations(path, 0, Long.MAX_VALUE);
+      String[] names = locations[0].getNames();
+      for (String node : names) {
+        if (node.equals(dnAddress)) {
+          fail("Old GS DN should not be present in latest block locations.");
+        }
+      }
+      out.close();
+    }
   }
 
   private void waitForNumTotalBlocks(final MiniDFSCluster cluster,

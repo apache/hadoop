@@ -560,6 +560,11 @@ public class MiniDFSCluster implements AutoCloseable {
     public void setDnArgs(String ... args) {
       dnArgs = args;
     }
+
+    public DataNode getDatanode() {
+      return datanode;
+    }
+
   }
 
   private Configuration conf;

@@ -3086,10 +3086,20 @@ public class BlockManager implements BlockStatsMXBean {
       }
     case RBW:
     case RWR:
+      final long reportedGS = reported.getGenerationStamp();
       if (!storedBlock.isComplete()) {
+        //When DN report lesser GS than the storedBlock then mark it is corrupt,
+        //As already valid replica will be present.
+        if (storedBlock.getGenerationStamp() > reported.getGenerationStamp()) {
+          return new BlockToMarkCorrupt(new Block(reported), storedBlock,
+              reportedGS,
+              "reported " + reportedState + " replica with genstamp "
+                  + reportedGS
+                  + " does not match Stored block's genstamp in block map "
+                  + storedBlock.getGenerationStamp(), Reason.GENSTAMP_MISMATCH);
+        }
         return null; // not corrupt
       } else if (storedBlock.getGenerationStamp() != reported.getGenerationStamp()) {
-        final long reportedGS = reported.getGenerationStamp();
         return new BlockToMarkCorrupt(new Block(reported), storedBlock, reportedGS,
             "reported " + reportedState + " replica with genstamp " + reportedGS
             + " does not match COMPLETE block's genstamp in block map "
@@ -3149,8 +3159,11 @@ public class BlockManager implements BlockStatsMXBean {
     block.getUnderConstructionFeature().addReplicaIfNotPresent(
         storageInfo, ucBlock.reportedBlock, ucBlock.reportedState);
 
-    if (ucBlock.reportedState == ReplicaState.FINALIZED &&
-        (block.findStorageInfo(storageInfo) < 0)) {
+    // Add replica if appropriate. If the replica was previously corrupt
+    // but now okay, it might need to be updated.
+    if (ucBlock.reportedState == ReplicaState.FINALIZED && (
+        block.findStorageInfo(storageInfo) < 0) || corruptReplicas
+        .isReplicaCorrupt(block, storageInfo.getDatanodeDescriptor())) {
       addStoredBlock(block, ucBlock.reportedBlock, storageInfo, null, true);
     }
   } 
