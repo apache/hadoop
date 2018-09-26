@@ -57,6 +57,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private List<ContainerId> release = null;
   private List<UpdateContainerRequest> updateRequests = null;
   private ResourceBlacklistRequest blacklistRequest = null;
+  private String trackingUrl = null;
 
   // This is deprecated, leave it here only to make unit test not break
   @Deprecated
@@ -113,6 +114,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.deprecatedIncreaseReqs != null) {
       addIncreaseRequestsToProto();
+    }
+    if (this.trackingUrl != null) {
+      builder.setTrackingUrl(this.trackingUrl);
     }
   }
 
@@ -384,7 +388,28 @@ public class AllocateRequestPBImpl extends AllocateRequest {
       this.release.add(convertFromProtoFormat(c));
     }
   }
-  
+
+  @Override
+  public String getTrackingUrl() {
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.trackingUrl != null) {
+      return this.trackingUrl;
+    }
+    if (p.hasTrackingUrl()) {
+      this.trackingUrl = p.getTrackingUrl();
+    }
+    return this.trackingUrl;
+  }
+
+  @Override
+  public void setTrackingUrl(String trackingUrl) {
+    maybeInitBuilder();
+    if (trackingUrl == null) {
+      builder.clearTrackingUrl();
+    }
+    this.trackingUrl = trackingUrl;
+  }
+
   private void addReleasesToProto() {
     maybeInitBuilder();
     builder.clearRelease();

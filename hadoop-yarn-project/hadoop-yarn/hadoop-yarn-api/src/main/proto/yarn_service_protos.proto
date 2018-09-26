@@ -89,6 +89,7 @@ message AllocateRequestProto {
   optional float progress = 5;
   repeated ContainerResourceIncreaseRequestProto increase_request = 6;
   repeated UpdateContainerRequestProto update_requests = 7;
+  optional string tracking_url = 11;
 }
 
 message NMTokenProto {

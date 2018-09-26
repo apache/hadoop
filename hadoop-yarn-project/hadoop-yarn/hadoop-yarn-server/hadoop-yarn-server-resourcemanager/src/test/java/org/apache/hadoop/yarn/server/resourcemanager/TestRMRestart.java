@@ -2698,6 +2698,51 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rm2.stop();
   }
 
+  @Test(timeout = 20000)
+  public void testRMRestartAfterUpdateTrackingUrl() throws Exception {
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm.getRMStateStore();
+
+    // Register node1
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * 1024);
+
+    RMApp app1 = rm.submitApp(2048);
+
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+
+    AllocateRequestPBImpl allocateRequest = new AllocateRequestPBImpl();
+    String newTrackingUrl = "hadoop.apache.org";
+    allocateRequest.setTrackingUrl(newTrackingUrl);
+
+    am1.allocate(allocateRequest);
+    // Check in-memory and stored tracking url
+    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getOriginalTrackingUrl());
+    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getCurrentAppAttempt()
+        .getOriginalTrackingUrl());
+    Assert.assertEquals(newTrackingUrl, memStore.getState()
+        .getApplicationState().get(app1.getApplicationId())
+        .getAttempt(attempt1.getAppAttemptId()).getFinalTrackingUrl());
+
+    // Start new RM, should recover updated tracking url
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getOriginalTrackingUrl());
+    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+        app1.getApplicationId()).getCurrentAppAttempt()
+        .getOriginalTrackingUrl());
+
+    rm.stop();
+    rm2.stop();
+  }
+
   private Credentials getCreds() throws IOException {
     Credentials ts = new Credentials();
     DataOutputBuffer dob = new DataOutputBuffer();

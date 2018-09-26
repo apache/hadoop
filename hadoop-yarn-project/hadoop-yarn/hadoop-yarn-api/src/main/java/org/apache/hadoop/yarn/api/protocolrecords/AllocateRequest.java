@@ -100,7 +100,21 @@ public abstract class AllocateRequest {
     allocateRequest.setIncreaseRequests(increaseRequests);
     return allocateRequest;
   }
-  
+
+  @Public
+  @Unstable
+  public static AllocateRequest newInstance(int responseID, float appProgress,
+      List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased,
+      ResourceBlacklistRequest resourceBlacklistRequest,
+      String trackingUrl) {
+    return AllocateRequest.newBuilder().responseId(responseID)
+        .progress(appProgress).askList(resourceAsk)
+        .releaseList(containersToBeReleased)
+        .resourceBlacklistRequest(resourceBlacklistRequest)
+        .trackingUrl(trackingUrl).build();
+  }
+
   @Public
   @Unstable
   public static AllocateRequest newInstance(int responseID, float appProgress,
@@ -256,6 +270,22 @@ public abstract class AllocateRequest {
   public abstract void setUpdateRequests(
       List<UpdateContainerRequest> updateRequests);
 
+  /**
+   * Get the tracking url update for this heartbeat.
+   * @return tracking url to update this application with
+   */
+  @Public
+  @Unstable
+  public abstract String getTrackingUrl();
+
+  /**
+   * Set the new tracking url for this application.
+   * @param trackingUrl the new tracking url
+   */
+  @Public
+  @Unstable
+  public abstract void setTrackingUrl(String trackingUrl);
+
   @Public
   @Unstable
   public static AllocateRequestBuilder newBuilder() {
@@ -354,6 +384,19 @@ public abstract class AllocateRequest {
     public AllocateRequestBuilder updateRequests(
         List<UpdateContainerRequest> updateRequests) {
       allocateRequest.setUpdateRequests(updateRequests);
+      return this;
+    }
+
+    /**
+     * Set the <code>trackingUrl</code> of the request.
+     * @see AllocateRequest#setTrackingUrl(String)
+     * @param trackingUrl new tracking url
+     * @return {@link AllocateRequestBuilder}
+     */
+    @Public
+    @Unstable
+    public AllocateRequestBuilder trackingUrl(String trackingUrl) {
+      allocateRequest.setTrackingUrl(trackingUrl);
       return this;
     }
 
