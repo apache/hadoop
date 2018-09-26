@@ -204,11 +204,9 @@ public class SCMChillModeManager implements
           }
         }
       });
-      if(inChillMode.get()) {
-        LOG.info("SCM in chill mode. {} % containers have at least one"
-                + " reported replica.",
-            (containerWithMinReplicas.get() / maxContainer) * 100);
-      }
+
+      LOG.info("SCM in chill mode. {} % containers have at least one reported "
+          + "replica.", (containerWithMinReplicas.get() / maxContainer) * 100);
     }
 
     @Override

@@ -21,14 +21,6 @@ package org.apache.hadoop.ozone.protocolPB;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -225,29 +217,5 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       throw new ServiceException(ex);
     }
 
-  }
-
-  @Override
-  public InChillModeResponseProto inChillMode(
-      RpcController controller,
-      InChillModeRequestProto request) throws ServiceException {
-    try {
-      return InChillModeResponseProto.newBuilder()
-          .setInChillMode(impl.inChillMode()).build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
-  }
-
-  @Override
-  public ForceExitChillModeResponseProto forceExitChillMode(
-      RpcController controller, ForceExitChillModeRequestProto request)
-      throws ServiceException {
-    try {
-      return ForceExitChillModeResponseProto.newBuilder()
-          .setExitedChillMode(impl.forceExitChillMode()).build();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
   }
 }
