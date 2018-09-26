@@ -120,29 +120,6 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     return pipeline;
   }
 
-  @Override
-  public ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request) throws IOException {
-    try {
-      return sendCommandAsync(request).get();
-    } catch (ExecutionException | InterruptedException e) {
-      /**
-       * In case the grpc channel handler throws an exception,
-       * the exception thrown will be wrapped within {@link ExecutionException}.
-       * Unwarpping here so that original exception gets passed
-       * to to the client.
-       */
-      if (e instanceof ExecutionException) {
-        Throwable cause = e.getCause();
-        if (cause instanceof IOException) {
-          throw (IOException) cause;
-        }
-      }
-      throw new IOException(
-          "Unexpected exception during execution:" + e.getMessage());
-    }
-  }
-
   /**
    * Sends a given command to server gets a waitable future back.
    *
