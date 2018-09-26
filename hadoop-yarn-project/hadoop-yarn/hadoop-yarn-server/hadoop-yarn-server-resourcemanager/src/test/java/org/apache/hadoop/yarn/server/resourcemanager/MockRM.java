@@ -700,13 +700,23 @@ public class MockRM extends ResourceManager {
 
   public RMApp submitApp(List<ResourceRequest> amResourceRequests)
       throws Exception {
-    return submitApp(amResourceRequests, "app1",
-        "user", null, false, null,
+    return submitApp(amResourceRequests, "app1", "user", null, false, null,
         super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
         false, false, null, 0, null, true,
         amResourceRequests.get(0).getPriority(),
-        amResourceRequests.get(0).getNodeLabelExpression(), null, null);
+        amResourceRequests.get(0).getNodeLabelExpression(), null, null, null);
+  }
+
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests,
+      String appNodeLabel) throws Exception {
+    return submitApp(amResourceRequests, "app1", "user", null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, false, null, 0, null, true,
+        amResourceRequests.get(0).getPriority(),
+        amResourceRequests.get(0).getNodeLabelExpression(), null, null,
+        appNodeLabel);
   }
 
   public RMApp submitApp(Resource capability, String name, String user,
@@ -730,7 +740,7 @@ public class MockRM extends ResourceManager {
         keepContainers, isAppIdProvided, applicationId,
         attemptFailuresValidityInterval, logAggregationContext,
         cancelTokensWhenComplete, priority, amLabel, applicationTimeouts,
-        tokensConf);
+        tokensConf, null);
   }
 
   public RMApp submitApp(List<ResourceRequest> amResourceRequests, String name,
@@ -741,8 +751,7 @@ public class MockRM extends ResourceManager {
       LogAggregationContext logAggregationContext,
       boolean cancelTokensWhenComplete, Priority priority, String amLabel,
       Map<ApplicationTimeoutType, Long> applicationTimeouts,
-      ByteBuffer tokensConf)
-      throws Exception {
+      ByteBuffer tokensConf, String appNodeLabel) throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
     if (! isAppIdProvided) {
@@ -769,6 +778,9 @@ public class MockRM extends ResourceManager {
     }
     if (priority != null) {
       sub.setPriority(priority);
+    }
+    if (appNodeLabel != null) {
+      sub.setNodeLabelExpression(appNodeLabel);
     }
     sub.setApplicationType(appType);
     ContainerLaunchContext clc = Records
