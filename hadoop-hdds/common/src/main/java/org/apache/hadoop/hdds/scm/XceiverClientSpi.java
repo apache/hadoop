@@ -95,14 +95,8 @@ public abstract class XceiverClientSpi implements Closeable {
    * @return Response to the command
    * @throws IOException
    */
-  public ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request) throws IOException {
-    try {
-      return sendCommandAsync(request).get();
-    } catch (ExecutionException | InterruptedException e) {
-      throw new IOException("Failed to command " + request, e);
-    }
-  }
+  public abstract ContainerCommandResponseProto sendCommand(
+      ContainerCommandRequestProto request) throws IOException;
 
   /**
    * Sends a given command to server gets a waitable future back.
