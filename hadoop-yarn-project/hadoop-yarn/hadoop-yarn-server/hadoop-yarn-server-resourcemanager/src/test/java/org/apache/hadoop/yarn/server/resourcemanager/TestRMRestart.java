@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -88,6 +89,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -457,6 +459,49 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @Test(timeout = 60000)
+  public void testAppReportNodeLabelRMRestart() throws Exception {
+    if (getSchedulerType() != SchedulerType.CAPACITY) {
+      return;
+    }
+    // Create RM
+    YarnConfiguration newConf = new YarnConfiguration(conf);
+    newConf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    MockRM rm1 = createMockRM(newConf);
+    NodeLabel amLabel = NodeLabel.newInstance("AMLABEL");
+    NodeLabel appLabel = NodeLabel.newInstance("APPLABEL");
+    List<NodeLabel> labels = new ArrayList<>();
+    labels.add(amLabel);
+    labels.add(appLabel);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
+    rm1.start();
+    // Add label
+    rm1.getAdminService().addToClusterNodeLabels(
+        AddToClusterNodeLabelsRequest.newInstance(labels));
+    // create app and launch the AM
+    ResourceRequest amResourceRequest = ResourceRequest
+        .newInstance(Priority.newInstance(0), ResourceRequest.ANY,
+            Resource.newInstance(200, 1), 1, true, amLabel.getName());
+    ArrayList resReqs = new ArrayList<>();
+    resReqs.add(amResourceRequest);
+    RMApp app0 = rm1.submitApp(resReqs, appLabel.getName());
+    rm1.killApp(app0.getApplicationId());
+    rm1.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+    // start new RM
+    MockRM rm2 = createMockRM(conf, memStore);
+    rm2.start();
+    Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+    ApplicationReport appReport = rm2.getClientRMService().getApplicationReport(
+        GetApplicationReportRequest.newInstance(app0.getApplicationId()))
+        .getApplicationReport();
+    Assert
+        .assertEquals(amLabel.getName(), appReport.getAmNodeLabelExpression());
+    Assert.assertEquals(appLabel.getName(),
+        appReport.getAppNodeLabelExpression());
+    rm1.stop();
+    rm2.stop();
+  }
+
+  @Test(timeout = 60000)
   public void testUnManagedRMRestart() throws Exception {
     // Create RM
     MockRM rm1 = createMockRM(conf);
@@ -471,6 +516,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockRM rm2 = createMockRM(conf, memStore);
     rm2.start();
     Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+    ApplicationReport appReport = rm2.getClientRMService().getApplicationReport(
+        GetApplicationReportRequest.newInstance(app0.getApplicationId()))
+        .getApplicationReport();
+    Assert.assertEquals(true, appReport.isUnmanagedApp());
     rm1.stop();
     rm2.stop();
   }
