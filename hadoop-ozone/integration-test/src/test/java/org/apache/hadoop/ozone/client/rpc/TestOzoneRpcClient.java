@@ -701,29 +701,26 @@ public class TestOzoneRpcClient {
       store.createVolume(
           volBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
     }
-    Iterator<? extends OzoneVolume> volIterator = store.listVolumes(volBase);
+    Iterator<OzoneVolume> volIterator = store.listVolumes(volBase);
     int totalVolumeCount = 0;
     while(volIterator.hasNext()) {
       volIterator.next();
       totalVolumeCount++;
     }
     Assert.assertEquals(20, totalVolumeCount);
-    Iterator<? extends OzoneVolume> volAIterator = store.listVolumes(
-        volBaseNameA);
+    Iterator<OzoneVolume> volAIterator = store.listVolumes(volBaseNameA);
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volAIterator.next().getName()
           .startsWith(volBaseNameA + i + "-"));
     }
     Assert.assertFalse(volAIterator.hasNext());
-    Iterator<? extends OzoneVolume> volBIterator = store.listVolumes(
-        volBaseNameB);
+    Iterator<OzoneVolume> volBIterator = store.listVolumes(volBaseNameB);
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volBIterator.next().getName()
           .startsWith(volBaseNameB + i + "-"));
     }
     Assert.assertFalse(volBIterator.hasNext());
-    Iterator<? extends OzoneVolume> iter = store.listVolumes(volBaseNameA +
-        "1-");
+    Iterator<OzoneVolume> iter = store.listVolumes(volBaseNameA + "1-");
     Assert.assertTrue(iter.next().getName().startsWith(volBaseNameA + "1-"));
     Assert.assertFalse(iter.hasNext());
   }
@@ -754,7 +751,7 @@ public class TestOzoneRpcClient {
       volB.createBucket(
           bucketBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
     }
-    Iterator<? extends OzoneBucket> volABucketIter =
+    Iterator<OzoneBucket> volABucketIter =
         volA.listBuckets("bucket-");
     int volABucketCount = 0;
     while(volABucketIter.hasNext()) {
@@ -762,7 +759,7 @@ public class TestOzoneRpcClient {
       volABucketCount++;
     }
     Assert.assertEquals(20, volABucketCount);
-    Iterator<? extends OzoneBucket> volBBucketIter =
+    Iterator<OzoneBucket> volBBucketIter =
         volA.listBuckets("bucket-");
     int volBBucketCount = 0;
     while(volBBucketIter.hasNext()) {
@@ -771,7 +768,7 @@ public class TestOzoneRpcClient {
     }
     Assert.assertEquals(20, volBBucketCount);
 
-    Iterator<? extends OzoneBucket> volABucketAIter =
+    Iterator<OzoneBucket> volABucketAIter =
         volA.listBuckets("bucket-a-");
     int volABucketACount = 0;
     while(volABucketAIter.hasNext()) {
@@ -779,7 +776,7 @@ public class TestOzoneRpcClient {
       volABucketACount++;
     }
     Assert.assertEquals(10, volABucketACount);
-    Iterator<? extends OzoneBucket> volBBucketBIter =
+    Iterator<OzoneBucket> volBBucketBIter =
         volA.listBuckets("bucket-b-");
     int volBBucketBCount = 0;
     while(volBBucketBIter.hasNext()) {
@@ -787,15 +784,13 @@ public class TestOzoneRpcClient {
       volBBucketBCount++;
     }
     Assert.assertEquals(10, volBBucketBCount);
-    Iterator<? extends OzoneBucket> volABucketBIter = volA.listBuckets(
-        "bucket-b-");
+    Iterator<OzoneBucket> volABucketBIter = volA.listBuckets("bucket-b-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketBIter.next().getName()
           .startsWith(bucketBaseNameB + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
-    Iterator<? extends OzoneBucket> volBBucketAIter = volB.listBuckets(
-        "bucket-a-");
+    Iterator<OzoneBucket> volBBucketAIter = volB.listBuckets("bucket-a-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volBBucketAIter.next().getName()
           .startsWith(bucketBaseNameA + i + "-"));
@@ -810,7 +805,7 @@ public class TestOzoneRpcClient {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);
     store.createVolume(volume);
     OzoneVolume vol = store.getVolume(volume);
-    Iterator<? extends OzoneBucket> buckets = vol.listBuckets("");
+    Iterator<OzoneBucket> buckets = vol.listBuckets("");
     while(buckets.hasNext()) {
       Assert.fail();
     }
@@ -894,7 +889,7 @@ public class TestOzoneRpcClient {
       four.write(value);
       four.close();
     }
-    Iterator<? extends OzoneKey> volABucketAIter =
+    Iterator<OzoneKey> volABucketAIter =
         volAbucketA.listKeys("key-");
     int volABucketAKeyCount = 0;
     while(volABucketAIter.hasNext()) {
@@ -902,7 +897,7 @@ public class TestOzoneRpcClient {
       volABucketAKeyCount++;
     }
     Assert.assertEquals(20, volABucketAKeyCount);
-    Iterator<? extends OzoneKey> volABucketBIter =
+    Iterator<OzoneKey> volABucketBIter =
         volAbucketB.listKeys("key-");
     int volABucketBKeyCount = 0;
     while(volABucketBIter.hasNext()) {
@@ -910,7 +905,7 @@ public class TestOzoneRpcClient {
       volABucketBKeyCount++;
     }
     Assert.assertEquals(20, volABucketBKeyCount);
-    Iterator<? extends OzoneKey> volBBucketAIter =
+    Iterator<OzoneKey> volBBucketAIter =
         volBbucketA.listKeys("key-");
     int volBBucketAKeyCount = 0;
     while(volBBucketAIter.hasNext()) {
@@ -918,7 +913,7 @@ public class TestOzoneRpcClient {
       volBBucketAKeyCount++;
     }
     Assert.assertEquals(20, volBBucketAKeyCount);
-    Iterator<? extends OzoneKey> volBBucketBIter =
+    Iterator<OzoneKey> volBBucketBIter =
         volBbucketB.listKeys("key-");
     int volBBucketBKeyCount = 0;
     while(volBBucketBIter.hasNext()) {
@@ -926,7 +921,7 @@ public class TestOzoneRpcClient {
       volBBucketBKeyCount++;
     }
     Assert.assertEquals(20, volBBucketBKeyCount);
-    Iterator<? extends OzoneKey> volABucketAKeyAIter =
+    Iterator<OzoneKey> volABucketAKeyAIter =
         volAbucketA.listKeys("key-a-");
     int volABucketAKeyACount = 0;
     while(volABucketAKeyAIter.hasNext()) {
@@ -934,7 +929,7 @@ public class TestOzoneRpcClient {
       volABucketAKeyACount++;
     }
     Assert.assertEquals(10, volABucketAKeyACount);
-    Iterator<? extends OzoneKey> volABucketAKeyBIter =
+    Iterator<OzoneKey> volABucketAKeyBIter =
         volAbucketA.listKeys("key-b-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketAKeyBIter.next().getName()
@@ -952,7 +947,7 @@ public class TestOzoneRpcClient {
     OzoneVolume vol = store.getVolume(volume);
     vol.createBucket(bucket);
     OzoneBucket buc = vol.getBucket(bucket);
-    Iterator<? extends OzoneKey> keys = buc.listKeys("");
+    Iterator<OzoneKey> keys = buc.listKeys("");
     while(keys.hasNext()) {
       Assert.fail();
     }

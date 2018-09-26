@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -55,11 +54,6 @@ public class ObjectStore {
   public ObjectStore(Configuration conf, ClientProtocol proxy) {
     this.proxy = proxy;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
-  }
-
-  @VisibleForTesting
-  protected ObjectStore() {
-    proxy = null;
   }
 
   /**
@@ -102,7 +96,7 @@ public class ObjectStore {
    * @param volumePrefix Volume prefix to match
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<? extends OzoneVolume> listVolumes(String volumePrefix)
+  public Iterator<OzoneVolume> listVolumes(String volumePrefix)
       throws IOException {
     return listVolumes(volumePrefix, null);
   }
@@ -117,7 +111,7 @@ public class ObjectStore {
    * @param prevVolume Volumes will be listed after this volume name
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<? extends OzoneVolume> listVolumes(String volumePrefix,
+  public Iterator<OzoneVolume> listVolumes(String volumePrefix,
       String prevVolume) throws IOException {
     return new VolumeIterator(null, volumePrefix, prevVolume);
   }
@@ -133,7 +127,7 @@ public class ObjectStore {
    * @param prevVolume Volumes will be listed after this volume name
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<? extends OzoneVolume> listVolumesByUser(String user,
+  public Iterator<OzoneVolume> listVolumesByUser(String user,
       String volumePrefix, String prevVolume)
       throws IOException {
     if(Strings.isNullOrEmpty(user)) {

@@ -51,8 +51,6 @@ services:
       image: apache/hadoop-runner
       volumes:
          - ../..:/opt/hadoop
-      ports:
-         - 9878:9878
       env_file:
           - ./docker-config
       command: ["ozone","s3g"]

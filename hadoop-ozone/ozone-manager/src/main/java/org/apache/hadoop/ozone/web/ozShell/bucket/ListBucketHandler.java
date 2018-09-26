@@ -88,8 +88,7 @@ public class ListBucketHandler extends Handler {
 
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
-    Iterator<? extends OzoneBucket> bucketIterator =
-        vol.listBuckets(prefix, startBucket);
+    Iterator<OzoneBucket> bucketIterator = vol.listBuckets(prefix, startBucket);
     List<BucketInfo> bucketList = new ArrayList<>();
     while (maxBuckets > 0 && bucketIterator.hasNext()) {
       BucketInfo bucketInfo =
