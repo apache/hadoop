@@ -85,7 +85,7 @@ container ID.
 ## The binding problem
 Hadoop YARN allows applications to run on the Hadoop cluster. Some of these are
 batch jobs or queries that can managed via YARN’s existing API using its
-application ID. In addition YARN can deploy ong-lived services instances such a
+application ID. In addition YARN can deploy long-lived services instances such a
 pool of Apache Tomcat web servers or an Apache HBase cluster. YARN will deploy
 them across the cluster depending on the individual each component requirements
 and server availability. These service instances need to be discovered by
