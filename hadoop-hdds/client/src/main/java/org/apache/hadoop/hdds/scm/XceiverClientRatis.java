@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.ratis.retry.RetryPolicy;
@@ -52,7 +51,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -183,38 +181,13 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return Objects.requireNonNull(client.get(), "client is null");
   }
 
-  private RaftClientReply sendRequest(ContainerCommandRequestProto request)
-      throws IOException {
-    boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
-    ByteString byteString = request.toByteString();
-    LOG.debug("sendCommand {} {}", isReadOnlyRequest, request);
-    final RaftClientReply reply =  isReadOnlyRequest ?
-        getClient().sendReadOnly(() -> byteString) :
-        getClient().send(() -> byteString);
-    LOG.debug("reply {} {}", isReadOnlyRequest, reply);
-    return reply;
-  }
-
   private CompletableFuture<RaftClientReply> sendRequestAsync(
-      ContainerCommandRequestProto request) throws IOException {
+      ContainerCommandRequestProto request) {
     boolean isReadOnlyRequest = HddsUtils.isReadOnly(request);
     ByteString byteString = request.toByteString();
     LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
     return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
         getClient().sendAsync(() -> byteString);
-  }
-
-  @Override
-  public ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request) throws IOException {
-    final RaftClientReply reply = sendRequest(request);
-    if (reply == null) {
-      throw new IOException(
-          String.format("Could not execute the request %s", request));
-    }
-    Preconditions.checkState(reply.isSuccess());
-    return ContainerCommandResponseProto.parseFrom(
-        reply.getMessage().getContent());
   }
 
   /**
@@ -226,8 +199,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    */
   @Override
   public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
-      ContainerCommandRequestProto request)
-      throws IOException, ExecutionException, InterruptedException {
+      ContainerCommandRequestProto request) {
     return sendRequestAsync(request).whenComplete((reply, e) ->
           LOG.debug("received reply {} for request: {} exception: {}", request,
               reply, e))
