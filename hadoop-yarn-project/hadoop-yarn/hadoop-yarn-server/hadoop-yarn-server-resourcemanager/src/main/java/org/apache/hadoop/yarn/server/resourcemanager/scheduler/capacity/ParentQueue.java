@@ -776,7 +776,6 @@ public class ParentQueue extends AbstractCSQueue {
       SchedulingMode schedulingMode) {
     CSAssignment assignment = CSAssignment.NULL_ASSIGNMENT;
 
-    Resource parentLimits = limits.getLimit();
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
@@ -790,7 +789,7 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, cluster, parentLimits,
+          getResourceLimitsOfChild(childQueue, cluster, limits.getNetLimit(),
               candidates.getPartition());
 
       CSAssignment childAssignment = childQueue.assignContainers(cluster,
@@ -812,16 +811,21 @@ public class ParentQueue extends AbstractCSQueue {
             CSAssignment.SkippedType.QUEUE_LIMIT) {
           assignment = childAssignment;
         }
+        Resource blockedHeadroom = null;
+        if (childQueue instanceof LeafQueue) {
+          blockedHeadroom = childLimits.getHeadroom();
+        } else {
+          blockedHeadroom = childLimits.getBlockedHeadroom();
+        }
         Resource resourceToSubtract = Resources.max(resourceCalculator,
-            cluster, childLimits.getHeadroom(), Resources.none());
+            cluster, blockedHeadroom, Resources.none());
+        limits.addBlockedHeadroom(resourceToSubtract);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Decrease parentLimits " + parentLimits +
+          LOG.debug("Decrease parentLimits " + limits.getLimit() +
               " for " + this.getQueueName() + " by " +
               resourceToSubtract + " as childQueue=" +
               childQueue.getQueueName() + " is blocked");
         }
-        parentLimits = Resources.subtract(parentLimits,
-            resourceToSubtract);
       }
     }
 
