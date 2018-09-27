@@ -307,4 +307,13 @@ public class ReplicationNodeManagerMock implements NodeManager {
                         EventPublisher publisher) {
     // do nothing.
   }
+
+  /**
+   * Empty implementation for processDeadNode.
+   * @param dnUuid
+   */
+  @Override
+  public void processDeadNode(UUID dnUuid) {
+    // do nothing.
+  }
 }

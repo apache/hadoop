@@ -422,6 +422,21 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
+   * Remove the node stats and update the storage stats
+   * in this Node Manager.
+   *
+   * @param dnUuid UUID of the datanode.
+   */
+  @Override
+  public void processDeadNode(UUID dnUuid) {
+    SCMNodeStat stat = this.nodeMetricMap.get(dnUuid);
+    if (stat != null) {
+      aggregateStat.subtract(stat);
+      stat.set(0, 0, 0);
+    }
+  }
+
+  /**
    * A class to declare some values for the nodes so that our tests
    * won't fail.
    */
