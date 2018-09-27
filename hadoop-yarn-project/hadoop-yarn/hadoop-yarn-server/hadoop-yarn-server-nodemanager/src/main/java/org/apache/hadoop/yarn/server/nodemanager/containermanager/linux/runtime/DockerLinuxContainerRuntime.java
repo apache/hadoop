@@ -235,6 +235,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private Context nmContext;
   private DockerClient dockerClient;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private String defaultImageName;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
   private CGroupsHandler cGroupsHandler;
@@ -254,17 +255,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
    * called {@code YARN_CONTAINER_RUNTIME_TYPE} whose value is {@code docker},
    * this method will return true.  Otherwise it will return false.
    *
+   * @param daemonConf the NodeManager daemon configuration
    * @param env the environment variable settings for the operation
    * @return whether a Docker container is requested
    */
-  public static boolean isDockerContainerRequested(
+  public static boolean isDockerContainerRequested(Configuration daemonConf,
       Map<String, String> env) {
-    if (env == null) {
-      return false;
+    String type = (env == null)
+        ? null : env.get(ContainerRuntimeConstants.ENV_CONTAINER_TYPE);
+    if (type == null) {
+      type = daemonConf.get(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE);
     }
-
-    String type = env.get(ContainerRuntimeConstants.ENV_CONTAINER_TYPE);
-
     return type != null && type.equals("docker");
   }
 
@@ -312,6 +313,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     defaultROMounts.clear();
     defaultRWMounts.clear();
     defaultTmpfsMounts.clear();
+    defaultImageName = conf.getTrimmed(
+        YarnConfiguration.NM_DOCKER_IMAGE_NAME, "");
     allowedNetworks.addAll(Arrays.asList(
         conf.getTrimmedStrings(
             YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_NETWORKS,
@@ -325,8 +328,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           + " is not in the set of allowed networks: " + allowedNetworks;
 
       if (LOG.isWarnEnabled()) {
-        LOG.warn(message + ". Please check "
-            + "configuration");
+        LOG.warn(message + ". Please check configuration");
       }
 
       throw new ContainerExecutionException(message);
@@ -369,7 +371,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
   @Override
   public boolean isRuntimeRequested(Map<String, String> env) {
-    return isDockerContainerRequested(env);
+    return isDockerContainerRequested(conf, env);
   }
 
   private Set<String> getDockerCapabilitiesFromConf() throws
@@ -789,6 +791,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
     boolean useEntryPoint = checkUseEntryPoint(environment);
 
+    if (imageName == null || imageName.isEmpty()) {
+      imageName = defaultImageName;
+    }
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
     }

@@ -1882,8 +1882,16 @@ public class YarnConfiguration extends Configuration {
   public static final String[] DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES
       = {"default"};
 
+  /** Default runtime to be used. */
+  public static final String LINUX_CONTAINER_RUNTIME_TYPE =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "type";
+
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
+
+  /** Default docker image to be used. */
+  public static final String NM_DOCKER_IMAGE_NAME =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "image-name";
 
   /** Capabilities allowed (and added by default) for docker containers. **/
   public static final String NM_DOCKER_CONTAINER_CAPABILITIES =

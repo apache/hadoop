@@ -309,11 +309,45 @@ public class TestDockerContainerRuntime {
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
     Assert.assertEquals(false, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(null));
+        .isDockerContainerRequested(conf, null));
     Assert.assertEquals(true, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(envDockerType));
+        .isDockerContainerRequested(conf, envDockerType));
     Assert.assertEquals(false, DockerLinuxContainerRuntime
-        .isDockerContainerRequested(envOtherType));
+        .isDockerContainerRequested(conf, envOtherType));
+  }
+
+  @Test
+  public void testSelectDockerContainerTypeWithDockerAsDefault() {
+    Map<String, String> envDockerType = new HashMap<>();
+    Map<String, String> envOtherType = new HashMap<>();
+
+    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE, "docker");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
+
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, null));
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envDockerType));
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envOtherType));
+  }
+
+  @Test
+  public void testSelectDockerContainerTypeWithDefaultSet() {
+    Map<String, String> envDockerType = new HashMap<>();
+    Map<String, String> envOtherType = new HashMap<>();
+
+    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE, "default");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
+
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, null));
+    Assert.assertEquals(true, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envDockerType));
+    Assert.assertEquals(false, DockerLinuxContainerRuntime
+        .isDockerContainerRequested(conf, envOtherType));
   }
 
   private PrivilegedOperation capturePrivilegedOperation()
@@ -403,6 +437,57 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  mounts="
+            + "/test_container_log_dir:/test_container_log_dir:rw,"
+            + "/test_application_local_dir:/test_application_local_dir:rw,"
+            + "/test_filecache_dir:/test_filecache_dir:ro,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir:ro",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  name=container_e11_1518975676334_14532816_01_000001",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
+  public void testDockerContainerLaunchWithDefaultImage()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.set(YarnConfiguration.NM_DOCKER_IMAGE_NAME, "busybox:1.2.3");
+    env.remove(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, nmContext);
+    runtime.launchContainer(builder.build());
+
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(Paths.get(
+        dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 13;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert
+        .assertEquals("  image=busybox:1.2.3", dockerCommands.get(counter++));
     Assert.assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
         dockerCommands.get(counter++));

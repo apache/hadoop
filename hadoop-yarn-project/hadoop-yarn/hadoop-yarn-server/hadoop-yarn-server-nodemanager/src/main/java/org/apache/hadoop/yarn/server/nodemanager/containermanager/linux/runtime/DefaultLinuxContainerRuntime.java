@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -71,7 +72,10 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public boolean isRuntimeRequested(Map<String, String> env) {
     String type = env.get(ContainerRuntimeConstants.ENV_CONTAINER_TYPE);
-    return type == null || type.equals("default");
+    if (type == null) {
+      type = conf.get(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE);
+    }
+    return type == null || type.isEmpty() || type.equals("default");
   }
 
   @Override

@@ -115,6 +115,23 @@ The following properties should be set in yarn-site.xml:
   </property>
 
   <property>
+    <name>yarn.nodemanager.runtime.linux.type</name>
+    <value></value>
+    <description>
+      Optional. Sets the default container runtime to use.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.image-name</name>
+    <value></value>
+    <description>
+      Optional. Default docker image to be used when the docker runtime is
+      selected.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
     <value>host,none,bridge</value>
     <description>

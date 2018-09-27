@@ -799,6 +799,7 @@ public class ContainerLaunch implements Callable<Integer> {
         }
         // The Docker container may not have fully started, reap the container.
         if (DockerLinuxContainerRuntime.isDockerContainerRequested(
+            conf,
             container.getLaunchContext().getEnvironment())) {
           reapDockerContainerNoPid(user);
         }
