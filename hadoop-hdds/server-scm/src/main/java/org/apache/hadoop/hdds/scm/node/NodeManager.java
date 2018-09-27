@@ -147,4 +147,11 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param nodeReport
    */
   void processNodeReport(UUID dnUuid, NodeReportProto nodeReport);
+
+  /**
+   * Process a dead node event in this Node Manager.
+   *
+   * @param dnUuid datanode uuid.
+   */
+  void processDeadNode(UUID dnUuid);
 }

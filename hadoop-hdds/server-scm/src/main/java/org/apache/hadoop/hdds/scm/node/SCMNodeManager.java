@@ -490,4 +490,20 @@ public class SCMNodeManager
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
   }
+
+  /**
+   * Remove the node stats and update the storage stats
+   * in this SCM Node Manager.
+   *
+   * @param dnUuid datanode uuid.
+   */
+  @Override
+  public void processDeadNode(UUID dnUuid) {
+    SCMNodeStat stat = nodeStats.get(dnUuid);
+    LOG.trace("Update stat values as Datanode {} is dead.", dnUuid);
+    if (stat != null) {
+      scmStat.subtract(stat);
+      stat.set(0, 0, 0);
+    }
+  }
 }

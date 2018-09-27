@@ -42,19 +42,24 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
 
   private final ContainerStateManager containerStateManager;
 
+  private final NodeManager nodeManager;
+
   private static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeHandler.class);
 
   public DeadNodeHandler(
       Node2ContainerMap node2ContainerMap,
-      ContainerStateManager containerStateManager) {
+      ContainerStateManager containerStateManager, NodeManager nodeManager) {
     this.node2ContainerMap = node2ContainerMap;
     this.containerStateManager = containerStateManager;
+    this.nodeManager = nodeManager;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
       EventPublisher publisher) {
+    nodeManager.processDeadNode(datanodeDetails.getUuid());
+
     Set<ContainerID> containers =
         node2ContainerMap.getContainers(datanodeDetails.getUuid());
     if (containers == null) {
