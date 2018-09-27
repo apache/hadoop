@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationAttemptEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
@@ -54,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.UserEntity;
+import org.apache.hadoop.yarn.server.timelineservice.metrics.PerNodeAggTimelineCollectorMetrics;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
@@ -78,6 +80,8 @@ public class TimelineCollectorWebService {
       LoggerFactory.getLogger(TimelineCollectorWebService.class);
 
   private @Context ServletContext context;
+  private static final PerNodeAggTimelineCollectorMetrics METRICS =
+      PerNodeAggTimelineCollectorMetrics.getInstance();
 
   /**
    * Gives information about timeline collector.
@@ -152,12 +156,15 @@ public class TimelineCollectorWebService {
       TimelineEntities entities) {
     init(res);
     UserGroupInformation callerUgi = getUser(req);
+    boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
     if (callerUgi == null) {
       String msg = "The owner of the posted timeline entities is not set";
       LOG.error(msg);
       throw new ForbiddenException(msg);
     }
 
+    long startTime = Time.monotonicNow();
+    boolean succeeded = false;
     try {
       ApplicationId appID = parseApplicationId(appId);
       if (appID == null) {
@@ -172,7 +179,6 @@ public class TimelineCollectorWebService {
         throw new NotFoundException("Application: "+ appId + " is not found");
       }
 
-      boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
       if (isAsync) {
         collector.putEntitiesAsync(processTimelineEntities(entities, appId,
             Boolean.valueOf(isSubAppEntities)), callerUgi);
@@ -181,6 +187,7 @@ public class TimelineCollectorWebService {
             Boolean.valueOf(isSubAppEntities)), callerUgi);
       }
 
+      succeeded = true;
       return Response.ok().build();
     } catch (NotFoundException | ForbiddenException e) {
       throw new WebApplicationException(e,
@@ -189,6 +196,13 @@ public class TimelineCollectorWebService {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
+    } finally {
+      long latency = Time.monotonicNow() - startTime;
+      if (isAsync) {
+        METRICS.addAsyncPutEntitiesLatency(latency, succeeded);
+      } else {
+        METRICS.addPutEntitiesLatency(latency, succeeded);
+      }
     }
   }
 
