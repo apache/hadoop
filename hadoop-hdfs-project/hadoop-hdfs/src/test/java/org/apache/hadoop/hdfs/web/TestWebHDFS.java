@@ -81,7 +81,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -1405,11 +1404,8 @@ public class TestWebHDFS {
           conf, WebHdfsConstants.WEBHDFS_SCHEME);
 
       // test getAllStoragePolicies
-      BlockStoragePolicy[] dfsPolicies = (BlockStoragePolicy[]) dfs
-          .getAllStoragePolicies().toArray();
-      BlockStoragePolicy[] webHdfsPolicies = (BlockStoragePolicy[]) webHdfs
-          .getAllStoragePolicies().toArray();
-      Assert.assertTrue(Arrays.equals(dfsPolicies, webHdfsPolicies));
+      Assert.assertTrue(Arrays.equals(dfs.getAllStoragePolicies().toArray(),
+          webHdfs.getAllStoragePolicies().toArray()));
 
       // test get/set/unset policies
       DFSTestUtil.createFile(dfs, path, 0, (short) 1, 0L);
