@@ -115,15 +115,20 @@ public class YarnServiceUtils {
   private static String getComponentArrayJson(String componentName, int count,
       String endpointSuffix) {
     String component = "\\\"" + componentName + "\\\":";
-    String array = "[";
+    StringBuilder array = new StringBuilder();
+    array.append("[");
     for (int i = 0; i < count; i++) {
-      array = array + "\\\"" + componentName + "-" + i
-          + endpointSuffix + "\\\"";
+      array.append("\\\"");
+      array.append(componentName);
+      array.append("-");
+      array.append(i);
+      array.append(endpointSuffix);
+      array.append("\\\"");
       if (i != count - 1) {
-        array = array + ",";
+        array.append(",");
       }
     }
-    array = array + "]";
-    return component + array;
+    array.append("]");
+    return component + array.toString();
   }
 }
