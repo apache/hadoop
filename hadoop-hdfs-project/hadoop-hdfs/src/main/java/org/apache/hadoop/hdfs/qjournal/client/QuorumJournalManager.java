@@ -54,6 +54,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.log.LogThrottlingHelper;
+import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -104,6 +106,11 @@ public class QuorumJournalManager implements JournalManager {
 
   private int outputBufferCapacity = 512 * 1024;
   private final URLConnectionFactory connectionFactory;
+
+  /** Limit logging about input stream selection to every 5 seconds max. */
+  private static final long SELECT_INPUT_STREAM_LOG_INTERVAL_MS = 5000;
+  private final LogThrottlingHelper selectInputStreamLogHelper =
+      new LogThrottlingHelper(SELECT_INPUT_STREAM_LOG_INTERVAL_MS);
 
   @VisibleForTesting
   public QuorumJournalManager(Configuration conf,
@@ -568,8 +575,12 @@ public class QuorumJournalManager implements JournalManager {
           "ID " + fromTxnId);
       return;
     }
-    LOG.info("Selected loggers with >= " + maxAllowedTxns +
-        " transactions starting from " + fromTxnId);
+    LogAction logAction = selectInputStreamLogHelper.record(fromTxnId);
+    if (logAction.shouldLog()) {
+      LOG.info("Selected loggers with >= " + maxAllowedTxns + " transactions " +
+          "starting from lowest txn ID " + logAction.getStats(0).getMin() +
+          LogThrottlingHelper.getLogSupressionMessage(logAction));
+    }
     PriorityQueue<EditLogInputStream> allStreams = new PriorityQueue<>(
         JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (GetJournaledEditsResponseProto resp : responseMap.values()) {
