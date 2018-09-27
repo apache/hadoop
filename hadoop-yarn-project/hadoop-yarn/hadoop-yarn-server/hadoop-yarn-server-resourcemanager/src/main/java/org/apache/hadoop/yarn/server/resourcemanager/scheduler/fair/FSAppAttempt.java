@@ -178,6 +178,17 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
   }
 
+  public void nodePartitionUpdated(RMContainer rmContainer, String oldPartition, String newPartition) {
+    Resource containerResource = rmContainer.getAllocatedResource();
+    this.attemptResourceUsage.decUsed(oldPartition, containerResource);
+    this.attemptResourceUsage.incUsed(newPartition, containerResource);
+
+    if (rmContainer.isAMContainer()) {
+      this.attemptResourceUsage.decAMUsed(oldPartition, containerResource);
+      this.attemptResourceUsage.incAMUsed(newPartition, containerResource);
+    }
+  }
+
   private void unreserveInternal(
       SchedulerRequestKey schedulerKey, FSSchedulerNode node) {
     try {

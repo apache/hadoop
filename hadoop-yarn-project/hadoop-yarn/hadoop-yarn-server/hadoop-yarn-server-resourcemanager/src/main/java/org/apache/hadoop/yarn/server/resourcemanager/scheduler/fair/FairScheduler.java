@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -85,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -201,6 +204,9 @@ public class FairScheduler extends
   final MaxRunningAppsEnforcer maxRunningEnforcer;
 
   private AllocationFileLoaderService allocsLoader;
+
+  private RMNodeLabelsManager labelManager;
+
   @VisibleForTesting
   volatile AllocationConfiguration allocConf;
 
@@ -382,6 +388,16 @@ public class FairScheduler extends
   public RMContainerTokenSecretManager
       getContainerTokenSecretManager() {
     return rmContext.getContainerTokenSecretManager();
+  }
+
+  /** Convenience method for use by other fair scheduler components to get the
+   * node labels manager.
+   *
+   * @return the node labels manager
+   */
+  @VisibleForTesting
+  public RMNodeLabelsManager getLabelsManager() {
+    return labelManager;
   }
 
   public boolean isSizeBasedWeight() {
@@ -769,6 +785,41 @@ public class FairScheduler extends
     }
   }
 
+  /**
+   * Process node labels update on a node.
+   */
+  private synchronized void updateLabelsOnNode(NodeId nodeId,
+      Set<String> newLabels) {
+    FSSchedulerNode node = nodeTracker.getNode(nodeId);
+    if (null == node) {
+      return;
+    }
+
+    // Get new partition, we have only one partition per node
+    String newPartition = Iterables.getFirst(newLabels, RMNodeLabelsManager.NO_LABEL);
+
+    // old partition as well
+    String oldPartition = node.getPartition();
+
+    // Update resources of these containers
+    for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
+      FSAppAttempt application =
+          getApplicationAttempt(rmContainer.getApplicationAttemptId());
+      if (null != application) {
+        application.nodePartitionUpdated(rmContainer, oldPartition,
+            newPartition);
+      } else {
+        LOG.warn("There's something wrong, some RMContainers running on"
+            + " a node, but we cannot find SchedulerApplicationAttempt for it. Node="
+            + node.getNodeID() + " applicationAttemptId="
+            + rmContainer.getApplicationAttemptId());
+      }
+    }
+
+    // Update node labels after we've done this
+    node.updateLabels(newLabels);
+  }
+
   private void addNode(List<NMContainerStatus> containerReports,
       RMNode node) {
     writeLock.lock();
@@ -776,6 +827,9 @@ public class FairScheduler extends
       FSSchedulerNode schedulerNode = new FSSchedulerNode(node,
           usePortForNodeName);
       nodeTracker.addNode(schedulerNode);
+
+      // update this node to node label manager
+      labelManager.activateNode(node.getNodeID(), schedulerNode.getTotalResource());
 
       triggerUpdate();
 
@@ -818,6 +872,9 @@ public class FairScheduler extends
             .createAbnormalContainerStatus(reservedContainer.getContainerId(),
                 SchedulerUtils.LOST_CONTAINER), RMContainerEventType.KILL);
       }
+
+      // update this node to node label manager
+      labelManager.deactivateNode(rmNode.getNodeID());
 
       nodeTracker.removeNode(nodeId);
       Resource clusterResource = getClusterResource();
@@ -1021,6 +1078,9 @@ public class FairScheduler extends
       super.nodeUpdate(nm);
 
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
+      if (fsNode != null) {
+        labelManager.activateNode(nm.getNodeID(), fsNode.getTotalResource());
+      }
       attemptScheduling(fsNode);
 
       long duration = getClock().getTime() - start;
@@ -1239,6 +1299,18 @@ public class FairScheduler extends
       NodeRemovedSchedulerEvent nodeRemovedEvent = (NodeRemovedSchedulerEvent)event;
       removeNode(nodeRemovedEvent.getRemovedRMNode());
       break;
+    case NODE_LABELS_UPDATE:
+      if (!(event instanceof NodeLabelsUpdateSchedulerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      NodeLabelsUpdateSchedulerEvent labelUpdateEvent = (NodeLabelsUpdateSchedulerEvent) event;
+      for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
+          .getUpdatedNodeToLabels().entrySet()) {
+        NodeId id = entry.getKey();
+        Set<String> labels = entry.getValue();
+        updateLabelsOnNode(id, labels);
+      }
+      break;
     case NODE_UPDATE:
       if (!(event instanceof NodeUpdateSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
@@ -1420,6 +1492,7 @@ public class FairScheduler extends
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       usePortForNodeName = this.conf.getUsePortForNodeName();
       reservableNodesRatio = this.conf.getReservableNodes();
+      this.labelManager = rmContext.getNodeLabelManager();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {

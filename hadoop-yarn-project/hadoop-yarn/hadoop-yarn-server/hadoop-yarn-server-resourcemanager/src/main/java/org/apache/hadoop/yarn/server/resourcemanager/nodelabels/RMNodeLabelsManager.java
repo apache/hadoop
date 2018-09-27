@@ -536,7 +536,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
 
   private boolean isNodeUsableByQueue(Set<String> nodeLabels, Queue q) {
     // node without any labels can be accessed by any queue
-    if (nodeLabels == null || nodeLabels.isEmpty()
+    if (q.accessibleNodeLabels.contains(ANY) || nodeLabels == null || nodeLabels.isEmpty()
         || (nodeLabels.size() == 1 && nodeLabels.contains(NO_LABEL))) {
       return true;
     }

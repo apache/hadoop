@@ -556,8 +556,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
         // set label expression for AM ANY request if not set
         if (null == anyReq.getNodeLabelExpression()) {
-          anyReq.setNodeLabelExpression(submissionContext
-              .getNodeLabelExpression());
+          anyReq.setNodeLabelExpression(determineAMNodeLabelExpression(
+              submissionContext.getNodeLabelExpression()));
         }
 
         // Put ANY request at the front
@@ -585,6 +585,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
 
     return null;
+  }
+
+  private String determineAMNodeLabelExpression(String nodeLabelExpression) {
+    if (nodeLabelExpression == null) {
+      return conf.get(YarnConfiguration.DEFAULT_AM_NODELABEL_EXPRESSION, null);
+    } else {
+      return nodeLabelExpression;
+    }
   }
 
   @Override

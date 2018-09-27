@@ -62,12 +62,14 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -113,6 +115,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.Default;
@@ -129,6 +132,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.xml.sax.SAXException;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 @SuppressWarnings("unchecked")
@@ -1022,6 +1026,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         .getAllocatedContainers());
     Assert.assertEquals(6144, queueInfo.getQueueStatistics()
         .getAllocatedMemoryMB());
+
+    //Test that queueInfo has access to all nodelabels
+    Assert.assertEquals("*", queueInfo.getAccessibleNodeLabels().iterator().next());
+    Assert.assertEquals("*", queueInfo.getAccessibleNodeLabels().iterator().next());
   }
 
   @Test
@@ -3144,7 +3152,173 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       }
     }
   }
-  
+
+  @Test
+  public void testExclusiveLabelAssignments() throws Exception {
+    final String testLabel1 = "ONE";
+    final String testLabel2 = "TWO";
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add five nodes
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    RMNode node3 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.3");
+    NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
+    scheduler.handle(nodeEvent3);
+
+    RMNode node4 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.4");
+    NodeAddedSchedulerEvent nodeEvent4 = new NodeAddedSchedulerEvent(node4);
+    scheduler.handle(nodeEvent4);
+
+    RMNode node5 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.5");
+    NodeAddedSchedulerEvent nodeEvent5 = new NodeAddedSchedulerEvent(node5);
+    scheduler.handle(nodeEvent5);
+
+    // Add exclusive test labels to cluster labels
+    NodeLabel label1 = new NodeLabelPBImpl();
+    label1.setName(testLabel1);
+    label1.setExclusivity(true);
+    NodeLabel label2 = new NodeLabelPBImpl();
+    label2.setName(testLabel2);
+    label2.setExclusivity(true);
+    resourceManager.getRMContext().getNodeLabelManager()
+        .addToCluserNodeLabels(ImmutableSet.of(label1, label2));
+
+    // Add testLabel1 to node 3 and testLabel2 to node 5
+    Map<NodeId, Set<String>> nodeToLabelsMap = new HashMap<>();
+    nodeToLabelsMap.put(node3.getNodeID(), ImmutableSet.of(testLabel1));
+    nodeToLabelsMap.put(node5.getNodeID(), ImmutableSet.of(testLabel2));
+    NodeLabelsUpdateSchedulerEvent nodeLabelEvent = new NodeLabelsUpdateSchedulerEvent(nodeToLabelsMap);
+    scheduler.handle(nodeLabelEvent);
+
+    ApplicationAttemptId attId1 =
+        createSchedulingRequest(1024, 1, "default", "user1", 10, 1, testLabel1);
+    ApplicationAttemptId attId2 =
+        createSchedulingRequest(1024, 1, "default", "user1", 10, 1, testLabel2);
+    ApplicationAttemptId attId3 =
+        createSchedulingRequest(1024, 1, "default", "user1", 10, 1);
+
+    FSAppAttempt app1 = scheduler.getSchedulerApp(attId1);
+    FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
+    FSAppAttempt app3 = scheduler.getSchedulerApp(attId3);
+
+    NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    NodeUpdateSchedulerEvent updateEvent3 = new NodeUpdateSchedulerEvent(node3);
+    NodeUpdateSchedulerEvent updateEvent4 = new NodeUpdateSchedulerEvent(node4);
+    NodeUpdateSchedulerEvent updateEvent5 = new NodeUpdateSchedulerEvent(node5);
+
+    scheduler.handle(updateEvent1);
+    scheduler.handle(updateEvent2);
+    scheduler.handle(updateEvent3);
+    scheduler.handle(updateEvent4);
+    scheduler.handle(updateEvent5);
+
+    // Number of containers per app matches number of same labeled nodes
+    assertEquals(1, app1.getLiveContainers().size());
+    assertEquals(1, app2.getLiveContainers().size());
+    assertEquals(3, app3.getLiveContainers().size());
+  }
+
+  @Test
+  public void testNonExclusiveLabelAssignments() throws Exception {
+    final String testLabel1 = "ONE";
+    final String testLabel2 = "TWO";
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add five nodes
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    RMNode node3 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.3");
+    NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
+    scheduler.handle(nodeEvent3);
+
+    RMNode node4 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.4");
+    NodeAddedSchedulerEvent nodeEvent4 = new NodeAddedSchedulerEvent(node4);
+    scheduler.handle(nodeEvent4);
+
+    RMNode node5 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.5");
+    NodeAddedSchedulerEvent nodeEvent5 = new NodeAddedSchedulerEvent(node5);
+    scheduler.handle(nodeEvent5);
+
+    // Add nonexclusive & exclusive test labels to cluster labels
+    NodeLabel label1 = new NodeLabelPBImpl();
+    label1.setName(testLabel1);
+    label1.setExclusivity(true);
+    NodeLabel label2 = new NodeLabelPBImpl();
+    label2.setName(testLabel2);
+    label2.setExclusivity(false);
+    resourceManager.getRMContext().getNodeLabelManager()
+        .addToCluserNodeLabels(ImmutableSet.of(label1, label2));
+
+    // Add exclusive testLabel1 to node 3 and nonexclusive testLabel2 to nodes 4 & 5
+    Map<NodeId, Set<String>> nodeToLabelsMap = new HashMap<>();
+    nodeToLabelsMap.put(node3.getNodeID(), ImmutableSet.of(testLabel1));
+    nodeToLabelsMap.put(node4.getNodeID(), ImmutableSet.of(testLabel2));
+    nodeToLabelsMap.put(node5.getNodeID(), ImmutableSet.of(testLabel2));
+    NodeLabelsUpdateSchedulerEvent nodeLabelEvent = new NodeLabelsUpdateSchedulerEvent(nodeToLabelsMap);
+    scheduler.handle(nodeLabelEvent);
+
+    // Create request without labels
+    ApplicationAttemptId attId =
+        createSchedulingRequest(1024, 1, "default", "user1", 10, 1);
+
+    FSAppAttempt app = scheduler.getSchedulerApp(attId);
+
+    NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    NodeUpdateSchedulerEvent updateEvent3 = new NodeUpdateSchedulerEvent(node3);
+    NodeUpdateSchedulerEvent updateEvent4 = new NodeUpdateSchedulerEvent(node4);
+    NodeUpdateSchedulerEvent updateEvent5 = new NodeUpdateSchedulerEvent(node5);
+
+    scheduler.handle(updateEvent1);
+    scheduler.handle(updateEvent2);
+    scheduler.handle(updateEvent3);
+    scheduler.handle(updateEvent4);
+    scheduler.handle(updateEvent5);
+
+    // Should have 2 containers on unlabeled nodes and 2 on non-exclusive labeled node
+    assertEquals(4, app.getLiveContainers().size());
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void testNotAllowSubmitApplication() throws Exception {
@@ -5086,6 +5260,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
         NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));

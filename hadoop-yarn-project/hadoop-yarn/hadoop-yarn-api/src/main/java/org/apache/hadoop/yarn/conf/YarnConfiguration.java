@@ -3544,6 +3544,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY = 0;
 
+  public static final String DEFAULT_AM_NODELABEL_EXPRESSION =
+      NODE_LABELS_PREFIX + "am.default-node-label-expression";
+
   public static final String APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC =
       YARN_PREFIX + "app.attempt.diagnostics.limit.kc";
 

@@ -42,11 +42,13 @@ import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 
 @Private
 @Unstable
@@ -256,6 +258,7 @@ public abstract class FSQueue implements Queue, Schedulable {
     queueInfo.setChildQueues(childQueueInfos);
     queueInfo.setQueueState(QueueState.RUNNING);
     queueInfo.setQueueStatistics(getQueueStatistics());
+    queueInfo.setAccessibleNodeLabels(getAccessibleNodeLabels());
     return queueInfo;
   }
 
@@ -461,14 +464,14 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   @Override
   public Set<String> getAccessibleNodeLabels() {
-    // TODO, add implementation for FS
-    return null;
+    // Allow queue access to all node labels
+    return ImmutableSet.of(RMNodeLabelsManager.ANY);
   }
   
   @Override
   public String getDefaultNodeLabelExpression() {
-    // TODO, add implementation for FS
-    return null;
+    // Allow queue access to all node labels
+    return RMNodeLabelsManager.ANY;
   }
   
   @Override
