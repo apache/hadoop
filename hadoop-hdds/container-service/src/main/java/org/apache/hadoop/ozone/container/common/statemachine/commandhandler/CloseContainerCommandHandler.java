@@ -74,6 +74,17 @@ public class CloseContainerCommandHandler implements CommandHandler {
           CloseContainerCommandProto
               .parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
+      if (container.getContainerSet().getContainer(containerID)
+          .getContainerData().isClosed()) {
+        LOG.debug("Container {} is already closed", containerID);
+        // It might happen that the where the first attempt of closing the
+        // container failed with NOT_LEADER_EXCEPTION. In such cases, SCM will
+        // retry to check the container got really closed via Ratis.
+        // In such cases of the retry attempt, if the container is already
+        // closed via Ratis, we should just return.
+        cmdExecuted = true;
+        return;
+      }
       HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
       HddsProtos.ReplicationType replicationType =
           closeContainerProto.getReplicationType();

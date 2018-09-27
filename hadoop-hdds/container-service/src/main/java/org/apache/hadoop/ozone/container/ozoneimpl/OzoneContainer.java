@@ -188,15 +188,6 @@ public class OzoneContainer {
       ContainerProtos.ContainerCommandRequestProto request,
       ReplicationType replicationType,
       PipelineID pipelineID) throws IOException {
-    if (containerSet.getContainer(request.getContainerID())
-        .getContainerData().isClosed()) {
-      LOG.debug("Container {} is already closed", request.getContainerID());
-      // It might happen that the where the first attempt of closing the
-      // container failed with NOT_LEADER_EXCEPTION. In such cases, SCM will
-      // retry to check the container got really closed via Ratis.
-      // In such cases of the retry attempt, if the container is already closed
-      // via Ratis, we should just return.
-    }
     LOG.info("submitting {} request over {} server for container {}",
         request.getCmdType(), replicationType, request.getContainerID());
     Preconditions.checkState(servers.containsKey(replicationType));
