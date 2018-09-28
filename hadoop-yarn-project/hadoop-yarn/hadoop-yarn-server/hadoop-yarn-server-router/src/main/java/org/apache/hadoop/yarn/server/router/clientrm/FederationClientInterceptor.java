@@ -654,7 +654,7 @@ public class FederationClientInterceptor
           exceptions.put(subClusterId, ioe);
         }
       }
-      if (results.isEmpty()) {
+      if (results.isEmpty() && !clusterIds.isEmpty()) {
         SubClusterId subClusterId = clusterIds.get(0);
         IOException ioe = exceptions.get(subClusterId);
         if (ioe != null) {

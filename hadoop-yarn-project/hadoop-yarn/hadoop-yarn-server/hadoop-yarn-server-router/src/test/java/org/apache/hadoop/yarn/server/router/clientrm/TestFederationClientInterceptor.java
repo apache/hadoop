@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.Map;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -412,5 +413,13 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         interceptor.getClusterMetrics(GetClusterMetricsRequest.newInstance());
     Assert.assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
+
+    ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
+        new Class[] {GetClusterMetricsRequest.class},
+        new Object[] {GetClusterMetricsRequest.newInstance()});
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics =interceptor.
+        invokeConcurrent(new ArrayList<>(), remoteMethod,
+            GetClusterMetricsResponse.class);
+    Assert.assertEquals(true, clusterMetrics.isEmpty());
   }
 }
