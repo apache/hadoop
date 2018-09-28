@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ *  with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509;
+package org.apache.hadoop.hdds.security.x509.keys;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 
@@ -40,6 +40,7 @@ import java.util.Set;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,9 +71,11 @@ public class TestHDDSKeyPEMWriter {
    * Assert basic things like we are able to create a file, and the names are
    * in expected format etc.
    *
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
-   * @throws IOException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
+   * @throws IOException - On I/O failure.
    */
   @Test
   public void testWriteKey()
@@ -90,10 +93,10 @@ public class TestHDDSKeyPEMWriter {
     // using the Config.
     Assert.assertTrue(keyLocation.toString().startsWith(prefix));
     Path privateKeyPath = Paths.get(keyLocation.toString(),
-        pemWriter.getSecurityConfig().getPrivateKeyName());
+        pemWriter.getSecurityConfig().getPrivateKeyFileName());
     Assert.assertTrue(privateKeyPath.toFile().exists());
     Path publicKeyPath = Paths.get(keyLocation.toString(),
-        pemWriter.getSecurityConfig().getPublicKeyName());
+        pemWriter.getSecurityConfig().getPublicKeyFileName());
     Assert.assertTrue(publicKeyPath.toFile().exists());
 
     // Read the private key and test if the expected String in the PEM file
@@ -110,7 +113,7 @@ public class TestHDDSKeyPEMWriter {
 
     // Let us decode the PEM file and parse it back into binary.
     KeyFactory kf = KeyFactory.getInstance(
-        pemWriter.getSecurityConfig().getAlgo());
+        pemWriter.getSecurityConfig().getKeyAlgo());
 
     // Replace the PEM Human readable guards.
     privateKeydata =
@@ -162,7 +165,7 @@ public class TestHDDSKeyPEMWriter {
   /**
    * Assert key rewrite fails without force option.
    *
-   * @throws IOException
+   * @throws IOException - on I/O failure.
    */
   @Test
   public void testReWriteKey()
@@ -178,13 +181,13 @@ public class TestHDDSKeyPEMWriter {
             () -> pemWriter.writeKey(kp));
     FileUtils.deleteQuietly(Paths.get(
         secConfig.getKeyLocation().toString() + "/" + secConfig
-            .getPrivateKeyName()).toFile());
+            .getPrivateKeyFileName()).toFile());
     LambdaTestUtils
         .intercept(IOException.class, "Public Key file already exists.",
             () -> pemWriter.writeKey(kp));
     FileUtils.deleteQuietly(Paths.get(
         secConfig.getKeyLocation().toString() + "/" + secConfig
-            .getPublicKeyName()).toFile());
+            .getPublicKeyFileName()).toFile());
 
     // Should succeed now as both public and private key are deleted.
     pemWriter.writeKey(kp);
@@ -196,7 +199,7 @@ public class TestHDDSKeyPEMWriter {
   /**
    * Assert key rewrite fails in non Posix file system.
    *
-   * @throws IOException
+   * @throws IOException - on I/O failure.
    */
   @Test
   public void testWriteKeyInNonPosixFS()

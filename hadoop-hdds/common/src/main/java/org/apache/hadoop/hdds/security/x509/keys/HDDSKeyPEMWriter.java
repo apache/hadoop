@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ *  with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  */
-package org.apache.hadoop.hdds.security.x509;
+package org.apache.hadoop.hdds.security.x509.keys;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.slf4j.Logger;
@@ -119,11 +120,11 @@ public class HDDSKeyPEMWriter {
    * Writes a given key using the default config options.
    *
    * @param keyPair - Key Pair to write to file.
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   public void writeKey(KeyPair keyPair) throws IOException {
-    writeKey(location, keyPair, securityConfig.getPrivateKeyName(),
-        securityConfig.getPublicKeyName(), false);
+    writeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
+        securityConfig.getPublicKeyFileName(), false);
   }
 
   /**
@@ -131,11 +132,11 @@ public class HDDSKeyPEMWriter {
    *
    * @param keyPair - Key pair to write
    * @param overwrite - Overwrites the keys if they already exist.
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   public void writeKey(KeyPair keyPair, boolean overwrite) throws IOException {
-    writeKey(location, keyPair, securityConfig.getPrivateKeyName(),
-        securityConfig.getPublicKeyName(), overwrite);
+    writeKey(location, keyPair, securityConfig.getPrivateKeyFileName(),
+        securityConfig.getPublicKeyFileName(), overwrite);
   }
 
   /**
@@ -144,12 +145,12 @@ public class HDDSKeyPEMWriter {
    * @param basePath - The location to write to, override the config values.
    * @param keyPair - Key pair to write
    * @param overwrite - Overwrites the keys if they already exist.
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   public void writeKey(Path basePath, KeyPair keyPair, boolean overwrite)
       throws IOException {
-    writeKey(basePath, keyPair, securityConfig.getPrivateKeyName(),
-        securityConfig.getPublicKeyName(), overwrite);
+    writeKey(basePath, keyPair, securityConfig.getPrivateKeyFileName(),
+        securityConfig.getPublicKeyFileName(), overwrite);
   }
 
   /**
@@ -160,7 +161,7 @@ public class HDDSKeyPEMWriter {
    * @param privateKeyFileName - private key file name.
    * @param publicKeyFileName - public key file name.
    * @param force - forces overwriting the keys.
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   private synchronized void writeKey(Path basePath, KeyPair keyPair,
       String privateKeyFileName, String publicKeyFileName, boolean force)
@@ -196,7 +197,7 @@ public class HDDSKeyPEMWriter {
    * @param privateKeyFile - Private key file.
    * @param force - forces overwriting the keys.
    * @param publicKeyFile - public key file.
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   private void checkKeyFile(File privateKeyFile, boolean force,
       File publicKeyFile) throws IOException {
@@ -225,7 +226,7 @@ public class HDDSKeyPEMWriter {
    * Checks if base path exists and sets file permissions.
    *
    * @param basePath - base path to write key
-   * @throws IOException
+   * @throws IOException - On I/O failure.
    */
   private void checkPreconditions(Path basePath) throws IOException {
     Preconditions.checkNotNull(basePath, "Base path cannot be null");
