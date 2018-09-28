@@ -73,6 +73,7 @@ public class Service extends BaseResource {
   private String version = null;
   private String description = null;
   private String dockerClientConfig = null;
+  private List<String> dependencies = new ArrayList<String>();
 
   /**
    * A unique service name.
@@ -352,6 +353,18 @@ public class Service extends BaseResource {
     this.queue = queue;
   }
 
+  @ApiModelProperty(example = "null", value = "A list of dependent services.")
+  @XmlElement(name = "dependencies")
+  @JsonProperty("dependencies")
+  public List<String> getDependencies() {
+    return dependencies;
+  }
+
+  public void setDependencies(List<String>
+      dependencies) {
+    this.dependencies = dependencies;
+  }
+
   public Service kerberosPrincipal(KerberosPrincipal kerberosPrincipal) {
     this.kerberosPrincipal = kerberosPrincipal;
     return this;
@@ -437,6 +450,8 @@ public class Service extends BaseResource {
         .append(toIndentedString(kerberosPrincipal)).append("\n");
     sb.append("    dockerClientConfig: ")
         .append(toIndentedString(dockerClientConfig)).append("\n");
+    sb.append("    dependencies: ")
+        .append(toIndentedString(dependencies)).append("\n");
     sb.append("}");
     return sb.toString();
   }

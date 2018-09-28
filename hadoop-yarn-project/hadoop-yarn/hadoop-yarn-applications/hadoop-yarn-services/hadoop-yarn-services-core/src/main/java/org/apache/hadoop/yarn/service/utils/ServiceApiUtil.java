@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
@@ -704,5 +706,46 @@ public class ServiceApiUtil {
       }
     }
     return components;
+  }
+
+  private static boolean serviceDependencySatisfied(Service service) {
+    boolean result = true;
+    try {
+      List<String> dependencies = service
+          .getDependencies();
+      org.apache.hadoop.conf.Configuration conf =
+          new org.apache.hadoop.conf.Configuration();
+      if (dependencies != null && dependencies.size() > 0) {
+        ServiceClient sc = new ServiceClient();
+        sc.init(conf);
+        sc.start();
+        for (String dependent : dependencies) {
+          Service dependentService = sc.getStatus(dependent);
+          if (dependentService.getState() == null ||
+              !dependentService.getState().equals(ServiceState.STABLE)) {
+            result = false;
+            LOG.info("Service dependency is not satisfied for " +
+                "service: {} state: {}", dependent,
+                dependentService.getState());
+          }
+        }
+        sc.close();
+      }
+    } catch (IOException | YarnException e) {
+      LOG.warn("Caught exception: ", e);
+      LOG.info("Service dependency is not satisified.");
+      result = false;
+    }
+    return result;
+  }
+
+  public static void checkServiceDependencySatisified(Service service) {
+    while (!serviceDependencySatisfied(service)) {
+      try {
+        LOG.info("Waiting for service dependencies.");
+        Thread.sleep(15000L);
+      } catch (InterruptedException e) {
+      }
+    }
   }
 }

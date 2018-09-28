@@ -170,7 +170,8 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
         } else {
           serviceManager.setServiceState(ServiceState.UPGRADING);
         }
-
+        ServiceApiUtil.checkServiceDependencySatisified(serviceManager
+            .getServiceSpec());
         return State.UPGRADING;
       } catch (Throwable e) {
         LOG.error("[SERVICE]: Upgrade to version {} failed", event.getVersion(),

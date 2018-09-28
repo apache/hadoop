@@ -406,7 +406,7 @@ a service resource has the following attributes.
 |queue|The YARN queue that this service should be submitted to.|false|string||
 |kerberos_principal|The principal info of the user who launches the service|false|KerberosPrincipal||
 |docker_client_config|URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json)|false|string||
-
+|dependencies|A list of service names that this service depends on.| false | string array ||
 
 ### ServiceState
 

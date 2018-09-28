@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.service.api.records.PlacementScope;
 import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -731,6 +732,44 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       Assert.assertEquals("Components are not equal.", expected.get(i),
           order.get(i));
     }
+  }
+
+  @Test(timeout = 1500)
+  public void testNoServiceDependencies() {
+    Service service = createExampleApplication();
+    Component compa = createComponent("compa");
+    Component compb = createComponent("compb");
+    service.addComponent(compa);
+    service.addComponent(compb);
+    List<String> dependencies = new ArrayList<String>();
+    service.setDependencies(dependencies);
+    ServiceApiUtil.checkServiceDependencySatisified(service);
+  }
+
+  @Test
+  public void testServiceDependencies() {
+    Thread thread = new Thread() {
+      @Override
+      public void run() {
+        Service service = createExampleApplication();
+        Component compa = createComponent("compa");
+        Component compb = createComponent("compb");
+        service.addComponent(compa);
+        service.addComponent(compb);
+        List<String> dependencies = new ArrayList<String>();
+        dependencies.add("abc");
+        service.setDependencies(dependencies);
+        Service dependent = createExampleApplication();
+        dependent.setState(ServiceState.STOPPED);
+        ServiceApiUtil.checkServiceDependencySatisified(service);
+      }
+    };
+    thread.start();
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+    }
+    Assert.assertTrue(thread.isAlive());
   }
 
   public static Service createExampleApplication() {

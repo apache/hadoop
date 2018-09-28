@@ -438,6 +438,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // wait for upgrade to complete
     waitForServiceToBeStable(client, service);
     Service active = client.getStatus(service.getName());
+    Assert.assertEquals("version mismatch", service.getVersion(),
+        active.getVersion());
     Assert.assertEquals("component not stable", ComponentState.STABLE,
         active.getComponent(component.getName()).getState());
     Assert.assertEquals("compa does not have new env", "val1",

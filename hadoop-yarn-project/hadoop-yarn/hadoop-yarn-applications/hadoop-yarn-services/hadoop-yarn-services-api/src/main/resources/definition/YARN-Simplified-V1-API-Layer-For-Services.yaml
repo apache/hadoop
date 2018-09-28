@@ -254,6 +254,11 @@ definitions:
       docker_client_config:
         type: string
         description: URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json).
+      dependencies:
+        type: array
+        items:
+          type: string
+        description: An array of services which should be in STABLE state, before this service can be started.
   ResourceInformation:
     description:
       ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object.
