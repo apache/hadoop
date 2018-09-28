@@ -12,15 +12,10 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Developper Guide
+# Examples
 
-(Need add more details)
+Here're some examples about Submarine usage.
 
-By default, submarine uses YARN service framework as runtime. If you want to add your own implementation. You can add a new `RuntimeFactory` implementation and configure following option to `submarine.xml` (which should be placed under same `$HADOOP_CONF_DIR`)
+[Running Distributed CIFAR 10 Tensorflow Job](RunningDistributedCifar10TFJobs.html)
 
-```
-<property>
-  <name>submarine.runtime.class</name>
-  <value>... full qualified class name for your runtime factory ... </value>
-</property>
-```
+[Running Zeppelin Notebook on YARN](RunningZeppelinOnYARN.html)

@@ -17,11 +17,13 @@
 ## Prerequisite
 
 Must:
-- Apache Hadoop 3.1.0, YARN service enabled.
+
+- Apache Hadoop 3.1.x, YARN service enabled.
 
 Optional:
-- Enable YARN DNS. (When distributed training required.)
-- Enable GPU on YARN support. (When GPU-based training required.)
+
+- Enable YARN DNS. (When distributed training is required.)
+- Enable GPU on YARN support. (When GPU-based training is required.)
 
 ## Run jobs
 
@@ -81,14 +83,25 @@ yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
   --input_path hdfs://default/dataset/cifar-10-data  \
   --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
   --worker_resources memory=4G,vcores=2,gpu=2  \
-  --worker_launch_cmd "python ... (Your training application cmd)"
+  --worker_launch_cmd "python ... (Your training application cmd)" \
+  --tensorboard # this will launch a companion tensorboard container for monitoring
 ```
 
 #### Notes:
 
 1) `DOCKER_JAVA_HOME` points to JAVA_HOME inside Docker image.
+
 2) `DOCKER_HADOOP_HDFS_HOME` points to HADOOP_HDFS_HOME inside Docker image.
+
 3) `--worker_resources` can include gpu when you need GPU to train your task.
+
+4) When `--tensorboard` is specified, you can go to YARN new UI, go to services -> `<you specified service>` -> Click `...` to access Tensorboard.
+
+This will launch a Tensorboard to monitor *all your jobs*. By access YARN UI (the new UI). You can go to services page, go to the `tensorboard-service`, click quick links (`Tensorboard`) can lead you to the tensorboard.
+
+See below screenshot:
+
+![alt text](./images/tensorboard-service.png "Tensorboard service")
 
 ### Launch Distributed Tensorflow Application:
 
@@ -110,12 +123,14 @@ yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
 #### Notes:
 
 1) Very similar to standalone TF application, but you need to specify #worker/#ps
+
 2) Different resources can be specified for worker and PS.
+
 3) `TF_CONFIG` environment will be auto generated and set before executing user's launch command.
 
-## Run jobs
+## Get job history / logs
 
-### Get Job Status
+### Get Job Status from CLI
 
 ```
 yarn jar hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job show --name tf-job-001
@@ -132,3 +147,28 @@ Job Meta Info:
 ```
 
 After that, you can run ```tensorboard --logdir=<checkpoint-path>``` to view Tensorboard of the job.
+
+### Run tensorboard to monitor your jobs
+
+```
+# Cleanup previous service if needed
+yarn app -destroy tensorboard-service; \
+yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
+  job run --name tensorboard-service --verbose --docker_image wtan/tf-1.8.0-cpu:0.0.3 \
+  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
+  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+  --num_workers 0 --tensorboard
+```
+
+You can view multiple job training history like from the `Tensorboard` link:
+
+![alt text](./images/multiple-tensorboard-jobs.png "Tensorboard for multiple jobs")
+
+
+### Get component logs from a training job
+
+There're two ways to get training job logs, one is from YARN UI (new or old):
+
+![alt text](./images/job-logs-ui.png "Job logs UI")
+
+Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
