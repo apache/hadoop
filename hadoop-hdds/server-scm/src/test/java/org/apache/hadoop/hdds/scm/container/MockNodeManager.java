@@ -266,11 +266,16 @@ public class MockNodeManager implements NodeManager {
   /**
    * Return the node stat of the specified datanode.
    * @param datanodeDetails - datanode details.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
-    return new SCMNodeMetric(nodeMetricMap.get(datanodeDetails.getUuid()));
+    SCMNodeStat stat = nodeMetricMap.get(datanodeDetails.getUuid());
+    if (stat == null) {
+      return null;
+    }
+    return new SCMNodeMetric(stat);
   }
 
   /**

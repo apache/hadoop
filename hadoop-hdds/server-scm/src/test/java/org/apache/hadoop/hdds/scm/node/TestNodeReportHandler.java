@@ -57,9 +57,12 @@ public class TestNodeReportHandler implements EventPublisher {
     StorageReportProto storageOne = TestUtils
         .createStorageReport(dn.getUuid(), storagePath, 100, 10, 90, null);
 
+    SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
+    Assert.assertNull(nodeMetric);
+
     nodeReportHandler.onMessage(
         getNodeReport(dn, storageOne), this);
-    SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
+    nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 100);
     Assert.assertTrue(nodeMetric.get().getRemaining().get() == 90);

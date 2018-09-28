@@ -150,8 +150,8 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
   private boolean hasEnoughSpace(DatanodeDetails datanodeDetails,
                                  long sizeRequired) {
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(datanodeDetails);
-    return (nodeMetric != null) && nodeMetric.get().getRemaining()
-        .hasResources(sizeRequired);
+    return (nodeMetric != null) && (nodeMetric.get() != null)
+        && nodeMetric.get().getRemaining().hasResources(sizeRequired);
   }
 
   /**

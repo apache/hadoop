@@ -55,6 +55,7 @@ public class SCMNodeMetric implements DatanodeMetric<SCMNodeStat, Long> {
    */
   @Override
   public boolean isGreater(SCMNodeStat o) {
+    Preconditions.checkNotNull(this.stat, "Argument cannot be null");
     Preconditions.checkNotNull(o, "Argument cannot be null");
 
     // if zero, replace with 1 for the division to work.
