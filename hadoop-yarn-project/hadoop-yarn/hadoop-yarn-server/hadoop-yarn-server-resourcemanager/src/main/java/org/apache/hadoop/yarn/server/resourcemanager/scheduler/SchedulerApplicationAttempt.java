@@ -398,9 +398,14 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       Priority priority, RMContainer rmContainer, Container container) {
     // Create RMContainer if necessary
     if (rmContainer == null) {
+      ResourceRequest anyRequest =
+          getResourceRequest(priority, ResourceRequest.ANY);
       rmContainer =
           new RMContainerImpl(container, getApplicationAttemptId(),
-              node.getNodeID(), appSchedulingInfo.getUser(), rmContext);
+              node.getNodeID(), appSchedulingInfo.getUser(), rmContext,
+              anyRequest != null ?
+                  anyRequest.getNodeLabelExpression() :
+                  CommonNodeLabelsManager.NO_LABEL);
       attemptResourceUsage.incReserved(node.getPartition(),
           container.getResource());
       ((RMContainerImpl)rmContainer).setQueueName(this.getQueueName());

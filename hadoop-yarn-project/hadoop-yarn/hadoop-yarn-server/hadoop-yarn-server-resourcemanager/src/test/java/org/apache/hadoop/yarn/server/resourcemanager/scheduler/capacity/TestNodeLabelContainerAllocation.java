@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -540,6 +541,68 @@ public class TestNodeLabelContainerAllocation {
         .getReserved("x").getMemorySize());
     Assert.assertEquals(0, leafQueue.getQueueResourceUsage().getReserved("x")
         .getMemorySize());
+    rm1.close();
+  }
+
+  @Test (timeout = 120000)
+  public void testRMContainerLeakInLeafQueue() throws Exception {
+    // set node -> label
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x"));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
+        NodeId.newInstance("h2", 0), toSet("x")));
+
+    // inject node label manager
+    MockRM rm1 =
+        new MockRM(TestUtils.getConfigurationWithDefaultQueueLabels(conf)) {
+          @Override public RMNodeLabelsManager createNodeLabelManager() {
+            return mgr;
+          }
+        };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB); // label = x
+    rm1.registerNode("h2:1234", 8 * GB); // label = x
+
+    // launch an app to queue a1 (label = x), and check all container will
+    // be allocated in h1
+    RMApp app1 = rm1.submitApp(1 * GB, "app1", "user", null, "a1");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    RMApp app2 = rm1.submitApp(1 * GB, "app2", "user", null, "a1");
+    MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // request a container.
+    am1.allocate("*", 7 * GB, 2, new ArrayList<ContainerId>());
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    LeafQueue leafQueue = (LeafQueue) cs.getQueue("a1");
+
+    // Do node heartbeats 1 time
+    // scheduler will reserve a container for app1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    // Check if a 4G container allocated for app1, and 4G is reserved
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    // kill app2 then do node heartbeat 1 time
+    // scheduler will allocate a container from the reserved container on nm1
+    rm1.killApp(app2.getApplicationId());
+    rm1.waitForState(app2.getApplicationId(), RMAppState.KILLED);
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
+    // After kill app1, LeafQueue#ignorePartitionExclusivityRMContainers should
+    // be clean, otherwise resource leak happened
+    rm1.killApp(app1.getApplicationId());
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    Assert.assertEquals(0, leafQueue.getIgnoreExclusivityRMContainers().size());
+
     rm1.close();
   }
 
