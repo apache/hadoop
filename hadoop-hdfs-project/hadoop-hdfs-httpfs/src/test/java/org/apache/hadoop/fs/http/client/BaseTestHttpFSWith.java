@@ -1175,6 +1175,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case DISALLOW_SNAPSHOT_EXCEPTION:
       testDisallowSnapshotException();
+      break;
     case FILE_STATUS_ATTR:
       testFileStatusAttr();
       break;
