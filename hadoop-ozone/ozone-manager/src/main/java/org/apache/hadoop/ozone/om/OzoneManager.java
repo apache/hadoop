@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.audit.AuditEventStatus;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -66,7 +67,6 @@ import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslat
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.logging.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +98,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
 public final class OzoneManager extends ServiceRuntimeInfoImpl
-    implements OzoneManagerProtocol, OMMXBean {
+    implements OzoneManagerProtocol, OMMXBean, Auditor {
   private static final Logger LOG =
       LoggerFactory.getLogger(OzoneManager.class);
 
@@ -498,9 +498,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           (args == null) ? null : args.toAuditMap()));
     } catch (Exception ex) {
       metrics.incNumVolumeCreateFails();
-      AUDIT.logWriteFailure(Level.ERROR,
+      AUDIT.logWriteFailure(
           buildAuditMessageForFailure(OMAction.CREATE_VOLUME,
-              (args == null) ? null : args.toAuditMap()), ex);
+              (args == null) ? null : args.toAuditMap(), ex)
+      );
       throw ex;
     }
   }
@@ -524,7 +525,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumVolumeUpdateFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.SET_OWNER,
-          auditMap), ex);
+          auditMap, ex)
+      );
       throw ex;
     }
   }
@@ -548,7 +550,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumVolumeUpdateFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.SET_QUOTA,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     }
   }
@@ -576,7 +578,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumVolumeCheckAccessFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(
-          OMAction.CHECK_VOLUME_ACCESS, auditMap), ex);
+          OMAction.CHECK_VOLUME_ACCESS, auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -604,7 +606,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumVolumeInfoFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_VOLUME,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -630,7 +632,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumVolumeDeleteFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_VOLUME,
-          buildAuditMap(volume)), ex);
+          buildAuditMap(volume), ex));
       throw ex;
     }
   }
@@ -662,7 +664,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumVolumeListFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_VOLUMES,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -698,7 +700,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumVolumeListFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_VOLUMES,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -724,7 +726,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumBucketCreateFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.CREATE_BUCKET,
-          (bucketInfo == null) ? null : bucketInfo.toAuditMap()), ex);
+          (bucketInfo == null) ? null : bucketInfo.toAuditMap(), ex));
       throw ex;
     }
   }
@@ -750,7 +752,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumBucketListFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_BUCKETS,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -781,7 +783,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumBucketInfoFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_BUCKET,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -808,7 +810,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumKeyAllocateFails();
       auditSuccess = false;
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.ALLOCATE_KEY,
-          (args == null) ? null : args.toAuditMap()), ex);
+          (args == null) ? null : args.toAuditMap(), ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -832,7 +834,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumKeyCommitFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.COMMIT_KEY,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     }
   }
@@ -851,7 +853,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumBlockAllocateCallFails();
       auditSuccess = false;
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.ALLOCATE_BLOCK,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -878,7 +880,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumKeyLookupFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
-          (args == null) ? null : args.toAuditMap()), ex);
+          (args == null) ? null : args.toAuditMap(), ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -901,7 +903,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (IOException e) {
       metrics.incNumKeyRenameFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.RENAME_KEY,
-          auditMap), e);
+          auditMap, e));
       throw e;
     }
   }
@@ -922,7 +924,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumKeyDeleteFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_KEY,
-          (args == null) ? null : args.toAuditMap()), ex);
+          (args == null) ? null : args.toAuditMap(), ex));
       throw ex;
     }
   }
@@ -944,7 +946,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       metrics.incNumKeyListFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     } finally {
       if(auditSuccess){
@@ -971,7 +973,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumBucketUpdateFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.UPDATE_BUCKET,
-          (args == null) ? null : args.toAuditMap()), ex);
+          (args == null) ? null : args.toAuditMap(), ex));
       throw ex;
     }
   }
@@ -994,7 +996,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       metrics.incNumBucketDeleteFails();
       AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.DELETE_BUCKET,
-          auditMap), ex);
+          auditMap, ex));
       throw ex;
     }
   }
@@ -1005,26 +1007,34 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return auditMap;
   }
 
-  // TODO: Temporary method until AuditMessage is simplified
-  private AuditMessage buildAuditMessageForSuccess(AuditAction op,
+  @Override
+  public AuditMessage buildAuditMessageForSuccess(AuditAction op,
       Map<String, String> auditMap) {
-    return new AuditMessage(
-      (Server.getRemoteUser() == null) ? null :
-              Server.getRemoteUser().getUserName(),
-      (Server.getRemoteIp() == null) ? null :
-          Server.getRemoteIp().getHostAddress(), op.toString(), auditMap,
-      AuditEventStatus.SUCCESS.toString());
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.SUCCESS.toString())
+        .withException(null)
+        .build();
   }
 
-  // TODO: Temporary method until AuditMessage is simplified
-  private AuditMessage buildAuditMessageForFailure(AuditAction op,
-      Map<String, String> auditMap) {
-    return new AuditMessage(
-      (Server.getRemoteUser() == null) ? null :
-              Server.getRemoteUser().getUserName(),
-      (Server.getRemoteIp() == null) ? null :
-          Server.getRemoteIp().getHostAddress(), op.toString(), auditMap,
-      AuditEventStatus.FAILURE.toString());
+  @Override
+  public AuditMessage buildAuditMessageForFailure(AuditAction op,
+      Map<String, String> auditMap, Throwable throwable) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.FAILURE.toString())
+        .withException(throwable)
+        .build();
   }
 
   private void registerMXBean() {

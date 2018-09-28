@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.audit;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,17 +48,41 @@ public class TestOzoneAuditLogger {
   private static final Map<String, String> PARAMS =
       new DummyEntity().toAuditMap();
 
-  private static final AuditMessage WRITE_FAIL_MSG = new AuditMessage("john",
-      "192.168.0.1", DummyAction.CREATE_VOLUME.name(), PARAMS, FAILURE);
+  private static final AuditMessage WRITE_FAIL_MSG =
+      new AuditMessage.Builder()
+          .setUser("john")
+          .atIp("192.168.0.1")
+          .forOperation(DummyAction.CREATE_VOLUME.name())
+          .withParams(PARAMS)
+          .withResult(FAILURE)
+          .withException(null).build();
 
-  private static final AuditMessage WRITE_SUCCESS_MSG = new AuditMessage("john",
-      "192.168.0.1", DummyAction.CREATE_VOLUME.name(), PARAMS, SUCCESS);
+  private static final AuditMessage WRITE_SUCCESS_MSG =
+      new AuditMessage.Builder()
+          .setUser("john")
+          .atIp("192.168.0.1")
+          .forOperation(DummyAction.CREATE_VOLUME.name())
+          .withParams(PARAMS)
+          .withResult(SUCCESS)
+          .withException(null).build();
 
-  private static final AuditMessage READ_FAIL_MSG = new AuditMessage("john",
-      "192.168.0.1", DummyAction.READ_VOLUME.name(), PARAMS, FAILURE);
+  private static final AuditMessage READ_FAIL_MSG =
+      new AuditMessage.Builder()
+          .setUser("john")
+          .atIp("192.168.0.1")
+          .forOperation(DummyAction.READ_VOLUME.name())
+          .withParams(PARAMS)
+          .withResult(FAILURE)
+          .withException(null).build();
 
-  private static final AuditMessage READ_SUCCESS_MSG = new AuditMessage("john",
-      "192.168.0.1", DummyAction.READ_VOLUME.name(), PARAMS, SUCCESS);
+  private static final AuditMessage READ_SUCCESS_MSG =
+      new AuditMessage.Builder()
+          .setUser("john")
+          .atIp("192.168.0.1")
+          .forOperation(DummyAction.READ_VOLUME.name())
+          .withParams(PARAMS)
+          .withResult(SUCCESS)
+          .withException(null).build();
 
   @BeforeClass
   public static void setUp(){
@@ -78,24 +101,13 @@ public class TestOzoneAuditLogger {
   }
 
   /**
-   * Ensures WriteSuccess events are logged @ INFO and above.
-   */
-  @Test
-  public void logInfoWriteSuccess() throws IOException {
-    AUDIT.logWriteSuccess(Level.INFO, WRITE_SUCCESS_MSG);
-    String expected =
-        "[INFO ] OMAudit - " + WRITE_SUCCESS_MSG.getFormattedMessage();
-    verifyLog(expected);
-  }
-
-  /**
    * Test to verify default log level is INFO when logging success events.
    */
   @Test
   public void verifyDefaultLogLevelForSuccess() throws IOException {
     AUDIT.logWriteSuccess(WRITE_SUCCESS_MSG);
     String expected =
-        "[INFO ] OMAudit - " + WRITE_SUCCESS_MSG.getFormattedMessage();
+        "INFO  | OMAudit | " + WRITE_SUCCESS_MSG.getFormattedMessage();
     verifyLog(expected);
   }
 
@@ -106,18 +118,7 @@ public class TestOzoneAuditLogger {
   public void verifyDefaultLogLevelForFailure() throws IOException {
     AUDIT.logWriteFailure(WRITE_FAIL_MSG);
     String expected =
-        "[ERROR] OMAudit - " + WRITE_FAIL_MSG.getFormattedMessage();
-    verifyLog(expected);
-  }
-
-  /**
-   * Test to verify WriteFailure events are logged as ERROR.
-   */
-  @Test
-  public void logErrorWriteFailure() throws IOException {
-    AUDIT.logWriteFailure(Level.ERROR, WRITE_FAIL_MSG);
-    String expected =
-        "[ERROR] OMAudit - " + WRITE_FAIL_MSG.getFormattedMessage();
+        "ERROR | OMAudit | " + WRITE_FAIL_MSG.getFormattedMessage();
     verifyLog(expected);
   }
 
@@ -126,20 +127,8 @@ public class TestOzoneAuditLogger {
    */
   @Test
   public void notLogReadEvents() throws IOException {
-    AUDIT.logReadSuccess(Level.INFO, READ_SUCCESS_MSG);
-    AUDIT.logReadFailure(Level.INFO, READ_FAIL_MSG);
-    AUDIT.logReadFailure(Level.ERROR, READ_FAIL_MSG);
-    AUDIT.logReadFailure(Level.ERROR, READ_FAIL_MSG, new Exception("test"));
-    verifyNoLog();
-  }
-
-  /**
-   * Test to ensure DEBUG level messages are not logged when INFO is enabled.
-   */
-  @Test
-  public void notLogDebugEvents() throws IOException {
-    AUDIT.logWriteSuccess(Level.DEBUG, WRITE_SUCCESS_MSG);
-    AUDIT.logReadSuccess(Level.DEBUG, READ_SUCCESS_MSG);
+    AUDIT.logReadSuccess(READ_SUCCESS_MSG);
+    AUDIT.logReadFailure(READ_FAIL_MSG);
     verifyNoLog();
   }
 

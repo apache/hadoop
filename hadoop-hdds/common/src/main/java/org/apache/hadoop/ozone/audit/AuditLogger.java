@@ -56,53 +56,21 @@ public class AuditLogger {
   }
 
   public void logWriteSuccess(AuditMessage msg) {
-    logWriteSuccess(Level.INFO, msg);
-  }
-
-  public void logWriteSuccess(Level level, AuditMessage msg) {
-    this.logger.logIfEnabled(FQCN, level, WRITE_MARKER, msg, null);
+    this.logger.logIfEnabled(FQCN, Level.INFO, WRITE_MARKER, msg, null);
   }
 
   public void logWriteFailure(AuditMessage msg) {
-    logWriteFailure(Level.ERROR, msg);
-  }
-
-  public void logWriteFailure(Level level, AuditMessage msg) {
-    logWriteFailure(level, msg, null);
-  }
-
-  public void logWriteFailure(AuditMessage msg, Throwable exception) {
-    logWriteFailure(Level.ERROR, msg, exception);
-  }
-
-  public void logWriteFailure(Level level, AuditMessage msg,
-      Throwable exception) {
-    this.logger.logIfEnabled(FQCN, level, WRITE_MARKER, msg, exception);
+    this.logger.logIfEnabled(FQCN, Level.ERROR, WRITE_MARKER, msg,
+        msg.getThrowable());
   }
 
   public void logReadSuccess(AuditMessage msg) {
-    logReadSuccess(Level.INFO, msg);
-  }
-
-  public void logReadSuccess(Level level, AuditMessage msg) {
-    this.logger.logIfEnabled(FQCN, level, READ_MARKER, msg, null);
+    this.logger.logIfEnabled(FQCN, Level.INFO, READ_MARKER, msg, null);
   }
 
   public void logReadFailure(AuditMessage msg) {
-    logReadFailure(Level.ERROR, msg);
-  }
-
-  public void logReadFailure(Level level, AuditMessage msg) {
-    logReadFailure(level, msg, null);
-  }
-
-  public void logReadFailure(AuditMessage msg, Throwable exception) {
-    logReadFailure(Level.ERROR, msg, exception);
-  }
-
-  public void logReadFailure(Level level, AuditMessage msg,
-      Throwable exception) {
-    this.logger.logIfEnabled(FQCN, level, READ_MARKER, msg, exception);
+    this.logger.logIfEnabled(FQCN, Level.ERROR, READ_MARKER, msg,
+        msg.getThrowable());
   }
 
 }
