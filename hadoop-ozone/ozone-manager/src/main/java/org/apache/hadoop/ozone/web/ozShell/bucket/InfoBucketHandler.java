@@ -50,10 +50,16 @@ public class InfoBucketHandler extends Handler {
     String volumeName, bucketName;
     URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
-
-    if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
-          "volume and bucket name required in info Bucket");
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 2) {
+      String errorMessage;
+      if (pathNameCount < 2) {
+        errorMessage = "volume and bucket name required in infoBucket";
+      } else {
+        errorMessage = "Invalid bucket name. Delimiters (/) not allowed in " +
+            "bucket name";
+      }
+      throw new OzoneClientException(errorMessage);
     }
 
     volumeName = path.getName(0).toString();

@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
@@ -47,9 +49,17 @@ public class InfoVolumeHandler extends Handler{
   public Void call() throws Exception {
 
     URI ozoneURI = verifyURI(uri);
-    if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to get info of a volume");
+    Path path = Paths.get(ozoneURI.getPath());
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 1) {
+      String errorMessage;
+      if (pathNameCount < 1) {
+        errorMessage = "Volume name is required to get info of a volume";
+      } else {
+        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
+            "volume name";
+      }
+      throw new OzoneClientException(errorMessage);
     }
 
     // we need to skip the slash in the URI path

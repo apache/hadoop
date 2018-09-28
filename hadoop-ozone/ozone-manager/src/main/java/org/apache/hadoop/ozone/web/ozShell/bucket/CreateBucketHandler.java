@@ -50,9 +50,16 @@ public class CreateBucketHandler extends Handler {
 
     URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
-          "volume and bucket name required in createBucket");
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 2) {
+      String errorMessage;
+      if (pathNameCount < 2) {
+        errorMessage = "volume and bucket name required in createBucket";
+      } else {
+        errorMessage = "Invalid bucket name. Delimiters (/) not allowed in " +
+            "bucket name";
+      }
+      throw new OzoneClientException(errorMessage);
     }
 
     String volumeName = path.getName(0).toString();

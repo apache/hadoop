@@ -19,6 +19,8 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
@@ -64,15 +66,20 @@ public class CreateVolumeHandler extends Handler {
   public Void call() throws Exception {
 
     URI ozoneURI = verifyURI(uri);
-
-    // we need to skip the slash in the URI path
-    // getPath returns /volumeName needs to remove the initial slash.
-    String volumeName = ozoneURI.getPath().replaceAll("^/+", "");
-    if (volumeName.isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to create a volume");
+    Path path = Paths.get(ozoneURI.getPath());
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 1) {
+      String errorMessage;
+      if (pathNameCount < 1) {
+        errorMessage = "Volume name is required to create a volume";
+      } else {
+        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
+            "volume name";
+      }
+      throw new OzoneClientException(errorMessage);
     }
 
+    String volumeName = ozoneURI.getPath().replaceAll("^/+", "");
     if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);
     }

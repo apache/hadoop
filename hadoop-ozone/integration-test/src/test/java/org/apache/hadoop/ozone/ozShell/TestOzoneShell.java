@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.ozShell;
 
+import com.google.common.base.Strings;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,7 +32,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -60,17 +61,9 @@ import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-
-import com.google.common.base.Strings;
-import org.apache.commons.lang3.RandomStringUtils;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -86,6 +79,12 @@ import picocli.CommandLine.IExceptionHandler2;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunLast;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * This test class specified for testing Ozone shell command.
@@ -211,8 +210,7 @@ public class TestOzoneShell {
     testCreateVolume("/////", "Volume name is required " +
         "to create a volume");
     testCreateVolume("/////vol/123",
-        "Bucket or Volume name has " +
-            "an unsupported character : /");
+        "Invalid volume name. Delimiters (/) not allowed in volume name");
   }
 
   private void testCreateVolume(String volumeName, String errorMsg)
@@ -304,6 +302,12 @@ public class TestOzoneShell {
     assertTrue(output.contains(volumeName));
     assertTrue(output.contains("createdOn")
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
+
+    // test infoVolume with invalid volume name
+    args = new String[] {"volume", "info",
+        url + "/" + volumeName + "/invalid-name"};
+    executeWithError(shell, args, "Invalid volume name. " +
+        "Delimiters (/) not allowed in volume name");
 
     // get info for non-exist volume
     args = new String[] {"volume", "info", url + "/invalid-volume"};
@@ -563,8 +567,13 @@ public class TestOzoneShell {
     // test create a bucket in a non-exist volume
     args = new String[] {"bucket", "create",
         url + "/invalid-volume/" + bucketName};
-
     executeWithError(shell, args, "Info Volume failed, error:VOLUME_NOT_FOUND");
+
+    // test createBucket with invalid bucket name
+    args = new String[] {"bucket", "create",
+        url + "/" + vol.getName() + "/" + bucketName + "/invalid-name"};
+    executeWithError(shell, args,
+        "Invalid bucket name. Delimiters (/) not allowed in bucket name");
   }
 
   @Test
@@ -617,6 +626,12 @@ public class TestOzoneShell {
     assertTrue(output.contains(bucketName));
     assertTrue(output.contains("createdOn")
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
+
+    // test infoBucket with invalid bucket name
+    args = new String[] {"bucket", "info",
+        url + "/" + vol.getName() + "/" + bucketName + "/invalid-name"};
+    executeWithError(shell, args,
+        "Invalid bucket name. Delimiters (/) not allowed in bucket name");
 
     // test get info from a non-exist bucket
     args = new String[] {"bucket", "info",
@@ -688,8 +703,14 @@ public class TestOzoneShell {
       assertNotNull(bucket);
     }
 
-    // test -length option
+    // test listBucket with invalid volume name
     String[] args = new String[] {"bucket", "list",
+        url + "/" + vol.getName() + "/invalid-name"};
+    executeWithError(shell, args, "Invalid volume name. " +
+        "Delimiters (/) not allowed in volume name");
+
+    // test -length option
+    args = new String[] {"bucket", "list",
         url + "/" + vol.getName(), "--length", "100"};
     execute(shell, args);
     commandOutput = out.toString();
@@ -954,8 +975,14 @@ public class TestOzoneShell {
       keyOutputStream.close();
     }
 
-    // test -length option
+    // test listKey with invalid bucket name
     String[] args = new String[] {"key", "list",
+        url + "/" + volumeName + "/" + bucketName + "/invalid-name"};
+    executeWithError(shell, args, "Invalid bucket name. " +
+        "Delimiters (/) not allowed in bucket name");
+
+    // test -length option
+    args = new String[] {"key", "list",
         url + "/" + volumeName + "/" + bucketName, "--length", "100"};
     execute(shell, args);
     commandOutput = out.toString();

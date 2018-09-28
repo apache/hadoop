@@ -71,9 +71,16 @@ public class ListKeyHandler extends Handler {
 
     URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
-          "volume/bucket is required in listKey");
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 2) {
+      String errorMessage;
+      if (pathNameCount < 2) {
+        errorMessage = "volume/bucket is required in listKey";
+      } else {
+        errorMessage = "Invalid bucket name. Delimiters (/) not allowed in " +
+            "bucket name";
+      }
+      throw new OzoneClientException(errorMessage);
     }
 
     if (maxKeys < 1) {
