@@ -750,9 +750,25 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // When reserving container
       RMContainer updatedContainer = reservedContainer;
       if (updatedContainer == null) {
+        AppPlacementAllocator<FiCaSchedulerNode> ps =
+            application.getAppSchedulingInfo()
+                .getAppPlacementAllocator(schedulerKey);
+        if (null == ps) {
+          LOG.warn("Failed to get " + AppPlacementAllocator.class.getName()
+              + " for application=" + application.getApplicationId()
+              + " schedulerRequestKey=" + schedulerKey);
+          ActivitiesLogger.APP
+              .recordAppActivityWithoutAllocation(activitiesManager, node,
+                  application, schedulerKey.getPriority(),
+                  ActivityDiagnosticConstant.
+                      PRIORITY_SKIPPED_BECAUSE_NULL_ANY_REQUEST,
+                  ActivityState.REJECTED);
+          return ContainerAllocation.PRIORITY_SKIPPED;
+        }
         updatedContainer = new RMContainerImpl(container, schedulerKey,
             application.getApplicationAttemptId(), node.getNodeID(),
-            application.getAppSchedulingInfo().getUser(), rmContext);
+            application.getAppSchedulingInfo().getUser(), rmContext,
+            ps.getPrimaryRequestedNodePartition());
       }
       allocationResult.updatedContainer = updatedContainer;
     }
