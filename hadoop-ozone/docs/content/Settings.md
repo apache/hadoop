@@ -53,7 +53,7 @@ following command. This will generate a template called ```ozone-site.xml``` at
 the specified path (directory).
 
 {{< highlight bash >}}
-ozone genconf -output <path>
+ozone genconf <path>
 {{< /highlight >}}
 
 Let us look at the settings inside the generated file (ozone-site.xml)  and

@@ -21,23 +21,40 @@ package org.apache.hadoop.ozone.genconf;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.hamcrest.CoreMatchers;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import picocli.CommandLine;
+import picocli.CommandLine.ExecutionException;
+import picocli.CommandLine.IExceptionHandler2;
+import picocli.CommandLine.ParseResult;
+import picocli.CommandLine.ParameterException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Tests GenerateOzoneRequiredConfigurations.
  */
 public class TestGenerateOzoneRequiredConfigurations {
   private static File outputBaseDir;
+  private static GenerateOzoneRequiredConfigurations genconfTool;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestGenerateOzoneRequiredConfigurations.class);
+  private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+  private final ByteArrayOutputStream err = new ByteArrayOutputStream();
+  private static final PrintStream OLD_OUT = System.out;
+  private static final PrintStream OLD_ERR = System.err;
   /**
    * Creates output directory which will be used by the test-cases.
    * If a test-case needs a separate directory, it has to create a random
@@ -49,6 +66,24 @@ public class TestGenerateOzoneRequiredConfigurations {
   public static void init() throws Exception {
     outputBaseDir = GenericTestUtils.getTestDir();
     FileUtils.forceMkdir(outputBaseDir);
+    genconfTool = new GenerateOzoneRequiredConfigurations();
+  }
+
+  @Before
+  public void setup() throws Exception {
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+  }
+
+  @After
+  public void reset() {
+    // reset stream after each unit test
+    out.reset();
+    err.reset();
+
+    // restore system streams
+    System.setOut(OLD_OUT);
+    System.setErr(OLD_ERR);
   }
 
   /**
@@ -57,6 +92,57 @@ public class TestGenerateOzoneRequiredConfigurations {
   @AfterClass
   public static void cleanup() throws IOException {
     FileUtils.deleteDirectory(outputBaseDir);
+  }
+
+  private void execute(String[] args, String msg) {
+    List<String> arguments = new ArrayList(Arrays.asList(args));
+    LOG.info("Executing shell command with args {}", arguments);
+    CommandLine cmd = genconfTool.getCmd();
+
+    IExceptionHandler2<List<Object>> exceptionHandler =
+        new IExceptionHandler2<List<Object>>() {
+          @Override
+          public List<Object> handleParseException(ParameterException ex,
+              String[] args) {
+            throw ex;
+          }
+
+          @Override
+          public List<Object> handleExecutionException(ExecutionException ex,
+              ParseResult parseResult) {
+            throw ex;
+          }
+        };
+    cmd.parseWithHandlers(new CommandLine.RunLast(),
+        exceptionHandler, args);
+    Assert.assertTrue(out.toString().contains(msg));
+  }
+
+  private void executeWithException(String[] args, String msg) {
+    List<String> arguments = new ArrayList(Arrays.asList(args));
+    LOG.info("Executing shell command with args {}", arguments);
+    CommandLine cmd = genconfTool.getCmd();
+
+    IExceptionHandler2<List<Object>> exceptionHandler =
+        new IExceptionHandler2<List<Object>>() {
+          @Override
+          public List<Object> handleParseException(ParameterException ex,
+              String[] args) {
+            throw ex;
+          }
+
+          @Override
+          public List<Object> handleExecutionException(ExecutionException ex,
+              ParseResult parseResult) {
+            throw ex;
+          }
+        };
+    try{
+      cmd.parseWithHandlers(new CommandLine.RunLast(),
+          exceptionHandler, args);
+    }catch(Exception ex){
+      Assert.assertTrue(ex.getMessage().contains(msg));
+    }
   }
 
   /**
@@ -68,79 +154,54 @@ public class TestGenerateOzoneRequiredConfigurations {
   @Test
   public void testGenerateConfigurations() throws Exception {
     File tempPath = getRandomTempDir();
-    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
-
-    Assert.assertEquals("Path is valid",
-        true, GenerateOzoneRequiredConfigurations.isValidPath(args[1]));
-
-    Assert.assertEquals("Permission is valid",
-        true, GenerateOzoneRequiredConfigurations.canWrite(args[1]));
-
-    Assert.assertEquals("Config file generated",
-        0, GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
+    String[] args = new String[]{tempPath.getAbsolutePath()};
+    execute(args, "ozone-site.xml has been generated at " +
+        tempPath.getAbsolutePath());
   }
 
   /**
-   * Tests ozone-site.xml generation by calling
-   * {@code GenerateOzoneRequiredConfigurations#main}.
-   *
+   * Test to avoid generating ozone-site.xml when insufficient permission.
    * @throws Exception
    */
   @Test
-  public void testGenerateConfigurationsThroughMainMethod() throws Exception {
-    File tempPath = getRandomTempDir();
-    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
-    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-    PrintStream oldStream = System.out;
-    try (PrintStream ps = new PrintStream(outContent)) {
-      System.setOut(ps);
-      GenerateOzoneRequiredConfigurations.main(args);
-      Assert.assertThat(outContent.toString(), CoreMatchers.containsString(
-          "ozone-site.xml has been generated at"));
-      System.setOut(oldStream);
-    }
-  }
-
-  /**
-   * Test to avoid generating ozone-site.xml when invalid permission.
-   * @throws Exception
-   */
-  @Test
-  public void generateConfigurationsFailure() throws Exception {
+  public void genconfFailureByInsufficientPermissions() throws Exception {
     File tempPath = getRandomTempDir();
     tempPath.setReadOnly();
-    String[] args = new String[]{"-output", tempPath.getAbsolutePath()};
-    GenerateOzoneRequiredConfigurations.main(args);
-
-    Assert.assertEquals("Path is valid",
-        true, GenerateOzoneRequiredConfigurations.isValidPath(args[1]));
-
-    Assert.assertEquals("Invalid permission",
-        false, GenerateOzoneRequiredConfigurations.canWrite(args[1]));
-
-    Assert.assertEquals("Config file not generated",
-        1, GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
-    tempPath.setWritable(true);
+    String[] args = new String[]{tempPath.getAbsolutePath()};
+    executeWithException(args, "Insufficient permission.");
   }
 
   /**
-   * Test to avoid generating ozone-site.xml when invalid permission.
+   * Test to avoid generating ozone-site.xml when invalid path.
    * @throws Exception
    */
   @Test
-  public void generateConfigurationsFailureForInvalidPath() throws Exception {
+  public void genconfFailureByInvalidPath() throws Exception {
     File tempPath = getRandomTempDir();
-    tempPath.setReadOnly();
-    String[] args = new String[]{"-output",
-        tempPath.getAbsolutePath() + "/ozone-site.xml"};
-    GenerateOzoneRequiredConfigurations.main(args);
+    String[] args = new String[]{"invalid-path"};
+    executeWithException(args, "Invalid directory path.");
+  }
 
-    Assert.assertEquals("Path is invalid", false,
-        GenerateOzoneRequiredConfigurations.isValidPath(args[1]));
+  /**
+   * Test to avoid generating ozone-site.xml when path not specified.
+   * @throws Exception
+   */
+  @Test
+  public void genconfPathNotSpecified() throws Exception {
+    File tempPath = getRandomTempDir();
+    String[] args = new String[]{};
+    executeWithException(args, "Missing required parameter: <path>");
+  }
 
-    Assert.assertEquals("Config file not generated", 1,
-        GenerateOzoneRequiredConfigurations.generateConfigurations(args[1]));
-    tempPath.setWritable(true);
+  /**
+   * Test to check help message.
+   * @throws Exception
+   */
+  @Test
+  public void genconfHelp() throws Exception {
+    File tempPath = getRandomTempDir();
+    String[] args = new String[]{"--help"};
+    execute(args, "Usage: ozone genconf [-hV] [--verbose]");
   }
 
   private File getRandomTempDir() throws IOException {
