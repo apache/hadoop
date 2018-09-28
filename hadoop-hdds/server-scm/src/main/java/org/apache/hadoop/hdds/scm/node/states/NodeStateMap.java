@@ -20,14 +20,10 @@ package org.apache.hadoop.hdds.scm.node.states;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -48,6 +44,11 @@ public class NodeStateMap {
    * Represents the current state of node.
    */
   private final ConcurrentHashMap<NodeState, Set<UUID>> stateMap;
+  /**
+   * Represents the current stats of node.
+   */
+  private final ConcurrentHashMap<UUID, SCMNodeStat> nodeStats;
+
   private final ReadWriteLock lock;
 
   /**
@@ -57,6 +58,7 @@ public class NodeStateMap {
     lock = new ReentrantReadWriteLock();
     nodeMap = new ConcurrentHashMap<>();
     stateMap = new ConcurrentHashMap<>();
+    nodeStats = new ConcurrentHashMap<>();
     initStateMap();
   }
 
@@ -257,6 +259,60 @@ public class NodeStateMap {
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  /**
+   * Returns the current stats of the node.
+   *
+   * @param uuid node id
+   *
+   * @return SCMNodeStat of the specify node.
+   *
+   * @throws NodeNotFoundException if the node is not found
+   */
+  public SCMNodeStat getNodeStat(UUID uuid) throws NodeNotFoundException {
+    SCMNodeStat stat = nodeStats.get(uuid);
+    if (stat == null) {
+      throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
+    return stat;
+  }
+
+  /**
+   * Returns a unmodifiable copy of nodeStats.
+   *
+   * @return map with node stats.
+   */
+  public Map<UUID, SCMNodeStat> getNodeStats() {
+    return Collections.unmodifiableMap(nodeStats);
+  }
+
+  /**
+   * Set the current stats of the node.
+   *
+   * @param uuid node id
+   *
+   * @param newstat stat that will set to the specify node.
+   */
+  public void setNodeStat(UUID uuid, SCMNodeStat newstat) {
+    nodeStats.put(uuid, newstat);
+  }
+
+  /**
+   * Remove the current stats of the specify node.
+   *
+   * @param uuid node id
+   *
+   * @return SCMNodeStat the stat removed from the node.
+   *
+   * @throws NodeNotFoundException if the node is not found
+   */
+  public SCMNodeStat removeNodeStat(UUID uuid) throws NodeNotFoundException {
+    SCMNodeStat stat = nodeStats.remove(uuid);
+    if (stat == null) {
+      throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
+    return stat;
   }
 
   /**

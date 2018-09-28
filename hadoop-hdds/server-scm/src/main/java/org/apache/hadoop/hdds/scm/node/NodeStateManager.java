@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
@@ -39,13 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -414,6 +409,51 @@ public class NodeStateManager implements Runnable, Closeable {
   public void removeNode(DatanodeDetails datanodeDetails)
       throws NodeNotFoundException {
     nodeStateMap.removeNode(datanodeDetails.getUuid());
+  }
+
+  /**
+   * Returns the current stats of the node.
+   *
+   * @param uuid node id
+   *
+   * @return SCMNodeStat
+   *
+   * @throws NodeNotFoundException if the node is not present
+   */
+  public SCMNodeStat getNodeStat(UUID uuid) throws NodeNotFoundException {
+    return nodeStateMap.getNodeStat(uuid);
+  }
+
+  /**
+   * Returns a unmodifiable copy of nodeStats.
+   * @return map with node stats.
+   */
+  public Map<UUID, SCMNodeStat> getNodeStatsMap() {
+    return nodeStateMap.getNodeStats();
+  }
+
+  /**
+   * Set the stat for the node.
+   *
+   * @param uuid node id.
+   *
+   * @param newstat new stat that will set to the specify node.
+   */
+  public void setNodeStat(UUID uuid, SCMNodeStat newstat) {
+    nodeStateMap.setNodeStat(uuid, newstat);
+  }
+
+  /**
+   * Remove the current stats of the specify node.
+   *
+   * @param uuid node id
+   *
+   * @return SCMNodeStat the stat removed from the node.
+   *
+   * @throws NodeNotFoundException if the node is not present.
+   */
+  public SCMNodeStat removeNodeStat(UUID uuid) throws NodeNotFoundException {
+    return nodeStateMap.removeNodeStat(uuid);
   }
 
   /**

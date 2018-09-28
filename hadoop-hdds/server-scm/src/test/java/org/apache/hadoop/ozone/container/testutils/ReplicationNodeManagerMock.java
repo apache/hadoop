@@ -196,7 +196,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * Return the node stat of the specified datanode.
    *
    * @param dd - datanode details.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails dd) {
