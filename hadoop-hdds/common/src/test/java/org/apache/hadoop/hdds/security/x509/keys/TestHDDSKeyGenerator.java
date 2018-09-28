@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ *  with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.hdds.security.x509;
+package org.apache.hadoop.hdds.security.x509.keys;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import java.security.KeyPair;
@@ -27,6 +27,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,7 +37,7 @@ import org.junit.Test;
  * Test class for HDDS Key Generator.
  */
 public class TestHDDSKeyGenerator {
-  private static SecurityConfig config;
+  private SecurityConfig config;
 
   @Before
   public void init() {
@@ -47,15 +48,18 @@ public class TestHDDSKeyGenerator {
   /**
    * In this test we verify that we are able to create a key pair, then get
    * bytes of that and use ASN1. parser to parse it back to a private key.
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
    */
   @Test
   public void testGenerateKey()
       throws NoSuchProviderException, NoSuchAlgorithmException {
     HDDSKeyGenerator keyGen = new HDDSKeyGenerator(config.getConfiguration());
     KeyPair keyPair = keyGen.generateKey();
-    Assert.assertEquals(config.getAlgo(), keyPair.getPrivate().getAlgorithm());
+    Assert.assertEquals(config.getKeyAlgo(),
+        keyPair.getPrivate().getAlgorithm());
     PKCS8EncodedKeySpec keySpec =
         new PKCS8EncodedKeySpec(keyPair.getPrivate().getEncoded());
     Assert.assertEquals("PKCS#8", keySpec.getFormat());
@@ -64,8 +68,10 @@ public class TestHDDSKeyGenerator {
   /**
    * In this test we assert that size that we specified is used for Key
    * generation.
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
    */
   @Test
   public void testGenerateKeyWithSize() throws NoSuchProviderException,

@@ -29,9 +29,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Provider;
 import java.security.Security;
+import java.time.Duration;
 
-import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_ALGORITHM;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_KEY_LEN;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DEFAULT_SECURITY_PROVIDER;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_ALGORITHM;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_KEY_DIR_NAME;
@@ -43,11 +44,17 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PRIVATE_KEY_FILE_NAME_D
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_SECURITY_PROVIDER;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_MAX_DURATION_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_SIGNATURE_ALGO;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_X509_SIGNATURE_ALGO_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 
 /**
- * A class that deals with all Security related configs in HDDDS.
- * It is easier to have all Java code related to config in a single place.
+ * A class that deals with all Security related configs in HDDS.
+ *
+ * This class allows security configs to be read and used consistently across
+ * all of security related code base.
  */
 public class SecurityConfig {
   private static final Logger LOG =
@@ -55,15 +62,17 @@ public class SecurityConfig {
   private static volatile Provider provider;
   private final Configuration configuration;
   private final int size;
-  private final String algo;
+  private final String keyAlgo;
   private final String providerString;
   private final String metadatDir;
   private final String keyDir;
-  private final String privateKeyName;
-  private final String publicKeyName;
+  private final String privateKeyFileName;
+  private final String publicKeyFileName;
+  private final Duration certDuration;
+  private final String x509SignatureAlgo;
 
   /**
-   * Constructs a HDDSKeyGenerator.
+   * Constructs a SecurityConfig.
    *
    * @param configuration - HDDS Configuration
    */
@@ -71,10 +80,10 @@ public class SecurityConfig {
     Preconditions.checkNotNull(configuration, "Configuration cannot be null");
     this.configuration = configuration;
     this.size = this.configuration.getInt(HDDS_KEY_LEN, HDDS_DEFAULT_KEY_LEN);
-    this.algo = this.configuration.get(HDDS_KEY_ALGORITHM,
+    this.keyAlgo = this.configuration.get(HDDS_KEY_ALGORITHM,
         HDDS_DEFAULT_KEY_ALGORITHM);
     this.providerString = this.configuration.get(HDDS_SECURITY_PROVIDER,
-            HDDS_DEFAULT_SECURITY_PROVIDER);
+        HDDS_DEFAULT_SECURITY_PROVIDER);
 
     // Please Note: To make it easy for our customers we will attempt to read
     // HDDS metadata dir and if that is not set, we will use Ozone directory.
@@ -86,10 +95,16 @@ public class SecurityConfig {
         + " null. Please check configs.");
     this.keyDir = this.configuration.get(HDDS_KEY_DIR_NAME,
         HDDS_KEY_DIR_NAME_DEFAULT);
-    this.privateKeyName = this.configuration.get(HDDS_PRIVATE_KEY_FILE_NAME,
+    this.privateKeyFileName = this.configuration.get(HDDS_PRIVATE_KEY_FILE_NAME,
         HDDS_PRIVATE_KEY_FILE_NAME_DEFAULT);
-    this.publicKeyName =  this.configuration.get(HDDS_PUBLIC_KEY_FILE_NAME,
+    this.publicKeyFileName = this.configuration.get(HDDS_PUBLIC_KEY_FILE_NAME,
         HDDS_PUBLIC_KEY_FILE_NAME_DEFAULT);
+
+    String durationString = this.configuration.get(HDDS_X509_MAX_DURATION,
+        HDDS_X509_MAX_DURATION_DEFAULT);
+    this.certDuration = Duration.parse(durationString);
+    this.x509SignatureAlgo = this.configuration.get(HDDS_X509_SIGNATURE_ALGO,
+        HDDS_X509_SIGNATURE_ALGO_DEFAULT);
 
     // First Startup -- if the provider is null, check for the provider.
     if (SecurityConfig.provider == null) {
@@ -105,39 +120,38 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the Provider name.
-   * @return String Provider name.
-   */
-  public String getProviderString() {
-    return providerString;
-  }
-
-  /**
-   * Returns the public key file name.
+   * Returns the public key file name, This is used for storing the public
+   * keys on disk.
+   *
    * @return String, File name used for public keys.
    */
-  public String getPublicKeyName() {
-    return publicKeyName;
+  public String getPublicKeyFileName() {
+    return publicKeyFileName;
   }
 
   /**
-   * Returns the private key file name.
+   * Returns the private key file name.This is used for storing the private
+   * keys on disk.
+   *
    * @return String, File name used for private keys.
    */
-  public String getPrivateKeyName() {
-    return privateKeyName;
+  public String getPrivateKeyFileName() {
+    return privateKeyFileName;
   }
 
   /**
    * Returns the File path to where keys are stored.
-   * @return  String Key location.
+   *
+   * @return String Key location.
    */
   public Path getKeyLocation() {
     return Paths.get(metadatDir, keyDir);
   }
 
   /**
-   * Gets the Key Size.
+   * Gets the Key Size, The default key size is 2048, since the default
+   * algorithm used is RSA. User can change this by setting the "hdds.key
+   * .len" in configuration.
    *
    * @return key size.
    */
@@ -146,7 +160,8 @@ public class SecurityConfig {
   }
 
   /**
-   * Gets provider.
+   * Returns the Provider name. SCM defaults to using Bouncy Castle and will
+   * return "BC".
    *
    * @return String Provider name.
    */
@@ -155,22 +170,48 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the Key generation Algorithm used.
+   * Returns the Key generation Algorithm used.  User can change this by
+   * setting the "hdds.key.algo" in configuration.
    *
    * @return String Algo.
    */
-  public String getAlgo() {
-    return algo;
+  public String getKeyAlgo() {
+    return keyAlgo;
+  }
+
+  /**
+   * Returns the X.509 Signature Algorithm used. This can be changed by setting
+   * "hdds.x509.signature.algorithm" to the new name. The default algorithm
+   * is SHA256withRSA.
+   *
+   * @return String
+   */
+  public String getSignatureAlgo() {
+    return x509SignatureAlgo;
   }
 
   /**
    * Returns the Configuration used for initializing this SecurityConfig.
-   * @return  Configuration
+   *
+   * @return Configuration
    */
   public Configuration getConfiguration() {
     return configuration;
   }
 
+  /**
+   * Returns the maximum length a certificate can be valid in SCM. The
+   * default value is 5 years. This can be changed by setting
+   * "hdds.x509.max.duration" in configuration. The formats accepted are
+   * based on the ISO-8601 duration format PnDTnHnMn.nS
+   *
+   * Default value is 5 years and written as P1865D.
+   *
+   * @return Duration.
+   */
+  public Duration getMaxCertificateDuration() {
+    return this.certDuration;
+  }
 
   /**
    * Adds a security provider dynamically if it is not loaded already.

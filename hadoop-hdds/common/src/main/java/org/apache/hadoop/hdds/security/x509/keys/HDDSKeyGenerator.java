@@ -5,7 +5,7 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ *  with the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,9 +16,10 @@
  * limitations under the License.
  *
  */
-package org.apache.hadoop.hdds.security.x509;
+package org.apache.hadoop.hdds.security.x509.keys;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +55,15 @@ public class HDDSKeyGenerator {
    * Use Config to generate key.
    *
    * @return KeyPair
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
    */
   public KeyPair generateKey() throws NoSuchProviderException,
       NoSuchAlgorithmException {
     return generateKey(securityConfig.getSize(),
-        securityConfig.getAlgo(), securityConfig.getProvider());
+        securityConfig.getKeyAlgo(), securityConfig.getProvider());
   }
 
   /**
@@ -68,13 +71,15 @@ public class HDDSKeyGenerator {
    *
    * @param size - int, valid key sizes.
    * @return KeyPair
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
    */
   public KeyPair generateKey(int size) throws
       NoSuchProviderException, NoSuchAlgorithmException {
     return generateKey(size,
-        securityConfig.getAlgo(), securityConfig.getProvider());
+        securityConfig.getKeyAlgo(), securityConfig.getProvider());
   }
 
   /**
@@ -84,8 +89,10 @@ public class HDDSKeyGenerator {
    * @param algorithm - Algorithm to use
    * @param provider - Security provider.
    * @return KeyPair.
-   * @throws NoSuchProviderException
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException - On Error, due to missing Java
+   * dependencies.
+   * @throws NoSuchAlgorithmException - On Error,  due to missing Java
+   * dependencies.
    */
   public KeyPair generateKey(int size, String algorithm, String provider)
       throws NoSuchProviderException, NoSuchAlgorithmException {
