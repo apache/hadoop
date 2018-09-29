@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
@@ -82,12 +81,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,10 +96,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import static java.util.stream.Collectors.toSet;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.matches;
 import static org.mockito.Mockito.doAnswer;
@@ -117,7 +114,7 @@ import static org.mockito.Mockito.when;
  *
  */
 
-public class TestAppManager{
+public class TestAppManager extends AppManagerTestBase{
   private Log LOG = LogFactory.getLog(TestAppManager.class);
   private static RMAppEventType appEventType = RMAppEventType.KILL;
 
@@ -234,70 +231,6 @@ public class TestAppManager{
       setAppEventType(event.getType());
       System.out.println("in handle routine " + getAppEventType().toString());
     }   
-  }   
-  
-
-  // Extend and make the functions we want to test public
-  public class TestRMAppManager extends RMAppManager {
-    private final RMStateStore stateStore;
-
-    public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, new ApplicationACLsManager(conf), conf);
-      this.stateStore = context.getStateStore();
-    }
-
-    public TestRMAppManager(RMContext context,
-        ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
-        YarnScheduler scheduler, ApplicationMasterService masterService,
-        ApplicationACLsManager applicationACLsManager, Configuration conf) {
-      super(context, scheduler, masterService, applicationACLsManager, conf);
-      this.stateStore = context.getStateStore();
-    }
-
-    public void checkAppNumCompletedLimit() {
-      super.checkAppNumCompletedLimit();
-    }
-
-    public void finishApplication(ApplicationId appId) {
-      super.finishApplication(appId);
-    }
-
-    public int getCompletedAppsListSize() {
-      return super.getCompletedAppsListSize();
-    }
-
-    public int getNumberOfCompletedAppsInStateStore() {
-      return this.completedAppsInStateStore;
-    }
-
-    List<ApplicationId> getCompletedApps() {
-      return completedApps;
-    }
-
-    Set<ApplicationId> getFirstNCompletedApps(int n) {
-      return getCompletedApps().stream().limit(n).collect(toSet());
-    }
-
-    Set<ApplicationId> getCompletedAppsWithEvenIdsInRange(int n) {
-      return getCompletedApps().stream().limit(n)
-          .filter(app -> app.getId() % 2 == 0).collect(toSet());
-    }
-
-    Set<ApplicationId> getRemovedAppsFromStateStore(int numRemoves) {
-      ArgumentCaptor<RMApp> argumentCaptor =
-          ArgumentCaptor.forClass(RMApp.class);
-      verify(stateStore, times(numRemoves))
-          .removeApplication(argumentCaptor.capture());
-      return argumentCaptor.getAllValues().stream().map(RMApp::getApplicationId)
-          .collect(toSet());
-    }
-
-    public void submitApplication(
-        ApplicationSubmissionContext submissionContext, String user)
-            throws YarnException, IOException {
-      super.submitApplication(submissionContext, System.currentTimeMillis(),
-        user);
-    }
   }
 
   private void addToCompletedApps(TestRMAppManager appMonitor,
@@ -1213,17 +1146,21 @@ public class TestAppManager{
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
 
+    when(scheduler.getMaximumResourceCapability(anyString())).thenReturn(
+        Resources.createResource(
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+
     ResourceCalculator rs = mock(ResourceCalculator.class);
     when(scheduler.getResourceCalculator()).thenReturn(rs);
 
-    when(scheduler.getNormalizedResource(any()))
+    when(scheduler.getNormalizedResource(any(), any()))
         .thenAnswer(new Answer<Resource>() {
-      @Override
-      public Resource answer(InvocationOnMock invocationOnMock)
-          throws Throwable {
-        return (Resource) invocationOnMock.getArguments()[0];
-      }
-    });
+          @Override
+          public Resource answer(InvocationOnMock invocationOnMock)
+              throws Throwable {
+            return (Resource) invocationOnMock.getArguments()[0];
+          }
+        });
 
     return scheduler;
   }

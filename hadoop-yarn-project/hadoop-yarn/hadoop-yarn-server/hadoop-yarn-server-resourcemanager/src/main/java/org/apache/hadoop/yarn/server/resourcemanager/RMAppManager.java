@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -567,13 +568,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
         // Normalize all requests
         String queue = submissionContext.getQueue();
+        Resource maxAllocation = scheduler.getMaximumResourceCapability(queue);
         for (ResourceRequest amReq : amReqs) {
-          SchedulerUtils.normalizeAndValidateRequest(amReq,
-              scheduler.getMaximumResourceCapability(queue),
-              queue, scheduler, isRecovery, rmContext);
+          SchedulerUtils.normalizeAndValidateRequest(amReq, maxAllocation,
+              queue, scheduler, isRecovery, rmContext, null);
 
-          amReq.setCapability(
-              scheduler.getNormalizedResource(amReq.getCapability()));
+          amReq.setCapability(scheduler.getNormalizedResource(
+              amReq.getCapability(), maxAllocation));
         }
         return amReqs;
       } catch (InvalidResourceRequestException e) {

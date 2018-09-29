@@ -192,6 +192,7 @@ public class FairScheduler extends
   protected long rackLocalityDelayMs; // Delay for rack locality
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
+
   @VisibleForTesting
   boolean maxAssignDynamic;
   protected int maxAssign; // Max containers to assign per heartbeat
@@ -227,12 +228,12 @@ public class FairScheduler extends
 
   private void validateConf(FairSchedulerConfiguration config) {
     // validate scheduler memory allocation setting
-    int minMem = config.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = config.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    int minMem =
+        config.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int maxMem =
+        config.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
     if (minMem < 0 || minMem > maxMem) {
       throw new YarnRuntimeException("Invalid resource scheduler memory"
@@ -254,12 +255,12 @@ public class FairScheduler extends
     }
 
     // validate scheduler vcores allocation setting
-    int minVcores = config.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = config.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    int minVcores =
+        config.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    int maxVcores =
+        config.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 
     if (minVcores < 0 || minVcores > maxVcores) {
       throw new YarnRuntimeException("Invalid resource scheduler vcores"
@@ -833,12 +834,33 @@ public class FairScheduler extends
   }
 
   @Override
-  public Resource getNormalizedResource(Resource requestedResource) {
+  public Resource getNormalizedResource(Resource requestedResource,
+      Resource maxResourceCapability) {
     return SchedulerUtils.getNormalizedResource(requestedResource,
         DOMINANT_RESOURCE_CALCULATOR,
         minimumAllocation,
-        getMaximumResourceCapability(),
+        maxResourceCapability,
         incrAllocation);
+  }
+
+  @Override
+  public Resource getMaximumResourceCapability(String queueName) {
+    if(queueName == null || queueName.isEmpty()) {
+      return  getMaximumResourceCapability();
+    }
+    FSQueue queue = queueMgr.getQueue(queueName);
+    Resource schedulerLevelMaxResourceCapability =
+        getMaximumResourceCapability();
+    if (queue == null) {
+      return schedulerLevelMaxResourceCapability;
+    }
+    Resource queueMaxResourceCapability = queue.getMaximumContainerAllocation();
+    if (queueMaxResourceCapability.equals(Resources.unbounded())) {
+      return schedulerLevelMaxResourceCapability;
+    } else {
+      return Resources.componentwiseMin(schedulerLevelMaxResourceCapability,
+          queueMaxResourceCapability);
+    }
   }
 
   @VisibleForTesting
@@ -897,7 +919,7 @@ public class FairScheduler extends
     handleContainerUpdates(application, updateRequests);
 
     // Sanity check
-    normalizeResourceRequests(ask);
+    normalizeResourceRequests(ask, queue.getName());
 
     // TODO, normalize SchedulingRequest
 

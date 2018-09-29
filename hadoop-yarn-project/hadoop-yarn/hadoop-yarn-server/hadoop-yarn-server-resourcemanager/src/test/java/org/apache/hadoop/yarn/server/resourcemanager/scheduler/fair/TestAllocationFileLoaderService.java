@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
@@ -30,7 +31,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,6 +44,7 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +56,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestAllocationFileLoaderService {
+
+  private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
 
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "/tmp")).getAbsolutePath();
@@ -203,7 +209,8 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new YarnConfiguration();
+    TestResourceUtils.addNewTypesToResources(A_CUSTOM_RESOURCE);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
 
@@ -246,6 +253,8 @@ public class TestAllocationFileLoaderService {
               .fairSharePreemptionTimeout(120)
               .minSharePreemptionTimeout(50)
               .fairSharePreemptionThreshold(0.6)
+              .maxContainerAllocation(
+                      "vcores=16, memory-mb=512, " + A_CUSTOM_RESOURCE + "=10")
             // Create hierarchical queues G,H, with different min/fair
             // share preemption timeouts and preemption thresholds.
             // Also add a child default to make sure it doesn't impact queue H.
@@ -253,6 +262,7 @@ public class TestAllocationFileLoaderService {
                 .fairSharePreemptionTimeout(180)
                 .minSharePreemptionTimeout(40)
                 .fairSharePreemptionThreshold(0.7)
+                .maxContainerAllocation("1024mb,8vcores")
               .buildSubQueue()
             .buildQueue()
             // Set default limit of apps per queue to 15
@@ -284,8 +294,6 @@ public class TestAllocationFileLoaderService {
     AllocationConfiguration queueConf = confHolder.allocConf;
 
     assertEquals(6, queueConf.getConfiguredQueues().get(FSQueueType.LEAF).size());
-    assertEquals(Resources.createResource(0),
-        queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
@@ -357,6 +365,29 @@ public class TestAllocationFileLoaderService {
     assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueC"), 0.01);
     assertEquals(.4f, queueConf.getQueueMaxAMShare("root.queueD"), 0.01);
     assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueE"), 0.01);
+
+    Resource expectedResourceWithCustomType = Resources.createResource(512, 16);
+    expectedResourceWithCustomType.setResourceValue(A_CUSTOM_RESOURCE, 10);
+
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation(
+            "root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueA"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueB"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueC"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueD"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueE"));
+    assertEquals(Resources.unbounded(),
+        queueConf.getQueueMaxContainerAllocation("root.queueF"));
+    assertEquals(expectedResourceWithCustomType,
+        queueConf.getQueueMaxContainerAllocation("root.queueG"));
+    assertEquals(Resources.createResource(1024, 8),
+        queueConf.getQueueMaxContainerAllocation("root.queueG.queueH"));
 
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +

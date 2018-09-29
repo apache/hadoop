@@ -84,6 +84,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private float fairSharePreemptionThreshold = 0.5f;
   private boolean preemptable = true;
   private boolean isDynamic = true;
+  protected Resource maxContainerAllocation;
 
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
@@ -162,6 +163,12 @@ public abstract class FSQueue implements Queue, Schedulable {
   public void setMaxShare(ConfigurableResource maxShare){
     this.maxShare = maxShare;
   }
+
+  public void setMaxContainerAllocation(Resource maxContainerAllocation){
+    this.maxContainerAllocation = maxContainerAllocation;
+  }
+
+  public abstract Resource getMaximumContainerAllocation();
 
   @Override
   public Resource getMaxShare() {

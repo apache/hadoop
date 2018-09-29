@@ -114,19 +114,19 @@ public class SchedulerUtils {
 
   public static final String UPDATED_CONTAINER =
       "Temporary container killed by application for ExeutionType update";
-  
-  public static final String LOST_CONTAINER = 
+
+  public static final String LOST_CONTAINER =
       "Container released on a *lost* node";
-  
-  public static final String PREEMPTED_CONTAINER = 
+
+  public static final String PREEMPTED_CONTAINER =
       "Container preempted by scheduler";
-  
-  public static final String COMPLETED_APPLICATION = 
+
+  public static final String COMPLETED_APPLICATION =
       "Container of a completed application";
-  
+
   public static final String EXPIRED_CONTAINER =
       "Container expired since it was unused";
-  
+
   public static final String UNRESERVED_CONTAINER =
       "Container reservation no longer required.";
 
@@ -141,7 +141,7 @@ public class SchedulerUtils {
    */
   public static ContainerStatus createAbnormalContainerStatus(
       ContainerId containerId, String diagnostics) {
-    return createAbnormalContainerStatus(containerId, 
+    return createAbnormalContainerStatus(containerId,
         ContainerExitStatus.ABORTED, diagnostics);
   }
 
@@ -169,14 +169,14 @@ public class SchedulerUtils {
    */
   public static ContainerStatus createPreemptedContainerStatus(
       ContainerId containerId, String diagnostics) {
-    return createAbnormalContainerStatus(containerId, 
+    return createAbnormalContainerStatus(containerId,
         ContainerExitStatus.PREEMPTED, diagnostics);
   }
 
   /**
    * Utility to create a {@link ContainerStatus} during exceptional
    * circumstances.
-   * 
+   *
    * @param containerId {@link ContainerId} of returned/released/lost container.
    * @param diagnostics diagnostic message
    * @return <code>ContainerStatus</code> for an returned/released/lost 
@@ -184,7 +184,7 @@ public class SchedulerUtils {
    */
   private static ContainerStatus createAbnormalContainerStatus(
       ContainerId containerId, int exitStatus, String diagnostics) {
-    ContainerStatus containerStatus = 
+    ContainerStatus containerStatus =
         recordFactory.newRecordInstance(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
     containerStatus.setDiagnostics(diagnostics);
@@ -254,23 +254,14 @@ public class SchedulerUtils {
       labelExp = RMNodeLabelsManager.NO_LABEL;
     }
 
-    if ( labelExp != null) {
+    if (labelExp != null) {
       resReq.setNodeLabelExpression(labelExp);
     }
   }
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
-      boolean isRecovery, RMContext rmContext)
-      throws InvalidResourceRequestException {
-    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
-        isRecovery, rmContext, null);
-  }
-
-
-  private static void normalizeAndValidateRequest(ResourceRequest resReq,
-          Resource maximumResource, String queueName, YarnScheduler scheduler,
-          boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
+      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
+      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
       throws InvalidResourceRequestException {
     Configuration conf = rmContext.getYarnConfiguration();
     // If Node label is not enabled throw exception
@@ -299,37 +290,30 @@ public class SchedulerUtils {
     SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
 
     if (!isRecovery) {
-      validateResourceRequest(resReq, maximumResource, queueInfo, rmContext);
+      validateResourceRequest(resReq, maximumAllocation, queueInfo, rmContext);
     }
   }
 
-  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
-      RMContext rmContext) throws InvalidResourceRequestException {
-    normalizeAndvalidateRequest(resReq, maximumResource, queueName, scheduler,
-        rmContext, null);
-  }
-
-  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
       RMContext rmContext, QueueInfo queueInfo)
       throws InvalidResourceRequestException {
-    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+    normalizeAndValidateRequest(resReq, maximumAllocation, queueName, scheduler,
         false, rmContext, queueInfo);
   }
 
   /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
-   * 
+   *
    * @throws InvalidResourceRequestException when there is invalid request
    */
   private static void validateResourceRequest(ResourceRequest resReq,
-      Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
+      Resource maximumAllocation, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
     final Resource requestedResource = resReq.getCapability();
     checkResourceRequestAgainstAvailableResource(requestedResource,
-        maximumResource);
+        maximumAllocation);
 
     String labelExp = resReq.getNodeLabelExpression();
     // we don't allow specify label expression other than resourceName=ANY now
@@ -535,7 +519,7 @@ public class SchedulerUtils {
       if (!str.trim().isEmpty()) {
         // check queue label
         if (queueLabels == null) {
-          return false; 
+          return false;
         } else {
           if (!queueLabels.contains(str)
               && !queueLabels.contains(RMNodeLabelsManager.ANY)) {

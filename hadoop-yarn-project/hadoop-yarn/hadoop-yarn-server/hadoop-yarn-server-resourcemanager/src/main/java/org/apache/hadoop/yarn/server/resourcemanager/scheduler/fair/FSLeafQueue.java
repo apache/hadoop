@@ -547,6 +547,16 @@ public class FSLeafQueue extends FSQueue {
     this.weights = weight;
   }
 
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
+  }
+
   /**
    * Helper method to compute the amount of minshare starvation.
    *
