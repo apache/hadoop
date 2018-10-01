@@ -118,6 +118,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>bcprov-jdk15on</artifactId>
       <version>1.54</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.54</version>
+    </dependency>
   </dependencies>
 
   <build>

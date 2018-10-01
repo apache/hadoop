@@ -64,11 +64,11 @@ public class OzoneManagerHttpServer extends BaseHttpServer {
   }
 
   @Override protected String getKeytabFile() {
-    return OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE;
+    return OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE;
   }
 
   @Override protected String getSpnegoPrincipal() {
-    return OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
+    return OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY;
   }
 
   @Override protected String getEnabledKey() {

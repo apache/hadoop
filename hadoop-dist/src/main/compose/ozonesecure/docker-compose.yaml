@@ -16,47 +16,38 @@
 
 version: "3"
 services:
-   ozone.kdc:
+   kdc:
       image: ahadoop/kdc:v1
-   namenode:
-      image: ahadoop/ozone:v1
-      hostname: namenode
+      hostname: kdc
       volumes:
-         - ${OZONEDIR}:/opt/hadoop
-      ports:
-         - 9000:9000
-      environment:
-          ENSURE_NAMENODE_DIR: /data/namenode
-      env_file:
-         - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","namenode"]
+          - $SRC_VOLUME:/opt/hadoop
    datanode:
-      image: ahadoop/ozone:v1
-      hostname: datanode
+      image: ahadoop/runner:latest
       volumes:
-        - ${OZONEDIR}:/opt/hadoop
+        - $SRC_VOLUME:/opt/hadoop
+      hostname: datanode
       ports:
-        - 9874
+        - 9864
+      command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
         - ./docker-config
-      command: ["/opt/hadoop/bin/ozone","datanode"]
-   om:
-      image: ahadoop/ozone:v1
+   ozoneManager:
+      image: ahadoop/runner:latest
       hostname: om
       volumes:
-         - ${OZONEDIR}:/opt/hadoop
+         - $SRC_VOLUME:/opt/hadoop
       ports:
          - 9874:9874
       environment:
-         ENSURE_KSM_INITIALIZED: /data/metadata/om/current/VERSION
+         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/ozone","ksm"]
+      command: ["/opt/hadoop/bin/ozone","om"]
    scm:
-      image: ahadoop/ozone:v1
+      image: ahadoop/runner:latest
       hostname: scm
       volumes:
-         - ${OZONEDIR}:/opt/hadoop
+         - $SRC_VOLUME:/opt/hadoop
       ports:
          - 9876:9876
       env_file:

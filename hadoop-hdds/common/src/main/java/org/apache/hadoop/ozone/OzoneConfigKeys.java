@@ -329,9 +329,6 @@ public final class OzoneConfigKeys {
       DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT =
       ScmConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT;
 
-  public static final String OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
-      "ozone.web.authentication.kerberos.principal";
-
   public static final String HDDS_DATANODE_PLUGINS_KEY =
       "hdds.datanode.plugins";
 
