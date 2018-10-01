@@ -121,10 +121,13 @@ public final class SCMDatanodeHeartbeatDispatcher {
               heartbeat.getPipelineActions()));
     }
 
-    if (heartbeat.hasCommandStatusReport()) {
-      eventPublisher.fireEvent(CMD_STATUS_REPORT,
-          new CommandStatusReportFromDatanode(datanodeDetails,
-              heartbeat.getCommandStatusReport()));
+    if (heartbeat.getCommandStatusReportsCount() != 0) {
+      for (CommandStatusReportsProto commandStatusReport : heartbeat
+          .getCommandStatusReportsList()) {
+        eventPublisher.fireEvent(CMD_STATUS_REPORT,
+            new CommandStatusReportFromDatanode(datanodeDetails,
+                commandStatusReport));
+      }
     }
 
     return commands;

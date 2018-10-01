@@ -23,11 +23,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -77,12 +72,4 @@ public interface StorageContainerDatanodeProtocol {
           ContainerReportsProto containerReportsRequestProto,
           PipelineReportsProto pipelineReports) throws IOException;
 
-  /**
-   * Used by datanode to send block deletion ACK to SCM.
-   * @param request block deletion transactions.
-   * @return block deletion transaction response.
-   * @throws IOException
-   */
-  ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      ContainerBlocksDeletionACKProto request) throws IOException;
 }

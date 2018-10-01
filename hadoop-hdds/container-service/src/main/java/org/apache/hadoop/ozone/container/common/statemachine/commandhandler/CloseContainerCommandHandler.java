@@ -106,7 +106,8 @@ public class CloseContainerCommandHandler implements CommandHandler {
         cmdExecuted = false;
       }
     } finally {
-      updateCommandStatus(context, command, cmdExecuted, LOG);
+      updateCommandStatus(context, command,
+          (cmdStatus) -> cmdStatus.setStatus(cmdExecuted), LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }

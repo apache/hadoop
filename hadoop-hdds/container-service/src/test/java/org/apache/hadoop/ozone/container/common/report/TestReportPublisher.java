@@ -138,9 +138,7 @@ public class TestReportPublisher {
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("Unit test ReportManager Thread - %d").build());
     publisher.init(dummyContext, executorService);
-    Assert.assertEquals(0,
-        ((CommandStatusReportPublisher) publisher).getReport()
-            .getCmdStatusCount());
+    Assert.assertNull(((CommandStatusReportPublisher) publisher).getReport());
 
     // Insert to status object to state context map and then get the report.
     CommandStatus obj1 = CommandStatus.CommandStatusBuilder.newBuilder()

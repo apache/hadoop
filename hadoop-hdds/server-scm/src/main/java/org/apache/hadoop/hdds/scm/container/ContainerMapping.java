@@ -33,7 +33,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -176,7 +175,10 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
-   * Returns the ContainerInfo from the container ID.
+   * Returns the ContainerInfo and pipeline from the containerID. If container
+   * has no available replicas in datanodes it returns pipeline with no
+   * datanodes and empty leaderID . Pipeline#isEmpty can be used to check for
+   * an empty pipeline.
    *
    * @param containerID - ID of container.
    * @return - ContainerWithPipeline such as creation state and the pipeline.
@@ -200,6 +202,7 @@ public class ContainerMapping implements Mapping {
       contInfo = ContainerInfo.fromProtobuf(temp);
 
       Pipeline pipeline;
+      String leaderId = "";
       if (contInfo.isContainerOpen()) {
         // If pipeline with given pipeline Id already exist return it
         pipeline = pipelineSelector.getPipeline(contInfo.getPipelineID());
@@ -207,14 +210,12 @@ public class ContainerMapping implements Mapping {
         // For close containers create pipeline from datanodes with replicas
         Set<DatanodeDetails> dnWithReplicas = containerStateManager
             .getContainerReplicas(contInfo.containerID());
-        if (dnWithReplicas.size() == 0) {
-          throw new SCMException("Can't create a pipeline for container with "
-              + "no replica.", ResultCodes.NO_REPLICA_FOUND);
+        if (!dnWithReplicas.isEmpty()) {
+          leaderId = dnWithReplicas.iterator().next().getUuidString();
         }
-        pipeline =
-            new Pipeline(dnWithReplicas.iterator().next().getUuidString(),
-                contInfo.getState(), ReplicationType.STAND_ALONE,
-                contInfo.getReplicationFactor(), PipelineID.randomId());
+        pipeline = new Pipeline(leaderId, contInfo.getState(),
+            ReplicationType.STAND_ALONE, contInfo.getReplicationFactor(),
+            PipelineID.randomId());
         dnWithReplicas.forEach(pipeline::addMember);
       }
       return new ContainerWithPipeline(contInfo, pipeline);

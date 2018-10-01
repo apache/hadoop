@@ -49,15 +49,6 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKProto.DeleteBlockTransactionResult;
-
 
 import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto
@@ -100,7 +91,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY;
@@ -240,18 +230,6 @@ public class SCMDatanodeProtocolServer implements
     return SCMHeartbeatResponseProto.newBuilder()
         .setDatanodeUUID(heartbeat.getDatanodeDetails().getUuid())
         .addAllCommands(cmdResponses).build();
-  }
-
-  @Override
-  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      ContainerBlocksDeletionACKProto acks) throws IOException {
-    if (acks.getResultsCount() > 0) {
-      List<DeleteBlockTransactionResult> resultList = acks.getResultsList();
-      scm.getScmBlockManager().getDeletedBlockLog()
-          .commitTransactions(resultList, UUID.fromString(acks.getDnId()));
-    }
-    return ContainerBlocksDeletionACKResponseProto.newBuilder()
-        .getDefaultInstanceForType();
   }
 
   /**

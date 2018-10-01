@@ -82,6 +82,6 @@ public class CommandStatusReportPublisher extends
         map.remove(key);
       }
     });
-    return builder.build();
+    return builder.getCmdStatusCount() > 0 ? builder.build() : null;
   }
 }

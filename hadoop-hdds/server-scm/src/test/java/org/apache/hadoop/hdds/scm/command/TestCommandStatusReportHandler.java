@@ -67,20 +67,20 @@ public class TestCommandStatusReportHandler implements EventPublisher {
     CommandStatusReportFromDatanode report = this.getStatusReport(Collections
         .emptyList());
     cmdStatusReportHandler.onMessage(report, this);
-    assertFalse(logCapturer.getOutput().contains("DeleteBlockCommandStatus"));
+    assertFalse(logCapturer.getOutput().contains("Delete_Block_Status"));
     assertFalse(logCapturer.getOutput().contains(
-        "CloseContainerCommandStatus"));
-    assertFalse(logCapturer.getOutput().contains("ReplicateCommandStatus"));
+        "Close_Container_Command_Status"));
+    assertFalse(logCapturer.getOutput().contains("Replicate_Command_Status"));
 
 
     report = this.getStatusReport(this.getCommandStatusList());
     cmdStatusReportHandler.onMessage(report, this);
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
-        "DeleteBlockCommandStatus"));
+        "Delete_Block_Status"));
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
-        "CloseContainerCommandStatus"));
+        "Close_Container_Command_Status"));
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
-        "ReplicateCommandStatus"));
+        "Replicate_Command_Status"));
 
     assertTrue(logCapturer.getOutput().contains("type: " +
         "closeContainerCommand"));

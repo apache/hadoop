@@ -23,8 +23,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .CloseContainerStatus;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
-    .DeleteBlockCommandStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
@@ -128,6 +127,10 @@ public final class SCMEvents {
   public static final Event<CommandForDatanode> DATANODE_COMMAND =
       new TypedEvent<>(CommandForDatanode.class, "Datanode_Command");
 
+  public static final TypedEvent<CommandForDatanode>
+      RETRIABLE_DATANODE_COMMAND =
+      new TypedEvent<>(CommandForDatanode.class, "Retriable_Datanode_Command");
+
   /**
    * A Close Container Event can be triggered under many condition. Some of them
    * are: 1. A Container is full, then we stop writing further information to
@@ -179,7 +182,7 @@ public final class SCMEvents {
    * status for Replication SCMCommand is received.
    */
   public static final Event<ReplicationStatus> REPLICATION_STATUS = new
-      TypedEvent<>(ReplicationStatus.class, "ReplicateCommandStatus");
+      TypedEvent<>(ReplicationStatus.class, "Replicate_Command_Status");
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for CloseContainer SCMCommand is received.
@@ -187,15 +190,15 @@ public final class SCMEvents {
   public static final Event<CloseContainerStatus>
       CLOSE_CONTAINER_STATUS =
       new TypedEvent<>(CloseContainerStatus.class,
-          "CloseContainerCommandStatus");
+          "Close_Container_Command_Status");
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for DeleteBlock SCMCommand is received.
    */
-  public static final Event<DeleteBlockCommandStatus>
+  public static final TypedEvent<CommandStatusReportHandler.DeleteBlockStatus>
       DELETE_BLOCK_STATUS =
-      new TypedEvent<>(DeleteBlockCommandStatus.class,
-          "DeleteBlockCommandStatus");
+      new TypedEvent<>(CommandStatusReportHandler.DeleteBlockStatus.class,
+          "Delete_Block_Status");
 
   /**
    * This event will be triggered while processing container reports from DN
@@ -203,7 +206,7 @@ public final class SCMEvents {
    * deleteTransactionID on SCM.
    */
   public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
-      new TypedEvent<>(PendingDeleteStatusList.class, "PendingDeleteStatus");
+      new TypedEvent<>(PendingDeleteStatusList.class, "Pending_Delete_Status");
 
   /**
    * This is the command for ReplicationManager to handle under/over

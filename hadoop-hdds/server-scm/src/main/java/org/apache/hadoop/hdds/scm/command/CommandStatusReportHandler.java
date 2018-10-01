@@ -63,8 +63,10 @@ public class CommandStatusReportHandler implements
             CloseContainerStatus(cmdStatus));
         break;
       case deleteBlocksCommand:
-        publisher.fireEvent(SCMEvents.DELETE_BLOCK_STATUS, new
-            DeleteBlockCommandStatus(cmdStatus));
+        if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
+          publisher.fireEvent(SCMEvents.DELETE_BLOCK_STATUS,
+              new DeleteBlockStatus(cmdStatus));
+        }
         break;
       default:
         LOGGER.debug("CommandStatus of type:{} not handled in " +
@@ -120,8 +122,8 @@ public class CommandStatusReportHandler implements
   /**
    * Wrapper event for DeleteBlock Command.
    */
-  public static class DeleteBlockCommandStatus extends CommandStatusEvent {
-    public DeleteBlockCommandStatus(CommandStatus cmdStatus) {
+  public static class DeleteBlockStatus extends CommandStatusEvent {
+    public DeleteBlockStatus(CommandStatus cmdStatus) {
       super(cmdStatus);
     }
   }
