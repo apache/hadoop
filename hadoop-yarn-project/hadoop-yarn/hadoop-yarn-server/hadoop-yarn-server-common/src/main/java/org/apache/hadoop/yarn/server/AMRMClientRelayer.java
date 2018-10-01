@@ -237,6 +237,27 @@ public class AMRMClientRelayer extends AbstractService
     return this.rmClient.registerApplicationMaster(request);
   }
 
+  /**
+   * After an RM failover, there might be more than one
+   * allocate/finishApplicationMaster call thread (due to RPC timeout and retry)
+   * doing the auto re-register concurrently. As a result, we need to swallow
+   * the already register exception thrown by the new RM.
+   */
+  private void reRegisterApplicationMaster(
+      RegisterApplicationMasterRequest request)
+      throws YarnException, IOException {
+    try {
+      registerApplicationMaster(request);
+    } catch (InvalidApplicationMasterRequestException e) {
+      if (e.getMessage()
+          .contains(AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE)) {
+        LOG.info("Concurrent thread successfully re-registered, moving on.");
+      } else {
+        throw e;
+      }
+    }
+  }
+
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request)
@@ -247,7 +268,7 @@ public class AMRMClientRelayer extends AbstractService
       LOG.warn("Out of sync with RM " + rmId
           + " for " + this.appId + ", hence resyncing.");
       // re register with RM
-      registerApplicationMaster(this.amRegistrationRequest);
+      reRegisterApplicationMaster(this.amRegistrationRequest);
       return finishApplicationMaster(request);
     }
   }
@@ -381,7 +402,7 @@ public class AMRMClientRelayer extends AbstractService
       }
 
       // re-register with RM, then retry allocate recursively
-      registerApplicationMaster(this.amRegistrationRequest);
+      reRegisterApplicationMaster(this.amRegistrationRequest);
       // Reset responseId after re-register
       allocateRequest.setResponseId(0);
       allocateResponse = allocate(allocateRequest);

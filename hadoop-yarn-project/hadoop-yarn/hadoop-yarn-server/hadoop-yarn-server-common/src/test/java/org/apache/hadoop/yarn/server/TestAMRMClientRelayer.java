@@ -64,6 +64,11 @@ public class TestAMRMClientRelayer {
     // Whether this mockRM will throw failover exception upon next heartbeat
     // from AM
     private boolean failover = false;
+
+    // Whether this mockRM will throw application already registered exception
+    // upon next registerApplicationMaster call
+    private boolean throwAlreadyRegister = false;
+
     private int responseIdReset = -1;
     private List<ResourceRequest> lastAsk;
     private List<ContainerId> lastRelease;
@@ -74,6 +79,11 @@ public class TestAMRMClientRelayer {
     public RegisterApplicationMasterResponse registerApplicationMaster(
         RegisterApplicationMasterRequest request)
         throws YarnException, IOException {
+      if (this.throwAlreadyRegister) {
+        this.throwAlreadyRegister = false;
+        throw new InvalidApplicationMasterRequestException(
+            AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + "appId");
+      }
       return null;
     }
 
@@ -116,6 +126,10 @@ public class TestAMRMClientRelayer {
 
     public void setFailoverFlag() {
       this.failover = true;
+    }
+
+    public void setThrowAlreadyRegister() {
+      this.throwAlreadyRegister = true;
     }
 
     public void setResponseIdReset(int expectedResponseId) {
@@ -314,5 +328,16 @@ public class TestAMRMClientRelayer {
     this.responseId = response.getResponseId();
     response = this.relayer.allocate(getAllocateRequest());
     Assert.assertEquals(this.responseId + 1, response.getResponseId());
+  }
+
+  @Test
+  public void testConcurrentReregister() throws YarnException, IOException {
+
+    // Set RM restart and failover flag
+    this.mockAMS.setFailoverFlag();
+
+    this.mockAMS.setThrowAlreadyRegister();
+
+    relayer.finishApplicationMaster(null);
   }
 }

@@ -184,6 +184,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   private volatile boolean justRecovered;
 
+  /** if true, allocate will be no-op, skipping actual processing. */
+  private volatile boolean finishAMCalled;
+
   /**
    * Used to keep track of the container Id and the sub cluster RM that created
    * the container, so that we know which sub-cluster to forward later requests
@@ -230,6 +233,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.amRegistrationRequest = null;
     this.amRegistrationResponse = null;
     this.justRecovered = false;
+    this.finishAMCalled = false;
   }
 
   /**
@@ -576,6 +580,12 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
               + ". AM should re-register and full re-send pending requests.");
     }
 
+    if (this.finishAMCalled) {
+      LOG.warn("FinishApplicationMaster already called by {}, skip heartbeat "
+          + "processing and return dummy response" + this.attemptId);
+      return RECORD_FACTORY.newRecordInstance(AllocateResponse.class);
+    }
+
     // Check responseId and handle duplicate heartbeat exactly same as RM
     synchronized (this.lastAllocateResponseLock) {
       LOG.info("Heartbeat from " + this.attemptId + " with responseId "
@@ -663,6 +673,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request)
       throws YarnException, IOException {
+
+    this.finishAMCalled = true;
 
     // TODO: consider adding batchFinishApplicationMaster in UAMPoolManager
     boolean failedToUnRegister = false;
