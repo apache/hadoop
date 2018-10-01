@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
@@ -35,8 +37,11 @@ import org.apache.hadoop.ozone.container.common.states.datanode
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus
     .CommandStatusBuilder;
+import org.apache.hadoop.ozone.protocol.commands
+    .DeleteBlockCommandStatus.DeleteBlockCommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
+import static java.lang.Math.min;
 import static org.apache.hadoop.hdds.scm.HddsServerUtil.getScmHeartbeatInterval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +57,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 
@@ -67,7 +73,7 @@ public class StateContext {
   private final DatanodeStateMachine parent;
   private final AtomicLong stateExecutionCount;
   private final Configuration conf;
-  private final Queue<GeneratedMessage> reports;
+  private final List<GeneratedMessage> reports;
   private final Queue<ContainerAction> containerActions;
   private final Queue<PipelineAction> pipelineActions;
   private DatanodeStateMachine.DatanodeStates state;
@@ -174,19 +180,23 @@ public class StateContext {
    * @param report report to be added
    */
   public void addReport(GeneratedMessage report) {
-    synchronized (reports) {
-      reports.add(report);
+    if (report != null) {
+      synchronized (reports) {
+        reports.add(report);
+      }
     }
   }
 
   /**
-   * Returns the next report, or null if the report queue is empty.
+   * Adds the reports which could not be sent by heartbeat back to the
+   * reports list.
    *
-   * @return report
+   * @param reportsToPutBack list of reports which failed to be sent by
+   *                         heartbeat.
    */
-  public GeneratedMessage getNextReport() {
+  public void putBackReports(List<GeneratedMessage> reportsToPutBack) {
     synchronized (reports) {
-      return reports.poll();
+      reports.addAll(0, reportsToPutBack);
     }
   }
 
@@ -207,19 +217,14 @@ public class StateContext {
    * @return List<reports>
    */
   public List<GeneratedMessage> getReports(int maxLimit) {
-    List<GeneratedMessage> reportList = new ArrayList<>();
+    List<GeneratedMessage> reportsToReturn = new LinkedList<>();
     synchronized (reports) {
-      if (!reports.isEmpty()) {
-        int size = reports.size();
-        int limit = size > maxLimit ? maxLimit : size;
-        for (int count = 0; count < limit; count++) {
-          GeneratedMessage report = reports.poll();
-          Preconditions.checkNotNull(report);
-          reportList.add(report);
-        }
-      }
-      return reportList;
+      List<GeneratedMessage> tempList = reports.subList(
+          0, min(reports.size(), maxLimit));
+      reportsToReturn.addAll(tempList);
+      tempList.clear();
     }
+    return reportsToReturn;
   }
 
 
@@ -442,9 +447,14 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
+    CommandStatusBuilder statusBuilder;
+    if (cmd.getType() == Type.deleteBlocksCommand) {
+      statusBuilder = new DeleteBlockCommandStatusBuilder();
+    } else {
+      statusBuilder = CommandStatusBuilder.newBuilder();
+    }
     this.addCmdStatus(cmd.getId(),
-        CommandStatusBuilder.newBuilder()
-            .setCmdId(cmd.getId())
+        statusBuilder.setCmdId(cmd.getId())
             .setStatus(Status.PENDING)
             .setType(cmd.getType())
             .build());
@@ -469,13 +479,13 @@ public class StateContext {
   /**
    * Updates status of a pending status command.
    * @param cmdId       command id
-   * @param cmdExecuted SCMCommand
+   * @param cmdStatusUpdater Consumer to update command status.
    * @return true if command status updated successfully else false.
    */
-  public boolean updateCommandStatus(Long cmdId, boolean cmdExecuted) {
+  public boolean updateCommandStatus(Long cmdId,
+      Consumer<CommandStatus> cmdStatusUpdater) {
     if(cmdStatusMap.containsKey(cmdId)) {
-      cmdStatusMap.get(cmdId)
-          .setStatus(cmdExecuted ? Status.EXECUTED : Status.FAILED);
+      cmdStatusUpdater.accept(cmdStatusMap.get(cmdId));
       return true;
     }
     return false;

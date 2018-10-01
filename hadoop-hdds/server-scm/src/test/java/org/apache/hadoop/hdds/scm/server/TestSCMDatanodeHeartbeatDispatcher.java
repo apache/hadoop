@@ -127,7 +127,7 @@ public class TestSCMDatanodeHeartbeatDispatcher {
         SCMHeartbeatRequestProto.newBuilder()
             .setDatanodeDetails(datanodeDetails.getProtoBufMessage())
             .setContainerReport(containerReport)
-            .setCommandStatusReport(commandStatusReport)
+            .addCommandStatusReports(commandStatusReport)
             .build();
     dispatcher.dispatch(heartbeat);
     Assert.assertEquals(2, eventReceived.get());

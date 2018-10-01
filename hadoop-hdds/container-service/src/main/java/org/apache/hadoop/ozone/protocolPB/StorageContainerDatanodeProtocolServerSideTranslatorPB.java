@@ -33,11 +33,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
-import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -96,15 +91,4 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
     }
   }
 
-
-  @Override
-  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      RpcController controller, ContainerBlocksDeletionACKProto request)
-      throws ServiceException {
-    try {
-      return impl.sendContainerBlocksDeletionACK(request);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
 }

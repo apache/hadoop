@@ -35,6 +35,13 @@ public class CommandStatus {
   private Status status;
   private String msg;
 
+  CommandStatus(Type type, Long cmdId, Status status, String msg) {
+    this.type = type;
+    this.cmdId = cmdId;
+    this.status = status;
+    this.msg = msg;
+  }
+
   public Type getType() {
     return type;
   }
@@ -60,6 +67,10 @@ public class CommandStatus {
     this.status = status;
   }
 
+  public void setStatus(boolean cmdExecuted) {
+    setStatus(cmdExecuted ? Status.EXECUTED : Status.FAILED);
+  }
+
   /**
    * Returns a CommandStatus from the protocol buffers.
    *
@@ -72,7 +83,8 @@ public class CommandStatus {
         .setCmdId(cmdStatusProto.getCmdId())
         .setStatus(cmdStatusProto.getStatus())
         .setType(cmdStatusProto.getType())
-        .setMsg(cmdStatusProto.getMsg()).build();
+        .setMsg(cmdStatusProto.getMsg())
+        .build();
   }
   /**
    * Returns a CommandStatus from the protocol buffers.
@@ -95,18 +107,34 @@ public class CommandStatus {
   /**
    * Builder class for CommandStatus.
    */
-  public static final class CommandStatusBuilder {
+  public static class CommandStatusBuilder {
 
     private SCMCommandProto.Type type;
     private Long cmdId;
     private StorageContainerDatanodeProtocolProtos.CommandStatus.Status status;
     private String msg;
 
-    private CommandStatusBuilder() {
+    CommandStatusBuilder() {
     }
 
     public static CommandStatusBuilder newBuilder() {
       return new CommandStatusBuilder();
+    }
+
+    public Type getType() {
+      return type;
+    }
+
+    public Long getCmdId() {
+      return cmdId;
+    }
+
+    public Status getStatus() {
+      return status;
+    }
+
+    public String getMsg() {
+      return msg;
     }
 
     public CommandStatusBuilder setType(Type commandType) {
@@ -130,12 +158,7 @@ public class CommandStatus {
     }
 
     public CommandStatus build() {
-      CommandStatus commandStatus = new CommandStatus();
-      commandStatus.type = this.type;
-      commandStatus.msg = this.msg;
-      commandStatus.status = this.status;
-      commandStatus.cmdId = this.cmdId;
-      return commandStatus;
+      return new CommandStatus(type, cmdId, status, msg);
     }
   }
 }

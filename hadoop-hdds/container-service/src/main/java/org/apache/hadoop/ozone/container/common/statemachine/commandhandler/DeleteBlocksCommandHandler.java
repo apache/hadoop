@@ -39,11 +39,11 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine
-    .EndpointStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
+import org.apache.hadoop.ozone.protocol.commands.DeleteBlockCommandStatus;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.CONTAINER_NOT_FOUND;
@@ -63,7 +64,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
  */
 public class DeleteBlocksCommandHandler implements CommandHandler {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(DeleteBlocksCommandHandler.class);
 
   private final ContainerSet containerSet;
@@ -83,6 +84,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
       StateContext context, SCMConnectionManager connectionManager) {
     cmdExecuted = false;
     long startTime = Time.monotonicNow();
+    ContainerBlocksDeletionACKProto blockDeletionACK = null;
     try {
       if (command.getType() != SCMCommandProto.Type.deleteBlocksCommand) {
         LOG.warn("Skipping handling command, expected command "
@@ -144,31 +146,28 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
             .setDnId(context.getParent().getDatanodeDetails()
                 .getUuid().toString());
       });
-      ContainerBlocksDeletionACKProto blockDeletionACK = resultBuilder.build();
+      blockDeletionACK = resultBuilder.build();
 
       // Send ACK back to SCM as long as meta updated
       // TODO Or we should wait until the blocks are actually deleted?
       if (!containerBlocks.isEmpty()) {
-        for (EndpointStateMachine endPoint : connectionManager.getValues()) {
-          try {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Sending following block deletion ACK to SCM");
-              for (DeleteBlockTransactionResult result :
-                  blockDeletionACK.getResultsList()) {
-                LOG.debug(result.getTxID() + " : " + result.getSuccess());
-              }
-            }
-            endPoint.getEndPoint()
-                .sendContainerBlocksDeletionACK(blockDeletionACK);
-          } catch (IOException e) {
-            LOG.error("Unable to send block deletion ACK to SCM {}",
-                endPoint.getAddress().toString(), e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sending following block deletion ACK to SCM");
+          for (DeleteBlockTransactionResult result : blockDeletionACK
+              .getResultsList()) {
+            LOG.debug(result.getTxID() + " : " + result.getSuccess());
           }
         }
       }
       cmdExecuted = true;
     } finally {
-      updateCommandStatus(context, command, cmdExecuted, LOG);
+      final ContainerBlocksDeletionACKProto deleteAck =
+          blockDeletionACK;
+      Consumer<CommandStatus> statusUpdater = (cmdStatus) -> {
+        cmdStatus.setStatus(cmdExecuted);
+        ((DeleteBlockCommandStatus) cmdStatus).setBlocksDeletionAck(deleteAck);
+      };
+      updateCommandStatus(context, command, statusUpdater, LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }
@@ -238,9 +237,9 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
       }
     }
 
-    containerDB.put(DFSUtil.string2Bytes(
-        OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX + delTX.getContainerID()),
-        Longs.toByteArray(delTX.getTxID()));
+    containerDB
+        .put(DFSUtil.string2Bytes(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX),
+            Longs.toByteArray(delTX.getTxID()));
     containerData
         .updateDeleteTransactionId(delTX.getTxID());
     // update pending deletion blocks count in in-memory container status

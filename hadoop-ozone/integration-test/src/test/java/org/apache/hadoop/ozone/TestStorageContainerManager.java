@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.junit.Assert.fail;
 
@@ -187,6 +188,8 @@ public class TestStorageContainerManager {
     int numKeys = 5;
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 100,
+        TimeUnit.MILLISECONDS);
+    conf.setTimeDuration(HDDS_COMMAND_STATUS_REPORT_INTERVAL, 100,
         TimeUnit.MILLISECONDS);
     conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
         3000,

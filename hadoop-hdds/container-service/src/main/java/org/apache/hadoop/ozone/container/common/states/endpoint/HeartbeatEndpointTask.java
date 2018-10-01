@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -124,12 +125,12 @@ public class HeartbeatEndpointTask
   @Override
   public EndpointStateMachine.EndPointStates call() throws Exception {
     rpcEndpoint.lock();
+    SCMHeartbeatRequestProto.Builder requestBuilder = null;
     try {
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
-      SCMHeartbeatRequestProto.Builder requestBuilder =
-          SCMHeartbeatRequestProto.newBuilder()
-              .setDatanodeDetails(datanodeDetailsProto);
+      requestBuilder = SCMHeartbeatRequestProto.newBuilder()
+          .setDatanodeDetails(datanodeDetailsProto);
       addReports(requestBuilder);
       addContainerActions(requestBuilder);
       addPipelineActions(requestBuilder);
@@ -139,11 +140,31 @@ public class HeartbeatEndpointTask
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
+      // put back the reports which failed to be sent
+      putBackReports(requestBuilder);
       rpcEndpoint.logIfNeeded(ex);
     } finally {
       rpcEndpoint.unlock();
     }
     return rpcEndpoint.getState();
+  }
+
+  // TODO: Make it generic.
+  private void putBackReports(SCMHeartbeatRequestProto.Builder requestBuilder) {
+    List<GeneratedMessage> reports = new LinkedList<>();
+    if (requestBuilder.hasContainerReport()) {
+      reports.add(requestBuilder.getContainerReport());
+    }
+    if (requestBuilder.hasNodeReport()) {
+      reports.add(requestBuilder.getNodeReport());
+    }
+    if (requestBuilder.getCommandStatusReportsCount() != 0) {
+      for (GeneratedMessage msg : requestBuilder
+          .getCommandStatusReportsList()) {
+        reports.add(msg);
+      }
+    }
+    context.putBackReports(reports);
   }
 
   /**
@@ -158,7 +179,11 @@ public class HeartbeatEndpointTask
           SCMHeartbeatRequestProto.getDescriptor().getFields()) {
         String heartbeatFieldName = descriptor.getMessageType().getFullName();
         if (heartbeatFieldName.equals(reportName)) {
-          requestBuilder.setField(descriptor, report);
+          if (descriptor.isRepeated()) {
+            requestBuilder.addRepeatedField(descriptor, report);
+          } else {
+            requestBuilder.setField(descriptor, report);
+          }
         }
       }
     }

@@ -77,7 +77,8 @@ public class ReplicateContainerCommandHandler implements CommandHandler {
       supervisor.addTask(replicationTask);
 
     } finally {
-      updateCommandStatus(context, command, true, LOG);
+      updateCommandStatus(context, command,
+          (cmdStatus) -> cmdStatus.setStatus(true), LOG);
     }
   }
 

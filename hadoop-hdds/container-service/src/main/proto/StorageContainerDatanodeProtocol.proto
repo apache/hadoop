@@ -80,7 +80,7 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  optional CommandStatusReportsProto commandStatusReport = 4;
+  repeated CommandStatusReportsProto commandStatusReports = 4;
   optional ContainerActionsProto containerActions = 5;
   optional PipelineActionsProto pipelineActions = 6;
   optional PipelineReportsProto pipelineReports = 7;
@@ -145,6 +145,7 @@ message CommandStatus {
   required Status status = 2 [default = PENDING];
   required SCMCommandProto.Type type = 3;
   optional string msg = 4;
+  optional ContainerBlocksDeletionACKProto blockDeletionAck = 5;
 }
 
 message ContainerActionsProto {
@@ -272,10 +273,6 @@ message ContainerBlocksDeletionACKProto {
   required string dnId = 2;
 }
 
-// SendACK response returned by datanode to SCM, currently empty.
-message ContainerBlocksDeletionACKResponseProto {
-}
-
 /**
 This command asks the datanode to close a specific container.
 */
@@ -386,8 +383,4 @@ service StorageContainerDatanodeProtocolService {
    */
   rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
 
-  /**
-   * Sends the block deletion ACK to SCM.
-   */
-  rpc sendContainerBlocksDeletionACK (ContainerBlocksDeletionACKProto) returns (ContainerBlocksDeletionACKResponseProto);
 }

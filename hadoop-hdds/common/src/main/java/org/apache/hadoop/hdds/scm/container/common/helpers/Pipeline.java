@@ -171,6 +171,10 @@ public class Pipeline {
   public Map<String, DatanodeDetails> getDatanodes() {
     return datanodes;
   }
+
+  public boolean isEmpty() {
+    return datanodes.isEmpty();
+  }
   /**
    * Returns the leader host.
    *

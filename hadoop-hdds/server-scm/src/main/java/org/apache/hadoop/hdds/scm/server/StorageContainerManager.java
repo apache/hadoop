@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
+import org.apache.hadoop.hdds.scm.block.DeletedBlockLogImpl;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteHandler;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hdds.scm.pipelines.PipelineReportHandler;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -253,6 +255,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     commandWatcherLeaseManager = new LeaseManager<>("CommandWatcher",
         watcherTimeout);
 
+    RetriableDatanodeEventWatcher retriableDatanodeEventWatcher =
+        new RetriableDatanodeEventWatcher<>(
+            SCMEvents.RETRIABLE_DATANODE_COMMAND,
+            SCMEvents.DELETE_BLOCK_STATUS,
+            commandWatcherLeaseManager);
+    retriableDatanodeEventWatcher.start(eventQueue);
+
     //TODO: support configurable containerPlacement policy
     ContainerPlacementPolicy containerPlacementPolicy =
         new SCMContainerPlacementCapacity(scmNodeManager, conf);
@@ -282,6 +291,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     httpServer = new StorageContainerManagerHttpServer(conf);
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
+    eventQueue.addHandler(SCMEvents.RETRIABLE_DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.NODE_REPORT, nodeReportHandler);
     eventQueue.addHandler(SCMEvents.CONTAINER_REPORT, containerReportHandler);
     eventQueue.addHandler(SCMEvents.CONTAINER_ACTIONS, actionsHandler);
@@ -296,6 +306,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         replicationStatus.getChillModeStatusListener());
     eventQueue
         .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
+    eventQueue.addHandler(SCMEvents.DELETE_BLOCK_STATUS,
+        (DeletedBlockLogImpl) scmBlockManager.getDeletedBlockLog());
     eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
         pipelineActionEventHandler);
     eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);

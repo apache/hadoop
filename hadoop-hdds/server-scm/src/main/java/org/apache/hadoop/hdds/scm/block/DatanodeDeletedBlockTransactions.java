@@ -61,7 +61,8 @@ public class DatanodeDeletedBlockTransactions {
     try {
       ContainerWithPipeline containerWithPipeline =
           mappingService.getContainerWithPipeline(tx.getContainerID());
-      if (containerWithPipeline.getContainerInfo().isContainerOpen()) {
+      if (containerWithPipeline.getContainerInfo().isContainerOpen()
+          || containerWithPipeline.getPipeline().isEmpty()) {
         return false;
       }
       pipeline = containerWithPipeline.getPipeline();
@@ -70,25 +71,19 @@ public class DatanodeDeletedBlockTransactions {
       return false;
     }
 
-    if (pipeline == null) {
-      SCMBlockDeletingService.LOG.warn(
-          "Container {} not found, continue to process next",
-          tx.getContainerID());
-      return false;
-    }
-
+    boolean success = false;
     for (DatanodeDetails dd : pipeline.getMachines()) {
       UUID dnID = dd.getUuid();
       if (dnsWithTransactionCommitted == null ||
           !dnsWithTransactionCommitted.contains(dnID)) {
         // Transaction need not be sent to dns which have already committed it
-        addTransactionToDN(dnID, tx);
+        success = addTransactionToDN(dnID, tx);
       }
     }
-    return true;
+    return success;
   }
 
-  private void addTransactionToDN(UUID dnID, DeletedBlocksTransaction tx) {
+  private boolean addTransactionToDN(UUID dnID, DeletedBlocksTransaction tx) {
     if (transactions.containsKey(dnID)) {
       List<DeletedBlocksTransaction> txs = transactions.get(dnID);
       if (txs != null && txs.size() < maximumAllowedTXNum) {
@@ -103,14 +98,17 @@ public class DatanodeDeletedBlockTransactions {
         if (!hasContained) {
           txs.add(tx);
           currentTXNum++;
+          return true;
         }
       }
     } else {
       currentTXNum++;
       transactions.put(dnID, tx);
+      return true;
     }
     SCMBlockDeletingService.LOG
         .debug("Transaction added: {} <- TX({})", dnID, tx.getTxID());
+    return false;
   }
 
   Set<UUID> getDatanodeIDs() {
