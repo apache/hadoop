@@ -44,6 +44,7 @@ public final class S3GatewayConfigKeys {
   public static final int OZONE_S3G_HTTPS_BIND_PORT_DEFAULT = 9879;
   public static final String OZONE_S3G_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
       "ozone.s3g.authentication.kerberos.principal";
+  public static final String OZONE_S3G_DOMAIN_NAME = "ozone.s3g.domain.name";
 
   /**
    * Never constructed.

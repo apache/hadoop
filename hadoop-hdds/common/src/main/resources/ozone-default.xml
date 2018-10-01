@@ -1035,12 +1035,12 @@
 
   <property>
     <name>hadoop.tags.custom</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
   </property>
 
   <property>
     <name>ozone.tags.system</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
   </property>
 
 
@@ -1221,5 +1221,79 @@
       will be maintained in the pool.
     </description>
   </property>
+
+  <property>
+    <name>ozone.s3g.authentication.kerberos.principal</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The server principal used by Ozone S3Gateway server. This is
+      typically set to
+      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
+      HTTP/ by convention.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.domain.name</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>List of Ozone S3Gateway domain names. If multiple
+      domain names to be provided, they should be a "," seperated.
+      This parameter is only required when virtual host style pattern is
+      followed.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http-address</name>
+    <value>0.0.0.0:9878</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The address and the base port where the Ozone S3Gateway
+      Server will
+      listen on.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of ozone.s3g.http-address.
+      This is useful for making the Ozone S3Gateway HTTP server listen on all
+      interfaces by setting it to 0.0.0.0.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http.enabled</name>
+    <value>true</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The boolean which enables the Ozone S3Gateway server
+      .</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.https-address</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Ozone S3Gateway serverHTTPS server address and port
+      .</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.https-bind-host</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The actual address the HTTPS server will bind to. If this optional address
+      is set, it overrides only the hostname portion of ozone.s3g.https-address.
+      This is useful for making the Ozone S3Gateway HTTPS server listen on all
+      interfaces by setting it to 0.0.0.0.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.keytab.file</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The keytab file used by the S3Gateway server to login as its
+      service principal. </description>
+  </property>
+
 
 </configuration>

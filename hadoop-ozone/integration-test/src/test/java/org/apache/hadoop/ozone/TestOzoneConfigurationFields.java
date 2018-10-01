@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.TestConfigurationFieldsBase;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.ozone.s3.S3GatewayConfigKeys;
 
 /**
  * Tests if configuration constants documented in ozone-defaults.xml.
@@ -32,7 +33,8 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     xmlFilename = new String("ozone-default.xml");
     configurationClasses =
         new Class[] {OzoneConfigKeys.class, ScmConfigKeys.class,
-            OMConfigKeys.class, HddsConfigKeys.class};
+            OMConfigKeys.class, HddsConfigKeys.class,
+            S3GatewayConfigKeys.class};
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
     xmlPropsToSkipCompare.add("hadoop.tags.custom");
