@@ -327,11 +327,11 @@ public final class ScmConfigKeys {
       "10m";
 
   public static final String
-      HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY =
-      "hdds.scm.web.authentication.kerberos.principal";
+      HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY =
+      "hdds.scm.http.kerberos.principal";
   public static final String
-      HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY =
-      "hdds.scm.web.authentication.kerberos.keytab";
+      HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
+      "hdds.scm.http.kerberos.keytab";
   /**
    * Never constructed.
    */

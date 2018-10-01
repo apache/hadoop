@@ -46,7 +46,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
+import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 
 /**
  * Test Class for Root Certificate generation.

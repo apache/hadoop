@@ -14,25 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.ksm.address=om
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
-OZONE-SITE.XML_hdds.scm.datanode.id=/data/datanode.id
-OZONE-SITE.XML_hdds.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
+OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
 OZONE-SITE.XML_ozone.handler.type=distributed
-OZONE-SITE.XML_hdds.scm.client.address=scm
+OZONE-SITE.XML_ozone.scm.client.address=scm
 OZONE-SITE.XML_ozone.replication=1
 OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
 OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
 OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
 OZONE-SITE.XML_ozone.security.enabled=true
-OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.principal=HTTP/scm@EXAMPLE.COM
-OZONE-SITE.XML_hdds.scm.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
-OZONE-SITE.XML_ozone.om.web.authentication.kerberos.principal=HTTP/om@EXAMPLE.COM
-OZONE-SITE.XML_ozone.om.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
-HDFS-SITE.XML_dfs.datanode.kerberos.principal=dn/datanode@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.om.http.kerberos.principal=HTTP/om@EXAMPLE.COM
+OZONE-SITE.XML_ozone.om.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+HDFS-SITE.XML_dfs.datanode.kerberos.principal=dn/_HOST@EXAMPLE.COM
 HDFS-SITE.XML_dfs.datanode.keytab.file=/etc/security/keytabs/dn.keytab
 HDFS-SITE.XML_dfs.web.authentication.kerberos.principal=HTTP/_HOST@EXAMPLE.COM
 HDFS-SITE.XML_dfs.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
@@ -41,11 +42,15 @@ HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
 CORE-SITE.XML_dfs.data.transfer.protection=authentication
 CORE-SITE.XML_hadoop.security.authentication=kerberos
 CORE-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*)s/.*/root/
+HDFS-SITE.XML_rpc.metrics.quantile.enable=true
+HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
-
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
+LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
 #BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm
@@ -87,13 +92,12 @@ LOG4J2.PROPERTIES_rootLogger.level=INFO
 LOG4J2.PROPERTIES_rootLogger.appenderRefs=stdout
 LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
 
-
 OZONE_DATANODE_SECURE_USER=root
 CONF_DIR=/etc/security/keytabs
 KERBEROS_KEYTABS=dn om scm HTTP testuser
 KERBEROS_KEYSTORES=hadoop
-KERBEROS_SERVER=ozone.kdc
+KERBEROS_SERVER=kdc
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 JSVC_HOME=/usr/bin
-SLEEP_SECONDS=10
+SLEEP_SECONDS=5
 KERBEROS_ENABLED=true

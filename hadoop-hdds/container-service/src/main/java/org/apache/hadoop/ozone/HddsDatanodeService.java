@@ -30,6 +30,10 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -147,12 +151,38 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
         datanodeDetails = initializeDatanodeDetails();
         datanodeDetails.setHostName(hostname);
         datanodeDetails.setIpAddress(ip);
+        LOG.info("HddsDatanodeService host:{} ip:{}", hostname, ip);
+        // Authenticate Hdds Datanode service if security is enabled
+        if (conf.getBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY,
+            true)) {
+          if (SecurityUtil.getAuthenticationMethod(conf).equals(
+              UserGroupInformation.AuthenticationMethod.KERBEROS)) {
+            LOG.debug("Ozone security is enabled. Attempting login for Hdds " +
+                    "Datanode user. "
+                    + "Principal: {},keytab: {}", conf.get(
+                DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY),
+                conf.get(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY));
+
+            UserGroupInformation.setConfiguration(conf);
+
+            SecurityUtil.login(conf, DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
+                DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hostname);
+          } else {
+            throw new AuthenticationException(SecurityUtil.
+                getAuthenticationMethod(conf) + " authentication method not " +
+                "supported. Datanode user" + " login " + "failed.");
+          }
+          LOG.info("Hdds Datanode login successful.");
+        }
         datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf);
         startPlugins();
         // Starting HDDS Daemons
         datanodeStateMachine.startDaemon();
       } catch (IOException e) {
         throw new RuntimeException("Can't start the HDDS datanode plugin", e);
+      } catch (AuthenticationException ex) {
+        throw new RuntimeException("Fail to authentication when starting" +
+            " HDDS datanode plugin", ex);
       }
     }
   }

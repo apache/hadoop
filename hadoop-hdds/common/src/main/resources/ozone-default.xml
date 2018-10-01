@@ -1629,11 +1629,11 @@
   </property>
 
   <property>
-    <name>hdds.scm.web.authentication.kerberos.principal</name>
+    <name>hdds.scm.http.kerberos.principal</name>
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>hdds.scm.web.authentication.kerberos.keytab</name>
+    <name>hdds.scm.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
@@ -1645,7 +1645,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.http.kerberos.keytab.file</name>
+    <name>ozone.om.http.kerberos.keytab</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
     <description>
       OzoneManager http server kerberos keytab.

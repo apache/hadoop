@@ -119,9 +119,9 @@ public final class TestSecureOzoneCluster {
         conf.get(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY));
      createPrincipal(spnegoKeytab,
          conf.get(ScmConfigKeys
-             .HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY));
+             .HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY));
         conf.get(OMConfigKeys
-            .OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+            .OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY);
     createPrincipal(omKeyTab,
         conf.get(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY));
   }
@@ -155,12 +155,12 @@ public final class TestSecureOzoneCluster {
 
     conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
         "scm/" + host + "@" + realm);
-    conf.set(ScmConfigKeys.HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+    conf.set(ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_PRINCIPAL_KEY,
         "HTTP_SCM/" + host + "@" + realm);
 
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "om/" + host + "@" + realm);
-    conf.set(OMConfigKeys.OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+    conf.set(OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY,
         "HTTP_OM/" + host + "@" + realm);
 
     scmKeytab = new File(workDir, "scm.keytab");
@@ -169,7 +169,8 @@ public final class TestSecureOzoneCluster {
 
     conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY,
         scmKeytab.getAbsolutePath());
-    conf.set(ScmConfigKeys.HDDS_SCM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE_KEY,
+    conf.set(
+        ScmConfigKeys.HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY,
         spnegoKeytab.getAbsolutePath());
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
         omKeyTab.getAbsolutePath());
