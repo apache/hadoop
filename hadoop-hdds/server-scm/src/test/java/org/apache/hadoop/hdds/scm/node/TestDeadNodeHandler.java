@@ -196,6 +196,29 @@ public class TestDeadNodeHandler {
     Assert.assertTrue(nodeStat.get().getScmUsed().get() == 0);
   }
 
+  @Test
+  public void testOnMessageReplicaFailure() throws Exception {
+    DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();
+    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+        .captureLogs(DeadNodeHandler.getLogger());
+    String storagePath1 = GenericTestUtils.getRandomizedTempPath()
+        .concat("/" + dn1.getUuidString());
+
+    StorageReportProto storageOne = TestUtils.createStorageReport(
+        dn1.getUuid(), storagePath1, 100, 10, 90, null);
+    nodeReportHandler.onMessage(getNodeReport(dn1, storageOne),
+        Mockito.mock(EventPublisher.class));
+
+    ContainerInfo container1 =
+        TestUtils.allocateContainer(containerStateManager);
+    registerReplicas(node2ContainerMap, dn1, container1);
+
+    deadNodeHandler.onMessage(dn1, eventQueue);
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "DataNode " + dn1.getUuid() + " doesn't have replica for container "
+            + container1.getContainerID()));
+  }
+
   private void registerReplicas(ContainerStateManager csm,
       ContainerInfo container, DatanodeDetails... datanodes) {
     csm.getContainerStateMap()

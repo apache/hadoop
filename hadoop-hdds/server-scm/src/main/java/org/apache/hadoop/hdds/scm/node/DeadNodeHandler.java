@@ -72,8 +72,13 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
         datanodeDetails.getUuid());
     for (ContainerID container : containers) {
       try {
-        containerStateManager.removeContainerReplica(container,
-            datanodeDetails);
+        try {
+          containerStateManager.removeContainerReplica(container,
+              datanodeDetails);
+        } catch (SCMException ex) {
+          LOG.info("DataNode {} doesn't have replica for container {}.",
+              datanodeDetails.getUuid(), container.getId());
+        }
 
         if (!containerStateManager.isOpen(container)) {
           ReplicationRequest replicationRequest =
@@ -89,5 +94,12 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
             .getId(), e);
       }
     }
+  }
+
+  /**
+   * Returns logger.
+   * */
+  public static Logger getLogger() {
+    return LOG;
   }
 }
