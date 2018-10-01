@@ -24,6 +24,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 /**
@@ -53,5 +54,13 @@ public class BufferedClientResponse {
 
   public MediaType getType() {
     return response.getType();
+  }
+
+  public int getStatus() {
+    return response.getStatus();
+  }
+
+  public Response.StatusType getStatusInfo() {
+    return response.getStatusInfo();
   }
 }

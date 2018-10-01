@@ -59,7 +59,16 @@ public class XmlCustomResourceTypeTestCase {
   public XmlCustomResourceTypeTestCase(WebResource path,
                                        BufferedClientResponse response) {
     this.path = path;
+    verifyStatus(response);
     this.response = response;
+  }
+
+  private void verifyStatus(BufferedClientResponse response) {
+    String responseStr = response.getEntity(String.class);
+    assertEquals("HTTP status should be 200, " +
+                    "status info: " + response.getStatusInfo() +
+                    " response as string: " + responseStr,
+            200, response.getStatus());
   }
 
   public void verify(Consumer<Document> verifier) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,7 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.BufferedClientResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomResourceTypeTestcase;
@@ -42,28 +39,24 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
-import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp
-        .TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp
-        .TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
 import static org.junit.Assert.assertEquals;
 
 /**
  * This test verifies that custom resource types are correctly serialized to XML
  * and JSON when HTTP GET request is sent to the resource: ws/v1/cluster/apps.
  */
-public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
+public class TestRMWebServicesAppCustomResourceTypes extends JerseyTestBase {
 
   private static MockRM rm;
   private static final int CONTAINER_MB = 1024;
@@ -104,7 +97,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
         .setInjector(Guice.createInjector(new WebServletModule()));
   }
 
-  public TestRMWebServicesAppsCustomResourceTypes() {
+  public TestRMWebServicesAppCustomResourceTypes() {
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.resourcemanager.webapp")
             .contextListenerClass(GuiceServletConfig.class)
@@ -112,8 +105,13 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
             .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
+  private WebResource getWebResourcePathForApp(RMApp app1, WebResource r) {
+    return r.path("ws").path("v1").path("cluster").path("apps")
+            .path(String.valueOf(app1.getApplicationId().toString()));
+  }
+
   @Test
-  public void testRunningAppsXml() throws Exception {
+  public void testRunningAppXml() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
@@ -122,7 +120,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
 
     WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
+    WebResource path = getWebResourcePathForApp(app1, r);
     ClientResponse response =
         path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
 
@@ -130,10 +128,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
             new XmlCustomResourceTypeTestCase(path,
                     new BufferedClientResponse(response));
     testCase.verify(document -> {
-      NodeList apps = document.getElementsByTagName("apps");
-      assertEquals("incorrect number of apps elements", 1, apps.getLength());
-
-      NodeList appArray = ((Element)(apps.item(0)))
+      NodeList appArray = document
               .getElementsByTagName("app");
       assertEquals("incorrect number of app elements", 1, appArray.getLength());
 
@@ -144,7 +139,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   @Test
-  public void testRunningAppsJson() throws Exception {
+  public void testRunningAppJson() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
@@ -153,7 +148,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
 
     WebResource r = resource();
-    WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
+    WebResource path = getWebResourcePathForApp(app1, r);
     ClientResponse response =
         path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
@@ -162,13 +157,9 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
             new BufferedClientResponse(response));
     testCase.verify(json -> {
       try {
-        assertEquals("incorrect number of apps elements", 1, json.length());
-        JSONObject apps = json.getJSONObject("apps");
-        assertEquals("incorrect number of app elements", 1, apps.length());
-        JSONArray array = apps.getJSONArray("app");
-        assertEquals("incorrect count of app", 1, array.length());
-
-        verifyAppInfoJson(array.getJSONObject(0), app1, rm);
+        assertEquals("incorrect number of app elements", 1, json.length());
+        JSONObject app = json.getJSONObject("app");
+        verifyAppInfoJson(app, app1, rm);
       } catch (JSONException e) {
         throw new RuntimeException(e);
       }
