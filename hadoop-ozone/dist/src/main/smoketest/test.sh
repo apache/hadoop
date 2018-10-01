@@ -95,7 +95,8 @@ if [ "$RUN_ALL" = true ]; then
    execute_tests ozone "${DEFAULT_TESTS[@]}"
    TESTS=("ozonefs")
    execute_tests ozonefs "${TESTS[@]}"
-
+   TESTS=("s3")
+   execute_tests ozones3 "${TESTS[@]}"
 else
    execute_tests "$DOCKERENV" "${POSITIONAL[@]}"
 fi
