@@ -117,21 +117,27 @@ public class FsDatasetUtil {
   }
 
   /**
-   * Find the meta-file for the specified block file
-   * and then return the generation stamp from the name of the meta-file.
+   * Find the meta-file for the specified block file and then return the
+   * generation stamp from the name of the meta-file. Generally meta file will
+   * be the next file in sorted array of file's.
+   *
+   * @param listdir
+   *          sorted list of file based on name.
+   * @param blockFile
+   *          block file for which generation stamp is needed.
+   * @param index
+   *          index of block file in array.
+   * @return generation stamp for block file.
    */
-  static long getGenerationStampFromFile(File[] listdir, File blockFile)
-      throws IOException {
+  static long getGenerationStampFromFile(File[] listdir, File blockFile,
+      int index) {
     String blockName = blockFile.getName();
-    for (int j = 0; j < listdir.length; j++) {
-      String path = listdir[j].getName();
-      if (!path.startsWith(blockName)) {
-        continue;
+    if ((index + 1) < listdir.length) {
+      // Check if next index file is meta file
+      String metaFile = listdir[index + 1].getName();
+      if (metaFile.startsWith(blockName)) {
+        return Block.getGenerationStamp(metaFile);
       }
-      if (blockFile.getCanonicalPath().equals(listdir[j].getCanonicalPath())) {
-        continue;
-      }
-      return Block.getGenerationStamp(listdir[j].getName());
     }
     FsDatasetImpl.LOG.warn("Block " + blockFile + " does not have a metafile!");
     return HdfsConstants.GRANDFATHER_GENERATION_STAMP;

@@ -1282,6 +1282,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.volumes.replica-add.threadpool.size</name>
+  <value></value>
+  <description>Specifies the maximum number of threads to use for
+  adding block in volume. Default value for this configuration is
+  max of (volume * number of bp_service, number of processor).
+  </description>
+</property>
+
+<property>
   <name>dfs.image.compress</name>
   <value>false</value>
   <description>When this value is true, the dfs image will be compressed.
