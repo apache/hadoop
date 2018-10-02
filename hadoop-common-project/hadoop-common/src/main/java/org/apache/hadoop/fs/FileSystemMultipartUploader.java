@@ -100,6 +100,14 @@ public class FileSystemMultipartUploader extends MultipartUploader {
     return fs.getPathHandle(status);
   }
 
+  private long totalPartsLen(List<Path> partHandles) throws IOException {
+    long totalLen = 0;
+    for (Path p: partHandles) {
+      totalLen += fs.getFileStatus(p).getLen();
+    }
+    return totalLen;
+  }
+
   @Override
   @SuppressWarnings("deprecation") // rename w/ OVERWRITE
   public PathHandle complete(Path filePath,
@@ -127,12 +135,17 @@ public class FileSystemMultipartUploader extends MultipartUploader {
         .collect(Collectors.toList());
 
     Path collectorPath = createCollectorPath(filePath);
-    Path filePathInsideCollector = mergePaths(collectorPath,
-        new Path(Path.SEPARATOR + filePath.getName()));
-    fs.create(filePathInsideCollector).close();
-    fs.concat(filePathInsideCollector,
-        partHandles.toArray(new Path[handles.size()]));
-    fs.rename(filePathInsideCollector, filePath, Options.Rename.OVERWRITE);
+    boolean emptyFile = totalPartsLen(partHandles) == 0;
+    if (emptyFile) {
+      fs.create(filePath).close();
+    } else {
+      Path filePathInsideCollector = mergePaths(collectorPath,
+          new Path(Path.SEPARATOR + filePath.getName()));
+      fs.create(filePathInsideCollector).close();
+      fs.concat(filePathInsideCollector,
+          partHandles.toArray(new Path[handles.size()]));
+      fs.rename(filePathInsideCollector, filePath, Options.Rename.OVERWRITE);
+    }
     fs.delete(collectorPath, true);
     return getPathHandle(filePath);
   }
