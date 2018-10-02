@@ -24,11 +24,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
-import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.node.states.NodeStateMap;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.node.states.*;
+import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.common.statemachine
@@ -87,6 +90,15 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   private final NodeStateMap nodeStateMap;
   /**
+   * Maintains the mapping from node to pipelines a node is part of.
+   */
+  private final Node2PipelineMap node2PipelineMap;
+  /**
+   * Maintains the map from node to ContainerIDs for the containers
+   * available on the node.
+   */
+  private final Node2ContainerMap node2ContainerMap;
+  /**
    * Used for publishing node state change events.
    */
   private final EventPublisher eventPublisher;
@@ -118,6 +130,8 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public NodeStateManager(Configuration conf, EventPublisher eventPublisher) {
     this.nodeStateMap = new NodeStateMap();
+    this.node2PipelineMap = new Node2PipelineMap();
+    this.node2ContainerMap = new Node2ContainerMap();
     this.eventPublisher = eventPublisher;
     this.state2EventMap = new HashMap<>();
     initialiseState2EventMap();
@@ -243,6 +257,14 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Adds a pipeline in the node2PipelineMap.
+   * @param pipeline - Pipeline to be added
+   */
+  public void addPipeline(Pipeline pipeline) {
+    node2PipelineMap.addPipeline(pipeline);
+  }
+
+  /**
    * Get information about the node.
    *
    * @param datanodeDetails DatanodeDetails
@@ -353,6 +375,15 @@ public class NodeStateManager implements Runnable, Closeable {
   }
 
   /**
+   * Gets set of pipelineID a datanode belongs to.
+   * @param dnId - Datanode ID
+   * @return Set of PipelineID
+   */
+  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
+    return node2PipelineMap.getPipelines(dnId);
+  }
+
+  /**
    * Returns the count of healthy nodes.
    *
    * @return healthy node count
@@ -454,6 +485,57 @@ public class NodeStateManager implements Runnable, Closeable {
    */
   public SCMNodeStat removeNodeStat(UUID uuid) throws NodeNotFoundException {
     return nodeStateMap.removeNodeStat(uuid);
+  }
+
+  /**
+   * Removes a pipeline from the node2PipelineMap.
+   * @param pipeline - Pipeline to be removed
+   */
+  public void removePipeline(Pipeline pipeline) {
+    node2PipelineMap.removePipeline(pipeline);
+  }
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws SCMException - if datanode is not known. For new datanode use
+   *                        addDatanodeInContainerMap call.
+   */
+  public void setContainersForDatanode(UUID uuid, Set<ContainerID> containerIds)
+      throws SCMException {
+    node2ContainerMap.setContainersForDatanode(uuid, containerIds);
+  }
+
+  /**
+   * Process containerReport received from datanode.
+   * @param uuid - DataonodeID
+   * @param containerIds - Set of containerIDs
+   * @return The result after processing containerReport
+   */
+  public ReportResult<ContainerID> processContainerReport(UUID uuid,
+      Set<ContainerID> containerIds) {
+    return node2ContainerMap.processReport(uuid, containerIds);
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  public Set<ContainerID> getContainers(UUID uuid) {
+    return node2ContainerMap.getContainers(uuid);
+  }
+
+  /**
+   * Insert a new datanode with set of containerIDs for containers available
+   * on it.
+   * @param uuid - DatanodeID
+   * @param containerIDs - Set of ContainerIDs
+   * @throws SCMException - if datanode already exists
+   */
+  public void addDatanodeInContainerMap(UUID uuid,
+      Set<ContainerID> containerIDs) throws SCMException {
+    node2ContainerMap.insertNewDatanode(uuid, containerIDs);
   }
 
   /**

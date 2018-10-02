@@ -33,7 +33,6 @@ import org.apache.hadoop.hdds.scm.container.placement.algorithms
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.pipelines.ratis.RatisManagerImpl;
 import org.apache.hadoop.hdds.scm.pipelines.standalone.StandaloneManagerImpl;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -61,7 +60,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
@@ -85,7 +83,7 @@ public class PipelineSelector {
   private final long containerSize;
   private final MetadataStore pipelineStore;
   private final PipelineStateManager stateManager;
-  private final Node2PipelineMap node2PipelineMap;
+  private final NodeManager nodeManager;
   private final Map<PipelineID, HashSet<ContainerID>> pipeline2ContainerMap;
   private final Map<PipelineID, Pipeline> pipelineMap;
   private final LeaseManager<Pipeline> pipelineLeaseManager;
@@ -105,7 +103,6 @@ public class PipelineSelector {
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.BYTES);
-    node2PipelineMap = new Node2PipelineMap();
     pipelineMap = new ConcurrentHashMap<>();
     pipelineManagerMap = new HashMap<>();
 
@@ -124,6 +121,7 @@ public class PipelineSelector {
     pipelineLeaseManager.start();
 
     stateManager = new PipelineStateManager();
+    this.nodeManager = nodeManager;
     pipeline2ContainerMap = new HashMap<>();
 
     // Write the container name to pipeline mapping.
@@ -361,10 +359,6 @@ public class PipelineSelector {
     }
   }
 
-  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
-    return node2PipelineMap.getPipelines(dnId);
-  }
-
   private void addExistingPipeline(Pipeline pipeline) throws IOException {
     LifeCycleState state = pipeline.getLifeCycleState();
     switch (state) {
@@ -379,7 +373,7 @@ public class PipelineSelector {
       // when all the nodes have reported.
       pipelineMap.put(pipeline.getId(), pipeline);
       pipeline2ContainerMap.put(pipeline.getId(), new HashSet<>());
-      node2PipelineMap.addPipeline(pipeline);
+      nodeManager.addPipeline(pipeline);
       // reset the datanodes in the pipeline
       // they will be reset on
       pipeline.resetPipeline();
@@ -393,7 +387,7 @@ public class PipelineSelector {
   }
 
   public void handleStaleNode(DatanodeDetails dn) {
-    Set<PipelineID> pipelineIDs = getPipelineByDnID(dn.getUuid());
+    Set<PipelineID> pipelineIDs = nodeManager.getPipelineByDnID(dn.getUuid());
     for (PipelineID id : pipelineIDs) {
       LOG.info("closing pipeline {}.", id);
       eventPublisher.fireEvent(SCMEvents.PIPELINE_CLOSE, id);
@@ -436,7 +430,7 @@ public class PipelineSelector {
       case CREATE:
         pipelineMap.put(pipeline.getId(), pipeline);
         pipeline2ContainerMap.put(pipeline.getId(), new HashSet<>());
-        node2PipelineMap.addPipeline(pipeline);
+        nodeManager.addPipeline(pipeline);
         // Acquire lease on pipeline
         Lease<Pipeline> pipelineLease = pipelineLeaseManager.acquire(pipeline);
         // Register callback to be executed in case of timeout
@@ -459,7 +453,7 @@ public class PipelineSelector {
       case TIMEOUT:
         closePipeline(pipeline);
         pipeline2ContainerMap.remove(pipeline.getId());
-        node2PipelineMap.removePipeline(pipeline);
+        nodeManager.removePipeline(pipeline);
         pipelineMap.remove(pipeline.getId());
         break;
       default:

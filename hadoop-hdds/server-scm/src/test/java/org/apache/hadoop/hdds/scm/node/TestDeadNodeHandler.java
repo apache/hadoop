@@ -39,7 +39,6 @@ import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -60,7 +59,6 @@ public class TestDeadNodeHandler {
 
   private List<ReplicationRequest> sentEvents = new ArrayList<>();
   private SCMNodeManager nodeManager;
-  private Node2ContainerMap node2ContainerMap;
   private ContainerStateManager containerStateManager;
   private NodeReportHandler nodeReportHandler;
   private DeadNodeHandler deadNodeHandler;
@@ -70,14 +68,13 @@ public class TestDeadNodeHandler {
   @Before
   public void setup() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    node2ContainerMap = new Node2ContainerMap();
     containerStateManager = new ContainerStateManager(conf,
         Mockito.mock(Mapping.class),
         Mockito.mock(PipelineSelector.class));
     eventQueue = new EventQueue();
     nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);
-    deadNodeHandler = new DeadNodeHandler(node2ContainerMap,
-        containerStateManager, nodeManager);
+    deadNodeHandler = new DeadNodeHandler(nodeManager,
+        containerStateManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);
     nodeReportHandler = new NodeReportHandler(nodeManager);
@@ -96,8 +93,8 @@ public class TestDeadNodeHandler {
     ContainerInfo container3 =
         TestUtils.allocateContainer(containerStateManager);
 
-    registerReplicas(node2ContainerMap, datanode1, container1, container2);
-    registerReplicas(node2ContainerMap, datanode2, container1, container3);
+    registerReplicas(datanode1, container1, container2);
+    registerReplicas(datanode2, container1, container3);
 
     registerReplicas(containerStateManager, container1, datanode1, datanode2);
     registerReplicas(containerStateManager, container2, datanode1);
@@ -105,12 +102,7 @@ public class TestDeadNodeHandler {
 
     TestUtils.closeContainer(containerStateManager, container1);
 
-    //WHEN datanode1 is dead
     deadNodeHandler.onMessage(datanode1, publisher);
-
-    //THEN
-    //node2ContainerMap has not been changed
-    Assert.assertEquals(2, node2ContainerMap.size());
 
     Set<DatanodeDetails> container1Replicas =
         containerStateManager.getContainerStateMap()
@@ -168,7 +160,7 @@ public class TestDeadNodeHandler {
 
     ContainerInfo container1 =
         TestUtils.allocateContainer(containerStateManager);
-    registerReplicas(node2ContainerMap, datanode1, container1);
+    registerReplicas(datanode1, container1);
 
     SCMNodeStat stat = nodeManager.getStats();
     Assert.assertTrue(stat.getCapacity().get() == 300);
@@ -211,7 +203,7 @@ public class TestDeadNodeHandler {
 
     ContainerInfo container1 =
         TestUtils.allocateContainer(containerStateManager);
-    registerReplicas(node2ContainerMap, dn1, container1);
+    registerReplicas(dn1, container1);
 
     deadNodeHandler.onMessage(dn1, eventQueue);
     Assert.assertTrue(logCapturer.getOutput().contains(
@@ -226,12 +218,11 @@ public class TestDeadNodeHandler {
             datanodes);
   }
 
-  private void registerReplicas(Node2ContainerMap node2ConMap,
-      DatanodeDetails datanode,
+  private void registerReplicas(DatanodeDetails datanode,
       ContainerInfo... containers)
       throws SCMException {
-    node2ConMap
-        .insertNewDatanode(datanode.getUuid(),
+    nodeManager
+        .addDatanodeInContainerMap(datanode.getUuid(),
             Arrays.stream(containers)
                 .map(container -> new ContainerID(container.getContainerID()))
                 .collect(Collectors.toSet()));

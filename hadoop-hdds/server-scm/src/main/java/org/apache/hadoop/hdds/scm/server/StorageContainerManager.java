@@ -62,7 +62,6 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodeReportHandler;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.scm.node.StaleNodeHandler;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineCloseHandler;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineActionEventHandler;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineReportHandler;
@@ -212,8 +211,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     scmBlockManager = new BlockManagerImpl(
         conf, getScmNodeManager(), scmContainerManager, eventQueue);
 
-    Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
-
     replicationStatus = new ReplicationActivityStatus();
 
     CloseContainerEventHandler closeContainerHandler =
@@ -226,18 +223,17 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
-    NewNodeHandler newNodeHandler = new NewNodeHandler(node2ContainerMap);
+    NewNodeHandler newNodeHandler = new NewNodeHandler(scmNodeManager);
     StaleNodeHandler staleNodeHandler =
-        new StaleNodeHandler(node2ContainerMap,
-                scmContainerManager.getPipelineSelector());
-    DeadNodeHandler deadNodeHandler = new DeadNodeHandler(node2ContainerMap,
-        getScmContainerManager().getStateManager(), scmNodeManager);
+        new StaleNodeHandler(scmContainerManager.getPipelineSelector());
+    DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
+        getScmContainerManager().getStateManager());
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
     PendingDeleteHandler pendingDeleteHandler =
         new PendingDeleteHandler(scmBlockManager.getSCMBlockDeletingService());
 
     ContainerReportHandler containerReportHandler =
-        new ContainerReportHandler(scmContainerManager, node2ContainerMap,
+        new ContainerReportHandler(scmContainerManager, scmNodeManager,
             replicationStatus);
     scmChillModeManager = new SCMChillModeManager(conf,
         getScmContainerManager().getStateManager().getAllContainers(),
