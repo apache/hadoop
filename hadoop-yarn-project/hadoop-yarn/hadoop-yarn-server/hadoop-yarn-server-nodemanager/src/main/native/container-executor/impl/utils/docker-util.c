@@ -1225,7 +1225,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
     if (strncmp("rw", mount_type, 2) == 0) {
       // rw mount
       if (permitted_rw == 0) {
-        fprintf(ERRORFILE, "Invalid docker rw mount '%s', realpath=%s\n", values[i], mount_src);
+        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
         ret = INVALID_DOCKER_RW_MOUNT;
         goto free_and_exit;
       } else {
@@ -1245,7 +1245,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
     } else {
       // ro mount
       if (permitted_ro == 0 && permitted_rw == 0) {
-        fprintf(ERRORFILE, "Invalid docker ro mount '%s', realpath=%s\n", values[i], mount_src);
+        fprintf(ERRORFILE, "Configuration does not allow docker mount '%s', realpath=%s\n", values[i], mount_src);
         ret = INVALID_DOCKER_RO_MOUNT;
         goto free_and_exit;
       }
