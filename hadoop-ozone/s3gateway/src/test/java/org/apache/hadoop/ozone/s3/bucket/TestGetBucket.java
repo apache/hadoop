@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.object.ListObject;
 import org.apache.hadoop.ozone.s3.object.ListObjectResponse;
 
@@ -36,7 +37,7 @@ import org.junit.Test;
 public class TestGetBucket {
 
   @Test
-  public void listRoot() throws IOException {
+  public void listRoot() throws OS3Exception, IOException {
 
     ListObject getBucket = new ListObject();
 
@@ -58,7 +59,7 @@ public class TestGetBucket {
   }
 
   @Test
-  public void listDir() throws IOException {
+  public void listDir() throws OS3Exception, IOException {
 
     ListObject getBucket = new ListObject();
 
@@ -78,7 +79,7 @@ public class TestGetBucket {
   }
 
   @Test
-  public void listSubDir() throws IOException {
+  public void listSubDir() throws OS3Exception, IOException {
 
     ListObject getBucket = new ListObject();
     OzoneClient ozoneClient =

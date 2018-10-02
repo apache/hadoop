@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.s3.EndpointBase;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 /**
  * List Object Rest endpoint.
@@ -55,7 +56,7 @@ public class ListObject extends EndpointBase {
       @QueryParam("marker") String marker,
       @DefaultValue("1000") @QueryParam("max-keys") int maxKeys,
       @QueryParam("prefix") String prefix,
-      @Context HttpHeaders hh) throws IOException {
+      @Context HttpHeaders hh) throws OS3Exception, IOException {
 
     if (delimiter == null) {
       delimiter = "/";
