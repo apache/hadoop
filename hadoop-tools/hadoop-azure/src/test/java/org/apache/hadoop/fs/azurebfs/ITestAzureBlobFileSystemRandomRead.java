@@ -525,7 +525,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   private void createTestFile() throws Exception {
     final AzureBlobFileSystem abFs = this.getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse(abFs.getIsNamespaceEnabeld());
+    Assume.assumeFalse(abFs.getIsNamespaceEnabled());
     FileSystem fs = this.getWasbFileSystem();
 
     if (fs.exists(TEST_FILE_PATH)) {
