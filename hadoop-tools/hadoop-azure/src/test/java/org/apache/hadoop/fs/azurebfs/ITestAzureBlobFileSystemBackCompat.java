@@ -45,7 +45,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     // test only valid for non-namespace enabled account
-    Assume.assumeFalse(fs.getIsNamespaceEnabeld());
+    Assume.assumeFalse(fs.getIsNamespaceEnabled());
     String storageConnectionString = getBlobConnectionString();
     CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
