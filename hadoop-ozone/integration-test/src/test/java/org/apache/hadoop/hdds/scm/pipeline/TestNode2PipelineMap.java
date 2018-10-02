@@ -97,7 +97,7 @@ public class TestNode2PipelineMap {
     Assert.assertEquals(3, dns.size());
 
     // get pipeline details by dnid
-    Set<PipelineID> pipelines = mapping.getPipelineSelector()
+    Set<PipelineID> pipelines = scm.getScmNodeManager()
         .getPipelineByDnID(dns.get(0).getUuid());
     Assert.assertEquals(1, pipelines.size());
     pipelines.forEach(p -> Assert.assertEquals(p,

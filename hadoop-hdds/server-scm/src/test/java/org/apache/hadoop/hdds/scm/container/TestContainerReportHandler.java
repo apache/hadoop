@@ -37,7 +37,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory;
 public class TestContainerReportHandler implements EventPublisher {
 
   private List<Object> publishedEvents = new ArrayList<>();
+  private final NodeManager nodeManager = new MockNodeManager(true, 1);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestContainerReportHandler.class);
@@ -73,7 +74,6 @@ public class TestContainerReportHandler implements EventPublisher {
   public void test() throws IOException {
     //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
-    Node2ContainerMap node2ContainerMap = new Node2ContainerMap();
     Mapping mapping = Mockito.mock(Mapping.class);
     PipelineSelector selector = Mockito.mock(PipelineSelector.class);
 
@@ -96,17 +96,17 @@ public class TestContainerReportHandler implements EventPublisher {
         new ReplicationActivityStatus();
 
     ContainerReportHandler reportHandler =
-        new ContainerReportHandler(mapping, node2ContainerMap,
+        new ContainerReportHandler(mapping, nodeManager,
             replicationActivityStatus);
 
     DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn2 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn3 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn4 = TestUtils.randomDatanodeDetails();
-    node2ContainerMap.insertNewDatanode(dn1.getUuid(), new HashSet<>());
-    node2ContainerMap.insertNewDatanode(dn2.getUuid(), new HashSet<>());
-    node2ContainerMap.insertNewDatanode(dn3.getUuid(), new HashSet<>());
-    node2ContainerMap.insertNewDatanode(dn4.getUuid(), new HashSet<>());
+    nodeManager.addDatanodeInContainerMap(dn1.getUuid(), new HashSet<>());
+    nodeManager.addDatanodeInContainerMap(dn2.getUuid(), new HashSet<>());
+    nodeManager.addDatanodeInContainerMap(dn3.getUuid(), new HashSet<>());
+    nodeManager.addDatanodeInContainerMap(dn4.getUuid(), new HashSet<>());
     PipelineSelector pipelineSelector = Mockito.mock(PipelineSelector.class);
 
     Pipeline pipeline = new Pipeline("leader", LifeCycleState.CLOSED,

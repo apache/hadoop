@@ -70,7 +70,7 @@ public class Node2ContainerMap extends Node2ObjectsMap<ContainerID> {
    * @param datanodeID - UUID of DN.
    * @param containers - Set of Containers tht is present on DN.
    * @throws SCMException - if we don't know about this datanode, for new DN
-   *                      use insertNewDatanode.
+   *                        use addDatanodeInContainerMap.
    */
   public void setContainersForDatanode(UUID datanodeID,
       Set<ContainerID> containers) throws SCMException {

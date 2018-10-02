@@ -119,7 +119,7 @@ public class TestPipelineClose {
         HddsProtos.LifeCycleState.CLOSED);
     for (DatanodeDetails dn : ratisContainer1.getPipeline().getMachines()) {
       // Assert that the pipeline has been removed from Node2PipelineMap as well
-      Assert.assertEquals(pipelineSelector.getPipelineByDnID(
+      Assert.assertEquals(scm.getScmNodeManager().getPipelineByDnID(
           dn.getUuid()).size(), 0);
     }
   }

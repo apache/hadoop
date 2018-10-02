@@ -19,25 +19,18 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Handles Stale node event.
  */
 public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
-  static final Logger LOG = LoggerFactory.getLogger(StaleNodeHandler.class);
 
-  private final Node2ContainerMap node2ContainerMap;
   private final PipelineSelector pipelineSelector;
 
-  public StaleNodeHandler(Node2ContainerMap node2ContainerMap,
-      PipelineSelector pipelineSelector) {
-    this.node2ContainerMap = node2ContainerMap;
+  public StaleNodeHandler(PipelineSelector pipelineSelector) {
     this.pipelineSelector = pipelineSelector;
   }
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -38,8 +37,6 @@ import org.slf4j.LoggerFactory;
  */
 public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
 
-  private final Node2ContainerMap node2ContainerMap;
-
   private final ContainerStateManager containerStateManager;
 
   private final NodeManager nodeManager;
@@ -47,10 +44,8 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
   private static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeHandler.class);
 
-  public DeadNodeHandler(
-      Node2ContainerMap node2ContainerMap,
-      ContainerStateManager containerStateManager, NodeManager nodeManager) {
-    this.node2ContainerMap = node2ContainerMap;
+  public DeadNodeHandler(NodeManager nodeManager,
+      ContainerStateManager containerStateManager) {
     this.containerStateManager = containerStateManager;
     this.nodeManager = nodeManager;
   }
@@ -61,7 +56,7 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
     nodeManager.processDeadNode(datanodeDetails.getUuid());
 
     Set<ContainerID> containers =
-        node2ContainerMap.getContainers(datanodeDetails.getUuid());
+        nodeManager.getContainers(datanodeDetails.getUuid());
     if (containers == null) {
       LOG.info("There's no containers in dead datanode {}, no replica will be"
           + " removed from the in-memory state.", datanodeDetails.getUuid());

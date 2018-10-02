@@ -21,8 +21,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -59,6 +64,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -469,6 +475,83 @@ public class SCMNodeManager
       nodeCountMap.put(state.toString(), getNodeCount(state));
     }
     return nodeCountMap;
+  }
+
+  /**
+   * Get set of pipelines a datanode is part of.
+   * @param dnId - datanodeID
+   * @return Set of PipelineID
+   */
+  @Override
+  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
+    return nodeStateManager.getPipelineByDnID(dnId);
+  }
+
+
+  /**
+   * Add pipeline information in the NodeManager.
+   * @param pipeline - Pipeline to be added
+   */
+  @Override
+  public void addPipeline(Pipeline pipeline) {
+    nodeStateManager.addPipeline(pipeline);
+  }
+
+  /**
+   * Remove a pipeline information from the NodeManager.
+   * @param pipeline - Pipeline to be removed
+   */
+  @Override
+  public void removePipeline(Pipeline pipeline) {
+    nodeStateManager.removePipeline(pipeline);
+  }
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws SCMException - if datanode is not known. For new datanode use
+   *                        addDatanodeInContainerMap call.
+   */
+  @Override
+  public void setContainersForDatanode(UUID uuid,
+      Set<ContainerID> containerIds) throws SCMException {
+    nodeStateManager.setContainersForDatanode(uuid, containerIds);
+  }
+
+  /**
+   * Process containerReport received from datanode.
+   * @param uuid - DataonodeID
+   * @param containerIds - Set of containerIDs
+   * @return The result after processing containerReport
+   */
+  @Override
+  public ReportResult<ContainerID> processContainerReport(UUID uuid,
+      Set<ContainerID> containerIds) {
+    return nodeStateManager.processContainerReport(uuid, containerIds);
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  @Override
+  public Set<ContainerID> getContainers(UUID uuid) {
+    return nodeStateManager.getContainers(uuid);
+  }
+
+  /**
+   * Insert a new datanode with set of containerIDs for containers available
+   * on it.
+   * @param uuid - DatanodeID
+   * @param containerIDs - Set of ContainerIDs
+   * @throws SCMException - if datanode already exists
+   */
+  @Override
+  public void addDatanodeInContainerMap(UUID uuid,
+      Set<ContainerID> containerIDs) throws SCMException {
+    nodeStateManager.addDatanodeInContainerMap(uuid, containerIDs);
   }
 
   // TODO:
