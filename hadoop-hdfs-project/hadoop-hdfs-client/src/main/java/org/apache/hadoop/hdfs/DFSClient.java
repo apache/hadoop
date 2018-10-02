@@ -1054,8 +1054,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
-   * default <code>replication</code> and <code>blockSize<code> and null <code>
-   * progress</code>.
+   * default <code>replication</code> and <code>blockSize</code> and null
+   * <code>progress</code>.
    */
   public OutputStream create(String src, boolean overwrite)
       throws IOException {
@@ -1065,7 +1065,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
-   * default <code>replication</code> and <code>blockSize<code>.
+   * default <code>replication</code> and <code>blockSize</code>.
    */
   public OutputStream create(String src,
       boolean overwrite, Progressable progress) throws IOException {

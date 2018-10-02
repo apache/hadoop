@@ -143,7 +143,7 @@ public interface ClientDatanodeProtocol {
 
   /**
    * Get the status of the previously issued reconfig task.
-   * @see {@link org.apache.hadoop.conf.ReconfigurationTaskStatus}.
+   * @see org.apache.hadoop.conf.ReconfigurationTaskStatus
    */
   ReconfigurationTaskStatus getReconfigurationStatus() throws IOException;
 

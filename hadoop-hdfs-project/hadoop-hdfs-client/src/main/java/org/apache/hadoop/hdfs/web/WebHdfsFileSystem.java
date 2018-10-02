@@ -176,7 +176,6 @@ public class WebHdfsFileSystem extends FileSystem
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
    *
    * @return <code>webhdfs</code>
    */

@@ -53,7 +53,8 @@ import java.util.concurrent.TimeUnit;
  * illustrated in the following diagram. Unless otherwise specified, all
  * range-related calculations are inclusive (the end offset of the previous
  * range should be 1 byte lower than the start offset of the next one).
- *
+ */
+ /*
  *  | <----  Block Group ----> |   <- Block Group: logical unit composing
  *  |                          |        striped HDFS files.
  *  blk_0      blk_1       blk_2   <- Internal Blocks: each internal block
@@ -492,9 +493,12 @@ public class StripedBlockUtil {
     return stripes.toArray(new AlignedStripe[stripes.size()]);
   }
 
+  /**
+   * Cell indexing convention defined in {@link StripingCell}.
+   */
   private static void calcualteChunkPositionsInBuf(int cellSize,
       AlignedStripe[] stripes, StripingCell[] cells, ByteBuffer buf) {
-    /**
+    /*
      *     | <--------------- AlignedStripe --------------->|
      *
      *     |<- length_0 ->|<--  length_1  -->|<- length_2 ->|
@@ -508,8 +512,6 @@ public class StripedBlockUtil {
      * |  cell_0_0_0 |  cell_1_0_1 and cell_2_0_2  |cell_3_1_0 ...|   <- buf
      * |  (partial)  |    (from blk_1 and blk_2)   |              |
      * +----------------------------------------------------------+
-     *
-     * Cell indexing convention defined in {@link StripingCell}
      */
     int done = 0;
     for (StripingCell cell : cells) {
@@ -562,7 +564,11 @@ public class StripedBlockUtil {
    * its start and end offsets -- e.g., the end logical offset of cell_0_0_0
    * should be 1 byte lower than the start logical offset of cell_1_0_1.
    *
-   *  | <------- Striped Block Group -------> |
+   * A StripingCell is a special instance of {@link StripingChunk} whose offset
+   * and size align with the cell used when writing data.
+   * TODO: consider parity cells
+   */
+  /*  | <------- Striped Block Group -------> |
    *    blk_0          blk_1          blk_2
    *      |              |              |
    *      v              v              v
@@ -572,9 +578,6 @@ public class StripedBlockUtil {
    * |cell_3_1_0|   |cell_4_1_1|   |cell_5_1_2| <- {@link #idxInBlkGroup} = 5
    * +----------+   +----------+   +----------+    {@link #idxInInternalBlk} = 1
    *                                               {@link #idxInStripe} = 2
-   * A StripingCell is a special instance of {@link StripingChunk} whose offset
-   * and size align with the cell used when writing data.
-   * TODO: consider parity cells
    */
   @VisibleForTesting
   public static class StripingCell {
@@ -622,6 +625,18 @@ public class StripedBlockUtil {
    * the diagram, any given byte range on a block group leads to 1~5
    * AlignedStripe's.
    *
+   * An AlignedStripe is the basic unit of reading from a striped block group,
+   * because within the AlignedStripe, all internal blocks can be processed in
+   * a uniform manner.
+   *
+   * The coverage of an AlignedStripe on an internal block is represented as a
+   * {@link StripingChunk}.
+   *
+   * To simplify the logic of reading a logical byte range from a block group,
+   * a StripingChunk is either completely in the requested byte range or
+   * completely outside the requested byte range.
+   */
+  /*
    * |<-------- Striped Block Group -------->|
    * blk_0   blk_1   blk_2      blk_3   blk_4
    *                 +----+  |  +----+  +----+
@@ -638,18 +653,7 @@ public class StripedBlockUtil {
    * |    |                  |  |    |  |    | <- AlignedStripe4:
    * +----+                  |  +----+  +----+      last cell is partial
    *                         |
-   * <---- data blocks ----> | <--- parity --->
-   *
-   * An AlignedStripe is the basic unit of reading from a striped block group,
-   * because within the AlignedStripe, all internal blocks can be processed in
-   * a uniform manner.
-   *
-   * The coverage of an AlignedStripe on an internal block is represented as a
-   * {@link StripingChunk}.
-   *
-   * To simplify the logic of reading a logical byte range from a block group,
-   * a StripingChunk is either completely in the requested byte range or
-   * completely outside the requested byte range.
+   * <---- data blocks ----> | <--- parity -->
    */
   public static class AlignedStripe {
     public VerticalRange range;
@@ -691,7 +695,8 @@ public class StripedBlockUtil {
    * starting at {@link #offsetInBlock} and lasting for {@link #spanInBlock}
    * bytes in an internal block. Note that VerticalRange doesn't necessarily
    * align with {@link StripingCell}.
-   *
+   */
+  /*
    * |<- Striped Block Group ->|
    *  blk_0
    *    |
@@ -735,8 +740,8 @@ public class StripedBlockUtil {
   /**
    * Indicates the coverage of an {@link AlignedStripe} on an internal block,
    * and the state of the chunk in the context of the read request.
-   *
-   * |<---------------- Striped Block Group --------------->|
+   */
+  /* |<---------------- Striped Block Group --------------->|
    *   blk_0        blk_1        blk_2          blk_3   blk_4
    *                           +---------+  |  +----+  +----+
    *     null         null     |REQUESTED|  |  |null|  |null| <- AlignedStripe0
@@ -745,7 +750,7 @@ public class StripedBlockUtil {
    * +---------+  +---------+  +---------+  |  +----+  +----+
    * |REQUESTED|  |REQUESTED|    ALLZERO    |  |null|  |null| <- AlignedStripe2
    * +---------+  +---------+               |  +----+  +----+
-   * <----------- data blocks ------------> | <--- parity --->
+   * <----------- data blocks ------------> | <--- parity -->
    */
   public static class StripingChunk {
     /** Chunk has been successfully fetched */
@@ -767,10 +772,12 @@ public class StripedBlockUtil {
 
     /**
      * If a chunk is completely in requested range, the state transition is:
-     * REQUESTED (when AlignedStripe created) -> PENDING -> {FETCHED | MISSING}
+     * REQUESTED (when AlignedStripe created) -&gt; PENDING -&gt;
+     * {FETCHED | MISSING}
      * If a chunk is completely outside requested range (including parity
      * chunks), state transition is:
-     * null (AlignedStripe created) -> REQUESTED (upon failure) -> PENDING ...
+     * null (AlignedStripe created) -&gt;REQUESTED (upon failure) -&gt;
+     * PENDING ...
      */
     public int state = REQUESTED;
 

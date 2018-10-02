@@ -294,12 +294,12 @@ public class DFSPacket {
   }
 
   /**
-   * Add a trace parent span for this packet.<p/>
-   *
+   * Add a trace parent span for this packet.
+   * <p>
    * Trace parent spans for a packet are the trace spans responsible for
    * adding data to that packet.  We store them as an array of longs for
-   * efficiency.<p/>
-   *
+   * efficiency.
+   * <p>
    * Protected by the DFSOutputStream dataQueue lock.
    */
   public void addTraceParent(Span span) {
@@ -323,10 +323,10 @@ public class DFSPacket {
   }
 
   /**
-   * Get the trace parent spans for this packet.<p/>
-   *
-   * Will always be non-null.<p/>
-   *
+   * Get the trace parent spans for this packet.
+   * <p>
+   * Will always be non-null.
+   * <p>
    * Protected by the DFSOutputStream dataQueue lock.
    */
   public SpanId[] getTraceParents() {

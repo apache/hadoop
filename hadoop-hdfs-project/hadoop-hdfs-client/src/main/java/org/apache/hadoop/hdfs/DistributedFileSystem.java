@@ -149,7 +149,6 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
    *
    * @return <code>hdfs</code>
    */
@@ -1860,7 +1859,7 @@ public class DistributedFileSystem extends FileSystem
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 
-  /** @see HdfsAdmin#allowSnapshot(Path) */
+  /** @see org.apache.hadoop.hdfs.client.HdfsAdmin#allowSnapshot(Path) */
   public void allowSnapshot(final Path path) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.ALLOW_SNAPSHOT);
@@ -1888,7 +1887,7 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
-  /** @see HdfsAdmin#disallowSnapshot(Path) */
+  /** @see org.apache.hadoop.hdfs.client.HdfsAdmin#disallowSnapshot(Path) */
   public void disallowSnapshot(final Path path) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.DISALLOW_SNAPSHOT);
@@ -2207,7 +2206,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @see {@link #addCacheDirective(CacheDirectiveInfo, EnumSet)}
+   * @see #addCacheDirective(CacheDirectiveInfo, EnumSet)
    */
   public long addCacheDirective(CacheDirectiveInfo info) throws IOException {
     return addCacheDirective(info, EnumSet.noneOf(CacheFlag.class));
@@ -2234,7 +2233,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * @see {@link #modifyCacheDirective(CacheDirectiveInfo, EnumSet)}
+   * @see #modifyCacheDirective(CacheDirectiveInfo, EnumSet)
    */
   public void modifyCacheDirective(CacheDirectiveInfo info) throws IOException {
     modifyCacheDirective(info, EnumSet.noneOf(CacheFlag.class));
@@ -3305,10 +3304,10 @@ public class DistributedFileSystem extends FileSystem
    * Returns a RemoteIterator which can be used to list all open files
    * currently managed by the NameNode. For large numbers of open files,
    * iterator will fetch the list in batches of configured size.
-   * <p/>
+   * <p>
    * Since the list is fetched in batches, it does not represent a
    * consistent snapshot of the all open files.
-   * <p/>
+   * <p>
    * This method can only be called by HDFS superusers.
    */
   @Deprecated

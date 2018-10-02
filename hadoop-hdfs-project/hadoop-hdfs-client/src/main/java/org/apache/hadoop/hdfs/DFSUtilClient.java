@@ -266,8 +266,8 @@ public class DFSUtilClient {
   }
 
   /**
-   * Convert a List<LocatedBlock> to BlockLocation[]
-   * @param blocks A List<LocatedBlock> to be converted
+   * Convert a List to BlockLocation[]
+   * @param blocks A List to be converted
    * @return converted array of BlockLocation
    */
   public static BlockLocation[] locatedBlocks2Locations(
