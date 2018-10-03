@@ -42,6 +42,7 @@ public class EndpointBase {
       LoggerFactory.getLogger(EndpointBase.class);
   @Inject
   private OzoneClient client;
+  private String requestId;
 
   protected OzoneBucket getBucket(String volumeName, String bucketName)
       throws IOException {
@@ -84,4 +85,18 @@ public class EndpointBase {
   public void setClient(OzoneClient ozoneClient) {
     this.client = ozoneClient;
   }
+
+  /**
+   * Set the requestId.
+   * @param id
+   */
+  protected void setRequestId(String id) {
+    this.requestId = id;
+  }
+
+  @VisibleForTesting
+  public String getRequestId() {
+    return requestId;
+  }
+
 }
