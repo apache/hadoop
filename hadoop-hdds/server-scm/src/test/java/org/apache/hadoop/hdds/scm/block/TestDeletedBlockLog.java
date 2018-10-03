@@ -19,8 +19,8 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -72,7 +72,7 @@ public class TestDeletedBlockLog {
   private static DeletedBlockLogImpl deletedBlockLog;
   private OzoneConfiguration conf;
   private File testDir;
-  private Mapping containerManager;
+  private ContainerManager containerManager;
   private List<DatanodeDetails> dnList;
 
   @Before
@@ -82,7 +82,7 @@ public class TestDeletedBlockLog {
     conf = new OzoneConfiguration();
     conf.setInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 20);
     conf.set(OZONE_METADATA_DIRS, testDir.getAbsolutePath());
-    containerManager = Mockito.mock(ContainerMapping.class);
+    containerManager = Mockito.mock(SCMContainerManager.class);
     deletedBlockLog = new DeletedBlockLogImpl(conf, containerManager);
     dnList = new ArrayList<>(3);
     setupContainerManager();

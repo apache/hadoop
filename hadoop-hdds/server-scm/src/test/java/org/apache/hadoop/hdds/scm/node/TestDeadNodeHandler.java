@@ -31,8 +31,8 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
-import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
@@ -69,7 +69,7 @@ public class TestDeadNodeHandler {
   public void setup() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
     containerStateManager = new ContainerStateManager(conf,
-        Mockito.mock(Mapping.class),
+        Mockito.mock(ContainerManager.class),
         Mockito.mock(PipelineSelector.class));
     eventQueue = new EventQueue();
     nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);

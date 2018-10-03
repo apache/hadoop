@@ -44,11 +44,11 @@ public class CloseContainerWatcher extends
 
   public static final Logger LOG =
       LoggerFactory.getLogger(CloseContainerWatcher.class);
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
 
   public CloseContainerWatcher(Event<CloseContainerRetryableReq> startEvent,
       Event<CloseContainerStatus> completionEvent,
-      LeaseManager<Long> leaseManager, Mapping containerManager) {
+      LeaseManager<Long> leaseManager, ContainerManager containerManager) {
     super(startEvent, completionEvent, leaseManager);
     this.containerManager = containerManager;
   }

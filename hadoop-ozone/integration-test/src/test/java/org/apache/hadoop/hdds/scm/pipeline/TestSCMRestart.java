@@ -20,7 +20,7 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -46,8 +46,8 @@ public class TestSCMRestart {
   private static OzoneConfiguration conf;
   private static Pipeline ratisPipeline1;
   private static Pipeline ratisPipeline2;
-  private static ContainerMapping mapping;
-  private static ContainerMapping newMapping;
+  private static ContainerManager containerManager;
+  private static ContainerManager newContainerManager;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -64,17 +64,17 @@ public class TestSCMRestart {
         .build();
     cluster.waitForClusterToBeReady();
     StorageContainerManager scm = cluster.getStorageContainerManager();
-    mapping = (ContainerMapping)scm.getScmContainerManager();
-    ratisPipeline1 =
-            mapping.allocateContainer(RATIS, THREE, "Owner1").getPipeline();
-    ratisPipeline2 =
-            mapping.allocateContainer(RATIS, ONE, "Owner2").getPipeline();
+    containerManager = scm.getContainerManager();
+    ratisPipeline1 = containerManager.allocateContainer(
+        RATIS, THREE, "Owner1").getPipeline();
+    ratisPipeline2 = containerManager.allocateContainer(
+        RATIS, ONE, "Owner2").getPipeline();
     // At this stage, there should be 2 pipeline one with 1 open container
     // each. Try restarting the SCM and then discover that pipeline are in
     // correct state.
     cluster.restartStorageContainerManager();
-    newMapping = (ContainerMapping)(cluster.getStorageContainerManager()
-            .getScmContainerManager());
+    newContainerManager = cluster.getStorageContainerManager()
+        .getContainerManager();
   }
 
   /**
@@ -90,10 +90,10 @@ public class TestSCMRestart {
   @Test
   public void testPipelineWithScmRestart() throws IOException {
     // After restart make sure that the pipeline are still present
-    Pipeline ratisPipeline1AfterRestart = newMapping.getPipelineSelector()
-            .getPipeline(ratisPipeline1.getId());
-    Pipeline ratisPipeline2AfterRestart = newMapping.getPipelineSelector()
-            .getPipeline(ratisPipeline2.getId());
+    Pipeline ratisPipeline1AfterRestart = newContainerManager
+        .getPipelineSelector().getPipeline(ratisPipeline1.getId());
+    Pipeline ratisPipeline2AfterRestart = newContainerManager
+        .getPipelineSelector().getPipeline(ratisPipeline2.getId());
     Assert.assertNotSame(ratisPipeline1AfterRestart, ratisPipeline1);
     Assert.assertNotSame(ratisPipeline2AfterRestart, ratisPipeline2);
     Assert.assertEquals(ratisPipeline1AfterRestart, ratisPipeline1);
@@ -111,9 +111,8 @@ public class TestSCMRestart {
 
     // Try creating a new ratis pipeline, it should be from the same pipeline
     // as was before restart
-    Pipeline newRatisPipeline =
-            newMapping.allocateContainer(RATIS, THREE, "Owner1")
-                    .getPipeline();
+    Pipeline newRatisPipeline = newContainerManager
+        .allocateContainer(RATIS, THREE, "Owner1").getPipeline();
     Assert.assertEquals(newRatisPipeline.getId(), ratisPipeline1.getId());
   }
 }

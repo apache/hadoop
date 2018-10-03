@@ -102,7 +102,7 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(containerID)
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(datanodes.size(), 1);
@@ -157,7 +157,7 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(containerID)
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(datanodes.size(), 1);
@@ -214,7 +214,7 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(containerID)
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(3, datanodes.size());

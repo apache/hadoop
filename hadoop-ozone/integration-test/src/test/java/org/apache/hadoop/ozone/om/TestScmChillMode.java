@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -128,7 +128,7 @@ public class TestScmChillMode {
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100, 4096);
     final List<ContainerInfo> containers = cluster
         .getStorageContainerManager()
-        .getScmContainerManager().getStateManager().getAllContainers();
+        .getContainerManager().getStateManager().getAllContainers();
     GenericTestUtils.waitFor(() -> {
       return containers.size() > 10;
     }, 100, 1000);
@@ -251,7 +251,7 @@ public class TestScmChillMode {
         new TestStorageContainerManagerHelper(miniCluster, conf);
     Map<String, OmKeyInfo> keyLocations = helper.createKeys(100 * 2, 4096);
     final List<ContainerInfo> containers = miniCluster
-        .getStorageContainerManager().getScmContainerManager()
+        .getStorageContainerManager().getContainerManager()
         .getStateManager().getAllContainers();
     GenericTestUtils.waitFor(() -> {
       return containers.size() > 10;
@@ -264,8 +264,8 @@ public class TestScmChillMode {
     containers.remove(3);
 
     // Close remaining containers
-    ContainerMapping mapping = (ContainerMapping) miniCluster
-        .getStorageContainerManager().getScmContainerManager();
+    SCMContainerManager mapping = (SCMContainerManager) miniCluster
+        .getStorageContainerManager().getContainerManager();
     containers.forEach(c -> {
       try {
         mapping.updateContainerState(c.getContainerID(),
@@ -347,7 +347,7 @@ public class TestScmChillMode {
     SCMClientProtocolServer clientProtocolServer = cluster
         .getStorageContainerManager().getClientProtocolServer();
     assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
-    final List<ContainerInfo> containers = scm.getScmContainerManager()
+    final List<ContainerInfo> containers = scm.getContainerManager()
         .getStateManager().getAllContainers();
     scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS, true);
     GenericTestUtils.waitFor(() -> {

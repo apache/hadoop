@@ -72,7 +72,6 @@ import static org.apache.hadoop.hdds
     .HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 
@@ -239,7 +238,7 @@ public class TestBlockDeletion {
     ContainerReportsProto dummyReport = dummyReportsBuilder.build();
 
     logCapturer.clearOutput();
-    scm.getScmContainerManager().processContainerReports(
+    scm.getContainerManager().processContainerReports(
         cluster.getHddsDatanodes().get(0).getDatanodeDetails(), dummyReport,
         false);
     // wait for event to be handled by event handler

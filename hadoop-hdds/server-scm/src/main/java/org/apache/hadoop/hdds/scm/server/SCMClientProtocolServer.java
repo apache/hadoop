@@ -160,7 +160,7 @@ public class SCMClientProtocolServer implements
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
 
-    return scm.getScmContainerManager()
+    return scm.getContainerManager()
         .allocateContainer(replicationType, factor, owner);
   }
 
@@ -168,7 +168,7 @@ public class SCMClientProtocolServer implements
   public ContainerInfo getContainer(long containerID) throws IOException {
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
-    return scm.getScmContainerManager()
+    return scm.getContainerManager()
         .getContainer(containerID);
   }
 
@@ -176,7 +176,7 @@ public class SCMClientProtocolServer implements
   public ContainerWithPipeline getContainerWithPipeline(long containerID)
       throws IOException {
     if (chillModePrecheck.isInChillMode()) {
-      ContainerInfo contInfo = scm.getScmContainerManager()
+      ContainerInfo contInfo = scm.getContainerManager()
           .getContainer(containerID);
       if (contInfo.isContainerOpen()) {
         if (!hasRequiredReplicas(contInfo)) {
@@ -188,7 +188,7 @@ public class SCMClientProtocolServer implements
     }
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
-    return scm.getScmContainerManager()
+    return scm.getContainerManager()
         .getContainerWithPipeline(containerID);
   }
 
@@ -198,7 +198,7 @@ public class SCMClientProtocolServer implements
    */
   private boolean hasRequiredReplicas(ContainerInfo contInfo) {
     try{
-      return getScm().getScmContainerManager().getStateManager()
+      return getScm().getContainerManager().getStateManager()
           .getContainerReplicas(contInfo.containerID())
           .size() >= contInfo.getReplicationFactor().getNumber();
     } catch (SCMException ex) {
@@ -211,7 +211,7 @@ public class SCMClientProtocolServer implements
   @Override
   public List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException {
-    return scm.getScmContainerManager().
+    return scm.getContainerManager().
         listContainer(startContainerID, count);
   }
 
@@ -219,7 +219,7 @@ public class SCMClientProtocolServer implements
   public void deleteContainer(long containerID) throws IOException {
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
-    scm.getScmContainerManager().deleteContainer(containerID);
+    scm.getContainerManager().deleteContainer(containerID);
 
   }
 
@@ -257,10 +257,10 @@ public class SCMClientProtocolServer implements
           .ObjectStageChangeRequestProto.Op.create) {
         if (stage == StorageContainerLocationProtocolProtos
             .ObjectStageChangeRequestProto.Stage.begin) {
-          scm.getScmContainerManager().updateContainerState(id, HddsProtos
+          scm.getContainerManager().updateContainerState(id, HddsProtos
               .LifeCycleEvent.CREATE);
         } else {
-          scm.getScmContainerManager().updateContainerState(id, HddsProtos
+          scm.getContainerManager().updateContainerState(id, HddsProtos
               .LifeCycleEvent.CREATED);
         }
       } else {
@@ -268,10 +268,10 @@ public class SCMClientProtocolServer implements
             .ObjectStageChangeRequestProto.Op.close) {
           if (stage == StorageContainerLocationProtocolProtos
               .ObjectStageChangeRequestProto.Stage.begin) {
-            scm.getScmContainerManager().updateContainerState(id, HddsProtos
+            scm.getContainerManager().updateContainerState(id, HddsProtos
                 .LifeCycleEvent.FINALIZE);
           } else {
-            scm.getScmContainerManager().updateContainerState(id, HddsProtos
+            scm.getContainerManager().updateContainerState(id, HddsProtos
                 .LifeCycleEvent.CLOSE);
           }
         }

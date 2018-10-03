@@ -46,9 +46,9 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       LoggerFactory.getLogger(CloseContainerEventHandler.class);
 
 
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
 
-  public CloseContainerEventHandler(Mapping containerManager) {
+  public CloseContainerEventHandler(ContainerManager containerManager) {
     this.containerManager = containerManager;
   }
 

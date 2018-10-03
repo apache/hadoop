@@ -22,7 +22,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -52,7 +52,7 @@ public class TestNodeFailure {
   private static OzoneConfiguration conf;
   private static ContainerWithPipeline ratisContainer1;
   private static ContainerWithPipeline ratisContainer2;
-  private static ContainerMapping mapping;
+  private static ContainerManager containerManager;
   private static long timeForFailure;
 
   /**
@@ -75,9 +75,11 @@ public class TestNodeFailure {
         .build();
     cluster.waitForClusterToBeReady();
     StorageContainerManager scm = cluster.getStorageContainerManager();
-    mapping = (ContainerMapping)scm.getScmContainerManager();
-    ratisContainer1 = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    ratisContainer2 = mapping.allocateContainer(RATIS, THREE, "testOwner");
+    containerManager = scm.getContainerManager();
+    ratisContainer1 = containerManager.allocateContainer(
+        RATIS, THREE, "testOwner");
+    ratisContainer2 = containerManager.allocateContainer(
+        RATIS, THREE, "testOwner");
     // At this stage, there should be 2 pipeline one with 1 open container each.
     // Try closing the both the pipelines, one with a closed container and
     // the other with an open container.
@@ -113,12 +115,12 @@ public class TestNodeFailure {
         ratisContainer1.getPipeline().getLifeCycleState());
     Assert.assertEquals(HddsProtos.LifeCycleState.OPEN,
         ratisContainer2.getPipeline().getLifeCycleState());
-    Assert.assertNull(
-        mapping.getPipelineSelector().getPipeline(pipelineToFail.getId()));
+    Assert.assertNull(containerManager.getPipelineSelector()
+        .getPipeline(pipelineToFail.getId()));
     // Now restart the datanode and make sure that a new pipeline is created.
     cluster.restartHddsDatanode(dnToFail);
     ContainerWithPipeline ratisContainer3 =
-        mapping.allocateContainer(RATIS, THREE, "testOwner");
+        containerManager.allocateContainer(RATIS, THREE, "testOwner");
     //Assert that new container is not created from the ratis 2 pipeline
     Assert.assertNotEquals(ratisContainer3.getPipeline().getId(),
         ratisContainer2.getPipeline().getId());

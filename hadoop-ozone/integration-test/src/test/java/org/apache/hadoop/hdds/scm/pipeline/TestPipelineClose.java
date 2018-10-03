@@ -21,7 +21,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -51,7 +51,7 @@ public class TestPipelineClose {
   private static ContainerWithPipeline ratisContainer1;
   private static ContainerWithPipeline ratisContainer2;
   private static ContainerStateMap stateMap;
-  private static ContainerMapping mapping;
+  private static ContainerManager containerManager;
   private static PipelineSelector pipelineSelector;
 
   /**
@@ -65,11 +65,13 @@ public class TestPipelineClose {
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(6).build();
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
-    mapping = (ContainerMapping)scm.getScmContainerManager();
-    stateMap = mapping.getStateManager().getContainerStateMap();
-    ratisContainer1 = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    ratisContainer2 = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    pipelineSelector = mapping.getPipelineSelector();
+    containerManager = scm.getContainerManager();
+    stateMap = containerManager.getStateManager().getContainerStateMap();
+    ratisContainer1 = containerManager
+        .allocateContainer(RATIS, THREE, "testOwner");
+    ratisContainer2 = containerManager
+        .allocateContainer(RATIS, THREE, "testOwner");
+    pipelineSelector = containerManager.getPipelineSelector();
     // At this stage, there should be 2 pipeline one with 1 open container each.
     // Try closing the both the pipelines, one with a closed container and
     // the other with an open container.
@@ -98,13 +100,13 @@ public class TestPipelineClose {
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
 
     Set<ContainerID> setClosed = pipelineSelector.getOpenContainerIDsByPipeline(
@@ -132,9 +134,9 @@ public class TestPipelineClose {
     Assert.assertEquals(1, setOpen.size());
 
     long cId2 = ratisContainer2.getContainerInfo().getContainerID();
-    mapping
+    containerManager
         .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATE);
-    mapping
+    containerManager
         .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATED);
     pipelineSelector.finalizePipeline(ratisContainer2.getPipeline());
     Assert.assertEquals(ratisContainer2.getPipeline().getLifeCycleState(),

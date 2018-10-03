@@ -50,21 +50,21 @@ public class ContainerReportHandler implements
 
   private final NodeManager nodeManager;
 
-  private final Mapping containerMapping;
+  private final ContainerManager containerManager;
 
   private ContainerStateManager containerStateManager;
 
   private ReplicationActivityStatus replicationStatus;
 
-  public ContainerReportHandler(Mapping containerMapping,
+  public ContainerReportHandler(ContainerManager containerManager,
       NodeManager nodeManager,
       ReplicationActivityStatus replicationActivityStatus) {
-    Preconditions.checkNotNull(containerMapping);
+    Preconditions.checkNotNull(containerManager);
     Preconditions.checkNotNull(nodeManager);
     Preconditions.checkNotNull(replicationActivityStatus);
-    this.containerStateManager = containerMapping.getStateManager();
+    this.containerStateManager = containerManager.getStateManager();
     this.nodeManager = nodeManager;
-    this.containerMapping = containerMapping;
+    this.containerManager = containerManager;
     this.replicationStatus = replicationActivityStatus;
   }
 
@@ -80,7 +80,7 @@ public class ContainerReportHandler implements
     try {
 
       //update state in container db and trigger close container events
-      containerMapping
+      containerManager
           .processContainerReports(datanodeOrigin, containerReport, false);
 
       Set<ContainerID> containerIds = containerReport.getReportsList().stream()

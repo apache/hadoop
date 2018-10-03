@@ -74,10 +74,10 @@ public class TestContainerReportHandler implements EventPublisher {
   public void test() throws IOException {
     //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
-    Mapping mapping = Mockito.mock(Mapping.class);
+    ContainerManager containerManager = Mockito.mock(ContainerManager.class);
     PipelineSelector selector = Mockito.mock(PipelineSelector.class);
 
-    when(mapping.getContainer(anyLong()))
+    when(containerManager.getContainer(anyLong()))
         .thenAnswer(
             (Answer<ContainerInfo>) invocation ->
                 new Builder()
@@ -88,15 +88,15 @@ public class TestContainerReportHandler implements EventPublisher {
       );
 
     ContainerStateManager containerStateManager =
-        new ContainerStateManager(conf, mapping, selector);
+        new ContainerStateManager(conf, containerManager, selector);
 
-    when(mapping.getStateManager()).thenReturn(containerStateManager);
+    when(containerManager.getStateManager()).thenReturn(containerStateManager);
 
     ReplicationActivityStatus replicationActivityStatus =
         new ReplicationActivityStatus();
 
     ContainerReportHandler reportHandler =
-        new ContainerReportHandler(mapping, nodeManager,
+        new ContainerReportHandler(containerManager, nodeManager,
             replicationActivityStatus);
 
     DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();

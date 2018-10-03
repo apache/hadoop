@@ -17,7 +17,7 @@
 package org.apache.hadoop.hdds.scm.block;
 
 import com.google.common.collect.ArrayListMultimap;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
@@ -42,15 +42,15 @@ public class DatanodeDeletedBlockTransactions {
   private int maximumAllowedTXNum;
   // Current counter of inserted TX.
   private int currentTXNum;
-  private Mapping mappingService;
+  private ContainerManager containerManager;
   // A list of TXs mapped to a certain datanode ID.
   private final ArrayListMultimap<UUID, DeletedBlocksTransaction>
       transactions;
 
-  DatanodeDeletedBlockTransactions(Mapping mappingService,
+  DatanodeDeletedBlockTransactions(ContainerManager containerManager,
       int maximumAllowedTXNum, int nodeNum) {
     this.transactions = ArrayListMultimap.create();
-    this.mappingService = mappingService;
+    this.containerManager = containerManager;
     this.maximumAllowedTXNum = maximumAllowedTXNum;
     this.nodeNum = nodeNum;
   }
@@ -60,7 +60,7 @@ public class DatanodeDeletedBlockTransactions {
     Pipeline pipeline = null;
     try {
       ContainerWithPipeline containerWithPipeline =
-          mappingService.getContainerWithPipeline(tx.getContainerID());
+          containerManager.getContainerWithPipeline(tx.getContainerID());
       if (containerWithPipeline.getContainerInfo().isContainerOpen()
           || containerWithPipeline.getPipeline().isEmpty()) {
         return false;

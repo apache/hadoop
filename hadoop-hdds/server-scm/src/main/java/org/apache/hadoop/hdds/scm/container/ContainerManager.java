@@ -33,10 +33,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Mapping class contains the mapping from a name to a pipeline mapping. This is
- * used by SCM when allocating new locations and when looking up a key.
+ * ContainerManager class contains the mapping from a name to a pipeline
+ * mapping. This is used by SCM when allocating new locations and when
+ * looking up a key.
  */
-public interface Mapping extends Closeable {
+public interface ContainerManager extends Closeable {
   /**
    * Returns the ContainerInfo from the container ID.
    *

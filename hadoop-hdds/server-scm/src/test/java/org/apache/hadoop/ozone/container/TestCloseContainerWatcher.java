@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
     .CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.CloseContainerWatcher;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -61,8 +61,8 @@ public class TestCloseContainerWatcher implements EventHandler<ContainerID> {
   private static EventWatcher<CloseContainerRetryableReq, CloseContainerStatus>
       watcher;
   private static LeaseManager<Long> leaseManager;
-  private static ContainerMapping containerMapping = Mockito
-      .mock(ContainerMapping.class);
+  private static SCMContainerManager containerManager = Mockito
+      .mock(SCMContainerManager.class);
   private static EventQueue queue;
   @Rule
   public Timeout timeout = new Timeout(1000*15);
@@ -230,7 +230,7 @@ public class TestCloseContainerWatcher implements EventHandler<ContainerID> {
         time);
     leaseManager.start();
     watcher = new CloseContainerWatcher(SCMEvents.CLOSE_CONTAINER_RETRYABLE_REQ,
-        SCMEvents.CLOSE_CONTAINER_STATUS, leaseManager, containerMapping);
+        SCMEvents.CLOSE_CONTAINER_STATUS, leaseManager, containerManager);
     queue = new EventQueue();
     watcher.start(queue);
   }
@@ -274,8 +274,8 @@ public class TestCloseContainerWatcher implements EventHandler<ContainerID> {
       throws IOException {
     ContainerInfo containerInfo = Mockito.mock(ContainerInfo.class);
     ContainerInfo containerInfo2 = Mockito.mock(ContainerInfo.class);
-    when(containerMapping.getContainer(id1)).thenReturn(containerInfo);
-    when(containerMapping.getContainer(id2)).thenReturn(containerInfo2);
+    when(containerManager.getContainer(id1)).thenReturn(containerInfo);
+    when(containerManager.getContainer(id2)).thenReturn(containerInfo2);
     when(containerInfo.isContainerOpen()).thenReturn(true);
     when(containerInfo2.isContainerOpen()).thenReturn(isOpen);
   }

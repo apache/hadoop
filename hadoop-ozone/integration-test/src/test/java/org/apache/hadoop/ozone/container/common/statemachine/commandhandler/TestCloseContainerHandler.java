@@ -81,7 +81,7 @@ public class TestCloseContainerHandler {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(containerID)
         .getPipeline();
 
     Assert.assertFalse(isContainerClosed(cluster, containerID));

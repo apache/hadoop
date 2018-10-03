@@ -301,7 +301,7 @@ public class TestCloseContainerHandlingByClient {
     Assert.assertTrue(!containerIdList.isEmpty());
     for (long containerID : containerIdList) {
       Pipeline pipeline =
-          cluster.getStorageContainerManager().getScmContainerManager()
+          cluster.getStorageContainerManager().getContainerManager()
               .getContainerWithPipeline(containerID).getPipeline();
       pipelineList.add(pipeline);
       List<DatanodeDetails> datanodes = pipeline.getMachines();
@@ -349,7 +349,7 @@ public class TestCloseContainerHandlingByClient {
         new ArrayList<>(groupOutputStream.getLocationInfoList());
     long containerID = locationInfos.get(0).getContainerID();
     List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getScmContainerManager()
+        cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(containerID).getPipeline().getMachines();
     Assert.assertEquals(1, datanodes.size());
     waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
@@ -451,7 +451,7 @@ public class TestCloseContainerHandlingByClient {
         groupOutputStream.getLocationInfoList();
     long containerID = locationInfos.get(0).getContainerID();
     List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getScmContainerManager()
+        cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(containerID).getPipeline().getMachines();
     Assert.assertEquals(1, datanodes.size());
     // move the container on the datanode to Closing state, this will ensure

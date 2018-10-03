@@ -40,9 +40,9 @@ import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerWatcher;
 import org.apache.hadoop.hdds.scm.container.ContainerActionsHandler;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerReportHandler;
-import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
@@ -151,7 +151,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * State Managers of SCM.
    */
   private final NodeManager scmNodeManager;
-  private final Mapping scmContainerManager;
+  private final ContainerManager containerManager;
   private final BlockManager scmBlockManager;
   private final SCMStorage scmStorage;
 
@@ -206,43 +206,43 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     scmNodeManager = new SCMNodeManager(
         conf, scmStorage.getClusterID(), this, eventQueue);
-    scmContainerManager = new ContainerMapping(
+    containerManager = new SCMContainerManager(
         conf, getScmNodeManager(), cacheSize, eventQueue);
     scmBlockManager = new BlockManagerImpl(
-        conf, getScmNodeManager(), scmContainerManager, eventQueue);
+        conf, getScmNodeManager(), containerManager, eventQueue);
 
     replicationStatus = new ReplicationActivityStatus();
 
     CloseContainerEventHandler closeContainerHandler =
-        new CloseContainerEventHandler(scmContainerManager);
+        new CloseContainerEventHandler(containerManager);
     NodeReportHandler nodeReportHandler =
         new NodeReportHandler(scmNodeManager);
     PipelineReportHandler pipelineReportHandler =
             new PipelineReportHandler(
-                    scmContainerManager.getPipelineSelector());
+                    containerManager.getPipelineSelector());
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
     NewNodeHandler newNodeHandler = new NewNodeHandler(scmNodeManager);
     StaleNodeHandler staleNodeHandler =
-        new StaleNodeHandler(scmContainerManager.getPipelineSelector());
+        new StaleNodeHandler(containerManager.getPipelineSelector());
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
-        getScmContainerManager().getStateManager());
+        getContainerManager().getStateManager());
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
     PendingDeleteHandler pendingDeleteHandler =
         new PendingDeleteHandler(scmBlockManager.getSCMBlockDeletingService());
 
     ContainerReportHandler containerReportHandler =
-        new ContainerReportHandler(scmContainerManager, scmNodeManager,
+        new ContainerReportHandler(containerManager, scmNodeManager,
             replicationStatus);
     scmChillModeManager = new SCMChillModeManager(conf,
-        getScmContainerManager().getStateManager().getAllContainers(),
+        getContainerManager().getStateManager().getAllContainers(),
         eventQueue);
     PipelineActionEventHandler pipelineActionEventHandler =
         new PipelineActionEventHandler();
 
     PipelineCloseHandler pipelineCloseHandler =
-        new PipelineCloseHandler(scmContainerManager.getPipelineSelector());
+        new PipelineCloseHandler(containerManager.getPipelineSelector());
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
@@ -263,14 +263,14 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new SCMContainerPlacementCapacity(scmNodeManager, conf);
 
     replicationManager = new ReplicationManager(containerPlacementPolicy,
-        scmContainerManager.getStateManager(), eventQueue,
+        containerManager.getStateManager(), eventQueue,
         commandWatcherLeaseManager);
 
     // setup CloseContainer watcher
     CloseContainerWatcher closeContainerWatcher =
         new CloseContainerWatcher(SCMEvents.CLOSE_CONTAINER_RETRYABLE_REQ,
             SCMEvents.CLOSE_CONTAINER_STATUS, commandWatcherLeaseManager,
-            scmContainerManager);
+            containerManager);
     closeContainerWatcher.start(eventQueue);
 
     scmAdminUsernames = conf.getTrimmedStringCollection(OzoneConfigKeys
@@ -632,7 +632,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public ContainerInfo getContainerInfo(long containerID) throws
       IOException {
-    return scmContainerManager.getContainer(containerID);
+    return containerManager.getContainer(containerID);
   }
 
   /**
@@ -774,7 +774,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       LOG.error("SCM Event Queue stop failed", ex);
     }
-    IOUtils.cleanupWithLogger(LOG, scmContainerManager);
+    IOUtils.cleanupWithLogger(LOG, containerManager);
   }
 
   /**
@@ -805,8 +805,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * Returns SCM container manager.
    */
   @VisibleForTesting
-  public Mapping getScmContainerManager() {
-    return scmContainerManager;
+  public ContainerManager getContainerManager() {
+    return containerManager;
   }
 
   /**

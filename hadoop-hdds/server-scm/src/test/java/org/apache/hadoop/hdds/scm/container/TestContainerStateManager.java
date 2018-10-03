@@ -41,7 +41,7 @@ public class TestContainerStateManager {
   @Before
   public void init() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    Mapping mapping = Mockito.mock(Mapping.class);
+    ContainerManager mapping = Mockito.mock(ContainerManager.class);
     PipelineSelector selector =  Mockito.mock(PipelineSelector.class);
     containerStateManager = new ContainerStateManager(conf, mapping, selector);
 

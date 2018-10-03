@@ -21,7 +21,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
@@ -51,7 +51,7 @@ public class TestNode2PipelineMap {
   private static StorageContainerManager scm;
   private static ContainerWithPipeline ratisContainer;
   private static ContainerStateMap stateMap;
-  private static ContainerMapping mapping;
+  private static ContainerManager containerManager;
   private static PipelineSelector pipelineSelector;
 
   /**
@@ -65,10 +65,11 @@ public class TestNode2PipelineMap {
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
-    mapping = (ContainerMapping)scm.getScmContainerManager();
-    stateMap = mapping.getStateManager().getContainerStateMap();
-    ratisContainer = mapping.allocateContainer(RATIS, THREE, "testOwner");
-    pipelineSelector = mapping.getPipelineSelector();
+    containerManager = scm.getContainerManager();
+    stateMap = containerManager.getStateManager().getContainerStateMap();
+    ratisContainer = containerManager.allocateContainer(
+        RATIS, THREE, "testOwner");
+    pipelineSelector = containerManager.getPipelineSelector();
   }
 
   /**
@@ -106,13 +107,13 @@ public class TestNode2PipelineMap {
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
-    mapping
+    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
     Set<ContainerID> set2 = pipelineSelector.getOpenContainerIDsByPipeline(
         ratisContainer.getPipeline().getId());
