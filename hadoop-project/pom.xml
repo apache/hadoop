@@ -1656,7 +1656,9 @@
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>${maven-javadoc-plugin.version}</version>
           <configuration>
-            <additionalOptions>-Xmaxwarns 10000</additionalOptions>
+            <additionalOptions>
+                <additionalOption>-Xmaxwarns 10000</additionalOption>
+            </additionalOptions>
           </configuration>
         </plugin>
         <plugin>
