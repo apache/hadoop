@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DirListingMetadata {
+public class DirListingMetadata extends ExpirableMetadata {
 
   /**
    * Convenience parameter for passing into constructor.
@@ -69,7 +69,7 @@ public class DirListingMetadata {
    *     the full and authoritative listing of all files in the directory.
    */
   public DirListingMetadata(Path path, Collection<PathMetadata> listing,
-      boolean isAuthoritative) {
+      boolean isAuthoritative, long lastUpdated) {
 
     checkPathAbsolute(path);
     this.path = path;
@@ -82,6 +82,12 @@ public class DirListingMetadata {
       }
     }
     this.isAuthoritative  = isAuthoritative;
+    this.setLastUpdated(lastUpdated);
+  }
+
+  public DirListingMetadata(Path path, Collection<PathMetadata> listing,
+      boolean isAuthoritative) {
+    this(path, listing, isAuthoritative, 0);
   }
 
   /**
@@ -91,6 +97,7 @@ public class DirListingMetadata {
   public DirListingMetadata(DirListingMetadata d) {
     path = d.path;
     isAuthoritative = d.isAuthoritative;
+    this.setLastUpdated(d.getLastUpdated());
     listMap = new ConcurrentHashMap<>(d.listMap);
   }
 
@@ -125,7 +132,8 @@ public class DirListingMetadata {
         filteredList.add(meta);
       }
     }
-    return new DirListingMetadata(path, filteredList, isAuthoritative);
+    return new DirListingMetadata(path, filteredList, isAuthoritative,
+        this.getLastUpdated());
   }
 
   /**
@@ -231,6 +239,7 @@ public class DirListingMetadata {
         "path=" + path +
         ", listMap=" + listMap +
         ", isAuthoritative=" + isAuthoritative +
+        ", lastUpdated=" + this.getLastUpdated() +
         '}';
   }
 

@@ -1369,6 +1369,16 @@
 </property>
 
 <property>
+    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
+    <value>3600000</value>
+    <description>
+        This value sets how long a directory listing in the MS is considered as
+        authoritative. The value is in milliseconds.
+        MetadataStore should be authoritative to use this configuration knob.
+    </description>
+</property>
+
+<property>
     <name>fs.s3a.metadatastore.impl</name>
     <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
     <description>

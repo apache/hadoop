@@ -205,6 +205,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
   private AWSCredentialProviderList credentials;
 
+  private S3Guard.ITtlTimeProvider ttlTimeProvider;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -345,6 +347,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
+      long authDirTtl = conf.getLong(METADATASTORE_AUTHORITATIVE_DIR_TTL,
+          DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
+      ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -1907,7 +1912,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         key = key + '/';
       }
 
-      DirListingMetadata dirMeta = metadataStore.listChildren(path);
+      DirListingMetadata dirMeta =
+          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
       if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
@@ -1925,7 +1931,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         result.add(files.next());
       }
       return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta,
-          allowAuthoritative);
+          allowAuthoritative, ttlTimeProvider);
     } else {
       LOG.debug("Adding: rd (not a dir): {}", path);
       FileStatus[] stats = new FileStatus[1];
@@ -2135,7 +2141,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           // We have a definitive true / false from MetadataStore, we are done.
           return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
         } else {
-          DirListingMetadata children = metadataStore.listChildren(path);
+          DirListingMetadata children =
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
           if (children != null) {
             tombstones = children.listTombstones();
           }
@@ -3122,7 +3129,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           tombstones = metadataStoreListFilesIterator.listTombstones();
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
-          DirListingMetadata meta = metadataStore.listChildren(path);
+          DirListingMetadata meta =
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
           if (meta != null) {
             tombstones = meta.listTombstones();
           } else {
@@ -3195,7 +3203,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             final String key = maybeAddTrailingSlash(pathToKey(path));
             final Listing.FileStatusAcceptor acceptor =
                 new Listing.AcceptAllButSelfAndS3nDirs(path);
-            DirListingMetadata meta = metadataStore.listChildren(path);
+            DirListingMetadata meta =
+                S3Guard.listChildrenWithTtl(metadataStore, path,
+                    ttlTimeProvider);
             final RemoteIterator<FileStatus> cachedFileStatusIterator =
                 listing.createProvidedFileStatusIterator(
                     S3Guard.dirMetaToStatuses(meta), filter, acceptor);
@@ -3345,5 +3355,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public AWSCredentialProviderList shareCredentials(final String purpose) {
     LOG.debug("Sharing credentials for: {}", purpose);
     return credentials.share();
+  }
+
+  @VisibleForTesting
+  protected S3Guard.ITtlTimeProvider getTtlTimeProvider() {
+    return ttlTimeProvider;
+  }
+
+  @VisibleForTesting
+  protected void setTtlTimeProvider(S3Guard.ITtlTimeProvider ttlTimeProvider) {
+    this.ttlTimeProvider = ttlTimeProvider;
   }
 }

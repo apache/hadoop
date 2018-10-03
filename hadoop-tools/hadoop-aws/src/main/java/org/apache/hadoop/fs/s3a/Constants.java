@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * All the constants used with the {@link S3AFileSystem}.
  *
@@ -326,6 +328,14 @@ public final class Constants {
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
+  /**
+   * How long a directory listing in the MS is considered as authoritative.
+   */
+  public static final String METADATASTORE_AUTHORITATIVE_DIR_TTL =
+      "fs.s3a.metadatastore.authoritative.dir.ttl";
+  public static final long DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL =
+      TimeUnit.MINUTES.toMillis(60);
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";

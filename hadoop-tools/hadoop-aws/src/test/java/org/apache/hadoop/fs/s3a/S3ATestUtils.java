@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -46,6 +48,7 @@ import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -906,4 +909,14 @@ public final class S3ATestUtils {
         .contains(providerClassname);
   }
 
+  public static boolean metadataStorePersistsAuthoritativeBit(MetadataStore ms)
+      throws IOException {
+    Map<String, String> diags = ms.getDiagnostics();
+    String persists =
+        diags.get(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT);
+    if(persists == null){
+      return false;
+    }
+    return Boolean.valueOf(persists);
+  }
 }

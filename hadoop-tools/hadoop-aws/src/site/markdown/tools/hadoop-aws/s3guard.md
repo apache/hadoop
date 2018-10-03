@@ -165,6 +165,17 @@ In particular: **If the Metadata Store is declared as authoritative,
 all interactions with the S3 bucket(s) must be through S3A clients sharing
 the same Metadata Store**
 
+It can be configured how long a directory listing in the MetadataStore is
+considered as authoritative. If `((lastUpdated + ttl) <= now)` is false, the
+directory  listing is no longer considered authoritative, so the flag will be
+removed on `S3AFileSystem` level.
+
+```xml
+<property>
+    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
+    <value>3600000</value>
+</property>
+```
 
 ### 3. Configure the Metadata Store.
 
