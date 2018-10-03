@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -56,7 +56,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.MB;
  * Tests for SCM Block Manager.
  */
 public class TestBlockManager implements EventHandler<Boolean> {
-  private static ContainerMapping mapping;
+  private static SCMContainerManager mapping;
   private static MockNodeManager nodeManager;
   private static BlockManagerImpl blockManager;
   private static File testDir;
@@ -83,7 +83,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new ContainerMapping(conf, nodeManager, 128, eventQueue);
+    mapping = new SCMContainerManager(conf, nodeManager, 128, eventQueue);
     blockManager = new BlockManagerImpl(conf,
         nodeManager, mapping, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);

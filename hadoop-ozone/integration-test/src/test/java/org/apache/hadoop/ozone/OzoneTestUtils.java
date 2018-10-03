@@ -44,13 +44,13 @@ public class OzoneTestUtils {
       StorageContainerManager scm) throws IOException {
     return performOperationOnKeyContainers((blockID) -> {
       try {
-        scm.getScmContainerManager()
+        scm.getContainerManager()
             .updateContainerState(blockID.getContainerID(),
                 HddsProtos.LifeCycleEvent.FINALIZE);
-        scm.getScmContainerManager()
+        scm.getContainerManager()
             .updateContainerState(blockID.getContainerID(),
                 HddsProtos.LifeCycleEvent.CLOSE);
-        Assert.assertFalse(scm.getScmContainerManager()
+        Assert.assertFalse(scm.getContainerManager()
             .getContainerWithPipeline(blockID.getContainerID())
             .getContainerInfo().isContainerOpen());
       } catch (IOException e) {

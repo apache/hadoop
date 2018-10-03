@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -70,7 +70,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   // by itself and does not rely on the Block service offered by SCM.
 
   private final NodeManager nodeManager;
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
 
   private final long containerSize;
 
@@ -92,7 +92,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    * @throws IOException
    */
   public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final Mapping containerManager,
+      final NodeManager nodeManager, final ContainerManager containerManager,
       EventPublisher eventPublisher)
       throws IOException {
     this.nodeManager = nodeManager;

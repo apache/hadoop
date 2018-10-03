@@ -58,10 +58,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Tests for Container Mapping.
+ * Tests for Container ContainerManager.
  */
-public class TestContainerMapping {
-  private static ContainerMapping mapping;
+public class TestSCMContainerManager {
+  private static SCMContainerManager containerManager;
   private static MockNodeManager nodeManager;
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
@@ -77,7 +77,7 @@ public class TestContainerMapping {
     Configuration conf = SCMTestUtils.getConf();
 
     testDir = GenericTestUtils
-        .getTestDir(TestContainerMapping.class.getSimpleName());
+        .getTestDir(TestSCMContainerManager.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setTimeDuration(
@@ -89,7 +89,7 @@ public class TestContainerMapping {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new ContainerMapping(conf, nodeManager, 128,
+    containerManager = new SCMContainerManager(conf, nodeManager, 128,
         new EventQueue());
     xceiverClientManager = new XceiverClientManager(conf);
     random = new Random();
@@ -97,8 +97,8 @@ public class TestContainerMapping {
 
   @AfterClass
   public static void cleanup() throws IOException {
-    if(mapping != null) {
-      mapping.close();
+    if(containerManager != null) {
+      containerManager.close();
     }
     FileUtil.fullyDelete(testDir);
   }
@@ -110,7 +110,7 @@ public class TestContainerMapping {
 
   @Test
   public void testallocateContainer() throws Exception {
-    ContainerWithPipeline containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
@@ -127,7 +127,7 @@ public class TestContainerMapping {
      */
     Set<UUID> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
-      ContainerWithPipeline containerInfo = mapping.allocateContainer(
+      ContainerWithPipeline containerInfo = containerManager.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
           containerOwner);
@@ -142,7 +142,7 @@ public class TestContainerMapping {
 
   @Test
   public void testGetContainer() throws IOException {
-    ContainerWithPipeline containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
@@ -155,10 +155,9 @@ public class TestContainerMapping {
 
   @Test
   public void testGetContainerWithPipeline() throws Exception {
-    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(),
-        containerOwner);
+    ContainerWithPipeline containerWithPipeline = containerManager
+        .allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
     ContainerInfo contInfo = containerWithPipeline.getContainerInfo();
     // Add dummy replicas for container.
     DatanodeDetails dn1 = DatanodeDetails.newBuilder()
@@ -169,28 +168,28 @@ public class TestContainerMapping {
         .setHostName("host2")
         .setIpAddress("2.2.2.2")
         .setUuid(UUID.randomUUID().toString()).build();
-    mapping
+    containerManager
         .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CREATE);
-    mapping.updateContainerState(contInfo.getContainerID(),
+    containerManager.updateContainerState(contInfo.getContainerID(),
         LifeCycleEvent.CREATED);
-    mapping.updateContainerState(contInfo.getContainerID(),
+    containerManager.updateContainerState(contInfo.getContainerID(),
         LifeCycleEvent.FINALIZE);
-    mapping
+    containerManager
         .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CLOSE);
     ContainerInfo finalContInfo = contInfo;
     LambdaTestUtils.intercept(SCMException.class, "No entry exist for "
-        + "containerId:", () -> mapping.getContainerWithPipeline(
+        + "containerId:", () -> containerManager.getContainerWithPipeline(
         finalContInfo.getContainerID()));
 
-    mapping.getStateManager().getContainerStateMap()
+    containerManager.getStateManager().getContainerStateMap()
         .addContainerReplica(contInfo.containerID(), dn1, dn2);
 
-    contInfo = mapping.getContainer(contInfo.getContainerID());
+    contInfo = containerManager.getContainer(contInfo.getContainerID());
     Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
     Pipeline pipeline = containerWithPipeline.getPipeline();
-    mapping.getPipelineSelector().finalizePipeline(pipeline);
+    containerManager.getPipelineSelector().finalizePipeline(pipeline);
 
-    ContainerWithPipeline containerWithPipeline2 = mapping
+    ContainerWithPipeline containerWithPipeline2 = containerManager
         .getContainerWithPipeline(contInfo.getContainerID());
     pipeline = containerWithPipeline2.getPipeline();
     Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
@@ -202,24 +201,23 @@ public class TestContainerMapping {
   @Test
   public void testgetNoneExistentContainer() throws IOException {
     thrown.expectMessage("Specified key does not exist.");
-    mapping.getContainer(random.nextLong());
+    containerManager.getContainer(random.nextLong());
   }
 
   @Test
   public void testContainerCreationLeaseTimeout() throws IOException,
       InterruptedException {
     nodeManager.setChillmode(false);
-    ContainerWithPipeline containerInfo = mapping.allocateContainer(
+    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
-    mapping.updateContainerState(containerInfo.getContainerInfo()
+    containerManager.updateContainerState(containerInfo.getContainerInfo()
             .getContainerID(), HddsProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
 
-    NavigableSet<ContainerID> deleteContainers = mapping.getStateManager()
-        .getMatchingContainerIDs(
-            "OZONE",
+    NavigableSet<ContainerID> deleteContainers = containerManager
+        .getStateManager().getMatchingContainerIDs("OZONE",
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.DELETING);
@@ -228,7 +226,7 @@ public class TestContainerMapping {
 
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
-    mapping
+    containerManager
         .updateContainerState(containerInfo.getContainerInfo().getContainerID(),
             HddsProtos.LifeCycleEvent.CREATED);
   }
@@ -258,25 +256,27 @@ public class TestContainerMapping {
         .newBuilder();
     crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
+    containerManager.processContainerReports(
+        datanodeDetails, crBuilder.build(), false);
 
     ContainerInfo updatedContainer =
-        mapping.getContainer(info.getContainerID());
+        containerManager.getContainer(info.getContainerID());
     Assert.assertEquals(100000000L,
         updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
 
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
       LambdaTestUtils.intercept(SCMException.class, "No entry "
-          + "exist for containerId:", () -> mapping.getStateManager()
+          + "exist for containerId:", () -> containerManager.getStateManager()
           .getContainerReplicas(ContainerID.valueof(c.getContainerID())));
     }
 
-    mapping.processContainerReports(TestUtils.randomDatanodeDetails(),
+    containerManager.processContainerReports(TestUtils.randomDatanodeDetails(),
         crBuilder.build(), true);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
-      Assert.assertTrue(mapping.getStateManager().getContainerReplicas(
-          ContainerID.valueof(c.getContainerID())).size() > 0);
+      Assert.assertTrue(containerManager.getStateManager()
+          .getContainerReplicas(
+              ContainerID.valueof(c.getContainerID())).size() > 0);
     }
   }
 
@@ -313,9 +313,10 @@ public class TestContainerMapping {
         .newBuilder();
     crBuilder.addAllReports(reports);
 
-    mapping.processContainerReports(datanodeDetails, crBuilder.build(), false);
+    containerManager.processContainerReports(
+        datanodeDetails, crBuilder.build(), false);
 
-    List<ContainerInfo> list = mapping.listContainer(0, 50);
+    List<ContainerInfo> list = containerManager.listContainer(0, 50);
     Assert.assertEquals(2, list.stream().filter(
         x -> x.getContainerID() == cID1 || x.getContainerID() == cID2).count());
     Assert.assertEquals(300000000L, list.stream().filter(
@@ -329,20 +330,18 @@ public class TestContainerMapping {
   @Test
   public void testCloseContainer() throws IOException {
     ContainerInfo info = createContainer();
-    mapping.updateContainerState(info.getContainerID(),
+    containerManager.updateContainerState(info.getContainerID(),
         HddsProtos.LifeCycleEvent.FINALIZE);
-    NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
-        .getMatchingContainerIDs(
-            containerOwner,
+    NavigableSet<ContainerID> pendingCloseContainers = containerManager
+        .getStateManager().getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.CLOSING);
     Assert.assertTrue(pendingCloseContainers.contains(info.containerID()));
-    mapping.updateContainerState(info.getContainerID(),
+    containerManager.updateContainerState(info.getContainerID(),
         HddsProtos.LifeCycleEvent.CLOSE);
-    NavigableSet<ContainerID> closeContainers = mapping.getStateManager()
-        .getMatchingContainerIDs(
-            containerOwner,
+    NavigableSet<ContainerID> closeContainers = containerManager
+        .getStateManager().getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.CLOSED);
@@ -350,20 +349,19 @@ public class TestContainerMapping {
   }
 
   /**
-   * Creates a container with the given name in ContainerMapping.
+   * Creates a container with the given name in SCMContainerManager.
    * @throws IOException
    */
   private ContainerInfo createContainer()
       throws IOException {
     nodeManager.setChillmode(false);
-    ContainerWithPipeline containerWithPipeline = mapping.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(),
-        containerOwner);
+    ContainerWithPipeline containerWithPipeline = containerManager
+        .allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
     ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    mapping.updateContainerState(containerInfo.getContainerID(),
+    containerManager.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATE);
-    mapping.updateContainerState(containerInfo.getContainerID(),
+    containerManager.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATED);
     return containerInfo;
   }
@@ -371,10 +369,10 @@ public class TestContainerMapping {
   @Test
   public void testFlushAllContainers() throws IOException {
     ContainerInfo info = createContainer();
-    List<ContainerInfo> containers = mapping.getStateManager()
+    List<ContainerInfo> containers = containerManager.getStateManager()
         .getAllContainers();
     Assert.assertTrue(containers.size() > 0);
-    mapping.flushContainerInfo();
+    containerManager.flushContainerInfo();
   }
 
 }

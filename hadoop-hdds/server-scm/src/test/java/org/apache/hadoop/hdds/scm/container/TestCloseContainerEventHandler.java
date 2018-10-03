@@ -50,7 +50,7 @@ public class TestCloseContainerEventHandler {
 
   private static Configuration configuration;
   private static MockNodeManager nodeManager;
-  private static ContainerMapping mapping;
+  private static SCMContainerManager mapping;
   private static long size;
   private static File testDir;
   private static EventQueue eventQueue;
@@ -65,7 +65,7 @@ public class TestCloseContainerEventHandler {
     configuration
         .set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new ContainerMapping(configuration, nodeManager, 128,
+    mapping = new SCMContainerManager(configuration, nodeManager, 128,
         new EventQueue());
     eventQueue = new EventQueue();
     eventQueue.addHandler(CLOSE_CONTAINER,

@@ -136,7 +136,7 @@ public class ContainerStateManager implements Closeable {
    */
   @SuppressWarnings("unchecked")
   public ContainerStateManager(Configuration configuration,
-      Mapping containerMapping, PipelineSelector pipelineSelector) {
+      ContainerManager containerManager, PipelineSelector pipelineSelector) {
 
     // Initialize the container state machine.
     Set<HddsProtos.LifeCycleState> finalStates = new HashSet();
@@ -158,15 +158,15 @@ public class ContainerStateManager implements Closeable {
     lastUsedMap = new ConcurrentHashMap<>();
     containerCount = new AtomicLong(0);
     containers = new ContainerStateMap();
-    loadExistingContainers(containerMapping, pipelineSelector);
+    loadExistingContainers(containerManager, pipelineSelector);
   }
 
-  private void loadExistingContainers(Mapping containerMapping,
+  private void loadExistingContainers(ContainerManager containerManager,
                                       PipelineSelector pipelineSelector) {
 
     List<ContainerInfo> containerList;
     try {
-      containerList = containerMapping.listContainer(0, Integer.MAX_VALUE);
+      containerList = containerManager.listContainer(0, Integer.MAX_VALUE);
 
       // if there are no container to load, let us return.
       if (containerList == null || containerList.size() == 0) {

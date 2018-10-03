@@ -445,7 +445,7 @@ public class TestOzoneRestClient {
     // Sum the data size from chunks in Container via containerID
     // and localID, make sure the size equals to the actually value size.
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(containerID)
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(datanodes.size(), 1);

@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
@@ -97,12 +97,13 @@ public class TestContainerPlacement {
     return nodeManager;
   }
 
-  ContainerMapping createContainerManager(Configuration config,
+  SCMContainerManager createContainerManager(Configuration config,
       NodeManager scmNodeManager) throws IOException {
     EventQueue eventQueue = new EventQueue();
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    return new ContainerMapping(config, scmNodeManager, cacheSize, eventQueue);
+    return new SCMContainerManager(config, scmNodeManager, cacheSize,
+        eventQueue);
 
   }
 
@@ -131,7 +132,7 @@ public class TestContainerPlacement {
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
 
     SCMNodeManager nodeManager = createNodeManager(conf);
-    ContainerMapping containerManager =
+    SCMContainerManager containerManager =
         createContainerManager(conf, nodeManager);
     List<DatanodeDetails> datanodes =
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);

@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.hdds.scm.command
     .CommandStatusReportHandler.DeleteBlockStatus;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -92,15 +92,15 @@ public class DeletedBlockLogImpl
 
   private final int maxRetry;
   private final MetadataStore deletedStore;
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
   private final Lock lock;
   // The latest id of deleted blocks in the db.
   private long lastTxID;
   // Maps txId to set of DNs which are successful in committing the transaction
   private Map<Long, Set<UUID>> transactionToDNsCommitMap;
 
-  public DeletedBlockLogImpl(Configuration conf, Mapping containerManager)
-      throws IOException {
+  public DeletedBlockLogImpl(Configuration conf,
+     ContainerManager containerManager) throws IOException {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
 

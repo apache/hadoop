@@ -74,12 +74,12 @@ import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 
 /**
- * Mapping class contains the mapping from a name to a pipeline mapping. This
- * is used by SCM when
- * allocating new locations and when looking up a key.
+ * ContainerManager class contains the mapping from a name to a pipeline
+ * mapping. This is used by SCM when allocating new locations and when
+ * looking up a key.
  */
-public class ContainerMapping implements Mapping {
-  private static final Logger LOG = LoggerFactory.getLogger(ContainerMapping
+public class SCMContainerManager implements ContainerManager {
+  private static final Logger LOG = LoggerFactory.getLogger(SCMContainerManager
       .class);
 
   private final NodeManager nodeManager;
@@ -108,7 +108,7 @@ public class ContainerMapping implements Mapping {
    * @throws IOException on Failure.
    */
   @SuppressWarnings("unchecked")
-  public ContainerMapping(
+  public SCMContainerManager(
       final Configuration conf, final NodeManager nodeManager, final int
       cacheSizeMB, EventPublisher eventPublisher) throws IOException {
     this.nodeManager = nodeManager;
@@ -653,7 +653,7 @@ public class ContainerMapping implements Mapping {
 
   /**
    * Since allocatedBytes of a container is only in memory, stored in
-   * containerStateManager, when closing ContainerMapping, we need to update
+   * containerStateManager, when closing SCMContainerManager, we need to update
    * this in the container store.
    *
    * @throws IOException on failure.

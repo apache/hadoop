@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -25,7 +27,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -83,7 +84,7 @@ public class TestContainerSQLCli {
   private OzoneConfiguration conf;
   private String datanodeIpAddress;
 
-  private ContainerMapping mapping;
+  private ContainerManager containerManager;
   private NodeManager nodeManager;
   private BlockManagerImpl blockManager;
 
@@ -119,9 +120,10 @@ public class TestContainerSQLCli {
     cluster.getStorageContainerManager().stop();
     eventQueue = new EventQueue();
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
-    mapping = new ContainerMapping(conf, nodeManager, 128,
+    containerManager = new SCMContainerManager(conf, nodeManager, 128,
         eventQueue);
-    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, eventQueue);
+    blockManager = new BlockManagerImpl(
+        conf, nodeManager, containerManager, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
     eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
     GenericTestUtils.waitFor(() -> {
@@ -165,7 +167,7 @@ public class TestContainerSQLCli {
     }
 
     blockManager.close();
-    mapping.close();
+    containerManager.close();
     nodeManager.close();
 
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, metaStoreType);
