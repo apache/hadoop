@@ -330,17 +330,13 @@ public class MockNodes {
       return this.physicalResource;
     }
 
-    public void updateResourceUtilization(ResourceUtilization utilization) {
-      this.nodeUtilization = utilization;
-    }
-
-    public void updateContainersAndNodeUtilization(
+    public void updateContainersInfoAndUtilization(
         UpdatedContainerInfo updatedContainerInfo,
         ResourceUtilization resourceUtilization) {
       if (updatedContainerInfo != null) {
         containerUpdates = Collections.singletonList(updatedContainerInfo);
       }
-      this.nodeUtilization = resourceUtilization;
+      this.containersUtilization = resourceUtilization;
     }
   };
 

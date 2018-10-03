@@ -2758,7 +2758,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
@@ -2850,7 +2850,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
@@ -2942,7 +2942,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(2000, 0, 0.8f));
@@ -3026,7 +3026,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(1800, 0, 0.5f));
@@ -3112,7 +3112,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(1800, 0, 0.5f));
@@ -3201,7 +3201,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus),
               Collections.emptyList()),
           ResourceUtilization.newInstance(512, 0, 0.1f));
@@ -3249,7 +3249,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers3.get(0).getId(),
               ContainerState.COMPLETE, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3325,7 +3325,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus1 = ContainerStatus.newInstance(
           allocatedContainers1.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus1),
               Collections.emptyList()),
           ResourceUtilization.newInstance(0, 0, 0.0f));
@@ -3348,7 +3348,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus containerStatus2 = ContainerStatus.newInstance(
           allocatedContainers2.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(containerStatus2),
               Collections.emptyList()),
           ResourceUtilization.newInstance(0, 0, 0.0f));
@@ -3443,7 +3443,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> containerStatuses = new ArrayList<>(2);
       containerStatuses.add(container1Status);
       containerStatuses.add(container2Status);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(containerStatuses, Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
 
@@ -3467,7 +3467,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers1.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3552,7 +3552,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> containerStatuses = new ArrayList<>(2);
       containerStatuses.add(container1Status);
       containerStatuses.add(container2Status);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(containerStatuses, Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
 
@@ -3578,7 +3578,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       ContainerStatus container3Status = ContainerStatus.newInstance(
           allocatedContainers3.get(0).getId(), ContainerState.RUNNING, "",
           ContainerExitStatus.SUCCESS);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.singletonList(container3Status),
               Collections.emptyList()),
           ResourceUtilization.newInstance(2000, 0, 0.2f));
@@ -3603,7 +3603,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers1.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3622,7 +3622,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers2.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(3000, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3709,7 +3709,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> containerStatuses = new ArrayList<>(2);
       containerStatuses.add(container1Status);
       containerStatuses.add(container2Status);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(containerStatuses, Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
 
@@ -3748,7 +3748,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers1.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3774,7 +3774,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers2.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(3000, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3863,7 +3863,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> containerStatuses = new ArrayList<>(2);
       containerStatuses.add(container1Status);
       containerStatuses.add(container2Status);
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(containerStatuses, Collections.emptyList()),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
 
@@ -3901,7 +3901,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       List<ContainerStatus> finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers1.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(1024, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3919,7 +3919,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       finishedContainers = Collections.singletonList(
           ContainerStatus.newInstance(allocatedContainers2.get(0).getId(),
               ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
-      node.updateContainersAndNodeUtilization(
+      node.updateContainersInfoAndUtilization(
           new UpdatedContainerInfo(Collections.emptyList(), finishedContainers),
           ResourceUtilization.newInstance(3000, 0, 0.1f));
       scheduler.handle(new NodeUpdateSchedulerEvent(node));

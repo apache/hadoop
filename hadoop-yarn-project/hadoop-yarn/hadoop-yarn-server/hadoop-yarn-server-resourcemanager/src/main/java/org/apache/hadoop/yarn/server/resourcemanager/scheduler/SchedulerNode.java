@@ -731,8 +731,16 @@ public abstract class SchedulerNode {
       return Resources.none();
     }
 
+    ResourceUtilization aggregateContainersUtilization =
+        getAggregatedContainersUtilization();
+    if (aggregateContainersUtilization == null) {
+      // be conservative if the aggregate container utilization is unknown
+      return Resources.none();
+
+    }
+
     ResourceUtilization projectedNodeUtilization = ResourceUtilization.
-        newInstance(getNodeUtilization());
+        newInstance(aggregateContainersUtilization);
     // account for resources allocated in this heartbeat
     projectedNodeUtilization.addTo(
         (int) (resourceAllocatedPendingLaunch.getMemorySize()), 0,
