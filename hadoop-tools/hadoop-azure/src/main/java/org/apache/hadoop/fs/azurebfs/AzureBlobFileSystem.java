@@ -553,7 +553,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.setOwner path: {}", path);
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       super.setOwner(path, owner, group);
       return;
     }
@@ -584,7 +584,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void setPermission(final Path path, final FsPermission permission)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setPermission path: {}", path);
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       super.setPermission(path, permission);
       return;
     }
@@ -619,7 +619,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path.toString());
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "modifyAclEntries is only supported by storage accounts with the "
           + "hierarchical namespace enabled.");
@@ -653,7 +653,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAclEntries path: {}", path);
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "removeAclEntries is only supported by storage accounts with the "
           + "hierarchical namespace enabled.");
@@ -683,7 +683,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeDefaultAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeDefaultAcl path: {}", path);
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "removeDefaultAcl is only supported by storage accounts with the "
           + "hierarchical namespace enabled.");
@@ -711,7 +711,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAcl path: {}", path);
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "removeAcl is only supported by storage accounts with the "
           + "hierarchical namespace enabled.");
@@ -742,7 +742,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setAcl path: {}", path);
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "setAcl is only supported by storage accounts with the hierarchical "
           + "namespace enabled.");
@@ -773,7 +773,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public AclStatus getAclStatus(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path.toString());
 
-    if (!getIsNamespaceEnabeld()) {
+    if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
           "getAclStatus is only supported by storage account with the "
           + "hierarchical namespace enabled.");
@@ -1005,7 +1005,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  boolean getIsNamespaceEnabeld() throws AzureBlobFileSystemException {
+  boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
     return abfsStore.getIsNamespaceEnabled();
   }
 
