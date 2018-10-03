@@ -72,7 +72,7 @@ public final class RouterQuotaUsage extends QuotaUsage {
   /**
    * Verify if namespace quota is violated once quota is set. Relevant
    * method {@link DirectoryWithQuotaFeature#verifyNamespaceQuota}.
-   * @throws NSQuotaExceededException
+   * @throws NSQuotaExceededException If the quota is exceeded.
    */
   public void verifyNamespaceQuota() throws NSQuotaExceededException {
     if (Quota.isViolated(getQuota(), getFileAndDirectoryCount())) {
@@ -84,7 +84,7 @@ public final class RouterQuotaUsage extends QuotaUsage {
   /**
    * Verify if storage space quota is violated once quota is set. Relevant
    * method {@link DirectoryWithQuotaFeature#verifyStoragespaceQuota}.
-   * @throws DSQuotaExceededException
+   * @throws DSQuotaExceededException If the quota is exceeded.
    */
   public void verifyStoragespaceQuota() throws DSQuotaExceededException {
     if (Quota.isViolated(getSpaceQuota(), getSpaceConsumed())) {

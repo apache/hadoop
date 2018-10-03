@@ -39,12 +39,11 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * Data schema for
- * {@link org.apache.hadoop.hdfs.server.federation.store.
- * MountTableStore FederationMountTableStore} data stored in the
- * {@link org.apache.hadoop.hdfs.server.federation.store.
- * StateStoreService FederationStateStoreService}. Supports string
- * serialization.
+ * Data schema for {@link
+ * org.apache.hadoop.hdfs.server.federation.store.MountTableStore
+ * FederationMountTableStore} data stored in the {@link
+ * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
+ * FederationStateStoreService}. Supports string serialization.
  */
 public abstract class MountTable extends BaseRecord {
 
@@ -100,10 +99,11 @@ public abstract class MountTable extends BaseRecord {
    * Constructor for a mount table entry with a single destinations.
    *
    * @param src Source path in the mount entry.
-   * @param destinations Nameservice destination of the mount point.
+   * @param destinations Name service destination of the mount point.
    * @param dateCreated Created date.
    * @param dateModified Modified date.
-   * @throws IOException
+   * @return New mount table instance.
+   * @throws IOException If it cannot be created.
    */
   public static MountTable newInstance(final String src,
       final Map<String, String> destinations,
@@ -119,8 +119,8 @@ public abstract class MountTable extends BaseRecord {
    * Constructor for a mount table entry with multiple destinations.
    *
    * @param src Source path in the mount entry.
-   * @param destinations Nameservice destinations of the mount point.
-   * @throws IOException
+   * @param destinations Name service destinations of the mount point.
+   * @throws IOException If it cannot be created.
    */
   public static MountTable newInstance(final String src,
       final Map<String, String> destinations) throws IOException {
@@ -187,12 +187,16 @@ public abstract class MountTable extends BaseRecord {
   /**
    * Set the destination paths.
    *
-   * @param paths Destination paths.
+   * @param dests Destination paths.
    */
   public abstract void setDestinations(List<RemoteLocation> dests);
 
   /**
    * Add a new destination to this mount table entry.
+   *
+   * @param nsId Name service identifier.
+   * @param path Path in the remote name service.
+   * @return If the destination was added.
    */
   public abstract boolean addDestination(String nsId, String path);
 

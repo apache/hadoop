@@ -75,8 +75,8 @@ public abstract class BaseRecord implements Comparable<BaseRecord> {
   public abstract long getExpirationMs();
 
   /**
-   * Map of primary key names->values for the record. The primary key can be a
-   * combination of 1-n different State Store serialized values.
+   * Map of primary key names to values for the record. The primary key can be
+   * a combination of 1-n different State Store serialized values.
    *
    * @return Map of key/value pairs that constitute this object's primary key.
    */

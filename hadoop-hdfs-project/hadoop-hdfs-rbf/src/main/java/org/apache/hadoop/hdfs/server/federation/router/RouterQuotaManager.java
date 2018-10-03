@@ -50,6 +50,7 @@ public class RouterQuotaManager {
 
   /**
    * Get all the mount quota paths.
+   * @return All the mount quota paths.
    */
   public Set<String> getAll() {
     readLock.lock();
@@ -88,8 +89,8 @@ public class RouterQuotaManager {
 
   /**
    * Get children paths (can including itself) under specified federation path.
-   * @param parentPath
-   * @return Set<String> Children path set.
+   * @param parentPath Federated path.
+   * @return Set of children paths.
    */
   public Set<String> getPaths(String parentPath) {
     readLock.lock();
@@ -154,6 +155,7 @@ public class RouterQuotaManager {
   /**
    * Check if the quota was set.
    * @param quota RouterQuotaUsage set in mount table.
+   * @return True if the quota is set.
    */
   public boolean isQuotaSet(RouterQuotaUsage quota) {
     if (quota != null) {

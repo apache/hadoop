@@ -33,12 +33,13 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateNamenodeReg
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 
 /**
- * Management API for NameNode registrations stored in
- * {@link org.apache.hadoop.hdfs.server.federation.store.records.MembershipState
- * MembershipState} records. The {@link org.apache.hadoop.hdfs.server.
- * federation.router.RouterHeartbeatService RouterHeartbeatService} periodically
- * polls each NN to update the NameNode metadata(addresses, operational) and HA
- * state(active, standby). Each NameNode may be polled by multiple
+ * Management API for NameNode registrations stored in {@link
+ * org.apache.hadoop.hdfs.server.federation.store.records.MembershipState
+ * MembershipState} records. The {@link
+ * org.apache.hadoop.hdfs.server.federation.router.RouterHeartbeatService
+ * RouterHeartbeatService} periodically polls each NN to update the NameNode
+ * metadata(addresses, operational) and HA state(active, standby). Each
+ * NameNode may be polled by multiple
  * {@link org.apache.hadoop.hdfs.server.federation.router.Router Router}
  * instances.
  * <p>
@@ -90,6 +91,7 @@ public abstract class MembershipStore
   /**
    * Get the expired registrations from the registration cache.
    *
+   * @param request Request to get the expired registrations.
    * @return Expired registrations or zero-length list if none are found.
    * @throws StateStoreUnavailableException Throws exception if the data store
    *           is not initialized.
@@ -103,7 +105,7 @@ public abstract class MembershipStore
   /**
    * Retrieves a list of registered nameservices and their associated info.
    *
-   * @param request
+   * @param request Request to get the name spaces.
    * @return Collection of information for each registered nameservice.
    * @throws IOException if the data store could not be queried or the query is
    *           invalid.

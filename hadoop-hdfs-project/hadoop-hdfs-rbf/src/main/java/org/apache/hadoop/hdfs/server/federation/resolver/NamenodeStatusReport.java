@@ -190,9 +190,9 @@ public class NamenodeStatusReport {
   }
 
   /**
-   * Get the HA service state.
+   * Set the HA service state.
    *
-   * @return The HA service state.
+   * @param state The HA service state to set.
    */
   public void setHAServiceState(HAServiceState state) {
     this.status = state;
@@ -293,6 +293,7 @@ public class NamenodeStatusReport {
    * @param numBlocksPendingReplication Number of blocks pending replication.
    * @param numBlocksUnderReplicated Number of blocks under replication.
    * @param numBlocksPendingDeletion Number of blocks pending deletion.
+   * @param providedSpace Space in provided storage.
    */
   public void setNamesystemInfo(long available, long total,
       long numFiles, long numBlocks, long numBlocksMissing,

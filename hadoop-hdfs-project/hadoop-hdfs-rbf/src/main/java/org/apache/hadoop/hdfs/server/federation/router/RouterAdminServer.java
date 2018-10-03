@@ -415,8 +415,8 @@ public class RouterAdminServer extends AbstractService
    * control. This method will be invoked during each RPC call in router
    * admin server.
    *
-   * @return Router permission checker
-   * @throws AccessControlException
+   * @return Router permission checker.
+   * @throws AccessControlException If the user is not authorized.
    */
   public static RouterPermissionChecker getPermissionChecker()
       throws AccessControlException {

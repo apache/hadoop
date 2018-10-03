@@ -62,7 +62,7 @@ public class Quota {
    * @param namespaceQuota Name space quota.
    * @param storagespaceQuota Storage space quota.
    * @param type StorageType that the space quota is intended to be set on.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public void setQuota(String path, long namespaceQuota,
       long storagespaceQuota, StorageType type) throws IOException {
@@ -91,7 +91,7 @@ public class Quota {
    * Get quota usage for the federation path.
    * @param path Federation path.
    * @return Aggregated quota.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);

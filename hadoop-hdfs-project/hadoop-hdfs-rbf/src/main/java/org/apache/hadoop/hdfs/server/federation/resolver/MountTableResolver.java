@@ -416,6 +416,7 @@ public class MountTableResolver
    * the read lock.
    * @param path Path to check/insert.
    * @return New remote location.
+   * @throws IOException If it cannot find the location.
    */
   public PathLocation lookupLocation(final String path) throws IOException {
     PathLocation ret = null;
@@ -631,6 +632,7 @@ public class MountTableResolver
   /**
    * Get the size of the cache.
    * @return Size of the cache.
+   * @throws IOException If the cache is not initialized.
    */
   protected long getCacheSize() throws IOException{
     if (this.locationCache != null) {

@@ -65,7 +65,7 @@ public class LocalResolver extends RouterResolver<String, String> {
    * too many calls. The cache might be updated asynchronously to reduce
    * latency.
    *
-   * @return Node IP -> Subcluster.
+   * @return Node IP to Subcluster.
    */
   @Override
   protected Map<String, String> getSubclusterInfo(

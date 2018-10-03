@@ -28,10 +28,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Service to periodically check if the {@link org.apache.hadoop.hdfs.server.
- * federation.store.StateStoreService StateStoreService} cached information in
- * the {@link Router} is up to date. This is for performance and removes the
- * {@link org.apache.hadoop.hdfs.server.federation.store.StateStoreService
+ * Service to periodically check if the {@link
+ * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
+ * StateStoreService} cached information in the {@link Router} is up to date.
+ * This is for performance and removes the {@link
+ * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
  * StateStoreService} from the critical path in common operations.
  */
 public class RouterSafemodeService extends PeriodicService {
@@ -45,12 +46,17 @@ public class RouterSafemodeService extends PeriodicService {
   /**
    * If we are in safe mode, fail requests as if a standby NN.
    * Router can enter safe mode in two different ways:
-   *   1. upon start up: router enters this mode after service start, and will
-   *      exit after certain time threshold;
-   *   2. via admin command: router enters this mode via admin command:
-   *        dfsrouteradmin -safemode enter
-   *      and exit after admin command:
-   *        dfsrouteradmin -safemode leave
+   * <ul>
+   * <li>Upon start up: router enters this mode after service start, and will
+   * exit after certain time threshold.
+   * <li>Via admin command:
+   * <ul>
+   * <li>Router enters this mode via admin command:
+   * dfsrouteradmin -safemode enter
+   * <li>And exit after admin command:
+   * dfsrouteradmin -safemode leave
+   * </ul>
+   * </ul>
    */
 
   /** Whether Router is in safe mode */

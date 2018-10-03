@@ -354,6 +354,8 @@ public class RouterRpcServer extends AbstractService
 
   /**
    * Get the active namenode resolver
+   *
+   * @return Active namenode resolver.
    */
   public ActiveNamenodeResolver getNamenodeResolver() {
     return namenodeResolver;
@@ -786,8 +788,8 @@ public class RouterRpcServer extends AbstractService
    * Get the list of datanodes per subcluster.
    *
    * @param type Type of the datanodes to get.
-   * @return nsId -> datanode list.
-   * @throws IOException
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
    */
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
@@ -1414,7 +1416,9 @@ public class RouterRpcServer extends AbstractService
 
   /**
    * Merge the outputs from multiple namespaces.
-   * @param map Namespace -> Output array.
+   *
+   * @param <T> The type of the objects to merge.
+   * @param map Namespace to Output array.
    * @param clazz Class of the values.
    * @return Array with the outputs.
    */
@@ -1434,6 +1438,7 @@ public class RouterRpcServer extends AbstractService
 
   /**
    * Convert a set of values into an array.
+   * @param <T> The type of the return objects.
    * @param set Input set.
    * @param clazz Class of the values.
    * @return Array with the values in set.
@@ -1446,7 +1451,8 @@ public class RouterRpcServer extends AbstractService
   }
 
   /**
-   * Get quota module implement.
+   * Get quota module implementation.
+   * @return Quota module implementation
    */
   public Quota getQuotaModule() {
     return this.quotaCall;

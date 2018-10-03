@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
  * Drivers may optionally override additional routines for performance
  * optimization, such as custom get/put/remove queries, depending on the
  * capabilities of the data store.
- * <p>
  */
 public abstract class StateStoreBaseImpl extends StateStoreDriver {
 

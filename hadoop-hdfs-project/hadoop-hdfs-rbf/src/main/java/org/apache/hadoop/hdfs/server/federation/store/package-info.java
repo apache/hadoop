@@ -29,15 +29,14 @@
  * The state store uses a modular data storage
  * {@link org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver
  * StateStoreDriver} to handle querying, updating and deleting data records. The
- * data storage driver is initialized and maintained by the
- * {@link org.apache.hadoop.hdfs.server.federation.store.
- * StateStoreService FederationStateStoreService}. The state store
+ * data storage driver is initialized and maintained by the {@link
+ * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
+ * FederationStateStoreService}. The state store
  * supports fetching all records of a type, filtering by column values or
  * fetching a single record by its primary key.
  * <p>
  * The state store contains several API interfaces, one for each data records
  * type.
- * <p>
  * <ul>
  * <li>FederationMembershipStateStore: state of all Namenodes in the federation.
  * Uses the MembershipState record.
@@ -46,10 +45,9 @@
  * <li>RouterStateStore: State of all routers in the federation. Uses the
  * RouterState record.
  * </ul>
- * <p>
  * Each API is defined in a separate interface. The implementations of these
- * interfaces are responsible for accessing the
- * {@link org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver
+ * interfaces are responsible for accessing the {@link
+ * org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver
  * StateStoreDriver} to query, update and delete data records.
  */
 
