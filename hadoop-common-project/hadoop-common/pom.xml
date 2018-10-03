@@ -647,48 +647,6 @@
             </executions>
           </plugin>
           <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>compile</phase>
-                <goals>
-                  <goal>javah</goal>
-                </goals>
-                <configuration>
-                  <javahPath>${env.JAVA_HOME}/bin/javah</javahPath>
-                  <javahClassNames>
-                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.bzip2.Bzip2Compressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.bzip2.Bzip2Decompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsMapping</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.nativeio.NativeIO</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory</javahClassName>
-                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawEncoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawDecoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
-                    <javahClassName>org.apache.hadoop.crypto.random.OpensslSecureRandom</javahClassName>
-                    <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
-                    <javahClassName>org.apache.hadoop.net.unix.DomainSocket</javahClassName>
-                    <javahClassName>org.apache.hadoop.net.unix.DomainSocketWatcher</javahClassName>
-                  </javahClassNames>
-                  <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
@@ -798,43 +756,6 @@
                     </requireOS>
                   </rules>
                   <fail>true</fail>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>compile</phase>
-                <goals>
-                  <goal>javah</goal>
-                </goals>
-                <configuration>
-                  <javahPath>${env.JAVA_HOME}/bin/javah</javahPath>
-                  <javahClassNames>
-                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsMapping</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.nativeio.NativeIO</javahClassName>
-                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawEncoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawDecoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder</javahClassName>
-                    <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
-                    <javahClassName>org.apache.hadoop.crypto.random.OpensslSecureRandom</javahClassName>
-                    <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
-                  </javahClassNames>
-                  <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
                 </configuration>
               </execution>
             </executions>
