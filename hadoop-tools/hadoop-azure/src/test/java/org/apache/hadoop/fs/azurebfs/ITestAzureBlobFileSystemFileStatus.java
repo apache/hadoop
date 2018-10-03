@@ -70,7 +70,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     String errorInStatus = "error in " + fileStatus + " from " + fs;
 
     // When running with Oauth, the owner and group info retrieved from server will be digit ids.
-    if (this.getAuthType() != AuthType.OAuth && !fs.isSecure()) {
+    if (this.getAuthType() != AuthType.OAuth && !fs.isSecureScheme()) {
       assertEquals(errorInStatus + ": owner",
               fs.getOwnerUser(), fileStatus.getOwner());
       assertEquals(errorInStatus + ": group",

@@ -56,7 +56,7 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "AbfsFileSystemContract{");
-    sb.append("isSecure=").append(isSecure);
+    sb.append("isSecureScheme=").append(isSecure);
     sb.append(super.toString());
     sb.append('}');
     return sb.toString();
