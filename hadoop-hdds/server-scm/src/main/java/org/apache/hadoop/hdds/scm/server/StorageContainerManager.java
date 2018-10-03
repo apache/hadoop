@@ -884,6 +884,21 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return id2StatMap;
   }
 
+  /**
+   * Returns live chill mode container threshold.
+   *
+   * @return String
+   */
+  @Override
+  public double getChillModeCurrentContainerThreshold() {
+    return getCurrentContainerThreshold();
+  }
+
+  /**
+   * Returns chill mode status.
+   * @return boolean
+   */
+  @Override
   public boolean isInChillMode() {
     return scmChillModeManager.getInChillMode();
   }

@@ -66,6 +66,7 @@ public class TestContainerStateManagerIntegration {
     conf = new OzoneConfiguration();
     cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
+    cluster.waitTobeOutOfChillMode();
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();
     scmContainerMapping = (ContainerMapping) scm.getScmContainerManager();

@@ -199,64 +199,6 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
-   * Get the minimum number of nodes to get out of chill mode.
-   *
-   * @return int
-   */
-  @Override
-  public int getMinimumChillModeNodes() {
-    return 0;
-  }
-
-  /**
-   * Chill mode is the period when node manager waits for a minimum configured
-   * number of datanodes to report in. This is called chill mode to indicate the
-   * period before node manager gets into action.
-   * <p>
-   * Forcefully exits the chill mode, even if we have not met the minimum
-   * criteria of the nodes reporting in.
-   */
-  @Override
-  public void forceExitChillMode() {
-
-  }
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  @Override
-  public void enterChillMode() {
-
-  }
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  @Override
-  public void exitChillMode() {
-
-  }
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  @Override
-  public boolean isOutOfChillMode() {
-    return !chillmode;
-  }
-
-  /**
-   * Returns a chill mode status string.
-   *
-   * @return String
-   */
-  @Override
-  public String getChillModeStatus() {
-    return null;
-  }
-
-  /**
    * Returns the aggregated node stats.
    * @return the aggregated node stats.
    */

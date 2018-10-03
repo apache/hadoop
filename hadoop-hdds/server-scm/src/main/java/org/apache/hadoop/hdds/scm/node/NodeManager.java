@@ -93,26 +93,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   List<DatanodeDetails> getAllNodes();
 
   /**
-   * Chill mode is the period when node manager waits for a minimum
-   * configured number of datanodes to report in. This is called chill mode
-   * to indicate the period before node manager gets into action.
-   *
-   * Forcefully exits the chill mode, even if we have not met the minimum
-   * criteria of the nodes reporting in.
-   */
-  void forceExitChillMode();
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  void enterChillMode();
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  void exitChillMode();
-
-  /**
    * Returns the aggregated node stats.
    * @return the aggregated node stats.
    */
