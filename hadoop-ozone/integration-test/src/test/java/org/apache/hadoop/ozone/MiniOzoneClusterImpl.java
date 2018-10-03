@@ -135,12 +135,12 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   public void waitTobeOutOfChillMode()
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      if (scm.getScmNodeManager().isOutOfChillMode()) {
+      if (!scm.isInChillMode()) {
         return true;
       }
       LOG.info("Waiting for cluster to be ready. No datanodes found");
       return false;
-    }, 100, 45000);
+    }, 100, 1000 * 45);
   }
 
   @Override

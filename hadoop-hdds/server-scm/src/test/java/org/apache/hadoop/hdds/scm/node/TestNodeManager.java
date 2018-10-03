@@ -71,10 +71,8 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -135,8 +133,6 @@ public class TestNodeManager {
         Mockito.mock(DeadNodeHandler.class));
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString(), null, eventQueue);
-    assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfChillMode());
     return nodeManager;
   }
 
@@ -153,8 +149,9 @@ public class TestNodeManager {
       InterruptedException, TimeoutException {
 
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
+      int registeredNodes = 5;
       // Send some heartbeats from different nodes.
-      for (int x = 0; x < nodeManager.getMinimumChillModeNodes(); x++) {
+      for (int x = 0; x < registeredNodes; x++) {
         DatanodeDetails datanodeDetails = TestUtils
             .createRandomDatanodeAndRegister(nodeManager);
         nodeManager.processHeartbeat(datanodeDetails);
@@ -163,8 +160,8 @@ public class TestNodeManager {
       //TODO: wait for heartbeat to be processed
       Thread.sleep(4 * 1000);
       assertTrue("Heartbeat thread should have picked up the" +
-              "scheduled heartbeats and transitioned out of chill mode.",
-          nodeManager.isOutOfChillMode());
+              "scheduled heartbeats.",
+          nodeManager.getAllNodes().size() == registeredNodes);
     }
   }
 
@@ -182,60 +179,8 @@ public class TestNodeManager {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
       //TODO: wait for heartbeat to be processed
       Thread.sleep(4 * 1000);
-      assertFalse("No heartbeats, Node manager should have been in" +
-          " chill mode.", nodeManager.isOutOfChillMode());
-    }
-  }
-
-  /**
-   * Asserts that if we don't get enough unique nodes we stay in chillmode.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-  @Test
-  public void testScmNotEnoughHeartbeats() throws IOException,
-      InterruptedException, TimeoutException {
-    try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-
-      // Need 100 nodes to come out of chill mode, only one node is sending HB.
-      nodeManager.setMinimumChillModeNodes(100);
-      nodeManager.processHeartbeat(TestUtils
-          .createRandomDatanodeAndRegister(nodeManager));
-      //TODO: wait for heartbeat to be processed
-      Thread.sleep(4 * 1000);
-      assertFalse("Not enough heartbeat, Node manager should have" +
-          "been in chillmode.", nodeManager.isOutOfChillMode());
-    }
-  }
-
-  /**
-   * Asserts that many heartbeat from the same node is counted as a single
-   * node.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-  @Test
-  public void testScmSameNodeHeartbeats() throws IOException,
-      InterruptedException, TimeoutException {
-
-    try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      nodeManager.setMinimumChillModeNodes(3);
-      DatanodeDetails datanodeDetails = TestUtils
-          .createRandomDatanodeAndRegister(nodeManager);
-
-      // Send 10 heartbeat from same node, and assert we never leave chill mode.
-      for (int x = 0; x < 10; x++) {
-        nodeManager.processHeartbeat(datanodeDetails);
-      }
-
-      //TODO: wait for heartbeat to be processed
-      Thread.sleep(4 * 1000);
-      assertFalse("Not enough nodes have send heartbeat to node" +
-          "manager.", nodeManager.isOutOfChillMode());
+      assertTrue("No heartbeats, 0 nodes should be registered",
+          nodeManager.getAllNodes().size() == 0);
     }
   }
 
@@ -869,62 +814,6 @@ public class TestNodeManager {
 
       thread1.interrupt();
       thread2.interrupt();
-    }
-  }
-
-
-  @Test
-  public void testScmEnterAndExitChillMode() throws IOException,
-      InterruptedException {
-    OzoneConfiguration conf = getConf();
-    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 100,
-        MILLISECONDS);
-
-    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
-      nodeManager.setMinimumChillModeNodes(10);
-      DatanodeDetails datanodeDetails = TestUtils
-          .createRandomDatanodeAndRegister(nodeManager);
-      nodeManager.processHeartbeat(datanodeDetails);
-      String status = nodeManager.getChillModeStatus();
-      Assert.assertThat(status, containsString("Still in chill " +
-          "mode, waiting on nodes to report in."));
-
-      // Should not exit chill mode since 10 nodes have not heartbeat yet.
-      assertFalse(nodeManager.isOutOfChillMode());
-
-      // Force exit chill mode.
-      nodeManager.forceExitChillMode();
-      assertTrue(nodeManager.isOutOfChillMode());
-      status = nodeManager.getChillModeStatus();
-      Assert.assertThat(status,
-          containsString("Out of chill mode."));
-
-
-      // Enter back to into chill mode.
-      nodeManager.enterChillMode();
-      assertFalse(nodeManager.isOutOfChillMode());
-      status = nodeManager.getChillModeStatus();
-      Assert.assertThat(status,
-          containsString("Out of startup chill mode," +
-              " but in manual chill mode."));
-
-      // Assert that node manager force enter cannot be overridden by nodes HBs.
-      for (int x = 0; x < 20; x++) {
-        DatanodeDetails datanode = TestUtils
-            .createRandomDatanodeAndRegister(nodeManager);
-        nodeManager.processHeartbeat(datanode);
-      }
-
-      Thread.sleep(500);
-      assertFalse(nodeManager.isOutOfChillMode());
-
-      // Make sure that once we exit out of manual chill mode, we fall back
-      // to the number of nodes to get out chill mode.
-      nodeManager.exitChillMode();
-      assertTrue(nodeManager.isOutOfChillMode());
-      status = nodeManager.getChillModeStatus();
-      Assert.assertThat(status,
-          containsString("Out of chill mode."));
     }
   }
 

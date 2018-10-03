@@ -56,8 +56,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for different container placement policy.
@@ -96,8 +94,6 @@ public class TestContainerPlacement {
         Mockito.mock(DeadNodeHandler.class));
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString(), null, eventQueue);
-    assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfChillMode());
     return nodeManager;
   }
 
@@ -153,8 +149,6 @@ public class TestContainerPlacement {
           (long) nodeManager.getStats().getScmUsed().get());
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
-
-      assertTrue(nodeManager.isOutOfChillMode());
 
       ContainerWithPipeline containerWithPipeline = containerManager
           .allocateContainer(

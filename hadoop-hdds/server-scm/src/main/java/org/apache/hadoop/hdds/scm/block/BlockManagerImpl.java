@@ -50,8 +50,6 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .CHILL_MODE_EXCEPTION;
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .INVALID_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
@@ -345,10 +343,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
    */
   @Override
   public void deleteBlocks(List<BlockID> blockIDs) throws IOException {
-    if (!nodeManager.isOutOfChillMode()) {
-      throw new SCMException("Unable to delete block while in chill mode",
-          CHILL_MODE_EXCEPTION);
-    }
+    ScmUtils.preCheck(ScmOps.deleteBlock, chillModePrecheck);
 
     LOG.info("Deleting blocks {}", StringUtils.join(",", blockIDs));
     Map<Long, List<Long>> containerBlocks = new HashMap<>();

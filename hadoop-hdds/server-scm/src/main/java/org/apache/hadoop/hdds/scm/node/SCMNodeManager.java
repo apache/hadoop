@@ -66,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Maintains information about the Datanodes on SCM side.
@@ -94,22 +93,8 @@ public class SCMNodeManager
   // can always calculate it from nodeStats whenever required.
   // Aggregated node stats
   private SCMNodeStat scmStat;
-  // Should we create ChillModeManager and extract all the chill mode logic
-  // to a new class?
-  private int chillModeNodeCount;
   private final String clusterID;
   private final VersionInfo version;
-  /**
-   * During start up of SCM, it will enter into chill mode and will be there
-   * until number of Datanodes registered reaches {@code chillModeNodeCount}.
-   * This flag is for tracking startup chill mode.
-   */
-  private AtomicBoolean inStartupChillMode;
-  /**
-   * Administrator can put SCM into chill mode manually.
-   * This flag is for tracking manual chill mode.
-   */
-  private AtomicBoolean inManualChillMode;
   private final CommandQueue commandQueue;
   // Node manager MXBean
   private ObjectName nmInfoBean;
@@ -128,10 +113,6 @@ public class SCMNodeManager
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
-    // TODO: Support this value as a Percentage of known machines.
-    this.chillModeNodeCount = 1;
-    this.inStartupChillMode = new AtomicBoolean(true);
-    this.inManualChillMode = new AtomicBoolean(false);
     this.scmManager = scmManager;
     LOG.info("Entering startup chill mode.");
     registerMXBean();
@@ -181,91 +162,6 @@ public class SCMNodeManager
   @Override
   public List<DatanodeDetails> getAllNodes() {
     return nodeStateManager.getAllNodes();
-  }
-
-  /**
-   * Get the minimum number of nodes to get out of Chill mode.
-   *
-   * @return int
-   */
-  @Override
-  public int getMinimumChillModeNodes() {
-    return chillModeNodeCount;
-  }
-
-  /**
-   * Sets the Minimum chill mode nodes count, used only in testing.
-   *
-   * @param count - Number of nodes.
-   */
-  @VisibleForTesting
-  public void setMinimumChillModeNodes(int count) {
-    chillModeNodeCount = count;
-  }
-
-  /**
-   * Returns chill mode Status string.
-   * @return String
-   */
-  @Override
-  public String getChillModeStatus() {
-    if (inStartupChillMode.get()) {
-      return "Still in chill mode, waiting on nodes to report in." +
-          String.format(" %d nodes reported, minimal %d nodes required.",
-              nodeStateManager.getTotalNodeCount(), getMinimumChillModeNodes());
-    }
-    if (inManualChillMode.get()) {
-      return "Out of startup chill mode, but in manual chill mode." +
-          String.format(" %d nodes have reported in.",
-              nodeStateManager.getTotalNodeCount());
-    }
-    return "Out of chill mode." +
-        String.format(" %d nodes have reported in.",
-            nodeStateManager.getTotalNodeCount());
-  }
-
-  /**
-   * Forcefully exits the chill mode even if we have not met the minimum
-   * criteria of exiting the chill mode. This will exit from both startup
-   * and manual chill mode.
-   */
-  @Override
-  public void forceExitChillMode() {
-    if(inStartupChillMode.get()) {
-      LOG.info("Leaving startup chill mode.");
-      inStartupChillMode.set(false);
-    }
-    if(inManualChillMode.get()) {
-      LOG.info("Leaving manual chill mode.");
-      inManualChillMode.set(false);
-    }
-  }
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  @Override
-  public void enterChillMode() {
-    LOG.info("Entering manual chill mode.");
-    inManualChillMode.set(true);
-  }
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  @Override
-  public void exitChillMode() {
-    LOG.info("Leaving manual chill mode.");
-    inManualChillMode.set(false);
-  }
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  @Override
-  public boolean isOutOfChillMode() {
-    return !(inStartupChillMode.get() || inManualChillMode.get());
   }
 
   /**
@@ -379,11 +275,6 @@ public class SCMNodeManager
     try {
       nodeStateManager.addNode(datanodeDetails);
       nodeStateManager.setNodeStat(dnId, new SCMNodeStat());
-      if(inStartupChillMode.get() &&
-          nodeStateManager.getTotalNodeCount() >= getMinimumChillModeNodes()) {
-        inStartupChillMode.getAndSet(false);
-        LOG.info("Leaving startup chill mode.");
-      }
       // Updating Node Report, as registration is successful
       updateNodeStat(datanodeDetails.getUuid(), nodeReport);
       LOG.info("Data node with ID: {} Registered.", datanodeDetails.getUuid());
