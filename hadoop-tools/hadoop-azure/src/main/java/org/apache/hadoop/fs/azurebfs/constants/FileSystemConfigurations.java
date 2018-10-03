@@ -63,5 +63,7 @@ public final class FileSystemConfigurations {
       = SSLSocketFactoryEx.SSLChannelMode.Default;
 
   public static final boolean DEFAULT_ENABLE_DELEGATION_TOKEN = false;
+  public static final boolean DEFAULT_ENABLE_HTTPS = true;
+
   private FileSystemConfigurations() {}
 }

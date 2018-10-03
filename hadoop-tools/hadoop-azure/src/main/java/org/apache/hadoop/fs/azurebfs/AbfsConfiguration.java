@@ -162,6 +162,10 @@ public class AbfsConfiguration{
       DefaultValue = "")
   private String abfsExternalAuthorizationClass;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
+          DefaultValue = DEFAULT_ENABLE_HTTPS)
+  private boolean alwaysUseHttps;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -431,6 +435,10 @@ public class AbfsConfiguration{
 
   public AbfsDelegationTokenManager getDelegationTokenManager() throws IOException {
     return new AbfsDelegationTokenManager(getRawConfiguration());
+  }
+
+  public boolean isHttpsAlwaysUsed() {
+    return this.alwaysUseHttps;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
