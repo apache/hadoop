@@ -115,7 +115,7 @@ public class AzureBlobFileSystemStore {
   private boolean isNamespaceEnabledSet;
   private boolean isNamespaceEnabled;
 
-  public AzureBlobFileSystemStore(URI uri, boolean isSecure, Configuration configuration, UserGroupInformation userGroupInformation)
+  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration, UserGroupInformation userGroupInformation)
           throws AzureBlobFileSystemException, IOException {
     this.uri = uri;
 
@@ -142,13 +142,11 @@ public class AzureBlobFileSystemStore {
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
 
-    if (AuthType.OAuth == abfsConfiguration.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey)
-            && !FileSystemUriSchemes.ABFS_SECURE_SCHEME.equals(uri.getScheme())) {
-      throw new IllegalArgumentException(
-              String.format("Incorrect URI %s, URI scheme must be abfss when authenticating using Oauth.", uri));
-    }
+    boolean usingOauth = (AuthType.OAuth == abfsConfiguration.getEnum(
+            FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey));
 
-    initializeClient(uri, fileSystemName, accountName, isSecure);
+    boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
+    initializeClient(uri, fileSystemName, accountName, useHttps);
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {
