@@ -635,7 +635,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
           return (metas.isEmpty() && dirPathMeta == null)
               ? null
-              : new DirListingMetadata(path, metas, isAuthoritative);
+              : new DirListingMetadata(path, metas, isAuthoritative,
+              dirPathMeta.getLastUpdated());
         });
   }
 
@@ -867,7 +868,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       if (!itemExists(item)) {
         final FileStatus status = makeDirStatus(path, username);
         metasToPut.add(new DDBPathMetadata(status, Tristate.FALSE, false,
-            meta.isAuthoritativeDir()));
+            meta.isAuthoritativeDir(), meta.getLastUpdated()));
         path = path.getParent();
       } else {
         break;
@@ -910,7 +911,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     Path path = meta.getPath();
     DDBPathMetadata ddbPathMeta =
         new DDBPathMetadata(makeDirStatus(path, username), meta.isEmpty(),
-            false, meta.isAuthoritative());
+            false, meta.isAuthoritative(), meta.getLastUpdated());
 
     // First add any missing ancestors...
     final Collection<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta);

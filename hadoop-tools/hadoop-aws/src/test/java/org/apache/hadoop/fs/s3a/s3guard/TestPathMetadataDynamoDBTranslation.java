@@ -29,6 +29,7 @@ import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.google.common.base.Preconditions;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -112,6 +113,11 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
       assertThat(element.getKeyType(),
           anyOf(is(HASH.toString()), is(RANGE.toString())));
     }
+  }
+
+  @After
+  public void tearDown() {
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.clear();
   }
 
   @Test
@@ -248,10 +254,11 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
       throws Exception {
     Item item = Mockito.spy(TEST_DIR_ITEM);
     item.withBoolean(IS_AUTHORITATIVE, true);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(IS_AUTHORITATIVE);
 
     final String user =
         UserGroupInformation.getCurrentUser().getShortUserName();
-    DDBPathMetadata meta = itemToPathMetadata(item, user, true);
+    DDBPathMetadata meta = itemToPathMetadata(item, user);
 
     Mockito.verify(item, Mockito.never()).getBoolean(IS_AUTHORITATIVE);
     assertFalse(meta.isAuthoritativeDir());
@@ -265,11 +272,48 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   public void testIsAuthoritativeCompatibilityPathMetadataToItem() {
     DDBPathMetadata meta = Mockito.spy(testFilePathMetadata);
     meta.setAuthoritativeDir(true);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(IS_AUTHORITATIVE);
 
-    Item item = pathMetadataToItem(meta, true);
+    Item item = pathMetadataToItem(meta);
 
     Mockito.verify(meta, never()).isAuthoritativeDir();
     assertFalse(item.hasAttribute(IS_AUTHORITATIVE));
+  }
+
+
+  /**
+   * Test when translating an {@link Item} to {@link DDBPathMetadata} works
+   * if {@code LAST_UPDATED} flag is ignored.
+   */
+  @Test
+  public void testIsLastUpdatedCompatibilityItemToPathMetadata()
+      throws Exception {
+    Item item = Mockito.spy(TEST_DIR_ITEM);
+    item.withLong(LAST_UPDATED, 100);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(LAST_UPDATED);
+
+    final String user =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    DDBPathMetadata meta = itemToPathMetadata(item, user);
+
+    Mockito.verify(item, Mockito.never()).getLong(LAST_UPDATED);
+    assertFalse(meta.isAuthoritativeDir());
+  }
+
+  /**
+   * Test when translating an {@link DDBPathMetadata} to {@link Item} works
+   * if {@code LAST_UPDATED} flag is ignored.
+   */
+  @Test
+  public void testIsLastUpdatedCompatibilityPathMetadataToItem() {
+    DDBPathMetadata meta = Mockito.spy(testFilePathMetadata);
+    meta.setLastUpdated(100);
+    PathMetadataDynamoDBTranslation.IGNORED_FIELDS.add(LAST_UPDATED);
+
+    Item item = pathMetadataToItem(meta);
+
+    Mockito.verify(meta, never()).getLastUpdated();
+    assertFalse(item.hasAttribute(LAST_UPDATED));
   }
 
 }

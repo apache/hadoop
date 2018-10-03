@@ -194,7 +194,8 @@ public final class S3Guard {
    */
   public static FileStatus[] dirListingUnion(MetadataStore ms, Path path,
       List<FileStatus> backingStatuses, DirListingMetadata dirMeta,
-      boolean isAuthoritative) throws IOException {
+      boolean isAuthoritative, ITtlTimeProvider timeProvider)
+      throws IOException {
 
     // Fast-path for NullMetadataStore
     if (isNullMetadataStore(ms)) {
@@ -241,7 +242,7 @@ public final class S3Guard {
 
     if (changed && isAuthoritative) {
       dirMeta.setAuthoritative(true); // This is the full directory contents
-      ms.put(dirMeta);
+      S3Guard.putWithTtl(ms, dirMeta, timeProvider);
     }
 
     return dirMetaToStatuses(dirMeta);
@@ -282,7 +283,7 @@ public final class S3Guard {
   @Deprecated
   @Retries.OnceExceptionsSwallowed
   public static void makeDirsOrdered(MetadataStore ms, List<Path> dirs,
-      String owner, boolean authoritative) {
+      String owner, boolean authoritative, ITtlTimeProvider timeProvider) {
     if (dirs == null) {
       return;
     }
@@ -326,7 +327,7 @@ public final class S3Guard {
             children.add(new PathMetadata(prevStatus));
           }
           dirMeta = new DirListingMetadata(f, children, authoritative);
-          ms.put(dirMeta);
+          S3Guard.putWithTtl(ms, dirMeta, timeProvider);
         }
 
         pathMetas.add(new PathMetadata(status));
@@ -486,5 +487,57 @@ public final class S3Guard {
     for (Path path : paths) {
       assertQualified(path);
     }
+  }
+
+  /**
+   * This interface is defined for testing purposes.
+   * TTL can be tested by implementing this interface and setting is as
+   * {@code S3Guard.ttlTimeProvider}. By doing this, getNow() can return any
+   * value preferred and flaky tests could be avoided.
+   */
+  public interface ITtlTimeProvider {
+    long getNow();
+    long getAuthoritativeDirTtl();
+  }
+
+  /**
+   * Runtime implementation for TTL Time Provider interface.
+   */
+  public static class TtlTimeProvider implements ITtlTimeProvider {
+    private long authoritativeDirTtl;
+
+    public TtlTimeProvider(long authoritativeDirTtl) {
+      this.authoritativeDirTtl = authoritativeDirTtl;
+    }
+
+    @Override
+    public long getNow() {
+      return System.currentTimeMillis();
+    }
+
+    @Override public long getAuthoritativeDirTtl() {
+      return authoritativeDirTtl;
+    }
+  }
+
+  public static void putWithTtl(MetadataStore ms, DirListingMetadata dirMeta,
+      ITtlTimeProvider timeProvider)
+      throws IOException {
+    dirMeta.setLastUpdated(timeProvider.getNow());
+    ms.put(dirMeta);
+  }
+
+  public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
+      Path path, ITtlTimeProvider timeProvider)
+      throws IOException {
+    long ttl = timeProvider.getAuthoritativeDirTtl();
+
+    DirListingMetadata dlm = ms.listChildren(path);
+
+    if(dlm != null && dlm.isAuthoritative()
+        && dlm.isExpired(ttl, timeProvider.getNow())) {
+      dlm.setAuthoritative(false);
+    }
+    return dlm;
   }
 }

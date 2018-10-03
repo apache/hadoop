@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -67,6 +69,11 @@ final class PathMetadataDynamoDBTranslation {
   static final String BLOCK_SIZE = "block_size";
   static final String IS_DELETED = "is_deleted";
   static final String IS_AUTHORITATIVE = "is_authoritative";
+  static final String LAST_UPDATED = "last_updated";
+
+  /** Used while testing backward compatibility. */
+  @VisibleForTesting
+  static final Set<String> IGNORED_FIELDS = new HashSet<>();
 
   /** Table version field {@value} in version marker item. */
   @VisibleForTesting
@@ -107,23 +114,7 @@ final class PathMetadataDynamoDBTranslation {
    * @param item DynamoDB item to convert
    * @return {@code item} converted to a {@link DDBPathMetadata}
    */
-  static DDBPathMetadata itemToPathMetadata(Item item, String username)
-      throws IOException {
-    return itemToPathMetadata(item, username, false);
-  }
-
-  /**
-   * Converts a DynamoDB item to a {@link DDBPathMetadata}.
-   * Can ignore {@code IS_AUTHORITATIVE} flag if {@code ignoreIsAuthFlag} is
-   * true.
-   *
-   * @param item DynamoDB item to convert
-   * @param ignoreIsAuthFlag if true, ignore the authoritative flag on item
-   * @return {@code item} converted to a {@link DDBPathMetadata}
-   */
-  static DDBPathMetadata itemToPathMetadata(Item item, String username,
-      boolean ignoreIsAuthFlag)
-      throws IOException {
+  static DDBPathMetadata itemToPathMetadata(Item item, String username) {
     if (item == null) {
       return null;
     }
@@ -145,11 +136,11 @@ final class PathMetadataDynamoDBTranslation {
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     boolean isAuthoritativeDir = false;
     final FileStatus fileStatus;
+    long lastUpdated = 0;
     if (isDir) {
-      if (!ignoreIsAuthFlag) {
-        isAuthoritativeDir = item.hasAttribute(IS_AUTHORITATIVE)
-            && item.getBoolean(IS_AUTHORITATIVE);
-      }
+      isAuthoritativeDir = !IGNORED_FIELDS.contains(IS_AUTHORITATIVE)
+          && item.hasAttribute(IS_AUTHORITATIVE)
+          && item.getBoolean(IS_AUTHORITATIVE);
       fileStatus = DynamoDBMetadataStore.makeDirStatus(path, username);
     } else {
       long len = item.hasAttribute(FILE_LENGTH) ? item.getLong(FILE_LENGTH) : 0;
@@ -158,21 +149,16 @@ final class PathMetadataDynamoDBTranslation {
       fileStatus = new FileStatus(len, false, 1, block, modTime, 0, null,
           username, username, path);
     }
+    lastUpdated =
+        !IGNORED_FIELDS.contains(LAST_UPDATED)
+            && item.hasAttribute(LAST_UPDATED)
+            ? item.getLong(LAST_UPDATED) : 0;
+
     boolean isDeleted =
         item.hasAttribute(IS_DELETED) && item.getBoolean(IS_DELETED);
 
     return new DDBPathMetadata(fileStatus, Tristate.UNKNOWN, isDeleted,
-        isAuthoritativeDir);
-  }
-
-  /**
-   * Converts a {@link DDBPathMetadata} to a DynamoDB item.
-   *
-   * @param meta {@link DDBPathMetadata} to convert
-   * @return {@code meta} converted to DynamoDB item
-   */
-  static Item pathMetadataToItem(DDBPathMetadata meta) {
-    return pathMetadataToItem(meta, false);
+        isAuthoritativeDir, lastUpdated);
   }
 
   /**
@@ -182,17 +168,15 @@ final class PathMetadataDynamoDBTranslation {
    * true.
    *
    * @param meta {@link DDBPathMetadata} to convert
-   * @param ignoreIsAuthFlag if true, ignore the authoritative flag on item
    * @return {@code meta} converted to DynamoDB item
    */
-  static Item pathMetadataToItem(DDBPathMetadata meta,
-      boolean ignoreIsAuthFlag) {
+  static Item pathMetadataToItem(DDBPathMetadata meta) {
     Preconditions.checkNotNull(meta);
     final FileStatus status = meta.getFileStatus();
     final Item item = new Item().withPrimaryKey(pathToKey(status.getPath()));
     if (status.isDirectory()) {
       item.withBoolean(IS_DIR, true);
-      if (!ignoreIsAuthFlag) {
+      if (!IGNORED_FIELDS.contains(IS_AUTHORITATIVE)) {
         item.withBoolean(IS_AUTHORITATIVE, meta.isAuthoritativeDir());
       }
     } else {
@@ -201,6 +185,11 @@ final class PathMetadataDynamoDBTranslation {
           .withLong(BLOCK_SIZE, status.getBlockSize());
     }
     item.withBoolean(IS_DELETED, meta.isDeleted());
+
+    if(!IGNORED_FIELDS.contains(LAST_UPDATED)) {
+      item.withLong(LAST_UPDATED, meta.getLastUpdated());
+    }
+
     return item;
   }
 

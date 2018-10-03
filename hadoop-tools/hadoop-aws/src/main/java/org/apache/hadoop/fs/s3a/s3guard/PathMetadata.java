@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class PathMetadata {
+public class PathMetadata extends ExpirableMetadata {
 
   private final FileStatus fileStatus;
   private Tristate isEmptyDirectory;
