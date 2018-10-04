@@ -39,8 +39,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
@@ -1069,7 +1071,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
-    FILE_STATUS_ATTR
+    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF
   }
 
   private void operation(Operation op) throws Exception {
@@ -1178,6 +1180,10 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case FILE_STATUS_ATTR:
       testFileStatusAttr();
+      break;
+    case GET_SNAPSHOT_DIFF:
+      testGetSnapshotDiff();
+      testGetSnapshotDiffIllegalParam();
       break;
     }
   }
@@ -1429,6 +1435,97 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       // Cleanup
       fs.deleteSnapshot(path, "snap-02");
       fs.deleteSnapshot(path, "snap-01");
+      fs.delete(path, true);
+    }
+  }
+
+  private void testGetSnapshotDiff() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot allowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      Assert.assertTrue(fs.getFileStatus(path).isSnapshotEnabled());
+      // Create a file and take a snapshot
+      Path file1 = new Path(path, "file1");
+      testCreate(file1, false);
+      fs.createSnapshot(path, "snap1");
+      // Create another file and take a snapshot
+      Path file2 = new Path(path, "file2");
+      testCreate(file2, false);
+      fs.createSnapshot(path, "snap2");
+      // Get snapshot diff
+      SnapshotDiffReport diffReport = null;
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        diffReport = httpFS.getSnapshotDiffReport(path, "snap1", "snap2");
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        diffReport = webHdfsFileSystem.getSnapshotDiffReport(path,
+            "snap1", "snap2");
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support getSnapshotDiff");
+      }
+      // Verify result with DFS
+      DistributedFileSystem dfs = (DistributedFileSystem)
+          FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      SnapshotDiffReport dfsDiffReport =
+          dfs.getSnapshotDiffReport(path, "snap1", "snap2");
+      Assert.assertEquals(diffReport.toString(), dfsDiffReport.toString());
+      // Cleanup
+      fs.deleteSnapshot(path, "snap2");
+      fs.deleteSnapshot(path, "snap1");
+      fs.delete(path, true);
+    }
+  }
+
+  private void testGetSnapshotDiffIllegalParamCase(FileSystem fs, Path path,
+      String oldsnapshotname, String snapshotname) throws IOException {
+    try {
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        httpFS.getSnapshotDiffReport(path, oldsnapshotname, snapshotname);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        webHdfsFileSystem.getSnapshotDiffReport(path, oldsnapshotname,
+            snapshotname);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support getSnapshotDiff");
+      }
+    } catch (SnapshotException|IllegalArgumentException|RemoteException e) {
+      // Expect SnapshotException, IllegalArgumentException
+      // or RemoteException(IllegalArgumentException)
+      if (e instanceof RemoteException) {
+        // Check RemoteException class name, should be IllegalArgumentException
+        Assert.assertEquals(((RemoteException) e).getClassName()
+            .compareTo(java.lang.IllegalArgumentException.class.getName()), 0);
+      }
+      return;
+    }
+    Assert.fail("getSnapshotDiff illegal param didn't throw Exception");
+  }
+
+  private void testGetSnapshotDiffIllegalParam() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot allowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      assertTrue("Snapshot should be allowed by DFS",
+          fs.getFileStatus(path).isSnapshotEnabled());
+      Assert.assertTrue(fs.getFileStatus(path).isSnapshotEnabled());
+      // Get snapshot diff
+      testGetSnapshotDiffIllegalParamCase(fs, path, "", "");
+      testGetSnapshotDiffIllegalParamCase(fs, path, "snap1", "");
+      testGetSnapshotDiffIllegalParamCase(fs, path, "", "snap2");
+      testGetSnapshotDiffIllegalParamCase(fs, path, "snap1", "snap2");
+      // Cleanup
       fs.delete(path, true);
     }
   }

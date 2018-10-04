@@ -45,6 +45,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -232,7 +234,7 @@ public class HttpFSFileSystem extends FileSystem
     SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
     ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
-    RENAMESNAPSHOT(HTTP_PUT);
+    RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET);
 
     private String httpMethod;
 
@@ -1465,6 +1467,19 @@ public class HttpFSFileSystem extends FileSystem
     HttpURLConnection conn = getConnection(Operation.DELETESNAPSHOT.getMethod(),
         params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public SnapshotDiffReport getSnapshotDiffReport(Path path,
+      String snapshotOldName, String snapshotNewName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTDIFF.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTDIFF.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshotDiffReport(json);
   }
 
 }
