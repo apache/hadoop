@@ -16,42 +16,58 @@
 
 version: "3"
 services:
-   kdc:
-      image: ahadoop/kdc:v1
-      hostname: kdc
-      volumes:
-          - $SRC_VOLUME:/opt/hadoop
-   datanode:
-      image: ahadoop/runner:latest
-      volumes:
-        - $SRC_VOLUME:/opt/hadoop
-      hostname: datanode
-      ports:
-        - 9864
-      command: ["/opt/hadoop/bin/ozone","datanode"]
-      env_file:
-        - ./docker-config
-   ozoneManager:
-      image: ahadoop/runner:latest
-      hostname: om
-      volumes:
-         - $SRC_VOLUME:/opt/hadoop
-      ports:
-         - 9874:9874
-      environment:
-         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
-      env_file:
-          - ./docker-config
-      command: ["/opt/hadoop/bin/ozone","om"]
-   scm:
-      image: ahadoop/runner:latest
-      hostname: scm
-      volumes:
-         - $SRC_VOLUME:/opt/hadoop
-      ports:
-         - 9876:9876
-      env_file:
-          - ./docker-config
-      environment:
-          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
-      command: ["/opt/hadoop/bin/ozone","scm"]
+  kdc:
+    build:
+      context: docker-image/docker-krb5
+      dockerfile: Dockerfile-krb5
+      args:
+        buildno: 1
+    hostname: kdc
+    volumes:
+    - $SRC_VOLUME:/opt/hadoop
+  datanode:
+    build:
+      context: docker-image/runner
+      dockerfile: Dockerfile
+      args:
+        buildno: 1
+    volumes:
+    - $SRC_VOLUME:/opt/hadoop
+    hostname: datanode
+    ports:
+    - 9864
+    command: ["/opt/hadoop/bin/ozone","datanode"]
+    env_file:
+    - docker-config
+  om:
+    build:
+      context: docker-image/runner
+      dockerfile: Dockerfile
+      args:
+        buildno: 1
+    hostname: om
+    volumes:
+    - $SRC_VOLUME:/opt/hadoop
+    ports:
+    - 9874:9874
+    environment:
+      ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+    env_file:
+    - docker-config
+    command: ["/opt/hadoop/bin/ozone","om"]
+  scm:
+    build:
+      context: docker-image/runner
+      dockerfile: Dockerfile
+      args:
+        buildno: 1
+    hostname: scm
+    volumes:
+    - $SRC_VOLUME:/opt/hadoop
+    ports:
+    - 9876:9876
+    env_file:
+    - docker-config
+    environment:
+      ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+    command: ["/opt/hadoop/bin/ozone","scm"]
