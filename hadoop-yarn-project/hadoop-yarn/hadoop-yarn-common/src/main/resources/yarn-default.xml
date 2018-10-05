@@ -265,6 +265,11 @@
   </property>
 
   <property>
+   <name>yarn.resourcemanager.resource-tracker.nm.ip-hostname-check</name>
+   <value>false</value>
+  </property>
+
+  <property>
     <description>Are acls enabled.</description>
     <name>yarn.acl.enable</name>
     <value>false</value>

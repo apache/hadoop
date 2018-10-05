@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
+import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -2401,5 +2404,47 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
     Assert.assertEquals(1, nodeHeartbeat.getResponseId());
+  }
+
+  @Test
+  public void testNMIpHostNameResolution() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        "localhost:" + ServerSocketUtil.getPort(10000, 10));
+    conf.setBoolean(YarnConfiguration.RM_NM_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
+        true);
+    MockRM mockRM = new MockRM(conf) {
+      @Override
+      protected ResourceTrackerService createResourceTrackerService() {
+        return new ResourceTrackerService(getRMContext(), nodesListManager,
+            this.nmLivelinessMonitor,
+            rmContext.getContainerTokenSecretManager(),
+            rmContext.getNMTokenSecretManager()) {
+        };
+      }
+    };
+    mockRM.start();
+    ResourceTracker rmTracker =
+        ServerRMProxy.createRMProxy(mockRM.getConfig(), ResourceTracker.class);
+    RegisterNodeManagerResponse response = rmTracker.registerNodeManager(
+        RegisterNodeManagerRequest.newInstance(
+            NodeId.newInstance("host1" + System.currentTimeMillis(), 1234),
+            1236, Resource.newInstance(10000, 10), "2", new ArrayList<>(),
+            new ArrayList<>()));
+    Assert
+        .assertEquals("Shutdown signal should be received", NodeAction.SHUTDOWN,
+            response.getNodeAction());
+    Assert.assertTrue("Diagnostic Message", response.getDiagnosticsMessage()
+        .contains("hostname cannot be resolved "));
+    // Test success
+    rmTracker =
+        ServerRMProxy.createRMProxy(mockRM.getConfig(), ResourceTracker.class);
+    response = rmTracker.registerNodeManager(RegisterNodeManagerRequest
+        .newInstance(NodeId.newInstance("localhost", 1234), 1236,
+            Resource.newInstance(10000, 10), "2", new ArrayList<>(),
+            new ArrayList<>()));
+    Assert.assertEquals("Successfull registration", NodeAction.NORMAL,
+        response.getNodeAction());
+    mockRM.stop();
   }
 }
