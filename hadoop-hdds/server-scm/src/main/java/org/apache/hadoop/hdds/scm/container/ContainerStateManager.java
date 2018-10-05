@@ -158,46 +158,6 @@ public class ContainerStateManager implements Closeable {
     lastUsedMap = new ConcurrentHashMap<>();
     containerCount = new AtomicLong(0);
     containers = new ContainerStateMap();
-    loadExistingContainers(containerManager, pipelineSelector);
-  }
-
-  private void loadExistingContainers(ContainerManager containerManager,
-                                      PipelineSelector pipelineSelector) {
-
-    List<ContainerInfo> containerList;
-    try {
-      containerList = containerManager.listContainer(0, Integer.MAX_VALUE);
-
-      // if there are no container to load, let us return.
-      if (containerList == null || containerList.size() == 0) {
-        LOG.info("No containers to load for this cluster.");
-        return;
-      }
-    } catch (IOException e) {
-      if (!e.getMessage().equals("No container exists in current db")) {
-        LOG.error("Could not list the containers", e);
-      }
-      return;
-    }
-
-    try {
-      long maxID = 0;
-      for (ContainerInfo container : containerList) {
-        containers.addContainer(container);
-        pipelineSelector.addContainerToPipeline(
-                container.getPipelineID(), container.getContainerID());
-
-        if (maxID < container.getContainerID()) {
-          maxID = container.getContainerID();
-        }
-
-        containerCount.set(maxID);
-      }
-    } catch (SCMException ex) {
-      LOG.error("Unable to create a container information. ", ex);
-      // Fix me, what is the proper shutdown procedure for SCM ??
-      // System.exit(1) // Should we exit here?
-    }
   }
 
   /**
@@ -282,6 +242,15 @@ public class ContainerStateManager implements Closeable {
     stateMachine.addTransition(LifeCycleState.DELETING,
         LifeCycleState.DELETED,
         LifeCycleEvent.CLEANUP);
+  }
+
+  public void addExistingContainer(ContainerInfo containerInfo)
+      throws SCMException {
+    containers.addContainer(containerInfo);
+    long containerID = containerInfo.getContainerID();
+    if (containerCount.get() < containerID) {
+      containerCount.set(containerID);
+    }
   }
 
   /**

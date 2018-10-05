@@ -146,6 +146,38 @@ public class SCMContainerManager implements ContainerManager {
     containerLeaseManager = new LeaseManager<>("ContainerCreation",
         containerCreationLeaseTimeout);
     containerLeaseManager.start();
+    loadExistingContainers();
+  }
+
+  private void loadExistingContainers() {
+
+    List<ContainerInfo> containerList;
+    try {
+      containerList = listContainer(0, Integer.MAX_VALUE);
+
+      // if there are no container to load, let us return.
+      if (containerList == null || containerList.size() == 0) {
+        LOG.info("No containers to load for this cluster.");
+        return;
+      }
+    } catch (IOException e) {
+      if (!e.getMessage().equals("No container exists in current db")) {
+        LOG.error("Could not list the containers", e);
+      }
+      return;
+    }
+
+    try {
+      for (ContainerInfo container : containerList) {
+        containerStateManager.addExistingContainer(container);
+        pipelineSelector.addContainerToPipeline(
+            container.getPipelineID(), container.getContainerID());
+      }
+    } catch (SCMException ex) {
+      LOG.error("Unable to create a container information. ", ex);
+      // Fix me, what is the proper shutdown procedure for SCM ??
+      // System.exit(1) // Should we exit here?
+    }
   }
 
   /**
