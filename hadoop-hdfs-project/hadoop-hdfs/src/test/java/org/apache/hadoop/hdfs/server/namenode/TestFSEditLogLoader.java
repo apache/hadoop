@@ -448,7 +448,7 @@ public class TestFSEditLogLoader {
           fromByte(code), FSEditLogOpCodes.fromByte(code));
     }
   }
-  
+
   @Test
   public void setLoadFSEditLogThrottling() throws Exception {
     FSNamesystem namesystem = mock(FSNamesystem.class);

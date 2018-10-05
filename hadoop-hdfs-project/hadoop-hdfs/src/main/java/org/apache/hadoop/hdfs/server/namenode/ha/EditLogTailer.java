@@ -256,7 +256,7 @@ public class EditLogTailer {
   }
 
   @VisibleForTesting
-  void doTailEdits() throws IOException, InterruptedException {
+  public void doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
