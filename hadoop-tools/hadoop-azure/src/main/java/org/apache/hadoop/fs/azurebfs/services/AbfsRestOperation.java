@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -175,6 +176,14 @@ public class AbfsRestOperation {
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
       }
+
+      // once HttpException is thrown by AzureADAuthenticator,
+      // it indicates the policy in AzureADAuthenticator determined
+      // retry is not needed
+      if (ex instanceof HttpException) {
+        throw new AbfsRestOperationException((HttpException) ex);
+      }
+
       return false;
     } finally {
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
