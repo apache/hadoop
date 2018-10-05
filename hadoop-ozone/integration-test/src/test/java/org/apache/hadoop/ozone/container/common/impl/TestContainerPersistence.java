@@ -74,7 +74,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Stage.COMBINED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.setDataChecksum;
@@ -129,7 +128,7 @@ public class TestContainerPersistence {
     blockManager = new BlockManagerImpl(conf);
     chunkManager = new ChunkManagerImpl();
 
-    for (String dir : conf.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
+    for (String dir : conf.getStrings(ScmConfigKeys.HDDS_DATANODE_DIR_KEY)) {
       StorageLocation location = StorageLocation.parse(dir);
       FileUtils.forceMkdir(new File(location.getNormalizedUri()));
     }
