@@ -145,7 +145,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompre
         THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(result));
         return;
     }
-    (*env)->SetLongField(env, this, ZStandardDecompressor_remaining, 0);
+    (*env)->SetIntField(env, this, ZStandardDecompressor_remaining, 0);
 }
 
 
