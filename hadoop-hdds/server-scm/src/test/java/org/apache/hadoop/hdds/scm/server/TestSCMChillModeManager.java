@@ -45,7 +45,7 @@ public class TestSCMChillModeManager {
   private List<ContainerInfo> containers;
 
   @Rule
-  public Timeout timeout = new Timeout(1000 * 20);
+  public Timeout timeout = new Timeout(1000 * 35);
 
   @BeforeClass
   public static void setUp() {
@@ -109,6 +109,45 @@ public class TestSCMChillModeManager {
     conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
     scmChillModeManager = new SCMChillModeManager(conf, containers, queue);
     assertFalse(scmChillModeManager.getInChillMode());
+  }
+
+  @Test
+  public void testChillModeDataNodeExitRule() throws Exception {
+    containers = new ArrayList<>();
+    testChillModeDataNodes(0);
+    testChillModeDataNodes(3);
+    testChillModeDataNodes(5);
+  }
+
+  private void testChillModeDataNodes(int numOfDns) throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration(config);
+    conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, numOfDns);
+    scmChillModeManager = new SCMChillModeManager(conf, containers, queue);
+    queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+        scmChillModeManager);
+    // Assert SCM is in Chill mode.
+    assertTrue(scmChillModeManager.getInChillMode());
+
+    // Register all DataNodes except last one and assert SCM is in chill mode.
+    for (int i = 0; i < numOfDns-1; i++) {
+      queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+          HddsTestUtils.createNodeRegistrationContainerReport(containers));
+      assertTrue(scmChillModeManager.getInChillMode());
+      assertTrue(scmChillModeManager.getCurrentContainerThreshold() == 1);
+    }
+
+    if(numOfDns == 0){
+      GenericTestUtils.waitFor(() -> {
+        return scmChillModeManager.getInChillMode();
+      }, 10, 1000 * 10);
+      return;
+    }
+    // Register last DataNode and check that SCM is out of Chill mode.
+    queue.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+        HddsTestUtils.createNodeRegistrationContainerReport(containers));
+    GenericTestUtils.waitFor(() -> {
+      return scmChillModeManager.getInChillMode();
+    }, 10, 1000 * 10);
   }
 
   private void testContainerThreshold(List<ContainerInfo> dnContainers,

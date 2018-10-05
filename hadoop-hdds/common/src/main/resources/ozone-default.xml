@@ -1165,6 +1165,15 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.min.datanode</name>
+    <value>1</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>Minimum DataNodes which should be registered to get SCM out of
+      chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>

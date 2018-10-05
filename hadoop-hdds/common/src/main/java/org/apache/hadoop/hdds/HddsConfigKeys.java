@@ -83,6 +83,9 @@ public final class HddsConfigKeys {
   public static final String HDDS_SCM_CHILLMODE_ENABLED =
       "hdds.scm.chillmode.enabled";
   public static final boolean HDDS_SCM_CHILLMODE_ENABLED_DEFAULT = true;
+  public static final String HDDS_SCM_CHILLMODE_MIN_DATANODE =
+      "hdds.scm.chillmode.min.datanode";
+  public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
 
   // % of containers which should have at least one reported replica
   // before SCM comes out of chill mode.
