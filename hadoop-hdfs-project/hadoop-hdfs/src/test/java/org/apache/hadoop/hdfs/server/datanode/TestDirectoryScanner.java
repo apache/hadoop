@@ -35,7 +35,6 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -924,10 +923,9 @@ public class TestDirectoryScanner {
     }
 
     @Override
-    public LinkedList<ScanInfo> compileReport(String bpid,
-        LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
+    public void compileReport(String bpid,
+        Collection<ScanInfo> report, ReportCompiler reportCompiler)
         throws InterruptedException, IOException {
-      return null;
     }
 
     @Override

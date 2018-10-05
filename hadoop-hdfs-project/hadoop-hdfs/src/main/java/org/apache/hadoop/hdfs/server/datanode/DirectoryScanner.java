@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,7 +43,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.ScanInfo;
@@ -657,7 +653,7 @@ public class DirectoryScanner implements Runnable {
       perfTimer.start();
       throttleTimer.start();
       for (String bpid : bpList) {
-        LinkedList<ScanInfo> report = new LinkedList<>();
+        List<ScanInfo> report = new ArrayList<>(DEFAULT_MAP_SIZE);
 
         perfTimer.reset().start();
         throttleTimer.reset().start();
@@ -720,16 +716,4 @@ public class DirectoryScanner implements Runnable {
       perfTimer.reset().start();
     }
   }
-
-  public enum BlockDirFilter implements FilenameFilter {
-    INSTANCE;
-
-    @Override
-    public boolean accept(File dir, String name) {
-      return name.startsWith(DataStorage.BLOCK_SUBDIR_PREFIX)
-          || name.startsWith(DataStorage.STORAGE_DIR_FINALIZED)
-          || name.startsWith(Block.BLOCK_FILE_PREFIX);
-    }
-  }
-
 }
