@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.mockito.Mockito.spy;
@@ -174,6 +175,11 @@ public class NameNodeAdapter {
   public static long getLeaseRenewalTime(NameNode nn, String path) {
     Lease l = getLeaseForPath(nn, path);
     return l == null ? -1 : l.getLastUpdate();
+  }
+
+
+  public static HAServiceState getServiceState(NameNode nn) {
+    return nn.getServiceState();
   }
 
   /**
