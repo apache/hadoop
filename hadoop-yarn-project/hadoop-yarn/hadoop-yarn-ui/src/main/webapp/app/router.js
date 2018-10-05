@@ -70,9 +70,6 @@ Router.map(function() {
     this.route('info', {path: '/:component_name/instances/:instance_name/info'});
   });
   this.route('yarn-app-attempt', { path: '/yarn-app-attempt/:app_attempt_id'});
-  this.route('error');
-  this.route('notfound', { path: '*:' });
-  this.route('notauth', { path: '*:' });
   this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
   this.route('yarn-queue-apps', { path: '/yarn-queue-apps/:queue_name' });
   this.route('yarn-tools', function() {
@@ -92,6 +89,10 @@ Router.map(function() {
   });
   this.route('yarn-flowrun-metric', { path: '/yarn-flowrun-metric/:flowrun_uid/:metric_id'});
   this.route('timeline-error', {path: 'timeline-error/:error_id'});
+
+  this.route('notauth');
+  this.route('notfound');
+  this.route('error', { path: '*:' });
 });
 
 export default Router;
