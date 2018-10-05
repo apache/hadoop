@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,10 +44,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
@@ -158,17 +162,66 @@ public abstract class HATestUtil {
     FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
     return (DistributedFileSystem)fs;
   }
-  
+
   public static DistributedFileSystem configureObserverReadFs(
       MiniDFSCluster cluster, Configuration conf,
-      int nsIndex) throws IOException, URISyntaxException {
+      boolean isObserverReadEnabled)
+          throws IOException, URISyntaxException {
     conf = new Configuration(conf);
-    String logicalName = getLogicalHostname(cluster);
-    setFailoverConfigurations(cluster, conf, logicalName, nsIndex);
-    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." +
-        logicalName, ObserverReadProxyProvider.class.getName());
-    FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
-    return (DistributedFileSystem) fs;
+    setupHAConfiguration(cluster, conf, 0, ObserverReadProxyProvider.class);
+    DistributedFileSystem dfs = (DistributedFileSystem)
+        FileSystem.get(getLogicalUri(cluster), conf);
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    provider.setObserverReadEnabled(isObserverReadEnabled);
+    return dfs;
+  }
+
+  public static boolean isSentToAnyOfNameNodes(
+      DistributedFileSystem dfs,
+      MiniDFSCluster cluster, int... nnIndices) throws IOException {
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    FailoverProxyProvider.ProxyInfo<?> pi = provider.getLastProxy();
+    for (int nnIdx : nnIndices) {
+      if (pi.proxyInfo.equals(
+          cluster.getNameNode(nnIdx).getNameNodeAddress().toString())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static MiniQJMHACluster setUpObserverCluster(
+      Configuration conf, int numObservers) throws IOException {
+    MiniQJMHACluster qjmhaCluster = new MiniQJMHACluster.Builder(conf)
+        .setNumNameNodes(2 + numObservers)
+        .build();
+    MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
+
+    dfsCluster.transitionToActive(0);
+    dfsCluster.waitActive(0);
+
+    for (int i = 0; i < numObservers; i++) {
+      dfsCluster.transitionToObserver(2 + i);
+    }
+    return qjmhaCluster;
+  }
+
+  public static <P extends FailoverProxyProvider<?>>
+  void setupHAConfiguration(MiniDFSCluster cluster,
+      Configuration conf, int nsIndex, Class<P> classFPP) {
+    MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
+    List<String> nnAddresses = new ArrayList<String>();
+    for (MiniDFSCluster.NameNodeInfo nn : nns) {
+      InetSocketAddress addr = nn.nameNode.getNameNodeAddress();
+      nnAddresses.add(
+          createUri(HdfsConstants.HDFS_URI_SCHEME, addr).toString());
+    }
+    setFailoverConfigurations(
+        conf, getLogicalHostname(cluster), nnAddresses, classFPP);
   }
 
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
@@ -211,11 +264,13 @@ public abstract class HATestUtil {
           public String apply(InetSocketAddress addr) {
             return "hdfs://" + addr.getHostName() + ":" + addr.getPort();
           }
-        }));
+        }), ConfiguredFailoverProxyProvider.class);
   }
 
-  public static void setFailoverConfigurations(Configuration conf, String logicalName,
-      Iterable<String> nnAddresses) {
+  public static <P extends FailoverProxyProvider<?>>
+  void setFailoverConfigurations(
+      Configuration conf, String logicalName,
+      Iterable<String> nnAddresses, Class<P> classFPP) {
     List<String> nnids = new ArrayList<String>();
     int i = 0;
     for (String address : nnAddresses) {
@@ -227,8 +282,8 @@ public abstract class HATestUtil {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, logicalName),
         Joiner.on(',').join(nnids));
-    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
-        ConfiguredFailoverProxyProvider.class.getName());
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+        + "." + logicalName, classFPP.getName());
     conf.set("fs.defaultFS", "hdfs://" + logicalName);
   }
 
