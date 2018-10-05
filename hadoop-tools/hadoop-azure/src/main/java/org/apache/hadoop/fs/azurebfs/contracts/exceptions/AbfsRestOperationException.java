@@ -22,6 +22,7 @@ package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 /**
@@ -57,6 +58,14 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
     this.statusCode = statusCode;
     this.errorCode = AzureServiceErrorCode.getAzureServiceCode(this.statusCode, errorCode);
     this.errorMessage = errorMessage;
+  }
+
+  public AbfsRestOperationException(final HttpException innerException) {
+    super(innerException.getMessage());
+
+    this.statusCode = innerException.getHttpErrorCode();
+    this.errorCode = AzureServiceErrorCode.UNKNOWN;
+    this.errorMessage = innerException.getMessage();
   }
 
   public int getStatusCode() {
