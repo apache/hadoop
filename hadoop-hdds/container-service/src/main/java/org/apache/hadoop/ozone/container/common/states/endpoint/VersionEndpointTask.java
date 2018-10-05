@@ -69,31 +69,39 @@ public class VersionEndpointTask implements
       VersionResponse response = VersionResponse.getFromProtobuf(
           versionResponse);
       rpcEndPoint.setVersion(response);
-      VolumeSet volumeSet = ozoneContainer.getVolumeSet();
-      Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
 
       String scmId = response.getValue(OzoneConsts.SCM_ID);
       String clusterId = response.getValue(OzoneConsts.CLUSTER_ID);
 
-      Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
-          "null");
-      Preconditions.checkNotNull(clusterId, "Reply from SCM: clusterId " +
-          "cannot be null");
+      // Check volumes
+      VolumeSet volumeSet = ozoneContainer.getVolumeSet();
+      volumeSet.readLock();
+      try {
+        Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
 
-      // If version file does not exist create version file and also set scmId
-      for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
-        HddsVolume hddsVolume = entry.getValue();
-        boolean result = HddsVolumeUtil.checkVolume(hddsVolume, scmId,
-            clusterId, LOG);
-        if (!result) {
-          volumeSet.failVolume(hddsVolume.getHddsRootDir().getPath());
+        Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
+            "null");
+        Preconditions.checkNotNull(clusterId, "Reply from SCM: clusterId " +
+            "cannot be null");
+
+        // If version file does not exist create version file and also set scmId
+        for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
+          HddsVolume hddsVolume = entry.getValue();
+          boolean result = HddsVolumeUtil.checkVolume(hddsVolume, scmId,
+              clusterId, LOG);
+          if (!result) {
+            volumeSet.failVolume(hddsVolume.getHddsRootDir().getPath());
+          }
         }
+        if (volumeSet.getVolumesList().size() == 0) {
+          // All volumes are inconsistent state
+          throw new DiskOutOfSpaceException("All configured Volumes are in " +
+              "Inconsistent State");
+        }
+      } finally {
+        volumeSet.readUnlock();
       }
-      if (volumeSet.getVolumesList().size() == 0) {
-        // All volumes are inconsistent state
-        throw new DiskOutOfSpaceException("All configured Volumes are in " +
-            "Inconsistent State");
-      }
+
       ozoneContainer.getDispatcher().setScmId(scmId);
 
       EndpointStateMachine.EndPointStates nextState =

@@ -108,8 +108,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     Preconditions.checkNotNull(scmId, "scmId cannot be null");
 
     File containerMetaDataPath = null;
-    //acquiring volumeset lock and container lock
-    volumeSet.acquireLock();
+    //acquiring volumeset read lock
+    volumeSet.readLock();
     long maxSize = containerData.getMaxSize();
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
@@ -166,7 +166,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       throw new StorageContainerException("Container creation failed.", ex,
           CONTAINER_INTERNAL_ERROR);
     } finally {
-      volumeSet.releaseLock();
+      volumeSet.readUnlock();
     }
   }
 

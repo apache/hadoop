@@ -271,14 +271,14 @@ public class KeyValueHandler extends Handler {
 
   public void populateContainerPathFields(KeyValueContainer container,
       long maxSize) throws IOException {
-    volumeSet.acquireLock();
+    volumeSet.readLock();
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
           .getVolumesList(), maxSize);
       String hddsVolumeDir = containerVolume.getHddsRootDir().toString();
       container.populatePathFields(scmID, containerVolume, hddsVolumeDir);
     } finally {
-      volumeSet.releaseLock();
+      volumeSet.readUnlock();
     }
   }
 
