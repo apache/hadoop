@@ -78,7 +78,7 @@ run mkdir -p ./etc
 run mkdir -p ./libexec
 
 run cp -r "${ROOT}/hadoop-common-project/hadoop-common/src/main/conf" "etc/hadoop"
-
+run cp "${ROOT}/hadoop-ozone/common/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop" "bin/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop.cmd" "bin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
