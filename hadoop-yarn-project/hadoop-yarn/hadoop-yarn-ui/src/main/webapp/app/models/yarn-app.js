@@ -24,10 +24,10 @@ export default DS.Model.extend({
   user: DS.attr("string"),
   queue: DS.attr("string"),
   state: DS.attr("string"),
-  startTime: DS.attr("string"),
+  startTime: DS.attr("number"),
   elapsedTime: DS.attr("string"),
   finalStatus: DS.attr("string"),
-  finishedTime: DS.attr("finishedTime"),
+  finishedTime: DS.attr("number"),
   progress: DS.attr("number"),
   diagnostics: DS.attr("string"),
   amHostHttpAddress: DS.attr("string"),
@@ -70,6 +70,17 @@ export default DS.Model.extend({
   hasFinishedTime: function() {
     return this.get("finishedTime") >= this.get("startTime");
   }.property("hasFinishedTime"),
+
+  formattedStartTime: function() {
+    return Converter.timeStampToDate(this.get('startTime'));
+  }.property('startTime'),
+
+  formattedFinishedTime: function() {
+    if (this.get("finishedTime") < this.get("startTime")) {
+      return "N/A";
+    }
+    return Converter.timeStampToDate(this.get("finishedTime"));
+  }.property('finishedTime'),
 
   formattedElapsedTime: function() {
     return Converter.msToElapsedTimeUnit(this.get("elapsedTime"));
