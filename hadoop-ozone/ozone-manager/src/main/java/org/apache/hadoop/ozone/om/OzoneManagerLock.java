@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
 
 /**
@@ -57,24 +58,26 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
  *     +--> acquireUserLock (will throw Exception)<br>
  * </p>
  * <br>
- *
  * To acquire a user lock you should not hold any Volume/Bucket lock. Similarly
  * to acquire a Volume lock you should not hold any Bucket lock.
- *
  */
 public final class OzoneManagerLock {
 
   private static final String VOLUME_LOCK = "volumeLock";
   private static final String BUCKET_LOCK = "bucketLock";
-
+  private static final String S3_BUCKET_LOCK = "s3BucketLock";
 
   private final LockManager<String> manager;
 
   // To maintain locks held by current thread.
   private final ThreadLocal<Map<String, AtomicInteger>> myLocks =
-      ThreadLocal.withInitial(() -> ImmutableMap.of(
-          VOLUME_LOCK, new AtomicInteger(0),
-          BUCKET_LOCK, new AtomicInteger(0)));
+      ThreadLocal.withInitial(
+          () -> ImmutableMap.of(
+              VOLUME_LOCK, new AtomicInteger(0),
+              BUCKET_LOCK, new AtomicInteger(0),
+              S3_BUCKET_LOCK, new AtomicInteger(0)
+          )
+      );
 
   /**
    * Creates new OzoneManagerLock instance.
@@ -95,11 +98,11 @@ public final class OzoneManagerLock {
    */
   public void acquireUserLock(String user) {
     // Calling thread should not hold any volume or bucket lock.
-    if (hasAnyVolumeLock() || hasAnyBucketLock()) {
+    if (hasAnyVolumeLock() || hasAnyBucketLock() || hasAnyS3Lock()) {
       throw new RuntimeException(
           "Thread '" + Thread.currentThread().getName() +
               "' cannot acquire user lock" +
-              " while holding volume/bucket lock(s).");
+              " while holding volume, bucket or S3 bucket lock(s).");
     }
     manager.lock(OM_USER_PREFIX + user);
   }
@@ -122,6 +125,9 @@ public final class OzoneManagerLock {
    */
   public void acquireVolumeLock(String volume) {
     // Calling thread should not hold any bucket lock.
+    // You can take an Volume while holding S3 bucket lock, since
+    // semantically an S3 bucket maps to the ozone volume. So we check here
+    // only if ozone bucket lock is taken.
     if (hasAnyBucketLock()) {
       throw new RuntimeException(
           "Thread '" + Thread.currentThread().getName() +
@@ -140,6 +146,38 @@ public final class OzoneManagerLock {
   }
 
   /**
+   * Acquires S3 Bucket lock on the given resource.
+   *
+   * <p>If the lock is not available then the current thread becomes
+   * disabled for thread scheduling purposes and lies dormant until the lock has
+   * been acquired.
+   *
+   * @param s3BucketName S3Bucket Name on which the lock has to be acquired
+   */
+  public void acquireS3Lock(String s3BucketName) {
+    // Calling thread should not hold any bucket lock.
+    // You can take an Volume while holding S3 bucket lock, since
+    // semantically an S3 bucket maps to the ozone volume. So we check here
+    // only if ozone bucket lock is taken.
+    if (hasAnyBucketLock()) {
+      throw new RuntimeException(
+          "Thread '" + Thread.currentThread().getName() +
+              "' cannot acquire S3 bucket lock while holding Ozone bucket " +
+              "lock(s).");
+    }
+    manager.lock(OM_S3_PREFIX + s3BucketName);
+    myLocks.get().get(S3_BUCKET_LOCK).incrementAndGet();
+  }
+
+  /**
+   * Releases the volume lock on given resource.
+   */
+  public void releaseS3Lock(String s3BucketName) {
+    manager.unlock(OM_S3_PREFIX + s3BucketName);
+    myLocks.get().get(S3_BUCKET_LOCK).decrementAndGet();
+  }
+
+  /**
    * Acquires bucket lock on the given resource.
    *
    * <p>If the lock is not available then the current thread becomes
@@ -152,7 +190,6 @@ public final class OzoneManagerLock {
     manager.lock(OM_KEY_PREFIX + volume + OM_KEY_PREFIX + bucket);
     myLocks.get().get(BUCKET_LOCK).incrementAndGet();
   }
-
 
   /**
    * Releases the bucket lock on given resource.
@@ -178,4 +215,7 @@ public final class OzoneManagerLock {
     return myLocks.get().get(BUCKET_LOCK).get() != 0;
   }
 
+  private boolean hasAnyS3Lock() {
+    return myLocks.get().get(S3_BUCKET_LOCK).get() != 0;
+  }
 }

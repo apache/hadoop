@@ -139,6 +139,7 @@ public final class OzoneConsts {
 
   public static final String OM_KEY_PREFIX = "/";
   public static final String OM_USER_PREFIX = "$";
+  public static final String OM_S3_PREFIX ="S3:";
 
   /**
    * Max OM Quota size of 1024 PB.

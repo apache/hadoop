@@ -88,6 +88,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |-------------------------------------------------------------------|
    * | openKey            | /volumeName/bucketName/keyName/id->KeyInfo   |
    * |-------------------------------------------------------------------|
+   * | s3Table            | s3BucketName -> /volumeName/bucketName       |
+   * |-------------------------------------------------------------------|
    */
 
   private static final String USER_TABLE = "userTable";
@@ -96,6 +98,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private static final String KEY_TABLE = "keyTable";
   private static final String DELETED_TABLE = "deletedTable";
   private static final String OPEN_KEY_TABLE = "openKeyTable";
+  private static final String S3_TABLE = "s3Table";
 
   private final DBStore store;
 
@@ -108,6 +111,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private final Table keyTable;
   private final Table deletedTable;
   private final Table openKeyTable;
+  private final Table s3Table;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     File metaDir = getOzoneMetaDirPath(conf);
@@ -125,6 +129,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(KEY_TABLE)
         .addTable(DELETED_TABLE)
         .addTable(OPEN_KEY_TABLE)
+        .addTable(S3_TABLE)
         .build();
 
     userTable = this.store.getTable(USER_TABLE);
@@ -144,6 +149,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
     openKeyTable = this.store.getTable(OPEN_KEY_TABLE);
     checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
+
+    s3Table = this.store.getTable(S3_TABLE);
+    checkTableStatus(s3Table, S3_TABLE);
 
   }
 
@@ -176,6 +184,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public Table getOpenKeyTable() {
     return openKeyTable;
   }
+
+  @Override
+  public Table getS3Table() {
+    return s3Table;
+  }
+
 
   private void checkTableStatus(Table table, String name) throws IOException {
     String logMessage = "Unable to get a reference to %s table. Cannot " +

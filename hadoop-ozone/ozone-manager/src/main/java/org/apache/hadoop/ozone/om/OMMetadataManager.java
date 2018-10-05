@@ -236,4 +236,10 @@ public interface OMMetadataManager {
    */
   Table getOpenKeyTable();
 
+  /**
+   * Gets the S3Bucket to Ozone Volume/bucket mapping table.
+   *
+   * @return Table.
+   */
+  Table getS3Table();
 }
