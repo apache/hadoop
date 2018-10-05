@@ -100,10 +100,8 @@ public class TestStateAlignmentContextWithHA {
     cluster.transitionToActive(0);
     cluster.transitionToObserver(2);
 
-    String nameservice = HATestUtil.getLogicalHostname(cluster);
-    HATestUtil.setFailoverConfigurations(cluster, CONF, nameservice, 0);
-    CONF.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX +
-        "." + nameservice, ORPPwithAlignmentContexts.class.getName());
+    HATestUtil.setupHAConfiguration(
+        cluster, CONF, 0, ORPPwithAlignmentContexts.class);
   }
 
   @Before
