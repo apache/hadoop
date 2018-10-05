@@ -160,29 +160,11 @@ export default Ember.Controller.extend({
     return amHostAddress;
   }),
 
-  isAppKillable: Ember.computed("model.app.state", function () {
+  isKillable: Ember.computed("model.app.state", function () {
     if (this.get("model.app.applicationType") === 'yarn-service') {
       return false;
     }
     const killableStates = ['NEW', 'NEW_SAVING', 'SUBMITTED', 'ACCEPTED', 'RUNNING'];
     return killableStates.indexOf(this.get("model.app.state")) > -1;
-  }),
-
-  isServiceDeployedOrRunning: Ember.computed('model.serviceInfo', function() {
-    const serviceInfo = this.get('model.serviceInfo');
-    const stoppedStates = ['STOPPED', 'SUCCEEDED', 'FAILED'];
-    if (serviceInfo) {
-      return stoppedStates.indexOf(serviceInfo.get('state')) === -1;
-    }
-    return false;
-  }),
-
-  isServiceStoppped: Ember.computed('model.serviceInfo', function() {
-    const serviceInfo = this.get('model.serviceInfo');
-    const stoppedStates = ['STOPPED', 'SUCCEEDED'];
-    if (serviceInfo) {
-      return stoppedStates.indexOf(serviceInfo.get('state')) > -1;
-    }
-    return false;
   })
 });
