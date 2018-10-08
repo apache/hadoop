@@ -831,46 +831,7 @@ public class ClientRMService extends AbstractService implements
     ApplicationsRequestScope scope = request.getScope();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
-    Iterator<RMApp> appsIter;
-    // If the query filters by queues, we can avoid considering apps outside
-    // of those queues by asking the scheduler for the apps in those queues.
-    if (queues != null && !queues.isEmpty()) {
-      // Construct an iterator over apps in given queues
-      // Collect list of lists to avoid copying all apps
-      final List<List<ApplicationAttemptId>> queueAppLists =
-          new ArrayList<List<ApplicationAttemptId>>();
-      for (String queue : queues) {
-        List<ApplicationAttemptId> appsInQueue = scheduler.getAppsInQueue(queue);
-        if (appsInQueue != null && !appsInQueue.isEmpty()) {
-          queueAppLists.add(appsInQueue);
-        }
-      }
-      appsIter = new Iterator<RMApp>() {
-        Iterator<List<ApplicationAttemptId>> appListIter = queueAppLists.iterator();
-        Iterator<ApplicationAttemptId> schedAppsIter;
-
-        @Override
-        public boolean hasNext() {
-          // Because queueAppLists has no empty lists, hasNext is whether the
-          // current list hasNext or whether there are any remaining lists
-          return (schedAppsIter != null && schedAppsIter.hasNext())
-              || appListIter.hasNext();
-        }
-        @Override
-        public RMApp next() {
-          if (schedAppsIter == null || !schedAppsIter.hasNext()) {
-            schedAppsIter = appListIter.next().iterator();
-          }
-          return apps.get(schedAppsIter.next().getApplicationId());
-        }
-        @Override
-        public void remove() {
-          throw new UnsupportedOperationException("Remove not supported");
-        }
-      };
-    } else {
-      appsIter = apps.values().iterator();
-    }
+    Iterator<RMApp> appsIter = apps.values().iterator();
     
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     while (appsIter.hasNext() && reports.size() < limit) {
@@ -880,6 +841,12 @@ public class ClientRMService extends AbstractService implements
       if (scope == ApplicationsRequestScope.OWN &&
           !callerUGI.getUserName().equals(application.getUser())) {
         continue;
+      }
+
+      if (queues != null && !queues.isEmpty()) {
+        if (!queues.contains(application.getQueue())) {
+          continue;
+        }
       }
 
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
