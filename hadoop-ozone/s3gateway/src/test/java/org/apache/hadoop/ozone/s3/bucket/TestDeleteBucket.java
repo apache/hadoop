@@ -23,8 +23,10 @@ package org.apache.hadoop.ozone.s3.bucket;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneVolumeStub;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.http.HttpStatus;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,15 +36,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- * This class test HeadBucket functionality.
+ * This class tests delete bucket functionality.
  */
-public class TestHeadBucket {
-
+public class TestDeleteBucket {
   private String volumeName = "myVolume";
   private String bucketName = "myBucket";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
-  private HeadBucket headBucket;
+  private OzoneVolume volumeStub;
+  private DeleteBucket deleteBucket;
 
   @Before
   public void setup() throws Exception {
@@ -54,42 +56,54 @@ public class TestHeadBucket {
     // Create volume and bucket
     objectStoreStub.createVolume(volumeName);
 
-    OzoneVolume volumeStub = objectStoreStub.getVolume(volumeName);
+    volumeStub = objectStoreStub.getVolume(volumeName);
     volumeStub.createBucket(bucketName);
 
     // Create HeadBucket and setClient to OzoneClientStub
-    headBucket = new HeadBucket();
-    headBucket.setClient(clientStub);
+    deleteBucket = new DeleteBucket();
+    deleteBucket.setClient(clientStub);
 
 
   }
 
   @Test
-  public void testHeadBucket() throws Exception {
-
-    Response response = headBucket.head(volumeName, bucketName);
-    assertEquals(200, response.getStatus());
-    assertEquals(headBucket.getRequestId(), response.getHeaderString(
+  public void testDeleteBucket() throws Exception {
+    Response response = deleteBucket.delete(volumeName, bucketName);
+    assertEquals(response.getStatus(), HttpStatus.SC_NO_CONTENT);
+    assertEquals(deleteBucket.getRequestId(), response.getHeaderString(
         "x-amz-request-id"));
   }
 
   @Test
-  public void testHeadFail() {
+  public void testDeleteWithNoSuchBucket() throws Exception {
     try {
-      headBucket.head(volumeName, "unknownbucket");
-    } catch (Exception ex) {
-      if (ex instanceof OS3Exception) {
-        assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(),
-            ((OS3Exception) ex).getCode());
-        assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(), (
-            (OS3Exception) ex).getErrorMessage());
-        assertEquals(headBucket.getRequestId(), (
-            (OS3Exception) ex).getRequestId());
-      } else {
-        fail("testHeadFail failed");
-      }
+      deleteBucket.delete(volumeName, "unknownbucket");
+    } catch (OS3Exception ex) {
+      assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
+      assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(),
+          ex.getErrorMessage());
+      assertEquals(deleteBucket.getRequestId(), ex.getRequestId());
       return;
     }
-    fail("testHeadFail failed");
+    fail("testDeleteWithNoSuchBucket failed");
+  }
+
+
+  @Test
+  public void testDeleteWithBucketNotEmpty() throws Exception {
+    try {
+      String bucket = "nonemptybucket";
+      volumeStub.createBucket(bucket);
+      OzoneVolumeStub stub  = (OzoneVolumeStub) volumeStub;
+      stub.setBucketEmptyStatus(bucket, false);
+      deleteBucket.delete(volumeName, bucket);
+    } catch (OS3Exception ex) {
+      assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getCode(), ex.getCode());
+      assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getErrorMessage(),
+          ex.getErrorMessage());
+      assertEquals(deleteBucket.getRequestId(), ex.getRequestId());
+      return;
+    }
+    fail("testDeleteWithBucketNotEmpty failed");
   }
 }
