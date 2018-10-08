@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.s3.exception;
 
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 
 /**
@@ -36,6 +37,10 @@ public final class S3ErrorTable {
 
   public static final OS3Exception NO_SUCH_BUCKET = new OS3Exception(
       "NoSuchBucket", "The specified bucket does not exist", HTTP_NOT_FOUND);
+
+  public static final OS3Exception BUCKET_NOT_EMPTY = new OS3Exception(
+      "BucketNotEmpty", "The bucket you tried to delete is not empty.",
+      HTTP_CONFLICT);
 
 
   /**
