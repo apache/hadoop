@@ -20,9 +20,9 @@
 @import 'variables.scss';
 
 .yarn-compose-box {
-  position: fixed;
-  bottom: 0;
-  top: 0px;
+  position: absolute;
+  top: 50px;
+  bottom: 40px;
   right: 0px;
   background-color: $yarn-panel-bg;
   border: 1px solid $yarn-border-color;
