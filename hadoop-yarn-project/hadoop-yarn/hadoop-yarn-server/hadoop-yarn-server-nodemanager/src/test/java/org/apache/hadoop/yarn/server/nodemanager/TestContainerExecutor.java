@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.junit.Assert;
@@ -175,6 +177,19 @@ public class TestContainerExecutor {
     ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
     builder.setContainer(container).setUser("foo");
     assertTrue(containerExecutor.reapContainer(builder.build()));
+  }
+
+  @Test
+  public void testExecContainer() throws Exception {
+    try {
+      ContainerExecContext.Builder builder = new ContainerExecContext.Builder();
+      builder.setUser("foo").setAppId("app1").setContainer("container1");
+      ContainerExecContext ctx = builder.build();
+      containerExecutor.execContainer(ctx);
+    } catch (Exception e) {
+      // socket exception should be thrown immediately, without RPC retries.
+      Assert.assertTrue(e instanceof ContainerExecutionException);
+    }
   }
 
   @Test

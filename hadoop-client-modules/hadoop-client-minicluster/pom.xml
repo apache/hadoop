@@ -666,6 +666,10 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>log4j:log4j</exclude>
+                      <exclude>org.eclipse.jetty.websocket:*</exclude>
+                      <exclude>javax.websocket:javax.websocket-api</exclude>
+                      <exclude>javax.annotation:javax.annotation-api</exclude>
+                      <exclude>org.eclipse.jetty:jetty-jndi</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                     </excludes>
                   </artifactSet>
@@ -775,6 +779,12 @@
                       <excludes>
                         <exclude>ehcache-107ext.xsd</exclude>
                         <exclude>ehcache-core.xsd</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty.websocket:javax-websocket-server-impl</artifact>
+                      <excludes>
+                        <exclude>*</exclude>
                       </excludes>
                     </filter>
                   </filters>

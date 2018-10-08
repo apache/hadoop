@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,9 +62,14 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -777,6 +784,32 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       postComplete(container.getContainerId());
     }
     return true;
+  }
+
+  /**
+   * Performs container exec.
+   *
+   * @param ctx Encapsulates information necessary for exec container.
+   * @return stdin and stdout of container exec.
+   * @throws ContainerExecutionException if container exec fails.
+   */
+  @Override
+  public IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException {
+    // TODO: calls PrivilegedOperationExecutor and return IOStream pairs
+    InputStream in = null;
+    OutputStream out = null;
+    int byteSize = 4000;
+    try {
+      in = new ByteArrayInputStream(
+          "This is input command".getBytes(Charset.forName("UTF-8")));
+      out = new ByteArrayOutputStream(byteSize);
+    } catch (IllegalArgumentException e) {
+      LOG.error("Failed to execute command to container runtime", e);
+    }
+    IOStreamPair pair = new IOStreamPair(in, out);
+    System.out.println(pair);
+    return new IOStreamPair(in, out);
   }
 
   @Override
