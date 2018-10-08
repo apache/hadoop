@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -930,8 +931,14 @@ public class RMAdminCLI extends HAAdmin {
         if (resourceTypesFromRM.containsKey(resName)) {
           String[] resourceValue = ResourceUtils.parseResourceValue(resValue);
           if (resourceValue.length == 2) {
+            long value = Long.parseLong(resourceValue[1]);
+            if (!resourceTypesFromRM.get(resName).getUnits()
+                .equals(resourceValue[0])) {
+              value = UnitsConversionUtil.convert(resourceValue[0],
+                  resourceTypesFromRM.get(resName).getUnits(), value);
+            }
             ResourceInformation ri = ResourceInformation.newInstance(resName,
-                resourceValue[0], Long.parseLong(resourceValue[1]));
+                resourceValue[0], value);
             resource.setResourceInformation(resName, ri);
           } else {
             throw new IllegalArgumentException("Invalid resource value: " +

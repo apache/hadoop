@@ -325,7 +325,7 @@ public class TestRMAdminCLI {
   public void testUpdateNodeResourceTypes() throws Exception {
     String nodeIdStr = "0.0.0.0:0";
     String resourceTypes =
-        "memory-mb=1024Mi,vcores=1,resource1=3Gi,resource2=2m";
+        "memory-mb=1Gi,vcores=1,resource1=3Gi,resource2=2m";
     String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
     assertEquals(0, rmAdminCLI.run(args));
     ArgumentCaptor<UpdateNodeResourceRequest> argument =
@@ -342,6 +342,11 @@ public class TestRMAdminCLI {
         ResourceInformation.newInstance("resource2", "m", 2));
 
     ResourceOption resource = resourceMap.get(nodeId);
+    // Ensure memory-mb has been converted to "Mi"
+    assertEquals(1024,
+        resource.getResource().getResourceInformation("memory-mb").getValue());
+    assertEquals("Mi",
+        resource.getResource().getResourceInformation("memory-mb").getUnits());
     assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
         resource);
     assertEquals("resource value for " + nodeIdStr + " is not as expected.",
