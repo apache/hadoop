@@ -37,6 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -215,6 +217,16 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract boolean reapContainer(ContainerReapContext ctx)
       throws IOException;
+
+  /**
+   * Perform interactive docker command into running container.
+   *
+   * @param ctx Encapsulates information necessary for exec containers.
+   * @return return input/output stream if the operation succeeded.
+   * @throws ContainerExecutionException if container exec fails.
+   */
+  public abstract IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException;
 
   /**
    * Delete specified directories as a given user.

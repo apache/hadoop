@@ -41,7 +41,9 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class WebServer extends AbstractService {
 
@@ -64,6 +66,7 @@ public class WebServer extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
+    Map<String, String> params = new HashMap<String, String>();
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,
                           YarnConfiguration.NM_BIND_HOST,
                           WebAppUtils.getNMWebAppURLWithoutScheme(conf));
@@ -102,6 +105,8 @@ public class WebServer extends AbstractService {
           WebApps
             .$for("node", Context.class, this.nmContext, "ws")
             .at(bindAddress)
+            .withServlet("ContainerShellWebSocket", "/container/*",
+              ContainerShellWebSocketServlet.class, params, false)
             .with(conf)
             .withHttpSpnegoPrincipalKey(
               YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
