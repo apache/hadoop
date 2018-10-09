@@ -250,4 +250,29 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<ServiceInfo> getServiceList() throws IOException;
+
+  /*
+   * S3 Specific functionality that is supported by Ozone Manager.
+   */
+
+  /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  void createS3Bucket(String userName, String s3BucketName) throws IOException;
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  String getOzoneBucketMapping(String s3BucketName) throws IOException;
+
 }
+

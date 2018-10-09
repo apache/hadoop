@@ -59,6 +59,8 @@ enum Status {
     METADATA_ERROR = 19;
     OM_NOT_INITIALIZED = 20;
     SCM_VERSION_MISMATCH_ERROR = 21;
+    S3_BUCKET_NOT_FOUND = 22;
+    S3_BUCKET_ALREADY_EXISTS = 23;
 }
 
 
@@ -362,6 +364,24 @@ message ServiceInfo {
     repeated ServicePort servicePorts = 3;
 }
 
+message S3BucketRequest {
+    required string userName = 1;
+    required string s3bucketname = 2;
+}
+
+message S3BucketResponse {
+    required Status status = 1;
+}
+
+message S3BucketInfoRequest {
+    required string s3bucketName = 1;
+}
+message S3BucketInfoResponse {
+    required Status status = 1;
+    optional string ozoneMapping = 2;
+}
+
+
 /**
  The OM service that takes care of Ozone namespace.
 */
@@ -479,4 +499,16 @@ service OzoneManagerService {
     */
     rpc getServiceList(ServiceListRequest)
     returns(ServiceListResponse);
+
+    /**
+     Creates an S3 bucket and creates an ozone mapping for that bucket.
+    */
+    rpc createS3Bucket(S3BucketRequest)
+    returns(S3BucketResponse);
+
+    /**
+    Gets the Ozone Mapping information for the S3Bucket.
+    */
+    rpc getS3Bucketinfo(S3BucketInfoRequest)
+    returns(S3BucketInfoResponse);
 }

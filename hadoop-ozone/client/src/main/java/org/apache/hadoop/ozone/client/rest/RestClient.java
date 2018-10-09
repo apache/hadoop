@@ -820,6 +820,31 @@ public class RestClient implements ClientProtocol {
     }
   }
 
+  @Override
+  public void createS3Bucket(String userName, String s3BucketName)
+      throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  @Override
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  @Override
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  @Override
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
   /**
    * Adds Ozone headers to http request.
    *

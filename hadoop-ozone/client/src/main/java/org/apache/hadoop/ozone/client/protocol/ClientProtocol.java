@@ -322,6 +322,41 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  void createS3Bucket(String userName, String s3BucketName) throws IOException;
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  String getOzoneBucketMapping(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  String getOzoneVolumeName(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  String getOzoneBucketName(String s3BucketName) throws IOException;
+
+  /**
    * Close and release the resources.
    */
   void close() throws IOException;

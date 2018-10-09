@@ -83,6 +83,54 @@ public class ObjectStore {
   }
 
   /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  public void createS3Bucket(String userName, String s3BucketName) throws
+      IOException {
+    proxy.createS3Bucket(userName, s3BucketName);
+  }
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    return proxy.getOzoneBucketMapping(s3BucketName);
+  }
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[0];
+
+  }
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[1];
+  }
+
+
+  /**
    * Returns the volume information.
    * @param volumeName Name of the volume.
    * @return OzoneVolume

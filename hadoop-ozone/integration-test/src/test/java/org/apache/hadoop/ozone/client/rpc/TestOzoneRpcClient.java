@@ -201,6 +201,40 @@ public class TestOzoneRpcClient {
   }
 
   @Test
+  public void testCreateS3Bucket()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+  @Test
+  public void testCreateS3BucketMapping()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+
+    String mapping = store.getOzoneBucketMapping(bucketName);
+    Assert.assertEquals("s3"+userName+"/"+bucketName, mapping);
+    Assert.assertEquals(bucketName, store.getOzoneBucketName(bucketName));
+    Assert.assertEquals("s3"+userName, store.getOzoneVolumeName(bucketName));
+
+  }
+
+  @Test
   public void testCreateBucketWithVersioning()
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();

@@ -74,6 +74,10 @@ public class S3BucketManagerImpl implements S3BucketManager {
     Preconditions.checkArgument(Strings.isNotBlank(userName), "User name " +
         "cannot be null or empty.");
 
+    Preconditions.checkArgument(bucketName.length() >=3 &&
+        bucketName.length() < 64, "Length of the S3 Bucket is not correct.");
+
+
     // TODO: Decide if we want to enforce S3 Bucket Creation Rules in this
     // code path?
     // https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
@@ -105,6 +109,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
               bucketName.getBytes(StandardCharsets.UTF_8));
 
       if (bucket != null) {
+        LOG.debug("Bucket already exists. {}", bucketName);
         throw new OMException(
             "Unable to create S3 bucket. " + bucketName + " already exists.",
             OMException.ResultCodes.S3_BUCKET_ALREADY_EXISTS);
@@ -165,6 +170,12 @@ public class S3BucketManagerImpl implements S3BucketManager {
 
   @Override
   public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    Preconditions.checkArgument(
+        Strings.isNotBlank(s3BucketName),
+        "Bucket name cannot be null or empty.");
+    Preconditions.checkArgument(s3BucketName.length() >=3 &&
+        s3BucketName.length() < 64,
+        "Length of the S3 Bucket is not correct.");
     omMetadataManager.getLock().acquireS3Lock(s3BucketName);
     try {
       byte[] mapping =
