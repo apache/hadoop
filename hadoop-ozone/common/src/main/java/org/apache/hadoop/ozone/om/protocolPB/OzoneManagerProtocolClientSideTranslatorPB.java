@@ -114,6 +114,17 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServiceListResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3BucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3BucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3BucketInfoRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3BucketInfoResponse;
+
+
+
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -761,6 +772,46 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
       throw new IOException("Getting service list failed, error: "
           + resp.getStatus());
     }
+  }
+
+  @Override
+  public void createS3Bucket(String userName, String s3BucketName)
+      throws IOException {
+    S3BucketRequest request  = S3BucketRequest.newBuilder()
+        .setUserName(userName)
+        .setS3Bucketname(s3BucketName)
+        .build();
+    final S3BucketResponse resp;
+    try {
+      resp = rpcProxy.createS3Bucket(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if(resp.getStatus() != Status.OK) {
+      throw new IOException("Creating S3 bucket failed, error: "
+          + resp.getStatus());
+    }
+
+  }
+
+  @Override
+  public String getOzoneBucketMapping(String s3BucketName)
+      throws IOException {
+    S3BucketInfoRequest request  = S3BucketInfoRequest.newBuilder()
+        .setS3BucketName(s3BucketName)
+        .build();
+    final  S3BucketInfoResponse resp;
+    try {
+      resp = rpcProxy.getS3Bucketinfo(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if(resp.getStatus() != Status.OK) {
+      throw new IOException("GetOzoneBucketMapping failed, error:" + resp
+          .getStatus());
+    }
+    return resp.getOzoneMapping();
   }
 
   /**
