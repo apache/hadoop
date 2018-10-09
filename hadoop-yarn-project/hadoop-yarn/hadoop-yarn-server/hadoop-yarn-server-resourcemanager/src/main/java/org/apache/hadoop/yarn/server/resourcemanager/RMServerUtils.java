@@ -97,7 +97,7 @@ public class RMServerUtils {
       "INCORRECT_CONTAINER_VERSION_ERROR";
   private static final String INVALID_CONTAINER_ID =
       "INVALID_CONTAINER_ID";
-  private static final String RESOURCE_OUTSIDE_ALLOWED_RANGE =
+  public static final String RESOURCE_OUTSIDE_ALLOWED_RANGE =
       "RESOURCE_OUTSIDE_ALLOWED_RANGE";
 
   protected static final RecordFactory RECORD_FACTORY =
@@ -235,7 +235,7 @@ public class RMServerUtils {
    * requested memory/vcore is non-negative and not greater than max
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
       RMContext rmContext) throws InvalidResourceRequestException {
     // Get queue from scheduler
     QueueInfo queueInfo = null;
@@ -247,7 +247,7 @@ public class RMServerUtils {
     }
 
     for (ResourceRequest resReq : ask) {
-      SchedulerUtils.normalizeAndvalidateRequest(resReq, maximumResource,
+      SchedulerUtils.normalizeAndValidateRequest(resReq, maximumAllocation,
           queueName, scheduler, rmContext, queueInfo);
     }
   }
@@ -338,7 +338,8 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    request.setCapability(scheduler.getNormalizedResource(request.getCapability()));
+    request.setCapability(scheduler
+        .getNormalizedResource(request.getCapability(), maximumAllocation));
     return true;
   }
 

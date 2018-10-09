@@ -59,7 +59,20 @@ public class FSParentQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
   }
-  
+
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (getName().equals("root")) {
+      return maxContainerAllocation;
+    }
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
+  }
+
   void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
