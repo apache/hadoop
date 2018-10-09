@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
@@ -55,6 +57,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.nio.file.Files;
@@ -412,7 +415,16 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     File f = getBlockFile(block);
     File dir = f.getParentFile();
     File[] files = FileUtil.listFiles(dir);
-    return FsDatasetUtil.getGenerationStampFromFile(files, f);
+    Arrays.sort(files, BlockPoolSlice.FILE_COMPARATOR);
+    String blockName = f.getName();
+    for (int i = 0; i < files.length; i++) {
+      String path = files[i].getName();
+      if (!path.startsWith(blockName)) {
+        continue;
+      }
+      return FsDatasetUtil.getGenerationStampFromFile(files, f, i);
+    }
+    return HdfsConstants.GRANDFATHER_GENERATION_STAMP;
   }
 
   @Override

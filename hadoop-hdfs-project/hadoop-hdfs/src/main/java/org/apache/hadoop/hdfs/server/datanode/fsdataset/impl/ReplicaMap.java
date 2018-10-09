@@ -121,6 +121,30 @@ class ReplicaMap {
   }
 
   /**
+  * Add a replica's meta information into the map, if already exist
+  * return the old replicaInfo.
+  */
+  ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
+    checkBlockPool(bpid);
+    checkBlock(replicaInfo);
+    try (AutoCloseableLock l = lock.acquire()) {
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
+        // Add an entry for block pool if it does not exist already
+        m = new LightWeightResizableGSet<Block, ReplicaInfo>();
+        map.put(bpid, m);
+      }
+      ReplicaInfo oldReplicaInfo = m.get(new Block(replicaInfo.getBlockId()));
+      if (oldReplicaInfo != null) {
+        return oldReplicaInfo;
+      } else {
+        m.put(replicaInfo);
+      }
+      return replicaInfo;
+    }
+  }
+
+  /**
    * Add all entries from the given replica map into the local replica map.
    */
   void addAll(ReplicaMap other) {
