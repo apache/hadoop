@@ -117,13 +117,15 @@ public class ChunkGroupOutputStream extends OutputStream {
     return streamEntries;
   }
 
-  public List<OmKeyLocationInfo> getLocationInfoList() {
+  public List<OmKeyLocationInfo> getLocationInfoList() throws IOException {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     for (ChunkOutputStreamEntry streamEntry : streamEntries) {
       OmKeyLocationInfo info =
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
               .setShouldCreateContainer(false)
-              .setLength(streamEntry.currentPosition).setOffset(0).build();
+              .setLength(streamEntry.currentPosition).setOffset(0)
+              .setBlockCommitSequenceId(streamEntry.getBlockCommitSequenceId())
+              .build();
       locationInfoList.add(info);
     }
     return locationInfoList;
@@ -153,8 +155,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.chunkSize = chunkSize;
     this.requestID = requestId;
     this.retryPolicy = retryPolicy;
-    LOG.debug("Expecting open key with one block, but got" +
-        info.getKeyLocationVersions().size());
   }
 
   /**
@@ -704,6 +704,14 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
         return out.getBuffer();
+      }
+      throw new IOException("Invalid Output Stream for Key: " + key);
+    }
+
+    long getBlockCommitSequenceId() throws IOException {
+      if (this.outputStream instanceof ChunkOutputStream) {
+        ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
+        return out.getBlockCommitSequenceId();
       }
       throw new IOException("Invalid Output Stream for Key: " + key);
     }

@@ -300,6 +300,7 @@ message BlockData {
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
   optional int64 size = 5;
+  optional uint64 blockCommitSequenceId = 6;
 }
 
 // Block Messages.
@@ -331,6 +332,7 @@ message  GetCommittedBlockLengthRequestProto {
 message  GetCommittedBlockLengthResponseProto {
   required DatanodeBlockID blockID = 1;
   required int64 blockLength = 2;
+  optional uint64 blockCommitSequenceId = 3;
 }
 
 message   DeleteBlockResponseProto {

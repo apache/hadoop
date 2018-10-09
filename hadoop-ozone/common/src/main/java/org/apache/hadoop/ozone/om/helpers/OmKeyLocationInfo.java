@@ -31,13 +31,15 @@ public final class OmKeyLocationInfo {
   private final long offset;
   // the version number indicating when this block was added
   private long createVersion;
+  private final long blockCommitSequenceId;
 
   private OmKeyLocationInfo(BlockID blockID, boolean shouldCreateContainer,
-                            long length, long offset) {
+      long length, long offset, long blockCommitSequenceId) {
     this.blockID = blockID;
     this.shouldCreateContainer = shouldCreateContainer;
     this.length = length;
     this.offset = offset;
+    this.blockCommitSequenceId = blockCommitSequenceId;
   }
 
   public void setCreateVersion(long version) {
@@ -84,6 +86,7 @@ public final class OmKeyLocationInfo {
     private boolean shouldCreateContainer;
     private long length;
     private long offset;
+    private long blockCommitSequenceId;
 
     public Builder setBlockID(BlockID blockId) {
       this.blockID = blockId;
@@ -105,9 +108,14 @@ public final class OmKeyLocationInfo {
       return this;
     }
 
+    public Builder setBlockCommitSequenceId(long sequenceId) {
+      this.blockCommitSequenceId = sequenceId;
+      return this;
+    }
+
     public OmKeyLocationInfo build() {
       return new OmKeyLocationInfo(blockID,
-          shouldCreateContainer, length, offset);
+          shouldCreateContainer, length, offset, blockCommitSequenceId);
     }
   }
 
@@ -118,6 +126,7 @@ public final class OmKeyLocationInfo {
         .setLength(length)
         .setOffset(offset)
         .setCreateVersion(createVersion)
+        .setBlockCommitSequenceId(blockCommitSequenceId)
         .build();
   }
 
@@ -126,7 +135,8 @@ public final class OmKeyLocationInfo {
         BlockID.getFromProtobuf(keyLocation.getBlockID()),
         keyLocation.getShouldCreateContainer(),
         keyLocation.getLength(),
-        keyLocation.getOffset());
+        keyLocation.getOffset(),
+        keyLocation.getBlockCommitSequenceId());
     info.setCreateVersion(keyLocation.getCreateVersion());
     return info;
   }
@@ -138,6 +148,7 @@ public final class OmKeyLocationInfo {
         ", shouldCreateContainer=" + shouldCreateContainer +
         ", length=" + length +
         ", offset=" + offset +
+        ", blockCommitSequenceId=" + blockCommitSequenceId +
         ", createVersion=" + createVersion + '}';
   }
 }

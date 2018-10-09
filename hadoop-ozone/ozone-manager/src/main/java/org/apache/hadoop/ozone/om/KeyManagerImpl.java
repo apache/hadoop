@@ -172,6 +172,7 @@ public class KeyManagerImpl implements KeyManager {
         .setBlockID(allocatedBlock.getBlockID())
         .setShouldCreateContainer(allocatedBlock.getCreateContainer())
         .setLength(scmBlockSize)
+        .setBlockCommitSequenceId(0)
         .setOffset(0)
         .build();
     // current version not committed, so new blocks coming now are added to
@@ -236,6 +237,7 @@ public class KeyManagerImpl implements KeyManager {
             .setBlockID(allocatedBlock.getBlockID())
             .setShouldCreateContainer(allocatedBlock.getCreateContainer())
             .setLength(allocateSize)
+            .setBlockCommitSequenceId(0)
             .setOffset(0)
             .build();
         locations.add(subKeyInfo);
