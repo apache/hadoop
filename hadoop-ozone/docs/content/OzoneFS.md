@@ -46,7 +46,7 @@ Please add the following entry to the core-site.xml.
   <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
 </property>
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>o3://localhost:9864/volume/bucket</value>
 </property>
 {{< /highlight >}}
