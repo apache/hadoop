@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.ozone.s3.bucket;
 
-import org.apache.hadoop.ozone.s3.EndpointBase;
-import org.apache.hadoop.ozone.s3.exception.OS3Exception;
-import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-import org.apache.hadoop.ozone.s3.exception.S3ErrorTable.Resource;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.http.HttpStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.ws.rs.HEAD;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+
+import org.apache.hadoop.ozone.s3.EndpointBase;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Finds the bucket exists or not.
@@ -46,7 +45,6 @@ public class HeadBucket extends EndpointBase {
   public Response head(@PathParam("volume") String volumeName,
                        @PathParam("bucket") String bucketName)
       throws Exception {
-    setRequestId(OzoneUtils.getRequestID());
     try {
       getVolume(volumeName).getBucket(bucketName);
       // Not sure what kind of error, we need to show for volume not exist
@@ -55,13 +53,12 @@ public class HeadBucket extends EndpointBase {
       LOG.error("Exception occurred in headBucket", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-                .NO_SUCH_BUCKET, getRequestId(), Resource.BUCKET);
+                .NO_SUCH_BUCKET, Resource.BUCKET);
         throw os3Exception;
       } else {
         throw ex;
       }
     }
-    return Response.ok().status(HttpStatus.SC_OK).header("x-amz-request-id",
-        getRequestId()).build();
+    return Response.ok().build();
   }
 }
