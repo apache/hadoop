@@ -103,8 +103,8 @@ public final class SelfSignedCertificate {
 
 
     ContentSigner contentSigner =
-        new JcaContentSignerBuilder(
-            config.getSignatureAlgo()).build(key.getPrivate());
+        new JcaContentSignerBuilder(config.getSignatureAlgo())
+            .setProvider(config.getProvider()).build(key.getPrivate());
 
     // Please note: Since this is a root certificate we use "ONE" as the
     // serial number. Also note that skip enforcing locale or UTC. We are
