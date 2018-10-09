@@ -513,7 +513,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   private static StartupOption parseArguments(String[] args) {
     int argsLen = (args == null) ? 0 : args.length;
-    StartupOption startOpt = StartupOption.HELP;
+    StartupOption startOpt = null;
     if (argsLen == 0) {
       startOpt = StartupOption.REGULAR;
     }
