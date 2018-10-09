@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
-import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -41,8 +40,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 /**
  * Test flush operation.
@@ -221,8 +218,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   private void testFlush(boolean flushEnabled) throws Exception {
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) getFileSystem();
 
     // Simulate setting "fs.azure.enable.flush" to true or false

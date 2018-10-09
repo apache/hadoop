@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -37,6 +35,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   private static final String DEFAULT_FILE_PERMISSION_VALUE = "640";
   private static final String DEFAULT_DIR_PERMISSION_VALUE = "750";
   private static final String DEFAULT_UMASK_VALUE = "027";
+  private static final String FULL_PERMISSION = "777";
 
   private static final Path TEST_FILE = new Path("testFile");
   private static final Path TEST_FOLDER = new Path("testDir");
@@ -54,7 +53,6 @@ public class ITestAzureBlobFileSystemFileStatus extends
     assertEquals("root listing", 0, rootls.length);
   }
 
-  @Ignore("When running against live abfs with Oauth account, this test will fail. Need to check the tenant.")
   @Test
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
@@ -69,13 +67,16 @@ public class ITestAzureBlobFileSystemFileStatus extends
 
     String errorInStatus = "error in " + fileStatus + " from " + fs;
 
-    // When running with Oauth, the owner and group info retrieved from server will be digit ids.
-    if (this.getAuthType() != AuthType.OAuth && !fs.isSecureScheme()) {
+    if (!fs.getIsNamespaceEnabled()) {
       assertEquals(errorInStatus + ": owner",
               fs.getOwnerUser(), fileStatus.getOwner());
       assertEquals(errorInStatus + ": group",
               fs.getOwnerUserPrimaryGroup(), fileStatus.getGroup());
+      assertEquals(new FsPermission(FULL_PERMISSION), fileStatus.getPermission());
     } else {
+      // When running with namespace enabled account,
+      // the owner and group info retrieved from server will be digit ids.
+      // hence skip the owner and group validation
       if (isDir) {
         assertEquals(errorInStatus + ": permission",
                 new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission());
@@ -88,7 +89,6 @@ public class ITestAzureBlobFileSystemFileStatus extends
     return fileStatus;
   }
 
-  @Ignore("When running against live abfs with Oauth account, this test will fail. Need to check the tenant.")
   @Test
   public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
