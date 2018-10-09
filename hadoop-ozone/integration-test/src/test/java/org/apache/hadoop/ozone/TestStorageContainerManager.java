@@ -58,6 +58,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -434,6 +435,18 @@ public class TestStorageContainerManager {
     exception.expect(SCMException.class);
     exception.expectMessage("SCM not initialized.");
     StorageContainerManager.createSCM(null, conf);
+  }
+
+  @Test
+  public void testSCMInitializationReturnCode() throws IOException {
+    ExitUtil.disableSystemExit();
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    // Set invalid args
+    String[] invalidArgs = {"--zxcvbnm"};
+    exception.expect(ExitUtil.ExitException.class);
+    exception.expectMessage("ExitException");
+    StorageContainerManager.createSCM(invalidArgs, conf);
   }
 
   @Test
