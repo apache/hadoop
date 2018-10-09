@@ -2744,22 +2744,6 @@
   <!-- YARN registry -->
 
   <property>
-    <name>hadoop.registry.rm.enabled</name>
-    <value>false</value>
-    <description>
-      Is the registry enabled in the YARN Resource Manager?
-
-      If true, the YARN RM will, as needed.
-      create the user and system paths, and purge
-      service records when containers, application attempts
-      and applications complete.
-
-      If false, the paths must be created by other means,
-      and no automatic cleanup of service records will take place.
-    </description>
-  </property>
-
-  <property>
     <name>hadoop.registry.zk.root</name>
     <value>/registry</value>
     <description>
