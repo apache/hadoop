@@ -94,6 +94,7 @@ public class CGroupElasticMemoryController extends Thread {
     boolean controlVirtual = controlVirtualMemory && !controlPhysicalMemory;
     Runnable oomHandlerTemp =
         getDefaultOOMHandler(conf, context, oomHandlerOverride, controlVirtual);
+    LOG.info("Using OOMHandler: " + oomHandlerTemp.getClass().getName());
     if (controlPhysicalMemory && controlVirtualMemory) {
       LOG.warn(
           NM_ELASTIC_MEMORY_CONTROL_ENABLED + " is on. " +
@@ -138,11 +139,10 @@ public class CGroupElasticMemoryController extends Thread {
       Configuration conf, Context context, Runnable oomHandlerLocal,
       boolean controlVirtual)
       throws YarnException {
-    Class oomHandlerClass =
-        conf.getClass(
-            YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_HANDLER,
-            DefaultOOMHandler.class);
     if (oomHandlerLocal == null) {
+      Class oomHandlerClass = conf.getClass(
+          YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_HANDLER,
+          DefaultOOMHandler.class);
       try {
         Constructor constr = oomHandlerClass.getConstructor(
             Context.class, boolean.class);
@@ -284,12 +284,15 @@ public class CGroupElasticMemoryController extends Thread {
       // This loop can be exited by terminating the process
       // with stopListening()
       while ((read = events.read(event)) == event.length) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("OOM event notification received from oom-listener");
+        }
         // An OOM event has occurred
         resolveOOM(executor);
       }
 
       if (read != -1) {
-        LOG.warn(String.format("Characters returned from event hander: %d",
+        LOG.warn(String.format("Characters returned from event handler: %d",
             read));
       }
 

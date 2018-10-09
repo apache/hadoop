@@ -1096,6 +1096,10 @@ public class ContainersMonitorImpl extends AbstractService implements
   private void setLatestContainersUtilization(ResourceUtilization utilization) {
     this.latestContainersUtilization = new ContainersResourceUtilization(
         utilization, Time.now());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updated latest containers resource utilization to " +
+          latestContainersUtilization.getUtilization());
+    }
   }
 
   /**

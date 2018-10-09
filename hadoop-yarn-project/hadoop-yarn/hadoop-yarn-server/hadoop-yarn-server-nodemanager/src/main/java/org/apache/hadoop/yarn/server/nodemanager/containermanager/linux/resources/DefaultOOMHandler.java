@@ -181,6 +181,9 @@ public class DefaultOOMHandler implements Runnable {
             CGroupsHandler.CGroupController.MEMORY,
             "",
             CGROUP_PARAM_MEMORY_OOM_CONTROL);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("OOM status read from cgroups: " + status);
+        }
         if (!status.contains(CGroupsHandler.UNDER_OOM)) {
           break;
         }

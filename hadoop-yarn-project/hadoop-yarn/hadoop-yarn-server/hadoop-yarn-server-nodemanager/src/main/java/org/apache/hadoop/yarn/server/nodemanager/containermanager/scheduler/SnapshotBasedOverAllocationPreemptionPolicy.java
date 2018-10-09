@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.records.ResourceThresholds;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link NMAllocationPreemptionPolicy} based on the
@@ -29,6 +31,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
  */
 public class SnapshotBasedOverAllocationPreemptionPolicy
     extends NMAllocationPreemptionPolicy {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SnapshotBasedOverAllocationPreemptionPolicy.class);
   private final int absoluteMemoryPreemptionThresholdMb;
   private final float cpuPreemptionThreshold;
   private final int maxTimesCpuOverPreemption;
@@ -52,6 +56,10 @@ public class SnapshotBasedOverAllocationPreemptionPolicy
     ResourceUtilization utilization =
         getContainersMonitor().getContainersUtilization(true).getUtilization();
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The latest container utilization is"  + utilization);
+    }
+
     int memoryOverLimit = utilization.getPhysicalMemory() -
         absoluteMemoryPreemptionThresholdMb;
     float vcoreOverLimit = utilization.getCPU() - cpuPreemptionThreshold;
@@ -59,6 +67,10 @@ public class SnapshotBasedOverAllocationPreemptionPolicy
     if (vcoreOverLimit > 0) {
       timesCpuOverPreemption++;
       if (timesCpuOverPreemption > maxTimesCpuOverPreemption) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("CPU utilization is over the preemption threshold " +
+              timesCpuOverPreemption + " times consecutively.");
+        }
         timesCpuOverPreemption = 0;
       } else {
         // report no over limit for cpu if # of times CPU is over the preemption
