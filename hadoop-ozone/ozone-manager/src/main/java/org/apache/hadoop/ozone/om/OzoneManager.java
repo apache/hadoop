@@ -122,6 +122,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final ScmBlockLocationProtocol scmBlockClient;
   private final StorageContainerLocationProtocol scmContainerClient;
   private ObjectName omInfoBeanName;
+  private final S3BucketManager s3BucketManager;
 
   private OzoneManager(OzoneConfiguration conf) throws IOException {
     Preconditions.checkNotNull(conf);
@@ -159,6 +160,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     metadataManager = new OmMetadataManagerImpl(configuration);
     volumeManager = new VolumeManagerImpl(metadataManager, configuration);
     bucketManager = new BucketManagerImpl(metadataManager);
+    s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
+        volumeManager, bucketManager);
     metrics = OMMetrics.create();
     keyManager =
         new KeyManagerImpl(scmBlockClient, metadataManager, configuration,
@@ -1127,6 +1130,26 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // metrics.incNumGetServiceListFails()
     return services;
   }
+
+  @Override
+  /**
+   * {@inheritDoc}
+   */
+  public void createS3Bucket(String userName, String s3BucketName)
+      throws IOException {
+    s3BucketManager.createS3Bucket(userName, s3BucketName);
+  }
+
+  @Override
+  /**
+   * {@inheritDoc}
+   */
+  public String getOzoneBucketMapping(String s3BucketName)
+      throws IOException {
+    return s3BucketManager.getOzoneBucketMapping(s3BucketName);
+  }
+
+
 
   /**
    * Startup options.

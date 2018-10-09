@@ -65,6 +65,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -565,6 +566,37 @@ public class RpcClient implements ClientProtocol {
                         keyInfo.getCreationTime(),
                         keyInfo.getModificationTime(),
                         ozoneKeyLocations);
+  }
+
+  @Override
+  public void createS3Bucket(String userName, String s3BucketName)
+      throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(userName), "user name " +
+        "cannot be null or empty.");
+
+    Preconditions.checkArgument(Strings.isNotBlank(s3BucketName), "bucket " +
+        "name cannot be null or empty.");
+    ozoneManagerClient.createS3Bucket(userName, s3BucketName);
+  }
+
+  @Override
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(s3BucketName), "bucket " +
+        "name cannot be null or empty.");
+    return ozoneManagerClient.getOzoneBucketMapping(s3BucketName);
+  }
+
+  @Override
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[0];
+
+  }
+
+  @Override
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[1];
   }
 
   @Override
