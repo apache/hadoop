@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -67,7 +66,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
   public ITestAzureBlobFileSystemRandomRead() throws Exception {
     super();
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Test
@@ -98,6 +96,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testRandomRead() throws Exception {
+    Assume.assumeFalse("This test does not support namespace enabled account",
+            this.getFileSystem().getIsNamespaceEnabled());
     assumeHugeFileExists();
     try (
             FSDataInputStream inputStreamV1
@@ -413,6 +413,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
   @Test
   public void testRandomReadPerformance() throws Exception {
+    Assume.assumeFalse("This test does not support namespace enabled account",
+            this.getFileSystem().getIsNamespaceEnabled());
     createTestFile();
     assumeHugeFileExists();
 
@@ -523,11 +525,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   private void createTestFile() throws Exception {
-    final AzureBlobFileSystem abFs = this.getFileSystem();
-    // test only valid for non-namespace enabled account
-    Assume.assumeFalse(abFs.getIsNamespaceEnabled());
-    FileSystem fs = this.getWasbFileSystem();
-
+    final AzureBlobFileSystem fs = this.getFileSystem();
     if (fs.exists(TEST_FILE_PATH)) {
       FileStatus status = fs.getFileStatus(TEST_FILE_PATH);
       if (status.getLen() >= TEST_FILE_SIZE) {
