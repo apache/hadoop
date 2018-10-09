@@ -1106,27 +1106,6 @@
   </property>
 
   <property>
-    <name>hdds.write.lock.reporting.threshold.ms</name>
-    <value>5000</value>
-    <tag>OZONE, DATANODE, MANAGEMENT</tag>
-    <description>
-      When a write lock is held for a long time, this will be logged as the
-      lock is released. This sets how long the lock must be held for logging
-      to occur.
-    </description>
-  </property>
-
-  <property>
-    <name>hdds.lock.suppress.warning.interval.ms</name>
-    <value>10000</value>
-    <tag>OZONE, DATANODE, MANAGEMENT</tag>
-    <description>
-      Instrumentation reporting long critical sections will suppress
-      consecutive warnings within this interval.
-    </description>
-  </property>
-
-  <property>
     <name>hdds.command.status.report.interval</name>
     <value>30s</value>
     <tag>OZONE, DATANODE, MANAGEMENT</tag>
