@@ -34,6 +34,7 @@ import java.util.ArrayList;
 public class BlockData {
   private final BlockID blockID;
   private final Map<String, String> metadata;
+  private long blockCommitSequenceId;
 
   /**
    * Represent a list of chunks.
@@ -64,6 +65,15 @@ public class BlockData {
     this.blockID = blockID;
     this.metadata = new TreeMap<>();
     this.size = 0;
+    blockCommitSequenceId = 0;
+  }
+
+  public long getBlockCommitSequenceId() {
+    return blockCommitSequenceId;
+  }
+
+  public void setBlockCommitSequenceId(long blockCommitSequenceId) {
+    this.blockCommitSequenceId = blockCommitSequenceId;
   }
 
   /**
@@ -85,6 +95,7 @@ public class BlockData {
     if (data.hasSize()) {
       Preconditions.checkArgument(data.getSize() == blockData.getSize());
     }
+    blockData.setBlockCommitSequenceId(data.getBlockCommitSequenceId());
     return blockData;
   }
 
@@ -104,6 +115,7 @@ public class BlockData {
     }
     builder.addAllChunks(getChunks());
     builder.setSize(size);
+    builder.setBlockCommitSequenceId(blockCommitSequenceId);
     return builder.build();
   }
 

@@ -244,6 +244,7 @@ message KeyLocation {
     required uint64 length = 4;
     // indicated at which version this block gets created.
     optional uint64 createVersion = 5;
+    optional uint64 blockCommitSequenceId = 6;
 }
 
 message KeyLocationList {
