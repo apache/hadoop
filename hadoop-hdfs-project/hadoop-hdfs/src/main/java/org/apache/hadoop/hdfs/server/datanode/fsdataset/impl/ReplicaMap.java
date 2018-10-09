@@ -154,7 +154,7 @@ class ReplicaMap {
       if (oldReplicaInfo != null) {
         return oldReplicaInfo;
       } else {
-        set.add(replicaInfo);
+        set.addOrReplace(replicaInfo);
       }
       return replicaInfo;
     }

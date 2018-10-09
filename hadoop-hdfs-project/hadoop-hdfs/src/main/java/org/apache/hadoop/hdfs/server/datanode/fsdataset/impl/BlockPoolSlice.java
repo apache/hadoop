@@ -183,8 +183,10 @@ class BlockPoolSlice {
                                                      .setConf(conf)
                                                      .setInitialUsed(loadDfsUsed())
                                                      .build();
-    // initialize add replica fork join pool
-    initializeAddReplicaPool(conf);
+    if (addReplicaThreadPool == null) {
+      // initialize add replica fork join pool
+      initializeAddReplicaPool(conf);
+    }
     // Make the dfs usage to be saved during shutdown.
     shutdownHook = new Runnable() {
       @Override
