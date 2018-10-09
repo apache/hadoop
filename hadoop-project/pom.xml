@@ -1586,6 +1586,11 @@
         <artifactId>jcodings</artifactId>
         <version>1.0.13</version>
       </dependency>
+      <dependency>
+        <groupId>javax.activation</groupId>
+        <artifactId>javax.activation-api</artifactId>
+        <version>1.2.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
