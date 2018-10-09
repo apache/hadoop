@@ -181,7 +181,11 @@ public class AMRMClientRelayer extends AbstractService
     this.amRegistrationRequest = registerRequest;
   }
 
-  public void setRMClient(ApplicationMasterProtocol client){
+  public String getRMIdentifier() {
+    return this.rmId;
+  }
+
+  public void setRMClient(ApplicationMasterProtocol client) {
     this.rmClient = client;
   }
 

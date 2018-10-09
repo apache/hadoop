@@ -201,9 +201,6 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     LOG.info("Number of allocated containers in the original request: "
         + Integer.toString(allocateResponse.getAllocatedContainers().size()));
 
-    // Make sure this request is picked up by all async heartbeat handlers
-    interceptor.drainAllAsyncQueue(false);
-
     // Send max 10 heart beats to receive all the containers. If not, we will
     // fail the test
     int numHeartbeat = 0;
@@ -217,8 +214,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       checkAMRMToken(allocateResponse.getAMRMToken());
       lastResponseId = allocateResponse.getResponseId();
 
-      containers.addAll(allocateResponse.getAllocatedContainers());
+      // Make sure this request is picked up by all async heartbeat handlers
+      interceptor.drainAllAsyncQueue(false);
 
+      containers.addAll(allocateResponse.getAllocatedContainers());
       LOG.info("Number of allocated containers in this request: "
           + Integer.toString(allocateResponse.getAllocatedContainers().size()));
       LOG.info("Total number of allocated containers: "
@@ -258,9 +257,6 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     LOG.info("Number of containers received in the original request: "
         + Integer.toString(newlyFinished.size()));
 
-    // Make sure this request is picked up by all async heartbeat handlers
-    interceptor.drainAllAsyncQueue(false);
-
     // Send max 10 heart beats to receive all the containers. If not, we will
     // fail the test
     int numHeartbeat = 0;
@@ -273,10 +269,12 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       checkAMRMToken(allocateResponse.getAMRMToken());
       lastResponseId = allocateResponse.getResponseId();
 
+      // Make sure this request is picked up by all async heartbeat handlers
+      interceptor.drainAllAsyncQueue(false);
+
       newlyFinished = getCompletedContainerIds(
           allocateResponse.getCompletedContainersStatuses());
       containersForReleasedContainerIds.addAll(newlyFinished);
-
       LOG.info("Number of containers received in this request: "
           + Integer.toString(newlyFinished.size()));
       LOG.info("Total number of containers received: "
@@ -438,7 +436,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     ExecutorCompletionService<RegisterApplicationMasterResponse> compSvc =
         new ExecutorCompletionService<>(threadpool);
 
-    Object syncObj = MockResourceManagerFacade.getSyncObj();
+    Object syncObj = MockResourceManagerFacade.getRegisterSyncObj();
 
     // Two register threads
     synchronized (syncObj) {
