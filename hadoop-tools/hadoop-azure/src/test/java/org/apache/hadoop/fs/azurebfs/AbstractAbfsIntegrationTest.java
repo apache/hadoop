@@ -133,7 +133,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
-    if (!isIPAddress && authType == AuthType.SharedKey) {
+    // Only live account without namespace support can run ABFS&WASB compatibility tests
+    if (!isIPAddress && !abfs.getIsNamespaceEnabled()) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
