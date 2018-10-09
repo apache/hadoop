@@ -219,7 +219,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     ContainerProtos.PutBlockResponseProto response;
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
-        .allocateContainer(xceiverClientManager.getType(),
+        .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
@@ -249,6 +249,8 @@ public class TestGetCommittedBlockLengthAndPutKey {
         blockID);
     Assert.assertEquals(
         response.getCommittedBlockLength().getBlockLength(), data.length);
+    Assert.assertTrue(
+        response.getCommittedBlockLength().getBlockCommitSequenceId() > 0);
     xceiverClientManager.releaseClient(client);
   }
 }

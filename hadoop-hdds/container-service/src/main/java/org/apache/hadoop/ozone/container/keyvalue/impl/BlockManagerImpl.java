@@ -85,7 +85,6 @@ public class BlockManagerImpl implements BlockManager {
     Preconditions.checkNotNull(db, "DB cannot be null here");
     db.put(Longs.toByteArray(data.getLocalID()), data.getProtoBufMessage()
         .toByteArray());
-
     // Increment keycount here
     container.getContainerData().incrKeyCount();
     return data.getSize();

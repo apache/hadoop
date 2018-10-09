@@ -133,10 +133,13 @@ public final class BlockUtils {
    */
   public static ContainerCommandResponseProto putBlockResponseSuccess(
       ContainerCommandRequestProto msg, long blockLength) {
+    ContainerProtos.BlockData blockData = msg.getPutBlock().getBlockData();
     GetCommittedBlockLengthResponseProto.Builder
         committedBlockLengthResponseBuilder =
         getCommittedBlockLengthResponseBuilder(blockLength,
-            msg.getPutBlock().getBlockData().getBlockID());
+            blockData.getBlockID());
+    committedBlockLengthResponseBuilder
+        .setBlockCommitSequenceId(blockData.getBlockCommitSequenceId());
     PutBlockResponseProto.Builder putKeyResponse =
         PutBlockResponseProto.newBuilder();
     putKeyResponse
