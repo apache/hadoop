@@ -59,7 +59,7 @@ public class AMHeartbeatRequestHandler extends Thread {
   private int lastResponseId;
 
   public AMHeartbeatRequestHandler(Configuration conf,
-      ApplicationId applicationId) {
+      ApplicationId applicationId, AMRMClientRelayer rmProxyRelayer) {
     super("AMHeartbeatRequestHandler Heartbeat Handler Thread");
     this.setUncaughtExceptionHandler(
         new HeartBeatThreadUncaughtExceptionHandler());
@@ -69,6 +69,7 @@ public class AMHeartbeatRequestHandler extends Thread {
     this.conf = conf;
     this.applicationId = applicationId;
     this.requestQueue = new LinkedBlockingQueue<>();
+    this.rmProxyRelayer = rmProxyRelayer;
 
     resetLastResponseId();
   }
@@ -154,13 +155,6 @@ public class AMHeartbeatRequestHandler extends Thread {
    */
   public void resetLastResponseId() {
     this.lastResponseId = 0;
-  }
-
-  /**
-   * Set the AMRMClientRelayer for RM connection.
-   */
-  public void setAMRMClientRelayer(AMRMClientRelayer relayer) {
-    this.rmProxyRelayer = relayer;
   }
 
   /**
