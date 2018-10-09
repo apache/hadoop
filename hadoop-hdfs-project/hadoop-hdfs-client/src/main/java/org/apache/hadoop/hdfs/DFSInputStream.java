@@ -89,6 +89,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 
+import static org.apache.hadoop.hdfs.util.IOUtilsClient.updateReadStatistics;
+
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles
  * negotiation of the namenode and various datanodes as necessary.
@@ -768,6 +770,9 @@ public class DFSInputStream extends FSInputStream
             // got a EOS from reader though we expect more data on it.
             throw new IOException("Unexpected EOS from the reader");
           }
+          updateReadStatistics(readStatistics, result, blockReader);
+          dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
+              result);
           return result;
         } catch (ChecksumException ce) {
           throw ce;
