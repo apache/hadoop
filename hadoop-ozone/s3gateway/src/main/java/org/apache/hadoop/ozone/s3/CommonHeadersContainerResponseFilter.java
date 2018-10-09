@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.s3;
 
+import javax.inject.Inject;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerResponseContext;
 import javax.ws.rs.container.ContainerResponseFilter;
@@ -30,10 +31,18 @@ import java.io.IOException;
 public class CommonHeadersContainerResponseFilter implements
     ContainerResponseFilter {
 
+  @Inject
+  private RequestIdentifier requestIdentifier;
+
   @Override
   public void filter(ContainerRequestContext containerRequestContext,
       ContainerResponseContext containerResponseContext) throws IOException {
+
     containerResponseContext.getHeaders().add("Server", "Ozone");
+    containerResponseContext.getHeaders()
+        .add("x-amz-id-2", requestIdentifier.getAmzId());
+    containerResponseContext.getHeaders()
+        .add("x-amz-request-id", requestIdentifier.getRequestId());
 
   }
 }

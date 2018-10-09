@@ -70,8 +70,7 @@ public class TestDeleteBucket {
   public void testDeleteBucket() throws Exception {
     Response response = deleteBucket.delete(volumeName, bucketName);
     assertEquals(response.getStatus(), HttpStatus.SC_NO_CONTENT);
-    assertEquals(deleteBucket.getRequestId(), response.getHeaderString(
-        "x-amz-request-id"));
+
   }
 
   @Test
@@ -82,7 +81,6 @@ public class TestDeleteBucket {
       assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
       assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(),
           ex.getErrorMessage());
-      assertEquals(deleteBucket.getRequestId(), ex.getRequestId());
       return;
     }
     fail("testDeleteWithNoSuchBucket failed");
@@ -101,7 +99,6 @@ public class TestDeleteBucket {
       assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getCode(), ex.getCode());
       assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getErrorMessage(),
           ex.getErrorMessage());
-      assertEquals(deleteBucket.getRequestId(), ex.getRequestId());
       return;
     }
     fail("testDeleteWithBucketNotEmpty failed");

@@ -26,11 +26,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.ozone.s3.EndpointBase;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+
 import org.apache.http.HttpStatus;
 
 /**
@@ -45,27 +44,25 @@ public class DeleteBucket extends EndpointBase {
                          @PathParam("bucket") String bucketName)
       throws IOException, OS3Exception {
 
-    setRequestId(OzoneUtils.getRequestID());
-
     try {
       getVolume(volumeName).deleteBucket(bucketName);
     } catch (IOException ex) {
       if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .BUCKET_NOT_EMPTY, getRequestId(), S3ErrorTable.Resource.BUCKET);
+            .BUCKET_NOT_EMPTY, S3ErrorTable.Resource.BUCKET);
         throw os3Exception;
       } else if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .NO_SUCH_BUCKET, getRequestId(), S3ErrorTable.Resource.BUCKET);
+            .NO_SUCH_BUCKET, S3ErrorTable.Resource.BUCKET);
         throw os3Exception;
       } else {
         throw ex;
       }
     }
 
-    return Response.ok().status(HttpStatus.SC_NO_CONTENT).header(
-        "x-amz-request-id", getRequestId()).header("x-amz-id-2",
-        RandomStringUtils.randomAlphanumeric(8, 16)).build();
+    return Response
+        .status(HttpStatus.SC_NO_CONTENT)
+        .build();
 
   }
 }
