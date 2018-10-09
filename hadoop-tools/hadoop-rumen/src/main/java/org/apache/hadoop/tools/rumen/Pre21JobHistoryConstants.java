@@ -44,12 +44,17 @@ public class Pre21JobHistoryConstants {
   /**
    * This enum contains some of the values commonly used by history log events. 
    * since values in history can only be strings - Values.name() is used in 
-   * most places in history file. 
+   * most places in history file.
+   *
+   * Note: "SUCCEEDED" is actually not a pre-0.21 value, but it might appear
+   * in jhist logs when the event is an unsuccessful job completion, yet, the
+   * overall job status is "SUCCEEDED".
    */
   public static enum Values {
-    SUCCESS, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING, PREP, SETUP
+    SUCCESS, SUCCEEDED, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING, PREP,
+    SETUP
   }
-  
+
   /**
    * Regex for Pre21 V1(old) jobhistory filename
    *   i.e jt-identifier_job-id_user-name_job-name
