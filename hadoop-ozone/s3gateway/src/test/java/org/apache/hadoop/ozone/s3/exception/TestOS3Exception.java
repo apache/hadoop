@@ -32,7 +32,8 @@ public class TestOS3Exception {
     OS3Exception ex = new OS3Exception("AccessDenied", "Access Denied",
         403);
     String requestId = OzoneUtils.getRequestID();
-    ex = S3ErrorTable.newError(ex, requestId, S3ErrorTable.Resource.BUCKET);
+    ex = S3ErrorTable.newError(ex, S3ErrorTable.Resource.BUCKET);
+    ex.setRequestId(requestId);
     String val = ex.toXml();
     String formatString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<Error>\n" +

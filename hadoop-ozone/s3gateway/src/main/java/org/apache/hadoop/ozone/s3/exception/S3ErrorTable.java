@@ -46,15 +46,12 @@ public final class S3ErrorTable {
   /**
    * Create a new instance of Error.
    * @param e Error Template
-   * @param requestID
    * @param resource Resource associated with this exception
    * @return creates a new instance of error based on the template
    */
-  public static OS3Exception newError(OS3Exception e, String requestID,
-                                         Resource resource){
+  public static OS3Exception newError(OS3Exception e, Resource resource) {
     OS3Exception err =  new OS3Exception(e.getCode(), e.getErrorMessage(),
         e.getHttpCode());
-    err.setRequestId(requestID);
     err.setResource(resource.getResource());
     return err;
   }

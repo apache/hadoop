@@ -69,8 +69,7 @@ public class TestHeadBucket {
 
     Response response = headBucket.head(volumeName, bucketName);
     assertEquals(200, response.getStatus());
-    assertEquals(headBucket.getRequestId(), response.getHeaderString(
-        "x-amz-request-id"));
+
   }
 
   @Test
@@ -83,8 +82,6 @@ public class TestHeadBucket {
             ((OS3Exception) ex).getCode());
         assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(), (
             (OS3Exception) ex).getErrorMessage());
-        assertEquals(headBucket.getRequestId(), (
-            (OS3Exception) ex).getRequestId());
       } else {
         fail("testHeadFail failed");
       }
