@@ -1162,10 +1162,11 @@ public class FairScheduler extends
     for (RMContainer rmContainer : promoted)  {
       FSAppAttempt appAttempt = getSchedulerApp(
           rmContainer.getApplicationAttemptId());
-      appAttempt.opportunisticContainerPromoted(rmContainer);
-
-      promotion.put(rmContainer.getContainer(),
-          ContainerUpdateType.PROMOTE_EXECUTION_TYPE);
+      if (appAttempt != null) {
+        appAttempt.opportunisticContainerPromoted(rmContainer);
+        promotion.put(rmContainer.getContainer(),
+            ContainerUpdateType.PROMOTE_EXECUTION_TYPE);
+      }
     }
 
     if (!promotion.isEmpty()) {
