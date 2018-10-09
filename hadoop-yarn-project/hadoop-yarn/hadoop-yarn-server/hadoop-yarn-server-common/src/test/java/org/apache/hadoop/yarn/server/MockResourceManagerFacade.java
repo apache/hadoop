@@ -207,10 +207,15 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   private boolean shouldWaitForSyncNextAllocate = false;
 
   // For unit test synchronization
-  private static Object syncObj = new Object();
+  private static Object registerSyncObj = new Object();
+  private static Object allocateSyncObj = new Object();
 
-  public static Object getSyncObj() {
-    return syncObj;
+  public static Object getRegisterSyncObj() {
+    return registerSyncObj;
+  }
+
+  public static Object getAllocateSyncObj() {
+    return allocateSyncObj;
   }
 
   public MockResourceManagerFacade(Configuration conf,
@@ -290,14 +295,14 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     shouldReRegisterNext = false;
 
     // Make sure we wait for certain test cases last in the method
-    synchronized (syncObj) {
-      syncObj.notifyAll();
+    synchronized (registerSyncObj) {
+      registerSyncObj.notifyAll();
       // We reuse the port number to indicate whether the unit test want us to
       // wait here
       if (request.getRpcPort() > 1000) {
         LOG.info("Register call in RM start waiting");
         try {
-          syncObj.wait();
+          registerSyncObj.wait();
           LOG.info("Register call in RM wait finished");
         } catch (InterruptedException e) {
           LOG.info("Register call in RM wait interrupted", e);
@@ -364,13 +369,13 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     }
 
     // Wait for signal for certain test cases
-    synchronized (syncObj) {
+    synchronized (allocateSyncObj) {
       if (shouldWaitForSyncNextAllocate) {
         shouldWaitForSyncNextAllocate = false;
 
         LOG.info("Allocate call in RM start waiting");
         try {
-          syncObj.wait();
+          allocateSyncObj.wait();
           LOG.info("Allocate call in RM wait finished");
         } catch (InterruptedException e) {
           LOG.info("Allocate call in RM wait interrupted", e);
@@ -431,8 +436,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
           }
 
           Assert.assertTrue("ContainerId " + id
-              + " being released is not valid for application: "
-              + conf.get("AMRMTOKEN"), found);
+              + " being released is not valid for application: " + attemptId,
+              found);
 
           ids.remove(id);
           completedList.add(
@@ -442,7 +447,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     }
 
     LOG.info("Allocating containers: " + containerList.size()
-        + " for application attempt: " + conf.get("AMRMTOKEN"));
+        + " for application attempt: " + attemptId);
 
     // Always issue a new AMRMToken as if RM rolled master key
     Token newAMRMToken = Token.newInstance(new byte[0],
@@ -455,7 +460,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   }
 
   public void setWaitForSyncNextAllocate(boolean wait) {
-    synchronized (syncObj) {
+    synchronized (allocateSyncObj) {
       shouldWaitForSyncNextAllocate = wait;
     }
   }

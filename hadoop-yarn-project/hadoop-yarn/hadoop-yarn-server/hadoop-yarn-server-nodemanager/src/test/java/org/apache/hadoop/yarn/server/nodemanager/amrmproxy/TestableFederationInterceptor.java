@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
+import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
@@ -69,8 +70,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
 
   @Override
   protected AMHeartbeatRequestHandler createHomeHeartbeartHandler(
-      Configuration conf, ApplicationId appId) {
-    return new TestableAMRequestHandlerThread(conf, appId);
+      Configuration conf, ApplicationId appId,
+      AMRMClientRelayer rmProxyRelayer) {
+    return new TestableAMRequestHandlerThread(conf, appId, rmProxyRelayer);
   }
 
   @SuppressWarnings("unchecked")
@@ -205,7 +207,8 @@ public class TestableFederationInterceptor extends FederationInterceptor {
         String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
         String rmId) {
       return new TestableUnmanagedApplicationManager(conf, appId, queueName,
-          submitter, appNameSuffix, keepContainersAcrossApplicationAttempts);
+          submitter, appNameSuffix, keepContainersAcrossApplicationAttempts,
+          rmId);
     }
   }
 
@@ -218,10 +221,17 @@ public class TestableFederationInterceptor extends FederationInterceptor {
 
     public TestableUnmanagedApplicationManager(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts,
+        String rmName) {
       super(conf, appId, queueName, submitter, appNameSuffix,
-          keepContainersAcrossApplicationAttempts, "TEST");
-      setHandlerThread(new TestableAMRequestHandlerThread(conf, appId));
+          keepContainersAcrossApplicationAttempts, rmName);
+    }
+
+    @Override
+    protected AMHeartbeatRequestHandler createAMHeartbeatRequestHandler(
+        Configuration conf, ApplicationId appId,
+        AMRMClientRelayer rmProxyRelayer) {
+      return new TestableAMRequestHandlerThread(conf, appId, rmProxyRelayer);
     }
 
     /**
@@ -244,8 +254,8 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   protected class TestableAMRequestHandlerThread
       extends AMHeartbeatRequestHandler {
     public TestableAMRequestHandlerThread(Configuration conf,
-        ApplicationId applicationId) {
-      super(conf, applicationId);
+        ApplicationId applicationId, AMRMClientRelayer rmProxyRelayer) {
+      super(conf, applicationId, rmProxyRelayer);
     }
 
     @Override

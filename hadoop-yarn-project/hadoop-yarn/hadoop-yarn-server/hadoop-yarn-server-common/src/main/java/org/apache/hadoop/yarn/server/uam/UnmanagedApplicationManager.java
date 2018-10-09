@@ -134,10 +134,12 @@ public class UnmanagedApplicationManager {
     this.submitter = submitter;
     this.appNameSuffix = appNameSuffix;
     this.userUgi = null;
-    this.heartbeatHandler =
-        new AMHeartbeatRequestHandler(this.conf, this.applicationId);
+    // Relayer's rmClient will be set after the RM connection is created
     this.rmProxyRelayer =
         new AMRMClientRelayer(null, this.applicationId, rmName);
+    this.heartbeatHandler = createAMHeartbeatRequestHandler(this.conf,
+        this.applicationId, this.rmProxyRelayer);
+
     this.connectionInitiated = false;
     this.registerRequest = null;
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
@@ -148,6 +150,13 @@ public class UnmanagedApplicationManager {
             DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     this.keepContainersAcrossApplicationAttempts =
         keepContainersAcrossApplicationAttempts;
+  }
+
+  @VisibleForTesting
+  protected AMHeartbeatRequestHandler createAMHeartbeatRequestHandler(
+      Configuration config, ApplicationId appId,
+      AMRMClientRelayer relayer) {
+    return new AMHeartbeatRequestHandler(config, appId, relayer);
   }
 
   /**
@@ -191,8 +200,6 @@ public class UnmanagedApplicationManager {
         this.applicationId.toString(), UserGroupInformation.getCurrentUser());
     this.rmProxyRelayer.setRMClient(createRMProxy(
         ApplicationMasterProtocol.class, this.conf, this.userUgi, amrmToken));
-
-    this.heartbeatHandler.setAMRMClientRelayer(this.rmProxyRelayer);
     this.heartbeatHandler.setUGI(this.userUgi);
   }
 
@@ -519,11 +526,6 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   public int getRequestQueueSize() {
     return this.heartbeatHandler.getRequestQueueSize();
-  }
-
-  @VisibleForTesting
-  protected void setHandlerThread(AMHeartbeatRequestHandler thread) {
-    this.heartbeatHandler = thread;
   }
 
   @VisibleForTesting
