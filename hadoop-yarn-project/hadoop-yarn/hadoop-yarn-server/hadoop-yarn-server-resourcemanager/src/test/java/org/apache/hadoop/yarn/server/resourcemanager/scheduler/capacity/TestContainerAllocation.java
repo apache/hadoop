@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -65,6 +66,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
 
 public class TestContainerAllocation {
 
@@ -1059,6 +1061,56 @@ public class TestContainerAllocation {
     rm1.drainEvents();
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testContainerRejectionWhenAskBeyondDynamicMax()
+      throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+    newConf.set(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
+        + MAXIMUM_ALLOCATION_MB, "4096");
+
+    MockRM rm1 = new MockRM(newConf);
+    rm1.start();
+
+    // before any node registered or before registration timeout,
+    // submit an app beyond queue max leads to failure.
+    boolean submitFailed = false;
+    MockNM nm1 = rm1.registerNode("h1:1234", 2 * GB, 1);
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    try {
+      am1.allocate("*", 5 * GB, 1, null);
+    } catch (InvalidResourceRequestException e) {
+      submitFailed = true;
+    }
+    Assert.assertTrue(submitFailed);
+
+    // Ask 4GB succeeded.
+    am1.allocate("*", 4 * GB, 1, null);
+
+    // Add a new node, now the cluster maximum should be refreshed to 3GB.
+    CapacityScheduler cs = (CapacityScheduler)rm1.getResourceScheduler();
+    cs.getNodeTracker().setForceConfiguredMaxAllocation(false);
+    rm1.registerNode("h2:1234", 3 * GB, 1);
+
+    // Now ask 4 GB will fail
+    submitFailed = false;
+    try {
+      am1.allocate("*", 4 * GB, 1, null);
+    } catch (InvalidResourceRequestException e) {
+      submitFailed = true;
+    }
+    Assert.assertTrue(submitFailed);
+
+    // But ask 3 GB succeeded.
+    am1.allocate("*", 3 * GB, 1, null);
 
     rm1.close();
   }
