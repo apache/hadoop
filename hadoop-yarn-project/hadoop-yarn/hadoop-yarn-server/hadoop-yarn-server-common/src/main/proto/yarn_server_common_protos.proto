@@ -40,6 +40,12 @@ message NodeStatusProto {
   optional ResourceUtilizationProto node_utilization = 7;
   repeated ContainerProto increased_containers = 8;
   optional OpportunisticContainersStatusProto opportunistic_containers_status = 9;
+  repeated AppResourceUtilizationProto application_utilizations = 11;
+}
+
+message AppResourceUtilizationProto {
+  required ApplicationIdProto application_id = 1;
+  optional ResourceUtilizationProto utilization = 3;
 }
 
 message OpportunisticContainersStatusProto {

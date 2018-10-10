@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import java.util.HashMap;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.MemoryResourceHandler;
@@ -122,6 +124,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   private ContainersResourceUtilization latestContainersUtilization;
+  private AppResourceUtilizations latestAppUtilizations;
 
   private NMAllocationPolicy overAllocationPolicy;
   private ResourceThresholds overAllocationPreemptionThresholds;
@@ -622,6 +625,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         long vmemUsageByAllContainers = 0;
         long pmemByAllContainers = 0;
         long cpuUsagePercentPerCoreByAllContainers = 0;
+
+        Map<ApplicationId, ResourceUtilization> perAppResourceUtilization =
+            new HashMap<>();
         for (Entry<ContainerId, ProcessTreeInfo> entry : trackingContainers
             .entrySet()) {
           ContainerId containerId = entry.getKey();
@@ -656,8 +662,9 @@ public class ContainersMonitorImpl extends AbstractService implements
               continue;
             }
 
-            recordUsage(containerId, pId, pTree, ptInfo, currentVmemUsage,
-                    currentPmemUsage, trackedContainersUtilization);
+            recordUsage(pTree, ptInfo, currentVmemUsage,
+                currentPmemUsage, trackedContainersUtilization,
+                perAppResourceUtilization);
 
             checkLimit(containerId, pId, pTree, ptInfo,
                     currentVmemUsage, currentPmemUsage);
@@ -686,6 +693,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
         // Save the aggregated utilization of the containers
         setLatestContainersUtilization(trackedContainersUtilization);
+        // Save the aggregated app utilizations
+        setLatestAppUtilizations(perAppResourceUtilization);
 
         // check opportunity to start containers if over-allocation is on
         checkUtilization();
@@ -769,19 +778,19 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     /**
      * Record usage metrics.
-     * @param containerId container id
-     * @param pId process id
      * @param pTree valid process tree entry with CPU measurement
      * @param ptInfo process tree info with limit information
      * @param currentVmemUsage virtual memory measurement
      * @param currentPmemUsage physical memory measurement
      * @param trackedContainersUtilization utilization tracker to update
      */
-    private void recordUsage(ContainerId containerId, String pId,
-                             ResourceCalculatorProcessTree pTree,
-                             ProcessTreeInfo ptInfo,
-                             long currentVmemUsage, long currentPmemUsage,
-                             ResourceUtilization trackedContainersUtilization) {
+    private void recordUsage(ResourceCalculatorProcessTree pTree,
+        ProcessTreeInfo ptInfo,
+        long currentVmemUsage, long currentPmemUsage,
+        ResourceUtilization trackedContainersUtilization,
+        Map<ApplicationId, ResourceUtilization> perAppUtil) {
+      ContainerId containerId = ptInfo.getContainerId();
+      String pId =ptInfo.getPID();
       // if machine has 6 cores and 3 are used,
       // cpuUsagePercentPerCore should be 300% and
       // cpuUsageTotalCoresPercentage should be 50%
@@ -806,11 +815,20 @@ public class ContainersMonitorImpl extends AbstractService implements
             cpuUsageTotalCoresPercentage));
       }
 
-      // Add resource utilization for this container
-      trackedContainersUtilization.addTo(
+      ResourceUtilization currResUtil =
+          ResourceUtilization.newInstance(
               (int) (currentPmemUsage >> 20),
               (int) (currentVmemUsage >> 20),
               milliVcoresUsed / 1000.0f);
+
+      // Add resource utilization for this container
+      trackedContainersUtilization.addTo(currResUtil);
+
+      ResourceUtilization appUtil =
+          perAppUtil.computeIfAbsent(
+              containerId.getApplicationAttemptId().getApplicationId(),
+              (x -> ResourceUtilization.newInstance(0, 0, 0.0f)));
+      appUtil.addTo(currResUtil);
 
       // Add usage to container metrics
       if (containerMetricsEnabled) {
@@ -1085,6 +1103,13 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   @Override
+  public AppResourceUtilizations getAppUtilizations(boolean latest) {
+    // TODO If latest is true, kickoff an immediate app utilization
+    //      and return value.
+    return this.latestAppUtilizations;
+  }
+
+  @Override
   public NMAllocationPolicy getContainerOverAllocationPolicy() {
     return overAllocationPolicy;
   }
@@ -1100,6 +1125,12 @@ public class ContainersMonitorImpl extends AbstractService implements
       LOG.debug("Updated latest containers resource utilization to " +
           latestContainersUtilization.getUtilization());
     }
+  }
+
+  private void setLatestAppUtilizations(
+      Map<ApplicationId, ResourceUtilization> appUtilization) {
+    this.latestAppUtilizations = new AppResourceUtilizations(
+        appUtilization, Time.now());
   }
 
   /**

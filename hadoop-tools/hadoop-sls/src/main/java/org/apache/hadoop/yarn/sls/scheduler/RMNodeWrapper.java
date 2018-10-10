@@ -225,6 +225,12 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
+  public Map<ApplicationId, ResourceUtilization>
+      getAggregatedAppUtilizations() {
+    return node.getAggregatedAppUtilizations();
+  }
+
+  @Override
   public Resource getPhysicalResource() {
     return null;
   }

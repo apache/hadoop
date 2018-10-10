@@ -206,6 +206,7 @@ public class ResourceManager extends CompositeService
   private final String zkRootNodePassword =
       Long.toString(new SecureRandom().nextLong());
   private boolean recoveryEnabled;
+  private ResourceUtilizationAggregator resUtilAggregator;
 
   @VisibleForTesting
   protected String webAppAddress;
@@ -344,6 +345,8 @@ public class ResourceManager extends CompositeService
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     registerMXBean();
+    this.resUtilAggregator = new ResourceUtilizationAggregator(rmContext);
+    addService(this.resUtilAggregator);
 
     super.serviceInit(this.conf);
   }
@@ -1644,5 +1647,10 @@ public class ResourceManager extends CompositeService
   @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @VisibleForTesting
+  ResourceUtilizationAggregator getResUtilizationAggregator() {
+    return resUtilAggregator;
   }
 }

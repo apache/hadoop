@@ -121,6 +121,7 @@ public class MockNodes {
     private Set<String> labels;
     private ResourceUtilization containersUtilization;
     private ResourceUtilization nodeUtilization;
+    private Map<ApplicationId, ResourceUtilization> appUtilization;
     private Resource physicalResource;
     private OverAllocationInfo overAllocationInfo;
     private List<UpdatedContainerInfo> containerUpdates =
@@ -330,13 +331,28 @@ public class MockNodes {
       return this.physicalResource;
     }
 
+    @Override
+    public Map<ApplicationId, ResourceUtilization>
+        getAggregatedAppUtilizations() {
+      return this.appUtilization;
+    }
+
     public void updateContainersInfoAndUtilization(
         UpdatedContainerInfo updatedContainerInfo,
         ResourceUtilization resourceUtilization) {
+      updateContainersInfoAndUtilization(
+          updatedContainerInfo, resourceUtilization, null);
+    }
+
+    public void updateContainersInfoAndUtilization(
+        UpdatedContainerInfo updatedContainerInfo,
+        ResourceUtilization resourceUtilization,
+        Map<ApplicationId, ResourceUtilization> appUtils) {
       if (updatedContainerInfo != null) {
         containerUpdates = Collections.singletonList(updatedContainerInfo);
       }
       this.containersUtilization = resourceUtilization;
+      this.appUtilization = appUtils;
     }
   };
 

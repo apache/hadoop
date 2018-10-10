@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
+import java.util.Map;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -35,6 +37,14 @@ public interface ContainersMonitor extends Service,
    * @return ResourceUtilization resource utilization of all containers
    */
   ContainersResourceUtilization getContainersUtilization(boolean latest);
+
+  /**
+   * Get the per app aggregate resource utilization of containers running on
+   * the node.
+   * @param latest true if the latest result should be returned.
+   * @return AppResourceUtilization per app resource utilization.
+   */
+  AppResourceUtilizations getAppUtilizations(boolean latest);
 
   /**
    * Get the policy to over-allocate containers when over-allocation is on.
@@ -100,6 +110,29 @@ public interface ContainersMonitor extends Service,
 
     public ResourceUtilization getUtilization() {
       return utilization;
+    }
+  }
+
+  /**
+   * A snapshot of resource utilization of all containers with the timestamp.
+   */
+  final class AppResourceUtilizations {
+    private final Map<ApplicationId, ResourceUtilization> utilizations;
+    private final long timestamp;
+
+    public AppResourceUtilizations(
+        Map<ApplicationId, ResourceUtilization> utilizations,
+        long timestamp) {
+      this.utilizations = utilizations;
+      this.timestamp = timestamp;
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    public Map<ApplicationId, ResourceUtilization> getUtilizations() {
+      return utilizations;
     }
   }
 }

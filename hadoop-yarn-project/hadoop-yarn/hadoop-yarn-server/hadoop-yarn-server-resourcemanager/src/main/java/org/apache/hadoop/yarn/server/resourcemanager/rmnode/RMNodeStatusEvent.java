@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.Map;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -63,6 +64,10 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     return this.nodeStatus.getContainersUtilization();
   }
 
+  public Map<ApplicationId, ResourceUtilization> getAggregateAppUtilization() {
+    return this.nodeStatus.getApplicationUtilizations();
+  }
+
   public ResourceUtilization getNodeUtilization() {
     return this.nodeStatus.getNodeUtilization();
   }
@@ -79,7 +84,7 @@ public class RMNodeStatusEvent extends RMNodeEvent {
       List<LogAggregationReport> logAggregationReportsForApps) {
     this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
-  
+
   public List<Container> getNMReportedIncreasedContainers() {
     return this.nodeStatus.getIncreasedContainers() == null ?
         Collections.emptyList() : this.nodeStatus.getIncreasedContainers();

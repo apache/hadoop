@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import java.util.Map;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.AppResourceUtilizationProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
@@ -57,6 +60,7 @@ public class NodeStatusPBImpl extends NodeStatus {
   private NodeHealthStatus nodeHealthStatus = null;
   private List<ApplicationId> keepAliveApplications = null;
   private List<Container> increasedContainers = null;
+  private Map<ApplicationId, ResourceUtilization> appUtilizations = null;
 
   public NodeStatusPBImpl() {
     builder = NodeStatusProto.newBuilder();
@@ -90,6 +94,9 @@ public class NodeStatusPBImpl extends NodeStatus {
     if (this.increasedContainers != null) {
       addIncreasedContainersToProto();
     }
+    if (this.appUtilizations != null) {
+      addAppUtilizations();
+    }
   }
 
   private synchronized void mergeLocalToProto() {
@@ -106,6 +113,26 @@ public class NodeStatusPBImpl extends NodeStatus {
       builder = NodeStatusProto.newBuilder(proto);
     }
     viaProto = false;
+  }
+
+  private void addAppUtilizations() {
+    maybeInitBuilder();
+    builder.clearApplicationUtilizations();
+    if (this.appUtilizations == null) {
+      return;
+    }
+    List<AppResourceUtilizationProto> protoList =
+        new ArrayList<>();
+
+    for (Map.Entry<ApplicationId, ResourceUtilization> entry :
+        this.appUtilizations.entrySet()) {
+      ApplicationId appId = entry.getKey();
+      ResourceUtilization resU = entry.getValue();
+      protoList.add(AppResourceUtilizationProto.newBuilder()
+          .setApplicationId(convertToProtoFormat(appId))
+          .setUtilization(convertToProtoFormat(resU)).build());
+    }
+    builder.addAllApplicationUtilizations(protoList);
   }
     
   private synchronized void addContainersToProto() {
@@ -423,6 +450,38 @@ public class NodeStatusPBImpl extends NodeStatus {
     }
     this.builder.setOpportunisticContainersStatus(
         convertToProtoFormat(opportunisticContainersStatus));
+  }
+
+  private synchronized void initAppUtilizations() {
+    if (this.appUtilizations != null) {
+      return;
+    }
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    List<AppResourceUtilizationProto> protoList =
+        p.getApplicationUtilizationsList();
+    this.appUtilizations = new HashMap<>();
+    for (AppResourceUtilizationProto au : protoList) {
+      ApplicationId appId = convertFromProtoFormat(au.getApplicationId());
+      ResourceUtilization resU = convertFromProtoFormat(au.getUtilization());
+      this.appUtilizations.put(appId, resU);
+    }
+  }
+
+  @Override
+  public synchronized void setApplicationUtilizations(
+      Map<ApplicationId, ResourceUtilization> applicationUtilizations) {
+    maybeInitBuilder();
+    if (applicationUtilizations == null) {
+      builder.clearApplicationUtilizations();
+    }
+    this.appUtilizations = applicationUtilizations;
+  }
+
+  @Override
+  public synchronized Map<ApplicationId, ResourceUtilization>
+      getApplicationUtilizations() {
+    initAppUtilizations();
+    return this.appUtilizations;
   }
 
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {

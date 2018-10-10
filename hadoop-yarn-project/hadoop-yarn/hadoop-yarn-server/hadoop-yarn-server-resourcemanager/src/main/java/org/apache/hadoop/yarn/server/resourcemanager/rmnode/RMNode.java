@@ -112,6 +112,13 @@ public interface RMNode {
   public ResourceUtilization getAggregatedContainersUtilization();
 
   /**
+   * the per app aggregated utilization of the containers running
+   * on the node.
+   * @return the aggregated per-app container utilzation;
+   */
+  Map<ApplicationId, ResourceUtilization> getAggregatedAppUtilizations();
+
+  /**
    * the total resource utilization of the node.
    * @return the total resource utilization of the node.
    */

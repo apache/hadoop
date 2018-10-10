@@ -53,6 +53,16 @@ public abstract class ResourceUtilization implements
   }
 
   /**
+   * Helper function to return a zero-ed out Utilization.
+   * @return New Resource Utilization.
+   */
+  @Public
+  @Unstable
+  public static ResourceUtilization newZero() {
+    return newInstance(0, 0, 0.0f);
+  }
+
+  /**
    * Get used <em>virtual memory</em>.
    *
    * @return <em>virtual memory</em> in MB
@@ -154,6 +164,20 @@ public abstract class ResourceUtilization implements
     this.setPhysicalMemory(this.getPhysicalMemory() + pmem);
     this.setVirtualMemory(this.getVirtualMemory() + vmem);
     this.setCPU(this.getCPU() + cpu);
+  }
+
+  /**
+   * Add utilization to the current one.
+   * @param resUtil Resource Utilization to add.
+   */
+  @Public
+  @Unstable
+  public void addTo(ResourceUtilization resUtil) {
+    this.setPhysicalMemory(
+        this.getPhysicalMemory() + resUtil.getPhysicalMemory());
+    this.setVirtualMemory(
+        this.getVirtualMemory() + resUtil.getVirtualMemory());
+    this.setCPU(this.getCPU() + resUtil.getCPU());
   }
 
   /**

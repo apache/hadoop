@@ -514,6 +514,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     List<ContainerStatus> containersStatuses = getContainerStatuses();
     ResourceUtilization containersUtilization = getContainersUtilization();
     ResourceUtilization nodeUtilization = getNodeUtilization();
+    Map<ApplicationId, ResourceUtilization> appUtilizations =
+        getAppUtilizations();
     List<org.apache.hadoop.yarn.api.records.Container> increasedContainers
         = getIncreasedContainers();
     NodeStatus nodeStatus =
@@ -523,6 +525,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     nodeStatus.setOpportunisticContainersStatus(
         getOpportunisticContainersStatus());
+    nodeStatus.setApplicationUtilizations(appUtilizations);
     return nodeStatus;
   }
 
@@ -544,6 +547,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     ContainersMonitor containersMonitor =
         this.context.getContainerManager().getContainersMonitor();
     return containersMonitor.getContainersUtilization(false).getUtilization();
+  }
+
+  private Map<ApplicationId, ResourceUtilization> getAppUtilizations() {
+    ContainersMonitor containersMonitor =
+        this.context.getContainerManager().getContainersMonitor();
+    return containersMonitor.getAppUtilizations(false).getUtilizations();
   }
 
   /**

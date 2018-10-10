@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
@@ -141,7 +142,7 @@ public class MockNM {
             container.getResource());
     List<Container> increasedConts = Collections.singletonList(container);
     nodeHeartbeat(Collections.singletonList(containerStatus), increasedConts,
-        true, responseId);
+        true, responseId, null);
   }
 
   public void addRegisteringCollector(ApplicationId appId,
@@ -211,7 +212,13 @@ public class MockNM {
 
   public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
     return nodeHeartbeat(Collections.<ContainerStatus>emptyList(),
-        Collections.<Container>emptyList(), isHealthy, responseId);
+        Collections.<Container>emptyList(), isHealthy, responseId, null);
+  }
+
+  public NodeHeartbeatResponse nodeHeartbeat(
+      Map<ApplicationId, ResourceUtilization> appUtil) throws Exception {
+    return nodeHeartbeat(Collections.<ContainerStatus>emptyList(),
+        Collections.<Container>emptyList(), true, responseId, appUtil);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
@@ -224,7 +231,7 @@ public class MockNM {
     containerStatusList.add(containerStatus);
     Log.getLog().info("ContainerStatus: " + containerStatus);
     return nodeHeartbeat(containerStatusList,
-        Collections.<Container>emptyList(), true, responseId);
+        Collections.<Container>emptyList(), true, responseId, null);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
@@ -239,18 +246,18 @@ public class MockNM {
       updatedStats.addAll(stats);
     }
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
-        isHealthy, resId);
+        isHealthy, resId, null);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(
       List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
-        isHealthy, responseId);
+        isHealthy, responseId, null);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
-      List<Container> increasedConts, boolean isHealthy, int resId)
-          throws Exception {
+      List<Container> increasedConts, boolean isHealthy, int resId,
+      Map<ApplicationId, ResourceUtilization> appUtil) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setResponseId(resId);
@@ -273,6 +280,11 @@ public class MockNM {
     healthStatus.setIsNodeHealthy(isHealthy);
     healthStatus.setLastHealthReportTime(1);
     status.setNodeHealthStatus(healthStatus);
+
+    if (appUtil != null && !appUtil.isEmpty()) {
+      status.setApplicationUtilizations(appUtil);
+    }
+
     req.setNodeStatus(status);
     req.setLastKnownContainerTokenMasterKey(this.currentContainerTokenMasterKey);
     req.setLastKnownNMTokenMasterKey(this.currentNMTokenMasterKey);

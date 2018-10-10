@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.api.records;
 
 import java.util.List;
 
+import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -132,4 +133,22 @@ public abstract class NodeStatus {
   @Unstable
   public abstract void setOpportunisticContainersStatus(
       OpportunisticContainersStatus opportunisticContainersStatus);
+
+  /**
+   * Set per application ResourceUtilization.
+   * @param applicationUtilizations Per application utilization map.
+   */
+  @Private
+  @Unstable
+  public abstract void setApplicationUtilizations(
+      Map<ApplicationId, ResourceUtilization> applicationUtilizations);
+
+  /**
+   * Get per application ResourceUtilization.
+   * @return Per application utilizations map.
+   */
+  @Private
+  @Unstable
+  public abstract Map<ApplicationId, ResourceUtilization>
+      getApplicationUtilizations();
 }

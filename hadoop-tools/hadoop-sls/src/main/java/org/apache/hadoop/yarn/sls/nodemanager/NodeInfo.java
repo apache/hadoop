@@ -199,6 +199,12 @@ public class NodeInfo {
     }
 
     @Override
+    public Map<ApplicationId, ResourceUtilization>
+        getAggregatedAppUtilizations() {
+      return null;
+    }
+
+    @Override
     public ResourceUtilization getNodeUtilization() {
       return null;
     }

@@ -138,6 +138,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private ResourceUtilization containersUtilization;
   /* Resource utilization for the node. */
   private ResourceUtilization nodeUtilization;
+  /* Per app aggregate utilization. */
+  private Map<ApplicationId, ResourceUtilization> appUtilizations;
 
   /** Physical resources in the node. */
   private volatile Resource physicalResource;
@@ -508,9 +510,29 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   @Override
+  public Map<ApplicationId, ResourceUtilization>
+      getAggregatedAppUtilizations() {
+    this.readLock.lock();
+    try {
+      return this.appUtilizations;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void setAggregatedAppUtilizations(
+      Map<ApplicationId, ResourceUtilization> appUtils) {
+    this.writeLock.lock();
+    try {
+      this.appUtilizations = appUtils;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  @Override
   public ResourceUtilization getAggregatedContainersUtilization() {
     this.readLock.lock();
-
     try {
       return this.containersUtilization;
     } finally {
@@ -830,6 +852,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     rmNode.setAggregatedContainersUtilization(statusEvent
         .getAggregatedContainersUtilization());
     rmNode.setNodeUtilization(statusEvent.getNodeUtilization());
+    rmNode.setAggregatedAppUtilizations(
+        statusEvent.getAggregateAppUtilization());
     return remoteNodeHealthStatus;
   }
 
