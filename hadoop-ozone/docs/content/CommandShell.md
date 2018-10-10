@@ -36,7 +36,7 @@ The commands supported by ozone are:
    * **envvars** - Display computed Hadoop environment variables.
    * **freon** -  Runs the ozone load generator.
    * **genesis**  - Developer Only, Ozone micro-benchmark application.
-   * **getozoneconf** -  Reads ozone config values from configuration.
+   * **getconf** -  Reads ozone config values from configuration.
    * **jmxget**  - Get JMX exported values from NameNode or DataNode.
    * **om** -   Ozone Manager, via daemon command can be started or stopped.
    * **sh** -  Primary command line interface for ozone.
