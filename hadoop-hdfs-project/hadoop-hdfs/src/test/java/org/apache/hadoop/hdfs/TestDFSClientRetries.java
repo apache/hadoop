@@ -1229,27 +1229,54 @@ public class TestDFSClientRetries {
     }
   }
 
+  /**
+   * Tests default configuration values and configuration setting
+   * of locate following block delays and number of retries.
+   *
+   * Configuration values tested:
+   * - dfs.client.block.write.locateFollowingBlock.initial.delay.ms
+   * - dfs.client.block.write.locateFollowingBlock.max.delay.ms
+   * - dfs.client.block.write.locateFollowingBlock.retries
+   */
   @Test
-  public void testDFSClientConfigurationLocateFollowingBlockInitialDelay()
+  public void testDFSClientConfigurationLocateFollowingBlock()
       throws Exception {
-    // test if HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY
-    // is not configured, verify DFSClient uses the default value 400.
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    final int initialDelayTestValue = 1000;
+    final int maxDelayTestValue = 35000;
+    final int retryTestValue = 7;
+
+    final int defaultInitialDelay = 400;
+    final int defaultMaxDelay = 60000;
+    final int defultRetry = 5;
+
     try {
       cluster.waitActive();
       NamenodeProtocols nn = cluster.getNameNodeRpc();
       DFSClient client = new DFSClient(null, nn, conf, null);
-      assertEquals(client.getConf().
-          getBlockWriteLocateFollowingInitialDelayMs(), 400);
+      assertEquals(defaultInitialDelay, client.getConf().
+          getBlockWriteLocateFollowingInitialDelayMs());
+      assertEquals(defaultMaxDelay, client.getConf().
+          getBlockWriteLocateFollowingMaxDelayMs());
+      assertEquals(defultRetry, client.getConf().
+          getNumBlockWriteLocateFollowingRetry());
 
-      // change HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY,
-      // verify DFSClient uses the configured value 1000.
       conf.setInt(
           HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_KEY,
-          1000);
+          initialDelayTestValue);
+      conf.setInt(
+          HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_KEY,
+          maxDelayTestValue);
+      conf.setInt(
+          HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
+          retryTestValue);
       client = new DFSClient(null, nn, conf, null);
-      assertEquals(client.getConf().
-          getBlockWriteLocateFollowingInitialDelayMs(), 1000);
+      assertEquals(initialDelayTestValue, client.getConf().
+          getBlockWriteLocateFollowingInitialDelayMs());
+      assertEquals(maxDelayTestValue, client.getConf().
+          getBlockWriteLocateFollowingMaxDelayMs());
+      assertEquals(retryTestValue, client.getConf().
+          getNumBlockWriteLocateFollowingRetry());
     } finally {
       cluster.shutdown();
     }
