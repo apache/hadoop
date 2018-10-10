@@ -98,6 +98,8 @@
                     <exclude> org.hamcrest:hamcrest-core</exclude>
                     <!-- Leave javax annotations we need exposed -->
                     <exclude>com.google.code.findbugs:jsr305</exclude>
+                    <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
+                    <exclude>org.bouncycastle:*</exclude>
                   </excludes>
                 </banTransitiveDependencies>
                 <banDuplicateClasses>
