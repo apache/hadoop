@@ -599,9 +599,17 @@
       secret$
       password$
       ssl.keystore.pass$
-      fs.s3.*[Ss]ecret.?[Kk]ey
+      fs.s3a.server-side-encryption.key
       fs.s3a.*.server-side-encryption.key
+      fs.s3a.secret.key
+      fs.s3a.*.secret.key
+      fs.s3a.session.key
+      fs.s3a.*.session.key
+      fs.s3a.session.token
+      fs.s3a.*.session.token
       fs.azure.account.key.*
+      fs.azure.oauth2.*
+      fs.adl.oauth2.*
       credential$
       oauth.*secret
       oauth.*password
