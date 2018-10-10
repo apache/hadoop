@@ -18,41 +18,57 @@
 package org.apache.hadoop.ozone.s3.object;
 
 import javax.ws.rs.HEAD;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.io.InputStream;
 
-import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.s3.EndpointBase;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+
+import org.apache.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Get object info rest endpoint.
  */
 @Path("/{volume}/{bucket}/{path:.+}")
 public class HeadObject extends EndpointBase {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HeadObject.class);
 
   @HEAD
   @Produces(MediaType.APPLICATION_XML)
   public Response head(
       @PathParam("volume") String volumeName,
       @PathParam("bucket") String bucketName,
-      @PathParam("path") String keyPath,
-      @HeaderParam("Content-Length") long length,
-      InputStream body) throws IOException {
+      @PathParam("path") String keyPath) throws Exception {
+    OzoneKeyDetails key;
 
-    OzoneBucket bucket = getBucket(volumeName, bucketName);
-    OzoneKeyDetails key = bucket.getKey(keyPath);
+    try {
+      key = getVolume(volumeName).getBucket(bucketName).getKey(keyPath);
+      // TODO: return the specified range bytes of this object.
+    } catch (IOException ex) {
+      LOG.error("Exception occurred in HeadObject", ex);
+      if (ex.getMessage().contains("KEY_NOT_FOUND")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+            .NO_SUCH_OBJECT, S3ErrorTable.Resource.OBJECT);
+        throw os3Exception;
+      } else {
+        throw ex;
+      }
+    }
 
-    return Response.
-        ok()
+    return Response.ok().status(HttpStatus.SC_OK)
+        .header("Last-Modified", key.getModificationTime())
+        .header("ETag", "" + key.getModificationTime())
         .header("Content-Length", key.getDataSize())
+        .header("Content-Type", "binary/octet-stream")
         .build();
-
   }
 }
