@@ -39,7 +39,7 @@ function hadoop_usage
   hadoop_add_subcommand "fs" client "run a filesystem command on Ozone file system. Equivalent to 'hadoop fs'"
   hadoop_add_subcommand "genconf" client "generate minimally required ozone configs and output to ozone-site.xml in specified path"
   hadoop_add_subcommand "genesis" client "runs a collection of ozone benchmarks to help with tuning."
-  hadoop_add_subcommand "getozoneconf" client "get ozone config values from configuration"
+  hadoop_add_subcommand "getconf" client "get ozone config values from configuration"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "om" daemon "Ozone Manager"
@@ -94,7 +94,7 @@ function ozonecmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.genesis.Genesis
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
-    getozoneconf)
+    getconf)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.OzoneGetConf;
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
     ;;
