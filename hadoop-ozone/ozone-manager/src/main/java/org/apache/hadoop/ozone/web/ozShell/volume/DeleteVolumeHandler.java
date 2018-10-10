@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import java.net.URI;
-
-import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
@@ -43,14 +40,7 @@ public class DeleteVolumeHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneClientException(
-          "Volume name is required to delete a volume");
-    }
-
-    // we need to skip the slash in the URI path
-    String volumeName = ozoneURI.getPath().substring(1);
+    String volumeName = parseVolumeName(uri);
 
     if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);
