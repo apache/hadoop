@@ -192,12 +192,14 @@ public class TestContainersLauncher {
         .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
     dummyMap.put(containerId, containerLaunch);
     Whitebox.setInternalState(spy, "running", dummyMap);
+
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER);
-    doNothing().when(containerLaunch).cleanupContainer();
+    assertEquals(1, dummyMap.size());
     spy.handle(event);
     assertEquals(0, dummyMap.size());
-    Mockito.verify(containerLaunch, Mockito.times(1)).cleanupContainer();
+    Mockito.verify(containerLauncher, Mockito.times(1))
+        .submit(Mockito.any(ContainerCleanup.class));
   }
 
   @Test
@@ -207,12 +209,14 @@ public class TestContainersLauncher {
         .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
     dummyMap.put(containerId, containerLaunch);
     Whitebox.setInternalState(spy, "running", dummyMap);
+
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT);
-    doNothing().when(containerLaunch).cleanupContainer();
+    assertEquals(1, dummyMap.size());
     spy.handle(event);
     assertEquals(0, dummyMap.size());
-    Mockito.verify(containerLaunch, Mockito.times(1)).cleanupContainer();
+    Mockito.verify(containerLauncher, Mockito.times(1))
+        .submit(Mockito.any(ContainerCleanup.class));
   }
 
   @Test
