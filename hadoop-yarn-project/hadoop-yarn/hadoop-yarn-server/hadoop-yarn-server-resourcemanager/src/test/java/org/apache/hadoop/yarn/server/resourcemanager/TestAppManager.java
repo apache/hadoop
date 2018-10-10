@@ -105,7 +105,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import static org.mockito.Matchers.anyString;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -238,7 +237,7 @@ public class TestAppManager{
   protected void addToCompletedApps(TestRMAppManager appMonitor, RMContext rmContext) {
     for (RMApp app : rmContext.getRMApps().values()) {
       if (app.getState() == RMAppState.FINISHED
-          || app.getState() == RMAppState.KILLED
+          || app.getState() == RMAppState.KILLED 
           || app.getState() == RMAppState.FAILED) {
         appMonitor.finishApplication(app.getApplicationId());
       }
@@ -1075,21 +1074,17 @@ public class TestAppManager{
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
 
-    when(scheduler.getMaximumResourceCapability(anyString())).thenReturn(
-        Resources.createResource(
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
-
     ResourceCalculator rs = mock(ResourceCalculator.class);
     when(scheduler.getResourceCalculator()).thenReturn(rs);
 
-    when(scheduler.getNormalizedResource(any(), any()))
+    when(scheduler.getNormalizedResource(any()))
         .thenAnswer(new Answer<Resource>() {
-          @Override
-          public Resource answer(InvocationOnMock invocationOnMock)
-              throws Throwable {
-            return (Resource) invocationOnMock.getArguments()[0];
-          }
-        });
+      @Override
+      public Resource answer(InvocationOnMock invocationOnMock)
+          throws Throwable {
+        return (Resource) invocationOnMock.getArguments()[0];
+      }
+    });
 
     return scheduler;
   }

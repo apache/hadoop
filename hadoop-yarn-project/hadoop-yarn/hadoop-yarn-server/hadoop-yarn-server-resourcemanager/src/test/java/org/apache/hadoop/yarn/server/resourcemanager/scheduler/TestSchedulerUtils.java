@@ -99,7 +99,6 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.junit.rules.ExpectedException;
-import org.mockito.Mockito;
 
 public class TestSchedulerUtils {
 
@@ -166,12 +165,12 @@ public class TestSchedulerUtils {
   @Test (timeout = 30000)
   public void testNormalizeRequest() {
     ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
-
+    
     final int minMemory = 1024;
     final int maxMemory = 8192;
     Resource minResource = Resources.createResource(minMemory, 0);
     Resource maxResource = Resources.createResource(maxMemory, 0);
-
+    
     ResourceRequest ask = new ResourceRequestPBImpl();
 
     // case negative memory
@@ -231,11 +230,11 @@ public class TestSchedulerUtils {
   @Test (timeout = 30000)
   public void testNormalizeRequestWithDominantResourceCalculator() {
     ResourceCalculator resourceCalculator = new DominantResourceCalculator();
-
+    
     Resource minResource = Resources.createResource(1024, 1);
     Resource maxResource = Resources.createResource(10240, 10);
     Resource clusterResource = Resources.createResource(10 * 1024, 10);
-
+    
     ResourceRequest ask = new ResourceRequestPBImpl();
 
     // case negative memory/vcores
@@ -260,12 +259,12 @@ public class TestSchedulerUtils {
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(2048, ask.getCapability().getMemorySize());
   }
-
+  
   @Test(timeout = 30000)
   public void testValidateResourceRequestWithErrorLabelsPermission()
       throws IOException {
     // mock queue and scheduler
-    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    YarnScheduler scheduler = mock(YarnScheduler.class);
     Set<String> queueAccessibleNodeLabels = Sets.newHashSet();
     QueueInfo queueInfo = mock(QueueInfo.class);
     when(queueInfo.getQueueName()).thenReturn("queue");
@@ -273,8 +272,6 @@ public class TestSchedulerUtils {
         .thenReturn(queueAccessibleNodeLabels);
     when(scheduler.getQueueInfo(any(String.class), anyBoolean(), anyBoolean()))
         .thenReturn(queueInfo);
-
-    when(rmContext.getScheduler()).thenReturn(scheduler);
 
     Resource maxResource = Resources.createResource(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -294,20 +291,20 @@ public class TestSchedulerUtils {
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
 
       resReq.setNodeLabelExpression("y");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression("");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression(" ");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when request labels is a subset of queue labels");
@@ -315,7 +312,7 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y"));
     }
-
+    
     // same as above, but cluster node labels don't contains label being
     // requested. should fail
     try {
@@ -328,13 +325,13 @@ public class TestSchedulerUtils {
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     }
-
+    
     // queue has labels, failed cases (when ask a label not included by queue)
     try {
       // set queue accessible node labesl to [x, y]
@@ -343,22 +340,22 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x"),
               NodeLabel.newInstance("y")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("z");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     } finally {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y"));
     }
-
+    
     // we don't allow specify more than two node labels in a single expression
     // now
     try {
@@ -368,43 +365,43 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x"),
               NodeLabel.newInstance("y")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x && y");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     } finally {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y"));
     }
-
+    
     // queue doesn't have label, succeed (when request no label)
     queueAccessibleNodeLabels.clear();
     try {
       // set queue accessible node labels to empty
       queueAccessibleNodeLabels.clear();
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression("");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression("  ");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when request labels is empty");
@@ -414,18 +411,18 @@ public class TestSchedulerUtils {
     try {
       // set queue accessible node labels to empty
       queueAccessibleNodeLabels.clear();
-
+      
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidLabelResourceRequestException e) {
       invalidlabelexception=true;
@@ -441,27 +438,27 @@ public class TestSchedulerUtils {
       // set queue accessible node labels to empty
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.add(RMNodeLabelsManager.ANY);
-
+      
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x"),
               NodeLabel.newInstance("y"), NodeLabel.newInstance("z")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression("y");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
-
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      
       resReq.setNodeLabelExpression("z");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when queue can access any labels");
@@ -469,25 +466,25 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y", "z"));
     }
-
+    
     // same as above, but cluster node labels don't contains label, should fail
     try {
       // set queue accessible node labels to empty
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.add(RMNodeLabelsManager.ANY);
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     }
-
+    
     // we don't allow resource name other than ANY and specify label
     try {
       // set queue accessible node labesl to [x, y]
@@ -496,22 +493,22 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x"),
               NodeLabel.newInstance("y")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), "rack", resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     } finally {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
           Arrays.asList("x", "y"));
     }
-
+    
     // we don't allow resource name other than ANY and specify label even if
     // queue has accessible label = *
     try {
@@ -521,15 +518,15 @@ public class TestSchedulerUtils {
           .asList(CommonNodeLabelsManager.ANY));
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
           ImmutableSet.of(NodeLabel.newInstance("x")));
-
+      
       Resource resource = Resources.createResource(
           0,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), "rack", resource, 1);
       resReq.setNodeLabelExpression("x");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
     } finally {
@@ -541,8 +538,8 @@ public class TestSchedulerUtils {
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq1 = BuilderUtils
           .newResourceRequest(mock(Priority.class), "*", resource, 1, "x");
-      normalizeAndvalidateRequest(resReq1, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq1, maxResource, "queue",
+          scheduler, rmContext);
       fail("Should fail");
     } catch (InvalidResourceRequestException e) {
       assertEquals("Invalid label resource request, cluster do not contain , "
@@ -556,8 +553,8 @@ public class TestSchedulerUtils {
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq1 = BuilderUtils
           .newResourceRequest(mock(Priority.class), "*", resource, 1, "x");
-      normalizeAndvalidateRequest(resReq1, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq1, maxResource, "queue",
+          scheduler, rmContext);
       Assert.assertEquals(RMNodeLabelsManager.NO_LABEL,
           resReq1.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
@@ -567,20 +564,13 @@ public class TestSchedulerUtils {
   }
 
   @Test (timeout = 30000)
-  public void testValidateResourceRequest() throws IOException {
-    ResourceScheduler mockScheduler = mock(ResourceScheduler.class);
-
-    QueueInfo queueInfo = mock(QueueInfo.class);
-    when(queueInfo.getQueueName()).thenReturn("queue");
+  public void testValidateResourceRequest() {
+    YarnScheduler mockScheduler = mock(YarnScheduler.class);
 
     Resource maxResource =
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    when(rmContext.getScheduler()).thenReturn(mockScheduler);
-    when(mockScheduler.getQueueInfo(Mockito.anyString(), Mockito.anyBoolean(),
-        Mockito.anyBoolean())).thenReturn(queueInfo);
 
     // zero memory
     try {
@@ -590,8 +580,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Zero memory should be accepted");
     }
@@ -604,8 +594,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Zero vcores should be accepted");
     }
@@ -619,8 +609,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Max memory should be accepted");
     }
@@ -634,8 +624,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Max vcores should not be accepted");
     }
@@ -648,8 +638,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
       fail("Negative memory should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
@@ -663,8 +653,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
       fail("Negative vcores should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
@@ -679,8 +669,8 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
       fail("More than max memory should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
@@ -694,14 +684,14 @@ public class TestSchedulerUtils {
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, null,
-          mockScheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
       fail("More than max vcores should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }
   }
-
+  
   @Test
   public void testValidateResourceBlacklistRequest() throws Exception {
 
@@ -763,7 +753,7 @@ public class TestSchedulerUtils {
     }
 
     rm.stop();
-
+    
     Assert.assertTrue(
         "Didn't not catch InvalidResourceBlacklistRequestException", error);
   }
@@ -803,12 +793,12 @@ public class TestSchedulerUtils {
           ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
     Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
   }
-
+  
   @Test (timeout = 30000)
   public void testNormalizeNodeLabelExpression()
       throws IOException {
     // mock queue and scheduler
-    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    YarnScheduler scheduler = mock(YarnScheduler.class);
     Set<String> queueAccessibleNodeLabels = Sets.newHashSet();
     QueueInfo queueInfo = mock(QueueInfo.class);
     when(queueInfo.getQueueName()).thenReturn("queue");
@@ -816,12 +806,10 @@ public class TestSchedulerUtils {
     when(queueInfo.getDefaultNodeLabelExpression()).thenReturn(" x ");
     when(scheduler.getQueueInfo(any(String.class), anyBoolean(), anyBoolean()))
         .thenReturn(queueInfo);
-
+    
     Resource maxResource = Resources.createResource(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    when(rmContext.getScheduler()).thenReturn(scheduler);
 
     // queue has labels, success cases
     try {
@@ -836,13 +824,13 @@ public class TestSchedulerUtils {
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       Assert.assertEquals("x", resReq.getNodeLabelExpression());
-
+      
       resReq.setNodeLabelExpression(" y ");
-      normalizeAndvalidateRequest(resReq, "queue",
-          scheduler, rmContext, maxResource);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
       Assert.assertEquals("y", resReq.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
@@ -1019,7 +1007,7 @@ public class TestSchedulerUtils {
     Assert.assertNull(applications.get(appId));
     return app;
   }
-
+  
   private static RMContext getMockRMContext() {
     RMContext rmContext = mock(RMContext.class);
     RMNodeLabelsManager nlm = new NullRMNodeLabelsManager();
@@ -1029,14 +1017,6 @@ public class TestSchedulerUtils {
         "true");
     when(rmContext.getNodeLabelManager()).thenReturn(nlm);
     return rmContext;
-  }
-
-  private static void normalizeAndvalidateRequest(ResourceRequest resReq,
-      String queueName, YarnScheduler scheduler, RMContext rmContext,
-      Resource maxAllocation)
-      throws InvalidResourceRequestException {
-    SchedulerUtils.normalizeAndValidateRequest(resReq, maxAllocation, queueName,
-        scheduler, rmContext, null);
   }
 
   private static class InvalidResourceRequestExceptionMessageGenerator {

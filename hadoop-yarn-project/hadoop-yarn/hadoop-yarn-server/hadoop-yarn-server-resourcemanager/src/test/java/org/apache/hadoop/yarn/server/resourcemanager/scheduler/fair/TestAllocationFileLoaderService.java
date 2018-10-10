@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
@@ -32,9 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -45,7 +42,6 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -205,7 +201,7 @@ public class TestAllocationFileLoaderService {
 
   @Test
   public void testAllocationFileParsing() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
 
@@ -248,7 +244,6 @@ public class TestAllocationFileLoaderService {
               .fairSharePreemptionTimeout(120)
               .minSharePreemptionTimeout(50)
               .fairSharePreemptionThreshold(0.6)
-              .maxContainerAllocation("512mb,16vcores")
             // Create hierarchical queues G,H, with different min/fair
             // share preemption timeouts and preemption thresholds.
             // Also add a child default to make sure it doesn't impact queue H.
@@ -256,7 +251,6 @@ public class TestAllocationFileLoaderService {
                 .fairSharePreemptionTimeout(180)
                 .minSharePreemptionTimeout(40)
                 .fairSharePreemptionThreshold(0.7)
-                .maxContainerAllocation("1024mb,8vcores")
               .buildSubQueue()
             .buildQueue()
             // Set default limit of apps per queue to 15
@@ -381,28 +375,6 @@ public class TestAllocationFileLoaderService {
     // Queue C ACL
     assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
         QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    Resource expectedResourceWithCustomType = Resources.createResource(512, 16);
-
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation(
-            "root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueA"));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueB"));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueC"));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueD"));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueE"));
-    assertEquals(Resources.unbounded(),
-        queueConf.getQueueMaxContainerAllocation("root.queueF"));
-    assertEquals(expectedResourceWithCustomType,
-        queueConf.getQueueMaxContainerAllocation("root.queueG"));
-    assertEquals(Resources.createResource(1024, 8),
-        queueConf.getQueueMaxContainerAllocation("root.queueG.queueH"));
 
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +

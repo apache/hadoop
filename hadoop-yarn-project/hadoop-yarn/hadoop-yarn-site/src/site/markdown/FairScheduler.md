@@ -92,8 +92,6 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * **maxChildResources**: maximum resources an ad hoc child queue is allocated, expressed either in absolute values (X mb, Y vcores) or as a percentage of the cluster resources (X% memory, Y% cpu). An ad hoc child queue will not be assigned a container that would put its aggregate usage over this limit.
 
-    * **maxContainerAllocation**: maximum resources a queue can allocate for a single container, expressed in the form of "X mb, Y vcores" or "vcores=X, memory-mb=Y". The latter form is required when specifying resources other than memory and CPU. If the property is not set it's value is inherited from a parent queue. It's default value is **yarn.scheduler.maximum-allocation-mb**. Cannot be higher than **maxResources**. This property is invalid for root queue.
-
     * **maxRunningApps**: limit the number of apps from the queue to run at once
 
     * **maxAMShare**: limit the fraction of the queue's fair share that can be used to run application masters. This property can only be used for leaf queues. For example, if set to 1.0f, then AMs in the leaf queue can take up to 100% of both the memory and CPU fair share. The value of -1.0f will disable this feature and the amShare will not be checked. The default value is 0.5f.

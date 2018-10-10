@@ -347,9 +347,9 @@ public class TestClientRMService {
 
    @Test
   public void testGetApplicationReport() throws Exception {
-    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    YarnScheduler yarnScheduler = mock(YarnScheduler.class);
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
 
     ApplicationId appId1 = getApplicationId(1);
 
@@ -358,7 +358,7 @@ public class TestClientRMService {
         mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
             ApplicationAccessType.VIEW_APP, null, appId1)).thenReturn(true);
 
-    ClientRMService rmService = new ClientRMService(rmContext, scheduler,
+    ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
         null, mockAclsManager, null, null);
     try {
       RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -441,9 +441,9 @@ public class TestClientRMService {
   public void testGetApplicationResourceUsageReportDummy() throws YarnException,
       IOException {
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(
         new EventHandler<Event>() {
           public void handle(Event event) {
@@ -453,7 +453,7 @@ public class TestClientRMService {
         mock(ApplicationSubmissionContext.class);
     YarnConfiguration config = new YarnConfiguration();
     RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
-        rmContext, scheduler, null, asContext, config, null, null);
+        rmContext, yarnScheduler, null, asContext, config, null, null);
     ApplicationResourceUsageReport report = rmAppAttemptImpl
         .getApplicationResourceUsageReport();
     assertEquals(report, RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT);
@@ -522,14 +522,14 @@ public class TestClientRMService {
   }
 
   public ClientRMService createRMService() throws IOException, YarnException {
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
-        scheduler);
+        yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
     when(rmContext.getYarnConfiguration()).thenReturn(new Configuration());
-    RMAppManager appManager = new RMAppManager(rmContext, scheduler, null,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
         mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(
         new EventHandler<Event>() {
@@ -543,7 +543,7 @@ public class TestClientRMService {
         mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
             any(QueueACL.class), any(RMApp.class), any(String.class),
             any())).thenReturn(true);
-    return new ClientRMService(rmContext, scheduler, appManager,
+    return new ClientRMService(rmContext, yarnScheduler, appManager,
         mockAclsManager, mockQueueACLsManager, null);
   }
 
@@ -892,9 +892,9 @@ public class TestClientRMService {
 
   @Test
   public void testGetQueueInfo() throws Exception {
-    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    YarnScheduler yarnScheduler = mock(YarnScheduler.class);
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
 
     ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
     QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
@@ -906,7 +906,7 @@ public class TestClientRMService {
         any(ApplicationAccessType.class), anyString(),
         any(ApplicationId.class))).thenReturn(true);
 
-    ClientRMService rmService = new ClientRMService(rmContext, scheduler,
+    ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
         null, mockAclsManager, mockQueueACLsManager, null);
     GetQueueInfoRequest request = recordFactory
         .newRecordInstance(GetQueueInfoRequest.class);
@@ -945,7 +945,7 @@ public class TestClientRMService {
         any(ApplicationAccessType.class), anyString(),
         any(ApplicationId.class))).thenReturn(false);
 
-    ClientRMService rmService1 = new ClientRMService(rmContext, scheduler,
+    ClientRMService rmService1 = new ClientRMService(rmContext, yarnScheduler,
         null, mockAclsManager1, mockQueueACLsManager1, null);
     request.setQueueName("testqueue");
     request.setIncludeApplications(true);
@@ -959,12 +959,12 @@ public class TestClientRMService {
   @Test (timeout = 30000)
   @SuppressWarnings ("rawtypes")
   public void testAppSubmit() throws Exception {
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     RMStateStore stateStore = mock(RMStateStore.class);
     when(rmContext.getStateStore()).thenReturn(stateStore);
-    RMAppManager appManager = new RMAppManager(rmContext, scheduler,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler,
         null, mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(
         new EventHandler<Event>() {
@@ -986,7 +986,7 @@ public class TestClientRMService {
         any()))
         .thenReturn(true);
     ClientRMService rmService =
-        new ClientRMService(rmContext, scheduler, appManager,
+        new ClientRMService(rmContext, yarnScheduler, appManager,
             mockAclsManager, mockQueueACLsManager, null);
     rmService.init(new Configuration());
 
@@ -1070,15 +1070,15 @@ public class TestClientRMService {
      * 2. Test each of the filters
      */
     // Basic setup
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     RMStateStore stateStore = mock(RMStateStore.class);
     when(rmContext.getStateStore()).thenReturn(stateStore);
     doReturn(mock(RMTimelineCollectorManager.class)).when(rmContext)
     .getRMTimelineCollectorManager();
 
-    RMAppManager appManager = new RMAppManager(rmContext, scheduler,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler,
         null, mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(
         new EventHandler<Event>() {
@@ -1092,7 +1092,7 @@ public class TestClientRMService {
         any()))
         .thenReturn(true);
     ClientRMService rmService =
-        new ClientRMService(rmContext, scheduler, appManager,
+        new ClientRMService(rmContext, yarnScheduler, appManager,
             mockAclsManager, mockQueueACLsManager, null);
     rmService.init(new Configuration());
 
@@ -1223,12 +1223,12 @@ public class TestClientRMService {
   public void testConcurrentAppSubmit()
       throws IOException, InterruptedException, BrokenBarrierException,
       YarnException {
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     RMStateStore stateStore = mock(RMStateStore.class);
     when(rmContext.getStateStore()).thenReturn(stateStore);
-    RMAppManager appManager = new RMAppManager(rmContext, scheduler,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler,
         null, mock(ApplicationACLsManager.class), new Configuration());
 
     final ApplicationId appId1 = getApplicationId(100);
@@ -1265,7 +1265,7 @@ public class TestClientRMService {
         .getRMTimelineCollectorManager();
 
     final ClientRMService rmService =
-        new ClientRMService(rmContext, scheduler, appManager, null, null,
+        new ClientRMService(rmContext, yarnScheduler, appManager, null, null,
             null);
     rmService.init(new Configuration());
 
@@ -1324,7 +1324,7 @@ public class TestClientRMService {
     return submitRequest;
   }
 
-  private void mockRMContext(ResourceScheduler scheduler, RMContext rmContext)
+  private void mockRMContext(YarnScheduler yarnScheduler, RMContext rmContext)
       throws IOException {
     Dispatcher dispatcher = mock(Dispatcher.class);
     when(rmContext.getDispatcher()).thenReturn(dispatcher);
@@ -1346,21 +1346,22 @@ public class TestClientRMService {
     queueConfigsByPartition.put("*", queueConfigs);
     queInfo.setQueueConfigurations(queueConfigsByPartition);
 
-    when(scheduler.getQueueInfo(eq("testqueue"), anyBoolean(), anyBoolean()))
+    when(yarnScheduler.getQueueInfo(eq("testqueue"), anyBoolean(), anyBoolean()))
         .thenReturn(queInfo);
-    when(scheduler.getQueueInfo(eq("nonexistentqueue"), anyBoolean(),
-        anyBoolean())).thenThrow(new IOException("queue does not exist"));
+    when(yarnScheduler.getQueueInfo(eq("nonexistentqueue"), anyBoolean(), anyBoolean()))
+        .thenThrow(new IOException("queue does not exist"));
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
     when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
-    ConcurrentHashMap<ApplicationId, RMApp> apps =
-        getRMApps(rmContext, scheduler);
+    ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
+        yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
-    when(scheduler.getAppsInQueue(eq("testqueue"))).thenReturn(
+    when(yarnScheduler.getAppsInQueue(eq("testqueue"))).thenReturn(
         getSchedulerApps(apps));
-    when(rmContext.getScheduler()).thenReturn(scheduler);
+     ResourceScheduler rs = mock(ResourceScheduler.class);
+     when(rmContext.getScheduler()).thenReturn(rs);
   }
 
   private ConcurrentHashMap<ApplicationId, RMApp> getRMApps(
@@ -1464,32 +1465,31 @@ public class TestClientRMService {
     return app;
   }
 
-  private static ResourceScheduler mockResourceScheduler()
-      throws YarnException {
-    ResourceScheduler scheduler = mock(ResourceScheduler.class);
-    when(scheduler.getMinimumResourceCapability()).thenReturn(
+  private static YarnScheduler mockYarnScheduler() throws YarnException {
+    YarnScheduler yarnScheduler = mock(YarnScheduler.class);
+    when(yarnScheduler.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
-    when(scheduler.getMaximumResourceCapability()).thenReturn(
+    when(yarnScheduler.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
-    when(scheduler.getMaximumResourceCapability(anyString())).thenReturn(
-        Resources.createResource(
+    when(yarnScheduler.getMaximumResourceCapability(any(String.class)))
+        .thenReturn(Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
-    when(scheduler.getAppsInQueue(QUEUE_1)).thenReturn(
+    when(yarnScheduler.getAppsInQueue(QUEUE_1)).thenReturn(
         Arrays.asList(getApplicationAttemptId(101), getApplicationAttemptId(102)));
-    when(scheduler.getAppsInQueue(QUEUE_2)).thenReturn(
+    when(yarnScheduler.getAppsInQueue(QUEUE_2)).thenReturn(
         Arrays.asList(getApplicationAttemptId(103)));
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
-    when(scheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
+    when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
 
     ResourceCalculator rs = mock(ResourceCalculator.class);
-    when(scheduler.getResourceCalculator()).thenReturn(rs);
+    when(yarnScheduler.getResourceCalculator()).thenReturn(rs);
 
-    when(scheduler.checkAndGetApplicationPriority(any(Priority.class),
+    when(yarnScheduler.checkAndGetApplicationPriority(any(Priority.class),
         any(UserGroupInformation.class), anyString(), any(ApplicationId.class)))
             .thenReturn(Priority.newInstance(0));
-    return scheduler;
+    return yarnScheduler;
   }
 
   private ResourceManager setupResourceManager() {
@@ -2186,15 +2186,15 @@ public class TestClientRMService {
      * Submit 3 applications alternately in two queues
      */
     // Basic setup
-    ResourceScheduler scheduler = mockResourceScheduler();
+    YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
-    mockRMContext(scheduler, rmContext);
+    mockRMContext(yarnScheduler, rmContext);
     RMStateStore stateStore = mock(RMStateStore.class);
     when(rmContext.getStateStore()).thenReturn(stateStore);
     doReturn(mock(RMTimelineCollectorManager.class)).when(rmContext)
         .getRMTimelineCollectorManager();
 
-    RMAppManager appManager = new RMAppManager(rmContext, scheduler, null,
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
         mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler())
         .thenReturn(new EventHandler<Event>() {
@@ -2213,7 +2213,7 @@ public class TestClientRMService {
     when(appAclsManager.checkAccess(eq(UserGroupInformation.getCurrentUser()),
         any(ApplicationAccessType.class), any(String.class),
         any(ApplicationId.class))).thenReturn(false);
-    ClientRMService rmService = new ClientRMService(rmContext, scheduler,
+    ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
         appManager, appAclsManager, queueAclsManager, null);
     rmService.init(new Configuration());
 
