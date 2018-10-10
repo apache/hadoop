@@ -667,6 +667,8 @@
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>log4j:log4j</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
+                      <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
+                      <exclude>org.bouncycastle:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
