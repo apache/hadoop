@@ -47,8 +47,8 @@ else
   exit 1
 fi
 
-SECURITY_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey hadoop.security.authentication | tr '[:upper:]' '[:lower:]' 2>&-)
-SECURITY_AUTHORIZATION_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey hadoop.security.authorization | tr '[:upper:]' '[:lower:]' 2>&-)
+SECURITY_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getconf -confKey hadoop.security.authentication | tr '[:upper:]' '[:lower:]' 2>&-)
+SECURITY_AUTHORIZATION_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getconf -confKey hadoop.security.authorization | tr '[:upper:]' '[:lower:]' 2>&-)
 
 if [[ ${SECURITY_ENABLED} == "kerberos" || ${SECURITY_AUTHORIZATION_ENABLED} == "true" ]]; then
   echo "Ozone is not supported in a security enabled cluster."
@@ -57,7 +57,7 @@ fi
 
 #---------------------------------------------------------
 # Check if ozone is enabled
-OZONE_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey ozone.enabled | tr '[:upper:]' '[:lower:]' 2>&-)
+OZONE_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getconf -confKey ozone.enabled | tr '[:upper:]' '[:lower:]' 2>&-)
 if [[ "${OZONE_ENABLED}" != "true" ]]; then
   echo "Operation is not supported because ozone is not enabled."
   exit -1
@@ -76,7 +76,7 @@ hadoop_uservar_su ozone datanode "${HADOOP_HDFS_HOME}/bin/ozone" \
 
 #---------------------------------------------------------
 # Ozone Manager nodes
-OM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -ozonemanagers 2>/dev/null)
+OM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getconf -ozonemanagers 2>/dev/null)
 echo "Stopping Ozone Manager nodes [${OM_NODES}]"
 if [[ "${OM_NODES}" == "0.0.0.0" ]]; then
   OM_NODES=$(hostname)
@@ -91,7 +91,7 @@ hadoop_uservar_su hdfs om "${HADOOP_HDFS_HOME}/bin/ozone" \
 
 #---------------------------------------------------------
 # Ozone storagecontainermanager nodes
-SCM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -storagecontainermanagers 2>/dev/null)
+SCM_NODES=$("${HADOOP_HDFS_HOME}/bin/ozone" getconf -storagecontainermanagers 2>/dev/null)
 echo "Stopping storage container manager nodes [${SCM_NODES}]"
 hadoop_uservar_su hdfs scm "${HADOOP_HDFS_HOME}/bin/ozone" \
   --workers \
