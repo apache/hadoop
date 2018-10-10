@@ -283,6 +283,33 @@ public class TestOzoneShell {
       GenericTestUtils.assertExceptionContains(
           "Info Volume failed, error:VOLUME_NOT_FOUND", e);
     }
+
+
+    volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    volume = client.getVolumeDetails(volumeName);
+    assertNotNull(volume);
+
+    //volumeName prefixed with /
+    String volumeNameWithSlashPrefix = "/" + volumeName;
+    args = new String[] {"volume", "delete",
+        url + "/" + volumeNameWithSlashPrefix};
+    execute(shell, args);
+    output = out.toString();
+    assertTrue(output.contains("Volume " + volumeName + " is deleted"));
+
+    // verify if volume has been deleted
+    try {
+      client.getVolumeDetails(volumeName);
+      fail("Get volume call should have thrown.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Info Volume failed, error:VOLUME_NOT_FOUND", e);
+    }
   }
 
   @Test
@@ -295,10 +322,22 @@ public class TestOzoneShell {
         .build();
     client.createVolume(volumeName, volumeArgs);
 
+    //volumeName supplied as-is
     String[] args = new String[] {"volume", "info", url + "/" + volumeName};
     execute(shell, args);
 
     String output = out.toString();
+    assertTrue(output.contains(volumeName));
+    assertTrue(output.contains("createdOn")
+        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
+
+    //volumeName prefixed with /
+    String volumeNameWithSlashPrefix = "/" + volumeName;
+    args = new String[] {"volume", "info",
+        url + "/" + volumeNameWithSlashPrefix};
+    execute(shell, args);
+
+    output = out.toString();
     assertTrue(output.contains(volumeName));
     assertTrue(output.contains("createdOn")
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
@@ -364,6 +403,15 @@ public class TestOzoneShell {
     execute(shell, args);
     vol = client.getVolumeDetails(volumeName);
     assertEquals(newUser, vol.getOwner());
+
+    //volume with / prefix
+    String volumeWithPrefix = "/" + volumeName;
+    String newUser2 = "new-user2";
+    args = new String[] {"volume", "update", url + "/" + volumeWithPrefix,
+        "--user", newUser2};
+    execute(shell, args);
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(newUser2, vol.getOwner());
 
     // test error conditions
     args = new String[] {"volume", "update", url + "/invalid-volume",

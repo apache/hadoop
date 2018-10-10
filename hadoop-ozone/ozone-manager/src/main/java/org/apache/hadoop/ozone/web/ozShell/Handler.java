@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.web.ozShell;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
@@ -151,6 +153,32 @@ public abstract class Handler implements Callable<Void> {
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
+  }
+
+  /**
+   *
+   * @param uri
+   * @return volumeName
+   * @throws Exception
+   * @throws OzoneClientException when uri is null or invalid volume name
+   */
+  protected String parseVolumeName(String uri) throws Exception{
+    URI ozoneURI = verifyURI(uri);
+    Path path = Paths.get(ozoneURI.getPath());
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 1) {
+      String errorMessage;
+      if (pathNameCount < 1) {
+        errorMessage = "Volume name is required to perform volume " +
+            "operations like info, update, create and delete. ";
+      } else {
+        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
+            "volume name";
+      }
+      throw new OzoneClientException(errorMessage);
+    }
+
+    return ozoneURI.getPath().replaceAll("^/+", "");
   }
 
   public boolean isVerbose() {
