@@ -87,7 +87,7 @@ public class SFTPFileSystem extends FileSystem {
   /**
    * Set configuration from UI.
    *
-   * @param uri
+   * @param uriInfo
    * @param conf
    * @throws IOException
    */
@@ -155,7 +155,7 @@ public class SFTPFileSystem extends FileSystem {
   /**
    * Logout and disconnect the given channel.
    *
-   * @param client
+   * @param channel
    * @throws IOException
    */
   private void disconnect(ChannelSftp channel) throws IOException {
@@ -493,6 +493,17 @@ public class SFTPFileSystem extends FileSystem {
     setConfigurationFromURI(uriInfo, conf);
     setConf(conf);
     this.uri = uriInfo;
+  }
+
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>sftp</code>
+   */
+  @Override
+  public String getScheme() {
+    return "sftp";
   }
 
   @Override

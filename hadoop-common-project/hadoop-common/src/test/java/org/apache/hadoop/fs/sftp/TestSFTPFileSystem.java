@@ -106,7 +106,6 @@ public class TestSFTPFileSystem {
     startSshdServer();
 
     Configuration conf = new Configuration();
-    conf.setClass("fs.sftp.impl", SFTPFileSystem.class, FileSystem.class);
     conf.setInt("fs.sftp.host.port", port);
     conf.setBoolean("fs.sftp.impl.disable.cache", true);
 
