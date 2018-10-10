@@ -107,7 +107,11 @@ public class OzoneBucketStub extends OzoneBucket {
 
   @Override
   public OzoneKeyDetails getKey(String key) throws IOException {
-    return keyDetails.get(key);
+    if (keyDetails.containsKey(key)) {
+      return keyDetails.get(key);
+    } else {
+      throw new IOException("Lookup key failed, error:KEY_NOT_FOUND");
+    }
   }
 
   @Override

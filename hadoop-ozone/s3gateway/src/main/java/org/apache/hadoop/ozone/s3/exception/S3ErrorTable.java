@@ -42,6 +42,8 @@ public final class S3ErrorTable {
       "BucketNotEmpty", "The bucket you tried to delete is not empty.",
       HTTP_CONFLICT);
 
+  public static final OS3Exception NO_SUCH_OBJECT = new OS3Exception(
+      "NoSuchObject", "The specified object does not exist", HTTP_NOT_FOUND);
 
   /**
    * Create a new instance of Error.
@@ -60,7 +62,8 @@ public final class S3ErrorTable {
    * Resources, which can be defined in OS3Exception.
    */
   public enum Resource {
-    BUCKET("Bucket");
+    BUCKET("Bucket"),
+    OBJECT("Object");
 
     private final String resource;
 
