@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.slf4j.Logger;
@@ -154,8 +153,8 @@ public class ContainersLauncher extends AbstractService
         break;
       case CLEANUP_CONTAINER:
       case CLEANUP_CONTAINER_FOR_REINIT:
-        ContainerLaunch launcher = running.remove(containerId);
-        if (launcher == null) {
+        ContainerLaunch existingLaunch = running.remove(containerId);
+        if (existingLaunch == null) {
           // Container not launched.
           // triggering KILLING to CONTAINER_CLEANEDUP_AFTER_KILL transition.
           dispatcher.getEventHandler().handle(
@@ -169,12 +168,9 @@ public class ContainersLauncher extends AbstractService
 
         // Cleanup a container whether it is running/killed/completed, so that
         // no sub-processes are alive.
-        try {
-          launcher.cleanupContainer();
-        } catch (IOException e) {
-          LOG.warn("Got exception while cleaning container " + containerId
-              + ". Ignoring.");
-        }
+        ContainerCleanup cleanup = new ContainerCleanup(context, getConfig(),
+            dispatcher, exec, event.getContainer(), existingLaunch);
+        containerLauncher.submit(cleanup);
         break;
       case SIGNAL_CONTAINER:
         SignalContainersLauncherEvent signalEvent =
