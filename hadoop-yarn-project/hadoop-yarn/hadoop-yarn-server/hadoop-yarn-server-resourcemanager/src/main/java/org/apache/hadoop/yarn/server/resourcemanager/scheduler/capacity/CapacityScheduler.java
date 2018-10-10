@@ -2581,7 +2581,17 @@ public class CapacityScheduler extends
       LOG.error("queue " + queueName + " is not an leaf queue");
       return getMaximumResourceCapability();
     }
-    return ((LeafQueue)queue).getMaximumAllocation();
+
+    // queue.getMaxAllocation returns *configured* maximum allocation.
+    // getMaximumResourceCapability() returns maximum allocation considers
+    // per-node maximum resources. So return (component-wise) min of the two.
+
+    Resource queueMaxAllocation = ((LeafQueue)queue).getMaximumAllocation();
+    Resource clusterMaxAllocationConsiderNodeMax =
+        getMaximumResourceCapability();
+
+    return Resources.componentwiseMin(queueMaxAllocation,
+        clusterMaxAllocationConsiderNodeMax);
   }
 
   private String handleMoveToPlanQueue(String targetQueueName) {
