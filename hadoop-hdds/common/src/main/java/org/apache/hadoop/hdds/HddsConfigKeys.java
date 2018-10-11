@@ -72,7 +72,7 @@ public final class HddsConfigKeys {
 
   // DB Profiles used by ROCKDB instances.
   public static final String HDDS_DB_PROFILE = "hdds.db.profile";
-  public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.SSD;
+  public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.DISK;
 
   // Once a container usage crosses this threshold, it is eligible for
   // closing.
