@@ -32,8 +32,8 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.retry.RetryPolicies;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
-import org.apache.ratis.shaded.proto.RaftProtos;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.util.Preconditions;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
@@ -103,7 +103,7 @@ public interface RatisHelper {
   RaftGroupId DUMMY_GROUP_ID =
       RaftGroupId.valueOf(ByteString.copyFromUtf8("AOzoneRatisGroup"));
 
-  RaftGroup EMPTY_GROUP = new RaftGroup(DUMMY_GROUP_ID,
+  RaftGroup EMPTY_GROUP = RaftGroup.valueOf(DUMMY_GROUP_ID,
       Collections.emptyList());
 
   static RaftGroup emptyRaftGroup() {
@@ -112,7 +112,7 @@ public interface RatisHelper {
 
   static RaftGroup newRaftGroup(Collection<RaftPeer> peers) {
     return peers.isEmpty()? emptyRaftGroup()
-        : new RaftGroup(DUMMY_GROUP_ID, peers);
+        : RaftGroup.valueOf(DUMMY_GROUP_ID, peers);
   }
 
   static RaftGroup newRaftGroup(RaftGroupId groupId,
@@ -120,12 +120,12 @@ public interface RatisHelper {
     final List<RaftPeer> newPeers = peers.stream()
         .map(RatisHelper::toRaftPeer)
         .collect(Collectors.toList());
-    return peers.isEmpty() ? new RaftGroup(groupId, Collections.emptyList())
-        : new RaftGroup(groupId, newPeers);
+    return peers.isEmpty() ? RaftGroup.valueOf(groupId, Collections.emptyList())
+        : RaftGroup.valueOf(groupId, newPeers);
   }
 
   static RaftGroup newRaftGroup(Pipeline pipeline) {
-    return new RaftGroup(pipeline.getId().getRaftGroupID(),
+    return RaftGroup.valueOf(pipeline.getId().getRaftGroupID(),
         toRaftPeers(pipeline));
   }
 
