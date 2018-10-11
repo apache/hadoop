@@ -135,7 +135,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
   protected final LocalDirsHandlerService dirsHandler;
 
-  private final Lock containerExecLock = new ReentrantLock();
+  private final Lock launchLock = new ReentrantLock();
 
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
@@ -485,11 +485,11 @@ public class ContainerLaunch implements Callable<Integer> {
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
     if (launchPrep == 0) {
-      containerExecLock.lock();
+      launchLock.lock();
       try {
         return exec.launchContainer(ctx);
       } finally {
-        containerExecLock.unlock();
+        launchLock.unlock();
       }
     }
     return launchPrep;
@@ -499,18 +499,18 @@ public class ContainerLaunch implements Callable<Integer> {
       throws IOException, ConfigurationException {
     int launchPrep = prepareForLaunch(ctx);
     if (launchPrep == 0) {
-      containerExecLock.lock();
+      launchLock.lock();
       try {
         return exec.relaunchContainer(ctx);
       } finally {
-        containerExecLock.unlock();
+        launchLock.unlock();
       }
     }
     return launchPrep;
   }
 
   void reapContainer() throws IOException {
-    containerExecLock.lock();
+    launchLock.lock();
     try {
       // Reap the container
       boolean result = exec.reapContainer(
@@ -524,7 +524,7 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       cleanupContainerFiles(getContainerWorkDir());
     } finally {
-      containerExecLock.unlock();
+      launchLock.unlock();
     }
   }
 
