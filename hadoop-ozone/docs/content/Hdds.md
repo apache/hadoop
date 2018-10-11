@@ -33,7 +33,7 @@ to maintain the replication levels needed by the cluster.
 
 It is easier to look at a putKey operation to understand the role that SCM plays.
 
-To put a key, a client makes a call to KSM with the following arguments.
+To put a key, a client makes a call to OM with the following arguments.
 
 -- putKey(keyName, data, pipeline type, replication count)
 
