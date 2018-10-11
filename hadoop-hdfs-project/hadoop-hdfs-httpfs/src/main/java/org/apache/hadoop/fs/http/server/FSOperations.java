@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -1699,6 +1700,40 @@ public class FSOperations {
       } else {
         return "";
       }
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshottableDirListing operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshottableDirListing implements
+      FileSystemAccess.FileSystemExecutor<String> {
+
+    /**
+     * Creates a getSnapshottableDirListing executor.
+     */
+    public FSGetSnapshottableDirListing() {
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A JSON string of all snapshottable directories.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshottableDirectoryStatus[] sds = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sds = dfs.getSnapshottableDirListing();
+      } else {
+        throw new UnsupportedOperationException("getSnapshottableDirListing is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(sds);
     }
   }
 }
