@@ -408,6 +408,12 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
+  public Boolean isNodeRegistered(
+      DatanodeDetails datanodeDetails) {
+    return null;
+  }
+
+  @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
     for (HddsProtos.NodeState state : HddsProtos.NodeState.values()) {
@@ -468,6 +474,11 @@ public class MockNodeManager implements NodeManager {
       aggregateStat.subtract(stat);
       stat.set(0, 0, 0);
     }
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return null;
   }
 
   /**
