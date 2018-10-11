@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
@@ -211,56 +208,6 @@ public class TestNodeManager {
     Thread.sleep(2 * 1000);
 
     //TODO: add assertion
-  }
-
-  /**
-   * Asserts scm informs datanodes to re-register with the nodemanager
-   * on a restart.
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testScmHeartbeatAfterRestart() throws Exception {
-    OzoneConfiguration conf = getConf();
-    conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
-        100, TimeUnit.MILLISECONDS);
-    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    UUID dnId = datanodeDetails.getUuid();
-    String storagePath = testDir.getAbsolutePath() + "/" + dnId;
-    StorageReportProto report =
-        TestUtils.createStorageReport(dnId, storagePath, 100, 10, 90, null);
-    try (SCMNodeManager nodemanager = createNodeManager(conf)) {
-      nodemanager.register(datanodeDetails,
-          TestUtils.createNodeReport(report),
-          TestUtils.getRandomPipelineReports());
-      List<SCMCommand> command = nodemanager.processHeartbeat(datanodeDetails);
-      Assert.assertTrue(nodemanager.getAllNodes().contains(datanodeDetails));
-      Assert.assertTrue("On regular HB calls, SCM responses a "
-          + "datanode with an empty command list", command.isEmpty());
-    }
-
-    // Sends heartbeat without registering to SCM.
-    // This happens when SCM restarts.
-    try (SCMNodeManager nodemanager = createNodeManager(conf)) {
-      Assert.assertFalse(nodemanager
-          .getAllNodes().contains(datanodeDetails));
-      try {
-        // SCM handles heartbeat asynchronously.
-        // It may need more than one heartbeat processing to
-        // send the notification.
-        GenericTestUtils.waitFor(new Supplier<Boolean>() {
-          @Override public Boolean get() {
-            List<SCMCommand> command =
-                nodemanager.processHeartbeat(datanodeDetails);
-            return command.size() == 1 && command.get(0).getType()
-                .equals(SCMCommandProto.Type.reregisterCommand);
-          }
-        }, 100, 3 * 1000);
-      } catch (TimeoutException e) {
-        Assert.fail("Times out to verify that scm informs "
-            + "datanode to re-register itself.");
-      }
-    }
   }
 
   /**

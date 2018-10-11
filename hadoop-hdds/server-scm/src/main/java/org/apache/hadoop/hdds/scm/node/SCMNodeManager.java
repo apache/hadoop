@@ -52,7 +52,6 @@ import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
-import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import org.slf4j.Logger;
@@ -196,7 +195,7 @@ public class SCMNodeManager
     try {
       stat = nodeStateManager.getNodeStat(dnId);
     } catch (NodeNotFoundException e) {
-      LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
+      LOG.debug("SCM updateNodeStat based on heartbeat from previous " +
           "dead datanode {}", dnId);
       stat = new SCMNodeStat();
     }
@@ -277,7 +276,7 @@ public class SCMNodeManager
       nodeStateManager.setNodeStat(dnId, new SCMNodeStat());
       // Updating Node Report, as registration is successful
       updateNodeStat(datanodeDetails.getUuid(), nodeReport);
-      LOG.info("Data node with ID: {} Registered.", datanodeDetails.getUuid());
+      LOG.info("Registered Data node : {}", datanodeDetails);
     } catch (NodeAlreadyExistsException e) {
       LOG.trace("Datanode is already registered. Datanode: {}",
           datanodeDetails.toString());
@@ -304,12 +303,20 @@ public class SCMNodeManager
     try {
       nodeStateManager.updateLastHeartbeatTime(datanodeDetails);
     } catch (NodeNotFoundException e) {
-      LOG.warn("SCM receive heartbeat from unregistered datanode {}",
-          datanodeDetails);
-      commandQueue.addCommand(datanodeDetails.getUuid(),
-          new ReregisterCommand());
+      LOG.error("SCM trying to process heartbeat from an " +
+          "unregistered node {}. Ignoring the heartbeat.", datanodeDetails);
     }
     return commandQueue.getCommand(datanodeDetails.getUuid());
+  }
+
+  @Override
+  public Boolean isNodeRegistered(DatanodeDetails datanodeDetails) {
+    try {
+      nodeStateManager.getNode(datanodeDetails);
+      return true;
+    } catch (NodeNotFoundException e) {
+      return false;
+    }
   }
 
   /**
@@ -486,5 +493,10 @@ public class SCMNodeManager
       LOG.warn("Can't update stats based on message of dead Datanode {}, it"
           + " doesn't exist or decommissioned already.", dnUuid);
     }
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return commandQueue.getCommand(dnID);
   }
 }

@@ -196,4 +196,11 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param dnUuid datanode uuid.
    */
   void processDeadNode(UUID dnUuid);
+
+  /**
+   * Get list of SCMCommands in the Command Queue for a particular Datanode.
+   * @param dnID - Datanode uuid.
+   * @return list of commands
+   */
+  List<SCMCommand> getCommandQueue(UUID dnID);
 }
