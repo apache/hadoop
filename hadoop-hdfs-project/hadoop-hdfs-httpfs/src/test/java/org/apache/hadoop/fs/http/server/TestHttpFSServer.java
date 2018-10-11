@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.http.server;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
@@ -1399,5 +1400,57 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertNotEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     // Clean up
     dfs.delete(path, true);
+  }
+
+  private void verifyGetSnapshottableDirectoryList(DistributedFileSystem dfs)
+      throws Exception {
+    // Send a request
+    HttpURLConnection conn = sendRequestToHttpFSServer("/",
+        "GETSNAPSHOTTABLEDIRECTORYLIST", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    // Verify the content of diff with DFS API.
+    SnapshottableDirectoryStatus[] dfsDirLst = dfs.getSnapshottableDirListing();
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetSnapshottableDirectoryList() throws Exception {
+    createHttpFSServer(false, false);
+    // Create test directories
+    String pathStr1 = "/tmp/tmp-snap-dirlist-test-1";
+    createDirWithHttp(pathStr1, "700", null);
+    Path path1 = new Path(pathStr1);
+    String pathStr2 = "/tmp/tmp-snap-dirlist-test-2";
+    createDirWithHttp(pathStr2, "700", null);
+    Path path2 = new Path(pathStr2);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        path1.toUri(), TestHdfsHelper.getHdfsConf());
+    // Verify response when there is no snapshottable directory
+    verifyGetSnapshottableDirectoryList(dfs);
+    // Enable snapshot for path1
+    dfs.allowSnapshot(path1);
+    Assert.assertTrue(dfs.getFileStatus(path1).isSnapshotEnabled());
+    // Verify response when there is one snapshottable directory
+    verifyGetSnapshottableDirectoryList(dfs);
+    // Enable snapshot for path2
+    dfs.allowSnapshot(path2);
+    Assert.assertTrue(dfs.getFileStatus(path2).isSnapshotEnabled());
+    // Verify response when there are two snapshottable directories
+    verifyGetSnapshottableDirectoryList(dfs);
+
+    // Clean up and verify
+    dfs.delete(path2, true);
+    verifyGetSnapshottableDirectoryList(dfs);
+    dfs.delete(path1, true);
+    verifyGetSnapshottableDirectoryList(dfs);
   }
 }

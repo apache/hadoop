@@ -41,6 +41,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1071,7 +1073,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
-    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF
+    FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST
   }
 
   private void operation(Operation op) throws Exception {
@@ -1184,6 +1186,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case GET_SNAPSHOT_DIFF:
       testGetSnapshotDiff();
       testGetSnapshotDiffIllegalParam();
+      break;
+    case GET_SNAPSHOTTABLE_DIRECTORY_LIST:
+      testGetSnapshottableDirListing();
       break;
     }
   }
@@ -1527,6 +1532,53 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       testGetSnapshotDiffIllegalParamCase(fs, path, "snap1", "snap2");
       // Cleanup
       fs.delete(path, true);
+    }
+  }
+
+  private void verifyGetSnapshottableDirListing(
+      FileSystem fs, DistributedFileSystem dfs) throws Exception {
+    // Get snapshottable directory list
+    SnapshottableDirectoryStatus[] sds = null;
+    if (fs instanceof HttpFSFileSystem) {
+      HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+      sds = httpFS.getSnapshottableDirectoryList();
+    } else if (fs instanceof WebHdfsFileSystem) {
+      WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+      sds = webHdfsFileSystem.getSnapshottableDirectoryList();
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() +
+          " doesn't support getSnapshottableDirListing");
+    }
+    // Verify result with DFS
+    SnapshottableDirectoryStatus[] dfssds = dfs.getSnapshottableDirListing();
+    Assert.assertEquals(JsonUtil.toJsonString(sds),
+        JsonUtil.toJsonString(dfssds));
+  }
+
+  private void testGetSnapshottableDirListing() throws Exception {
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Create directories with snapshot allowed
+      Path path1 = new Path("/tmp/tmp-snap-dirlist-test-1");
+      DistributedFileSystem dfs = (DistributedFileSystem)
+          FileSystem.get(path1.toUri(), this.getProxiedFSConf());
+      // Verify response when there is no snapshottable directory
+      verifyGetSnapshottableDirListing(fs, dfs);
+      createSnapshotTestsPreconditions(path1);
+      Assert.assertTrue(fs.getFileStatus(path1).isSnapshotEnabled());
+      // Verify response when there is one snapshottable directory
+      verifyGetSnapshottableDirListing(fs, dfs);
+      Path path2 = new Path("/tmp/tmp-snap-dirlist-test-2");
+      createSnapshotTestsPreconditions(path2);
+      Assert.assertTrue(fs.getFileStatus(path2).isSnapshotEnabled());
+      // Verify response when there are two snapshottable directories
+      verifyGetSnapshottableDirListing(fs, dfs);
+
+      // Clean up and verify
+      fs.delete(path2, true);
+      verifyGetSnapshottableDirListing(fs, dfs);
+      fs.delete(path1, true);
+      verifyGetSnapshottableDirListing(fs, dfs);
     }
   }
 }
