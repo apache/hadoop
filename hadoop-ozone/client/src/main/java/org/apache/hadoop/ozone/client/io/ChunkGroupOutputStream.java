@@ -712,6 +712,11 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
         return out.getBlockCommitSequenceId();
+      } else if (outputStream == null) {
+        // For a pre allocated block for which no write has been initiated,
+        // the OutputStream will be null here.
+        // In such cases, the default blockCommitSequenceId will be 0
+        return 0;
       }
       throw new IOException("Invalid Output Stream for Key: " + key);
     }
