@@ -38,6 +38,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.Path;
@@ -52,9 +53,14 @@ import com.google.common.util.concurrent.Uninterruptibles;
  
 public class TestConfigurationDeprecation {
   private Configuration conf;
-  final static String CONFIG = new File("./test-config-TestConfigurationDeprecation.xml").getAbsolutePath();
-  final static String CONFIG2 = new File("./test-config2-TestConfigurationDeprecation.xml").getAbsolutePath();
-  final static String CONFIG3 = new File("./test-config3-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG = new File("./test-config" +
+      "-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG2 = new File("./test-config2" +
+      "-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG3 = new File("./test-config3" +
+      "-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG4 = new File("./test-config4" +
+      "-TestConfigurationDeprecation.xml").getAbsolutePath();
   BufferedWriter out;
   
   static {
@@ -288,14 +294,14 @@ public class TestConfigurationDeprecation {
   @Test
   public void testIteratorWithDeprecatedKeys() {
     Configuration conf = new Configuration();
-    Configuration.addDeprecation("dK", new String[]{"nK"});
+    Configuration.addDeprecation("dK_iterator", new String[]{"nK_iterator"});
     conf.set("k", "v");
-    conf.set("dK", "V");
-    assertEquals("V", conf.get("dK"));
-    assertEquals("V", conf.get("nK"));
-    conf.set("nK", "VV");
-    assertEquals("VV", conf.get("dK"));
-    assertEquals("VV", conf.get("nK"));
+    conf.set("dK_iterator", "V");
+    assertEquals("V", conf.get("dK_iterator"));
+    assertEquals("V", conf.get("nK_iterator"));
+    conf.set("nK_iterator", "VV");
+    assertEquals("VV", conf.get("dK_iterator"));
+    assertEquals("VV", conf.get("nK_iterator"));
     boolean kFound = false;
     boolean dKFound = false;
     boolean nKFound = false;
@@ -304,11 +310,11 @@ public class TestConfigurationDeprecation {
         assertEquals("v", entry.getValue());
         kFound = true;
       }
-      if (entry.getKey().equals("dK")) {
+      if (entry.getKey().equals("dK_iterator")) {
         assertEquals("VV", entry.getValue());
         dKFound = true;
       }
-      if (entry.getKey().equals("nK")) {
+      if (entry.getKey().equals("nK_iterator")) {
         assertEquals("VV", entry.getValue());
         nKFound = true;
       }
@@ -321,19 +327,19 @@ public class TestConfigurationDeprecation {
   @Test
   public void testUnsetWithDeprecatedKeys() {
     Configuration conf = new Configuration();
-    Configuration.addDeprecation("dK", new String[]{"nK"});
-    conf.set("nK", "VV");
-    assertEquals("VV", conf.get("dK"));
-    assertEquals("VV", conf.get("nK"));
-    conf.unset("dK");
-    assertNull(conf.get("dK"));
-    assertNull(conf.get("nK"));
-    conf.set("nK", "VV");
-    assertEquals("VV", conf.get("dK"));
-    assertEquals("VV", conf.get("nK"));
-    conf.unset("nK");
-    assertNull(conf.get("dK"));
-    assertNull(conf.get("nK"));
+    Configuration.addDeprecation("dK_unset", new String[]{"nK_unset"});
+    conf.set("nK_unset", "VV");
+    assertEquals("VV", conf.get("dK_unset"));
+    assertEquals("VV", conf.get("nK_unset"));
+    conf.unset("dK_unset");
+    assertNull(conf.get("dK_unset"));
+    assertNull(conf.get("nK_unset"));
+    conf.set("nK_unset", "VV");
+    assertEquals("VV", conf.get("dK_unset"));
+    assertEquals("VV", conf.get("nK_unset"));
+    conf.unset("nK_unset");
+    assertNull(conf.get("dK_unset"));
+    assertNull(conf.get("nK_unset"));
   }
 
   private static String getTestKeyName(int threadIndex, int testIndex) {
@@ -426,4 +432,36 @@ public class TestConfigurationDeprecation {
     assertEquals(null, conf.get("Z"));
     assertEquals(null, conf.get("X"));
   }
+
+  @Test
+  public void testGetPropertyBeforeDeprecetionsAreSet() throws Exception {
+    // SETUP
+    final String oldZkAddressKey = "yarn.resourcemanager.zk-address";
+    final String newZkAddressKey = CommonConfigurationKeys.ZK_ADDRESS;
+    final String zkAddressValue = "dummyZkAddress";
+
+    try{
+      out = new BufferedWriter(new FileWriter(CONFIG4));
+      startConfig();
+      appendProperty(oldZkAddressKey, zkAddressValue);
+      endConfig();
+
+      Path fileResource = new Path(CONFIG4);
+      conf.addResource(fileResource);
+    } finally {
+      out.close();
+    }
+
+    // ACT
+    conf.get(oldZkAddressKey);
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[] {
+        new Configuration.DeprecationDelta(oldZkAddressKey, newZkAddressKey)});
+
+    // ASSERT
+    assertEquals("Property should be accessible through deprecated key",
+        zkAddressValue, conf.get(oldZkAddressKey));
+    assertEquals("Property should be accessible through new key",
+        zkAddressValue, conf.get(newZkAddressKey));
+  }
+
 }
