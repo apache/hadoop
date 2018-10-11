@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;

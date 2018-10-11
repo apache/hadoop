@@ -197,7 +197,6 @@ message ContainerCommandRequestProto {
 
   optional   PutSmallFileRequestProto putSmallFile = 19;
   optional   GetSmallFileRequestProto getSmallFile = 20;
-
   optional   GetCommittedBlockLengthRequestProto getCommittedBlockLength = 21;
 }
 

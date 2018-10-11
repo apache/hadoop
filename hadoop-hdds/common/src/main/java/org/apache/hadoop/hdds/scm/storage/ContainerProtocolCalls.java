@@ -20,7 +20,7 @@ package org.apache.hadoop.hdds.scm.storage;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .BlockNotCommittedException;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;

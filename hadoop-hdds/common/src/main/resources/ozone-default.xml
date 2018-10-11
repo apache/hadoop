@@ -136,6 +136,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.num.container.op.executors</name>
+    <value>10</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Number of executors that will be used by Ratis to execute
+      container ops.(10 by default).
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.segment.size</name>
     <value>1073741824</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>

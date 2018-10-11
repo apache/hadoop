@@ -172,10 +172,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <phase>generate-sources</phase>
             <configuration>
               <tasks>
-                <replace token="com.google.protobuf" value="org.apache.ratis.shaded.com.google.protobuf"
+                <replace token="com.google.protobuf" value="org.apache.ratis.thirdparty.com.google.protobuf"
                   dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
                 </replace>
-                <replace token="io.grpc" value="org.apache.ratis.shaded.io.grpc"
+                <replace token="io.grpc" value="org.apache.ratis.thirdparty.io.grpc"
                   dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
                 </replace>
               </tasks>

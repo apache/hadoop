@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -439,6 +439,7 @@ public final class ContainerTestHelper {
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
     newList.add(writeRequest.getChunkData());
     blockData.setChunks(newList);
+    blockData.setBlockCommitSequenceId(0);
     putRequest.setBlockData(blockData.getProtoBufMessage());
 
     ContainerCommandRequestProto.Builder request =

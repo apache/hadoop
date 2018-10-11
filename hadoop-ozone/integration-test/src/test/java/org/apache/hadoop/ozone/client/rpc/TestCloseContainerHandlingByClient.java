@@ -341,7 +341,6 @@ public class TestCloseContainerHandlingByClient {
     Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
     // With the initial size provided, it should have pre allocated 4 blocks
     Assert.assertEquals(2, groupOutputStream.getStreamEntries().size());
-    Assert.assertEquals(2, groupOutputStream.getLocationInfoList().size());
     String dataString = fixedLengthString(keyString, (1 * blockSize));
     byte[] data = dataString.getBytes();
     key.write(data);
