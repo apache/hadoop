@@ -79,7 +79,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  *                                       values.
  *   </li>
  *   <li>
- *   <code>BlockCompressWriter</code> : Block-compressed files, both keys & 
+ *   <code>BlockCompressWriter</code> : Block-compressed files, both keys &amp;
  *                                      values are collected in 'blocks' 
  *                                      separately and compressed. The size of 
  *                                      the 'block' is configurable.
@@ -94,13 +94,13 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  * <p>The {@link SequenceFile.Reader} acts as the bridge and can read any of the
  * above <code>SequenceFile</code> formats.</p>
  *
- * <h4 id="Formats">SequenceFile Formats</h4>
+ * <h3 id="Formats">SequenceFile Formats</h3>
  * 
  * <p>Essentially there are 3 different formats for <code>SequenceFile</code>s
  * depending on the <code>CompressionType</code> specified. All of them share a
  * <a href="#Header">common header</a> described below.
  * 
- * <h5 id="Header">SequenceFile Header</h5>
+ * <h4 id="Header">SequenceFile Header</h4>
  * <ul>
  *   <li>
  *   version - 3 bytes of magic header <b>SEQ</b>, followed by 1 byte of actual 
@@ -133,7 +133,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  *   </li>
  * </ul>
  * 
- * <h5 id="#UncompressedFormat">Uncompressed SequenceFile Format</h5>
+ * <h5>Uncompressed SequenceFile Format</h5>
  * <ul>
  * <li>
  * <a href="#Header">Header</a>
@@ -152,7 +152,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  * </li>
  * </ul>
  *
- * <h5 id="#RecordCompressedFormat">Record-Compressed SequenceFile Format</h5>
+ * <h5>Record-Compressed SequenceFile Format</h5>
  * <ul>
  * <li>
  * <a href="#Header">Header</a>
@@ -171,7 +171,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
  * </li>
  * </ul>
  * 
- * <h5 id="#BlockCompressedFormat">Block-Compressed SequenceFile Format</h5>
+ * <h5>Block-Compressed SequenceFile Format</h5>
  * <ul>
  * <li>
  * <a href="#Header">Header</a>
@@ -1935,8 +1935,8 @@ public class SequenceFile {
      * @param fs The file system used to open the file.
      * @param file The file being read.
      * @param bufferSize The buffer size used to read the file.
-     * @param length The length being read if it is >= 0.  Otherwise,
-     *               the length is not available.
+     * @param length The length being read if it is {@literal >=} 0.
+     *               Otherwise, the length is not available.
      * @return The opened stream.
      * @throws IOException
      */

@@ -62,10 +62,10 @@ import org.apache.hadoop.util.Timer;
  * still maintaining overall information about how many large requests were
  * received.
  *
- * <p/>This class can also be used to coordinate multiple logging points; see
+ * <p>This class can also be used to coordinate multiple logging points; see
  * {@link #record(String, long, double...)} for more details.
  *
- * <p/>This class is not thread-safe.
+ * <p>This class is not thread-safe.
  */
 public class LogThrottlingHelper {
 
@@ -175,7 +175,7 @@ public class LogThrottlingHelper {
    * about the values specified since the last time the caller was expected to
    * write to its log.
    *
-   * <p/>Specifying multiple values will maintain separate summary statistics
+   * <p>Specifying multiple values will maintain separate summary statistics
    * about each value. For example:
    * <pre>{@code
    *   helper.record(1, 0);
@@ -230,7 +230,7 @@ public class LogThrottlingHelper {
    * iteration as "pre", yet each one is able to maintain its own summary
    * information.
    *
-   * <p/>Other behavior is the same as {@link #record(double...)}.
+   * <p>Other behavior is the same as {@link #record(double...)}.
    *
    * @param recorderName The name of the recorder. This is used to check if the
    *                     current recorder is the primary. Other names are

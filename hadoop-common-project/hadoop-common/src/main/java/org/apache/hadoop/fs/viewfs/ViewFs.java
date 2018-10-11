@@ -75,16 +75,16 @@ import org.apache.hadoop.util.Time;
  * one or more individual file systems (a localFs or Hdfs, S3fs, etc).
  * For example one could have a mount table that provides links such as
  * <ul>
- * <li>  /user          -> hdfs://nnContainingUserDir/user
- * <li>  /project/foo   -> hdfs://nnProject1/projects/foo
- * <li>  /project/bar   -> hdfs://nnProject2/projects/bar
- * <li>  /tmp           -> hdfs://nnTmp/privateTmpForUserXXX
+ * <li>  /user          {@literal ->} hdfs://nnContainingUserDir/user
+ * <li>  /project/foo   {@literal ->} hdfs://nnProject1/projects/foo
+ * <li>  /project/bar   {@literal ->} hdfs://nnProject2/projects/bar
+ * <li>  /tmp           {@literal ->} hdfs://nnTmp/privateTmpForUserXXX
  * </ul> 
  * 
  * ViewFs is specified with the following URI: <b>viewfs:///</b> 
  * <p>
  * To use viewfs one would typically set the default file system in the
- * config  (i.e. fs.defaultFS < = viewfs:///) along with the
+ * config  (i.e. fs.defaultFS {@literal <} = viewfs:///) along with the
  * mount table config variables as described below. 
  * 
  * <p>
@@ -132,7 +132,7 @@ import org.apache.hadoop.util.Time;
  *   (because they do not fit on one) then one could specify a mount
  *   entry such as following merges two dirs:
  *   <ul>
- *   <li> /user -> hdfs://nnUser1/user,hdfs://nnUser2/user
+ *   <li> /user {@literal ->} hdfs://nnUser1/user,hdfs://nnUser2/user
  *   </ul>
  *  Such a mergeLink can be specified with the following config var where ","
  *  is used as the separator for each of links to be merged:

@@ -25,8 +25,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
- * An interface for the implementation of <userId, userName> mapping
- * and <groupId, groupName> mapping
+ * An interface for the implementation of {@literal <}userId,
+ * userName{@literal >} mapping and {@literal <}groupId, groupName{@literal >}
+ * mapping.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

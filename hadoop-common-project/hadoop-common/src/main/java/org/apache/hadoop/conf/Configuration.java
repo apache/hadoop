@@ -115,7 +115,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 /**
  * Provides access to configuration parameters.
  *
- * <h4 id="Resources">Resources</h4>
+ * <h3 id="Resources">Resources</h3>
  *
  * <p>Configurations are specified by resources. A resource contains a set of
  * name/value pairs as XML data. Each resource is named by either a 
@@ -141,12 +141,12 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * Once a resource declares a value final, no subsequently-loaded 
  * resource can alter that value.  
  * For example, one might define a final parameter with:
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;dfs.hosts.include&lt;/name&gt;
  *    &lt;value&gt;/etc/hadoop/conf/hosts.include&lt;/value&gt;
  *    <b>&lt;final&gt;true&lt;/final&gt;</b>
- *  &lt;/property&gt;</pre></tt>
+ *  &lt;/property&gt;</code></pre>
  *
  * Administrators typically define parameters as final in 
  * <tt>core-site.xml</tt> for values that user applications may not alter.
@@ -164,7 +164,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *
  * <p>For example, if a configuration resource contains the following property
  * definitions: 
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;basedir&lt;/name&gt;
  *    &lt;value&gt;/user/${<i>user.name</i>}&lt;/value&gt;
@@ -179,7 +179,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;name&gt;otherdir&lt;/name&gt;
  *    &lt;value&gt;${<i>env.BASE_DIR</i>}/other&lt;/value&gt;
  *  &lt;/property&gt;
- *  </pre></tt>
+ *  </code></pre>
  *
  * <p>When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
  * will be resolved to another property in this Configuration, while
@@ -203,7 +203,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * can define there own custom tags in  hadoop.tags.custom property.
  *
  * <p>For example, we can tag existing property as:
- * <tt><pre>
+ * <pre><code>
  *  &lt;property&gt;
  *    &lt;name&gt;dfs.replication&lt;/name&gt;
  *    &lt;value&gt;3&lt;/value&gt;
@@ -215,7 +215,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;value&gt;3&lt;/value&gt;
  *    &lt;tag&gt;HDFS,SECURITY&lt;/tag&gt;
  *  &lt;/property&gt;
- * </pre></tt>
+ * </code></pre>
  * <p> Properties marked with tags can be retrieved with <tt>conf
  * .getAllPropertiesByTag("HDFS")</tt> or <tt>conf.getAllPropertiesByTags
  * (Arrays.asList("YARN","SECURITY"))</tt>.</p>
@@ -581,9 +581,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
    * 
-   * @param key
-   * @param newKeys
-   * @param customMessage
+   * @param key to be deprecated
+   * @param newKeys list of keys that take up the values of deprecated key
+   * @param customMessage depcrication message
    * @deprecated use {@link #addDeprecation(String key, String newKey,
       String customMessage)} instead
    */
@@ -605,9 +605,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
    *
-   * @param key
-   * @param newKey
-   * @param customMessage
+   * @param key to be deprecated
+   * @param newKey key that take up the values of deprecated key
+   * @param customMessage deprecation message
    */
   public static void addDeprecation(String key, String newKey,
 	      String customMessage) {
@@ -1428,6 +1428,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Unset a previously set property.
+   * @param name the property name
    */
   public synchronized void unset(String name) {
     String[] names = null;
@@ -1717,6 +1718,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * is equivalent to <code>set(&lt;name&gt;, value.toString())</code>.
    * @param name property name
    * @param value new value
+   * @param <T> enumeration type
    */
   public <T extends Enum<T>> void setEnum(String name, T value) {
     set(name, value.toString());
@@ -1727,8 +1729,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Note that the returned value is trimmed by this method.
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists
+   * @param <T> enumeration type
    * @throws IllegalArgumentException If mapping is illegal for the type
    * provided
+   * @return enumeration type
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     final String val = getTrimmed(name);
@@ -1807,6 +1811,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param unit Unit to convert the stored property, if it exists.
    * @throws NumberFormatException If the property stripped of its unit is not
    *         a number
+   * @return time duration in given time unit
    */
   public long getTimeDuration(String name, long defaultValue, TimeUnit unit) {
     String vStr = get(name);
@@ -2299,6 +2304,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the CredentialProvider API and conditionally fallsback to config.
    * @param name property name
    * @return password
+   * @throws IOException when error in fetching password
    */
   public char[] getPassword(String name) throws IOException {
     char[] pass = null;
@@ -2358,7 +2364,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * alias.
    * @param name alias of the provisioned credential
    * @return password or null if not found
-   * @throws IOException
+   * @throws IOException when error in fetching password
    */
   public char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
@@ -3425,25 +3431,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Write out the non-default properties in this configuration to the
    * given {@link Writer}.
-   *
+   * <ul>
    * <li>
    * When property name is not empty and the property exists in the
    * configuration, this method writes the property and its attributes
    * to the {@link Writer}.
    * </li>
-   * <p>
    *
    * <li>
    * When property name is null or empty, this method writes all the
    * configuration properties and their attributes to the {@link Writer}.
    * </li>
-   * <p>
    *
    * <li>
    * When property name is not empty but the property doesn't exist in
    * the configuration, this method throws an {@link IllegalArgumentException}.
    * </li>
-   * <p>
+   * </ul>
    * @param out the writer to write to.
    */
   public void writeXml(String propertyName, Writer out)
@@ -3553,7 +3557,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    *  Writes properties and their attributes (final and resource)
    *  to the given {@link Writer}.
-   *
+   *  <ul>
    *  <li>
    *  When propertyName is not empty, and the property exists
    *  in the configuration, the format of the output would be,
@@ -3593,6 +3597,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *  found in the configuration, this method will throw an
    *  {@link IllegalArgumentException}.
    *  </li>
+   *  </ul>
    *  <p>
    * @param config the configuration
    * @param propertyName property name
@@ -3791,7 +3796,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * get keys matching the the regex 
    * @param regex
-   * @return Map<String,String> with matching keys
+   * @return {@literal Map<String,String>} with matching keys
    */
   public Map<String,String> getValByRegex(String regex) {
     Pattern p = Pattern.compile(regex);

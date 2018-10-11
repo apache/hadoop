@@ -127,7 +127,7 @@ public class DelegationTokenManager {
   /**
    * Sets an external <code>DelegationTokenSecretManager</code> instance to
    * manage creation and verification of Delegation Tokens.
-   * <p/>
+   * <p>
    * This is useful for use cases where secrets must be shared across multiple
    * services.
    *

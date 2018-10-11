@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  * abstraction to separate key storage from users of encryption. It
  * is intended to support getting or storing keys in a variety of ways,
  * including third party bindings.
- * <P/>
+ * <p>
  * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
@@ -549,7 +549,7 @@ public abstract class KeyProvider {
   /**
    * Create a new key generating the material for it.
    * The given key must not already exist.
-   * <p/>
+   * <p>
    * This implementation generates the key material and calls the
    * {@link #createKey(String, byte[], Options)} method.
    *
@@ -593,7 +593,7 @@ public abstract class KeyProvider {
 
   /**
    * Roll a new version of the given key generating the material for it.
-   * <p/>
+   * <p>
    * This implementation generates the key material and calls the
    * {@link #rollNewVersion(String, byte[])} method.
    *

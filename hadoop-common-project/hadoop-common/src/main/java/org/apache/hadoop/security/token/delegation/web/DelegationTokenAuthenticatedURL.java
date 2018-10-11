@@ -44,19 +44,19 @@ import java.util.Map;
  * The <code>DelegationTokenAuthenticatedURL</code> is a
  * {@link AuthenticatedURL} sub-class with built-in Hadoop Delegation Token
  * functionality.
- * <p/>
+ * <p>
  * The authentication mechanisms supported by default are Hadoop Simple
  * authentication (also known as pseudo authentication) and Kerberos SPNEGO
  * authentication.
- * <p/>
+ * <p>
  * Additional authentication mechanisms can be supported via {@link
  * DelegationTokenAuthenticator} implementations.
- * <p/>
+ * <p>
  * The default {@link DelegationTokenAuthenticator} is the {@link
  * KerberosDelegationTokenAuthenticator} class which supports
  * automatic fallback from Kerberos SPNEGO to Hadoop Simple authentication via
  * the {@link PseudoDelegationTokenAuthenticator} class.
- * <p/>
+ * <p>
  * <code>AuthenticatedURL</code> instances are not thread-safe.
  */
 @InterfaceAudience.Public
@@ -115,7 +115,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * Returns the default {@link DelegationTokenAuthenticator} class to use when
    * an {@link DelegationTokenAuthenticatedURL} instance is created without
    * specifying one.
-   * <p/>
+   * <p>
    * The default class is {@link KerberosDelegationTokenAuthenticator}
    *
    * @return the delegation token authenticator class to use as default.
@@ -143,7 +143,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
 
   /**
    * Creates an <code>DelegationTokenAuthenticatedURL</code>.
-   * <p/>
+   * <p>
    * An instance of the default {@link DelegationTokenAuthenticator} will be
    * used.
    */
@@ -191,7 +191,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * Sets if delegation token should be transmitted in the URL query string.
    * By default it is transmitted using the
    * {@link DelegationTokenAuthenticator#DELEGATION_TOKEN_HEADER} HTTP header.
-   * <p/>
+   * <p>
    * This method is provided to enable WebHDFS backwards compatibility.
    *
    * @param useQueryString  <code>TRUE</code> if the token is transmitted in the

@@ -25,7 +25,7 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 /**
  * An {@link AuthenticationHandler} that implements Kerberos SPNEGO mechanism
  * for HTTP and supports Delegation Token functionality.
- * <p/>
+ * <p>
  * In addition to the {@link KerberosAuthenticationHandler} configuration
  * properties, this handler supports:
  * <ul>

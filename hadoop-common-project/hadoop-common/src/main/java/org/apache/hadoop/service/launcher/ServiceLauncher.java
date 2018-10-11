@@ -268,7 +268,7 @@ public class ServiceLauncher<S extends Service>
    * <ol>
    * <li>Parse the command line.</li> 
    * <li>Build the service configuration from it.</li>
-   * <li>Start the service.</li>.
+   * <li>Start the service.</li>
    * <li>If it is a {@link LaunchableService}: execute it</li>
    * <li>Otherwise: wait for it to finish.</li>
    * <li>Exit passing the status code to the {@link #exit(int, String)}

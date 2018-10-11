@@ -113,7 +113,7 @@ public class KeyProviderDelegationTokenExtension extends
   /**
    * Creates a <code>KeyProviderDelegationTokenExtension</code> using a given 
    * {@link KeyProvider}.
-   * <p/>
+   * <p>
    * If the given <code>KeyProvider</code> implements the 
    * {@link DelegationTokenExtension} interface the <code>KeyProvider</code> 
    * itself will provide the extension functionality, otherwise a default 

@@ -44,7 +44,8 @@ import java.util.EnumSet;
 /**
  * CredentialProvider based on Java's KeyStore file format. The file may be
  * stored only on the local filesystem using the following name mangling:
- * localjceks://file/home/larry/creds.jceks -> file:///home/larry/creds.jceks
+ * localjceks://file/home/larry/creds.jceks {@literal ->}
+ * file:///home/larry/creds.jceks
  */
 @InterfaceAudience.Private
 public final class LocalJavaKeyStoreProvider extends

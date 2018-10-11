@@ -70,7 +70,7 @@ import java.util.Set;
  * <p>
  * The optional <code>get</code> parameter is used to query an specific 
  * attribute of a JMX bean.  The format of the URL is
- * <code>http://.../jmx?get=MXBeanName::AttributeName<code>
+ * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
  * <p>
  * For example 
  * <code>
@@ -85,7 +85,7 @@ import java.util.Set;
  * <p>
  * The return format is JSON and in the form
  * <p>
- *  <code><pre>
+ *  <pre><code>
  *  {
  *    "beans" : [
  *      {
@@ -94,7 +94,7 @@ import java.util.Set;
  *      }
  *    ]
  *  }
- *  </pre></code>
+ *  </code></pre>
  *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.

@@ -148,16 +148,16 @@ abstract public class Command extends Configured {
    * expand arguments, and then process each argument.
    * <pre>
    * run
-   * |-> {@link #processOptions(LinkedList)}
-   * \-> {@link #processRawArguments(LinkedList)}
-   *      |-> {@link #expandArguments(LinkedList)}
-   *      |   \-> {@link #expandArgument(String)}*
-   *      \-> {@link #processArguments(LinkedList)}
-   *          |-> {@link #processArgument(PathData)}*
-   *          |   |-> {@link #processPathArgument(PathData)}
-   *          |   \-> {@link #processPaths(PathData, PathData...)}
-   *          |        \-> {@link #processPath(PathData)}*
-   *          \-> {@link #processNonexistentPath(PathData)}
+   * |{@literal ->} {@link #processOptions(LinkedList)}
+   * \{@literal ->} {@link #processRawArguments(LinkedList)}
+   *      |{@literal ->} {@link #expandArguments(LinkedList)}
+   *      |   \{@literal ->} {@link #expandArgument(String)}*
+   *      \{@literal ->} {@link #processArguments(LinkedList)}
+   *          |{@literal ->} {@link #processArgument(PathData)}*
+   *          |   |{@literal ->} {@link #processPathArgument(PathData)}
+   *          |   \{@literal ->} {@link #processPaths(PathData, PathData...)}
+   *          |        \{@literal ->} {@link #processPath(PathData)}*
+   *          \{@literal ->} {@link #processNonexistentPath(PathData)}
    * </pre>
    * Most commands will chose to implement just
    * {@link #processOptions(LinkedList)} and {@link #processPath(PathData)}
@@ -292,8 +292,8 @@ abstract public class Command extends Configured {
   /**
    *  This is the last chance to modify an argument before going into the
    *  (possibly) recursive {@link #processPaths(PathData, PathData...)}
-   *  -> {@link #processPath(PathData)} loop.  Ex.  ls and du use this to
-   *  expand out directories.
+   *  {@literal ->} {@link #processPath(PathData)} loop.  Ex.  ls and du use
+   *  this to expand out directories.
    *  @param item a {@link PathData} representing a path which exists
    *  @throws IOException if anything goes wrong... 
    */

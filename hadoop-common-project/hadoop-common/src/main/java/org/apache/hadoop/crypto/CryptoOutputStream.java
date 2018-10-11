@@ -36,10 +36,10 @@ import com.google.common.base.Preconditions;
  * required in order to ensure that the plain text and cipher text have a 1:1
  * mapping. The encryption is buffer based. The key points of the encryption are
  * (1) calculating counter and (2) padding through stream position.
- * <p/>
+ * <p>
  * counter = base + pos/(algorithm blocksize); 
  * padding = pos%(algorithm blocksize); 
- * <p/>
+ * <p>
  * The underlying stream offset is maintained as state.
  *
  * Note that while some of this class' methods are synchronized, this is just to
