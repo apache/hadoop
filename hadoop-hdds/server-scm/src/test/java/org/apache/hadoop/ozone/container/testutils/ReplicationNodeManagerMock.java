@@ -295,6 +295,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
     return null;
   }
 
+  @Override
+  public Boolean isNodeRegistered(
+      DatanodeDetails datanodeDetails) {
+    return null;
+  }
+
   /**
    * Clears all nodes from the node Manager.
    */
@@ -340,5 +346,10 @@ public class ReplicationNodeManagerMock implements NodeManager {
   @Override
   public void processDeadNode(UUID dnUuid) {
     // do nothing.
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return null;
   }
 }
