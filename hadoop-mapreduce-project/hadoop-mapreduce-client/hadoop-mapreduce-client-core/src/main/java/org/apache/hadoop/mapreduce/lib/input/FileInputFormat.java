@@ -233,11 +233,15 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         (PathFilter) ReflectionUtils.newInstance(filterClass, conf) : null;
   }
 
-  /** List input directories.
+  /**
+   * List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
    * expression. 
-   * 
-   * @param job the job to list input paths for
+   *
+   * If security is enabled, this method collects
+   * delegation tokens from the input paths and adds them to the job's
+   * credentials.
+   * @param job the job to list input paths for and attach tokens to.
    * @return array of FileStatus objects
    * @throws IOException if zero items.
    */
