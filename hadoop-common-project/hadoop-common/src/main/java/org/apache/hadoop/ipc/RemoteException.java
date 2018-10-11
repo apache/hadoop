@@ -102,7 +102,7 @@ public class RemoteException extends IOException {
    * a <code>String</code> as a parameter.
    * Otherwise it returns this.
    * 
-   * @return <code>Throwable
+   * @return <code>Throwable</code>
    */
   public IOException unwrapRemoteException() {
     try {

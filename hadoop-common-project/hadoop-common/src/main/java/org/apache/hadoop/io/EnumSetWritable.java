@@ -83,7 +83,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
 
   /**
    * reset the EnumSetWritable with specified
-   * <tt>value</value> and <tt>elementType</tt>. If the <tt>value</tt> argument
+   * <tt>value</tt> and <tt>elementType</tt>. If the <tt>value</tt> argument
    * is null or its size is zero, the <tt>elementType</tt> argument must not be
    * null. If the argument <tt>value</tt>'s size is bigger than zero, the
    * argument <tt>elementType</tt> is not be used.

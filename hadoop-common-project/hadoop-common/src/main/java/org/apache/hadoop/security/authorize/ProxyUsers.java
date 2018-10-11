@@ -108,12 +108,12 @@ public class ProxyUsers {
    * @param remoteAddress
    * @param conf
    * @throws AuthorizationException
-   * @deprecated use {@link #authorize(UserGroupInformation, String) instead. 
+   * @deprecated use {@link #authorize(UserGroupInformation, String)} instead.
    */
   @Deprecated
   public static void authorize(UserGroupInformation user, 
       String remoteAddress, Configuration conf) throws AuthorizationException {
-    authorize(user,remoteAddress);
+    authorize(user, remoteAddress);
   }
   
   @VisibleForTesting 

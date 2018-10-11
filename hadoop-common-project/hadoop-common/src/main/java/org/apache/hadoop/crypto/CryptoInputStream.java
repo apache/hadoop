@@ -53,10 +53,10 @@ import org.apache.hadoop.util.StringUtils;
  * required in order to ensure that the plain text and cipher text have a 1:1
  * mapping. The decryption is buffer based. The key points of the decryption
  * are (1) calculating the counter and (2) padding through stream position:
- * <p/>
+ * <p>
  * counter = base + pos/(algorithm blocksize); 
  * padding = pos%(algorithm blocksize); 
- * <p/>
+ * <p>
  * The underlying stream offset is maintained as state.
  */
 @InterfaceAudience.Private

@@ -246,12 +246,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
     /**
      * This provider expects URIs in the following form :
-     * kms://<PROTO>@<AUTHORITY>/<PATH>
+     * {@literal kms://<PROTO>@<AUTHORITY>/<PATH>}
      *
      * where :
      * - PROTO = http or https
-     * - AUTHORITY = <HOSTS>[:<PORT>]
-     * - HOSTS = <HOSTNAME>[;<HOSTS>]
+     * - AUTHORITY = {@literal <HOSTS>[:<PORT>]}
+     * - HOSTS = {@literal <HOSTNAME>[;<HOSTS>]}
      * - HOSTNAME = string
      * - PORT = integer
      *

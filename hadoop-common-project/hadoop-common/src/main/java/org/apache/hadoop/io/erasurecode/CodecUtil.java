@@ -36,7 +36,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
 /**
- * A codec & coder utility to help create coders conveniently.
+ * A codec &amp; coder utility to help create coders conveniently.
  *
  * {@link CodecUtil} includes erasure coder configurations key and default
  * values such as coder class name and erasure codec option values included

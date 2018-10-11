@@ -54,7 +54,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
+   * <p>
    *
    * @return <code>file</code>
    */

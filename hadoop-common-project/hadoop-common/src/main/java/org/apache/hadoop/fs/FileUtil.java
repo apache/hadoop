@@ -1474,8 +1474,8 @@ public class FileUtil {
    * @param inputClassPath String input classpath to bundle into the jar manifest
    * @param pwd Path to working directory to save jar
    * @param targetDir path to where the jar execution will have its working dir
-   * @param callerEnv Map<String, String> caller's environment variables to use
-   *   for expansion
+   * @param callerEnv Map {@literal <}String, String{@literal >} caller's
+   * environment variables to use for expansion
    * @return String[] with absolute path to new jar in position 0 and
    *   unexpanded wild card entry path in position 1
    * @throws IOException if there is an I/O error while writing the jar file

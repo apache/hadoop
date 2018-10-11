@@ -2747,7 +2747,7 @@ public abstract class Server {
   
   /** 
    * Constructs a server listening on the named port and address.  Parameters passed must
-   * be of the named class.  The <code>handlerCount</handlerCount> determines
+   * be of the named class.  The <code>handlerCount</code> determines
    * the number of handler threads that will be used to process calls.
    * If queueSizePerHandler or numReaders are not -1 they will be used instead of parameters
    * from configuration. Otherwise the configuration will be picked up.

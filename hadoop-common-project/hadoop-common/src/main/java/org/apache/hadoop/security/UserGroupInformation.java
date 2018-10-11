@@ -676,7 +676,7 @@ public class UserGroupInformation {
 
   /**
    * remove the login method that is followed by a space from the username
-   * e.g. "jack (auth:SIMPLE)" -> "jack"
+   * e.g. "jack (auth:SIMPLE)" {@literal ->} "jack"
    *
    * @param userName
    * @return userName without login method

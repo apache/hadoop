@@ -28,7 +28,6 @@ public interface RefreshHandler {
    * Implement this method to accept refresh requests from the administrator.
    * @param identifier is the identifier you registered earlier
    * @param args contains a list of string args from the administrator
-   * @throws Exception as a shorthand for a RefreshResponse(-1, message)
    * @return a RefreshResponse
    */
   RefreshResponse handleRefresh(String identifier, String[] args);

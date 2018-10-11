@@ -32,10 +32,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  * the {@link DNSToSwitchMappingWithDependency} interface using 
  * a script configured via the 
  * {@link CommonConfigurationKeys#NET_DEPENDENCY_SCRIPT_FILE_NAME_KEY} option.
- * <p/>
+ * <p>
  * It contains a static class <code>RawScriptBasedMappingWithDependency</code>
  * that performs the getDependency work.
- * <p/>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -52,7 +51,7 @@ public class ScriptBasedMappingWithDependency  extends ScriptBasedMapping
 
   /**
    * Create an instance with the default configuration.
-   * </p>
+   * <p>
    * Calling {@link #setConf(Configuration)} will trigger a
    * re-evaluation of the configuration settings and so be used to
    * set up the mapping script.
@@ -76,7 +75,7 @@ public class ScriptBasedMappingWithDependency  extends ScriptBasedMapping
 
   /**
    * {@inheritDoc}
-   * <p/>
+   * <p>
    * This will get called in the superclass constructor, so a check is needed
    * to ensure that the raw mapping is defined before trying to relaying a null
    * configuration.

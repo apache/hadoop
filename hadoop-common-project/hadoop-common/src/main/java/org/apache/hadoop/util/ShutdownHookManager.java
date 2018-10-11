@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.SERVICE_SHUTDOW
 /**
  * The <code>ShutdownHookManager</code> enables running shutdownHook
  * in a deterministic order, higher priority first.
- * <p/>
+ * <p>
  * The JVM runs ShutdownHooks in a non-deterministic order or in parallel.
  * This class registers a single JVM shutdownHook and run all the
  * shutdownHooks registered to it (to this class) in order based on their

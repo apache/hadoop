@@ -146,8 +146,8 @@ public class NetUtils {
 
   /**
    * Util method to build socket addr from either:
-   *   <host>:<port>
-   *   <fs>://<host>:<port>/<path>
+   *   {@literal <host>:<port>}
+   *   {@literal <fs>://<host>:<port>/<path>}
    */
   public static InetSocketAddress createSocketAddr(String target) {
     return createSocketAddr(target, -1);
@@ -155,9 +155,9 @@ public class NetUtils {
 
   /**
    * Util method to build socket addr from either:
-   *   <host>
-   *   <host>:<port>
-   *   <fs>://<host>:<port>/<path>
+   *   {@literal <host>}
+   *   {@literal <host>:<port>}
+   *   {@literal <fs>://<host>:<port>/<path>}
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort) {
@@ -938,7 +938,7 @@ public class NetUtils {
    * Return a free port number. There is no guarantee it will remain free, so
    * it should be used immediately.
    *
-   * @returns A free port for binding a local socket
+   * @return A free port for binding a local socket
    */
   public static int getFreeSocketPort() {
     int port = 0;
@@ -959,7 +959,7 @@ public class NetUtils {
    *
    * @param localAddr
    * @param bindWildCardAddress
-   * @returns InetAddress
+   * @return InetAddress
    */
   public static InetAddress bindToLocalAddress(InetAddress localAddr, boolean
       bindWildCardAddress) {

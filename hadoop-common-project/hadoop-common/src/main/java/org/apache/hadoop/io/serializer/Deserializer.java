@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * <p>
- * Provides a facility for deserializing objects of type <T> from an
+ * Provides a facility for deserializing objects of type {@literal <T>} from an
  * {@link InputStream}.
  * </p>
  * 

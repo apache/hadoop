@@ -76,7 +76,7 @@ public class FTPFileSystem extends FileSystem {
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
+   * <p>
    *
    * @return <code>ftp</code>
    */
@@ -162,7 +162,7 @@ public class FTPFileSystem extends FileSystem {
   /**
    * Set FTP's transfer mode based on configuration. Valid values are
    * STREAM_TRANSFER_MODE, BLOCK_TRANSFER_MODE and COMPRESSED_TRANSFER_MODE.
-   * <p/>
+   * <p>
    * Defaults to BLOCK_TRANSFER_MODE.
    *
    * @param conf
@@ -195,7 +195,7 @@ public class FTPFileSystem extends FileSystem {
    * Set the FTPClient's data connection mode based on configuration. Valid
    * values are ACTIVE_LOCAL_DATA_CONNECTION_MODE,
    * PASSIVE_LOCAL_DATA_CONNECTION_MODE and PASSIVE_REMOTE_DATA_CONNECTION_MODE.
-   * <p/>
+   * <p>
    * Defaults to ACTIVE_LOCAL_DATA_CONNECTION_MODE.
    *
    * @param client
