@@ -269,6 +269,11 @@ int is_docker_support_enabled();
 int run_docker(const char *command_file);
 
 /**
+ * Run a docker command passing the command file as an argument with terminal.
+ */
+int run_docker_with_pty(const char *command_file);
+
+/**
  * Run a docker command without a command file
  */
 int exec_docker_command(char *docker_command, char **argv, int argc);
