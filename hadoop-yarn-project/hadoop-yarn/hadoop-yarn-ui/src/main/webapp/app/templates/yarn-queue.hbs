@@ -60,17 +60,6 @@
         </div>
       </div>
     </div>
-    <div class="panel-heading">
-      <div class="clearfix">
-        <ul class="nav nav-pills">
-          <ul class="nav nav-pills collapse in">
-            {{#link-to 'yarn-queue.apps' tagName="li" class=(if (eq target.currentPath 'yarn-queue.apps') "active")}}
-              {{#link-to 'yarn-queue.apps' appId (query-params service=model.serviceName)}}Applications{{/link-to}}
-            {{/link-to}}
-          </ul>
-        </ul>
-      </div>
-    </div>
     <div class="panel-body yarn-app-body">
       {{outlet}}
     </div>
