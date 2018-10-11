@@ -432,6 +432,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     ret = get_docker_volume_command(command_file, conf, args);
   } else if (strcmp(DOCKER_START_COMMAND, command) == 0) {
     ret = get_docker_start_command(command_file, conf, args);
+  } else if (strcmp(DOCKER_EXEC_COMMAND, command) == 0) {
+    ret = get_docker_exec_command(command_file, conf, args);
   } else {
     ret = UNKNOWN_DOCKER_COMMAND;
   }
@@ -817,6 +819,57 @@ int get_docker_start_command(const char *command_file, const struct configuratio
 free_and_exit:
   free(container_name);
   free_configuration(&command_config);
+  return ret;
+}
+
+int get_docker_exec_command(const char *command_file, const struct configuration *conf, args *args) {
+  int ret = 0, i = 0;
+  char *container_name = NULL;
+  char **launch_command = NULL;
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_EXEC_COMMAND, &command_config);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (container_name == NULL || validate_container_name(container_name) != 0) {
+    ret = INVALID_DOCKER_CONTAINER_NAME;
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, DOCKER_EXEC_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, "-it");
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+
+  launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
+                                                      ",");
+  if (launch_command != NULL) {
+    for (i = 0; launch_command[i] != NULL; ++i) {
+      ret = add_to_args(args, launch_command[i]);
+      if (ret != 0) {
+        ret = BUFFER_TOO_SMALL;
+        goto free_and_exit;
+      }
+    }
+  } else {
+    ret = INVALID_COMMAND_FILE;
+  }
+free_and_exit:
+  free(container_name);
+  free_configuration(&command_config);
+  free_values(launch_command);
   return ret;
 }
 

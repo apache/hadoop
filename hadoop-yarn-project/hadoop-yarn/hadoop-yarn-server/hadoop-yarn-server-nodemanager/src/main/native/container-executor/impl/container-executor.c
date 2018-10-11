@@ -47,6 +47,7 @@
 #include <sys/wait.h>
 #include <getopt.h>
 #include <sys/param.h>
+#include <termios.h>
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -1357,8 +1358,25 @@ char **construct_docker_command(const char *command_file) {
 }
 
 int run_docker(const char *command_file) {
+  struct configuration command_config = {0, NULL};
+
+  int ret = read_config(command_file, &command_config);
+  if (ret != 0) {
+    free_configuration(&command_config);
+    return INVALID_COMMAND_FILE;
+  }
+  char *value = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (value != NULL && strcasecmp(value, "exec") == 0) {
+    free(value);
+    free_configuration(&command_config);
+    return run_docker_with_pty(command_file);
+  }
+  free_configuration(&command_config);
+  free(value);
+
   char **args = construct_docker_command(command_file);
   char* docker_binary = get_docker_binary(&CFG);
+
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
@@ -1372,6 +1390,150 @@ int run_docker(const char *command_file) {
     free_values(args);
     exit_code = 0;
   }
+  return exit_code;
+}
+
+int run_docker_with_pty(const char *command_file) {
+  int exit_code = -1;
+  char **args = construct_docker_command(command_file);
+  char* docker_binary = get_docker_binary(&CFG);
+  int fdm, fds, rc;
+  char input[4000];
+
+  fdm = posix_openpt(O_RDWR);
+  if (fdm < 0) {
+    fprintf(stderr, "Error %d on posix_openpt()\n", errno);
+    return DOCKER_EXEC_FAILED;
+  }
+
+  rc = grantpt(fdm);
+  if (rc != 0) {
+    fprintf(stderr, "Error %d on grantpt()\n", errno);
+    return DOCKER_EXEC_FAILED;
+  }
+
+  rc = unlockpt(fdm);
+  if (rc != 0) {
+    fprintf(stderr, "Error %d on unlockpt()\n", errno);
+    return DOCKER_EXEC_FAILED;
+  }
+
+  // Open the slave PTY
+  fds = open(ptsname(fdm), O_RDWR);
+
+  // Creation of a child process
+  if (fork()) {
+    fd_set fd_in;
+    // Parent
+
+    // Close the slave side of the PTY
+    close(fds);
+    while (1) {
+      // Wait for data from standard input and master side of PTY
+      FD_ZERO(&fd_in);
+      FD_SET(0, &fd_in);
+      FD_SET(fdm, &fd_in);
+      rc = select(fdm + 1, &fd_in, NULL, NULL, NULL);
+      switch(rc) {
+        case -1 : fprintf(stderr, "Error %d on select()\n", errno);
+                  exit(1);
+        default :
+            {
+              // If data on standard input
+              if (FD_ISSET(0, &fd_in)) {
+                rc = read(0, input, sizeof(input));
+                if (rc > 0) {
+                  // Send data on the master side of PTY
+                  ssize_t written = write(fdm, input, rc);
+                  if (written == -1) {
+                    fprintf(stderr, "Error %d writing to container.\n", errno);
+                    exit(DOCKER_EXEC_FAILED);
+                  }
+                } else {
+                  if (rc < 0) {
+                    fprintf(stderr, "Error %d on read standard input\n", errno);
+                    exit(DOCKER_EXEC_FAILED);
+                  }
+                }
+              }
+
+              // If data on master side of PTY
+              if (FD_ISSET(fdm, &fd_in)) {
+                rc = read(fdm, input, sizeof(input));
+                if (rc > 0) {
+                  // Send data on standard output
+                  ssize_t written = write(1, input, rc);
+                  if (written == -1) {
+                    fprintf(stderr, "Error %d writing to terminal.\n", errno);
+                    exit(DOCKER_EXEC_FAILED);
+                  }
+                } else {
+                  if (rc < 0) {
+                    fprintf(stderr, "Error %d on read master PTY\n", errno);
+                    exit(DOCKER_EXEC_FAILED);
+                  }
+                }
+              }
+            }
+      } // End switch
+    } // End while
+  } else {
+    struct termios slave_orig_term_settings; // Saved terminal settings
+    struct termios new_term_settings; // Current terminal settings
+
+    // Child
+
+    // Close the master side of the PTY
+    close(fdm);
+
+    // Save the default parameters of the slave side of the PTY
+    rc = tcgetattr(fds, &slave_orig_term_settings);
+
+    // Set raw mode on the slave side of the PTY
+    new_term_settings = slave_orig_term_settings;
+    cfmakeraw (&new_term_settings);
+    tcsetattr (fds, TCSANOW, &new_term_settings);
+
+    // The slave side of the PTY becomes the standard input and outputs of the child process
+    close(0); // Close standard input (current terminal)
+    close(1); // Close standard output (current terminal)
+    close(2); // Close standard error (current terminal)
+
+    if (dup(fds) == -1) {
+      // PTY becomes standard input (0)
+      exit(DOCKER_EXEC_FAILED);
+    }
+    if (dup(fds) == -1) {
+      // PTY becomes standard output (1)
+      exit(DOCKER_EXEC_FAILED);
+    }
+    if (dup(fds) == -1) {
+      // PTY becomes standard error (2)
+      exit(DOCKER_EXEC_FAILED);
+    }
+
+    // Now the original file descriptor is useless
+    close(fds);
+
+    // Make the current process a new session leader
+    setsid();
+
+    // As the child is a session leader, set the controlling terminal to be the slave side of the PTY
+    // (Mandatory for programs like the shell to make them manage correctly their outputs)
+    ioctl(0, TIOCSCTTY, 1);
+
+    if (execvp(docker_binary, args) != 0) {
+      fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
+              docker_binary, strerror(errno));
+      free(docker_binary);
+      free_values(args);
+      exit_code = DOCKER_EXEC_FAILED;
+    } else {
+      free_values(args);
+      exit_code = 0;
+    }
+  }
+
   return exit_code;
 }
 

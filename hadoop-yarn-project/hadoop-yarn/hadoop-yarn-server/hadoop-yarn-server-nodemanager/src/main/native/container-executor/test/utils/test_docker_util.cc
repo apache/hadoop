@@ -1762,4 +1762,33 @@ namespace ContainerExecutor {
       free_configuration(&container_executor_cfg);
     }
   }
+
+  TEST_F(TestDockerUtil, test_docker_exec) {
+    std::string container_executor_contents = "[docker]\n"
+        "  docker.allowed.devices=/dev/test\n  docker.trusted.registries=hadoop\n";
+    write_file(container_executor_cfg_file, container_executor_contents);
+    int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = create_ce_file();
+    if (ret != 0) {
+      std::cerr << "Could not create ce file, skipping test" << std::endl;
+      return;
+    }
+
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n"
+            "  docker-command=exec\n  name=container_e1_12312_11111_02_000001\n  launch-command=bash",
+        "exec -it container_e1_12312_11111_02_000001 bash"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=exec\n  image=hadoop/docker-image\n  user=nobody",
+        static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_exec_command);
+    free_configuration(&container_executor_cfg);
+  }
 }
