@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.util.Set;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -223,5 +224,39 @@ public class RMContainerTokenSecretManager extends
     }
 
     return BuilderUtils.newContainerToken(nodeId, password, tokenIdentifier);
+  }
+
+  public Token createPromotedContainerToken(
+      Token containerTokenBeforeUpdate, NodeId nodeId) throws IOException {
+    ContainerTokenIdentifier oldTokenIdentifier =
+        BuilderUtils.newContainerTokenIdentifier(
+            containerTokenBeforeUpdate);
+    byte[] password;
+    ContainerTokenIdentifier newTokenIdentifier;
+
+    // Lock so that we use the same MasterKey's keyId and its bytes
+    this.readLock.lock();
+    try {
+      newTokenIdentifier = new ContainerTokenIdentifier(
+          oldTokenIdentifier.getContainerID(),
+          oldTokenIdentifier.getVersion() + 1,
+          oldTokenIdentifier.getNmHostAddress(),
+          oldTokenIdentifier.getApplicationSubmitter(),
+          oldTokenIdentifier.getResource(),
+          oldTokenIdentifier.getExpiryTimeStamp(),
+          oldTokenIdentifier.getMasterKeyId(),
+          oldTokenIdentifier.getRMIdentifier(),
+          oldTokenIdentifier.getPriority(),
+          oldTokenIdentifier.getCreationTime(),
+          oldTokenIdentifier.getLogAggregationContext(),
+          oldTokenIdentifier.getNodeLabelExpression(),
+          oldTokenIdentifier.getContainerType(),
+          ExecutionType.GUARANTEED);
+      password = this.createPassword(newTokenIdentifier);
+    } finally {
+      this.readLock.unlock();
+    }
+
+    return BuilderUtils.newContainerToken(nodeId, password, newTokenIdentifier);
   }
 }

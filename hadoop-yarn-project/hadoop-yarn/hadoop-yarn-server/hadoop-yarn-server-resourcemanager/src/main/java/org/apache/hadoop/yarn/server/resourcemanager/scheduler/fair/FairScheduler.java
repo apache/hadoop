@@ -1164,6 +1164,7 @@ public class FairScheduler extends
           rmContainer.getApplicationAttemptId());
       if (appAttempt != null) {
         appAttempt.opportunisticContainerPromoted(rmContainer);
+        rmContainer.promote();
         promotion.put(rmContainer.getContainer(),
             ContainerUpdateType.PROMOTE_EXECUTION_TYPE);
       }

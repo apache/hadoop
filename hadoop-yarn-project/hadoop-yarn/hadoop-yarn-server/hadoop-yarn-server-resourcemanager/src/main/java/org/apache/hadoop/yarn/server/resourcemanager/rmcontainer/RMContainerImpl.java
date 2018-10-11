@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -936,6 +938,29 @@ public class RMContainerImpl implements RMContainer {
   @Override
   public ExecutionType getExecutionType() {
     return container.getExecutionType();
+  }
+
+  @Override
+  public boolean promote() {
+    assert(container.getExecutionType() == ExecutionType.OPPORTUNISTIC);
+
+    boolean promoted = false;
+    try {
+      if (container.getContainerToken() != null) {
+        // container token may not have been generated yet
+        Token newToken = rmContext.getContainerTokenSecretManager().
+            createPromotedContainerToken(container.getContainerToken(), nodeId);
+        container.setContainerToken(newToken);
+        container.setExecutionType(ExecutionType.GUARANTEED);
+      }
+      container.setVersion(container.getVersion() + 1);
+      promoted = true;
+    } catch (IOException e) {
+      LOG.warn("The update of the token of " + container.getId() +
+          " failed. It will not be promoted automatically. ", e);
+    }
+
+    return promoted;
   }
 
   @Override

@@ -3409,6 +3409,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       MockNodes.MockRMNodeImpl node = MockNodes.newNodeInfo(1,
           Resources.createResource(4096, 4), overAllocationInfo);
       scheduler.handle(new NodeAddedSchedulerEvent(node));
+      SchedulerNode schedulerNode =
+          scheduler.getSchedulerNode(node.getNodeID());
 
       // create two scheduling requests that leave no unallocated resources
       ApplicationAttemptId appAttempt1 =
@@ -3422,6 +3424,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers1.get(0).getExecutionType());
+
       ApplicationAttemptId appAttempt2 =
           createSchedulingRequest(2048, "queue1", "user1", 1, false);
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3433,6 +3436,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers2.get(0).getExecutionType());
+
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // node utilization is low after the two container run on the node
       ContainerStatus container1Status = ContainerStatus.newInstance(
@@ -3463,6 +3471,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           allocatedContainers3.get(0).getExecutionType());
       assertTrue("No reservation should be made for the third request",
           scheduler.getNode(node.getNodeID()).getReservedContainer() == null);
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the first GUARANTEED container finishes
       List<ContainerStatus> finishedContainers = Collections.singletonList(
@@ -3475,6 +3487,30 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
       // the OPPORTUNISTIC container should be promoted
       assertEquals(1024, scheduler.getQueueManager().getQueue("queue2").
+          getGuaranteedResourceUsage().getMemorySize());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+          getOpportunisticResourceUsage().getMemorySize());
+
+      assertEquals(Resource.newInstance(3072, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+
+      // now the promoted container finishes
+      finishedContainers = Collections.singletonList(
+          ContainerStatus.newInstance(allocatedContainers3.get(0).getId(),
+              ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
+      node.updateContainersInfoAndUtilization(
+          new UpdatedContainerInfo(
+              Collections.emptyList(), finishedContainers),
+          ResourceUtilization.newInstance(1024, 0, 0.1f));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node));
+
+      assertEquals(Resource.newInstance(2048, 1),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
           getGuaranteedResourceUsage().getMemorySize());
       assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
           getOpportunisticResourceUsage().getMemorySize());
@@ -3518,6 +3554,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       MockNodes.MockRMNodeImpl node = MockNodes.newNodeInfo(1,
           Resources.createResource(4096, 4), overAllocationInfo);
       scheduler.handle(new NodeAddedSchedulerEvent(node));
+      SchedulerNode schedulerNode =
+          scheduler.getSchedulerNode(node.getNodeID());
 
       // create two scheduling requests that leave no unallocated resources
       ApplicationAttemptId appAttempt1 =
@@ -3542,6 +3580,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers2.get(0).getExecutionType());
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // node utilization is low after the two container run on the node
       ContainerStatus container1Status = ContainerStatus.newInstance(
@@ -3574,6 +3616,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           allocatedContainers3.get(0).getExecutionType());
       assertTrue("No reservation should be made for the third request",
           scheduler.getNode(node.getNodeID()).getReservedContainer() == null);
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1536, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // node utilization is low after the third container run on the node
       ContainerStatus container3Status = ContainerStatus.newInstance(
@@ -3599,6 +3645,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.OPPORTUNISTIC,
           allocatedContainers4.get(0).getExecutionType());
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(2560, 2),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the first GUARANTEED container finishes
       List<ContainerStatus> finishedContainers = Collections.singletonList(
@@ -3613,11 +3663,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           getGuaranteedResourceUsage().getMemorySize());
       assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
           getOpportunisticResourceUsage().getMemorySize());
-      // the second OPPORLTUNISTIC container should not be promoted
+      // the second OPPORTUNISTIC container should not be promoted
       assertEquals(1024, scheduler.getQueueManager().getQueue("queue3").
           getOpportunisticResourceUsage().getMemorySize());
       assertEquals(0, scheduler.getQueueManager().getQueue("queue3").
           getGuaranteedResourceUsage().getMemorySize());
+      assertEquals(Resource.newInstance(3584, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the second GUARANTEED container finishes
       finishedContainers = Collections.singletonList(
@@ -3631,6 +3685,29 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals(1024, scheduler.getQueueManager().getQueue("queue3").
           getGuaranteedResourceUsage().getMemorySize());
       assertEquals(0, scheduler.getQueueManager().getQueue("queue3").
+          getOpportunisticResourceUsage().getMemorySize());
+      assertEquals(Resource.newInstance(2560, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+
+      // now the first promoted container finishes
+      finishedContainers = Collections.singletonList(
+          ContainerStatus.newInstance(allocatedContainers3.get(0).getId(),
+              ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
+      node.updateContainersInfoAndUtilization(
+          new UpdatedContainerInfo(
+              Collections.emptyList(), finishedContainers),
+          ResourceUtilization.newInstance(1024, 0, 0.1f));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node));
+
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+          getGuaranteedResourceUsage().getMemorySize());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
           getOpportunisticResourceUsage().getMemorySize());
     } finally {
       conf.setBoolean(YarnConfiguration.RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED,
@@ -3675,6 +3752,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       MockNodes.MockRMNodeImpl node = MockNodes.newNodeInfo(1,
           Resources.createResource(4096, 4), overAllocationInfo);
       scheduler.handle(new NodeAddedSchedulerEvent(node));
+      SchedulerNode schedulerNode =
+          scheduler.getSchedulerNode(node.getNodeID());
 
       // create two scheduling requests that leave no unallocated resources
       ApplicationAttemptId appAttempt1 =
@@ -3688,6 +3767,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers1.get(0).getExecutionType());
+
       ApplicationAttemptId appAttempt2 =
           createSchedulingRequest(2048, "queue1", "user1", 1, false);
       scheduler.handle(new NodeUpdateSchedulerEvent(node));
@@ -3699,6 +3779,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers2.get(0).getExecutionType());
+
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // node utilization is low after the two container run on the node
       ContainerStatus container1Status = ContainerStatus.newInstance(
@@ -3725,8 +3810,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertTrue(allocatedContainers3.size() == 0);
       // verify that a reservation is made for the second request
       assertTrue("A reservation should be made for the third request",
-          scheduler.getNode(node.getNodeID()).getReservedContainer().
+          schedulerNode.getReservedContainer().
               getReservedResource().equals(Resource.newInstance(2000, 1)));
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // create another scheduling request that asks for more than what's left
       // unallocated on the node but can be served with overallocation.
@@ -3742,8 +3831,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           ExecutionType.OPPORTUNISTIC,
           allocatedContainers4.get(0).getExecutionType());
       assertTrue("A reservation should still be made for the second request",
-          scheduler.getNode(node.getNodeID()).getReservedContainer().
+          schedulerNode.getReservedContainer().
               getReservedResource().equals(Resource.newInstance(2000, 1)));
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the first GUARANTEED container finishes
       List<ContainerStatus> finishedContainers = Collections.singletonList(
@@ -3770,6 +3863,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       // resources are taken by handling the reservation
       assertEquals(1024, scheduler.getQueueManager().getQueue("queue3").
           getOpportunisticResourceUsage().getMemorySize());
+      assertEquals(Resource.newInstance(4048, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the second GUARANTEED container finishes
       finishedContainers = Collections.singletonList(
@@ -3785,7 +3882,29 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           getGuaranteedResourceUsage().getMemorySize());
       assertEquals(0, scheduler.getQueueManager().getQueue("queue3").
           getOpportunisticResourceUsage().getMemorySize());
+      assertEquals(Resource.newInstance(3024, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
+      // now the promoted container finishes
+      finishedContainers = Collections.singletonList(
+          ContainerStatus.newInstance(allocatedContainers4.get(0).getId(),
+              ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
+      node.updateContainersInfoAndUtilization(
+          new UpdatedContainerInfo(
+              Collections.emptyList(), finishedContainers),
+          ResourceUtilization.newInstance(1024, 0, 0.1f));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node));
+
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue3").
+          getGuaranteedResourceUsage().getMemorySize());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue3").
+          getOpportunisticResourceUsage().getMemorySize());
+      assertEquals(Resource.newInstance(2000, 1),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
     } finally {
       conf.setBoolean(YarnConfiguration.RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED,
           false);
@@ -3829,6 +3948,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       MockNodes.MockRMNodeImpl node = MockNodes.newNodeInfo(1,
           Resources.createResource(4096, 4), overAllocationInfo);
       scheduler.handle(new NodeAddedSchedulerEvent(node));
+      SchedulerNode schedulerNode =
+          scheduler.getSchedulerNode(node.getNodeID());
 
       // create two scheduling requests that leave no unallocated resources
       ApplicationAttemptId appAttempt1 =
@@ -3853,6 +3974,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals("unexpected container execution type",
           ExecutionType.GUARANTEED,
           allocatedContainers2.get(0).getExecutionType());
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+
 
       // node utilization is low after the two container run on the node
       ContainerStatus container1Status = ContainerStatus.newInstance(
@@ -3882,7 +4008,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           ExecutionType.OPPORTUNISTIC,
           allocatedContainers3.get(0).getExecutionType());
       assertTrue("No reservation should be made for the third request",
-          scheduler.getNode(node.getNodeID()).getReservedContainer() == null);
+          schedulerNode.getReservedContainer() == null);
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
+
 
       // create another scheduling request that opts out of oversubscription
       ApplicationAttemptId appAttempt4 =
@@ -3895,8 +4026,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertTrue(allocatedContainers4.size() == 0);
       // verify that a reservation is made for the second request
       assertTrue("A reservation should be made for the fourth request",
-          scheduler.getNode(node.getNodeID()).getReservedContainer().
+          schedulerNode.getReservedContainer().
               getReservedResource().equals(Resource.newInstance(2000, 1)));
+      assertEquals(Resource.newInstance(4096, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(1024, 1),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the first GUARANTEED container finishes
       List<ContainerStatus> finishedContainers = Collections.singletonList(
@@ -3913,8 +4048,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
           getOpportunisticResourceUsage().getMemorySize());
       assertTrue("A reservation should still be made for the fourth request",
-          scheduler.getNode(node.getNodeID()).getReservedContainer().
+          schedulerNode.getReservedContainer().
               getReservedResource().equals(Resource.newInstance(2000, 1)));
+      assertEquals(Resource.newInstance(3072, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
       // now the second GUARANTEED container finishes
       finishedContainers = Collections.singletonList(
@@ -3936,8 +4075,30 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           ExecutionType.GUARANTEED,
           allocatedContainers4.get(0).getExecutionType());
       assertTrue("The reservation for the fourth request should be canceled",
-          scheduler.getNode(node.getNodeID()).getReservedContainer() == null);
+          schedulerNode.getReservedContainer() == null);
+      assertEquals(Resource.newInstance(3024, 2),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
 
+      // now that the promoted container finishes
+      finishedContainers = Collections.singletonList(
+          ContainerStatus.newInstance(allocatedContainers3.get(0).getId(),
+              ContainerState.RUNNING, "", ContainerExitStatus.SUCCESS));
+      node.updateContainersInfoAndUtilization(
+          new UpdatedContainerInfo(
+              Collections.emptyList(), finishedContainers),
+          ResourceUtilization.newInstance(1024, 0, 0.1f));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node));
+
+      assertEquals(Resource.newInstance(2000, 1),
+          schedulerNode.getAllocatedResource());
+      assertEquals(Resource.newInstance(0, 0),
+          schedulerNode.getOpportunisticResourceAllocated());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+          getGuaranteedResourceUsage().getMemorySize());
+      assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+          getOpportunisticResourceUsage().getMemorySize());
     } finally {
       conf.setBoolean(YarnConfiguration.RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED,
           false);

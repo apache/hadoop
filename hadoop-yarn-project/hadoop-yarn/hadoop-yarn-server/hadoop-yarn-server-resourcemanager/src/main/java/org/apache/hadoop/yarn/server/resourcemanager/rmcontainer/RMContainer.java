@@ -102,6 +102,8 @@ public interface RMContainer extends EventHandler<RMContainerEvent>,
 
   ExecutionType getExecutionType();
 
+  boolean promote();
+
   /**
    * If the container was allocated by a container other than the Resource
    * Manager (e.g., the distributed scheduler in the NM
