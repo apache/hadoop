@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.management.MBeanServer;
@@ -32,15 +33,24 @@ import java.lang.management.ManagementFactory;
  * Test the JMX interface for the rocksdb metastore implementation.
  */
 public class TestRocksDBStoreMBean {
+  
+  Configuration conf;
+  
+  @Before
+  public void init() throws Exception {
+    conf = new OzoneConfiguration();
+
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
+  }
+  
 
   @Test
   public void testJmxBeans() throws Exception {
     File testDir =
         GenericTestUtils.getTestDir(getClass().getSimpleName() + "-withstat");
 
-    Configuration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
-        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS, "ALL");
 
     RocksDBStore metadataStore =
         (RocksDBStore) MetadataStoreBuilder.newBuilder().setConf(conf)
@@ -72,9 +82,6 @@ public class TestRocksDBStoreMBean {
     File testDir = GenericTestUtils
         .getTestDir(getClass().getSimpleName() + "-withoutstat");
 
-    Configuration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
-        OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB);
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
         OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF);
 
