@@ -80,6 +80,7 @@ Run ozoneFS tests
     ${result} =         Execute               ozone sh key list o3://ozoneManager/fstest/bucket1 | grep -v WARN | jq -r '.[].keyName'
                         Should not contain  ${result}       testdir
 
+                        Execute               rm -Rf localdir1
                         Execute               mkdir localdir1
                         Execute               cp NOTICE.txt localdir1/LOCAL.txt
                         Execute               ozone fs -mkdir -p o3://bucket1.fstest/testdir1
@@ -95,14 +96,17 @@ Run ozoneFS tests
 
                         Execute               ozone fs -cp o3://bucket1.fstest/testdir1/localdir1 o3://bucket2.fstest/testdir2/
 
-                        Execute               ozone fs -cp o3://bucket1.fstest/testdir1/localdir1 o3://bucket3.fstest1/testdir3/
+                        Execute               ozone fs -cp o3://bucket1.fstest/testdir1/localdir1 o3://bucket3.fstest2/testdir3/
 
                         Execute               ozone sh key put o3://ozoneManager/fstest/bucket1/KEY.txt NOTICE.txt
     ${result} =         Execute               ozone fs -ls o3://bucket1.fstest/KEY.txt
                         Should contain    ${result}         KEY.txt
-    ${result} =         Execute               ozone fs -copyFromLocal NOTICE.txt o3://bucket1.fstest/KEY.txt
-                        Should contain    ${result}         'File exists'
+    ${rc}  ${result} =  Run And Return Rc And Output        ozone fs -copyFromLocal NOTICE.txt o3://bucket1.fstest/KEY.txt
+                        Should Be Equal As Integers     ${rc}                1
+                        Should contain    ${result}         File exists
+                        Execute               rm -Rf GET.txt
                         Execute               ozone fs -get o3://bucket1.fstest/KEY.txt GET.txt
                         Execute               ls -l GET.txt
-    ${result} =         Execute               ozone fs -ls o3://abcde.pqrs/
+    ${rc}  ${result} =  Run And Return Rc And Output        ozone fs -ls o3://abcde.pqrs/
+                        Should Be Equal As Integers     ${rc}                1
                         Should contain    ${result}         VOLUME_NOT_FOUND
