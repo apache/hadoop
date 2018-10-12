@@ -35,17 +35,16 @@ import org.apache.http.HttpStatus;
 /**
  * Delete a bucket.
  */
-@Path("/{volume}/{bucket}")
+@Path("/{bucket}")
 public class DeleteBucket extends EndpointBase {
 
   @DELETE
   @Produces(MediaType.APPLICATION_XML)
-  public Response delete(@PathParam("volume") String volumeName,
-                         @PathParam("bucket") String bucketName)
+  public Response delete(@PathParam("bucket") String bucketName)
       throws IOException, OS3Exception {
 
     try {
-      getVolume(volumeName).deleteBucket(bucketName);
+      deleteS3Bucket(bucketName);
     } catch (IOException ex) {
       if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable

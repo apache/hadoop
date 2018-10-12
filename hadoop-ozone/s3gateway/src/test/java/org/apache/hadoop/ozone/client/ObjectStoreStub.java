@@ -37,6 +37,7 @@ public class ObjectStoreStub extends ObjectStore {
 
   private Map<String, OzoneVolumeStub> volumes = new HashMap<>();
   private Map<String, String> bucketVolumeMap = new HashMap<>();
+  private Map<String, Boolean> bucketEmptyStatus = new HashMap<>();
 
   @Override
   public void createVolume(String volumeName) throws IOException {
@@ -112,25 +113,56 @@ public class ObjectStoreStub extends ObjectStore {
   @Override
   public void createS3Bucket(String userName, String s3BucketName) throws
       IOException {
-    bucketVolumeMap.put(s3BucketName, "s3"+userName+"/"+s3BucketName);
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      String volumeName = "s3"+userName;
+      bucketVolumeMap.put(s3BucketName, volumeName + "/" + s3BucketName);
+      bucketEmptyStatus.put(s3BucketName, true);
+      createVolume(volumeName);
+      volumes.get(volumeName).createBucket(s3BucketName);
+    } else {
+      throw new IOException("BUCKET_ALREADY_EXISTS");
+    }
   }
 
   @Override
   public void deleteS3Bucket(String s3BucketName) throws
       IOException {
-    bucketVolumeMap.remove(s3BucketName);
+    if (bucketVolumeMap.containsKey(s3BucketName)) {
+      if (bucketEmptyStatus.get(s3BucketName)) {
+        bucketVolumeMap.remove(s3BucketName);
+      } else {
+        throw new IOException("BUCKET_NOT_EMPTY");
+      }
+    } else {
+      throw new IOException("BUCKET_NOT_FOUND");
+    }
   }
 
   @Override
   public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
     return bucketVolumeMap.get(s3BucketName);
   }
+
   @Override
   public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
     return bucketVolumeMap.get(s3BucketName).split("/")[0];
   }
+
   @Override
   public String getOzoneBucketName(String s3BucketName) throws IOException {
+    if (bucketVolumeMap.get(s3BucketName) == null) {
+      throw new IOException("S3_BUCKET_NOT_FOUND");
+    }
     return bucketVolumeMap.get(s3BucketName).split("/")[1];
+  }
+
+  public void setBucketEmptyStatus(String bucketName, boolean status) {
+    bucketEmptyStatus.put(bucketName, status);
   }
 }
