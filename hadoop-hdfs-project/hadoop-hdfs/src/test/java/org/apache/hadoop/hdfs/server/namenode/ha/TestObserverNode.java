@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -32,14 +30,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -77,13 +72,7 @@ public class TestObserverNode {
   @BeforeClass
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
-    // disable block scanner
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-    conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
-    conf.setTimeDuration(
-        DFS_HA_TAILEDITS_PERIOD_KEY, 100, TimeUnit.MILLISECONDS);
-
-    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1);
+    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 0, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
@@ -302,6 +291,7 @@ public class TestObserverNode {
   }
 
   private static void setObserverRead(boolean flag) throws Exception {
-    dfs = HATestUtil.configureObserverReadFs(dfsCluster, conf, flag);
+    dfs = HATestUtil.configureObserverReadFs(
+        dfsCluster, conf, ObserverReadProxyProvider.class, flag);
   }
 }

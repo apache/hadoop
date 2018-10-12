@@ -17,21 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -45,7 +40,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * Test consistency of reads while accessing an ObserverNode.
@@ -65,19 +59,11 @@ public class TestConsistentReadsObserver {
   @BeforeClass
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
-    // disable block scanner
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
     // disable fast tailing here because this test's assertions are based on the
     // timing of explicitly called rollEditLogAndTail. Although this means this
     // test takes some time to run
     // TODO: revisit if there is a better way.
-    conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, false);
-
-    // disable fast tailing so that coordination takes time.
-    conf.setTimeDuration(DFS_HA_LOGROLL_PERIOD_KEY, 300, TimeUnit.SECONDS);
-    conf.setTimeDuration(DFS_HA_TAILEDITS_PERIOD_KEY, 200, TimeUnit.SECONDS);
-
-    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1);
+    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 0, false);
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
@@ -177,6 +163,7 @@ public class TestConsistentReadsObserver {
   }
 
   private static void setObserverRead(boolean flag) throws Exception {
-    dfs = HATestUtil.configureObserverReadFs(dfsCluster, conf, flag);
+    dfs = HATestUtil.configureObserverReadFs(
+        dfsCluster, conf, ObserverReadProxyProvider.class, flag);
   }
 }
