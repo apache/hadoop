@@ -32,6 +32,16 @@ import static org.junit.Assert.assertEquals;
 public class TestCopyListingFileStatus {
 
   @Test
+  public void testToString() {
+    CopyListingFileStatus src = new CopyListingFileStatus(
+        4344L, false, 2, 512 << 20, 1234L, 5678L, new FsPermission((short)0512),
+        "dingo", "yaks", new Path("hdfs://localhost:4344"));
+    src.toString();
+    src = new CopyListingFileStatus();
+    src.toString();
+  }
+
+  @Test
   public void testCopyListingFileStatusSerialization() throws Exception {
     CopyListingFileStatus src = new CopyListingFileStatus(
         4344L, false, 2, 512 << 20, 1234L, 5678L, new FsPermission((short)0512),
