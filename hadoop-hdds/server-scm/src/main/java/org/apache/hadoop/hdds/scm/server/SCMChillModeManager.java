@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -162,7 +163,7 @@ public class SCMChillModeManager implements
 
     // Required cutoff % for containers with at least 1 reported replica.
     private double chillModeCutoff;
-    // Containers read from scm db.
+    // Containers read from scm db (excluding containers in ALLOCATED state).
     private Map<Long, ContainerInfo> containerMap;
     private double maxContainer;
 
@@ -174,11 +175,16 @@ public class SCMChillModeManager implements
       containerMap = new ConcurrentHashMap<>();
       if(containers != null) {
         containers.forEach(c -> {
-          if (c != null) {
+          // Containers in ALLOCATED state should not be included while
+          // calculating the total number of containers here. They are not
+          // reported by DNs and hence should not affect the chill mode exit
+          // rule.
+          if (c != null && c.getState() != null &&
+              !c.getState().equals(HddsProtos.LifeCycleState.ALLOCATED)) {
             containerMap.put(c.getContainerID(), c);
           }
         });
-        maxContainer = containers.size();
+        maxContainer = containerMap.size();
       }
     }
 
