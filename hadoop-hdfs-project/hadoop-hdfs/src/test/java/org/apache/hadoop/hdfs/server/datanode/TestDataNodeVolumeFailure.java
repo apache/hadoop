@@ -424,10 +424,8 @@ public class TestDataNodeVolumeFailure {
       @Override
       public Boolean get() {
         // underReplicatedBlocks are due to failed volumes
-        int underReplicatedBlocks = BlockManagerTestUtil
-            .checkHeartbeatAndGetUnderReplicatedBlocksCount(
-                cluster.getNamesystem(), bm);
-
+        long underReplicatedBlocks = bm.getLowRedundancyBlocksCount()
+            + bm.getPendingReconstructionBlocksCount();
         if (underReplicatedBlocks > 0) {
           return true;
         }
