@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
@@ -29,6 +32,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Function;
@@ -163,17 +167,18 @@ public abstract class HATestUtil {
     return (DistributedFileSystem)fs;
   }
 
-  public static DistributedFileSystem configureObserverReadFs(
+  public static <P extends ObserverReadProxyProvider<?>>
+  DistributedFileSystem configureObserverReadFs(
       MiniDFSCluster cluster, Configuration conf,
-      boolean isObserverReadEnabled)
+      Class<P> classFPP, boolean isObserverReadEnabled)
           throws IOException, URISyntaxException {
     conf = new Configuration(conf);
-    setupHAConfiguration(cluster, conf, 0, ObserverReadProxyProvider.class);
+    setupHAConfiguration(cluster, conf, 0, classFPP);
     DistributedFileSystem dfs = (DistributedFileSystem)
         FileSystem.get(getLogicalUri(cluster), conf);
-    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
-        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
-            dfs.getClient().getNamenode())).getProxyProvider();
+    @SuppressWarnings("unchecked")
+    P provider = (P) ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+        dfs.getClient().getNamenode())).getProxyProvider();
     provider.setObserverReadEnabled(isObserverReadEnabled);
     return dfs;
   }
@@ -195,10 +200,25 @@ public abstract class HATestUtil {
   }
 
   public static MiniQJMHACluster setUpObserverCluster(
-      Configuration conf, int numObservers) throws IOException {
-    MiniQJMHACluster qjmhaCluster = new MiniQJMHACluster.Builder(conf)
-        .setNumNameNodes(2 + numObservers)
-        .build();
+      Configuration conf, int numObservers, int numDataNodes,
+      boolean fastTailing) throws IOException {
+    // disable block scanner
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
+
+    conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, fastTailing);
+    if(fastTailing) {
+      conf.setTimeDuration(
+          DFS_HA_TAILEDITS_PERIOD_KEY, 100, TimeUnit.MILLISECONDS);
+    } else {
+      // disable fast tailing so that coordination takes time.
+      conf.setTimeDuration(DFS_HA_LOGROLL_PERIOD_KEY, 300, TimeUnit.SECONDS);
+      conf.setTimeDuration(DFS_HA_TAILEDITS_PERIOD_KEY, 200, TimeUnit.SECONDS);
+    }
+
+    MiniQJMHACluster.Builder qjmBuilder = new MiniQJMHACluster.Builder(conf)
+        .setNumNameNodes(2 + numObservers);
+    qjmBuilder.getDfsBuilder().numDataNodes(numDataNodes);
+    MiniQJMHACluster qjmhaCluster = qjmBuilder.build();
     MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
 
     dfsCluster.transitionToActive(0);
