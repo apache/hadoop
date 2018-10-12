@@ -76,6 +76,24 @@ public class TestS3BucketManager {
   }
 
   @Test
+  public void testDeleteS3Bucket() throws IOException {
+    S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
+        volumeManager, bucketManager);
+    s3BucketManager.createS3Bucket("ozone", "s3bucket");
+
+    // This call should have created a ozone volume called s3ozone and bucket
+    // called s3ozone/s3bucket.
+    Assert.assertNotNull(volumeManager.getVolumeInfo("s3ozone"));
+    Assert.assertNotNull(bucketManager.getBucketInfo("s3ozone", "s3bucket"));
+
+    s3BucketManager.deleteS3Bucket("s3bucket");
+
+    //Deleting non existing bucket should throw.
+    thrown.expect(IOException.class);
+    s3BucketManager.deleteS3Bucket("s3bucket");
+  }
+
+  @Test
   public void testGetS3BucketMapping() throws IOException {
     S3BucketManager s3BucketManager = new S3BucketManagerImpl(conf, metaMgr,
         volumeManager, bucketManager);

@@ -828,6 +828,13 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
+  public void deleteS3Bucket(String s3BucketName)
+      throws IOException {
+    throw new UnsupportedOperationException("Ozone REST protocol does not " +
+        "support this operation.");
+  }
+
+  @Override
   public String getOzoneBucketMapping(String s3BucketName) throws IOException {
     throw new UnsupportedOperationException("Ozone REST protocol does not " +
         "support this operation.");

@@ -1144,6 +1144,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * {@inheritDoc}
    */
+  public void deleteS3Bucket(String s3BucketName)
+      throws IOException {
+    s3BucketManager.deleteS3Bucket(s3BucketName);
+  }
+
+  @Override
+  /**
+   * {@inheritDoc}
+   */
   public String getOzoneBucketMapping(String s3BucketName)
       throws IOException {
     return s3BucketManager.getOzoneBucketMapping(s3BucketName);

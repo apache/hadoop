@@ -34,6 +34,13 @@ public interface S3BucketManager {
   void createS3Bucket(String userName, String bucketName) throws IOException;
 
   /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param bucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  void deleteS3Bucket(String bucketName) throws IOException;
+
+  /**
    * Returns the Ozone volume/bucket where the S3 Bucket points to.
    * @param s3BucketName - S3 Bucket Name
    * @return String - Ozone volume/bucket

@@ -580,6 +580,14 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
+  public void deleteS3Bucket(String s3BucketName)
+      throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(s3BucketName), "bucket " +
+        "name cannot be null or empty.");
+    ozoneManagerClient.deleteS3Bucket(s3BucketName);
+  }
+
+  @Override
   public String getOzoneBucketMapping(String s3BucketName) throws IOException {
     Preconditions.checkArgument(Strings.isNotBlank(s3BucketName), "bucket " +
         "name cannot be null or empty.");
