@@ -42,7 +42,7 @@ can use
 OzoneClient ozClient = OzoneClientFactory.getRestClient();
 {{< /highlight >}}
 
-And to get a a RPC client we can call
+And to get a RPC client we can call
 
 {{< highlight java >}}
 OzoneClient ozClient = OzoneClientFactory.getRpcClient();
