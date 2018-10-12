@@ -174,9 +174,18 @@ public class TestOzoneFileInterfaces {
 
     try (FSDataInputStream inputStream = fs.open(path)) {
       byte[] buffer = new byte[stringLen];
-      inputStream.readFully(0, buffer);
+      // This read will not change the offset inside the file
+      int readBytes = inputStream.read(0, buffer, 0, buffer.length);
       String out = new String(buffer, 0, buffer.length);
       assertEquals(data, out);
+      assertEquals(readBytes, buffer.length);
+      assertEquals(0, inputStream.getPos());
+
+      // The following read will change the internal offset
+      readBytes = inputStream.read(buffer, 0, buffer.length);
+      assertEquals(data, out);
+      assertEquals(readBytes, buffer.length);
+      assertEquals(buffer.length, inputStream.getPos());
     }
   }
 
