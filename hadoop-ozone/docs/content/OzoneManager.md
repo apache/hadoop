@@ -70,7 +70,7 @@ We are hopeful that this leads to a more straightforward way of discovering sett
 OM and SCM
 -------------------
 [Storage container manager]({{< ref "Hdds.md" >}}) or (SCM) is the block manager
- for ozone. When a client requests OM for a set of data nodes to write data, OM talk to SCM and gets a block.
+ for ozone. When a client requests OM for a set of data nodes to write data, OM talks to SCM and gets a block.
 
 A block returned by SCM contains a pipeline, which is a set of nodes that we participate in that block replication.
 
