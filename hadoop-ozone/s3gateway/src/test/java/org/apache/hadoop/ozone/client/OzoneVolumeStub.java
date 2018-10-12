@@ -35,7 +35,6 @@ import org.apache.hadoop.ozone.OzoneAcl;
 public class OzoneVolumeStub extends OzoneVolume {
 
   private Map<String, OzoneBucketStub> buckets = new HashMap<>();
-  private Map<String, Boolean> bucketEmptyStatus = new HashMap<>();
 
   public OzoneVolumeStub(String name, String admin, String owner,
       long quotaInBytes,
@@ -61,7 +60,6 @@ public class OzoneVolumeStub extends OzoneVolume {
         bucketArgs.getStorageType(),
         bucketArgs.getVersioning(),
         System.currentTimeMillis()));
-    bucketEmptyStatus.put(bucketName, true);
 
   }
 
@@ -98,17 +96,9 @@ public class OzoneVolumeStub extends OzoneVolume {
   @Override
   public void deleteBucket(String bucketName) throws IOException {
     if (buckets.containsKey(bucketName)) {
-      if (bucketEmptyStatus.get(bucketName)) {
-        buckets.remove(bucketName);
-      } else {
-        throw new IOException("BUCKET_NOT_EMPTY");
-      }
+      buckets.remove(bucketName);
     } else {
       throw new IOException("BUCKET_NOT_FOUND");
     }
-  }
-
-  public void setBucketEmptyStatus(String bucketName, boolean status) {
-    bucketEmptyStatus.put(bucketName, status);
   }
 }

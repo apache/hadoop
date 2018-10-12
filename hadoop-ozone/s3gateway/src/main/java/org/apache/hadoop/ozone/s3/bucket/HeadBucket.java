@@ -35,20 +35,17 @@ import org.slf4j.LoggerFactory;
 /**
  * Finds the bucket exists or not.
  */
-@Path("/{volume}/{bucket}")
+@Path("/{bucket}")
 public class HeadBucket extends EndpointBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(HeadBucket.class);
 
   @HEAD
-  public Response head(@PathParam("volume") String volumeName,
-                       @PathParam("bucket") String bucketName)
+  public Response head(@PathParam("bucket") String bucketName)
       throws Exception {
     try {
-      getVolume(volumeName).getBucket(bucketName);
-      // Not sure what kind of error, we need to show for volume not exist
-      // to end user. As right now we throw run time exception.
+      getVolume(getOzoneVolumeName(bucketName)).getBucket(bucketName);
     } catch (IOException ex) {
       LOG.error("Exception occurred in headBucket", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {

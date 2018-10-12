@@ -22,7 +22,6 @@ package org.apache.hadoop.ozone.s3.bucket;
 
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
-import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 import org.junit.Before;
@@ -38,8 +37,8 @@ import static org.junit.Assert.fail;
  */
 public class TestHeadBucket {
 
-  private String volumeName = "myVolume";
   private String bucketName = "myBucket";
+  private String userName = "ozone";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
   private HeadBucket headBucket;
@@ -51,23 +50,17 @@ public class TestHeadBucket {
     clientStub = new OzoneClientStub();
     objectStoreStub = clientStub.getObjectStore();
 
-    // Create volume and bucket
-    objectStoreStub.createVolume(volumeName);
-
-    OzoneVolume volumeStub = objectStoreStub.getVolume(volumeName);
-    volumeStub.createBucket(bucketName);
+    objectStoreStub.createS3Bucket(userName, bucketName);
 
     // Create HeadBucket and setClient to OzoneClientStub
     headBucket = new HeadBucket();
     headBucket.setClient(clientStub);
-
-
   }
 
   @Test
   public void testHeadBucket() throws Exception {
 
-    Response response = headBucket.head(volumeName, bucketName);
+    Response response = headBucket.head(bucketName);
     assertEquals(200, response.getStatus());
 
   }
@@ -75,7 +68,7 @@ public class TestHeadBucket {
   @Test
   public void testHeadFail() {
     try {
-      headBucket.head(volumeName, "unknownbucket");
+      headBucket.head("unknownbucket");
     } catch (Exception ex) {
       if (ex instanceof OS3Exception) {
         assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(),

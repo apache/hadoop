@@ -23,6 +23,7 @@ Resource            commonawslib.robot
 ${ENDPOINT_URL}       http://s3g:9878
 ${OZONE_TEST}         true
 ${BUCKET}             generated
+${NONEXIST-BUCKET}    generated1
 
 *** Keywords ***
 
@@ -58,3 +59,13 @@ Create Bucket
                         Should contain              ${result}         Location
 
     Run Keyword if     '${OZONE_TEST}' == 'true'    Check Volume
+
+Head Bucket
+    ${result} =         Execute AWSS3APICli     head-bucket --bucket ${BUCKET}
+    ${result} =         Execute AWSS3APICli and checkrc      head-bucket --bucket ${NONEXIST-BUCKET}  255
+                        Should contain          ${result}    Not Found
+                        Should contain          ${result}    404
+Delete Bucket
+    ${result} =         Execute AWSS3APICli     head-bucket --bucket ${BUCKET}
+    ${result} =         Execute AWSS3APICli and checkrc      delete-bucket --bucket ${NONEXIST-BUCKET}  255
+                        Should contain          ${result}    NoSuchBucket
