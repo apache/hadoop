@@ -63,14 +63,14 @@ Useful Docker & Ozone Commands
 
 If you make any modifications to ozone, the simplest way to test it is to run freon and unit tests.
 
-Here are the instructions to run corona in a docker based cluster.
+Here are the instructions to run freon in a docker based cluster.
 
 {{< highlight bash >}}
 docker-compose exec datanode bash
 {{< /highlight >}}
 
 This will open a bash shell on the data node container.
-Now we can execute corona for load generation.
+Now we can execute freon for load generation.
 
 {{< highlight bash >}}
 ozone freon randomkeys --numOfVolumes=10 --numOfBuckets 10 --numOfKeys 10
