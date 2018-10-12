@@ -123,10 +123,11 @@ public final class ContainerCache extends LRUMap {
    * @param containerID - ID of the container.
    * @param containerDBType - DB type of the container.
    * @param containerDBPath - DB path of the container.
+   * @param conf - Hadoop Configuration.
    * @return MetadataStore.
    */
-  public MetadataStore getDB(long containerID, String containerDBType, String
-                             containerDBPath)
+  public MetadataStore getDB(long containerID, String containerDBType,
+                             String containerDBPath, Configuration conf)
       throws IOException {
     Preconditions.checkState(containerID >= 0,
         "Container ID cannot be negative.");
@@ -138,6 +139,7 @@ public final class ContainerCache extends LRUMap {
         db = MetadataStoreBuilder.newBuilder()
             .setDbFile(new File(containerDBPath))
             .setCreateIfMissing(false)
+            .setConf(conf)
             .setDBType(containerDBType)
             .build();
         this.put(containerID, db);

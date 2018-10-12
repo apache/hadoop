@@ -20,6 +20,7 @@ package org.apache.hadoop.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.iq80.leveldb.Options;
 import org.rocksdb.BlockBasedTableConfig;
@@ -30,6 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_METADATA_STORE_IMPL_LEVELDB;
@@ -53,7 +56,7 @@ public class MetadataStoreBuilder {
   private File dbFile;
   private long cacheSize;
   private boolean createIfMissing = true;
-  private Configuration conf;
+  private Optional<Configuration> optionalConf = Optional.empty();
   private String dbType;
 
   public static MetadataStoreBuilder newBuilder() {
@@ -76,7 +79,7 @@ public class MetadataStoreBuilder {
   }
 
   public MetadataStoreBuilder setConf(Configuration configuration) {
-    this.conf = configuration;
+    this.optionalConf = Optional.of(configuration);
     return this;
   }
 
@@ -98,13 +101,12 @@ public class MetadataStoreBuilder {
     }
 
     // Build db store based on configuration
-    MetadataStore store = null;
+    final Configuration conf = optionalConf.orElseGet(
+        () -> new OzoneConfiguration());
 
     if(dbType == null) {
       LOG.debug("dbType is null, using ");
-      dbType = conf == null ?
-          OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT :
-          conf.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
+      dbType = conf.getTrimmed(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
               OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_DEFAULT);
       LOG.debug("dbType is null, using dbType {} from ozone configuration",
           dbType);
@@ -117,7 +119,7 @@ public class MetadataStoreBuilder {
       if (cacheSize > 0) {
         options.cacheSize(cacheSize);
       }
-      store = new LevelDBStore(dbFile, options);
+      return new LevelDBStore(dbFile, options);
     } else if (OZONE_METADATA_STORE_IMPL_ROCKSDB.equals(dbType)) {
       org.rocksdb.Options opts = new org.rocksdb.Options();
       opts.setCreateIfMissing(createIfMissing);
@@ -128,10 +130,9 @@ public class MetadataStoreBuilder {
         opts.setTableFormatConfig(tableConfig);
       }
 
-      String rocksDbStat = conf == null ?
-          OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT :
-          conf.getTrimmed(OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
-              OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT);
+      String rocksDbStat = conf.getTrimmed(
+          OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
+          OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT);
 
       if (!rocksDbStat.equals(OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF)) {
         Statistics statistics = new Statistics();
@@ -139,14 +140,13 @@ public class MetadataStoreBuilder {
         opts = opts.setStatistics(statistics);
 
       }
-      store = new RocksDBStore(dbFile, opts);
-    } else {
-      throw new IllegalArgumentException("Invalid argument for "
-          + OzoneConfigKeys.OZONE_METADATA_STORE_IMPL
-          + ". Expecting " + OZONE_METADATA_STORE_IMPL_LEVELDB
-          + " or " + OZONE_METADATA_STORE_IMPL_ROCKSDB
-          + ", but met " + dbType);
+      return new RocksDBStore(dbFile, opts);
     }
-    return store;
+    
+    throw new IllegalArgumentException("Invalid argument for "
+        + OzoneConfigKeys.OZONE_METADATA_STORE_IMPL
+        + ". Expecting " + OZONE_METADATA_STORE_IMPL_LEVELDB
+        + " or " + OZONE_METADATA_STORE_IMPL_ROCKSDB
+        + ", but met " + dbType);
   }
 }
