@@ -83,8 +83,7 @@ public class TestXceiverClientMetrics {
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
             containerOwner);
     XceiverClientSpi client = clientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
 
     ContainerCommandRequestProto request = ContainerTestHelper
         .getCreateContainerRequest(
