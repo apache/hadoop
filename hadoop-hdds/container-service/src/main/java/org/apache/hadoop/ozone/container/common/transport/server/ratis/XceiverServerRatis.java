@@ -70,6 +70,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -240,7 +241,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
     // Set the ratis storage directory
     String storageDir = HddsServerUtil.getOzoneDatanodeRatisDirectory(conf);
-    RaftServerConfigKeys.setStorageDir(properties, new File(storageDir));
+    RaftServerConfigKeys.setStorageDirs(properties,
+        Collections.singletonList(new File(storageDir)));
 
     // For grpc set the maximum message size
     GrpcConfigKeys.setMessageSizeMax(properties,
