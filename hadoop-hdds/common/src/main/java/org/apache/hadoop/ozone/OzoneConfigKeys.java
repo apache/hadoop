@@ -90,7 +90,7 @@ public final class OzoneConfigKeys {
       "ozone.metastore.rocksdb.statistics";
 
   public static final String  OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT =
-      "ALL";
+      "OFF";
   public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF =
       "OFF";
 
