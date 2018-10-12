@@ -79,6 +79,34 @@ public class EndpointBase {
     return volume;
   }
 
+  /**
+   * Create an S3Bucket, and also it creates mapping needed to access via
+   * ozone and S3.
+   * @param userName
+   * @param bucketName
+   * @return location of the S3Bucket.
+   * @throws IOException
+   */
+  protected String createS3Bucket(String userName, String bucketName) throws
+      IOException {
+    try {
+      client.getObjectStore().createS3Bucket(userName, bucketName);
+    } catch (IOException ex) {
+      LOG.error("createS3Bucket error:", ex);
+      if (!ex.getMessage().contains("ALREADY_EXISTS")) {
+        // S3 does not return error for bucket already exists, it just
+        // returns the location.
+        throw ex;
+      }
+    }
+
+    // Not required to call as bucketname is same, but calling now in future
+    // if mapping changes we get right location.
+    String location = client.getObjectStore().getOzoneBucketName(
+        bucketName);
+    return "/"+location;
+  }
+
   @VisibleForTesting
   public void setClient(OzoneClient ozoneClient) {
     this.client = ozoneClient;
