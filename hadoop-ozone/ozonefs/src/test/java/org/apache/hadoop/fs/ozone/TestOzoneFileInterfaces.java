@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Before;
@@ -167,12 +168,22 @@ public class TestOzoneFileInterfaces {
     assertTrue("Modification time has not been recorded: " + status,
         status.getModificationTime() > currentTime);
 
+    assertEquals(false, status.isDirectory());
+    assertEquals(FsPermission.getFileDefault(), status.getPermission());
+    verifyOwnerGroup(status);
+
     try (FSDataInputStream inputStream = fs.open(path)) {
       byte[] buffer = new byte[stringLen];
       inputStream.readFully(0, buffer);
       String out = new String(buffer, 0, buffer.length);
       assertEquals(data, out);
     }
+  }
+
+  private void verifyOwnerGroup(FileStatus fileStatus) {
+    String owner = getCurrentUser();
+    assertEquals(owner, fileStatus.getOwner());
+    assertEquals(owner, fileStatus.getGroup());
   }
 
 
@@ -186,6 +197,10 @@ public class TestOzoneFileInterfaces {
     FileStatus status = fs.getFileStatus(path);
     assertTrue("The created path is not directory.", status.isDirectory());
 
+    assertEquals(true, status.isDirectory());
+    assertEquals(FsPermission.getDirDefault(), status.getPermission());
+    verifyOwnerGroup(status);
+
     assertEquals(0, status.getLen());
 
     FileStatus[] statusList = fs.listStatus(createPath("/"));
@@ -195,8 +210,6 @@ public class TestOzoneFileInterfaces {
     FileStatus statusRoot = fs.getFileStatus(createPath("/"));
     assertTrue("Root dir (/) is not a directory.", status.isDirectory());
     assertEquals(0, status.getLen());
-
-
   }
 
   @Test
