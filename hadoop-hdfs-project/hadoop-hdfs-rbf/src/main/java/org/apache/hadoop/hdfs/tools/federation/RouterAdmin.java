@@ -151,17 +151,7 @@ public class RouterAdmin extends Configured implements Tool {
    * @param arg List of of command line parameters.
    */
   private void validateMax(String[] arg) {
-    if (arg[0].equals("-rm")) {
-      if (arg.length > 2) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=1 argument allowed");
-      }
-    } else if (arg[0].equals("-ls")) {
-      if (arg.length > 2) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=1 argument allowed");
-      }
-    } else if (arg[0].equals("-clrQuota")) {
+    if (arg[0].equals("-ls")) {
       if (arg.length > 2) {
         throw new IllegalArgumentException(
             "Too many arguments, Max=1 argument allowed");
@@ -183,6 +173,45 @@ public class RouterAdmin extends Configured implements Tool {
     }
   }
 
+  /**
+   * Usage: validates the minimum number of arguments for a command.
+   * @param argv List of of command line parameters.
+   * @return true if number of arguments are valid for the command else false.
+   */
+  private boolean validateMin(String[] argv) {
+    String cmd = argv[0];
+    if ("-add".equals(cmd)) {
+      if (argv.length < 4) {
+        return false;
+      }
+    } else if ("-update".equals(cmd)) {
+      if (argv.length < 4) {
+        return false;
+      }
+    } else if ("-rm".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
+    } else if ("-setQuota".equals(cmd)) {
+      if (argv.length < 4) {
+        return false;
+      }
+    } else if ("-clrQuota".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
+    } else if ("-safemode".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
+    } else if ("-nameservice".equals(cmd)) {
+      if (argv.length < 3) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public int run(String[] argv) throws Exception {
     if (argv.length < 1) {
@@ -196,50 +225,11 @@ public class RouterAdmin extends Configured implements Tool {
     String cmd = argv[i++];
 
     // Verify that we have enough command line parameters
-    if ("-add".equals(cmd)) {
-      if (argv.length < 4) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-update".equals(cmd)) {
-      if (argv.length < 4) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-rm".equals(cmd)) {
-      if (argv.length < 2) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-setQuota".equals(cmd)) {
-      if (argv.length < 4) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-clrQuota".equals(cmd)) {
-      if (argv.length < 2) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-safemode".equals(cmd)) {
-      if (argv.length < 2) {
-        System.err.println("Not enough parameters specified for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-nameservice".equals(cmd)) {
-      if (argv.length < 3) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
-        printUsage(cmd);
-        return exitCode;
-      }
+    if (!validateMin(argv)) {
+      System.err.println("Not enough parameters specificed for cmd " + cmd);
+      printUsage(cmd);
+      return exitCode;
     }
-
     // Initialize RouterClient
     try {
       String address = getConf().getTrimmed(
@@ -273,8 +263,17 @@ public class RouterAdmin extends Configured implements Tool {
           exitCode = -1;
         }
       } else if ("-rm".equals(cmd)) {
-        if (removeMount(argv[i])) {
-          System.out.println("Successfully removed mount point " + argv[i]);
+        while (i < argv.length) {
+          try {
+            if (removeMount(argv[i])) {
+              System.out.println("Successfully removed mount point " + argv[i]);
+            }
+          } catch (IOException e) {
+            exitCode = -1;
+            System.err
+                .println(cmd.substring(1) + ": " + e.getLocalizedMessage());
+          }
+          i++;
         }
       } else if ("-ls".equals(cmd)) {
         if (argv.length > 1) {
@@ -288,9 +287,12 @@ public class RouterAdmin extends Configured implements Tool {
               "Successfully set quota for mount point " + argv[i]);
         }
       } else if ("-clrQuota".equals(cmd)) {
-        if (clrQuota(argv[i])) {
-          System.out.println(
-              "Successfully clear quota for mount point " + argv[i]);
+        while (i < argv.length) {
+          if (clrQuota(argv[i])) {
+            System.out
+                .println("Successfully clear quota for mount point " + argv[i]);
+            i++;
+          }
         }
       } else if ("-safemode".equals(cmd)) {
         manageSafeMode(argv[i]);
