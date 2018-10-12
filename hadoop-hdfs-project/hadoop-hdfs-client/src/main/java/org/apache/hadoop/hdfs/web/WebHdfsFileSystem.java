@@ -111,7 +111,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -119,6 +118,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
+import org.apache.hadoop.security.token.org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -1643,6 +1643,16 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    KeyProvider keyProvider = getKeyProvider();
+    if (keyProvider instanceof DelegationTokenIssuer) {
+      return new DelegationTokenIssuer[] {(DelegationTokenIssuer) keyProvider};
+    }
+    return null;
+  }
+
+  @Override
   public synchronized Token<?> getRenewToken() {
     return delegationToken;
   }
@@ -1675,14 +1685,6 @@ public class WebHdfsFileSystem extends FileSystem
     new FsPathRunner(op, null,
         new TokenArgumentParam(token.encodeToUrlString())
     ).run();
-  }
-
-  @Override
-  public Token<?>[] addDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    return HdfsKMSUtil.addDelegationTokensForKeyProvider(this, renewer,
-        credentials, getUri(), tokens);
   }
 
   public BlockLocation[] getFileBlockLocations(final FileStatus status,
