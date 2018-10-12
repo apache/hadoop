@@ -63,7 +63,7 @@ public final class ScmConfigKeys {
   public static final ReplicationLevel
       DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT = ReplicationLevel.MAJORITY;
   public static final String DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY
-      = "dfs.container.ratis.num.container.op.threads";
+      = "dfs.container.ratis.num.container.op.executors";
   public static final int DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT
       = 10;
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY =
