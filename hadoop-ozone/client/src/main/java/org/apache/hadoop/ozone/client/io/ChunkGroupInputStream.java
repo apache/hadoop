@@ -273,7 +273,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       ContainerWithPipeline containerWithPipeline =
           storageContainerLocationClient.getContainerWithPipeline(containerID);
       XceiverClientSpi xceiverClient = xceiverClientManager
-          .acquireClient(containerWithPipeline.getPipeline(), containerID);
+          .acquireClient(containerWithPipeline.getPipeline());
       boolean success = false;
       containerKey = omKeyLocationInfo.getLocalID();
       try {
