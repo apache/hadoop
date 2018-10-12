@@ -32,14 +32,13 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
-import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.JsonSerialization;
@@ -58,7 +57,6 @@ import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -99,7 +97,7 @@ import static org.apache.hadoop.util.KMSUtil.parseJSONMetadata;
 public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     KeyProviderDelegationTokenExtension.DelegationTokenExtension {
 
-  private static final Logger LOG =
+  static final Logger LOG =
       LoggerFactory.getLogger(KMSClientProvider.class);
 
   private static final String INVALID_SIGNATURE = "Invalid signature";
@@ -133,12 +131,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
+  private KeyProviderDelegationTokenExtension.DelegationTokenExtension
+      clientTokenProvider = this;
+  // the token's service.
   private final Text dtService;
-
-  // Allow fallback to default kms server port 9600 for certain tests that do
-  // not specify the port explicitly in the kms provider url.
-  @VisibleForTesting
-  public static volatile boolean fallbackDefaultPortForTesting = false;
+  // alias in the credentials.
+  private final Text canonicalService;
 
   private class EncryptedQueueRefiller implements
     ValueQueue.QueueRefiller<EncryptedKeyVersion> {
@@ -162,6 +160,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     }
   }
 
+  static class TokenSelector extends AbstractDelegationTokenSelector {
+    static final TokenSelector INSTANCE = new TokenSelector();
+
+    TokenSelector() {
+      super(TOKEN_KIND);
+    }
+  }
+
   /**
    * The KMS implementation of {@link TokenRenewer}.
    */
@@ -182,8 +188,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     @Override
     public long renew(Token<?> token, Configuration conf) throws IOException {
       LOG.debug("Renewing delegation token {}", token);
-      KeyProvider keyProvider = KMSUtil.createKeyProvider(conf,
-          KeyProviderFactory.KEY_PROVIDER_PATH);
+      KeyProvider keyProvider = createKeyProvider(token, conf);
       try {
         if (!(keyProvider instanceof
             KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
@@ -204,8 +209,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     @Override
     public void cancel(Token<?> token, Configuration conf) throws IOException {
       LOG.debug("Canceling delegation token {}", token);
-      KeyProvider keyProvider = KMSUtil.createKeyProvider(conf,
-          KeyProviderFactory.KEY_PROVIDER_PATH);
+      KeyProvider keyProvider = createKeyProvider(token, conf);
       try {
         if (!(keyProvider instanceof
             KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
@@ -221,6 +225,19 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           keyProvider.close();
         }
       }
+    }
+
+    private static KeyProvider createKeyProvider(
+        Token<?> token, Configuration conf) throws IOException {
+      String service = token.getService().toString();
+      URI uri;
+      if (service != null && service.startsWith(SCHEME_NAME + ":/")) {
+        LOG.debug("Creating key provider with token service value {}", service);
+        uri = URI.create(service);
+      } else { // conf fallback
+        uri = KMSUtil.getKeyProviderUri(conf);
+      }
+      return (uri != null) ? KMSUtil.createKeyProviderFromUri(conf, uri) : null;
     }
   }
 
@@ -283,12 +300,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           }
           hostsPart = t[0];
         }
-        return createProvider(conf, origUrl, port, hostsPart);
+        KMSClientProvider[] providers =
+            createProviders(conf, origUrl, port, hostsPart);
+        return new LoadBalancingKMSClientProvider(providerUri, providers, conf);
       }
       return null;
     }
 
-    private KeyProvider createProvider(Configuration conf,
+    private KMSClientProvider[] createProviders(Configuration conf,
         URL origUrl, int port, String hostsPart) throws IOException {
       String[] hosts = hostsPart.split(";");
       KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
@@ -302,7 +321,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           throw new IOException("Could not instantiate KMSProvider.", e);
         }
       }
-      return new LoadBalancingKMSClientProvider(providers, conf);
+      return providers;
     }
   }
 
@@ -358,13 +377,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
     super(conf);
     kmsUrl = createServiceURL(extractKMSPath(uri));
-    int kmsPort = kmsUrl.getPort();
-    if ((kmsPort == -1) && fallbackDefaultPortForTesting) {
-      kmsPort = 9600;
-    }
-
-    InetSocketAddress addr = new InetSocketAddress(kmsUrl.getHost(), kmsPort);
-    dtService = SecurityUtil.buildTokenService(addr);
+    // the token's service so it can be instantiated for renew/cancel.
+    dtService = getDtService(uri);
+    // the canonical service is the alias for the token in the credentials.
+    // typically it's the actual service in the token but older clients expect
+    // an address.
+    URI serviceUri = URI.create(kmsUrl.toString());
+    canonicalService = SecurityUtil.buildTokenService(serviceUri);
 
     if ("https".equalsIgnoreCase(kmsUrl.getProtocol())) {
       sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
@@ -402,8 +421,22 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
-    LOG.debug("KMSClientProvider for KMS url: {} delegation token service: {}" +
-        " created.", kmsUrl, dtService);
+    LOG.debug("KMSClientProvider created for KMS url: {} delegation token "
+            + "service: {} canonical service: {}.", kmsUrl, dtService,
+        canonicalService);
+  }
+
+  protected static Text getDtService(URI uri) {
+    Text service;
+    // remove fragment for forward compatibility with logical naming.
+    final String fragment = uri.getFragment();
+    if (fragment != null) {
+      service = new Text(
+          uri.getScheme() + ":" + uri.getSchemeSpecificPart());
+    } else {
+      service = new Text(uri.toString());
+    }
+    return service;
   }
 
   private static Path extractKMSPath(URI uri) throws MalformedURLException, IOException {
@@ -475,7 +508,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
-              new DelegationTokenAuthenticatedURL(configurator);
+              createAuthenticatedURL();
           return authUrl.openConnection(url, authToken, doAsUser);
         }
       });
@@ -931,6 +964,96 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return encKeyVersionQueue.getSize(keyName);
   }
 
+  // note: this is only a crutch for backwards compatibility.
+  // override the instance that will be used to select a token, intended
+  // to allow load balancing provider to find a token issued by any of its
+  // sub-providers.
+  protected void setClientTokenProvider(
+      KeyProviderDelegationTokenExtension.DelegationTokenExtension provider) {
+    clientTokenProvider = provider;
+  }
+
+  @VisibleForTesting
+  DelegationTokenAuthenticatedURL createAuthenticatedURL() {
+    return new DelegationTokenAuthenticatedURL(configurator) {
+      @Override
+      public org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
+          selectDelegationToken(URL url, Credentials creds) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Looking for delegation token. creds: {}",
+              creds.getAllTokens());
+        }
+        // clientTokenProvider is either "this" or a load balancing instance.
+        // if the latter, it will first look for the load balancer's uri
+        // service followed by each sub-provider for backwards-compatibility.
+        return clientTokenProvider.selectDelegationToken(creds);
+      }
+    };
+  }
+
+  @InterfaceAudience.Private
+  @Override
+  public Token<?> selectDelegationToken(Credentials creds) {
+    Token<?> token = selectDelegationToken(creds, dtService);
+    if (token == null) {
+      token = selectDelegationToken(creds, canonicalService);
+    }
+    return token;
+  }
+
+  protected static Token<?> selectDelegationToken(Credentials creds,
+                                                  Text service) {
+    Token<?> token = creds.getToken(service);
+    LOG.debug("selected by alias={} token={}", service, token);
+    if (token != null && TOKEN_KIND.equals(token.getKind())) {
+      return token;
+    }
+    token = TokenSelector.INSTANCE.selectToken(service, creds.getAllTokens());
+    LOG.debug("selected by service={} token={}", service, token);
+    return token;
+  }
+
+  @Override
+  public String getCanonicalServiceName() {
+    return canonicalService.toString();
+  }
+
+  @Override
+  public Token<?> getDelegationToken(final String renewer) throws IOException {
+    final URL url = createURL(null, null, null, null);
+    final DelegationTokenAuthenticatedURL authUrl =
+        new DelegationTokenAuthenticatedURL(configurator);
+    Token<?> token = null;
+    try {
+      final String doAsUser = getDoAsUser();
+      token = getActualUgi().doAs(new PrivilegedExceptionAction<Token<?>>() {
+        @Override
+        public Token<?> run() throws Exception {
+          // Not using the cached token here.. Creating a new token here
+          // everytime.
+          LOG.debug("Getting new token from {}, renewer:{}", url, renewer);
+          return authUrl.getDelegationToken(url,
+              new DelegationTokenAuthenticatedURL.Token(), renewer, doAsUser);
+        }
+      });
+      if (token != null) {
+        token.setService(dtService);
+        LOG.info("New token created: ({})", token);
+      } else {
+        throw new IOException("Got NULL as delegation token");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } catch (Exception e) {
+      if (e instanceof IOException) {
+        throw (IOException) e;
+      } else {
+        throw new IOException(e);
+      }
+    }
+    return token;
+  }
+
   @Override
   public long renewDelegationToken(final Token<?> dToken) throws IOException {
     try {
@@ -941,7 +1064,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       LOG.debug("Renewing delegation token {} with url:{}, as:{}",
           token, url, doAsUser);
       final DelegationTokenAuthenticatedURL authUrl =
-          new DelegationTokenAuthenticatedURL(configurator);
+          createAuthenticatedURL();
       return getActualUgi().doAs(
           new PrivilegedExceptionAction<Long>() {
             @Override
@@ -973,7 +1096,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
               LOG.debug("Cancelling delegation token {} with url:{}, as:{}",
                   dToken, url, doAsUser);
               final DelegationTokenAuthenticatedURL authUrl =
-                  new DelegationTokenAuthenticatedURL(configurator);
+                  createAuthenticatedURL();
               authUrl.cancelDelegationToken(url, token, doAsUser);
               return null;
             }
@@ -1023,47 +1146,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
             dToken.getKind(), dToken.getService());
     token.setDelegationToken(dt);
     return token;
-  }
-
-  @Override
-  public Token<?>[] addDelegationTokens(final String renewer,
-      Credentials credentials) throws IOException {
-    Token<?>[] tokens = null;
-    Token<?> token = credentials.getToken(dtService);
-    if (token == null) {
-      final URL url = createURL(null, null, null, null);
-      final DelegationTokenAuthenticatedURL authUrl =
-          new DelegationTokenAuthenticatedURL(configurator);
-      try {
-        final String doAsUser = getDoAsUser();
-        token = getActualUgi().doAs(new PrivilegedExceptionAction<Token<?>>() {
-          @Override
-          public Token<?> run() throws Exception {
-            // Not using the cached token here.. Creating a new token here
-            // everytime.
-            LOG.info("Getting new token from {}, renewer:{}", url, renewer);
-            return authUrl.getDelegationToken(url,
-                new DelegationTokenAuthenticatedURL.Token(), renewer, doAsUser);
-          }
-        });
-        if (token != null) {
-          LOG.info("New token received: ({})", token);
-          credentials.addToken(token.getService(), token);
-          tokens = new Token<?>[] { token };
-        } else {
-          throw new IOException("Got NULL as delegation token");
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      } catch (Exception e) {
-        if (e instanceof IOException) {
-          throw (IOException) e;
-        } else {
-          throw new IOException(e);
-        }
-      }
-    }
-    return tokens;
   }
 
   private boolean containsKmsDt(UserGroupInformation ugi) throws IOException {

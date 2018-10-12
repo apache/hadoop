@@ -61,6 +61,7 @@ import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -205,7 +206,7 @@ import com.google.common.net.InetAddresses;
  ********************************************************/
 @InterfaceAudience.Private
 public class DFSClient implements java.io.Closeable, RemotePeerFactory,
-    DataEncryptionKeyFactory {
+    DataEncryptionKeyFactory, KeyProviderTokenIssuer {
   public static final Logger LOG = LoggerFactory.getLogger(DFSClient.class);
 
   private final Configuration conf;
@@ -682,6 +683,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @InterfaceAudience.LimitedPrivate( { "HDFS" })
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
+  }
+
+  @Override
+  public Token<?>getDelegationToken(String renewer) throws IOException {
+    return getDelegationToken(renewer == null ? null : new Text(renewer));
   }
 
   /**
@@ -3029,7 +3035,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  URI getKeyProviderUri() throws IOException {
+  @Override
+  public URI getKeyProviderUri() throws IOException {
     return HdfsKMSUtil.getKeyProviderUri(ugi, namenodeUri,
         getServerDefaults().getKeyProviderUri(), conf);
   }
