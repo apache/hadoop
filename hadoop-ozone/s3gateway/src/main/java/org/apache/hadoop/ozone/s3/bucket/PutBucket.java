@@ -20,25 +20,60 @@ package org.apache.hadoop.ozone.s3.bucket;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.s3.EndpointBase;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV2;
+import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV4;
+import org.apache.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Create new bucket.
  */
-@Path("/{volume}/{bucket}")
+@Path("/{bucket}")
 public class PutBucket extends EndpointBase {
 
-  @PUT
-  @Produces(MediaType.APPLICATION_XML)
-  public void put(
-      @PathParam("volume") String volumeName,
-      @PathParam("bucket") String bucketName) throws IOException {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PutBucket.class);
 
-    getVolume(volumeName).createBucket(bucketName);
+  @PUT
+  public Response put(@PathParam("bucket") String bucketName, @Context
+                  HttpHeaders httpHeaders) throws IOException, OS3Exception {
+
+    String auth = httpHeaders.getHeaderString("Authorization");
+    LOG.info("Auth header string {}", auth);
+
+    if (auth == null) {
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
+    }
+
+    String userName;
+    if (auth.startsWith("AWS4")) {
+      LOG.info("V4 Header {}", auth);
+      AuthorizationHeaderV4 authorizationHeader = new AuthorizationHeaderV4(
+          auth);
+      userName = authorizationHeader.getAccessKeyID().toLowerCase();
+    } else {
+      LOG.info("V2 Header {}", auth);
+      AuthorizationHeaderV2 authorizationHeader = new AuthorizationHeaderV2(
+          auth);
+      userName = authorizationHeader.getAccessKeyID().toLowerCase();
+    }
+
+    String location = createS3Bucket(userName, bucketName);
+
+    LOG.info("Location is {}", location);
+    return Response.status(HttpStatus.SC_OK).header("Location", location)
+       .build();
 
   }
 }
