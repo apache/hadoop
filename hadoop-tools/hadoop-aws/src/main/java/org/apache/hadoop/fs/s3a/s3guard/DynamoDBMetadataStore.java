@@ -807,7 +807,6 @@ public class DynamoDBMetadataStore implements MetadataStore {
         final String status = description.getTableStatus();
         switch (status) {
         case "CREATING":
-        case "UPDATING":
           LOG.debug("Table {} in region {} is being created/updated. This may"
                   + " indicate that the table is being operated by another "
                   + "concurrent thread or process. Waiting for active...",
@@ -818,6 +817,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
           throw new FileNotFoundException("DynamoDB table "
               + "'" + tableName + "' is being "
               + "deleted in region " + region);
+        case "UPDATING":
+          // table being updated; it can still be used.
+          LOG.debug("Table is being updated.");
+          break;
         case "ACTIVE":
           break;
         default:
