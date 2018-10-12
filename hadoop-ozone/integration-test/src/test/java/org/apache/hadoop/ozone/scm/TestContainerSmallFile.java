@@ -86,8 +86,7 @@ public class TestContainerSmallFile {
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
 
@@ -110,8 +109,7 @@ public class TestContainerSmallFile {
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
 
@@ -135,8 +133,7 @@ public class TestContainerSmallFile {
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
     BlockID blockID = ContainerTestHelper.getTestBlockID(

@@ -189,8 +189,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     ContainerInfo container = containerWithPipeline.getContainerInfo();
 
     XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline(),
-            container.getContainerID());
+        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
       try {

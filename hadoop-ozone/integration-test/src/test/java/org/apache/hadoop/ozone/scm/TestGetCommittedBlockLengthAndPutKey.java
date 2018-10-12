@@ -91,8 +91,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
-    XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
@@ -128,7 +127,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+        xceiverClientManager.acquireClient(pipeline);
     // create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
@@ -162,7 +161,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(), containerID);
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
@@ -187,7 +186,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(), containerID);
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls
         .createContainer(client, containerID, traceID);
 
@@ -223,8 +222,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
-    XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
