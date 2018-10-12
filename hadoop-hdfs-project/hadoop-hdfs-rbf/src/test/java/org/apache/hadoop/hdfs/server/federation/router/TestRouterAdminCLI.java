@@ -342,13 +342,43 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains(
         "Cannot remove mount point " + invalidPath));
+  }
 
-    // test wrong number of arguments
-    System.setErr(new PrintStream(err));
-    argv = new String[] {"-rm", src, "check" };
-    ToolRunner.run(admin, argv);
-    assertTrue(err.toString()
-        .contains("Too many arguments, Max=1 argument allowed"));
+  @Test
+  public void testMultiArgsRemoveMountTable() throws Exception {
+    String nsId = "ns0";
+    String src1 = "/test-rmmounttable1";
+    String src2 = "/test-rmmounttable2";
+    String dest1 = "/rmmounttable1";
+    String dest2 = "/rmmounttable2";
+    // Adding mount table entries
+    String[] argv = new String[] {"-add", src1, nsId, dest1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    argv = new String[] {"-add", src2, nsId, dest2};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    // Ensure mount table entries added successfully
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src1);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    MountTable mountTable = getResponse.getEntries().get(0);
+    getRequest = GetMountTableEntriesRequest.newInstance(src2);
+    getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    assertEquals(src1, mountTable.getSourcePath());
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(src2, mountTable.getSourcePath());
+    // Remove multiple mount table entries
+    argv = new String[] {"-rm", src1, src2};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    // Verify successful deletion of mount table entries
+    getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    assertEquals(0, getResponse.getEntries().size());
   }
 
   @Test
@@ -540,6 +570,7 @@ public class TestRouterAdminCLI {
   public void testSetAndClearQuota() throws Exception {
     String nsId = "ns0";
     String src = "/test-QuotaMounttable";
+    String src1 = "/test-QuotaMounttable1";
     String dest = "/QuotaMounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
@@ -605,15 +636,42 @@ public class TestRouterAdminCLI {
     assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
 
+    // verify multi args ClrQuota
+    String dest1 = "/QuotaMounttable1";
+    // Add mount table entries.
+    argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    argv = new String[] {"-add", src1, nsId, dest1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    // SetQuota for the added entries
+    argv = new String[] {"-setQuota", src, "-nsQuota", String.valueOf(nsQuota),
+        "-ssQuota", String.valueOf(ssQuota)};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    argv = new String[] {"-setQuota", src1, "-nsQuota",
+        String.valueOf(nsQuota), "-ssQuota", String.valueOf(ssQuota)};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    // Clear quota for the added entries
+    argv = new String[] {"-clrQuota", src, src1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+
+    // Verify clear quota for the entries
+    for (int i = 0; i < 2; i++) {
+      mountTable = getResponse.getEntries().get(i);
+      quotaUsage = mountTable.getQuota();
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
+    }
+
     // verify wrong arguments
     System.setErr(new PrintStream(err));
-    argv = new String[] {"-clrQuota", src, "check"};
-    ToolRunner.run(admin, argv);
-    assertTrue(err.toString(),
-        err.toString().contains("Too many arguments, Max=1 argument allowed"));
-
     argv = new String[] {"-setQuota", src, "check", "check2"};
-    err.reset();
     ToolRunner.run(admin, argv);
     assertTrue(err.toString().contains("Invalid argument : check"));
   }
