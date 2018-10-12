@@ -36,6 +36,7 @@ public class ObjectStoreStub extends ObjectStore {
   }
 
   private Map<String, OzoneVolumeStub> volumes = new HashMap<>();
+  private Map<String, String> bucketVolumeMap = new HashMap<>();
 
   @Override
   public void createVolume(String volumeName) throws IOException {
@@ -106,5 +107,30 @@ public class ObjectStoreStub extends ObjectStore {
   @Override
   public void deleteVolume(String volumeName) throws IOException {
     volumes.remove(volumeName);
+  }
+
+  @Override
+  public void createS3Bucket(String userName, String s3BucketName) throws
+      IOException {
+    bucketVolumeMap.put(s3BucketName, "s3"+userName+"/"+s3BucketName);
+  }
+
+  @Override
+  public void deleteS3Bucket(String s3BucketName) throws
+      IOException {
+    bucketVolumeMap.remove(s3BucketName);
+  }
+
+  @Override
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    return bucketVolumeMap.get(s3BucketName);
+  }
+  @Override
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    return bucketVolumeMap.get(s3BucketName).split("/")[0];
+  }
+  @Override
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    return bucketVolumeMap.get(s3BucketName).split("/")[1];
   }
 }

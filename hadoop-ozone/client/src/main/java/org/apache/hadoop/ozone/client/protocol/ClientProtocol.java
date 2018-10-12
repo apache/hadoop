@@ -331,6 +331,14 @@ public interface ClientProtocol {
   void createS3Bucket(String userName, String s3BucketName) throws IOException;
 
   /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param bucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  void deleteS3Bucket(String bucketName) throws IOException;
+
+
+  /**
    * Returns the Ozone Namespace for the S3Bucket. It will return the
    * OzoneVolume/OzoneBucketName.
    * @param s3BucketName  - S3 Bucket Name.
