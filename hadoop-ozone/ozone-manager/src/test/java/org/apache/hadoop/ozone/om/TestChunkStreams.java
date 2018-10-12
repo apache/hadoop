@@ -226,7 +226,7 @@ public class TestChunkStreams {
 
       // read following 300 bytes, but only 200 left
       len = groupInputStream.read(resBuf, 340, 260);
-      assertEquals(5, groupInputStream.getCurrentStreamIndex());
+      assertEquals(4, groupInputStream.getCurrentStreamIndex());
       assertEquals(0, groupInputStream.getRemainingOfIndex(4));
       assertEquals(160, len);
       assertEquals(dataString, new String(resBuf).substring(0, 500));
