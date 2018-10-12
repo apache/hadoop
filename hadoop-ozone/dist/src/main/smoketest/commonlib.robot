@@ -22,3 +22,10 @@ Execute
     Log                             ${output}
     Should Be Equal As Integers     ${rc}                       0
     [return]                        ${output}
+
+Execute and checkrc
+    [arguments]                     ${command}                  ${expected_error_code}
+    ${rc}                           ${output} =                 Run And Return Rc And Output           ${command}
+    Log                             ${output}
+    Should Be Equal As Integers     ${rc}                       ${expected_error_code}
+    [return]                        ${output}
