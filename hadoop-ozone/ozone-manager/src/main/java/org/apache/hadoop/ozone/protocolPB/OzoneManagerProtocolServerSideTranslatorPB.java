@@ -98,6 +98,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3BucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .ServiceListResponse;
@@ -589,6 +593,20 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     S3BucketResponse.Builder resp = S3BucketResponse.newBuilder();
     try {
       impl.createS3Bucket(request.getUserName(), request.getS3Bucketname());
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public S3DeleteBucketResponse deleteS3Bucket(RpcController controller,
+                                         S3DeleteBucketRequest request) throws
+      ServiceException {
+    S3DeleteBucketResponse.Builder resp = S3DeleteBucketResponse.newBuilder();
+    try {
+      impl.deleteS3Bucket(request.getS3BucketName());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));

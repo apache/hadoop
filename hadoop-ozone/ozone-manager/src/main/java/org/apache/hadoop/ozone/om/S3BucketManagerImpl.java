@@ -127,6 +127,30 @@ public class S3BucketManagerImpl implements S3BucketManager {
     }
   }
 
+  @Override
+  public void deleteS3Bucket(String bucketName) throws IOException {
+    Preconditions.checkArgument(
+        Strings.isNotBlank(bucketName), "Bucket name cannot be null or empty");
+
+    omMetadataManager.getLock().acquireS3Lock(bucketName);
+    try {
+      byte[] bucket = bucketName.getBytes(StandardCharsets.UTF_8);
+      byte[] map = omMetadataManager.getS3Table().get(bucket);
+
+      if (map == null) {
+        throw new OMException("No such S3 bucket. " + bucketName,
+            OMException.ResultCodes.S3_BUCKET_NOT_FOUND);
+      }
+      bucketManager.deleteBucket(getOzoneVolumeName(bucketName), bucketName);
+      omMetadataManager.getS3Table().delete(bucket);
+    } catch(IOException ex) {
+      throw ex;
+    } finally {
+      omMetadataManager.getLock().releaseS3Lock(bucketName);
+    }
+
+  }
+
   private String formatOzoneVolumeName(String userName) {
     return String.format("s3%s", userName);
   }
@@ -202,4 +226,5 @@ public class S3BucketManagerImpl implements S3BucketManager {
     String mapping = getOzoneBucketMapping(s3BucketName);
     return mapping.split("/")[1];
   }
+
 }

@@ -119,6 +119,10 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.S3BucketResponse;
 import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3DeleteBucketRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .OzoneManagerProtocolProtos.S3DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.S3BucketInfoRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.S3BucketInfoResponse;
@@ -784,6 +788,25 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     final S3BucketResponse resp;
     try {
       resp = rpcProxy.createS3Bucket(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if(resp.getStatus() != Status.OK) {
+      throw new IOException("Creating S3 bucket failed, error: "
+          + resp.getStatus());
+    }
+
+  }
+
+  @Override
+  public void deleteS3Bucket(String s3BucketName) throws IOException {
+    S3DeleteBucketRequest request  = S3DeleteBucketRequest.newBuilder()
+        .setS3BucketName(s3BucketName)
+        .build();
+    final S3DeleteBucketResponse resp;
+    try {
+      resp = rpcProxy.deleteS3Bucket(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

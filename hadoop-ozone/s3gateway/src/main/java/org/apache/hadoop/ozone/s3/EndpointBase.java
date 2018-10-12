@@ -107,6 +107,49 @@ public class EndpointBase {
     return "/"+location;
   }
 
+  /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param s3BucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  public void deleteS3Bucket(String s3BucketName)
+      throws IOException {
+    client.getObjectStore().deleteS3Bucket(s3BucketName);
+  }
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    return client.getObjectStore().getOzoneBucketMapping(s3BucketName);
+  }
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    return client.getObjectStore().getOzoneVolumeName(s3BucketName);
+  }
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    return client.getObjectStore().getOzoneBucketName(s3BucketName);
+  }
+
+
   @VisibleForTesting
   public void setClient(OzoneClient ozoneClient) {
     this.client = ozoneClient;

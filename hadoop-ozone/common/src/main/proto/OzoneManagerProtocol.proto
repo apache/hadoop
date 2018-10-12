@@ -381,6 +381,14 @@ message S3BucketInfoResponse {
     optional string ozoneMapping = 2;
 }
 
+message S3DeleteBucketRequest {
+    required string s3bucketName = 1;
+}
+
+message S3DeleteBucketResponse {
+    required Status status = 1;
+}
+
 
 /**
  The OM service that takes care of Ozone namespace.
@@ -505,6 +513,9 @@ service OzoneManagerService {
     */
     rpc createS3Bucket(S3BucketRequest)
     returns(S3BucketResponse);
+
+    rpc deleteS3Bucket(S3DeleteBucketRequest)
+    returns(S3DeleteBucketResponse);
 
     /**
     Gets the Ozone Mapping information for the S3Bucket.

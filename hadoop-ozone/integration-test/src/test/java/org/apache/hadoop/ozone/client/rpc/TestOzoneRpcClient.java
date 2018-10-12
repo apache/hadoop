@@ -45,6 +45,7 @@ import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -213,6 +214,33 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(bucketName, bucket.getName());
     Assert.assertTrue(bucket.getCreationTime() >= currentTime);
     Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+  @Test
+  public void testDeleteS3Bucket()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone1";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
+    store.deleteS3Bucket(bucketName);
+    thrown.expect(IOException.class);
+    store.getOzoneVolumeName(bucketName);
+  }
+
+  @Test
+  public void testDeleteS3NonExistingBucket() {
+    try {
+      store.deleteS3Bucket(UUID.randomUUID().toString());
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("NOT_FOUND", ex);
+    }
   }
 
   @Test
