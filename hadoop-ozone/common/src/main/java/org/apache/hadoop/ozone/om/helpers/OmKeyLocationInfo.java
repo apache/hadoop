@@ -78,10 +78,6 @@ public final class OmKeyLocationInfo {
     return offset;
   }
 
-  public long getBlockCommitSequenceId() {
-    return blockCommitSequenceId;
-  }
-
   /**
    * Builder of OmKeyLocationInfo.
    */
