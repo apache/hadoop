@@ -42,8 +42,7 @@ public final class MetadataKeyFilters {
       new MetadataKeyFilters.KeyPrefixFilter()
           .addFilter(OzoneConsts.DELETING_KEY_PREFIX, true)
           .addFilter(OzoneConsts.DELETED_KEY_PREFIX, true)
-          .addFilter(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX, true)
-          .addFilter(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX, true);
+          .addFilter(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX, true);
 
   private MetadataKeyFilters() {
   }
