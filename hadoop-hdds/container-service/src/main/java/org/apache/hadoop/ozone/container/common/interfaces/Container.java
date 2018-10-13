@@ -132,4 +132,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    */
   StorageContainerDatanodeProtocolProtos.ContainerInfo getContainerReport()
       throws StorageContainerException;
+
+  /**
+   * updates the blockCommitSequenceId.
+   */
+  void updateBlockCommitSequenceId(long blockCommitSequenceId);
 }

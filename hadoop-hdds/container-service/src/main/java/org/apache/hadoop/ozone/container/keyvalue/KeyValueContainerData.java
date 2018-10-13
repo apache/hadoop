@@ -72,6 +72,8 @@ public class KeyValueContainerData extends ContainerData {
 
   private long deleteTransactionId;
 
+  private long blockCommitSequenceId;
+
   static {
     // Initialize YAML fields
     KV_YAML_FIELDS = Lists.newArrayList();
@@ -149,6 +151,20 @@ public class KeyValueContainerData extends ContainerData {
       return null;
     }
     return new File(metadataPath).getParent();
+  }
+
+  /**
+   * Returns the blockCommitSequenceId.
+   */
+  public long getBlockCommitSequenceId() {
+    return blockCommitSequenceId;
+  }
+
+  /**
+   * updates the blockCommitSequenceId.
+   */
+  public void updateBlockCommitSequenceId(long id) {
+    this.blockCommitSequenceId = id;
   }
 
   /**
