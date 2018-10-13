@@ -215,6 +215,7 @@ message ContainerInfo {
   optional string finalhash = 9;
   optional hadoop.hdds.LifeCycleState state = 10;
   optional int64 deleteTransactionId = 11;
+  optional uint64 blockCommitSequenceId = 12;
 }
 
 /*
