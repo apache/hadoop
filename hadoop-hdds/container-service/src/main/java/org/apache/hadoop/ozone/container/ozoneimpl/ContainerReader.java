@@ -191,6 +191,13 @@ public class ContainerReader implements Runnable {
           kvContainerData
               .updateDeleteTransactionId(Longs.fromByteArray(delTxnId));
         }
+        // sets the BlockCommitSequenceId.
+        byte[] bcsId = containerDB.get(
+            DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
+        if (bcsId != null) {
+          kvContainerData
+              .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
+        }
         containerSet.addContainer(kvContainer);
       } else {
         throw new StorageContainerException("Container File is corrupted. " +

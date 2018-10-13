@@ -25,12 +25,16 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.interfaces.BlockManager;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
+import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,8 +87,16 @@ public class BlockManagerImpl implements BlockManager {
     // This is a post condition that acts as a hint to the user.
     // Should never fail.
     Preconditions.checkNotNull(db, "DB cannot be null here");
-    db.put(Longs.toByteArray(data.getLocalID()), data.getProtoBufMessage()
-        .toByteArray());
+
+    long blockCommitSequenceId = data.getBlockCommitSequenceId();
+    // update the blockData as well as BlockCommitSequenceId here
+    BatchOperation batch = new BatchOperation();
+    batch.put(Longs.toByteArray(data.getLocalID()),
+        data.getProtoBufMessage().toByteArray());
+    batch.put(DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX),
+        Longs.toByteArray(blockCommitSequenceId));
+    db.writeBatch(batch);
+    container.updateBlockCommitSequenceId(blockCommitSequenceId);
     // Increment keycount here
     container.getContainerData().incrKeyCount();
     return data.getSize();
@@ -208,8 +220,9 @@ public class BlockManagerImpl implements BlockManager {
     MetadataStore db = BlockUtils.getDB(cData, config);
     result = new ArrayList<>();
     byte[] startKeyInBytes = Longs.toByteArray(startLocalID);
-    List<Map.Entry<byte[], byte[]>> range = db.getSequentialRangeKVs(
-        startKeyInBytes, count, null);
+    List<Map.Entry<byte[], byte[]>> range =
+        db.getSequentialRangeKVs(startKeyInBytes, count,
+            MetadataKeyFilters.getNormalKeyFilter());
     for (Map.Entry<byte[], byte[]> entry : range) {
       BlockData value = BlockUtils.getBlockData(entry.getValue());
       BlockData data = new BlockData(value.getBlockID());

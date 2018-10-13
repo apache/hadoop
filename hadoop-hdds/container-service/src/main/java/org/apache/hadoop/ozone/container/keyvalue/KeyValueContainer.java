@@ -508,6 +508,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
   }
 
+  @Override
+  public void updateBlockCommitSequenceId(long blockCommitSequenceId) {
+    containerData.updateBlockCommitSequenceId(blockCommitSequenceId);
+  }
+
+
   /**
    * Returns KeyValueContainerReport for the KeyValueContainer.
    */
@@ -524,7 +530,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .setKeyCount(containerData.getKeyCount())
         .setUsed(containerData.getBytesUsed())
         .setState(getHddsState())
-        .setDeleteTransactionId(containerData.getDeleteTransactionId());
+        .setDeleteTransactionId(containerData.getDeleteTransactionId())
+        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId());
     return ciBuilder.build();
   }
 
