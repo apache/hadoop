@@ -163,6 +163,8 @@ public class TestMetadataStore {
       GenericTestUtils.assertExceptionContains("Store has no more elements",
           ex);
     }
+    dbStore.close();
+    dbStore.destroy();
     FileUtils.deleteDirectory(dbDir);
 
   }
