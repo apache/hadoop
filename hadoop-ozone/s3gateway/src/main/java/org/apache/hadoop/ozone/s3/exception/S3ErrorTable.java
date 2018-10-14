@@ -35,6 +35,9 @@ public final class S3ErrorTable {
   public static final OS3Exception INVALID_URI = new OS3Exception("InvalidURI",
       "Couldn't parse the specified URI.", HTTP_BAD_REQUEST);
 
+  public static final OS3Exception NO_SUCH_VOLUME = new OS3Exception(
+      "NoSuchVolume", "The specified volume does not exist", HTTP_NOT_FOUND);
+
   public static final OS3Exception NO_SUCH_BUCKET = new OS3Exception(
       "NoSuchBucket", "The specified bucket does not exist", HTTP_NOT_FOUND);
 
@@ -69,7 +72,8 @@ public final class S3ErrorTable {
   public enum Resource {
     BUCKET("Bucket"),
     OBJECT("Object"),
-    HEADER("header");
+    HEADER("header"),
+    VOLUME("Volume");
 
     private final String resource;
 
