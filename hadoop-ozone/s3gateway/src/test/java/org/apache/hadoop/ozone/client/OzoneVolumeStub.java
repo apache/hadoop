@@ -77,7 +77,12 @@ public class OzoneVolumeStub extends OzoneVolume {
   public Iterator<? extends OzoneBucket> listBuckets(String bucketPrefix) {
     return buckets.values()
         .stream()
-        .filter(bucket -> bucket.getName().startsWith(bucketPrefix))
+        .filter(bucket -> {
+          if (bucketPrefix != null) {
+            return bucket.getName().startsWith(bucketPrefix);
+          } else {
+            return true;
+          }})
         .collect(Collectors.toList())
         .iterator();
   }
