@@ -142,6 +142,26 @@ public class HddsDispatcher implements ContainerDispatcher {
     responseProto = handler.handle(msg, container);
     if (responseProto != null) {
       metrics.incContainerOpsLatencies(cmdType, System.nanoTime() - startTime);
+
+      // If the request is of Write Type and the container operation
+      // is unsuccessful, it implies the applyTransaction on the container
+      // failed. All subsequent transactions on the container should fail and
+      // hence replica will be marked unhealthy here. In this case, a close
+      // container action will be sent to SCM to close the container.
+      if (!HddsUtils.isReadOnly(msg)
+          && responseProto.getResult() != ContainerProtos.Result.SUCCESS) {
+        // If the container is open and the container operation has failed,
+        // it should be first marked unhealthy and the initiate the close
+        // container action. This also implies this is the first transaction
+        // which has failed, so the container is marked unhealthy right here.
+        // Once container is marked unhealthy, all the subsequent write
+        // transactions will fail with UNHEALTHY_CONTAINER exception.
+        if (container.getContainerState() == ContainerLifeCycleState.OPEN) {
+          container.getContainerData()
+              .setState(ContainerLifeCycleState.UNHEALTHY);
+          sendCloseContainerActionIfNeeded(container);
+        }
+      }
       return responseProto;
     } else {
       return ContainerUtils.unsupportedRequest(msg);
@@ -149,29 +169,44 @@ public class HddsDispatcher implements ContainerDispatcher {
   }
 
   /**
-   * If the container usage reaches the close threshold we send Close
-   * ContainerAction to SCM.
-   *
+   * If the container usage reaches the close threshold or the container is
+   * marked unhealthy we send Close ContainerAction to SCM.
    * @param container current state of container
    */
   private void sendCloseContainerActionIfNeeded(Container container) {
     // We have to find a more efficient way to close a container.
-    Boolean isOpen = Optional.ofNullable(container)
+    boolean isSpaceFull = isContainerFull(container);
+    boolean shouldClose = isSpaceFull || isContainerUnhealthy(container);
+    if (shouldClose) {
+      ContainerData containerData = container.getContainerData();
+      ContainerAction.Reason reason =
+          isSpaceFull ? ContainerAction.Reason.CONTAINER_FULL :
+              ContainerAction.Reason.CONTAINER_UNHEALTHY;
+      ContainerAction action = ContainerAction.newBuilder()
+          .setContainerID(containerData.getContainerID())
+          .setAction(ContainerAction.Action.CLOSE).setReason(reason).build();
+      context.addContainerActionIfAbsent(action);
+    }
+  }
+
+  private boolean isContainerFull(Container container) {
+    boolean isOpen = Optional.ofNullable(container)
         .map(cont -> cont.getContainerState() == ContainerLifeCycleState.OPEN)
         .orElse(Boolean.FALSE);
     if (isOpen) {
       ContainerData containerData = container.getContainerData();
-      double containerUsedPercentage = 1.0f * containerData.getBytesUsed() /
-          containerData.getMaxSize();
-      if (containerUsedPercentage >= containerCloseThreshold) {
-        ContainerAction action = ContainerAction.newBuilder()
-            .setContainerID(containerData.getContainerID())
-            .setAction(ContainerAction.Action.CLOSE)
-            .setReason(ContainerAction.Reason.CONTAINER_FULL)
-            .build();
-        context.addContainerActionIfAbsent(action);
-      }
+      double containerUsedPercentage =
+          1.0f * containerData.getBytesUsed() / containerData.getMaxSize();
+      return containerUsedPercentage >= containerCloseThreshold;
+    } else {
+      return false;
     }
+  }
+
+  private boolean isContainerUnhealthy(Container container) {
+    return Optional.ofNullable(container).map(
+        cont -> (cont.getContainerState() == ContainerLifeCycleState.UNHEALTHY))
+        .orElse(Boolean.FALSE);
   }
 
   @Override
