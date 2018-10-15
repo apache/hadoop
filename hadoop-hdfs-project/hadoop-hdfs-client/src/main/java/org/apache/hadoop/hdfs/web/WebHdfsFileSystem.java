@@ -118,7 +118,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
-import org.apache.hadoop.security.token.org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Progressable;
@@ -173,6 +173,7 @@ public class WebHdfsFileSystem extends FileSystem
   private Set<String> restCsrfMethodsToIgnore;
 
   private DFSOpsCountStatistics storageStatistics;
+  private KeyProvider testProvider;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -1949,11 +1950,19 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public KeyProvider getKeyProvider() throws IOException {
+    if (testProvider != null) {
+      return testProvider;
+    }
     URI keyProviderUri = getKeyProviderUri();
     if (keyProviderUri == null) {
       return null;
     }
     return KMSUtil.createKeyProviderFromUri(getConf(), keyProviderUri);
+  }
+
+  @VisibleForTesting
+  public void setTestProvider(KeyProvider kp) {
+    testProvider = kp;
   }
 
   /**
