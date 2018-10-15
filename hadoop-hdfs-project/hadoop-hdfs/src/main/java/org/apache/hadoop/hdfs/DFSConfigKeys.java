@@ -676,6 +676,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_DEFAULT =
       0;  //no throttling
 
+  // String table in the fsimage utilizes an expanded bit range.
+  public static final String DFS_IMAGE_EXPANDED_STRING_TABLES_KEY =
+      "dfs.image.string-tables.expanded";
+  public static final boolean DFS_IMAGE_EXPANDED_STRING_TABLES_DEFAULT =
+      false;
+
   // Image transfer timeout
   public static final String DFS_IMAGE_TRANSFER_TIMEOUT_KEY = "dfs.image.transfer.timeout";
   public static final int DFS_IMAGE_TRANSFER_TIMEOUT_DEFAULT = 60 * 1000;
