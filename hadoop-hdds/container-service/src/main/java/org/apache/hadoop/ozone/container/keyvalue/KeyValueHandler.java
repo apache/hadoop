@@ -241,9 +241,12 @@ public class KeyValueHandler extends Handler {
         newContainer.create(volumeSet, volumeChoosingPolicy, scmID);
         containerSet.addContainer(newContainer);
       } else {
-        throw new StorageContainerException("Container already exists with " +
-            "container Id " + containerID, ContainerProtos.Result
-            .CONTAINER_EXISTS);
+
+        // The create container request for an already existing container can
+        // arrive in case the ContainerStateMachine reapplies the transaction
+        // on datanode restart. Just log a warning msg here.
+        LOG.warn("Container already exists." +
+            "container Id " + containerID);
       }
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
@@ -370,6 +373,7 @@ public class KeyValueHandler extends Handler {
 
   /**
    * Handles Close Container Request. An open container is closed.
+   * Close Container call is idempotent.
    */
   ContainerCommandResponseProto handleCloseContainer(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {

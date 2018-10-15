@@ -462,15 +462,7 @@ public class TestContainerPersistence {
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
     chunkManager.writeChunk(container, blockID, info, data, COMBINED);
-    try {
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
-    } catch (StorageContainerException ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Rejecting write chunk request. OverWrite flag required"));
-      Assert.assertEquals(ex.getResult(),
-          ContainerProtos.Result.OVERWRITE_FLAG_REQUIRED);
-    }
-
+    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
     chunkManager.writeChunk(container, blockID, info, data, COMBINED);
@@ -478,7 +470,7 @@ public class TestContainerPersistence {
     Assert.assertEquals(datalen, bytesUsed);
 
     long bytesWrite = container.getContainerData().getWriteBytes();
-    Assert.assertEquals(datalen * 2, bytesWrite);
+    Assert.assertEquals(datalen * 3, bytesWrite);
   }
 
   /**
@@ -748,10 +740,11 @@ public class TestContainerPersistence {
 
   }
 
-  private BlockData writeBlockHelper(BlockID blockID)
+  private BlockData writeBlockHelper(BlockID blockID, int i)
       throws IOException, NoSuchAlgorithmException {
     ChunkInfo info = writeChunkHelper(blockID);
     BlockData blockData = new BlockData(blockID);
+    blockData.setBlockCommitSequenceId((long) i);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     blockData.setChunks(chunkList);
@@ -766,7 +759,7 @@ public class TestContainerPersistence {
     for (int i = 0; i < 10; i++) {
       BlockID blockID = new BlockID(testContainerID, i);
       expectedBlocks.add(blockID);
-      BlockData kd = writeBlockHelper(blockID);
+      BlockData kd = writeBlockHelper(blockID, i);
       blockManager.putBlock(container, kd);
     }
 
