@@ -31,17 +31,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 @InterfaceAudience.Private
 public class XAttrStorage {
 
-  private static final SerialNumberMap<String> NAME_MAP =
-      new SerialNumberMap<>();
-
-  public static int getNameSerialNumber(String name) {
-    return NAME_MAP.get(name);
-  }
-
-  public static String getName(int n) {
-    return NAME_MAP.get(n);
-  }
-
   /**
    * Reads the extended attribute of an inode by name with prefix.
    * <p/>

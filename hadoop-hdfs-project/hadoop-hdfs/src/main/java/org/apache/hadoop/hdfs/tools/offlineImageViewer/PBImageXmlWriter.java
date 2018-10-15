@@ -63,7 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -269,7 +269,7 @@ public final class PBImageXmlWriter {
   private final Configuration conf;
   private final PrintStream out;
   private final SimpleDateFormat isoDateFormat;
-  private String[] stringTable;
+  private SerialNumberManager.StringTable stringTable;
 
   public static SimpleDateFormat createSimpleDateFormat() {
     SimpleDateFormat format =
@@ -430,8 +430,9 @@ public final class PBImageXmlWriter {
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
           XAttrNamespaceProto.valueOf(ns).toString());
-      o(SECTION_NAME,
-          stringTable[XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET)]);
+      o(SECTION_NAME, SerialNumberManager.XATTR.getString(
+          XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
+          stringTable));
       ByteString val = xattr.getValue();
       if (val.isValidUtf8()) {
         o(INODE_SECTION_VAL, val.toStringUtf8());
@@ -784,10 +785,9 @@ public final class PBImageXmlWriter {
               .o(SNAPSHOT_DIFF_SECTION_CHILDREN_SIZE, d.getChildrenSize())
               .o(SNAPSHOT_DIFF_SECTION_IS_SNAPSHOT_ROOT, d.getIsSnapshotRoot())
               .o(SECTION_NAME, d.getName().toStringUtf8());
-          INodeDirectory snapshotCopy = d.getSnapshotCopy();
-          if (snapshotCopy != null) {
+          if (d.hasSnapshotCopy()) {
             out.print("<" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">");
-            dumpINodeDirectory(snapshotCopy);
+            dumpINodeDirectory(d.getSnapshotCopy());
             out.print("</" + SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY + ">\n");
           }
           o(SNAPSHOT_DIFF_SECTION_CREATED_LIST_SIZE, d.getCreatedListSize());
@@ -851,13 +851,7 @@ public final class PBImageXmlWriter {
   }
 
   private void loadStringTable(InputStream in) throws IOException {
-    StringTableSection s = StringTableSection.parseDelimitedFrom(in);
-    stringTable = new String[s.getNumEntry() + 1];
-    for (int i = 0; i < s.getNumEntry(); ++i) {
-      StringTableSection.Entry e = StringTableSection.Entry
-          .parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
-    }
+    stringTable = FSImageLoader.loadStringTable(in);
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {
