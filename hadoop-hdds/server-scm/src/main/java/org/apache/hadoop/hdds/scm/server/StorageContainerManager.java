@@ -927,10 +927,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * Startup options.
    */
   public enum StartupOption {
-    INIT("-init"),
-    CLUSTERID("-clusterid"),
-    GENCLUSTERID("-genclusterid"),
-    REGULAR("-regular"),
+    INIT("--init"),
+    CLUSTERID("--clusterid"),
+    GENCLUSTERID("--genclusterid"),
+    REGULAR("--regular"),
     HELP("-help");
 
     private final String name;

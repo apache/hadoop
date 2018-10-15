@@ -107,7 +107,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private static final String USAGE =
       "Usage: \n ozone om [genericOptions] " + "[ "
-          + StartupOption.CREATEOBJECTSTORE.getName() + " ]\n " + "ozone om [ "
+          + StartupOption.INIT.getName() + " ]\n " + "ozone om [ "
           + StartupOption.HELP.getName() + " ]\n";
   private final OzoneConfiguration configuration;
   private final RPC.Server omRpcServer;
@@ -318,7 +318,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return null;
     }
     switch (startOpt) {
-    case CREATEOBJECTSTORE:
+    case INIT:
       if (printBanner) {
         StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
       }
@@ -347,8 +347,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @throws IOException in case ozone metadata directory path is not
    *                     accessible
    */
-
-  private static boolean omInit(OzoneConfiguration conf) throws IOException {
+  @VisibleForTesting
+  static boolean omInit(OzoneConfiguration conf) throws IOException {
     OMStorage omStorage = new OMStorage(conf);
     StorageState state = omStorage.getState();
     if (state != StorageState.INITIALIZED) {
@@ -1164,9 +1164,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * Startup options.
    */
   public enum StartupOption {
-    CREATEOBJECTSTORE("-createObjectStore"),
-    HELP("-help"),
-    REGULAR("-regular");
+    INIT("--init"),
+    HELP("--help"),
+    REGULAR("--regular");
 
     private final String name;
 

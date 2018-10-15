@@ -26,7 +26,7 @@ menu:
 Before we boot up the Ozone cluster, we need to initialize both SCM and Ozone Manager.
 
 {{< highlight bash >}}
-ozone scm -init
+ozone scm --init
 {{< /highlight >}}
 This allows SCM to create the cluster Identity and initialize its state.
 The ```init``` command is similar to Namenode format. Init command is executed only once, that allows SCM to create all the required on-disk structures to work correctly.
@@ -37,7 +37,7 @@ ozone --daemon start scm
 Once we know SCM is up and running, we can create an Object Store for our use. This is done by running the following command.
 
 {{< highlight bash >}}
-ozone om -createObjectStore
+ozone om --init
 {{< /highlight >}}
 
 
@@ -50,7 +50,7 @@ ozone --daemon start om
 
 At this point Ozone's name services, the Ozone manager, and the block service  SCM is both running.
 **Please note**: If SCM is not running
-```createObjectStore``` command will fail. SCM start will fail if on-disk data structures are missing. So please make sure you have done both ```init``` and ```createObjectStore``` commands.
+```om --init``` command will fail. SCM start will fail if on-disk data structures are missing. So please make sure you have done both ```scm --init``` and ```om --init``` commands.
 
 Now we need to start the data nodes. Please run the following command on each datanode.
 {{< highlight bash >}}
@@ -64,8 +64,8 @@ At this point SCM, Ozone Manager and data nodes are up and running.
 -------
 If you want to make your life simpler, you can just run
 {{< highlight bash >}}
-ozone scm -init
-ozone om -createObjectStore
+ozone scm --init
+ozone om --init
 start-ozone.sh
 {{< /highlight >}}
 This assumes that you have set up the slaves file correctly and ssh
