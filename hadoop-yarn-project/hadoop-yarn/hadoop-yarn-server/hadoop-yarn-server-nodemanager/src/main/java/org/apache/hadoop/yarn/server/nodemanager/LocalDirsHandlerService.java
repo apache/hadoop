@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskValidator;
 import org.apache.hadoop.util.DiskValidatorFactory;
@@ -493,7 +495,8 @@ public class LocalDirsHandlerService extends AbstractService {
 
   }
 
-  private void checkDirs() {
+  @VisibleForTesting
+  public void checkDirs() {
     boolean disksStatusChange = false;
     Set<String> failedLocalDirsPreCheck =
         new HashSet<String>(localDirs.getFailedDirs());

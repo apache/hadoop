@@ -27,7 +27,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -56,7 +55,12 @@ public class TestDiskFailures {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDiskFailures.class);
 
-  private static final long DISK_HEALTH_CHECK_INTERVAL = 1000;//1 sec
+  /*
+   * Set disk check interval high enough so that it never runs during the test.
+   * Checks will be called manually if necessary.
+   */
+  private static final long TOO_HIGH_DISK_HEALTH_CHECK_INTERVAL =
+      1000 * 60 * 60 * 24;
 
   private static FileContext localFS = null;
   private static final File testDir = new File("target",
@@ -146,9 +150,10 @@ public class TestDiskFailures {
                                          : YarnConfiguration.NM_LOG_DIRS;
 
     Configuration conf = new Configuration();
-    // set disk health check interval to a small value (say 1 sec).
+    // set disk health check interval to a large value to effectively disable
+    // disk health check done internally in LocalDirsHandlerService"
     conf.setLong(YarnConfiguration.NM_DISK_HEALTH_CHECK_INTERVAL_MS,
-                 DISK_HEALTH_CHECK_INTERVAL);
+        TOO_HIGH_DISK_HEALTH_CHECK_INTERVAL);
 
     // If 2 out of the total 4 local-dirs fail OR if 2 Out of the total 4
     // log-dirs fail, then the node's health status should become unhealthy.
@@ -202,22 +207,6 @@ public class TestDiskFailures {
     verifyDisksHealth(localORLogDirs, expectedDirs, false);
   }
 
-  /**
-   * Wait for the NodeManger to go for the disk-health-check at least once.
-   */
-  private void waitForDiskHealthCheck() {
-    long lastDisksCheckTime = dirsHandler.getLastDisksCheckTime();
-    long time = lastDisksCheckTime;
-    for (int i = 0; i < 10 && (time <= lastDisksCheckTime); i++) {
-      try {
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {
-        LOG.error(
-            "Interrupted while waiting for NodeManager's disk health check.");
-      }
-      time = dirsHandler.getLastDisksCheckTime();
-    }
-  }
 
   /**
    * Verify if the NodeManager could identify disk failures.
@@ -228,8 +217,8 @@ public class TestDiskFailures {
    */
   private void verifyDisksHealth(boolean localORLogDirs, String expectedDirs,
       boolean isHealthy) {
-    // Wait for the NodeManager to identify disk failures.
-    waitForDiskHealthCheck();
+    // identify disk failures
+    dirsHandler.checkDirs();
 
     List<String> list = localORLogDirs ? dirsHandler.getLocalDirs()
                                        : dirsHandler.getLogDirs();
@@ -272,7 +261,10 @@ public class TestDiskFailures {
    */
   private void prepareDirToFail(String dir) throws IOException {
     File file = new File(dir);
-    FileUtil.fullyDelete(file);
+    if(!FileUtil.fullyDelete(file)) {
+      throw new IOException("Delete of file was unsuccessful! Path: " +
+          file.getAbsolutePath());
+    }
     file.createNewFile();
     LOG.info("Prepared " + dir + " to fail.");
   }
