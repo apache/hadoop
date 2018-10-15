@@ -62,6 +62,8 @@ message ResourceInformationProto {
   optional int64 value = 2;
   optional string units = 3;
   optional ResourceTypesProto type = 4;
+  repeated string tags = 5;
+  repeated StringStringMapProto attributes = 6;
 }
 
 message ResourceTypeInfoProto {

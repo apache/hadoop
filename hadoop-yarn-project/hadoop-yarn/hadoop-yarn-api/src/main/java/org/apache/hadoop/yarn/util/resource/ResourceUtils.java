@@ -41,9 +41,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,6 +57,7 @@ public class ResourceUtils {
 
   public static final String UNITS = ".units";
   public static final String TYPE = ".type";
+  public static final String TAGS = ".tags";
   public static final String MINIMUM_ALLOCATION = ".minimum-allocation";
   public static final String MAXIMUM_ALLOCATION = ".maximum-allocation";
 
@@ -242,6 +245,10 @@ public class ResourceUtils {
                   + "'. One of name, units or type is configured incorrectly.");
         }
         ResourceTypes resourceType = ResourceTypes.valueOf(resourceTypeName);
+        String[] resourceTags = conf.getTrimmedStrings(
+            YarnConfiguration.RESOURCE_TYPES + "." + resourceName + TAGS);
+        Set<String> resourceTagSet = new HashSet<>();
+        Collections.addAll(resourceTagSet, resourceTags);
         LOG.info("Adding resource type - name = " + resourceName + ", units = "
             + resourceUnits + ", type = " + resourceTypeName);
         if (resourceInformationMap.containsKey(resourceName)) {
@@ -250,7 +257,7 @@ public class ResourceUtils {
         }
         resourceInformationMap.put(resourceName, ResourceInformation
             .newInstance(resourceName, resourceUnits, 0L, resourceType,
-                minimumAllocation, maximumAllocation));
+                minimumAllocation, maximumAllocation, resourceTagSet, null));
       }
     }
 
