@@ -25,6 +25,7 @@ import java.net.SocketException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.logging.Level;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -33,6 +34,7 @@ import javax.net.ssl.SSLSocketFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wildfly.openssl.OpenSSLProvider;
+import org.wildfly.openssl.SSL;
 
 
 /**
@@ -118,6 +120,7 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
     switch (preferredChannelMode) {
       case Default:
         try {
+          java.util.logging.Logger.getLogger(SSL.class.getName()).setLevel(Level.WARNING);
           ctx = SSLContext.getInstance("openssl.TLS");
           ctx.init(null, null, null);
           channelMode = SSLChannelMode.OpenSSL;
