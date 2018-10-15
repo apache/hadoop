@@ -95,7 +95,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.Progressable;
 
 import javax.annotation.Nonnull;
