@@ -70,7 +70,6 @@ import org.slf4j.LoggerFactory;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
@@ -144,7 +143,7 @@ public class ApiServiceClient extends AppAdminClient {
   /**
    * Calculate Resource Manager address base on working REST API.
    */
-  private String getRMWebAddress() {
+  String getRMWebAddress() {
     Configuration conf = getConfig();
     String scheme = "http://";
     String path = "/app/v1/services/version";
@@ -156,8 +155,7 @@ public class ApiServiceClient extends AppAdminClient {
           .get("yarn.resourcemanager.webapp.https.address");
     }
     boolean useKerberos = UserGroupInformation.isSecurityEnabled();
-    List<String> rmServers = RMHAUtils
-        .getRMHAWebappAddresses(new YarnConfiguration(conf));
+    List<String> rmServers = getRMHAWebAddresses(conf);
     for (String host : rmServers) {
       try {
         Client client = Client.create();
@@ -175,16 +173,16 @@ public class ApiServiceClient extends AppAdminClient {
             LOG.debug("Fail to resolve username: {}", e);
           }
         }
-        WebResource webResource = client
-            .resource(sb.toString());
+        Builder builder = client
+            .resource(sb.toString()).type(MediaType.APPLICATION_JSON);
         if (useKerberos) {
           String[] server = host.split(":");
           String challenge = generateToken(server[0]);
-          webResource.header(HttpHeaders.AUTHORIZATION, "Negotiate " +
+          builder.header(HttpHeaders.AUTHORIZATION, "Negotiate " +
               challenge);
           LOG.debug("Authorization: Negotiate {}", challenge);
         }
-        ClientResponse test = webResource.get(ClientResponse.class);
+        ClientResponse test = builder.get(ClientResponse.class);
         if (test.getStatus() == 200) {
           rmAddress = host;
           break;
@@ -195,6 +193,11 @@ public class ApiServiceClient extends AppAdminClient {
       }
     }
     return scheme+rmAddress;
+  }
+
+  List<String> getRMHAWebAddresses(Configuration conf) {
+    return RMHAUtils
+        .getRMHAWebappAddresses(new YarnConfiguration(conf));
   }
 
   /**
