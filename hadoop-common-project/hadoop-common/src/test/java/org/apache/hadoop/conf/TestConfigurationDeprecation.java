@@ -77,6 +77,7 @@ public class TestConfigurationDeprecation {
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
     new File(CONFIG3).delete();
+    new File(CONFIG4).delete();
   }
   
   private void startConfig() throws IOException{
