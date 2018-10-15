@@ -89,11 +89,33 @@ public class BlockManagerImpl implements BlockManager {
     Preconditions.checkNotNull(db, "DB cannot be null here");
 
     long blockCommitSequenceId = data.getBlockCommitSequenceId();
+    byte[] blockCommitSequenceIdKey =
+        DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX);
+    byte[] blockCommitSequenceIdValue = db.get(blockCommitSequenceIdKey);
+
+    // default blockCommitSequenceId for any block is 0. It the putBlock
+    // request is not coming via Ratis(for test scenarios), it will be 0.
+    // In such cases, we should overwrite the block as well
+    if (blockCommitSequenceIdValue != null && blockCommitSequenceId != 0) {
+      if (blockCommitSequenceId <= Longs
+          .fromByteArray(blockCommitSequenceIdValue)) {
+        // Since the blockCommitSequenceId stored in the db is greater than
+        // equal to blockCommitSequenceId to be updated, it means the putBlock
+        // transaction is reapplied in the ContainerStateMachine on restart.
+        // It also implies that the given block must already exist in the db.
+        // just log and return
+        LOG.warn("blockCommitSequenceId " + Longs
+            .fromByteArray(blockCommitSequenceIdValue)
+            + " in the Container Db is greater than" + " the supplied value "
+            + blockCommitSequenceId + " .Ignoring it");
+        return data.getSize();
+      }
+    }
     // update the blockData as well as BlockCommitSequenceId here
     BatchOperation batch = new BatchOperation();
     batch.put(Longs.toByteArray(data.getLocalID()),
         data.getProtoBufMessage().toByteArray());
-    batch.put(DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX),
+    batch.put(blockCommitSequenceIdKey,
         Longs.toByteArray(blockCommitSequenceId));
     db.writeBatch(batch);
     container.updateBlockCommitSequenceId(blockCommitSequenceId);
