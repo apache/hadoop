@@ -19,11 +19,15 @@
 package org.apache.hadoop.yarn.api.records;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Class to encapsulate information about a Resource - the name of the resource,
@@ -37,6 +41,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private long value;
   private long minimumAllocation;
   private long maximumAllocation;
+  private Set<String> tags = new HashSet<>();
+  private Map<String, String> attributes = new HashMap<>();
 
   // Known resource types
   public static final String MEMORY_URI = "memory-mb";
@@ -185,6 +191,42 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   }
 
   /**
+   * Get the attributes of the resource.
+   * @return resource attributes
+   */
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
+
+  /**
+   * Set a map of attributes to the resource.
+   * @param attributes resource attributes
+   */
+  public void setAttributes(Map<String, String> attributes) {
+    if (attributes != null) {
+      this.attributes = attributes;
+    }
+  }
+
+  /**
+   * Get resource tags.
+   * @return resource tags
+   */
+  public Set<String> getTags() {
+    return this.tags;
+  }
+
+  /**
+   * Add tags to the resource.
+   * @param tags resource tags
+   */
+  public void setTags(Set<String> tags) {
+    if (tags != null) {
+      this.tags = tags;
+    }
+  }
+
+  /**
    * Create a new instance of ResourceInformation from another object.
    *
    * @param other the object from which the new object should be created
@@ -199,6 +241,15 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   public static ResourceInformation newInstance(String name, String units,
       long value, ResourceTypes type, long minimumAllocation,
       long maximumAllocation) {
+    return ResourceInformation.newInstance(name, units, value, type,
+        minimumAllocation, maximumAllocation,
+        ImmutableSet.of(), ImmutableMap.of());
+  }
+
+  public static ResourceInformation newInstance(String name, String units,
+      long value, ResourceTypes type, long minimumAllocation,
+      long maximumAllocation,
+      Set<String> tags, Map<String, String> attributes) {
     ResourceInformation ret = new ResourceInformation();
     ret.setName(name);
     ret.setResourceType(type);
@@ -206,6 +257,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     ret.setValue(value);
     ret.setMinimumAllocation(minimumAllocation);
     ret.setMaximumAllocation(maximumAllocation);
+    ret.setTags(tags);
+    ret.setAttributes(attributes);
     return ret;
   }
 
@@ -258,13 +311,16 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     dst.setValue(src.getValue());
     dst.setMinimumAllocation(src.getMinimumAllocation());
     dst.setMaximumAllocation(src.getMaximumAllocation());
+    dst.setTags(src.getTags());
+    dst.setAttributes(src.getAttributes());
   }
 
   @Override
   public String toString() {
     return "name: " + this.name + ", units: " + this.units + ", type: "
         + resourceType + ", value: " + value + ", minimum allocation: "
-        + minimumAllocation + ", maximum allocation: " + maximumAllocation;
+        + minimumAllocation + ", maximum allocation: " + maximumAllocation
+        + ", tags: " + tags + ", attributes " + attributes;
   }
 
   public String getShorthandRepresentation() {
@@ -284,7 +340,9 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     }
     ResourceInformation r = (ResourceInformation) obj;
     if (!this.name.equals(r.getName())
-        || !this.resourceType.equals(r.getResourceType())) {
+        || !this.resourceType.equals(r.getResourceType())
+        || !this.tags.equals(r.getTags())
+        || !this.attributes.equals(r.getAttributes())) {
       return false;
     }
     if (this.units.equals(r.units)) {
@@ -302,6 +360,12 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     result = prime * result + resourceType.hashCode();
     result = prime * result + units.hashCode();
     result = prime * result + Long.hashCode(value);
+    if (tags != null && !tags.isEmpty()) {
+      result = prime * result + tags.hashCode();
+    }
+    if (attributes != null && !attributes.isEmpty()) {
+      result = prime * result + attributes.hashCode();
+    }
     return result;
   }
 

@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestInterpreterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.TimedPlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
@@ -526,6 +527,33 @@ public class ProtoUtils {
       ret.add(tmp.build());
     }
     return ret;
+  }
+
+  public static Map<String, String> convertStringStringMapProtoListToMap(
+      List<StringStringMapProto> pList) {
+    Map<String, String> ret = new HashMap<>();
+    if (pList != null) {
+      for (StringStringMapProto p : pList) {
+        if (p.hasKey()) {
+          ret.put(p.getKey(), p.getValue());
+        }
+      }
+    }
+    return ret;
+  }
+
+  public static List<YarnProtos.StringStringMapProto> convertToProtoFormat(
+      Map<String, String> stringMap) {
+    List<YarnProtos.StringStringMapProto> pList = new ArrayList<>();
+    if (stringMap != null && !stringMap.isEmpty()) {
+      StringStringMapProto.Builder pBuilder = StringStringMapProto.newBuilder();
+      for (Map.Entry<String, String> entry : stringMap.entrySet()) {
+        pBuilder.setKey(entry.getKey());
+        pBuilder.setValue(entry.getValue());
+        pList.add(pBuilder.build());
+      }
+    }
+    return pList;
   }
 
   public static PlacementConstraintTargetProto.TargetType convertToProtoFormat(

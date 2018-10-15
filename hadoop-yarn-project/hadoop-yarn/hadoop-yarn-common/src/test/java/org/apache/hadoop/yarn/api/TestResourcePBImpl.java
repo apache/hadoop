@@ -23,6 +23,7 @@ import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos;
@@ -44,7 +45,7 @@ public class TestResourcePBImpl {
   public void setup() throws Exception {
     ResourceUtils.resetResourceTypes();
 
-    String resourceTypesFile = "resource-types-4.xml";
+    String resourceTypesFile = "resource-types-5.xml";
     Configuration conf = new YarnConfiguration();
     TestResourceUtils.setupResourceTypes(conf, resourceTypesFile);
   }
@@ -53,7 +54,7 @@ public class TestResourcePBImpl {
   public void teardown() {
     Configuration conf = new YarnConfiguration();
     File source = new File(
-        conf.getClassLoader().getResource("resource-types-4.xml").getFile());
+        conf.getClassLoader().getResource("resource-types-5.xml").getFile());
     File dest = new File(source.getParent(), "resource-types.xml");
     if (dest.exists()) {
       dest.delete();
@@ -174,5 +175,128 @@ public class TestResourcePBImpl {
         res2.getResourceInformation("resource1").getValue());
     Assert.assertEquals("G",
         res2.getResourceInformation("resource1").getUnits());
+  }
+
+  @Test
+  public void testResourceTags() {
+    YarnProtos.ResourceInformationProto riProto =
+        YarnProtos.ResourceInformationProto.newBuilder()
+            .setType(
+                YarnProtos.ResourceTypeInfoProto.newBuilder()
+                    .setName("yarn.io/test-volume")
+                    .setType(YarnProtos.ResourceTypesProto.COUNTABLE).getType())
+            .setValue(10)
+            .setUnits("G")
+            .setKey("yarn.io/test-volume")
+            .addTags("tag_A")
+            .addTags("tag_B")
+            .addTags("tag_C")
+            .build();
+    YarnProtos.ResourceProto proto =
+        YarnProtos.ResourceProto.newBuilder()
+            .setMemory(1024)
+            .setVirtualCores(3)
+            .addResourceValueMap(riProto)
+            .build();
+    Resource res = new ResourcePBImpl(proto);
+
+    Assert.assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
+    Assert.assertEquals(10,
+        res.getResourceInformation("yarn.io/test-volume")
+            .getValue());
+    Assert.assertEquals("G",
+        res.getResourceInformation("yarn.io/test-volume")
+            .getUnits());
+    Assert.assertEquals(3,
+        res.getResourceInformation("yarn.io/test-volume")
+            .getTags().size());
+    Assert.assertFalse(res.getResourceInformation("yarn.io/test-volume")
+        .getTags().isEmpty());
+    Assert.assertTrue(res.getResourceInformation("yarn.io/test-volume")
+        .getAttributes().isEmpty());
+
+    boolean protoConvertExpected = false;
+    YarnProtos.ResourceProto protoFormat = ProtoUtils.convertToProtoFormat(res);
+    for (YarnProtos.ResourceInformationProto pf :
+        protoFormat.getResourceValueMapList()) {
+      if (pf.getKey().equals("yarn.io/test-volume")) {
+        protoConvertExpected = pf.getAttributesCount() == 0
+            && pf.getTagsCount() == 3;
+      }
+    }
+    Assert.assertTrue("Expecting resource's protobuf message"
+        + " contains 0 attributes and 3 tags",
+        protoConvertExpected);
+  }
+
+  @Test
+  public void testResourceAttributes() {
+    YarnProtos.ResourceInformationProto riProto =
+        YarnProtos.ResourceInformationProto.newBuilder()
+            .setType(
+                YarnProtos.ResourceTypeInfoProto.newBuilder()
+                    .setName("yarn.io/test-volume")
+                    .setType(YarnProtos.ResourceTypesProto.COUNTABLE).getType())
+            .setValue(10)
+            .setUnits("G")
+            .setKey("yarn.io/test-volume")
+            .addAttributes(
+                YarnProtos.StringStringMapProto
+                    .newBuilder()
+                    .setKey("driver").setValue("test-driver")
+                    .build())
+            .addAttributes(
+                YarnProtos.StringStringMapProto
+                    .newBuilder()
+                    .setKey("mount").setValue("/mnt/data")
+                    .build())
+            .build();
+    YarnProtos.ResourceProto proto =
+        YarnProtos.ResourceProto.newBuilder()
+            .setMemory(1024)
+            .setVirtualCores(3)
+            .addResourceValueMap(riProto)
+            .build();
+    Resource res = new ResourcePBImpl(proto);
+
+    Assert.assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
+    Assert.assertEquals(10,
+        res.getResourceInformation("yarn.io/test-volume")
+            .getValue());
+    Assert.assertEquals("G",
+        res.getResourceInformation("yarn.io/test-volume")
+            .getUnits());
+    Assert.assertEquals(2,
+        res.getResourceInformation("yarn.io/test-volume")
+            .getAttributes().size());
+    Assert.assertTrue(res.getResourceInformation("yarn.io/test-volume")
+        .getTags().isEmpty());
+    Assert.assertFalse(res.getResourceInformation("yarn.io/test-volume")
+        .getAttributes().isEmpty());
+
+    boolean protoConvertExpected = false;
+    YarnProtos.ResourceProto protoFormat = ProtoUtils.convertToProtoFormat(res);
+    for (YarnProtos.ResourceInformationProto pf :
+        protoFormat.getResourceValueMapList()) {
+      if (pf.getKey().equals("yarn.io/test-volume")) {
+        protoConvertExpected = pf.getAttributesCount() == 2
+            && pf.getTagsCount() == 0;
+      }
+    }
+    Assert.assertTrue("Expecting resource's protobuf message"
+            + " contains 2 attributes and 0 tags",
+        protoConvertExpected);
+  }
+
+  @Test
+  public void testParsingResourceTags() {
+    ResourceInformation info =
+        ResourceUtils.getResourceTypes().get("resource3");
+    Assert.assertTrue(info.getAttributes().isEmpty());
+    Assert.assertFalse(info.getTags().isEmpty());
+    Assert.assertEquals(info.getTags().size(), 2);
+    info.getTags().remove("resource3_tag_1");
+    info.getTags().remove("resource3_tag_2");
+    Assert.assertTrue(info.getTags().isEmpty());
   }
 }
