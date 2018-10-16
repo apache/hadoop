@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -230,8 +230,7 @@ public final class OmBucketInfo implements Auditable {
         .addAllAcls(acls.stream().map(
             OMPBHelper::convertOzoneAcl).collect(Collectors.toList()))
         .setIsVersionEnabled(isVersionEnabled)
-        .setStorageType(PBHelperClient.convertStorageType(
-            storageType))
+        .setStorageType(storageType.toProto())
         .setCreationTime(creationTime)
         .build();
   }
@@ -248,7 +247,7 @@ public final class OmBucketInfo implements Auditable {
         bucketInfo.getAclsList().stream().map(
             OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketInfo.getIsVersionEnabled(),
-        PBHelperClient.convertStorageType(
-            bucketInfo.getStorageType()), bucketInfo.getCreationTime());
+        StorageType.valueOf(bucketInfo.getStorageType()),
+        bucketInfo.getCreationTime());
   }
 }

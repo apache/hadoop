@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.om;
 
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;

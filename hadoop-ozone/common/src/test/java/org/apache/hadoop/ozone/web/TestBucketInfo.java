@@ -19,8 +19,8 @@
 package org.apache.hadoop.ozone.web;
 
 
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Test;
