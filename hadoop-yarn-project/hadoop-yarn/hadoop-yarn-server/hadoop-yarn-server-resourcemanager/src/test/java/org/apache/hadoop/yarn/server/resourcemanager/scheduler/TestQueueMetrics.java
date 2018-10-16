@@ -18,15 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
-import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .AppMetricsChecker.AppMetricsKey.*;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.*;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -46,8 +37,40 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_COMPLETED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_FAILED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_PENDING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_RUNNING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_SUBMITTED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_ALLOCATED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_RELEASED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class TestQueueMetrics {
+  private static Queue createMockQueue(QueueMetrics metrics) {
+    Queue queue = mock(Queue.class);
+    when(queue.getMetrics()).thenReturn(metrics);
+    return queue;
+  }
+
   private static final int GB = 1024; // MB
+  private static final String USER = "alice";
+  private static final String USER_2 = "dodo";
   private static final Configuration conf = new Configuration();
   private MetricsSystem ms;
 
@@ -60,19 +83,18 @@ public class TestQueueMetrics {
   @Test
   public void testDefaultSingleQueueMetrics() {
     String queueName = "single";
-    String user = "alice";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
 						 conf);
     MetricsSource queueSource= queueSource(ms, queueName);
-    AppSchedulingInfo app = mockApp(user);
+    AppSchedulingInfo app = mockApp(USER);
 
-    metrics.submitApp(user);
-    MetricsSource userSource = userSource(ms, queueName, user);
+    metrics.submitApp(USER);
+    MetricsSource userSource = userSource(ms, queueName, USER);
     AppMetricsChecker appMetricsChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(queueSource, true);
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
@@ -80,7 +102,7 @@ public class TestQueueMetrics {
     metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
         Resources.createResource(100*GB, 100));
     metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
-        user, 5, Resources.createResource(3*GB, 3));
+        USER, 5, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     ResourceMetricsChecker rmChecker = ResourceMetricsChecker.create()
@@ -91,14 +113,14 @@ public class TestQueueMetrics {
         .gaugeInt(PENDING_CONTAINERS, 5)
         .checkAgainst(queueSource);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
         .checkAgainst(queueSource, true);
 
     metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
-        user, 3, Resources.createResource(2*GB, 2), true);
+        USER, 3, Resources.createResource(2*GB, 2), true);
     rmChecker = ResourceMetricsChecker.createFromChecker(rmChecker)
         .gaugeLong(ALLOCATED_MB, 6 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 6)
@@ -110,7 +132,7 @@ public class TestQueueMetrics {
         .checkAgainst(queueSource);
 
     metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
-        user, 1, Resources.createResource(2*GB, 2));
+        USER, 1, Resources.createResource(2*GB, 2));
     rmChecker = ResourceMetricsChecker.createFromChecker(rmChecker)
         .gaugeLong(ALLOCATED_MB, 4 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -119,13 +141,13 @@ public class TestQueueMetrics {
         .checkAgainst(queueSource);
 
     metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
-        user, 0, Resources.createResource(2 * GB, 2));
+        USER, 0, Resources.createResource(2 * GB, 2));
     //nothing should change in values
     rmChecker = ResourceMetricsChecker.createFromChecker(rmChecker)
         .checkAgainst(queueSource);
 
     metrics.decrPendingResources(RMNodeLabelsManager.NO_LABEL,
-        user, 0, Resources.createResource(2 * GB, 2));
+        USER, 0, Resources.createResource(2 * GB, 2));
     //nothing should change in values
     ResourceMetricsChecker.createFromChecker(rmChecker)
         .checkAgainst(queueSource);
@@ -136,7 +158,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(USER, RMAppState.FINISHED);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -146,24 +168,23 @@ public class TestQueueMetrics {
   @Test
   public void testQueueAppMetricsForMultipleFailures() {
     String queueName = "single";
-    String user = "alice";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
         new Configuration());
     MetricsSource queueSource = queueSource(ms, queueName);
-    AppSchedulingInfo app = mockApp(user);
+    AppSchedulingInfo app = mockApp(USER);
 
-    metrics.submitApp(user);
-    MetricsSource userSource = userSource(ms, queueName, user);
+    metrics.submitApp(USER);
+    MetricsSource userSource = userSource(ms, queueName, USER);
     AppMetricsChecker appMetricsChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(queueSource, true);
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -177,12 +198,12 @@ public class TestQueueMetrics {
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -197,12 +218,12 @@ public class TestQueueMetrics {
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), USER);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -215,7 +236,7 @@ public class TestQueueMetrics {
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
-    metrics.finishApp(user, RMAppState.FAILED);
+    metrics.finishApp(USER, RMAppState.FAILED);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .counter(APPS_FAILED, 1)
@@ -227,15 +248,14 @@ public class TestQueueMetrics {
   @Test
   public void testSingleQueueWithUserMetrics() {
     String queueName = "single2";
-    String user = "dodo";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, true,
 						 conf);
     MetricsSource queueSource = queueSource(ms, queueName);
-    AppSchedulingInfo app = mockApp(user);
+    AppSchedulingInfo app = mockApp(USER_2);
 
-    metrics.submitApp(user);
-    MetricsSource userSource = userSource(ms, queueName, user);
+    metrics.submitApp(USER_2);
+    MetricsSource userSource = userSource(ms, queueName, USER_2);
 
     AppMetricsChecker appMetricsQueueSourceChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
@@ -244,7 +264,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(userSource, true);
 
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(USER_2);
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
@@ -257,9 +277,9 @@ public class TestQueueMetrics {
     metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
         Resources.createResource(100*GB, 100));
     metrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
-        user, Resources.createResource(10*GB, 10));
+        USER_2, Resources.createResource(10*GB, 10));
     metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
-        user, 5, Resources.createResource(3*GB, 3));
+        USER_2, 5, Resources.createResource(3*GB, 3));
 
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
@@ -280,7 +300,7 @@ public class TestQueueMetrics {
             .gaugeInt(PENDING_CONTAINERS, 5)
             .checkAgainst(userSource);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), USER_2);
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
             .gaugeInt(APPS_PENDING, 0)
@@ -293,7 +313,7 @@ public class TestQueueMetrics {
             .checkAgainst(userSource, true);
 
     metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
-        user, 3, Resources.createResource(2*GB, 2), true);
+        USER_2, 3, Resources.createResource(2*GB, 2), true);
     resMetricsQueueSourceChecker =
         ResourceMetricsChecker.createFromChecker(resMetricsQueueSourceChecker)
             .gaugeLong(ALLOCATED_MB, 6 * GB)
@@ -316,7 +336,7 @@ public class TestQueueMetrics {
             .checkAgainst(userSource);
 
     metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
-        user, 1, Resources.createResource(2*GB, 2));
+        USER_2, 1, Resources.createResource(2*GB, 2));
     ResourceMetricsChecker.createFromChecker(resMetricsQueueSourceChecker)
             .gaugeLong(ALLOCATED_MB, 4 * GB)
             .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -340,7 +360,7 @@ public class TestQueueMetrics {
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(userSource, true);
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(USER_2, RMAppState.FINISHED);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -353,7 +373,6 @@ public class TestQueueMetrics {
   public void testNodeTypeMetrics() {
     String parentQueueName = "root";
     String leafQueueName = "root.leaf";
-    String user = "alice";
 
     QueueMetrics parentMetrics =
       QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
@@ -365,29 +384,29 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, leafQueueName);
     //AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
-    MetricsSource userSource = userSource(ms, leafQueueName, user);
-    MetricsSource parentUserSource = userSource(ms, parentQueueName, user);
+    metrics.submitApp(USER);
+    MetricsSource userSource = userSource(ms, leafQueueName, USER);
+    MetricsSource parentUserSource = userSource(ms, parentQueueName, USER);
 
-    metrics.incrNodeTypeAggregations(user, NodeType.NODE_LOCAL);
+    metrics.incrNodeTypeAggregations(USER, NodeType.NODE_LOCAL);
     checkAggregatedNodeTypes(queueSource, 1L, 0L, 0L);
     checkAggregatedNodeTypes(parentQueueSource, 1L, 0L, 0L);
     checkAggregatedNodeTypes(userSource, 1L, 0L, 0L);
     checkAggregatedNodeTypes(parentUserSource, 1L, 0L, 0L);
 
-    metrics.incrNodeTypeAggregations(user, NodeType.RACK_LOCAL);
+    metrics.incrNodeTypeAggregations(USER, NodeType.RACK_LOCAL);
     checkAggregatedNodeTypes(queueSource, 1L, 1L, 0L);
     checkAggregatedNodeTypes(parentQueueSource, 1L, 1L, 0L);
     checkAggregatedNodeTypes(userSource, 1L, 1L, 0L);
     checkAggregatedNodeTypes(parentUserSource, 1L, 1L, 0L);
 
-    metrics.incrNodeTypeAggregations(user, NodeType.OFF_SWITCH);
+    metrics.incrNodeTypeAggregations(USER, NodeType.OFF_SWITCH);
     checkAggregatedNodeTypes(queueSource, 1L, 1L, 1L);
     checkAggregatedNodeTypes(parentQueueSource, 1L, 1L, 1L);
     checkAggregatedNodeTypes(userSource, 1L, 1L, 1L);
     checkAggregatedNodeTypes(parentUserSource, 1L, 1L, 1L);
 
-    metrics.incrNodeTypeAggregations(user, NodeType.OFF_SWITCH);
+    metrics.incrNodeTypeAggregations(USER, NodeType.OFF_SWITCH);
     checkAggregatedNodeTypes(queueSource, 1L, 1L, 2L);
     checkAggregatedNodeTypes(parentQueueSource, 1L, 1L, 2L);
     checkAggregatedNodeTypes(userSource, 1L, 1L, 2L);
@@ -396,67 +415,60 @@ public class TestQueueMetrics {
 
   @Test
   public void testTwoLevelWithUserMetrics() {
-    String parentQueueName = "root";
-    String leafQueueName = "root.leaf";
-    String user = "alice";
+    AppSchedulingInfo app = mockApp(USER);
 
-    QueueMetrics parentMetrics =
-      QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
-    Queue parentQueue = mock(Queue.class);
-    when(parentQueue.getMetrics()).thenReturn(parentMetrics);
-    QueueMetrics metrics =
-      QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
-    MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
-    MetricsSource queueSource = queueSource(ms, leafQueueName);
-    AppSchedulingInfo app = mockApp(user);
-
-    metrics.submitApp(user);
-    MetricsSource userSource = userSource(ms, leafQueueName, user);
-    MetricsSource parentUserSource = userSource(ms, parentQueueName, user);
+    QueueInfo root = new QueueInfo(null, "root", ms, conf, USER);
+    QueueInfo leaf = new QueueInfo(root, "root.leaf", ms, conf, USER);
+    leaf.queueMetrics.submitApp(USER);
 
     AppMetricsChecker appMetricsQueueSourceChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
-        .checkAgainst(queueSource, true);
+        .checkAgainst(leaf.queueSource, true);
     AppMetricsChecker appMetricsParentQueueSourceChecker =
         AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
-        .checkAgainst(parentQueueSource, true);
+        .checkAgainst(root.queueSource, true);
     AppMetricsChecker appMetricsUserSourceChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
-        .checkAgainst(userSource, true);
+        .checkAgainst(leaf.userSource, true);
     AppMetricsChecker appMetricsParentUserSourceChecker =
         AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
-        .checkAgainst(parentUserSource, true);
+        .checkAgainst(root.userSource, true);
 
-    metrics.submitAppAttempt(user);
+    leaf.queueMetrics.submitAppAttempt(USER);
     appMetricsQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
-        .checkAgainst(queueSource, true);
+        .checkAgainst(leaf.queueSource, true);
     appMetricsParentQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsParentQueueSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
-        .checkAgainst(parentQueueSource, true);
+        .checkAgainst(root.queueSource, true);
     appMetricsUserSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
-        .checkAgainst(userSource, true);
+        .checkAgainst(leaf.userSource, true);
     appMetricsParentUserSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsParentUserSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
-        .checkAgainst(parentUserSource, true);
+        .checkAgainst(root.userSource, true);
 
-    parentMetrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+    root.queueMetrics.setAvailableResourcesToQueue(
+        RMNodeLabelsManager.NO_LABEL,
         Resources.createResource(100*GB, 100));
-    metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+    leaf.queueMetrics.setAvailableResourcesToQueue(
+        RMNodeLabelsManager.NO_LABEL,
         Resources.createResource(100*GB, 100));
-    parentMetrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
-        user, Resources.createResource(10*GB, 10));
-    metrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
-        user, Resources.createResource(10*GB, 10));
-    metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
-        user, 5, Resources.createResource(3*GB, 3));
+    root.queueMetrics.setAvailableResourcesToUser(
+        RMNodeLabelsManager.NO_LABEL,
+        USER, Resources.createResource(10*GB, 10));
+    leaf.queueMetrics.setAvailableResourcesToUser(
+        RMNodeLabelsManager.NO_LABEL,
+        USER, Resources.createResource(10*GB, 10));
+    leaf.queueMetrics.incrPendingResources(
+        RMNodeLabelsManager.NO_LABEL,
+        USER, 5, Resources.createResource(3*GB, 3));
 
     ResourceMetricsChecker resMetricsQueueSourceChecker =
         ResourceMetricsChecker.create()
@@ -465,7 +477,7 @@ public class TestQueueMetrics {
         .gaugeLong(PENDING_MB, 15 * GB)
         .gaugeInt(PENDING_V_CORES, 15)
         .gaugeInt(PENDING_CONTAINERS, 5)
-        .checkAgainst(queueSource);
+        .checkAgainst(leaf.queueSource);
     ResourceMetricsChecker resMetricsParentQueueSourceChecker =
         ResourceMetricsChecker.create()
             .gaugeLong(AVAILABLE_MB, 100 * GB)
@@ -473,7 +485,7 @@ public class TestQueueMetrics {
             .gaugeLong(PENDING_MB, 15 * GB)
             .gaugeInt(PENDING_V_CORES, 15)
             .gaugeInt(PENDING_CONTAINERS, 5)
-            .checkAgainst(parentQueueSource);
+            .checkAgainst(root.queueSource);
     ResourceMetricsChecker resMetricsUserSourceChecker =
         ResourceMetricsChecker.create()
             .gaugeLong(AVAILABLE_MB, 10 * GB)
@@ -481,7 +493,7 @@ public class TestQueueMetrics {
             .gaugeLong(PENDING_MB, 15 * GB)
             .gaugeInt(PENDING_V_CORES, 15)
             .gaugeInt(PENDING_CONTAINERS, 5)
-            .checkAgainst(userSource);
+            .checkAgainst(leaf.userSource);
     ResourceMetricsChecker resMetricsParentUserSourceChecker =
         ResourceMetricsChecker.create()
             .gaugeLong(AVAILABLE_MB, 10 * GB)
@@ -489,24 +501,24 @@ public class TestQueueMetrics {
             .gaugeLong(PENDING_MB, 15 * GB)
             .gaugeInt(PENDING_V_CORES, 15)
             .gaugeInt(PENDING_CONTAINERS, 5)
-            .checkAgainst(parentUserSource);
+            .checkAgainst(root.userSource);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    leaf.queueMetrics.runAppAttempt(app.getApplicationId(), USER);
     appMetricsQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
             .gaugeInt(APPS_PENDING, 0)
             .gaugeInt(APPS_RUNNING, 1)
-            .checkAgainst(queueSource, true);
+            .checkAgainst(leaf.queueSource, true);
     appMetricsUserSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
             .gaugeInt(APPS_PENDING, 0)
             .gaugeInt(APPS_RUNNING, 1)
-            .checkAgainst(userSource, true);
+            .checkAgainst(leaf.userSource, true);
 
-    metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
-        user, 3, Resources.createResource(2*GB, 2), true);
-    metrics.reserveResource(RMNodeLabelsManager.NO_LABEL,
-        user, Resources.createResource(3*GB, 3));
+    leaf.queueMetrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
+        USER, 3, Resources.createResource(2*GB, 2), true);
+    leaf.queueMetrics.reserveResource(RMNodeLabelsManager.NO_LABEL,
+        USER, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     resMetricsQueueSourceChecker =
@@ -521,7 +533,7 @@ public class TestQueueMetrics {
             .gaugeLong(RESERVED_MB, 3 * GB)
             .gaugeInt(RESERVED_V_CORES, 3)
             .gaugeInt(RESERVED_CONTAINERS, 1)
-            .checkAgainst(queueSource);
+            .checkAgainst(leaf.queueSource);
     resMetricsParentQueueSourceChecker =
         ResourceMetricsChecker
             .createFromChecker(resMetricsParentQueueSourceChecker)
@@ -535,7 +547,7 @@ public class TestQueueMetrics {
             .gaugeLong(RESERVED_MB, 3 * GB)
             .gaugeInt(RESERVED_V_CORES, 3)
             .gaugeInt(RESERVED_CONTAINERS, 1)
-            .checkAgainst(parentQueueSource);
+            .checkAgainst(root.queueSource);
     resMetricsUserSourceChecker =
         ResourceMetricsChecker.createFromChecker(resMetricsUserSourceChecker)
             .gaugeLong(ALLOCATED_MB, 6 * GB)
@@ -548,7 +560,7 @@ public class TestQueueMetrics {
             .gaugeLong(RESERVED_MB, 3 * GB)
             .gaugeInt(RESERVED_V_CORES, 3)
             .gaugeInt(RESERVED_CONTAINERS, 1)
-        .checkAgainst(userSource);
+        .checkAgainst(leaf.userSource);
     resMetricsParentUserSourceChecker = ResourceMetricsChecker
         .createFromChecker(resMetricsParentUserSourceChecker)
             .gaugeLong(ALLOCATED_MB, 6 * GB)
@@ -561,12 +573,12 @@ public class TestQueueMetrics {
             .gaugeLong(RESERVED_MB, 3 * GB)
             .gaugeInt(RESERVED_V_CORES, 3)
             .gaugeInt(RESERVED_CONTAINERS, 1)
-            .checkAgainst(parentUserSource);
+            .checkAgainst(root.userSource);
 
-    metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
-        user, 1, Resources.createResource(2*GB, 2));
-    metrics.unreserveResource(RMNodeLabelsManager.NO_LABEL,
-          user, Resources.createResource(3*GB, 3));
+    leaf.queueMetrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
+        USER, 1, Resources.createResource(2*GB, 2));
+    leaf.queueMetrics.unreserveResource(RMNodeLabelsManager.NO_LABEL,
+        USER, Resources.createResource(3*GB, 3));
     ResourceMetricsChecker.createFromChecker(resMetricsQueueSourceChecker)
         .gaugeLong(ALLOCATED_MB, 4 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -575,7 +587,7 @@ public class TestQueueMetrics {
         .gaugeLong(RESERVED_MB, 0)
         .gaugeInt(RESERVED_V_CORES, 0)
         .gaugeInt(RESERVED_CONTAINERS, 0)
-        .checkAgainst(queueSource);
+        .checkAgainst(leaf.queueSource);
     ResourceMetricsChecker.createFromChecker(resMetricsParentQueueSourceChecker)
         .gaugeLong(ALLOCATED_MB, 4 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -584,7 +596,7 @@ public class TestQueueMetrics {
         .gaugeLong(RESERVED_MB, 0)
         .gaugeInt(RESERVED_V_CORES, 0)
         .gaugeInt(RESERVED_CONTAINERS, 0)
-        .checkAgainst(parentQueueSource);
+        .checkAgainst(root.queueSource);
     ResourceMetricsChecker.createFromChecker(resMetricsUserSourceChecker)
         .gaugeLong(ALLOCATED_MB, 4 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -593,7 +605,7 @@ public class TestQueueMetrics {
         .gaugeLong(RESERVED_MB, 0)
         .gaugeInt(RESERVED_V_CORES, 0)
         .gaugeInt(RESERVED_CONTAINERS, 0)
-        .checkAgainst(userSource);
+        .checkAgainst(leaf.userSource);
     ResourceMetricsChecker.createFromChecker(resMetricsParentUserSourceChecker)
         .gaugeLong(ALLOCATED_MB, 4 * GB)
         .gaugeInt(ALLOCATED_V_CORES, 4)
@@ -602,46 +614,46 @@ public class TestQueueMetrics {
         .gaugeLong(RESERVED_MB, 0)
         .gaugeInt(RESERVED_V_CORES, 0)
         .gaugeInt(RESERVED_CONTAINERS, 0)
-        .checkAgainst(parentUserSource);
+        .checkAgainst(root.userSource);
 
-    metrics.finishAppAttempt(
+    leaf.queueMetrics.finishAppAttempt(
         app.getApplicationId(), app.isPending(), app.getUser());
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
             .counter(APPS_SUBMITTED, 1)
             .gaugeInt(APPS_RUNNING, 0)
-            .checkAgainst(queueSource, true);
+            .checkAgainst(leaf.queueSource, true);
     appMetricsParentQueueSourceChecker = AppMetricsChecker
             .createFromChecker(appMetricsParentQueueSourceChecker)
             .counter(APPS_SUBMITTED, 1)
             .gaugeInt(APPS_PENDING, 0)
             .gaugeInt(APPS_RUNNING, 0)
-            .checkAgainst(parentQueueSource, true);
+            .checkAgainst(root.queueSource, true);
     appMetricsUserSourceChecker = AppMetricsChecker
             .createFromChecker(appMetricsUserSourceChecker)
             .counter(APPS_SUBMITTED, 1)
             .gaugeInt(APPS_RUNNING, 0)
-            .checkAgainst(userSource, true);
+            .checkAgainst(leaf.userSource, true);
     appMetricsParentUserSourceChecker = AppMetricsChecker
             .createFromChecker(appMetricsParentUserSourceChecker)
             .counter(APPS_SUBMITTED, 1)
             .gaugeInt(APPS_PENDING, 0)
             .gaugeInt(APPS_RUNNING, 0)
-            .checkAgainst(parentUserSource, true);
+            .checkAgainst(root.userSource, true);
 
-    metrics.finishApp(user, RMAppState.FINISHED);
+    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
-        .checkAgainst(queueSource, true);
+        .checkAgainst(leaf.queueSource, true);
     AppMetricsChecker.createFromChecker(appMetricsParentQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
-        .checkAgainst(parentQueueSource, true);
+        .checkAgainst(root.queueSource, true);
     AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
         .counter(APPS_COMPLETED, 1)
-        .checkAgainst(userSource, true);
+        .checkAgainst(leaf.userSource, true);
     AppMetricsChecker.createFromChecker(appMetricsParentUserSourceChecker)
         .counter(APPS_COMPLETED, 1)
-        .checkAgainst(parentUserSource, true);
+        .checkAgainst(root.userSource, true);
   }
   
   @Test 
@@ -719,7 +731,7 @@ public class TestQueueMetrics {
     assertCounter("AggregateOffSwitchContainersAllocated", offSwitch, rb);
   }
 
-  private static AppSchedulingInfo mockApp(String user) {
+  static AppSchedulingInfo mockApp(String user) {
     AppSchedulingInfo app = mock(AppSchedulingInfo.class);
     when(app.getUser()).thenReturn(user);
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
@@ -732,7 +744,7 @@ public class TestQueueMetrics {
     return ms.getSource(QueueMetrics.sourceName(queue).toString());
   }
 
-  private static MetricsSource userSource(MetricsSystem ms, String queue,
+  public static MetricsSource userSource(MetricsSystem ms, String queue,
       String user) {
     return ms.getSource(QueueMetrics.sourceName(queue).
         append(",user=").append(user).toString());
