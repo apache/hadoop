@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
@@ -60,6 +61,7 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -256,6 +258,26 @@ public class TestOzoneShell {
         };
     cmd.parseWithHandlers(new RunLast(),
         exceptionHandler, args);
+  }
+
+  /**
+   * Test to create volume without specifying --user or -u.
+   * @throws Exception
+   */
+  @Test
+  public void testCreateVolumeWithoutUser() throws Exception {
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(1);
+    String[] args = new String[] {"volume", "create", url + "/" + volumeName,
+        "--root"};
+
+    execute(shell, args);
+
+    String truncatedVolumeName =
+        volumeName.substring(volumeName.lastIndexOf('/') + 1);
+    OzoneVolume volumeInfo = client.getVolumeDetails(truncatedVolumeName);
+    assertEquals(truncatedVolumeName, volumeInfo.getName());
+    assertEquals(UserGroupInformation.getCurrentUser().getUserName(),
+        volumeInfo.getOwner());
   }
 
   @Test
