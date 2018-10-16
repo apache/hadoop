@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -230,8 +230,7 @@ public final class OmBucketArgs implements Auditable {
       builder.setIsVersionEnabled(isVersionEnabled);
     }
     if(storageType != null) {
-      builder.setStorageType(
-          PBHelperClient.convertStorageType(storageType));
+      builder.setStorageType(storageType.toProto());
     }
     return builder.build();
   }
@@ -250,7 +249,7 @@ public final class OmBucketArgs implements Auditable {
             OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketArgs.hasIsVersionEnabled() ?
             bucketArgs.getIsVersionEnabled() : null,
-        bucketArgs.hasStorageType() ? PBHelperClient.convertStorageType(
+        bucketArgs.hasStorageType() ? StorageType.valueOf(
             bucketArgs.getStorageType()) : null);
   }
 }

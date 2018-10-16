@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.client.protocol;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;

@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
