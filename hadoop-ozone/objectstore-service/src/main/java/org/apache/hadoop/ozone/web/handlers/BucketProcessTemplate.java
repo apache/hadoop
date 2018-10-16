@@ -29,7 +29,7 @@ import java.nio.file.NoSuchFileException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneRestUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;

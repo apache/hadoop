@@ -34,7 +34,6 @@ Ozone Manager. Ozone Manager manages the namespace for ozone.
 This is similar to Namenode for Ozone.
 */
 
-import "hdfs.proto";
 import "hdds.proto";
 
 enum Status {
@@ -170,8 +169,15 @@ message BucketInfo {
     required string bucketName = 2;
     repeated OzoneAclInfo acls = 3;
     required bool isVersionEnabled = 4 [default = false];
-    required hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
+    required StorageTypeProto storageType = 5 [default = DISK];
     required uint64 creationTime = 6;
+}
+
+enum StorageTypeProto {
+    DISK = 1;
+    SSD = 2;
+    ARCHIVE = 3;
+    RAM_DISK = 4;
 }
 
 message BucketArgs {
@@ -180,7 +186,7 @@ message BucketArgs {
     repeated OzoneAclInfo addAcls = 3;
     repeated OzoneAclInfo removeAcls = 4;
     optional bool isVersionEnabled = 5;
-    optional hadoop.hdfs.StorageTypeProto storageType = 6;
+    optional StorageTypeProto storageType = 6;
 }
 
 message OzoneAclInfo {
