@@ -113,4 +113,9 @@ public class ITestS3AContractMultipartUploader extends
     }
     super.teardown();
   }
+
+  @Override
+  public void testMultipartUploadEmptyPart() throws Exception {
+    // ignore the test in the base class.
+  }
 }
