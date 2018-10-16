@@ -436,7 +436,7 @@ public class WriteOperationHelper {
    * @return the result of the operation
    * @throws IOException on problems
    */
-  @Retries.OnceTranslated
+  @Retries.RetryTranslated
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
@@ -451,7 +451,7 @@ public class WriteOperationHelper {
    * @throws IOException on problems
    * @param destKey destination key
    */
-  @Retries.RetryTranslated
+  @Retries.OnceTranslated
   public void revertCommit(String destKey) throws IOException {
     once("revert commit", destKey,
         () -> {
