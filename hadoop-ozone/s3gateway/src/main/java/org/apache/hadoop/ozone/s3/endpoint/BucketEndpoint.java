@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,50 +6,61 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.s3.object;
+package org.apache.hadoop.ozone.s3.endpoint;
 
+import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Iterator;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.s3.EndpointBase;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * List Object Rest endpoint.
+ * Bucket level rest endpoints.
  */
-@Path("/{volume}/{bucket}")
-public class ListObject extends EndpointBase {
+@Path("/{bucket}")
+public class BucketEndpoint extends EndpointBase {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BucketEndpoint.class);
 
+  /**
+   * Rest endpoint to list objects in a specific bucket.
+   * <p>
+   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/v2-RESTBucketGET.html
+   * for more details.
+   */
   @GET
-  @Produces(MediaType.APPLICATION_XML)
-  public ListObjectResponse get(
-      @PathParam("volume") String volumeName,
+  public ListObjectResponse list(
       @PathParam("bucket") String bucketName,
       @QueryParam("delimiter") String delimiter,
       @QueryParam("encoding-type") String encodingType,
@@ -65,8 +76,7 @@ public class ListObject extends EndpointBase {
       prefix = "";
     }
 
-    OzoneVolume volume = getVolume(volumeName);
-    OzoneBucket bucket = getBucket(volume, bucketName);
+    OzoneBucket bucket = getBucket(bucketName);
 
     Iterator<? extends OzoneKey> ozoneKeyIterator = bucket.listKeys(prefix);
 
@@ -113,7 +123,77 @@ public class ListObject extends EndpointBase {
         response.addKey(keyMetadata);
       }
     }
+    response.setKeyCount(
+        response.getCommonPrefixes().size() + response.getContents().size());
     return response;
   }
 
+  @PUT
+  public Response put(@PathParam("bucket") String bucketName, @Context
+      HttpHeaders httpHeaders) throws IOException, OS3Exception {
+
+    String userName = parseUsername(httpHeaders);
+
+    String location = createS3Bucket(userName, bucketName);
+
+    LOG.info("Location is {}", location);
+    return Response.status(HttpStatus.SC_OK).header("Location", location)
+        .build();
+
+  }
+
+  /**
+   * Rest endpoint to check the existence of a bucket.
+   * <p>
+   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketHEAD.html
+   * for more details.
+   */
+  @HEAD
+  public Response head(@PathParam("bucket") String bucketName)
+      throws OS3Exception, IOException {
+    try {
+      getBucket(bucketName);
+    } catch (OS3Exception ex) {
+      LOG.error("Exception occurred in headBucket", ex);
+      //TODO: use a subclass fo OS3Exception and catch it here.
+      if (ex.getCode().contains("NoSuchBucket")) {
+        return Response.status(Status.BAD_REQUEST).build();
+      } else {
+        throw ex;
+      }
+    }
+    return Response.ok().build();
+  }
+
+  /**
+   * Rest endpoint to delete specific bucket.
+   * <p>
+   * See: https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketDELETE.html
+   * for more details.
+   */
+  @DELETE
+  public Response delete(@PathParam("bucket") String bucketName)
+      throws IOException, OS3Exception {
+
+    try {
+      deleteS3Bucket(bucketName);
+    } catch (IOException ex) {
+      if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+            .BUCKET_NOT_EMPTY, S3ErrorTable.Resource.BUCKET);
+        throw os3Exception;
+      } else if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
+        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+            .NO_SUCH_BUCKET, S3ErrorTable.Resource.BUCKET);
+        throw os3Exception;
+      } else {
+        throw ex;
+      }
+    }
+
+    return Response
+        .status(HttpStatus.SC_NO_CONTENT)
+        .build();
+
+  }
 }

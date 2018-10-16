@@ -18,30 +18,31 @@
  *
  */
 
-package org.apache.hadoop.ozone.s3.bucket;
+package org.apache.hadoop.ozone.s3.endpoint;
+
+import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
-import org.apache.hadoop.ozone.s3.exception.OS3Exception;
-import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.ws.rs.core.Response;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
 
 /**
  * This class test HeadBucket functionality.
  */
-public class TestHeadBucket {
+public class TestRootList {
 
-  private String bucketName = "myBucket";
-  private String userName = "ozone";
+  private String volumeName = "vol1";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
-  private HeadBucket headBucket;
+  private OzoneVolume volumeStub;
+  private RootEndpoint rootEndpoint;
 
   @Before
   public void setup() throws Exception {
@@ -49,37 +50,30 @@ public class TestHeadBucket {
     //Create client stub and object store stub.
     clientStub = new OzoneClientStub();
     objectStoreStub = clientStub.getObjectStore();
-
-    objectStoreStub.createS3Bucket(userName, bucketName);
+    objectStoreStub.createVolume("s3key");
+    volumeStub = objectStoreStub.getVolume("s3key");
 
     // Create HeadBucket and setClient to OzoneClientStub
-    headBucket = new HeadBucket();
-    headBucket.setClient(clientStub);
+    rootEndpoint = new RootEndpoint();
+    rootEndpoint.setClient(clientStub);
   }
 
   @Test
-  public void testHeadBucket() throws Exception {
+  public void testListBucket() throws Exception {
+    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    when(headers.getHeaderString("Authorization")).thenReturn("AWS key:secret");
 
-    Response response = headBucket.head(bucketName);
-    assertEquals(200, response.getStatus());
+    // List operation should success even there is no bucket.
+    ListBucketResponse response = rootEndpoint.get(headers);
+    assertEquals(0, response.getBucketsNum());
 
-  }
-
-  @Test
-  public void testHeadFail() {
-    try {
-      headBucket.head("unknownbucket");
-    } catch (Exception ex) {
-      if (ex instanceof OS3Exception) {
-        assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(),
-            ((OS3Exception) ex).getCode());
-        assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(), (
-            (OS3Exception) ex).getErrorMessage());
-      } else {
-        fail("testHeadFail failed");
-      }
-      return;
+    String bucketBaseName = "bucket-";
+    for(int i = 0; i < 10; i++) {
+      volumeStub.createBucket(
+          bucketBaseName + RandomStringUtils.randomNumeric(3));
     }
-    fail("testHeadFail failed");
+    response = rootEndpoint.get(headers);
+    assertEquals(10, response.getBucketsNum());
   }
+
 }

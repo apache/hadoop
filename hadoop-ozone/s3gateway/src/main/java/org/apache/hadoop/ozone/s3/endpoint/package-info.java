@@ -15,7 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- * Unit tests for the object related rest endpoints.
+ * Rest endpoint implementation for the s3 gateway.
  */
-package org.apache.hadoop.ozone.s3.object;
+@javax.xml.bind.annotation.XmlSchema(
+    namespace = "http://s3.amazonaws"
+        + ".com/doc/2006-03-01/", elementFormDefault =
+    javax.xml.bind.annotation.XmlNsForm.QUALIFIED,
+    xmlns = {
+        @javax.xml.bind.annotation.XmlNs(namespaceURI = "http://s3.amazonaws"
+            + ".com/doc/2006-03-01/", prefix = "")})
+
+package org.apache.hadoop.ozone.s3.endpoint;

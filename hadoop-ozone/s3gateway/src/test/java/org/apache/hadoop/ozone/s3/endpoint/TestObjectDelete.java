@@ -17,13 +17,14 @@
  * under the License.
  *
  */
-package org.apache.hadoop.ozone.s3.object;
+package org.apache.hadoop.ozone.s3.endpoint;
 
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,23 +32,26 @@ import org.junit.Test;
 /**
  * Test delete object.
  */
-public class TestDeleteObject {
+public class TestObjectDelete {
 
   @Test
-  public void delete() throws IOException {
+  public void delete() throws IOException, OS3Exception {
     //GIVEN
     OzoneClient client = new OzoneClientStub();
-    client.getObjectStore().createVolume("vol1");
-    client.getObjectStore().getVolume("vol1").createBucket("b1");
+    client.getObjectStore().createS3Bucket("bilbo", "b1");
+
+    String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
+
     OzoneBucket bucket =
-        client.getObjectStore().getVolume("vol1").getBucket("b1");
+        client.getObjectStore().getVolume(volumeName).getBucket("b1");
+
     bucket.createKey("key1", 0).close();
 
-    DeleteObject rest = new DeleteObject();
+    ObjectEndpoint rest = new ObjectEndpoint();
     rest.setClient(client);
 
     //WHEN
-    rest.delete("vol1", "b1", "key1");
+    rest.delete("b1", "key1");
 
     //THEN
     Assert.assertFalse("Bucket Should not contain any key after delete",

@@ -17,12 +17,10 @@
  * under the License.
  *
  */
-package org.apache.hadoop.ozone.s3.bucket;
+package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
-import org.apache.hadoop.ozone.s3.object.ListObjectResponse;
 
 import org.junit.Test;
 

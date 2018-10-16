@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.s3.bucket;
+package org.apache.hadoop.ozone.s3.endpoint;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ozone.s3.commontypes.BucketMetadata;

@@ -17,32 +17,33 @@
  * under the License.
  *
  */
-package org.apache.hadoop.ozone.s3.object;
+package org.apache.hadoop.ozone.s3.endpoint;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.*;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.core.Response;
-import org.apache.hadoop.ozone.s3.exception.OS3Exception;
-import java.io.IOException;
-
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-
 /**
  * Test head object.
  */
-public class TestHeadObject {
-  private String volName = "vol1";
+public class TestObjectHead {
   private String bucketName = "b1";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
-  private HeadObject headObject;
+  private ObjectEndpoint keyEndpoint;
   private OzoneBucket bucket;
 
   @Before
@@ -52,14 +53,14 @@ public class TestHeadObject {
     objectStoreStub = clientStub.getObjectStore();
 
     // Create volume and bucket
-    objectStoreStub.createVolume(volName);
-    OzoneVolume volumeStub = objectStoreStub.getVolume(volName);
-    volumeStub.createBucket(bucketName);
+    objectStoreStub.createS3Bucket("bilbo", bucketName);
+    String volName = objectStoreStub.getOzoneVolumeName(bucketName);
+
     bucket = objectStoreStub.getVolume(volName).getBucket(bucketName);
 
     // Create HeadBucket and setClient to OzoneClientStub
-    headObject = new HeadObject();
-    headObject.setClient(clientStub);
+    keyEndpoint = new ObjectEndpoint();
+    keyEndpoint.setClient(clientStub);
   }
 
   @Test
@@ -73,7 +74,7 @@ public class TestHeadObject {
     out.close();
 
     //WHEN
-    Response response = headObject.head(volName, bucketName, "key1");
+    Response response = keyEndpoint.head(bucketName, "key1");
 
     //THEN
     Assert.assertEquals(200, response.getStatus());
@@ -85,7 +86,7 @@ public class TestHeadObject {
   public void testHeadFailByBadName() throws Exception {
     //Head an object that doesn't exist.
     try {
-      headObject.head(volName, bucketName, "badKeyName");
+      keyEndpoint.head(bucketName, "badKeyName");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchObject"));
       Assert.assertTrue(ex.getErrorMessage().contains("object does not exist"));

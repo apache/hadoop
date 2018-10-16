@@ -31,7 +31,7 @@ public class IsoDateAdapter extends XmlAdapter<String, Instant> {
 
   public IsoDateAdapter() {
     iso8861Formatter =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mmX")
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
             .withZone(ZoneOffset.UTC);
   }
 
