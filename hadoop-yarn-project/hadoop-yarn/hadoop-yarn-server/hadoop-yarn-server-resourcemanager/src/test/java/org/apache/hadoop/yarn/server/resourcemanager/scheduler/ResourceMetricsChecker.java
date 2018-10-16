@@ -27,33 +27,30 @@ import java.util.Map;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_ALLOCATED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_RELEASED;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CONTAINERS;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_MB;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_V_CORES;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_MB;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_V_CORES;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.PENDING_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricType.COUNTER_LONG;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricType.GAUGE_INT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricType.GAUGE_LONG;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_ALLOCATED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_RELEASED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CONTAINERS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_V_CORES;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
 
 final class ResourceMetricsChecker {
   private final static Logger LOG =
           LoggerFactory.getLogger(ResourceMetricsChecker.class);
+
+  enum ResourceMetricType {
+    GAUGE_INT, GAUGE_LONG, COUNTER_INT, COUNTER_LONG
+  }
 
   private static final ResourceMetricsChecker INITIAL_CHECKER =
       new ResourceMetricsChecker()
@@ -72,28 +69,40 @@ final class ResourceMetricsChecker {
           .gaugeInt(RESERVED_CONTAINERS, 0);
 
   enum ResourceMetricsKey {
-    ALLOCATED_MB("AllocatedMB"),
-    ALLOCATED_V_CORES("AllocatedVCores"),
-    ALLOCATED_CONTAINERS("AllocatedContainers"),
-    AGGREGATE_CONTAINERS_ALLOCATED("AggregateContainersAllocated"),
-    AGGREGATE_CONTAINERS_RELEASED("AggregateContainersReleased"),
-    AVAILABLE_MB("AvailableMB"),
-    AVAILABLE_V_CORES("AvailableVCores"),
-    PENDING_MB("PendingMB"),
-    PENDING_V_CORES("PendingVCores"),
-    PENDING_CONTAINERS("PendingContainers"),
-    RESERVED_MB("ReservedMB"),
-    RESERVED_V_CORES("ReservedVCores"),
-    RESERVED_CONTAINERS("ReservedContainers");
+    ALLOCATED_MB("AllocatedMB", GAUGE_LONG),
+    ALLOCATED_V_CORES("AllocatedVCores", GAUGE_INT),
+    ALLOCATED_CONTAINERS("AllocatedContainers", GAUGE_INT),
+    AGGREGATE_CONTAINERS_ALLOCATED("AggregateContainersAllocated",
+        COUNTER_LONG),
+    AGGREGATE_CONTAINERS_RELEASED("AggregateContainersReleased",
+        COUNTER_LONG),
+    AVAILABLE_MB("AvailableMB", GAUGE_LONG),
+    AVAILABLE_V_CORES("AvailableVCores", GAUGE_INT),
+    PENDING_MB("PendingMB", GAUGE_LONG),
+    PENDING_V_CORES("PendingVCores", GAUGE_INT),
+    PENDING_CONTAINERS("PendingContainers", GAUGE_INT),
+    RESERVED_MB("ReservedMB", GAUGE_LONG),
+    RESERVED_V_CORES("ReservedVCores", GAUGE_INT),
+    RESERVED_CONTAINERS("ReservedContainers", GAUGE_INT),
+    AGGREGATE_VCORE_SECONDS_PREEMPTED(
+        "AggregateVcoreSecondsPreempted", COUNTER_LONG),
+    AGGREGATE_MEMORY_MB_SECONDS_PREEMPTED(
+        "AggregateMemoryMBSecondsPreempted", COUNTER_LONG);
 
     private String value;
+    private ResourceMetricType type;
 
-    ResourceMetricsKey(String value) {
+    ResourceMetricsKey(String value, ResourceMetricType type) {
       this.value = value;
+      this.type = type;
     }
 
     public String getValue() {
       return value;
+    }
+
+    public ResourceMetricType getType() {
+      return type;
     }
   }
 
@@ -123,18 +132,29 @@ final class ResourceMetricsChecker {
   }
 
   ResourceMetricsChecker gaugeLong(ResourceMetricsKey key, long value) {
+    ensureTypeIsCorrect(key, GAUGE_LONG);
     gaugesLong.put(key, value);
     return this;
   }
 
   ResourceMetricsChecker gaugeInt(ResourceMetricsKey key, int value) {
+    ensureTypeIsCorrect(key, GAUGE_INT);
     gaugesInt.put(key, value);
     return this;
   }
 
   ResourceMetricsChecker counter(ResourceMetricsKey key, long value) {
+    ensureTypeIsCorrect(key, COUNTER_LONG);
     counters.put(key, value);
     return this;
+  }
+
+  private void ensureTypeIsCorrect(ResourceMetricsKey
+      key, ResourceMetricType actualType) {
+    if (key.type != actualType) {
+      throw new IllegalStateException("Metrics type should be " + key.type
+          + " instead of " + actualType + " for metrics: " + key.value);
+    }
   }
 
   ResourceMetricsChecker checkAgainst(MetricsSource source) {
