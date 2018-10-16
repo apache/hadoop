@@ -2106,7 +2106,8 @@ public class CapacityScheduler extends
   private void updateQueuePreemptionMetrics(
       CSQueue queue, RMContainer rmc) {
     QueueMetrics qMetrics = queue.getMetrics();
-    long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
+    final long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
+    final long usedSeconds = usedMillis / DateUtils.MILLIS_PER_SECOND;
     Resource containerResource = rmc.getAllocatedResource();
     qMetrics.preemptContainer();
     long mbSeconds = (containerResource.getMemorySize() * usedMillis)
@@ -2115,6 +2116,8 @@ public class CapacityScheduler extends
         / DateUtils.MILLIS_PER_SECOND;
     qMetrics.updatePreemptedMemoryMBSeconds(mbSeconds);
     qMetrics.updatePreemptedVcoreSeconds(vcSeconds);
+    qMetrics.updatePreemptedSecondsForCustomResources(containerResource,
+        usedSeconds);
   }
 
   @Lock(Lock.NoLock.class)
