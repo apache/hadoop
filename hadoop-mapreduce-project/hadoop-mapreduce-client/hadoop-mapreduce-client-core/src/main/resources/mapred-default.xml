@@ -127,7 +127,7 @@
 
   <property>
     <name>mapreduce.job.max.split.locations</name>
-    <value>10</value>
+    <value>15</value>
     <description>The max number of block locations to store for each split for
     locality calculation.
     </description>
