@@ -389,6 +389,7 @@ public class TestDataNodeVolumeFailure {
     DataNodeTestUtils.injectDataDirFailure(dn0Vol2);
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
+    dn0.checkDiskError();
     assertFalse(dn0.shouldRun());
   }
 
