@@ -652,6 +652,14 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
+
+    kp.setPrincipalName(null);
+    kp.setKeytab(null);
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+    } catch (NullPointerException e) {
+        Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+    }
   }
 
   @Test
