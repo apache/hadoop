@@ -199,7 +199,8 @@ public class ConfigFile implements Serializable {
     ConfigFile configFile = (ConfigFile) o;
     return Objects.equals(this.type, configFile.type)
         && Objects.equals(this.destFile, configFile.destFile)
-        && Objects.equals(this.srcFile, configFile.srcFile);
+        && Objects.equals(this.srcFile, configFile.srcFile)
+        && Objects.equals(this.properties, configFile.properties);
   }
 
   @Override

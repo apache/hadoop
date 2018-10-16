@@ -88,7 +88,7 @@ public interface UpgradeComponentsFinder {
       }
 
       if (!Objects.equals(currentDef.getConfiguration(),
-          currentDef.getConfiguration())) {
+          targetDef.getConfiguration())) {
         return targetDef.getComponents();
       }
 
