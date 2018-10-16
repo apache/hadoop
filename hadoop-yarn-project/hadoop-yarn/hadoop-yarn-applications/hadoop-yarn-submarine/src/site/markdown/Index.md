@@ -41,6 +41,4 @@ Click below contents if you want to understand more.
 
 - [Developer guide](DeveloperGuide.html)
 
-- [Installation guide](InstallationGuide.html)
-
-- [Installation guide Chinese version](InstallationGuideChineseVersion.html)
+- [Installation guides](HowToInstall.html)
