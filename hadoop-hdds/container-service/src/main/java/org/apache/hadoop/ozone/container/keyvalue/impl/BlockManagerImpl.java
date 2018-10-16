@@ -53,6 +53,8 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
 public class BlockManagerImpl implements BlockManager {
 
   static final Logger LOG = LoggerFactory.getLogger(BlockManagerImpl.class);
+  private static byte[] blockCommitSequenceIdKey =
+          DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX);
 
   private Configuration config;
 
@@ -89,8 +91,6 @@ public class BlockManagerImpl implements BlockManager {
     Preconditions.checkNotNull(db, "DB cannot be null here");
 
     long blockCommitSequenceId = data.getBlockCommitSequenceId();
-    byte[] blockCommitSequenceIdKey =
-        DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX);
     byte[] blockCommitSequenceIdValue = db.get(blockCommitSequenceIdKey);
 
     // default blockCommitSequenceId for any block is 0. It the putBlock
