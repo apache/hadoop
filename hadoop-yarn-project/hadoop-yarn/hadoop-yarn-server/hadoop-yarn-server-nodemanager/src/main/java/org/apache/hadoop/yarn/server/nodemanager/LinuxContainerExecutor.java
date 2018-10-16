@@ -658,6 +658,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         ctx.getNmPrivateContainerScriptPath())
       .setExecutionAttribute(NM_PRIVATE_TOKENS_PATH,
         ctx.getNmPrivateTokensPath())
+      .setExecutionAttribute(NM_PRIVATE_KEYSTORE_PATH,
+        ctx.getNmPrivateKeystorePath())
+      .setExecutionAttribute(NM_PRIVATE_TRUSTSTORE_PATH,
+        ctx.getNmPrivateTruststorePath())
       .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
       .setExecutionAttribute(LOCAL_DIRS, ctx.getLocalDirs())
       .setExecutionAttribute(LOG_DIRS, ctx.getLogDirs())

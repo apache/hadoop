@@ -218,6 +218,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     Container container = ctx.getContainer();
     Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
     Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
+    Path nmPrivateKeystorePath = ctx.getNmPrivateKeystorePath();
+    Path nmPrivateTruststorePath = ctx.getNmPrivateTruststorePath();
     String user = ctx.getUser();
     Path containerWorkDir = ctx.getContainerWorkDir();
     List<String> localDirs = ctx.getLocalDirs();
@@ -252,6 +254,18 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     Path tokenDst =
       new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
     copyFile(nmPrivateTokensPath, tokenDst, user);
+
+    if (nmPrivateKeystorePath != null) {
+      Path keystoreDst =
+          new Path(containerWorkDir, ContainerLaunch.KEYSTORE_FILE);
+      copyFile(nmPrivateKeystorePath, keystoreDst, user);
+    }
+
+    if (nmPrivateTruststorePath != null) {
+      Path truststoreDst =
+          new Path(containerWorkDir, ContainerLaunch.TRUSTSTORE_FILE);
+      copyFile(nmPrivateTruststorePath, truststoreDst, user);
+    }
 
     // copy launch script to work dir
     Path launchDst =

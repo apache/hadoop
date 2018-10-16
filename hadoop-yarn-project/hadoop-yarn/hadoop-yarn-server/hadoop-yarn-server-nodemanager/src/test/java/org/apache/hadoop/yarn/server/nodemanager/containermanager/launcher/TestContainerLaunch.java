@@ -25,6 +25,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -55,9 +56,12 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -108,11 +112,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -124,6 +130,8 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
@@ -2442,5 +2450,146 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertEquals(StringUtils.join(",",
         launch.getUserFilecacheDirs(localDirsForRead)),
         StringUtils.join(",", ctx.getUserFilecacheDirs()));
+  }
+
+  @Test(timeout = 20000)
+  public void testFilesAndEnvWithoutHTTPS() throws Exception {
+    testFilesAndEnv(false);
+  }
+
+  @Test(timeout = 20000)
+  public void testFilesAndEnvWithHTTPS() throws Exception {
+    testFilesAndEnv(true);
+  }
+
+  private void testFilesAndEnv(boolean https) throws Exception {
+    // setup mocks
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler handler = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(handler);
+    ContainerExecutor containerExecutor = mock(ContainerExecutor.class);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        DataOutputStream dos = (DataOutputStream) args[0];
+        dos.writeBytes("script");
+        return null;
+      }
+    }).when(containerExecutor).writeLaunchEnv(
+        any(), any(), any(), any(), any(), any(), any());
+    Application app = mock(Application.class);
+    ApplicationId appId = mock(ApplicationId.class);
+    when(appId.toString()).thenReturn("1");
+    when(app.getAppId()).thenReturn(appId);
+    Container container = mock(Container.class);
+    ContainerId id = mock(ContainerId.class);
+    when(id.toString()).thenReturn("1");
+    when(container.getContainerId()).thenReturn(id);
+    when(container.getUser()).thenReturn("user");
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    when(clc.getCommands()).thenReturn(Lists.newArrayList());
+    when(container.getLaunchContext()).thenReturn(clc);
+    Credentials credentials = mock(Credentials.class);
+    when(container.getCredentials()).thenReturn(credentials);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        DataOutputStream dos = (DataOutputStream) args[0];
+        dos.writeBytes("credentials");
+        return null;
+      }
+    }).when(credentials).writeTokenStorageToStream(any(DataOutputStream.class));
+    if (https) {
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE))
+          .thenReturn("keystore".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD))
+          .thenReturn("keystore_password".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE))
+          .thenReturn("truststore".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD))
+          .thenReturn("truststore_password".getBytes());
+    }
+
+    // call containerLaunch
+    ContainerLaunch containerLaunch = new ContainerLaunch(
+        distContext, conf, dispatcher,
+        containerExecutor, app, container, dirsHandler, containerManager);
+    containerLaunch.call();
+
+    // verify the nmPrivate paths and files
+    ArgumentCaptor<ContainerStartContext> cscArgument =
+        ArgumentCaptor.forClass(ContainerStartContext.class);
+    verify(containerExecutor, times(1)).launchContainer(cscArgument.capture());
+    ContainerStartContext csc = cscArgument.getValue();
+    Path nmPrivate = dirsHandler.getLocalPathForWrite(
+        ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR +
+            appId.toString() + Path.SEPARATOR + id.toString());
+    Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.CONTAINER_SCRIPT),
+        csc.getNmPrivateContainerScriptPath());
+    Assert.assertEquals(new Path(nmPrivate,
+        String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+            id.toString())), csc.getNmPrivateTokensPath());
+    Assert.assertEquals("script",
+        readStringFromPath(csc.getNmPrivateContainerScriptPath()));
+    Assert.assertEquals("credentials",
+        readStringFromPath(csc.getNmPrivateTokensPath()));
+    if (https) {
+      Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.KEYSTORE_FILE),
+          csc.getNmPrivateKeystorePath());
+      Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.TRUSTSTORE_FILE),
+          csc.getNmPrivateTruststorePath());
+      Assert.assertEquals("keystore",
+          readStringFromPath(csc.getNmPrivateKeystorePath()));
+      Assert.assertEquals("truststore",
+          readStringFromPath(csc.getNmPrivateTruststorePath()));
+    } else {
+      Assert.assertNull(csc.getNmPrivateKeystorePath());
+      Assert.assertNull(csc.getNmPrivateTruststorePath());
+    }
+
+    // verify env
+    ArgumentCaptor<Map> envArgument = ArgumentCaptor.forClass(Map.class);
+    verify(containerExecutor, times(1)).writeLaunchEnv(any(),
+        envArgument.capture(), any(), any(), any(), any(), any());
+    Map env = envArgument.getValue();
+    Path workDir = dirsHandler.getLocalPathForWrite(
+        ContainerLocalizer.USERCACHE + Path.SEPARATOR + container.getUser() +
+            Path.SEPARATOR + ContainerLocalizer.APPCACHE + Path.SEPARATOR +
+            app.getAppId().toString() + Path.SEPARATOR +
+            container.getContainerId().toString());
+    Assert.assertEquals(new Path(workDir,
+            ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE).toUri().getPath(),
+        env.get(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME));
+    if (https) {
+      Assert.assertEquals(new Path(workDir,
+              ContainerLaunch.KEYSTORE_FILE).toUri().getPath(),
+          env.get(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME));
+      Assert.assertEquals("keystore_password",
+          env.get(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME));
+      Assert.assertEquals(new Path(workDir,
+              ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath(),
+          env.get(ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME));
+      Assert.assertEquals("truststore_password",
+          env.get(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME));
+    } else {
+      Assert.assertNull(env.get("KEYSTORE_FILE_LOCATION"));
+      Assert.assertNull(env.get("KEYSTORE_PASSWORD"));
+      Assert.assertNull(env.get("TRUSTSTORE_FILE_LOCATION"));
+      Assert.assertNull(env.get("TRUSTSTORE_PASSWORD"));
+    }
+  }
+
+  private String readStringFromPath(Path p) throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    try (FSDataInputStream is = fs.open(p)) {
+      byte[] bytes = IOUtils.readFullyToByteArray(is);
+      return new String(bytes);
+    }
   }
 }

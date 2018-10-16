@@ -168,13 +168,13 @@ void test_get_user_directory() {
 void test_check_nm_local_dir() {
   // check filesystem is same as running user.
   int expected = 0;
-  char *local_path = TEST_ROOT "target";
+  char *local_path = TEST_ROOT "/target";
   char *root_path = "/";
   if (mkdirs(local_path, 0700) != 0) {
     printf("FAIL: unble to create node manager local directory: %s\n", local_path);
     exit(1);
   }
-  int actual = check_nm_local_dir(nm_uid, local_path);
+  int actual = check_nm_local_dir(user_detail->pw_uid, local_path);
   if (expected != actual) {
     printf("test_nm_local_dir expected %d got %d\n", expected, actual);
     exit(1);
@@ -199,31 +199,76 @@ void test_get_app_directory() {
   free(app_dir);
 }
 
-void test_get_container_directory() {
-  char *container_dir = get_container_work_directory(TEST_ROOT, "owen", "app_1",
+void test_get_container_work_directory() {
+  char *expected_file = TEST_ROOT "/usercache/user/appcache/app_1/container_1";
+  char *work_dir = get_container_work_directory(TEST_ROOT, "user", "app_1",
 						 "container_1");
-  char *expected = TEST_ROOT "/usercache/owen/appcache/app_1/container_1";
-  if (strcmp(container_dir, expected) != 0) {
-    printf("Fail get_container_work_directory got %s expected %s\n",
-	   container_dir, expected);
+  if (strcmp(work_dir, expected_file) != 0) {
+    printf("Fail get_container_work_directory expected %s got %s\n",
+         expected_file, work_dir);
     exit(1);
   }
-  free(container_dir);
+  free(work_dir);
 }
 
 void test_get_container_launcher_file() {
-  char *expected_file = (TEST_ROOT "/usercache/user/appcache/app_200906101234_0001"
-			 "/launch_container.sh");
-  char *app_dir = get_app_directory(TEST_ROOT, "user",
-                                    "app_200906101234_0001");
-  char *container_file =  get_container_launcher_file(app_dir);
-  if (strcmp(container_file, expected_file) != 0) {
-    printf("failure to match expected container file %s vs %s\n", container_file,
-           expected_file);
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/"
+            "app_200906101234_0001/container_1/launch_container.sh");
+  char *work_dir = get_container_work_directory(TEST_ROOT, "user",
+            "app_200906101234_0001", "container_1");
+  char *launcher_file =  get_container_launcher_file(work_dir);
+  if (strcmp(launcher_file, expected_file) != 0) {
+    printf("failure to match expected launcher file %s got %s\n",
+      expected_file, launcher_file);
     exit(1);
   }
-  free(app_dir);
-  free(container_file);
+  free(work_dir);
+  free(launcher_file);
+}
+
+void test_get_container_credentials_file() {
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/"
+            "app_200906101234_0001/container_1/container_tokens");
+  char *work_dir = get_container_work_directory(TEST_ROOT, "user",
+            "app_200906101234_0001", "container_1");
+  char *credentials_file =  get_container_credentials_file(work_dir);
+  if (strcmp(credentials_file, expected_file) != 0) {
+    printf("failure to match expected credentials file %s got %s\n",
+      expected_file, credentials_file);
+    exit(1);
+  }
+  free(work_dir);
+  free(credentials_file);
+}
+
+void test_get_container_keystore_file() {
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/"
+            "app_200906101234_0001/container_1/yarn_provided.keystore");
+  char *work_dir = get_container_work_directory(TEST_ROOT, "user",
+            "app_200906101234_0001", "container_1");
+  char *keystore_file =  get_container_keystore_file(work_dir);
+  if (strcmp(keystore_file, expected_file) != 0) {
+    printf("failure to match expected keystore file %s got %s\n",
+      expected_file, keystore_file);
+    exit(1);
+  }
+  free(work_dir);
+  free(keystore_file);
+}
+
+void test_get_container_truststore_file() {
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/"
+            "app_200906101234_0001/container_1/yarn_provided.truststore");
+  char *work_dir = get_container_work_directory(TEST_ROOT, "user",
+            "app_200906101234_0001", "container_1");
+  char *truststore_file =  get_container_truststore_file(work_dir);
+  if (strcmp(truststore_file, expected_file) != 0) {
+    printf("failure to match expected truststore file %s got %s\n",
+      expected_file, truststore_file);
+    exit(1);
+  }
+  free(work_dir);
+  free(truststore_file);
 }
 
 void test_get_app_log_dir() {
@@ -762,38 +807,31 @@ void test_signal_container_group() {
   }
 }
 
+void create_text_file(const char* filename, const char* contents) {
+  FILE* creds = fopen(filename, "w");
+  if (creds == NULL) {
+    printf("FAIL: failed to create %s file - %s\n", filename, strerror(errno));
+    exit(1);
+  }
+  if (fwrite(contents, sizeof(char), sizeof(contents), creds)
+        < sizeof(contents)) {
+    printf("FAIL: fwrite failed on file %s- %s\n", filename, strerror(errno));
+    exit(1);
+  }
+  if (fclose(creds) != 0) {
+    printf("FAIL: fclose failed on file %s - %s\n", filename, strerror(errno));
+    exit(1);
+  }
+}
+
 void test_init_app() {
   printf("\nTesting init app\n");
   if (seteuid(0) != 0) {
     printf("FAIL: seteuid to root failed - %s\n", strerror(errno));
     exit(1);
   }
-  FILE* creds = fopen(TEST_ROOT "/creds.txt", "w");
-  if (creds == NULL) {
-    printf("FAIL: failed to create credentials file - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fprintf(creds, "secret key\n") < 0) {
-    printf("FAIL: fprintf failed - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fclose(creds) != 0) {
-    printf("FAIL: fclose failed - %s\n", strerror(errno));
-    exit(1);
-  }
-  FILE* job_xml = fopen(TEST_ROOT "/job.xml", "w");
-  if (job_xml == NULL) {
-    printf("FAIL: failed to create job file - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fprintf(job_xml, "<jobconf/>\n") < 0) {
-    printf("FAIL: fprintf failed - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fclose(job_xml) != 0) {
-    printf("FAIL: fclose failed - %s\n", strerror(errno));
-    exit(1);
-  }
+  create_text_file(TEST_ROOT "/creds.txt", "secret key");
+  create_text_file(TEST_ROOT "/job.xml", "<jobconf/>\n");
   if (seteuid(user_detail->pw_uid) != 0) {
     printf("FAIL: failed to seteuid back to user - %s\n", strerror(errno));
     exit(1);
@@ -807,19 +845,19 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(yarn_username, "app_4", "container_1",
+    exit(initialize_app(yarn_username, "app_4", "container_1",
                        TEST_ROOT "/creds.txt",
-                       local_dirs, log_dirs, final_pgm) != 0) {
-      printf("FAIL: failed in child\n");
-      exit(42);
-    }
-    // should never return
-    exit(1);
+                       local_dirs, log_dirs, final_pgm));
   }
   int status = 0;
   if (waitpid(child, &status, 0) <= 0) {
     printf("FAIL: failed waiting for process %" PRId64 " - %s\n", (int64_t)child,
 	   strerror(errno));
+    exit(1);
+  }
+  if (WEXITSTATUS(status) != 0) {
+    printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+           (int64_t)child, WEXITSTATUS(status));
     exit(1);
   }
   if (access(TEST_ROOT "/logs/userlogs/app_4", R_OK) != 0) {
@@ -859,24 +897,24 @@ void test_init_app() {
   free(container_dir);
 }
 
-void test_run_container() {
-  printf("\nTesting run container\n");
+void test_launch_container(const char* app, int https) {
+  if (https == 1) {
+    printf("\nTesting launch container with HTTPS\n");
+  } else {
+    printf("\nTesting launch container without HTTPS\n");
+  }
   if (seteuid(0) != 0) {
     printf("FAIL: seteuid to root failed - %s\n", strerror(errno));
     exit(1);
   }
-  FILE* creds = fopen(TEST_ROOT "/creds.txt", "w");
-  if (creds == NULL) {
-    printf("FAIL: failed to create credentials file - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fprintf(creds, "secret key\n") < 0) {
-    printf("FAIL: fprintf failed - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (fclose(creds) != 0) {
-    printf("FAIL: fclose failed - %s\n", strerror(errno));
-    exit(1);
+  create_text_file(TEST_ROOT "/creds.txt", "secret key");
+  char* keystore_file = NULL;
+  char* truststore_file = NULL;
+  if (https == 1) {
+    keystore_file = TEST_ROOT "/yarn_provided.keystore";
+    truststore_file = TEST_ROOT "/yarn_provided.truststore";
+    create_text_file(keystore_file, "keystore");
+    create_text_file(truststore_file, "truststore");
   }
 
   char * cgroups_pids[] = { TEST_ROOT "/cgroups-pid1.txt", TEST_ROOT "/cgroups-pid2.txt", 0 };
@@ -906,32 +944,36 @@ void test_run_container() {
   fflush(stdout);
   fflush(stderr);
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-1",
-					      yarn_username, "app_4", "container_1");
+         yarn_username, app, "container_1");
   const char * pid_file = TEST_ROOT "/pid.txt";
 
   pid_t child = fork();
   if (child == -1) {
     printf("FAIL: failed to fork process for init_app - %s\n",
-	   strerror(errno));
+         strerror(errno));
     exit(1);
   } else if (child == 0) {
-    if (launch_container_as_user(yarn_username, "app_4", "container_1",
-          container_dir, script_name, TEST_ROOT "/creds.txt", pid_file,
-          local_dirs, log_dirs,
-          "cgroups", cgroups_pids) != 0) {
-      printf("FAIL: failed in child\n");
-      exit(42);
-    }
-    // should never return
-    exit(1);
+    exit(launch_container_as_user(yarn_username, app, "container_1",
+                        container_dir, script_name, TEST_ROOT "/creds.txt",
+                        https, keystore_file, truststore_file,
+                        pid_file, local_dirs, log_dirs,
+                        "cgroups", cgroups_pids));
   }
   int status = 0;
   if (waitpid(child, &status, 0) <= 0) {
     printf("FAIL: failed waiting for process %" PRId64 " - %s\n", (int64_t)child,
-	   strerror(errno));
+         strerror(errno));
     exit(1);
   }
-  if (access(TEST_ROOT "/logs/userlogs/app_4/container_1", R_OK) != 0) {
+  if (WEXITSTATUS(status) != 0) {
+    printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+           (int64_t)child, WEXITSTATUS(status));
+    exit(1);
+  }
+  char container_log_path[100000];
+  snprintf(container_log_path, sizeof container_log_path, "%s%s%s%s", TEST_ROOT,
+            "/logs/userlogs/", app, "/container_1");
+  if (access(container_log_path, R_OK) != 0) {
     printf("FAIL: failed to create container log directory\n");
     exit(1);
   }
@@ -939,14 +981,17 @@ void test_run_container() {
     printf("FAIL: failed to create container directory %s\n", container_dir);
     exit(1);
   }
-  char buffer[100000];
-  sprintf(buffer, "%s/foobar", container_dir);
-  if (access(buffer, R_OK) != 0) {
-    printf("FAIL: failed to create touch file %s\n", buffer);
+  char touchfile[100000];
+  sprintf(touchfile, "%s/foobar", container_dir);
+  if (access(touchfile, R_OK) != 0) {
+    printf("FAIL: failed to create touch file %s\n", touchfile);
     exit(1);
   }
   free(container_dir);
-  container_dir = get_app_log_directory(TEST_ROOT "/logs/userlogs", "app_4/container_1");
+  char app_log_path[100000];
+  snprintf(app_log_path, sizeof app_log_path, "%s%s%s", TEST_ROOT,
+            "/logs/userlogs/", app);
+  container_dir = get_app_log_directory(app_log_path, "container_1");
   if (access(container_dir, R_OK) != 0) {
     printf("FAIL: failed to create app log directory %s\n", container_dir);
     exit(1);
@@ -1395,6 +1440,13 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  if (mkdirs(TEST_ROOT, 0777) != 0) {
+    exit(1);
+  }
+  if (chmod(TEST_ROOT, 0777) != 0) {    // in case of umask
+    exit(1);
+  }
+
   if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
     exit(1);
   }
@@ -1448,11 +1500,20 @@ int main(int argc, char **argv) {
   printf("\nTesting get_app_directory()\n");
   test_get_app_directory();
 
-  printf("\nTesting get_container_directory()\n");
-  test_get_container_directory();
+  printf("\nTesting get_container_work_directory()\n");
+  test_get_container_work_directory();
 
   printf("\nTesting get_container_launcher_file()\n");
   test_get_container_launcher_file();
+
+  printf("\nTesting get_container_credentials_file()\n");
+  test_get_container_credentials_file();
+
+  printf("\nTesting get_container_keystore_file()\n");
+  test_get_container_keystore_file();
+
+  printf("\nTesting get_container_truststore_file()\n");
+  test_get_container_truststore_file();
 
   printf("\nTesting get_app_log_dir()\n");
   test_get_app_log_dir();
@@ -1510,7 +1571,8 @@ int main(int argc, char **argv) {
     // these tests do internal forks so that the change_owner and execs
     // don't mess up our process.
     test_init_app();
-    test_run_container();
+    test_launch_container("app_4", 0);
+    test_launch_container("app_5", 1);
   }
 
   /*

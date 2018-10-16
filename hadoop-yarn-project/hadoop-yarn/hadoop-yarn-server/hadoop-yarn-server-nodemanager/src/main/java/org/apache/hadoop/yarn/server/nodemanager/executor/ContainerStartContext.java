@@ -40,6 +40,8 @@ public final class ContainerStartContext {
   private final Map<Path, List<String>> localizedResources;
   private final Path nmPrivateContainerScriptPath;
   private final Path nmPrivateTokensPath;
+  private final Path nmPrivateKeystorePath;
+  private final Path nmPrivateTruststorePath;
   private final String user;
   private final String appId;
   private final Path containerWorkDir;
@@ -57,6 +59,8 @@ public final class ContainerStartContext {
     private Map<Path, List<String>> localizedResources;
     private Path nmPrivateContainerScriptPath;
     private Path nmPrivateTokensPath;
+    private Path nmPrivateKeystorePath;
+    private Path nmPrivateTruststorePath;
     private String user;
     private String appId;
     private Path containerWorkDir;
@@ -91,6 +95,16 @@ public final class ContainerStartContext {
 
     public Builder setNmPrivateTokensPath(Path nmPrivateTokensPath) {
       this.nmPrivateTokensPath = nmPrivateTokensPath;
+      return this;
+    }
+
+    public Builder setNmPrivateKeystorePath(Path nmPrivateKeystorePath) {
+      this.nmPrivateKeystorePath = nmPrivateKeystorePath;
+      return this;
+    }
+
+    public Builder setNmPrivateTruststorePath(Path nmPrivateTruststorePath) {
+      this.nmPrivateTruststorePath = nmPrivateTruststorePath;
       return this;
     }
 
@@ -161,6 +175,8 @@ public final class ContainerStartContext {
     this.localizedResources = builder.localizedResources;
     this.nmPrivateContainerScriptPath = builder.nmPrivateContainerScriptPath;
     this.nmPrivateTokensPath = builder.nmPrivateTokensPath;
+    this.nmPrivateKeystorePath = builder.nmPrivateKeystorePath;
+    this.nmPrivateTruststorePath = builder.nmPrivateTruststorePath;
     this.user = builder.user;
     this.appId = builder.appId;
     this.containerWorkDir = builder.containerWorkDir;
@@ -192,6 +208,14 @@ public final class ContainerStartContext {
 
   public Path getNmPrivateTokensPath() {
     return this.nmPrivateTokensPath;
+  }
+
+  public Path getNmPrivateKeystorePath() {
+    return this.nmPrivateKeystorePath;
+  }
+
+  public Path getNmPrivateTruststorePath() {
+    return this.nmPrivateTruststorePath;
   }
 
   public String getUser() {

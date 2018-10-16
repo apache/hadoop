@@ -613,6 +613,16 @@ char *get_container_credentials_file(const char* work_dir) {
       CREDENTIALS_FILENAME);
 }
 
+char *get_container_keystore_file(const char* work_dir) {
+  return concatenate("%s/%s", "am container keystore", 2, work_dir,
+      KEYSTORE_FILENAME);
+}
+
+char *get_container_truststore_file(const char* work_dir) {
+  return concatenate("%s/%s", "am container truststore", 2, work_dir,
+      TRUSTSTORE_FILENAME);
+}
+
 /**
  * Get the app log directory under the given log_root
  */
@@ -1565,9 +1575,11 @@ int exec_docker_command(char *docker_command, char **argv, int argc) {
 }
 
 int create_script_paths(const char *work_dir,
-  const char *script_name, const char *cred_file,
-  char** script_file_dest, char** cred_file_dest,
-  int* container_file_source, int* cred_file_source ) {
+  const char *script_name, const char *cred_file, const int https,
+  const char *keystore_file, const char *truststore_file,
+  char** script_file_dest, char** cred_file_dest, char** keystore_file_dest,
+  char** truststore_file_dest, int* container_file_source,
+  int* cred_file_source, int* keystore_file_source, int* truststore_file_source) {
   int exit_code = -1;
 
   *script_file_dest = get_container_launcher_file(work_dir);
@@ -1585,6 +1597,24 @@ int create_script_paths(const char *work_dir,
     fflush(ERRORFILE);
     return exit_code;
   }
+
+  if (https == 1) {
+    *keystore_file_dest = get_container_keystore_file(work_dir);
+    if (NULL == keystore_file_dest) {
+      exit_code = OUT_OF_MEMORY;
+      fprintf(ERRORFILE, "Could not create keystore_file_dest");
+      fflush(ERRORFILE);
+      return exit_code;
+    }
+    *truststore_file_dest = get_container_truststore_file(work_dir);
+    if (NULL == truststore_file_dest) {
+      exit_code = OUT_OF_MEMORY;
+      fprintf(ERRORFILE, "Could not create truststore_file_dest");
+      fflush(ERRORFILE);
+      return exit_code;
+    }
+  }
+
   // open launch script
   *container_file_source = open_file_as_nm(script_name);
   if (*container_file_source == -1) {
@@ -1596,10 +1626,29 @@ int create_script_paths(const char *work_dir,
   // open credentials
   *cred_file_source = open_file_as_nm(cred_file);
   if (*cred_file_source == -1) {
-    exit_code = INVALID_ARGUMENT_NUMBER;
+    exit_code = INVALID_NM_ROOT_DIRS;
     fprintf(ERRORFILE, "Could not open cred file");
     fflush(ERRORFILE);
     return exit_code;
+  }
+
+  if (https == 1) {
+    // open keystore
+    *keystore_file_source = open_file_as_nm(keystore_file);
+    if (*keystore_file_source == -1) {
+      exit_code = INVALID_NM_ROOT_DIRS;
+      fprintf(ERRORFILE, "Could not open keystore file");
+      fflush(ERRORFILE);
+      return exit_code;
+    }
+    // open truststore
+    *truststore_file_source = open_file_as_nm(truststore_file);
+    if (*truststore_file_source == -1) {
+      exit_code = INVALID_NM_ROOT_DIRS;
+      fprintf(ERRORFILE, "Could not open truststore file");
+      fflush(ERRORFILE);
+      return exit_code;
+    }
   }
 
   exit_code = 0;
@@ -1609,10 +1658,14 @@ int create_script_paths(const char *work_dir,
 int create_local_dirs(const char * user, const char *app_id,
                        const char *container_id, const char *work_dir,
                        const char *script_name, const char *cred_file,
+                       const int https,
+                       const char *keystore_file, const char *truststore_file,
                        char* const* local_dirs,
                        char* const* log_dirs, int effective_user,
                        char* script_file_dest, char* cred_file_dest,
-                       int container_file_source, int cred_file_source) {
+                       char* keystore_file_dest, char* truststore_file_dest,
+                       int container_file_source, int cred_file_source,
+                       int keystore_file_source, int truststore_file_source) {
   int exit_code = -1;
   // create the user directory on all disks
   int result = initialize_user(user, local_dirs);
@@ -1665,10 +1718,30 @@ int create_local_dirs(const char * user, const char *app_id,
   // Copy credential file to permissions 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
-    exit_code = COULD_NOT_CREATE_CREDENTIALS_FILE;
+    exit_code = COULD_NOT_CREATE_CREDENTIALS_COPY;
     fprintf(ERRORFILE, "Could not copy file");
     fflush(ERRORFILE);
     goto cleanup;
+  }
+
+  if (https == 1) {
+    // Copy keystore file to permissions 600
+    if (copy_file(keystore_file_source, keystore_file, keystore_file_dest,
+          S_IRUSR | S_IWUSR) != 0) {
+      exit_code = COULD_NOT_CREATE_KEYSTORE_COPY;
+      fprintf(ERRORFILE, "Could not copy file");
+      fflush(ERRORFILE);
+      goto cleanup;
+    }
+
+    // Copy truststore file to permissions 600
+    if (copy_file(truststore_file_source, truststore_file, truststore_file_dest,
+          S_IRUSR | S_IWUSR) != 0) {
+      exit_code = COULD_NOT_CREATE_TRUSTSTORE_COPY;
+      fprintf(ERRORFILE, "Could not copy file");
+      fflush(ERRORFILE);
+      goto cleanup;
+    }
   }
 
   if (chdir(work_dir) != 0) {
@@ -1708,17 +1781,23 @@ int create_user_filecache_dirs(const char * user, char* const* local_dirs) {
 int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
+                              const int https,
+                              const char *keystore_file, const char *truststore_file,
                               const char *pid_file, char* const* local_dirs,
                               char* const* log_dirs, const char *command_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
+  char *keystore_file_dest = NULL;
+  char *truststore_file_dest = NULL;
   char *exit_code_file = NULL;
   char *docker_command_with_binary = NULL;
   char *docker_inspect_command = NULL;
   char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
+  int keystore_file_source = -1;
+  int truststore_file_source = -1;
   int use_entry_point = 0;
 
   gid_t user_gid = getegid();
@@ -1729,8 +1808,8 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(
-    work_dir, script_name, cred_file, &script_file_dest, &cred_file_dest,
-    &container_file_source, &cred_file_source);
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, &script_file_dest, &cred_file_dest,
+    &keystore_file_dest, &truststore_file_dest, &container_file_source, &cred_file_source, &keystore_file_source, &truststore_file_source);
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create script path\n");
     fflush(ERRORFILE);
@@ -1739,9 +1818,9 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 
   fprintf(LOGFILE, "Creating local dirs...\n");
   exit_code = create_local_dirs(user, app_id, container_id,
-    work_dir, script_name, cred_file, local_dirs, log_dirs,
-    1, script_file_dest, cred_file_dest,
-    container_file_source, cred_file_source);
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, local_dirs, log_dirs,
+    1, script_file_dest, cred_file_dest, keystore_file_dest, truststore_file_dest,
+    container_file_source, cred_file_source, keystore_file_source, truststore_file_source);
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create local files and directories %d %d\n", container_file_source, cred_file_source);
     fflush(ERRORFILE);
@@ -1973,6 +2052,8 @@ cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
+  free(keystore_file_dest);
+  free(truststore_file_dest);
   free(docker_command_with_binary);
   free(docker_inspect_command);
   free_values(docker_command);
@@ -1983,12 +2064,16 @@ cleanup:
 int launch_container_as_user(const char *user, const char *app_id,
                    const char *container_id, const char *work_dir,
                    const char *script_name, const char *cred_file,
+                   const int https,
+                   const char *keystore_file, const char *truststore_file,
                    const char* pid_file, char* const* local_dirs,
                    char* const* log_dirs, const char *resources_key,
                    char* const* resources_values) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
+  char *keystore_file_dest = NULL;
+  char *truststore_file_dest = NULL;
   char *exit_code_file = NULL;
 
   fprintf(LOGFILE, "Getting exit code file...\n");
@@ -2000,11 +2085,13 @@ int launch_container_as_user(const char *user, const char *app_id,
 
   int container_file_source =-1;
   int cred_file_source = -1;
+  int keystore_file_source = -1;
+  int truststore_file_source = -1;
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(
-    work_dir, script_name, cred_file, &script_file_dest, &cred_file_dest,
-    &container_file_source, &cred_file_source);
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, &script_file_dest, &cred_file_dest,
+    &keystore_file_dest, &truststore_file_dest, &container_file_source, &cred_file_source, &keystore_file_source, &truststore_file_source);
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create local files and directories");
     fflush(ERRORFILE);
@@ -2052,9 +2139,9 @@ int launch_container_as_user(const char *user, const char *app_id,
 
   fprintf(LOGFILE, "Creating local dirs...\n");
   exit_code = create_local_dirs(user, app_id, container_id,
-    work_dir, script_name, cred_file, local_dirs, log_dirs,
-    0, script_file_dest, cred_file_dest,
-    container_file_source, cred_file_source);
+    work_dir, script_name, cred_file, https, keystore_file, truststore_file, local_dirs, log_dirs,
+    0, script_file_dest, cred_file_dest, keystore_file_dest, truststore_file_dest,
+    container_file_source, cred_file_source, keystore_file_source, truststore_file_source);
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create local files and directories");
     fflush(ERRORFILE);
@@ -2087,6 +2174,8 @@ int launch_container_as_user(const char *user, const char *app_id,
     free(exit_code_file);
     free(script_file_dest);
     free(cred_file_dest);
+    free(keystore_file_dest);
+    free(truststore_file_dest);
     return exit_code;
 }
 
