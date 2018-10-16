@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
@@ -30,11 +31,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -97,6 +100,26 @@ public class TestObserverNode {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
     }
+  }
+
+  @Test
+  public void testNoActiveToObserver() throws Exception {
+    try {
+      dfsCluster.transitionToObserver(0);
+    } catch (ServiceFailedException e) {
+      return;
+    }
+    fail("active cannot be transitioned to observer");
+  }
+
+  @Test
+  public void testNoObserverToActive() throws Exception {
+    try {
+      dfsCluster.transitionToActive(2);
+    } catch (ServiceFailedException e) {
+      return;
+    }
+    fail("observer cannot be transitioned to active");
   }
 
   @Test
