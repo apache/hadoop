@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -45,8 +46,7 @@ public class CreateVolumeHandler extends Handler {
   private String uri;
 
   @Option(names = {"--user", "-u"},
-      description = "Owner of of the volume", required =
-      true)
+      description = "Owner of of the volume")
   private String userName;
 
   @Option(names = {"--quota", "-q"},
@@ -64,6 +64,9 @@ public class CreateVolumeHandler extends Handler {
    */
   @Override
   public Void call() throws Exception {
+    if(userName == null) {
+      userName = UserGroupInformation.getCurrentUser().getUserName();
+    }
 
     URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
