@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.s3.object;
+package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -47,6 +47,9 @@ public class ListObjectResponse {
 
   @XmlElement(name = "MaxKeys")
   private int maxKeys;
+
+  @XmlElement(name = "KeyCount")
+  private int keyCount;
 
   @XmlElement(name = "Delimiter")
   private String delimiter = "/";
@@ -143,5 +146,13 @@ public class ListObjectResponse {
 
   public void addPrefix(String relativeKeyName) {
     commonPrefixes.add(new CommonPrefix(relativeKeyName));
+  }
+
+  public int getKeyCount() {
+    return keyCount;
+  }
+
+  public void setKeyCount(int keyCount) {
+    this.keyCount = keyCount;
   }
 }

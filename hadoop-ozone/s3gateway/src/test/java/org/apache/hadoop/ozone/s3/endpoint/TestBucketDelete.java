@@ -18,30 +18,31 @@
  *
  */
 
-package org.apache.hadoop.ozone.s3.bucket;
+package org.apache.hadoop.ozone.s3.endpoint;
+
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.ObjectStoreStub;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+
 import org.apache.http.HttpStatus;
-import org.junit.Before;
-import org.junit.Test;
-
-import javax.ws.rs.core.Response;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This class tests delete bucket functionality.
  */
-public class TestDeleteBucket {
+public class TestBucketDelete {
+
   private String bucketName = "myBucket";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
-  private DeleteBucket deleteBucket;
+  private BucketEndpoint bucketEndpoint;
 
   @Before
   public void setup() throws Exception {
@@ -53,15 +54,15 @@ public class TestDeleteBucket {
     objectStoreStub.createS3Bucket("ozone", bucketName);
 
     // Create HeadBucket and setClient to OzoneClientStub
-    deleteBucket = new DeleteBucket();
-    deleteBucket.setClient(clientStub);
+    bucketEndpoint = new BucketEndpoint();
+    bucketEndpoint.setClient(clientStub);
 
 
   }
 
   @Test
-  public void testDeleteBucket() throws Exception {
-    Response response = deleteBucket.delete(bucketName);
+  public void testBucketEndpoint() throws Exception {
+    Response response = bucketEndpoint.delete(bucketName);
     assertEquals(response.getStatus(), HttpStatus.SC_NO_CONTENT);
 
   }
@@ -69,7 +70,7 @@ public class TestDeleteBucket {
   @Test
   public void testDeleteWithNoSuchBucket() throws Exception {
     try {
-      deleteBucket.delete("unknownbucket");
+      bucketEndpoint.delete("unknownbucket");
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getCode(), ex.getCode());
       assertEquals(S3ErrorTable.NO_SUCH_BUCKET.getErrorMessage(),
@@ -87,7 +88,7 @@ public class TestDeleteBucket {
       objectStoreStub.createS3Bucket("ozone1", bucket);
       ObjectStoreStub stub = (ObjectStoreStub) objectStoreStub;
       stub.setBucketEmptyStatus(bucket, false);
-      deleteBucket.delete(bucket);
+      bucketEndpoint.delete(bucket);
     } catch (OS3Exception ex) {
       assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getCode(), ex.getCode());
       assertEquals(S3ErrorTable.BUCKET_NOT_EMPTY.getErrorMessage(),

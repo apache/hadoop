@@ -18,72 +18,63 @@
  *
  */
 
-package org.apache.hadoop.ozone.s3.object;
+package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 /**
- * Test put object.
+ * Test get object.
  */
-public class TestPutObject {
+public class TestObjectGet {
+
   public static final String CONTENT = "0123456789";
-  private String userName = "ozone";
-  private String bucketName = "b1";
-  private String keyName = "key1";
-  private OzoneClientStub clientStub;
-  private ObjectStore objectStoreStub;
-  private PutObject putObject;
-
-  @Before
-  public void setup() throws IOException {
-    //Create client stub and object store stub.
-    clientStub = new OzoneClientStub();
-    objectStoreStub = clientStub.getObjectStore();
-
-    // Create bucket
-    objectStoreStub.createS3Bucket(userName, bucketName);
-
-    // Create PutObject and setClient to OzoneClientStub
-    putObject = new PutObject();
-    putObject.setClient(clientStub);
-  }
 
   @Test
-  public void testPutObject() throws IOException {
+  public void get() throws IOException, OS3Exception {
     //GIVEN
+    OzoneClientStub client = new OzoneClientStub();
+    client.getObjectStore().createS3Bucket("bilbo", "b1");
+    String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
+    OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
+    volume.createBucket("b1");
+    OzoneBucket bucket =
+        volume.getBucket("b1");
+    OzoneOutputStream keyStream =
+        bucket.createKey("key1", CONTENT.getBytes().length);
+    keyStream.write(CONTENT.getBytes());
+    keyStream.close();
+
+    ObjectEndpoint rest = new ObjectEndpoint();
+    rest.setClient(client);
     HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+
     ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
 
     //WHEN
-    Response response = putObject.put(headers, bucketName, keyName,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "32 * 1024 * 1024",
-            CONTENT.length(), body);
+    rest.get(headers, "b1", "key1", body);
 
     //THEN
-    String volumeName = clientStub.getObjectStore().getOzoneVolumeName(bucketName);
     OzoneInputStream ozoneInputStream =
-        clientStub.getObjectStore().getVolume(volumeName).getBucket(bucketName)
-            .readKey(keyName);
+        volume.getBucket("b1")
+            .readKey("key1");
     String keyContent =
         IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
 
-    Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(CONTENT, keyContent);
   }
 }

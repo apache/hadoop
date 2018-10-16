@@ -82,7 +82,8 @@ public class OzoneVolumeStub extends OzoneVolume {
             return bucket.getName().startsWith(bucketPrefix);
           } else {
             return true;
-          }})
+          }
+        })
         .collect(Collectors.toList())
         .iterator();
   }
