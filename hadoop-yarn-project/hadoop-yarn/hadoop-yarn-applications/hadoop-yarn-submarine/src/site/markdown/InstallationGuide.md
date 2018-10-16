@@ -16,9 +16,11 @@
 
 ## Prerequisites
 
+(Please note that all following prerequisites are just an example for you to install. You can always choose to install your own version of kernel, different users, different drivers, etc.).
+
 ### Operating System
 
-The operating system and kernel versions we used are as shown in the following table, which should be minimum required versions:
+The operating system and kernel versions we have tested are as shown in the following table, which is the recommneded minimum required versions.
 
 | Enviroment | Verion |
 | ------ | ------ |
@@ -27,7 +29,7 @@ The operating system and kernel versions we used are as shown in the following t
 
 ### User & Group
 
-As there are some specific users and groups need to be created to install hadoop/docker. Please create them if they are missing.
+As there are some specific users and groups recommended to be created to install hadoop/docker. Please create them if they are missing.
 
 ```
 adduser hdfs
@@ -45,7 +47,7 @@ usermod -aG docker hadoop
 
 ### GCC Version
 
-Check the version of GCC tool
+Check the version of GCC tool (to compile kernel).
 
 ```bash
 gcc --version
@@ -64,7 +66,7 @@ wget http://vault.centos.org/7.3.1611/os/x86_64/Packages/kernel-headers-3.10.0-5
 rpm -ivh kernel-headers-3.10.0-514.el7.x86_64.rpm
 ```
 
-### GPU Servers
+### GPU Servers (Only for Nvidia GPU equipped nodes)
 
 ```
 lspci | grep -i nvidia
@@ -76,9 +78,9 @@ lspci | grep -i nvidia
 
 
 
-### Nvidia Driver Installation
+### Nvidia Driver Installation (Only for Nvidia GPU equipped nodes)
 
-If nvidia driver/cuda has been installed before, They should be uninstalled firstly.
+To make a clean installation, if you have requirements to upgrade GPU drivers. If nvidia driver/cuda has been installed before, They should be uninstalled firstly.
 
 ```
 # uninstall cuda：
@@ -96,16 +98,16 @@ yum install nvidia-detect
 nvidia-detect -v
 Probing for supported NVIDIA devices...
 [10de:13bb] NVIDIA Corporation GM107GL [Quadro K620]
-This device requires the current 390.87 NVIDIA driver kmod-nvidia
+This device requires the current xyz.nm NVIDIA driver kmod-nvidia
 [8086:1912] Intel Corporation HD Graphics 530
 An Intel display controller was also detected
 ```
 
-Pay attention to `This device requires the current 390.87 NVIDIA driver kmod-nvidia`.
-Download the installer [NVIDIA-Linux-x86_64-390.87.run](https://www.nvidia.com/object/linux-amd64-display-archive.html).
+Pay attention to `This device requires the current xyz.nm NVIDIA driver kmod-nvidia`.
+Download the installer like [NVIDIA-Linux-x86_64-390.87.run](https://www.nvidia.com/object/linux-amd64-display-archive.html).
 
 
-Some preparatory work for nvidia driver installation
+Some preparatory work for nvidia driver installation. (This is follow normal Nvidia GPU driver installation, just put here for your convenience)
 
 ```
 # It may take a while to update
@@ -162,6 +164,8 @@ https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
 
 ### Docker Installation
+
+We recommend to use Docker version >= 1.12.5, following steps are just for your reference. You can always to choose other approaches to install Docker.
 
 ```
 yum -y update
@@ -226,9 +230,9 @@ Server:
  OS/Arch:      linux/amd64
 ```
 
-### Nvidia-docker Installation
+### Nvidia-docker Installation (Only for Nvidia GPU equipped nodes)
 
-Submarine is based on nvidia-docker 1.0 version
+Submarine depends on nvidia-docker 1.0 version
 
 ```
 wget -P /tmp https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.1/nvidia-docker-1.0.1-1.x86_64.rpm
@@ -283,7 +287,6 @@ tf.test.is_gpu_available()
 
 Reference:
 https://github.com/NVIDIA/nvidia-docker/tree/1.0
-
 
 
 ### Tensorflow Image
@@ -367,7 +370,7 @@ ENV PATH $PATH:$JAVA_HOME/bin
 ### Test tensorflow in a docker container
 
 After docker image is built, we can check
-tensorflow environments before submitting a yarn job.
+Tensorflow environments before submitting a yarn job.
 
 ```shell
 $ docker run -it ${docker_image_name} /bin/bash
@@ -394,10 +397,13 @@ If there are some errors, we could check the following configuration.
 
 ### Etcd Installation
 
-To install Etcd on specified servers, we can run Submarine/install.sh
+etcd is a distributed reliable key-value store for the most critical data of a distributed system, Registration and discovery of services used in containers.
+You can also choose alternatives like zookeeper, Consul.
+
+To install Etcd on specified servers, we can run Submarine-installer/install.sh
 
 ```shell
-$ ./Submarine/install.sh
+$ ./Submarine-installer/install.sh
 # Etcd status
 systemctl status Etcd.service
 ```
@@ -421,7 +427,10 @@ b3d05464c356441a: name=etcdnode1 peerURLs=http://${etcd_host_ip3}:2380 clientURL
 
 ### Calico Installation
 
-To install Calico on specified servers, we can run Submarine/install.sh
+Calico creates and manages a flat three-tier network, and each container is assigned a routable ip. We just add the steps here for your convenience.
+You can also choose alternatives like Flannel, OVS.
+
+To install Calico on specified servers, we can run Submarine-installer/install.sh
 
 ```
 systemctl start calico-node.service
@@ -460,11 +469,8 @@ docker exec workload-A ping workload-B
 
 ## Hadoop Installation
 
-### Compile hadoop source code
-
-```
-mvn package -Pdist -DskipTests -Dtar
-```
+### Get Hadoop Release
+You can either get Hadoop release binary or compile from source code. Please follow the https://hadoop.apache.org/ guides.
 
 
 ### Start yarn service
@@ -593,10 +599,10 @@ Add configurations in container-executor.cfg
    ...
    # Add configurations in `[docker]` part：
    # /usr/bin/nvidia-docker is the path of nvidia-docker command
-   # nvidia_driver_375.26 means that nvidia driver version is 375.26. nvidia-smi command can be used to check the version
+   # nvidia_driver_375.26 means that nvidia driver version is <version>. nvidia-smi command can be used to check the version
    docker.allowed.volume-drivers=/usr/bin/nvidia-docker
    docker.allowed.devices=/dev/nvidiactl,/dev/nvidia-uvm,/dev/nvidia-uvm-tools,/dev/nvidia1,/dev/nvidia0
-   docker.allowed.ro-mounts=nvidia_driver_375.26
+   docker.allowed.ro-mounts=nvidia_driver_<version>
 
    [gpu]
    module.enabled=true
@@ -607,154 +613,3 @@ Add configurations in container-executor.cfg
    root=/sys/fs/cgroup
    yarn-hierarchy=/hadoop-yarn
    ```
-
-#### Test with a tensorflow job
-
-Distributed-shell + GPU + cgroup
-
-```bash
- ./yarn jar /home/hadoop/hadoop-current/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0-SNAPSHOT.jar job run \
- --env DOCKER_JAVA_HOME=/opt/java \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name distributed-tf-gpu \
- --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=calico-network \
- --docker_image gpu-cuda9.0-tf1.8.0-with-models \
- --input_path hdfs://${dfs_name_service}/tmp/cifar-10-data \
- --checkpoint_path hdfs://${dfs_name_service}/user/hadoop/tf-distributed-checkpoint \
- --num_ps 0 \
- --ps_resources memory=4G,vcores=2,gpu=0 \
- --ps_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --num-gpus=0" \
- --worker_resources memory=4G,vcores=2,gpu=1 --verbose \
- --num_workers 1 \
- --worker_launch_cmd "python /test/cifar10_estimator/cifar10_main.py --data-dir=hdfs://${dfs_name_service}/tmp/cifar-10-data --job-dir=hdfs://${dfs_name_service}/tmp/cifar-10-jobdir --train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1"
-```
-
-
-
-## Issues:
-
-### Issue 1: Fail to start nodemanager after system reboot
-
-```
-2018-09-20 18:54:39,785 ERROR org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor: Failed to bootstrap configured resource subsystems!
-org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException: Unexpected: Cannot create yarn cgroup Subsystem:cpu Mount points:/proc/mounts User:yarn Path:/sys/fs/cgroup/cpu,cpuacct/hadoop-yarn
-  at org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandlerImpl.initializePreMountedCGroupController(CGroupsHandlerImpl.java:425)
-  at org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandlerImpl.initializeCGroupController(CGroupsHandlerImpl.java:377)
-  at org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsCpuResourceHandlerImpl.bootstrap(CGroupsCpuResourceHandlerImpl.java:98)
-  at org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsCpuResourceHandlerImpl.bootstrap(CGroupsCpuResourceHandlerImpl.java:87)
-  at org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain.bootstrap(ResourceHandlerChain.java:58)
-  at org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor.init(LinuxContainerExecutor.java:320)
-  at org.apache.hadoop.yarn.server.nodemanager.NodeManager.serviceInit(NodeManager.java:389)
-  at org.apache.hadoop.service.AbstractService.init(AbstractService.java:164)
-  at org.apache.hadoop.yarn.server.nodemanager.NodeManager.initAndStartNodeManager(NodeManager.java:929)
-  at org.apache.hadoop.yarn.server.nodemanager.NodeManager.main(NodeManager.java:997)
-2018-09-20 18:54:39,789 INFO org.apache.hadoop.service.AbstractService: Service NodeManager failed in state INITED
-```
-
-Solution: Grant user yarn the access to  `/sys/fs/cgroup/cpu,cpuacct`, which is the subfolder of cgroup mount destination.
-
-```
-chown :yarn -R /sys/fs/cgroup/cpu,cpuacct
-chmod g+rwx -R /sys/fs/cgroup/cpu,cpuacct
-```
-
-If GPUs are used，the access to cgroup devices folder is neede as well
-
-```
-chown :yarn -R /sys/fs/cgroup/devices
-chmod g+rwx -R /sys/fs/cgroup/devices
-```
-
-
-### Issue 2: container-executor permission denied
-
-```
-2018-09-21 09:36:26,102 WARN org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor: IOException executing command:
-java.io.IOException: Cannot run program "/etc/yarn/sbin/Linux-amd64-64/container-executor": error=13, Permission denied
-        at java.lang.ProcessBuilder.start(ProcessBuilder.java:1048)
-        at org.apache.hadoop.util.Shell.runCommand(Shell.java:938)
-        at org.apache.hadoop.util.Shell.run(Shell.java:901)
-        at org.apache.hadoop.util.Shell$ShellCommandExecutor.execute(Shell.java:1213)
-```
-
-Solution: The permission of `/etc/yarn/sbin/Linux-amd64-64/container-executor` should be 6050
-
-### Issue 3：How to get docker service log
-
-Solution: we can get docker log with the following command
-
-```
-journalctl -u docker
-```
-
-### Issue 4：docker can't remove containers with errors like `device or resource busy`
-
-```bash
-$ docker rm 0bfafa146431
-Error response from daemon: Unable to remove filesystem for 0bfafa146431771f6024dcb9775ef47f170edb2f1852f71916ba44209ca6120a: remove /app/docker/containers/0bfafa146431771f6024dcb9775ef47f170edb2f152f71916ba44209ca6120a/shm: device or resource busy
-```
-
-Solution: to find which process leads to a `device or resource busy`, we can add a shell script, named `find-busy-mnt.sh`
-
-```bash
-#!/bin/bash
-
-# A simple script to get information about mount points and pids and their
-# mount namespaces.
-
-if [ $# -ne 1 ];then
-echo "Usage: $0 <devicemapper-device-id>"
-exit 1
-fi
-
-ID=$1
-
-MOUNTS=`find /proc/*/mounts | xargs grep $ID 2>/dev/null`
-
-[ -z "$MOUNTS" ] &&  echo "No pids found" && exit 0
-
-printf "PID\tNAME\t\tMNTNS\n"
-echo "$MOUNTS" | while read LINE; do
-PID=`echo $LINE | cut -d ":" -f1 | cut -d "/" -f3`
-# Ignore self and thread-self
-if [ "$PID" == "self" ] || [ "$PID" == "thread-self" ]; then
-  continue
-fi
-NAME=`ps -q $PID -o comm=`
-MNTNS=`readlink /proc/$PID/ns/mnt`
-printf "%s\t%s\t\t%s\n" "$PID" "$NAME" "$MNTNS"
-done
-```
-
-Kill the process by pid, which is found by the script
-
-```bash
-$ chmod +x find-busy-mnt.sh
-./find-busy-mnt.sh 0bfafa146431771f6024dcb9775ef47f170edb2f152f71916ba44209ca6120a
-# PID   NAME            MNTNS
-# 5007  ntpd            mnt:[4026533598]
-$ kill -9 5007
-```
-
-
-### Issue 5：Failed to execute `sudo nvidia-docker run`
-
-```
-docker: Error response from daemon: create nvidia_driver_361.42: VolumeDriver.Create: internal error, check logs for details.
-See 'docker run --help'.
-```
-
-Solution:
-
-```
-#check nvidia-docker status
-$ systemctl status nvidia-docker
-$ journalctl -n -u nvidia-docker
-#restart nvidia-docker
-systemctl stop nvidia-docker
-systemctl start nvidia-docker
-```
-
-### Issue 6：Yarn failed to start containers
-
-if the number of GPUs required by applications is larger than the number of GPUs in the cluster, there would be some containers can't be created.
-
