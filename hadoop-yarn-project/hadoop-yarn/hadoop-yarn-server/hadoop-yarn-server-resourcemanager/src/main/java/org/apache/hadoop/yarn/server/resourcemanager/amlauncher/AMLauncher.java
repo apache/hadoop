@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.amlauncher;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -233,6 +236,32 @@ public class AMLauncher implements Runnable {
     if (amrmToken != null) {
       credentials.addToken(amrmToken.getService(), amrmToken);
     }
+
+    // Setup Keystore and Truststore
+    String httpsPolicy = conf.get(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_HTTPS_POLICY);
+    if (httpsPolicy.equals("LENIENT") || httpsPolicy.equals("STRICT")) {
+      ProxyCA proxyCA = rmContext.getProxyCAManager().getProxyCA();
+      try {
+        String kPass = proxyCA.generateKeyStorePassword();
+        byte[] keyStore = proxyCA.createChildKeyStore(applicationId, kPass);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE, keyStore);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD,
+            kPass.getBytes(StandardCharsets.UTF_8));
+        String tPass = proxyCA.generateKeyStorePassword();
+        byte[] trustStore = proxyCA.getChildTrustStore(tPass);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE, trustStore);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD,
+            tPass.getBytes(StandardCharsets.UTF_8));
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));

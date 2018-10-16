@@ -23,6 +23,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -106,8 +107,17 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
         ctx.getExecutionAttribute(CONTAINER_WORK_DIR).toString(),
         ctx.getExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH).toUri()
             .getPath(),
-        ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
-        ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
+        ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath());
+    Path keystorePath = ctx.getExecutionAttribute(NM_PRIVATE_KEYSTORE_PATH);
+    Path truststorePath = ctx.getExecutionAttribute(NM_PRIVATE_TRUSTSTORE_PATH);
+    if (keystorePath != null && truststorePath != null) {
+      launchOp.appendArgs("--https",
+          keystorePath.toUri().getPath(),
+          truststorePath.toUri().getPath());
+    } else {
+      launchOp.appendArgs("--http");
+    }
+    launchOp.appendArgs(ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
         StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
             ctx.getExecutionAttribute(LOCAL_DIRS)),
         StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,

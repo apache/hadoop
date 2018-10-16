@@ -37,6 +37,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -88,12 +90,11 @@ public class TestLinuxContainerExecutorWithMocks {
   private static final Logger LOG =
        LoggerFactory.getLogger(TestLinuxContainerExecutorWithMocks.class);
 
-  private static final String MOCK_EXECUTOR =
-      "./src/test/resources/mock-container-executor";
+  private static final String MOCK_EXECUTOR = "mock-container-executor";
   private static final String MOCK_EXECUTOR_WITH_ERROR =
-      "./src/test/resources/mock-container-executer-with-error";
+      "mock-container-executer-with-error";
   private static final String MOCK_EXECUTOR_WITH_CONFIG_ERROR =
-      "./src/test/resources/mock-container-executer-with-configuration-error";
+      "mock-container-executer-with-configuration-error";
 
   private String tmpMockExecutor;
   private LinuxContainerExecutor mockExec = null;
@@ -121,11 +122,13 @@ public class TestLinuxContainerExecutorWithMocks {
     return ret;
   }
 
-  private void setupMockExecutor(String executorPath, Configuration conf)
-      throws IOException {
+  private void setupMockExecutor(String executorName, Configuration conf)
+      throws IOException, URISyntaxException {
     //we'll always use the tmpMockExecutor - since
     // PrivilegedOperationExecutor can only be initialized once.
 
+    URI executorPath = getClass().getClassLoader().getResource(executorName)
+        .toURI();
     Files.copy(Paths.get(executorPath), Paths.get(tmpMockExecutor),
         REPLACE_EXISTING);
 
@@ -140,7 +143,8 @@ public class TestLinuxContainerExecutorWithMocks {
   }
 
   @Before
-  public void setup() throws IOException, ContainerExecutionException {
+  public void setup() throws IOException, ContainerExecutionException,
+      URISyntaxException {
     assumeNotWindows();
 
     tmpMockExecutor = System.getProperty("test.build.data") +
@@ -172,7 +176,18 @@ public class TestLinuxContainerExecutorWithMocks {
   }
 
   @Test
-  public void testContainerLaunch()
+  public void testContainerLaunchWithoutHTTPS()
+      throws IOException, ConfigurationException {
+    testContainerLaunch(false);
+  }
+
+  @Test
+  public void testContainerLaunchWithHTTPS()
+      throws IOException, ConfigurationException {
+    testContainerLaunch(true);
+  }
+
+  private void testContainerLaunch(boolean https)
       throws IOException, ConfigurationException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
@@ -193,41 +208,64 @@ public class TestLinuxContainerExecutorWithMocks {
     
     Path scriptPath = new Path("file:///bin/echo");
     Path tokensPath = new Path("file:///dev/null");
+    Path keystorePath = new Path("file:///dev/null");
+    Path truststorePath = new Path("file:///dev/null");
     Path workDir = new Path("/tmp");
     Path pidFile = new Path(workDir, "pid.txt");
 
     mockExec.activateContainer(cId, pidFile);
-    int ret = mockExec.launchContainer(new ContainerStartContext.Builder()
-        .setContainer(container)
-        .setNmPrivateContainerScriptPath(scriptPath)
-        .setNmPrivateTokensPath(tokensPath)
-        .setUser(appSubmitter)
-        .setAppId(appId)
-        .setContainerWorkDir(workDir)
-        .setLocalDirs(dirsHandler.getLocalDirs())
-        .setLogDirs(dirsHandler.getLogDirs())
-        .setFilecacheDirs(new ArrayList<>())
-        .setUserLocalDirs(new ArrayList<>())
-        .setContainerLocalDirs(new ArrayList<>())
-        .setContainerLogDirs(new ArrayList<>())
-        .setUserFilecacheDirs(new ArrayList<>())
-        .setApplicationLocalDirs(new ArrayList<>())
-        .build());
+    ContainerStartContext.Builder ctxBuilder =
+        new ContainerStartContext.Builder()
+            .setContainer(container)
+            .setNmPrivateContainerScriptPath(scriptPath)
+            .setNmPrivateTokensPath(tokensPath)
+            .setUser(appSubmitter)
+            .setAppId(appId)
+            .setContainerWorkDir(workDir)
+            .setLocalDirs(dirsHandler.getLocalDirs())
+            .setLogDirs(dirsHandler.getLogDirs())
+            .setFilecacheDirs(new ArrayList<>())
+            .setUserLocalDirs(new ArrayList<>())
+            .setContainerLocalDirs(new ArrayList<>())
+            .setContainerLogDirs(new ArrayList<>())
+            .setUserFilecacheDirs(new ArrayList<>())
+            .setApplicationLocalDirs(new ArrayList<>());
+    if (https) {
+      ctxBuilder.setNmPrivateKeystorePath(keystorePath);
+      ctxBuilder.setNmPrivateTruststorePath(truststorePath);
+    }
+    int ret = mockExec.launchContainer(ctxBuilder.build());
     assertEquals(0, ret);
-    assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
-        appSubmitter, cmd, appId, containerId,
-        workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            dirsHandler.getLocalDirs()),
-        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-            dirsHandler.getLogDirs()), "cgroups=none"),
-        readMockParams());
-    
+    if (https) {
+      assertEquals(Arrays.asList(
+          YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+          appSubmitter, cmd, appId, containerId,
+          workDir.toString(), scriptPath.toUri().getPath(),
+          tokensPath.toUri().getPath(), "--https",
+          keystorePath.toUri().getPath(), truststorePath.toUri().getPath(),
+          pidFile.toString(),
+          StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+              dirsHandler.getLocalDirs()),
+          StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+              dirsHandler.getLogDirs()), "cgroups=none"),
+          readMockParams());
+    } else {
+      assertEquals(Arrays.asList(
+          YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
+          appSubmitter, cmd, appId, containerId,
+          workDir.toString(), scriptPath.toUri().getPath(),
+          tokensPath.toUri().getPath(), "--http", pidFile.toString(),
+          StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+              dirsHandler.getLocalDirs()),
+          StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+              dirsHandler.getLogDirs()), "cgroups=none"),
+          readMockParams());
+    }
   }
 
   @Test (timeout = 5000)
   public void testContainerLaunchWithPriority()
-      throws IOException, ConfigurationException {
+      throws IOException, ConfigurationException, URISyntaxException {
 
     // set the scheduler priority to make sure still works with nice -n prio
     Configuration conf = new Configuration();
@@ -242,7 +280,7 @@ public class TestLinuxContainerExecutorWithMocks {
     assertEquals("third should be the priority", Integer.toString(2),
                  command.get(2));
 
-    testContainerLaunch();
+    testContainerLaunchWithoutHTTPS();
   }
 
   @Test (timeout = 5000)
@@ -306,7 +344,7 @@ public class TestLinuxContainerExecutorWithMocks {
   
   @Test
   public void testContainerLaunchError()
-      throws IOException, ContainerExecutionException {
+      throws IOException, ContainerExecutionException, URISyntaxException {
 
     final String[] expecetedMessage = {"badcommand", "Exit code: 24"};
     final String[] executor = {
@@ -410,7 +448,8 @@ public class TestLinuxContainerExecutorWithMocks {
         assertEquals(Arrays.asList(YarnConfiguration.
                 DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
             appSubmitter, cmd, appId, containerId,
-            workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
+            workDir.toString(), "/bin/echo", "/dev/null", "--http",
+            pidFile.toString(),
             StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
                 dirsHandler.getLocalDirs()),
             StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
@@ -462,7 +501,7 @@ public class TestLinuxContainerExecutorWithMocks {
   }
   
   @Test
-  public void testDeleteAsUser() throws IOException {
+  public void testDeleteAsUser() throws IOException, URISyntaxException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
         PrivilegedOperation.RunAsUserCommand.DELETE_AS_USER.getValue());

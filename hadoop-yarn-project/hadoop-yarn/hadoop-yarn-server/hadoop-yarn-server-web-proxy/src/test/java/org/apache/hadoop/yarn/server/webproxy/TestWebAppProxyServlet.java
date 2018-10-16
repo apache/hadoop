@@ -27,6 +27,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.ConnectException;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
@@ -54,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -63,6 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -333,12 +337,13 @@ public class TestWebAppProxyServlet {
       assertEquals(proxyConn.getRequestProperties().size(), 4);
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
-      // Verify if number of headers received by end server is 8.
-      // Eight headers include Accept, Host, Connection, User-Agent, Cookie,
-      // Origin, Access-Control-Request-Method and
+      // Verify if number of headers received by end server is 9.
+      // This should match WebAppProxyServlet#PASS_THROUGH_HEADERS.
+      // Nine headers include Accept, Host, Connection, User-Agent, Cookie,
+      // Origin, Access-Control-Request-Method, Accept-Encoding, and
       // Access-Control-Request-Headers. Pls note that Unknown-Header is dropped
       // by proxy as it is not in the list of allowed headers.
-      assertEquals(numberOfHeaders, 8);
+      assertEquals(numberOfHeaders, 9);
       assertFalse(hasUnknownHeader);
     } finally {
       proxy.close();
@@ -381,6 +386,51 @@ public class TestWebAppProxyServlet {
         mainServer.stop();
       }
     }
+  }
+
+  @Test(timeout=5000)
+  public void testCheckHttpsStrictAndNotProvided() throws Exception {
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    StringWriter sw = new StringWriter();
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(sw));
+    YarnConfiguration conf = new YarnConfiguration();
+    final URI httpLink = new URI("http://foo.com");
+    final URI httpsLink = new URI("https://foo.com");
+
+    // NONE policy
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "NONE");
+    assertFalse(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpsLink, conf));
+    assertEquals("", sw.toString());
+    Mockito.verify(resp, Mockito.times(0)).setContentType(Mockito.any());
+    assertFalse(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpLink, conf));
+    assertEquals("", sw.toString());
+    Mockito.verify(resp, Mockito.times(0)).setContentType(Mockito.any());
+
+    // LENIENT policy
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "LENIENT");
+    assertFalse(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpsLink, conf));
+    assertEquals("", sw.toString());
+    Mockito.verify(resp, Mockito.times(0)).setContentType(Mockito.any());
+    assertFalse(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpLink, conf));
+    assertEquals("", sw.toString());
+    Mockito.verify(resp, Mockito.times(0)).setContentType(Mockito.any());
+
+    // STRICT policy
+    conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "STRICT");
+    assertFalse(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpsLink, conf));
+    assertEquals("", sw.toString());
+    Mockito.verify(resp, Mockito.times(0)).setContentType(Mockito.any());
+    assertTrue(WebAppProxyServlet.checkHttpsStrictAndNotProvided(
+        resp, httpLink, conf));
+    String s = sw.toString();
+    assertTrue("Was expecting an HTML page explaining that an HTTPS tracking" +
+        " url must be used but found " + s, s.contains("HTTPS must be used"));
+    Mockito.verify(resp, Mockito.times(1)).setContentType(MimeType.HTML);
   }
 
   private String readInputStream(InputStream input) throws Exception {

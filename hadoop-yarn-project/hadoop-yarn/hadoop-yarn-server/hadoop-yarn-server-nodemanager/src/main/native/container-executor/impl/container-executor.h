@@ -59,6 +59,8 @@ enum operations {
 #define CONTAINER_DIR_PATTERN NM_APP_DIR_PATTERN "/%s"
 #define CONTAINER_SCRIPT "launch_container.sh"
 #define CREDENTIALS_FILENAME "container_tokens"
+#define KEYSTORE_FILENAME "yarn_provided.keystore"
+#define TRUSTSTORE_FILENAME "yarn_provided.truststore"
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
@@ -102,6 +104,8 @@ int initialize_app(const char *user, const char *app_id,
 int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
+                              const int https,
+                              const char *keystore_file, const char *truststore_file,
                               const char *pid_file, char* const* local_dirs,
                               char* const* log_dirs,
                               const char *command_file);
@@ -118,8 +122,13 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
  * @param container_id the container id
  * @param work_dir the working directory for the container.
  * @param script_name the name of the script to be run to launch the container.
- * @param cred_file the credentials file that needs to be compied to the
+ * @param cred_file the credentials file that needs to be copied to the
  * working directory.
+ * @param https 1 if a keystore and truststore will be provided, 0 if not
+ * @param keystore_file the keystore file that needs to be copied to the
+ * working directory.
+ * @param truststore_file the truststore file that needs to be copied to the
+ * working directory
  * @param pid_file file where pid of process should be written to
  * @param local_dirs nodemanager-local-directories to be used
  * @param log_dirs nodemanager-log-directories to be used
@@ -130,6 +139,8 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 int launch_container_as_user(const char * user, const char *app_id,
                      const char *container_id, const char *work_dir,
                      const char *script_name, const char *cred_file,
+                     const int https,
+                     const char *keystore_file, const char *truststore_file,
                      const char *pid_file, char* const* local_dirs,
                      char* const* log_dirs, const char *resources_key,
                      char* const* resources_value);
@@ -193,6 +204,10 @@ char *get_container_work_directory(const char *nm_root, const char *user,
 char *get_container_launcher_file(const char* work_dir);
 
 char *get_container_credentials_file(const char* work_dir);
+
+char *get_container_keystore_file(const char* work_dir);
+
+char *get_container_truststore_file(const char* work_dir);
 
 /**
  * Get the app log directory under log_root

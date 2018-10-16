@@ -3505,6 +3505,24 @@
 
   <property>
     <description>
+      Specifies what the RM does regarding HTTPS enforcement for communication
+      with AM Web Servers, as well as generating and providing certificates.
+      Possible values are:
+      - NONE - the RM will do nothing special.
+      - LENIENT - the RM will generate and provide a keystore and truststore
+      to the AM, which it is free to use for HTTPS in its tracking URL web
+      server.  The RM proxy will still allow HTTP connections to AMs that opt
+      not to use HTTPS.
+      - STRICT - this is the same as LENIENT, except that the RM proxy will
+      only allow HTTPS connections to AMs; HTTP connections will be blocked
+      and result in a warning page to the user.
+    </description>
+    <name>yarn.resourcemanager.application-https.policy</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
+    <description>
       Defines the limit of the diagnostics message of an application
       attempt, in kilo characters (character count * 1024).
       When using ZooKeeper to store application state behavior, its

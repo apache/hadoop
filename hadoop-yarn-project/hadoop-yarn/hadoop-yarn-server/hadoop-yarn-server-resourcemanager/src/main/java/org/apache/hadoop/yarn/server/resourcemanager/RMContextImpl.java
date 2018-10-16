@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
@@ -636,6 +637,16 @@ public class RMContextImpl implements RMContext {
   @Override
   public void setResourceProfilesManager(ResourceProfilesManager mgr) {
     this.activeServiceContext.setResourceProfilesManager(mgr);
+  }
+
+  @Override
+  public ProxyCAManager getProxyCAManager() {
+    return this.activeServiceContext.getProxyCAManager();
+  }
+
+  @Override
+  public void setProxyCAManager(ProxyCAManager proxyCAManager) {
+    this.activeServiceContext.setProxyCAManager(proxyCAManager);
   }
   // Note: Read java doc before adding any services over here.
 

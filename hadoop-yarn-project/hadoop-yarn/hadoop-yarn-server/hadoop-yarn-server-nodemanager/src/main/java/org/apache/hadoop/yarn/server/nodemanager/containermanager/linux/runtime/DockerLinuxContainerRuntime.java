@@ -1205,19 +1205,29 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
             PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
 
     launchOp.appendArgs(runAsUser, ctx.getExecutionAttribute(USER),
-            Integer.toString(PrivilegedOperation
-                    .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
-            ctx.getExecutionAttribute(APPID),
-            containerIdStr,
-            containerWorkDir.toString(),
-            nmPrivateContainerScriptPath.toUri().getPath(),
-            ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
-            ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
-            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-                    localDirs),
-            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
-                    logDirs),
-            commandFile);
+        Integer.toString(PrivilegedOperation
+            .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
+        ctx.getExecutionAttribute(APPID),
+        containerIdStr,
+        containerWorkDir.toString(),
+        nmPrivateContainerScriptPath.toUri().getPath(),
+        ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath());
+    Path keystorePath = ctx.getExecutionAttribute(NM_PRIVATE_KEYSTORE_PATH);
+    Path truststorePath = ctx.getExecutionAttribute(NM_PRIVATE_TRUSTSTORE_PATH);
+    if (keystorePath != null && truststorePath != null) {
+      launchOp.appendArgs("--https",
+          keystorePath.toUri().getPath(),
+          truststorePath.toUri().getPath());
+    } else {
+      launchOp.appendArgs("--http");
+    }
+    launchOp.appendArgs(
+        ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
+        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+            localDirs),
+        StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+            logDirs),
+        commandFile);
 
     String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
 

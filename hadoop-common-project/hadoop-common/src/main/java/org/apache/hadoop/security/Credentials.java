@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
+
   public enum SerializedFormat {
     WRITABLE((byte) 0x00),
     PROTOBUF((byte) 0x01);
