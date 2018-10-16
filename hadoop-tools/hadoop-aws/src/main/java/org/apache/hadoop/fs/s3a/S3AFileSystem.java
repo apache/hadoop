@@ -2449,11 +2449,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Wait for an upload to complete.
    * If the waiting for completion is interrupted, the upload will be
    * aborted before an {@code InterruptedIOException} is thrown.
-   * @param upload upload to wait for
+   * If the upload (or its result collection) failed, this is where
+   * the failure is raised as an AWS exception
    * @param key destination key
+   * @param uploadInfo upload to wait for
    * @return the upload result
    * @throws InterruptedIOException if the blocking was interrupted.
    */
+  @Retries.OnceRaw
   UploadResult waitForUploadCompletion(String key, UploadInfo uploadInfo)
       throws InterruptedIOException {
     Upload upload = uploadInfo.getUpload();
