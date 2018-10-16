@@ -62,6 +62,12 @@ public class RunJobParameters extends RunParameters {
     if (parsedCommandLine.getOptionValue(CliConstants.N_WORKERS) != null) {
       nWorkers = Integer.parseInt(
           parsedCommandLine.getOptionValue(CliConstants.N_WORKERS));
+      // Only check null value.
+      // Training job shouldn't ignore INPUT_PATH option
+      // But if nWorkers is 0, INPUT_PATH can be ignored because user can only run Tensorboard
+      if (null == input && 0 != nWorkers) {
+        throw new ParseException("\"--" + CliConstants.INPUT_PATH + "\" is absent");
+      }
     }
 
     int nPS = 0;
