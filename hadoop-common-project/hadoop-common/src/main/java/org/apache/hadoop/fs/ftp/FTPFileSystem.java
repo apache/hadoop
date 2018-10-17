@@ -62,6 +62,7 @@ public class FTPFileSystem extends FileSystem {
   public static final int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 
   public static final int DEFAULT_BLOCK_SIZE = 4 * 1024;
+  public static final long DEFAULT_TIMEOUT = 0;
   public static final String FS_FTP_USER_PREFIX = "fs.ftp.user.";
   public static final String FS_FTP_HOST = "fs.ftp.host";
   public static final String FS_FTP_HOST_PORT = "fs.ftp.host.port";
@@ -71,6 +72,7 @@ public class FTPFileSystem extends FileSystem {
   public static final String FS_FTP_TRANSFER_MODE = "fs.ftp.transfer.mode";
   public static final String E_SAME_DIRECTORY_ONLY =
       "only same directory renames are supported";
+  public static final String FS_FTP_TIMEOUT = "fs.ftp.timeout";
 
   private URI uri;
 
@@ -150,6 +152,7 @@ public class FTPFileSystem extends FileSystem {
       client.setFileTransferMode(getTransferMode(conf));
       client.setFileType(FTP.BINARY_FILE_TYPE);
       client.setBufferSize(DEFAULT_BUFFER_SIZE);
+      setTimeout(client, conf);
       setDataConnectionMode(client, conf);
     } else {
       throw new IOException("Login failed on server - " + host + ", port - "
@@ -157,6 +160,16 @@ public class FTPFileSystem extends FileSystem {
     }
 
     return client;
+  }
+
+  /**
+   * Set the FTPClient's timeout based on configuration.
+   * FS_FTP_TIMEOUT is set as timeout (defaults to DEFAULT_TIMEOUT).
+   */
+  @VisibleForTesting
+  void setTimeout(FTPClient client, Configuration conf) {
+    long timeout = conf.getLong(FS_FTP_TIMEOUT, DEFAULT_TIMEOUT);
+    client.setControlKeepAliveTimeout(timeout);
   }
 
   /**

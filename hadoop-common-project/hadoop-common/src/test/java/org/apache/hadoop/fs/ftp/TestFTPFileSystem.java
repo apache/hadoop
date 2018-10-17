@@ -137,4 +137,19 @@ public class TestFTPFileSystem {
     return ftpFile;
   }
 
+  @Test
+  public void testFTPSetTimeout() {
+    Configuration conf = new Configuration();
+    FTPClient client = new FTPClient();
+    FTPFileSystem ftp = new FTPFileSystem();
+
+    ftp.setTimeout(client, conf);
+    assertEquals(client.getControlKeepAliveTimeout(),
+        FTPFileSystem.DEFAULT_TIMEOUT);
+
+    long timeout = 600;
+    conf.setLong(FTPFileSystem.FS_FTP_TIMEOUT, timeout);
+    ftp.setTimeout(client, conf);
+    assertEquals(client.getControlKeepAliveTimeout(), timeout);
+  }
 }
