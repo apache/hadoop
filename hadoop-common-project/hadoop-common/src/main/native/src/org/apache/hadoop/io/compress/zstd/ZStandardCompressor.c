@@ -139,7 +139,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompress
 }
 
 // Create the compression stream
-JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_create (JNIEnv *env, jobject this) {
+JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_create (JNIEnv *env, jclass clazz) {
     ZSTD_CStream* const stream =  dlsym_ZSTD_createCStream();
     if (stream == NULL) {
         THROW(env, "java/lang/InternalError", "Error creating the stream");
@@ -149,7 +149,7 @@ JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompres
 }
 
 // Initialize the compression stream
-JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_init (JNIEnv *env, jobject this, jint level, jlong stream) {
+JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_init (JNIEnv *env, jclass clazz, jint level, jlong stream) {
     size_t result = dlsym_ZSTD_initCStream((ZSTD_CStream *) stream, level);
     if (dlsym_ZSTD_isError(result)) {
         THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(result));
@@ -158,7 +158,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompress
 }
 
 // free the compression stream
-JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_end (JNIEnv *env, jobject this, jlong stream) {
+JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_end (JNIEnv *env, jclass clazz, jlong stream) {
     size_t result = dlsym_ZSTD_freeCStream((ZSTD_CStream *) stream);
     if (dlsym_ZSTD_isError(result)) {
         THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(result));
@@ -227,7 +227,7 @@ JNIEXPORT jint Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_defla
 }
 
 JNIEXPORT jstring JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_getLibraryName
-(JNIEnv *env, jclass class) {
+(JNIEnv *env, jclass clazz) {
 #ifdef UNIX
     if (dlsym_ZSTD_isError) {
         Dl_info dl_info;
@@ -250,7 +250,7 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompr
 
 // returns the max size of the recommended input and output buffers
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_getStreamSize
-(JNIEnv *env, jobject this) {
+(JNIEnv *env, jclass clazz) {
     int x = (int) dlsym_ZSTD_CStreamInSize();
     int y = (int) dlsym_ZSTD_CStreamOutSize();
     return (x >= y) ? x : y;
