@@ -75,7 +75,7 @@ public class VersionEndpointTask implements
 
       // Check volumes
       VolumeSet volumeSet = ozoneContainer.getVolumeSet();
-      volumeSet.readLock();
+      volumeSet.writeLock();
       try {
         Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
 
@@ -94,12 +94,12 @@ public class VersionEndpointTask implements
           }
         }
         if (volumeSet.getVolumesList().size() == 0) {
-          // All volumes are inconsistent state
+          // All volumes are in inconsistent state
           throw new DiskOutOfSpaceException("All configured Volumes are in " +
               "Inconsistent State");
         }
       } finally {
-        volumeSet.readUnlock();
+        volumeSet.writeUnlock();
       }
 
       ozoneContainer.getDispatcher().setScmId(scmId);
