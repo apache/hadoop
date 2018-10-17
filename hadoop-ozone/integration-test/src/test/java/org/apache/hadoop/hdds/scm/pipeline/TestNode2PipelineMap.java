@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
-import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -50,7 +49,6 @@ public class TestNode2PipelineMap {
   private static OzoneConfiguration conf;
   private static StorageContainerManager scm;
   private static ContainerWithPipeline ratisContainer;
-  private static ContainerStateMap stateMap;
   private static ContainerManager containerManager;
   private static PipelineSelector pipelineSelector;
 
@@ -66,7 +64,6 @@ public class TestNode2PipelineMap {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    stateMap = containerManager.getStateManager().getContainerStateMap();
     ratisContainer = containerManager.allocateContainer(
         RATIS, THREE, "testOwner");
     pipelineSelector = containerManager.getPipelineSelector();
@@ -89,10 +86,10 @@ public class TestNode2PipelineMap {
     Set<ContainerID> set = pipelineSelector.getOpenContainerIDsByPipeline(
         ratisContainer.getPipeline().getId());
 
-    long cId = ratisContainer.getContainerInfo().getContainerID();
+    ContainerID cId = ratisContainer.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
     set.forEach(containerID ->
-            Assert.assertEquals(containerID, ContainerID.valueof(cId)));
+            Assert.assertEquals(containerID, cId));
 
     List<DatanodeDetails> dns = ratisContainer.getPipeline().getMachines();
     Assert.assertEquals(3, dns.size());

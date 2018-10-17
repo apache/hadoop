@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -32,12 +31,10 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,7 +47,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -89,7 +85,7 @@ public class TestSCMContainerManager {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
-    containerManager = new SCMContainerManager(conf, nodeManager, 128,
+    containerManager = new SCMContainerManager(conf, nodeManager,
         new EventQueue());
     xceiverClientManager = new XceiverClientManager(conf);
     random = new Random();
@@ -169,28 +165,36 @@ public class TestSCMContainerManager {
         .setIpAddress("2.2.2.2")
         .setUuid(UUID.randomUUID().toString()).build();
     containerManager
-        .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(contInfo.getContainerID(),
+        .updateContainerState(contInfo.containerID(), LifeCycleEvent.CREATE);
+    containerManager.updateContainerState(contInfo.containerID(),
         LifeCycleEvent.CREATED);
-    containerManager.updateContainerState(contInfo.getContainerID(),
+    containerManager.updateContainerState(contInfo.containerID(),
         LifeCycleEvent.FINALIZE);
     containerManager
-        .updateContainerState(contInfo.getContainerID(), LifeCycleEvent.CLOSE);
+        .updateContainerState(contInfo.containerID(), LifeCycleEvent.CLOSE);
     ContainerInfo finalContInfo = contInfo;
-    LambdaTestUtils.intercept(SCMException.class, "No entry exist for "
-        + "containerId:", () -> containerManager.getContainerWithPipeline(
-        finalContInfo.getContainerID()));
+    Assert.assertEquals(0,
+        containerManager.getContainerReplicas(
+            finalContInfo.containerID()).size());
 
-    containerManager.getStateManager().getContainerStateMap()
-        .addContainerReplica(contInfo.containerID(), dn1, dn2);
+    containerManager.updateContainerReplica(contInfo.containerID(),
+        ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
+        .setDatanodeDetails(dn1).build());
+    containerManager.updateContainerReplica(contInfo.containerID(),
+        ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
+        .setDatanodeDetails(dn2).build());
 
-    contInfo = containerManager.getContainer(contInfo.getContainerID());
+    Assert.assertEquals(2,
+        containerManager.getContainerReplicas(
+            finalContInfo.containerID()).size());
+
+    contInfo = containerManager.getContainer(contInfo.containerID());
     Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
     Pipeline pipeline = containerWithPipeline.getPipeline();
     containerManager.getPipelineSelector().finalizePipeline(pipeline);
 
     ContainerWithPipeline containerWithPipeline2 = containerManager
-        .getContainerWithPipeline(contInfo.getContainerID());
+        .getContainerWithPipeline(contInfo.containerID());
     pipeline = containerWithPipeline2.getPipeline();
     Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
     Assert.assertNotNull("Pipeline should not be null", pipeline);
@@ -199,9 +203,14 @@ public class TestSCMContainerManager {
   }
 
   @Test
-  public void testgetNoneExistentContainer() throws IOException {
-    thrown.expectMessage("Specified key does not exist.");
-    containerManager.getContainer(random.nextLong());
+  public void testgetNoneExistentContainer() {
+    try {
+      containerManager.getContainer(ContainerID.valueof(
+          random.nextInt() & Integer.MAX_VALUE));
+      Assert.fail();
+    } catch (ContainerNotFoundException ex) {
+      // Success!
+    }
   }
 
   @Test
@@ -213,21 +222,13 @@ public class TestSCMContainerManager {
         xceiverClientManager.getFactor(),
         containerOwner);
     containerManager.updateContainerState(containerInfo.getContainerInfo()
-            .getContainerID(), HddsProtos.LifeCycleEvent.CREATE);
+        .containerID(), HddsProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
-
-    NavigableSet<ContainerID> deleteContainers = containerManager
-        .getStateManager().getMatchingContainerIDs("OZONE",
-            xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.DELETING);
-    Assert.assertTrue(deleteContainers
-        .contains(containerInfo.getContainerInfo().containerID()));
 
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
     containerManager
-        .updateContainerState(containerInfo.getContainerInfo().getContainerID(),
+        .updateContainerState(containerInfo.getContainerInfo().containerID(),
             HddsProtos.LifeCycleEvent.CREATED);
   }
 
@@ -257,26 +258,24 @@ public class TestSCMContainerManager {
     crBuilder.addAllReports(reports);
 
     containerManager.processContainerReports(
-        datanodeDetails, crBuilder.build(), false);
+        datanodeDetails, crBuilder.build());
 
     ContainerInfo updatedContainer =
-        containerManager.getContainer(info.getContainerID());
+        containerManager.getContainer(info.containerID());
     Assert.assertEquals(100000000L,
         updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
 
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
-      LambdaTestUtils.intercept(SCMException.class, "No entry "
-          + "exist for containerId:", () -> containerManager.getStateManager()
-          .getContainerReplicas(ContainerID.valueof(c.getContainerID())));
+     Assert.assertEquals(containerManager.getContainerReplicas(
+         ContainerID.valueof(c.getContainerID())).size(), 1);
     }
 
     containerManager.processContainerReports(TestUtils.randomDatanodeDetails(),
-        crBuilder.build(), true);
+        crBuilder.build());
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
-      Assert.assertTrue(containerManager.getStateManager()
-          .getContainerReplicas(
-              ContainerID.valueof(c.getContainerID())).size() > 0);
+      Assert.assertEquals(containerManager.getContainerReplicas(
+              ContainerID.valueof(c.getContainerID())).size(), 2);
     }
   }
 
@@ -314,9 +313,10 @@ public class TestSCMContainerManager {
     crBuilder.addAllReports(reports);
 
     containerManager.processContainerReports(
-        datanodeDetails, crBuilder.build(), false);
+        datanodeDetails, crBuilder.build());
 
-    List<ContainerInfo> list = containerManager.listContainer(0, 50);
+    List<ContainerInfo> list = containerManager.listContainer(
+        ContainerID.valueof(1), 50);
     Assert.assertEquals(2, list.stream().filter(
         x -> x.getContainerID() == cID1 || x.getContainerID() == cID2).count());
     Assert.assertEquals(300000000L, list.stream().filter(
@@ -329,23 +329,13 @@ public class TestSCMContainerManager {
 
   @Test
   public void testCloseContainer() throws IOException {
-    ContainerInfo info = createContainer();
-    containerManager.updateContainerState(info.getContainerID(),
+    ContainerID id = createContainer().containerID();
+    containerManager.updateContainerState(id,
         HddsProtos.LifeCycleEvent.FINALIZE);
-    NavigableSet<ContainerID> pendingCloseContainers = containerManager
-        .getStateManager().getMatchingContainerIDs(containerOwner,
-            xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.CLOSING);
-    Assert.assertTrue(pendingCloseContainers.contains(info.containerID()));
-    containerManager.updateContainerState(info.getContainerID(),
+    containerManager.updateContainerState(id,
         HddsProtos.LifeCycleEvent.CLOSE);
-    NavigableSet<ContainerID> closeContainers = containerManager
-        .getStateManager().getMatchingContainerIDs(containerOwner,
-            xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.CLOSED);
-    Assert.assertTrue(closeContainers.contains(info.containerID()));
+   ContainerInfo closedContainer = containerManager.getContainer(id);
+   Assert.assertEquals(LifeCycleState.CLOSED, closedContainer.getState());
   }
 
   /**
@@ -359,20 +349,11 @@ public class TestSCMContainerManager {
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
     ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    containerManager.updateContainerState(containerInfo.getContainerID(),
+    containerManager.updateContainerState(containerInfo.containerID(),
         HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(containerInfo.getContainerID(),
+    containerManager.updateContainerState(containerInfo.containerID(),
         HddsProtos.LifeCycleEvent.CREATED);
     return containerInfo;
-  }
-
-  @Test
-  public void testFlushAllContainers() throws IOException {
-    ContainerInfo info = createContainer();
-    List<ContainerInfo> containers = containerManager.getStateManager()
-        .getAllContainers();
-    Assert.assertTrue(containers.size() > 0);
-    containerManager.flushContainerInfo();
   }
 
 }

@@ -88,7 +88,8 @@ public class CloseContainerWatcher extends
       publisher) {
     try {
       // Check if container is still open
-      if (containerManager.getContainer(containerID).isContainerOpen()) {
+      if (containerManager.getContainer(
+          ContainerID.valueof(containerID)).isOpen()) {
         publisher.fireEvent(SCMEvents.CLOSE_CONTAINER,
             ContainerID.valueof(containerID));
       }

@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.scm.block;
 
 import com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
@@ -60,8 +61,9 @@ public class DatanodeDeletedBlockTransactions {
     Pipeline pipeline = null;
     try {
       ContainerWithPipeline containerWithPipeline =
-          containerManager.getContainerWithPipeline(tx.getContainerID());
-      if (containerWithPipeline.getContainerInfo().isContainerOpen()
+          containerManager.getContainerWithPipeline(
+              ContainerID.valueof(tx.getContainerID()));
+      if (containerWithPipeline.getContainerInfo().isOpen()
           || containerWithPipeline.getPipeline().isEmpty()) {
         return false;
       }

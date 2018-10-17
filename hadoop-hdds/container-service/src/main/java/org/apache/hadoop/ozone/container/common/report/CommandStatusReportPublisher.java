@@ -75,10 +75,10 @@ public class CommandStatusReportPublisher extends
 
     iterator.forEachRemaining(key -> {
       CommandStatus cmdStatus = map.get(key);
-      builder.addCmdStatus(cmdStatus.getProtoBufMessage());
       // If status is still pending then don't remove it from map as
       // CommandHandler will change its status when it works on this command.
       if (!cmdStatus.getStatus().equals(Status.PENDING)) {
+        builder.addCmdStatus(cmdStatus.getProtoBufMessage());
         map.remove(key);
       }
     });

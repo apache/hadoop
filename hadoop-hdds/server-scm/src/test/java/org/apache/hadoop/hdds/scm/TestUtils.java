@@ -23,11 +23,10 @@ import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
-import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
@@ -42,13 +41,8 @@ import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageTypeProto;
-import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 
@@ -412,39 +406,21 @@ public final class TestUtils {
     return report.build();
   }
 
-  public static
-      org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo
-      allocateContainer(ContainerStateManager containerStateManager)
+  public static org.apache.hadoop.hdds.scm.container.ContainerInfo
+      allocateContainer(ContainerManager containerManager)
       throws IOException {
-
-    PipelineSelector pipelineSelector = Mockito.mock(PipelineSelector.class);
-
-    Pipeline pipeline = new Pipeline("leader", HddsProtos.LifeCycleState.CLOSED,
-        HddsProtos.ReplicationType.STAND_ALONE,
-        HddsProtos.ReplicationFactor.THREE,
-        PipelineID.randomId());
-
-    when(pipelineSelector
-        .getReplicationPipeline(HddsProtos.ReplicationType.STAND_ALONE,
-            HddsProtos.ReplicationFactor.THREE)).thenReturn(pipeline);
-
-    return containerStateManager
-        .allocateContainer(pipelineSelector,
-            HddsProtos.ReplicationType.STAND_ALONE,
+    return containerManager
+        .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
             HddsProtos.ReplicationFactor.THREE, "root").getContainerInfo();
 
   }
 
-  public static void closeContainer(ContainerStateManager containerStateManager,
-      org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo
-          container)
-      throws SCMException {
-
-    containerStateManager.getContainerStateMap()
-        .updateState(container, container.getState(), LifeCycleState.CLOSING);
-
-    containerStateManager.getContainerStateMap()
-        .updateState(container, container.getState(), LifeCycleState.CLOSED);
+  public static void closeContainer(ContainerManager containerManager,
+      ContainerID id) throws IOException {
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.FINALIZE);
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.CLOSE);
 
   }
 }

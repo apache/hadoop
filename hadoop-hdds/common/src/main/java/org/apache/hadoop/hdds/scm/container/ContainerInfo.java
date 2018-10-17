@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.container.common.helpers;
+package org.apache.hadoop.hdds.scm.container;
 
 import static java.lang.Math.max;
 
@@ -36,7 +36,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -62,9 +62,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   private PipelineID pipelineID;
   private ReplicationFactor replicationFactor;
   private ReplicationType replicationType;
-  // Bytes allocated by SCM for clients.
-  private long allocatedBytes;
-  // Actual container usage, updated through heartbeat.
   private long usedBytes;
   private long numberOfKeys;
   private long lastUsed;
@@ -84,7 +81,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       long containerID,
       HddsProtos.LifeCycleState state,
       PipelineID pipelineID,
-      long allocatedBytes,
       long usedBytes,
       long numberOfKeys,
       long stateEnterTime,
@@ -94,7 +90,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       ReplicationType repType) {
     this.containerID = containerID;
     this.pipelineID = pipelineID;
-    this.allocatedBytes = allocatedBytes;
     this.usedBytes = usedBytes;
     this.numberOfKeys = numberOfKeys;
     this.lastUsed = Time.monotonicNow();
@@ -108,7 +103,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
 
   public ContainerInfo(ContainerInfo info) {
     this(info.getContainerID(), info.getState(), info.getPipelineID(),
-        info.getAllocatedBytes(), info.getUsedBytes(), info.getNumberOfKeys(),
+        info.getUsedBytes(), info.getNumberOfKeys(),
         info.getStateEnterTime(), info.getOwner(),
         info.getDeleteTransactionId(), info.getReplicationFactor(),
         info.getReplicationType());
@@ -123,7 +118,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     return builder.setPipelineID(
         PipelineID.getFromProtobuf(info.getPipelineID()))
-        .setAllocatedBytes(info.getAllocatedBytes())
         .setUsedBytes(info.getUsedBytes())
         .setNumberOfKeys(info.getNumberOfKeys())
         .setState(info.getState())
@@ -158,20 +152,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
 
   public PipelineID getPipelineID() {
     return pipelineID;
-  }
-
-  public long getAllocatedBytes() {
-    return allocatedBytes;
-  }
-
-  /**
-   * Set Allocated bytes.
-   *
-   * @param size - newly allocated bytes -- negative size is case of deletes
-   * can be used.
-   */
-  public void updateAllocatedBytes(long size) {
-    this.allocatedBytes += size;
   }
 
   public long getUsedBytes() {
@@ -211,18 +191,11 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     lastUsed = Time.monotonicNow();
   }
 
-  public void allocate(long size) {
-    // should we also have total container size in ContainerInfo
-    // and check before allocating?
-    allocatedBytes += size;
-  }
-
   public HddsProtos.SCMContainerInfo getProtobuf() {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
     Preconditions.checkState(containerID > 0);
-    return builder.setAllocatedBytes(getAllocatedBytes())
-        .setContainerID(getContainerID())
+    return builder.setContainerID(getContainerID())
         .setUsedBytes(getUsedBytes())
         .setNumberOfKeys(getNumberOfKeys()).setState(getState())
         .setStateEnterTime(getStateEnterTime()).setContainerID(getContainerID())
@@ -393,7 +366,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
    */
   public static class Builder {
     private HddsProtos.LifeCycleState state;
-    private long allocated;
     private long used;
     private long keys;
     private long stateEnterTime;
@@ -431,11 +403,6 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       return this;
     }
 
-    public Builder setAllocatedBytes(long bytesAllocated) {
-      this.allocated = bytesAllocated;
-      return this;
-    }
-
     public Builder setUsedBytes(long bytesUsed) {
       this.used = bytesUsed;
       return this;
@@ -462,7 +429,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     }
 
     public ContainerInfo build() {
-      return new ContainerInfo(containerID, state, pipelineID, allocated,
+      return new ContainerInfo(containerID, state, pipelineID,
               used, keys, stateEnterTime, owner, deleteTransactionId,
           replicationFactor, replicationType);
     }
@@ -473,7 +440,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
    * container is either open, allocated, creating or creating.
    * Any containers in these states is managed as an open container by SCM.
    */
-  public boolean isContainerOpen() {
+  public boolean isOpen() {
     return state == HddsProtos.LifeCycleState.ALLOCATED ||
         state == HddsProtos.LifeCycleState.CREATING ||
         state == HddsProtos.LifeCycleState.OPEN ||

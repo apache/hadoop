@@ -411,10 +411,6 @@ public class KeyManagerImpl implements KeyManager {
 
       // A rename is a no-op if the target and source name is same.
       // TODO: Discuss if we need to throw?.
-      // TODO: Define the semantics of rename more clearly. Today this code
-      // will allow rename of a Key across volumes. This should *not* be
-      // allowed. The documentation of Ozone says that rename is permitted only
-      // within a volume.
       if (fromKeyName.equals(toKeyName)) {
         return;
       }

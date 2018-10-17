@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -81,7 +82,8 @@ public class TestCloseContainerHandler {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(
+            ContainerID.valueof(containerID))
         .getPipeline();
 
     Assert.assertFalse(isContainerClosed(cluster, containerID));

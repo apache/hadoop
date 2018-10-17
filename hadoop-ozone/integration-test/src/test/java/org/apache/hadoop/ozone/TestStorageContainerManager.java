@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLog;
 import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -168,8 +169,7 @@ public class TestStorageContainerManager {
         } else {
           // If passes permission check, it should fail with
           // key not exist exception.
-          Assert.assertTrue(e.getMessage()
-              .contains("Specified key does not exist"));
+          Assert.assertTrue(e instanceof ContainerNotFoundException);
         }
       }
     } finally {

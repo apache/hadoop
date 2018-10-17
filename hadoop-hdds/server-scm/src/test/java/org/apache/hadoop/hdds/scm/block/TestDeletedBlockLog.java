@@ -19,9 +19,10 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
@@ -61,7 +62,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_BLOCK_DELETION_MAX_RETRY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.when;
 
 /**
@@ -109,9 +110,10 @@ public class TestDeletedBlockLog {
     pipeline.addMember(dnList.get(2));
     ContainerWithPipeline containerWithPipeline =
         new ContainerWithPipeline(containerInfo, pipeline);
-    when(containerManager.getContainerWithPipeline(anyLong()))
+    when(containerManager.getContainerWithPipeline(anyObject()))
         .thenReturn(containerWithPipeline);
-    when(containerManager.getContainer(anyLong())).thenReturn(containerInfo);
+    when(containerManager.getContainer(anyObject()))
+        .thenReturn(containerInfo);
   }
 
   @After
@@ -396,8 +398,8 @@ public class TestDeletedBlockLog {
     ContainerWithPipeline containerWithPipeline = new ContainerWithPipeline(
         containerInfo, pipeline);
     Mockito.doReturn(containerInfo).when(containerManager)
-        .getContainer(containerID);
+        .getContainer(ContainerID.valueof(containerID));
     Mockito.doReturn(containerWithPipeline).when(containerManager)
-        .getContainerWithPipeline(containerID);
+        .getContainerWithPipeline(ContainerID.valueof(containerID));
   }
 }

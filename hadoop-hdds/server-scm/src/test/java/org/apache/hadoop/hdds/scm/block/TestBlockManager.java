@@ -83,7 +83,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new SCMContainerManager(conf, nodeManager, 128, eventQueue);
+    mapping = new SCMContainerManager(conf, nodeManager, eventQueue);
     blockManager = new BlockManagerImpl(conf,
         nodeManager, mapping, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);

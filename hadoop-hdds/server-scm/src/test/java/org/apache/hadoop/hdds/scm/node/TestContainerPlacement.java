@@ -102,7 +102,7 @@ public class TestContainerPlacement {
     EventQueue eventQueue = new EventQueue();
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    return new SCMContainerManager(config, scmNodeManager, cacheSize,
+    return new SCMContainerManager(config, scmNodeManager,
         eventQueue);
 
   }

@@ -18,38 +18,40 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import static org.mockito.Matchers.eq;
 import org.mockito.Mockito;
 
 /**
@@ -57,27 +59,32 @@ import org.mockito.Mockito;
  */
 public class TestDeadNodeHandler {
 
-  private List<ReplicationRequest> sentEvents = new ArrayList<>();
   private SCMNodeManager nodeManager;
-  private ContainerStateManager containerStateManager;
+  private ContainerManager containerManager;
   private NodeReportHandler nodeReportHandler;
   private DeadNodeHandler deadNodeHandler;
   private EventPublisher publisher;
   private EventQueue eventQueue;
+  private String storageDir;
 
   @Before
   public void setup() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    containerStateManager = new ContainerStateManager(conf,
-        Mockito.mock(ContainerManager.class),
-        Mockito.mock(PipelineSelector.class));
+    storageDir = GenericTestUtils.getTempPath(
+        TestDeadNodeHandler.class.getSimpleName() + UUID.randomUUID());
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, storageDir);
     eventQueue = new EventQueue();
     nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);
-    deadNodeHandler = new DeadNodeHandler(nodeManager,
-        containerStateManager);
+    containerManager = new SCMContainerManager(conf, nodeManager, eventQueue);
+    deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);
     nodeReportHandler = new NodeReportHandler(nodeManager);
+  }
+
+  @After
+  public void teardown() {
+    FileUtil.fullyDelete(new File(storageDir));
   }
 
   @Test
@@ -85,58 +92,89 @@ public class TestDeadNodeHandler {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
+    DatanodeDetails datanode3 = TestUtils.randomDatanodeDetails();
+
+    String storagePath = GenericTestUtils.getRandomizedTempPath()
+        .concat("/" + datanode1.getUuidString());
+
+    StorageReportProto storageOne = TestUtils.createStorageReport(
+        datanode1.getUuid(), storagePath, 100, 10, 90, null);
+
+    // Standalone pipeline now excludes the nodes which are already used,
+    // is the a proper behavior. Adding 9 datanodes for now to make the
+    // test case happy.
+
+    nodeManager.register(datanode1,
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(datanode2,
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(datanode3,
+        TestUtils.createNodeReport(storageOne), null);
+
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
+
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(TestUtils.randomDatanodeDetails(),
+        TestUtils.createNodeReport(storageOne), null);
 
     ContainerInfo container1 =
-        TestUtils.allocateContainer(containerStateManager);
+        TestUtils.allocateContainer(containerManager);
     ContainerInfo container2 =
-        TestUtils.allocateContainer(containerStateManager);
+        TestUtils.allocateContainer(containerManager);
     ContainerInfo container3 =
-        TestUtils.allocateContainer(containerStateManager);
+        TestUtils.allocateContainer(containerManager);
+
+    containerManager.updateContainerState(
+        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
+    containerManager.updateContainerState(
+        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
+
+    containerManager.updateContainerState(
+        container2.containerID(), HddsProtos.LifeCycleEvent.CREATE);
+    containerManager.updateContainerState(
+        container2.containerID(), HddsProtos.LifeCycleEvent.CREATED);
+
+    containerManager.updateContainerState(
+        container3.containerID(), HddsProtos.LifeCycleEvent.CREATE);
+    containerManager.updateContainerState(
+        container3.containerID(), HddsProtos.LifeCycleEvent.CREATED);
 
     registerReplicas(datanode1, container1, container2);
     registerReplicas(datanode2, container1, container3);
 
-    registerReplicas(containerStateManager, container1, datanode1, datanode2);
-    registerReplicas(containerStateManager, container2, datanode1);
-    registerReplicas(containerStateManager, container3, datanode2);
+    registerReplicas(containerManager, container1, datanode1, datanode2);
+    registerReplicas(containerManager, container2, datanode1);
+    registerReplicas(containerManager, container3, datanode2);
 
-    TestUtils.closeContainer(containerStateManager, container1);
+    TestUtils.closeContainer(containerManager, container1.containerID());
+    TestUtils.closeContainer(containerManager, container2.containerID());
+    TestUtils.closeContainer(containerManager, container3.containerID());
 
     deadNodeHandler.onMessage(datanode1, publisher);
 
-    Set<DatanodeDetails> container1Replicas =
-        containerStateManager.getContainerStateMap()
-            .getContainerReplicas(new ContainerID(container1.getContainerID()));
+    Set<ContainerReplica> container1Replicas = containerManager
+        .getContainerReplicas(new ContainerID(container1.getContainerID()));
     Assert.assertEquals(1, container1Replicas.size());
-    Assert.assertEquals(datanode2, container1Replicas.iterator().next());
+    Assert.assertEquals(datanode2,
+        container1Replicas.iterator().next().getDatanodeDetails());
 
-    Set<DatanodeDetails> container2Replicas =
-        containerStateManager.getContainerStateMap()
-            .getContainerReplicas(new ContainerID(container2.getContainerID()));
+    Set<ContainerReplica> container2Replicas = containerManager
+        .getContainerReplicas(new ContainerID(container2.getContainerID()));
     Assert.assertEquals(0, container2Replicas.size());
 
-    Set<DatanodeDetails> container3Replicas =
-        containerStateManager.getContainerStateMap()
+    Set<ContainerReplica> container3Replicas = containerManager
             .getContainerReplicas(new ContainerID(container3.getContainerID()));
     Assert.assertEquals(1, container3Replicas.size());
-    Assert.assertEquals(datanode2, container3Replicas.iterator().next());
-
-    ArgumentCaptor<ReplicationRequest> replicationRequestParameter =
-        ArgumentCaptor.forClass(ReplicationRequest.class);
-
-    Mockito.verify(publisher)
-        .fireEvent(eq(SCMEvents.REPLICATE_CONTAINER),
-            replicationRequestParameter.capture());
-
-    Assert
-        .assertEquals(container1.getContainerID(),
-            replicationRequestParameter.getValue().getContainerId());
-    Assert
-        .assertEquals(1,
-            replicationRequestParameter.getValue().getReplicationCount());
-    Assert
-        .assertEquals(3,
-            replicationRequestParameter.getValue().getExpecReplicationCount());
+    Assert.assertEquals(datanode2,
+        container3Replicas.iterator().next().getDatanodeDetails());
   }
 
   @Test
@@ -144,6 +182,7 @@ public class TestDeadNodeHandler {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
+
     String storagePath1 = GenericTestUtils.getRandomizedTempPath()
         .concat("/" + datanode1.getUuidString());
     String storagePath2 = GenericTestUtils.getRandomizedTempPath()
@@ -153,14 +192,16 @@ public class TestDeadNodeHandler {
         datanode1.getUuid(), storagePath1, 100, 10, 90, null);
     StorageReportProto storageTwo = TestUtils.createStorageReport(
         datanode2.getUuid(), storagePath2, 200, 20, 180, null);
+
+    nodeManager.register(datanode1,
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(datanode2,
+        TestUtils.createNodeReport(storageTwo), null);
+
     nodeReportHandler.onMessage(getNodeReport(datanode1, storageOne),
         Mockito.mock(EventPublisher.class));
     nodeReportHandler.onMessage(getNodeReport(datanode2, storageTwo),
         Mockito.mock(EventPublisher.class));
-
-    ContainerInfo container1 =
-        TestUtils.allocateContainer(containerStateManager);
-    registerReplicas(datanode1, container1);
 
     SCMNodeStat stat = nodeManager.getStats();
     Assert.assertTrue(stat.getCapacity().get() == 300);
@@ -190,32 +231,56 @@ public class TestDeadNodeHandler {
 
   @Test
   public void testOnMessageReplicaFailure() throws Exception {
+
+    DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
+    DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
+    DatanodeDetails datanode3 = TestUtils.randomDatanodeDetails();
+
+    String storagePath = GenericTestUtils.getRandomizedTempPath()
+        .concat("/" + datanode1.getUuidString());
+
+    StorageReportProto storageOne = TestUtils.createStorageReport(
+        datanode1.getUuid(), storagePath, 100, 10, 90, null);
+
+    nodeManager.register(datanode1,
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(datanode2,
+        TestUtils.createNodeReport(storageOne), null);
+    nodeManager.register(datanode3,
+        TestUtils.createNodeReport(storageOne), null);
+
     DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(DeadNodeHandler.getLogger());
-    String storagePath1 = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + dn1.getUuidString());
 
-    StorageReportProto storageOne = TestUtils.createStorageReport(
-        dn1.getUuid(), storagePath1, 100, 10, 90, null);
     nodeReportHandler.onMessage(getNodeReport(dn1, storageOne),
         Mockito.mock(EventPublisher.class));
 
     ContainerInfo container1 =
-        TestUtils.allocateContainer(containerStateManager);
+        TestUtils.allocateContainer(containerManager);
+    containerManager.updateContainerState(
+        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
+    containerManager.updateContainerState(
+        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
+    TestUtils.closeContainer(containerManager, container1.containerID());
+
     registerReplicas(dn1, container1);
 
     deadNodeHandler.onMessage(dn1, eventQueue);
     Assert.assertTrue(logCapturer.getOutput().contains(
-        "DataNode " + dn1.getUuid() + " doesn't have replica for container "
-            + container1.getContainerID()));
+        "Exception while removing container replica "));
   }
 
-  private void registerReplicas(ContainerStateManager csm,
-      ContainerInfo container, DatanodeDetails... datanodes) {
-    csm.getContainerStateMap()
-        .addContainerReplica(new ContainerID(container.getContainerID()),
-            datanodes);
+  private void registerReplicas(ContainerManager containerManager,
+      ContainerInfo container, DatanodeDetails... datanodes)
+      throws ContainerNotFoundException {
+    for (DatanodeDetails datanode : datanodes) {
+      containerManager.updateContainerReplica(
+          new ContainerID(container.getContainerID()),
+          ContainerReplica.newBuilder()
+              .setContainerID(container.containerID())
+              .setDatanodeDetails(datanode).build());
+    }
   }
 
   private void registerReplicas(DatanodeDetails datanode,

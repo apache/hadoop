@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -29,18 +30,17 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * We are creating a specific type for this to avoid mixing this with
  * normal integers in code.
  */
-public class ContainerID implements Comparable {
+public final class ContainerID implements Comparable<ContainerID> {
 
   private final long id;
 
+  // TODO: make this private.
   /**
    * Constructs ContainerID.
    *
    * @param id int
    */
   public ContainerID(long id) {
-    Preconditions.checkState(id > 0,
-        "Container ID should be a positive long. "+ id);
     this.id = id;
   }
 
@@ -49,7 +49,9 @@ public class ContainerID implements Comparable {
    * @param containerID  long
    * @return ContainerID.
    */
-  public static ContainerID valueof(long containerID) {
+  public static ContainerID valueof(final long containerID) {
+    Preconditions.checkState(containerID > 0,
+        "Container ID should be a positive long. "+ containerID);
     return new ContainerID(containerID);
   }
 
@@ -62,8 +64,12 @@ public class ContainerID implements Comparable {
     return id;
   }
 
+  public byte[] getBytes() {
+    return Longs.toByteArray(id);
+  }
+
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
@@ -72,7 +78,7 @@ public class ContainerID implements Comparable {
       return false;
     }
 
-    ContainerID that = (ContainerID) o;
+    final ContainerID that = (ContainerID) o;
 
     return new EqualsBuilder()
         .append(getId(), that.getId())
@@ -87,14 +93,8 @@ public class ContainerID implements Comparable {
   }
 
   @Override
-  public int compareTo(Object o) {
-    Preconditions.checkNotNull(o);
-    if(getClass() != o.getClass()) {
-      throw new ClassCastException("ContainerID class expected. found:" +
-          o.getClass().toString());
-    }
-
-    ContainerID that = (ContainerID) o;
+  public int compareTo(final ContainerID that) {
+    Preconditions.checkNotNull(that);
     return new CompareToBuilder()
         .append(this.getId(), that.getId())
         .build();
