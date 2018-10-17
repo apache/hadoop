@@ -33,8 +33,10 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
@@ -169,7 +171,7 @@ public class SCMClientProtocolServer implements
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
     return scm.getContainerManager()
-        .getContainer(containerID);
+        .getContainer(ContainerID.valueof(containerID));
   }
 
   @Override
@@ -177,8 +179,8 @@ public class SCMClientProtocolServer implements
       throws IOException {
     if (chillModePrecheck.isInChillMode()) {
       ContainerInfo contInfo = scm.getContainerManager()
-          .getContainer(containerID);
-      if (contInfo.isContainerOpen()) {
+          .getContainer(ContainerID.valueof(containerID));
+      if (contInfo.isOpen()) {
         if (!hasRequiredReplicas(contInfo)) {
           throw new SCMException("Open container " + containerID + " doesn't"
               + " have enough replicas to service this operation in "
@@ -189,7 +191,7 @@ public class SCMClientProtocolServer implements
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(null);
     return scm.getContainerManager()
-        .getContainerWithPipeline(containerID);
+        .getContainerWithPipeline(ContainerID.valueof(containerID));
   }
 
   /**
@@ -198,10 +200,10 @@ public class SCMClientProtocolServer implements
    */
   private boolean hasRequiredReplicas(ContainerInfo contInfo) {
     try{
-      return getScm().getContainerManager().getStateManager()
+      return getScm().getContainerManager()
           .getContainerReplicas(contInfo.containerID())
           .size() >= contInfo.getReplicationFactor().getNumber();
-    } catch (SCMException ex) {
+    } catch (ContainerNotFoundException ex) {
       // getContainerReplicas throws exception if no replica's exist for given
       // container.
       return false;
@@ -212,14 +214,14 @@ public class SCMClientProtocolServer implements
   public List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException {
     return scm.getContainerManager().
-        listContainer(startContainerID, count);
+        listContainer(ContainerID.valueof(startContainerID), count);
   }
 
   @Override
   public void deleteContainer(long containerID) throws IOException {
     String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(remoteUser);
-    scm.getContainerManager().deleteContainer(containerID);
+    scm.getContainerManager().deleteContainer(ContainerID.valueof(containerID));
 
   }
 
@@ -257,10 +259,12 @@ public class SCMClientProtocolServer implements
           .ObjectStageChangeRequestProto.Op.create) {
         if (stage == StorageContainerLocationProtocolProtos
             .ObjectStageChangeRequestProto.Stage.begin) {
-          scm.getContainerManager().updateContainerState(id, HddsProtos
+          scm.getContainerManager().updateContainerState(
+              ContainerID.valueof(id), HddsProtos
               .LifeCycleEvent.CREATE);
         } else {
-          scm.getContainerManager().updateContainerState(id, HddsProtos
+          scm.getContainerManager().updateContainerState(
+              ContainerID.valueof(id), HddsProtos
               .LifeCycleEvent.CREATED);
         }
       } else {
@@ -268,10 +272,12 @@ public class SCMClientProtocolServer implements
             .ObjectStageChangeRequestProto.Op.close) {
           if (stage == StorageContainerLocationProtocolProtos
               .ObjectStageChangeRequestProto.Stage.begin) {
-            scm.getContainerManager().updateContainerState(id, HddsProtos
+            scm.getContainerManager().updateContainerState(
+                ContainerID.valueof(id), HddsProtos
                 .LifeCycleEvent.FINALIZE);
           } else {
-            scm.getContainerManager().updateContainerState(id, HddsProtos
+            scm.getContainerManager().updateContainerState(
+                ContainerID.valueof(id), HddsProtos
                 .LifeCycleEvent.CLOSE);
           }
         }

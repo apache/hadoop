@@ -18,7 +18,6 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -61,7 +60,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     ContainerInfo info;
     try {
       containerWithPipeline =
-          containerManager.getContainerWithPipeline(containerID.getId());
+          containerManager.getContainerWithPipeline(containerID);
       info = containerWithPipeline.getContainerInfo();
       if (info == null) {
         LOG.error("Failed to update the container state. Container with id : {}"
@@ -81,8 +80,8 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
         // We cannot close a container in ALLOCATED state, moving the
         // container to CREATING state, this should eventually
         // timeout and the container will be moved to DELETING state.
-        LOG.debug("Closing container {} in {} state", containerID, state);
-        containerManager.updateContainerState(containerID.getId(),
+        LOG.debug("Closing container #{} in {} state", containerID, state);
+        containerManager.updateContainerState(containerID,
             HddsProtos.LifeCycleEvent.CREATE);
         break;
       case CREATING:
@@ -91,7 +90,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
         LOG.debug("Closing container {} in {} state", containerID, state);
         break;
       case OPEN:
-        containerManager.updateContainerState(containerID.getId(),
+        containerManager.updateContainerState(containerID,
             HddsProtos.LifeCycleEvent.FINALIZE);
         fireCloseContainerEvents(containerWithPipeline, info, publisher);
         break;
@@ -101,16 +100,15 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       case CLOSED:
       case DELETING:
       case DELETED:
-        LOG.info(
-            "container with id : {} is in {} state and need not be closed.",
-            containerID.getId(), info.getState());
+        LOG.info("Cannot close container #{}, it is already in {} state.",
+            containerID.getId(), state);
         break;
       default:
-        throw new IOException(
-            "Invalid container state for container " + containerID);
+        throw new IOException("Invalid container state for container #"
+            + containerID);
       }
     } catch (IOException ex) {
-      LOG.error("Failed to update the container state for" + "container : {}"
+      LOG.error("Failed to update the container state for container #{}"
           + containerID, ex);
     }
   }
@@ -125,13 +123,14 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
             info.getReplicationType(), info.getPipelineID());
 
     Pipeline pipeline = containerWithPipeline.getPipeline();
-    pipeline.getMachines().stream().map(
-        datanode -> new CommandForDatanode<>(datanode.getUuid(),
-            closeContainerCommand)).forEach((command) -> {
-              publisher.fireEvent(DATANODE_COMMAND, command);
-            });
+    pipeline.getMachines().stream()
+        .map(node ->
+            new CommandForDatanode<>(node.getUuid(), closeContainerCommand))
+        .forEach(command -> publisher.fireEvent(DATANODE_COMMAND, command));
+
     publisher.fireEvent(CLOSE_CONTAINER_RETRYABLE_REQ,
         new CloseContainerRetryableReq(containerID));
+
     LOG.trace("Issuing {} on Pipeline {} for container", closeContainerCommand,
         pipeline, containerID);
   }

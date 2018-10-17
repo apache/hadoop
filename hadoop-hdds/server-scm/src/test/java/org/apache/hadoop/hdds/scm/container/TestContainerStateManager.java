@@ -18,18 +18,22 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.mockito.Mockito.when;
 
 /**
  * Testing ContainerStatemanager.
@@ -41,16 +45,14 @@ public class TestContainerStateManager {
   @Before
   public void init() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    ContainerManager mapping = Mockito.mock(ContainerManager.class);
-    PipelineSelector selector =  Mockito.mock(PipelineSelector.class);
-    containerStateManager = new ContainerStateManager(conf, mapping, selector);
+    containerStateManager = new ContainerStateManager(conf);
 
   }
 
   @Test
   public void checkReplicationStateOK() throws IOException {
     //GIVEN
-    ContainerInfo c1 = TestUtils.allocateContainer(containerStateManager);
+    ContainerInfo c1 = allocateContainer();
 
     DatanodeDetails d1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails d2 = TestUtils.randomDatanodeDetails();
@@ -61,18 +63,18 @@ public class TestContainerStateManager {
     addReplica(c1, d3);
 
     //WHEN
-    ReplicationRequest replicationRequest = containerStateManager
-        .checkReplicationState(new ContainerID(c1.getContainerID()));
+    Set<ContainerReplica> replicas = containerStateManager
+        .getContainerReplicas(c1.containerID());
 
     //THEN
-    Assert.assertNull(replicationRequest);
+    Assert.assertEquals(3, replicas.size());
   }
 
   @Test
   public void checkReplicationStateMissingReplica() throws IOException {
     //GIVEN
 
-    ContainerInfo c1 = TestUtils.allocateContainer(containerStateManager);
+    ContainerInfo c1 = allocateContainer();
 
     DatanodeDetails d1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails d2 = TestUtils.randomDatanodeDetails();
@@ -81,18 +83,40 @@ public class TestContainerStateManager {
     addReplica(c1, d2);
 
     //WHEN
-    ReplicationRequest replicationRequest = containerStateManager
-        .checkReplicationState(new ContainerID(c1.getContainerID()));
+    Set<ContainerReplica> replicas = containerStateManager
+        .getContainerReplicas(c1.containerID());
 
-    Assert
-        .assertEquals(c1.getContainerID(), replicationRequest.getContainerId());
-    Assert.assertEquals(2, replicationRequest.getReplicationCount());
-    Assert.assertEquals(3, replicationRequest.getExpecReplicationCount());
+    Assert.assertEquals(2, replicas.size());
+    Assert.assertEquals(3, c1.getReplicationFactor().getNumber());
   }
 
-  private void addReplica(ContainerInfo c1, DatanodeDetails d1) {
+  private void addReplica(ContainerInfo cont, DatanodeDetails node)
+      throws ContainerNotFoundException {
+    ContainerReplica replica = ContainerReplica.newBuilder()
+        .setContainerID(cont.containerID())
+        .setDatanodeDetails(node)
+        .build();
     containerStateManager
-        .addContainerReplica(new ContainerID(c1.getContainerID()), d1);
+        .updateContainerReplica(cont.containerID(), replica);
+  }
+
+  private ContainerInfo allocateContainer() throws IOException {
+
+    PipelineSelector pipelineSelector = Mockito.mock(PipelineSelector.class);
+
+    Pipeline pipeline = new Pipeline("leader", HddsProtos.LifeCycleState.CLOSED,
+        HddsProtos.ReplicationType.STAND_ALONE,
+        HddsProtos.ReplicationFactor.THREE,
+        PipelineID.randomId());
+
+    when(pipelineSelector
+        .getReplicationPipeline(HddsProtos.ReplicationType.STAND_ALONE,
+            HddsProtos.ReplicationFactor.THREE)).thenReturn(pipeline);
+
+    return containerStateManager.allocateContainer(
+        pipelineSelector, HddsProtos.ReplicationType.STAND_ALONE,
+        HddsProtos.ReplicationFactor.THREE, "root");
+
   }
 
 }

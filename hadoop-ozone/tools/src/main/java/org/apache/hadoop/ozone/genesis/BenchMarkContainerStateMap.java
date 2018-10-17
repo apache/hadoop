@@ -22,7 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
@@ -70,9 +70,6 @@ public class BenchMarkContainerStateMap {
             .setPipelineID(pipeline.getId())
             .setReplicationType(pipeline.getType())
             .setReplicationFactor(pipeline.getFactor())
-            // This is bytes allocated for blocks inside container, not the
-            // container size
-            .setAllocatedBytes(0)
             .setUsedBytes(0)
             .setNumberOfKeys(0)
             .setStateEnterTime(Time.monotonicNow())
@@ -93,9 +90,6 @@ public class BenchMarkContainerStateMap {
             .setPipelineID(pipeline.getId())
             .setReplicationType(pipeline.getType())
             .setReplicationFactor(pipeline.getFactor())
-            // This is bytes allocated for blocks inside container, not the
-            // container size
-            .setAllocatedBytes(0)
             .setUsedBytes(0)
             .setNumberOfKeys(0)
             .setStateEnterTime(Time.monotonicNow())
@@ -115,9 +109,6 @@ public class BenchMarkContainerStateMap {
           .setPipelineID(pipeline.getId())
           .setReplicationType(pipeline.getType())
           .setReplicationFactor(pipeline.getFactor())
-          // This is bytes allocated for blocks inside container, not the
-          // container size
-          .setAllocatedBytes(0)
           .setUsedBytes(0)
           .setNumberOfKeys(0)
           .setStateEnterTime(Time.monotonicNow())
@@ -188,9 +179,6 @@ public class BenchMarkContainerStateMap {
         .setPipelineID(pipeline.getId())
         .setReplicationType(pipeline.getType())
         .setReplicationFactor(pipeline.getFactor())
-        // This is bytes allocated for blocks inside container, not the
-        // container size
-        .setAllocatedBytes(0)
         .setUsedBytes(0)
         .setNumberOfKeys(0)
         .setStateEnterTime(Time.monotonicNow())

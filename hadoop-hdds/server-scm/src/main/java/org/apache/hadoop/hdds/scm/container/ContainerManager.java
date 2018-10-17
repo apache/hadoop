@@ -21,7 +21,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
@@ -31,13 +30,31 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+// TODO: Write extensive java doc.
+// This is the main interface of ContainerManager.
 /**
  * ContainerManager class contains the mapping from a name to a pipeline
  * mapping. This is used by SCM when allocating new locations and when
  * looking up a key.
  */
 public interface ContainerManager extends Closeable {
+
+  /**
+   * Returns all the containers managed by ContainerManager.
+   *
+   * @return List of ContainerInfo
+   */
+  List<ContainerInfo> getContainers();
+
+  /**
+   * Returns all the containers which are in the specified state.
+   *
+   * @return List of ContainerInfo
+   */
+  List<ContainerInfo> getContainers(HddsProtos.LifeCycleState state);
+
   /**
    * Returns the ContainerInfo from the container ID.
    *
@@ -45,7 +62,8 @@ public interface ContainerManager extends Closeable {
    * @return - ContainerInfo such as creation state and the pipeline.
    * @throws IOException
    */
-  ContainerInfo getContainer(long containerID) throws IOException;
+  ContainerInfo getContainer(ContainerID containerID)
+      throws ContainerNotFoundException;
 
   /**
    * Returns the ContainerInfo from the container ID.
@@ -54,8 +72,8 @@ public interface ContainerManager extends Closeable {
    * @return - ContainerWithPipeline such as creation state and the pipeline.
    * @throws IOException
    */
-  ContainerWithPipeline getContainerWithPipeline(long containerID)
-      throws IOException;
+  ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
+      throws ContainerNotFoundException;
 
   /**
    * Returns containers under certain conditions.
@@ -72,8 +90,7 @@ public interface ContainerManager extends Closeable {
    * @return a list of container.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(long startContainerID, int count)
-      throws IOException;
+  List<ContainerInfo> listContainer(ContainerID startContainerID, int count);
 
   /**
    * Allocates a new container for a given keyName and replication factor.
@@ -93,7 +110,7 @@ public interface ContainerManager extends Closeable {
    * @param containerID - Container ID
    * @throws IOException
    */
-  void deleteContainer(long containerID) throws IOException;
+  void deleteContainer(ContainerID containerID) throws IOException;
 
   /**
    * Update container state.
@@ -102,14 +119,8 @@ public interface ContainerManager extends Closeable {
    * @return - new container state
    * @throws IOException
    */
-  HddsProtos.LifeCycleState updateContainerState(long containerID,
+  HddsProtos.LifeCycleState updateContainerState(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException;
-
-  /**
-   * Returns the container State Manager.
-   * @return ContainerStateManager
-   */
-  ContainerStateManager getStateManager();
 
   /**
    * Process container report from Datanode.
@@ -117,8 +128,35 @@ public interface ContainerManager extends Closeable {
    * @param reports Container report
    */
   void processContainerReports(DatanodeDetails datanodeDetails,
-      ContainerReportsProto reports, boolean isRegisterCall)
-      throws IOException;
+      ContainerReportsProto reports) throws IOException;
+
+  /**
+   * Returns the latest list of replicas for given containerId.
+   *
+   * @param containerID Container ID
+   * @return Set of ContainerReplica
+   */
+  Set<ContainerReplica> getContainerReplicas(ContainerID containerID)
+      throws ContainerNotFoundException;
+
+  /**
+   * Adds a container Replica for the given Container.
+   *
+   * @param containerID Container ID
+   * @param replica ContainerReplica
+   */
+  void updateContainerReplica(ContainerID containerID, ContainerReplica replica)
+      throws ContainerNotFoundException;
+
+  /**
+   * Remove a container Replica form a given Container.
+   *
+   * @param containerID Container ID
+   * @param replica ContainerReplica
+   * @return True of dataNode is removed successfully else false.
+   */
+  void removeContainerReplica(ContainerID containerID, ContainerReplica replica)
+      throws ContainerNotFoundException, ContainerReplicaNotFoundException;
 
   /**
    * Update deleteTransactionId according to deleteTransactionMap.

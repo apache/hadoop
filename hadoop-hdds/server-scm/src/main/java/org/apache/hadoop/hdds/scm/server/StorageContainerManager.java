@@ -40,13 +40,14 @@ import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.CloseContainerWatcher;
 import org.apache.hadoop.hdds.scm.container.ContainerActionsHandler;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerReportHandler;
 import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
@@ -96,9 +97,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -190,9 +188,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   private StorageContainerManager(OzoneConfiguration conf) throws IOException {
 
-    final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
-        OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-
     StorageContainerManager.initMetrics();
     initContainerReportCache(conf);
 
@@ -207,9 +202,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     scmNodeManager = new SCMNodeManager(
         conf, scmStorage.getClusterID(), this, eventQueue);
     containerManager = new SCMContainerManager(
-        conf, getScmNodeManager(), cacheSize, eventQueue);
+        conf, scmNodeManager, eventQueue);
     scmBlockManager = new BlockManagerImpl(
-        conf, getScmNodeManager(), containerManager, eventQueue);
+        conf, scmNodeManager, containerManager, eventQueue);
 
     replicationStatus = new ReplicationActivityStatus();
 
@@ -227,7 +222,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     StaleNodeHandler staleNodeHandler =
         new StaleNodeHandler(containerManager.getPipelineSelector());
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
-        getContainerManager().getStateManager());
+        containerManager);
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
     PendingDeleteHandler pendingDeleteHandler =
         new PendingDeleteHandler(scmBlockManager.getSCMBlockDeletingService());
@@ -236,7 +231,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new ContainerReportHandler(containerManager, scmNodeManager,
             replicationStatus);
     scmChillModeManager = new SCMChillModeManager(conf,
-        getContainerManager().getStateManager().getAllContainers(),
+        containerManager.getContainers(),
         eventQueue);
     PipelineActionEventHandler pipelineActionEventHandler =
         new PipelineActionEventHandler();
@@ -263,8 +258,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new SCMContainerPlacementCapacity(scmNodeManager, conf);
 
     replicationManager = new ReplicationManager(containerPlacementPolicy,
-        containerManager.getStateManager(), eventQueue,
-        commandWatcherLeaseManager);
+        containerManager, eventQueue, commandWatcherLeaseManager);
 
     // setup CloseContainer watcher
     CloseContainerWatcher closeContainerWatcher =
@@ -632,7 +626,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public ContainerInfo getContainerInfo(long containerID) throws
       IOException {
-    return containerManager.getContainer(containerID);
+    return containerManager.getContainer(ContainerID.valueof(containerID));
   }
 
   /**

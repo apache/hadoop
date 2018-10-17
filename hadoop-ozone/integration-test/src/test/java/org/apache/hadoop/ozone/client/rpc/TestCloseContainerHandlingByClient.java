@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
@@ -302,7 +303,8 @@ public class TestCloseContainerHandlingByClient {
     for (long containerID : containerIdList) {
       Pipeline pipeline =
           cluster.getStorageContainerManager().getContainerManager()
-              .getContainerWithPipeline(containerID).getPipeline();
+              .getContainerWithPipeline(ContainerID.valueof(containerID))
+              .getPipeline();
       pipelineList.add(pipeline);
       List<DatanodeDetails> datanodes = pipeline.getMachines();
       for (DatanodeDetails details : datanodes) {
@@ -349,7 +351,8 @@ public class TestCloseContainerHandlingByClient {
     long containerID = locationInfos.get(0).getContainerID();
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(containerID).getPipeline().getMachines();
+            .getContainerWithPipeline(ContainerID.valueof(containerID))
+            .getPipeline().getMachines();
     Assert.assertEquals(1, datanodes.size());
     waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
     dataString = fixedLengthString(keyString, (1 * blockSize));
@@ -451,7 +454,8 @@ public class TestCloseContainerHandlingByClient {
     long containerID = locationInfos.get(0).getContainerID();
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(containerID).getPipeline().getMachines();
+            .getContainerWithPipeline(ContainerID.valueof(containerID))
+            .getPipeline().getMachines();
     Assert.assertEquals(1, datanodes.size());
     // move the container on the datanode to Closing state, this will ensure
     // closing the key will hit BLOCK_NOT_COMMITTED_EXCEPTION while trying

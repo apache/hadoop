@@ -24,11 +24,9 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
@@ -49,11 +47,7 @@ public class ContainerReportHandler implements
       LoggerFactory.getLogger(ContainerReportHandler.class);
 
   private final NodeManager nodeManager;
-
   private final ContainerManager containerManager;
-
-  private ContainerStateManager containerStateManager;
-
   private ReplicationActivityStatus replicationStatus;
 
   public ContainerReportHandler(ContainerManager containerManager,
@@ -62,7 +56,6 @@ public class ContainerReportHandler implements
     Preconditions.checkNotNull(containerManager);
     Preconditions.checkNotNull(nodeManager);
     Preconditions.checkNotNull(replicationActivityStatus);
-    this.containerStateManager = containerManager.getStateManager();
     this.nodeManager = nodeManager;
     this.containerManager = containerManager;
     this.replicationStatus = replicationActivityStatus;
@@ -81,7 +74,7 @@ public class ContainerReportHandler implements
 
       //update state in container db and trigger close container events
       containerManager
-          .processContainerReports(datanodeOrigin, containerReport, false);
+          .processContainerReports(datanodeOrigin, containerReport);
 
       Set<ContainerID> containerIds = containerReport.getReportsList().stream()
           .map(StorageContainerDatanodeProtocolProtos
@@ -97,13 +90,21 @@ public class ContainerReportHandler implements
           .setContainersForDatanode(datanodeOrigin.getUuid(), containerIds);
 
       for (ContainerID containerID : reportResult.getMissingEntries()) {
-        containerStateManager
-            .removeContainerReplica(containerID, datanodeOrigin);
+        final ContainerReplica replica = ContainerReplica.newBuilder()
+            .setContainerID(containerID)
+            .setDatanodeDetails(datanodeOrigin)
+            .build();
+        containerManager
+            .removeContainerReplica(containerID, replica);
         checkReplicationState(containerID, publisher);
       }
 
       for (ContainerID containerID : reportResult.getNewEntries()) {
-        containerStateManager.addContainerReplica(containerID, datanodeOrigin);
+        final ContainerReplica replica = ContainerReplica.newBuilder()
+            .setContainerID(containerID)
+            .setDatanodeDetails(datanodeOrigin)
+            .build();
+        containerManager.updateContainerReplica(containerID, replica);
         checkReplicationState(containerID, publisher);
       }
 
@@ -116,35 +117,30 @@ public class ContainerReportHandler implements
   }
 
   private void checkReplicationState(ContainerID containerID,
-      EventPublisher publisher)
-      throws SCMException {
-    ContainerInfo container = containerStateManager.getContainer(containerID);
-
-    if (container == null) {
-      //warning unknown container
+      EventPublisher publisher) {
+    try {
+      ContainerInfo container = containerManager.getContainer(containerID);
+      replicateIfNeeded(container, publisher);
+    } catch (ContainerNotFoundException ex) {
       LOG.warn(
           "Container is missing from containerStateManager. Can't request "
               + "replication. {}",
           containerID);
-      return;
-    }
-    if (container.isContainerOpen()) {
-      return;
     }
 
-    ReplicationRequest replicationState =
-        containerStateManager.checkReplicationState(containerID);
-    if (replicationState != null) {
-      if (replicationStatus.isReplicationEnabled()) {
+  }
+
+  private void replicateIfNeeded(ContainerInfo container,
+      EventPublisher publisher) throws ContainerNotFoundException {
+    if (!container.isOpen() && replicationStatus.isReplicationEnabled()) {
+      final int existingReplicas = containerManager
+          .getContainerReplicas(container.containerID()).size();
+      final int expectedReplicas = container.getReplicationFactor().getNumber();
+      if (existingReplicas != expectedReplicas) {
         publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-            replicationState);
-      } else {
-        LOG.warn(
-            "Over/under replicated container but the replication is not "
-                + "(yet) enabled: "
-                + replicationState.toString());
+            new ReplicationRequest(container.getContainerID(),
+                existingReplicas, expectedReplicas));
       }
     }
-
   }
 }

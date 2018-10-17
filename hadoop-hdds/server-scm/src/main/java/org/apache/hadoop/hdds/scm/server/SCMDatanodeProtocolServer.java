@@ -197,7 +197,7 @@ public class SCMDatanodeProtocolServer implements
     if (registeredCommand.getError()
         == SCMRegisteredResponseProto.ErrorCode.success) {
       scm.getContainerManager().processContainerReports(datanodeDetails,
-          containerReportsProto, true);
+          containerReportsProto);
       eventPublisher.fireEvent(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
           new NodeRegistrationContainerReport(datanodeDetails,
               containerReportsProto));

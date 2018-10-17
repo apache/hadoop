@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -50,7 +49,6 @@ public class TestPipelineClose {
   private static StorageContainerManager scm;
   private static ContainerWithPipeline ratisContainer1;
   private static ContainerWithPipeline ratisContainer2;
-  private static ContainerStateMap stateMap;
   private static ContainerManager containerManager;
   private static PipelineSelector pipelineSelector;
 
@@ -66,7 +64,6 @@ public class TestPipelineClose {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    stateMap = containerManager.getStateManager().getContainerStateMap();
     ratisContainer1 = containerManager
         .allocateContainer(RATIS, THREE, "testOwner");
     ratisContainer2 = containerManager
@@ -93,10 +90,9 @@ public class TestPipelineClose {
     Set<ContainerID> set = pipelineSelector.getOpenContainerIDsByPipeline(
         ratisContainer1.getPipeline().getId());
 
-    long cId = ratisContainer1.getContainerInfo().getContainerID();
+    ContainerID cId = ratisContainer1.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
-    set.forEach(containerID ->
-            Assert.assertEquals(containerID, ContainerID.valueof(cId)));
+    set.forEach(containerID -> Assert.assertEquals(containerID, cId));
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline
@@ -133,7 +129,7 @@ public class TestPipelineClose {
         ratisContainer2.getPipeline().getId());
     Assert.assertEquals(1, setOpen.size());
 
-    long cId2 = ratisContainer2.getContainerInfo().getContainerID();
+    ContainerID cId2 = ratisContainer2.getContainerInfo().containerID();
     containerManager
         .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATE);
     containerManager

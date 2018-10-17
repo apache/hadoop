@@ -120,8 +120,7 @@ public class TestContainerSQLCli {
     cluster.getStorageContainerManager().stop();
     eventQueue = new EventQueue();
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
-    containerManager = new SCMContainerManager(conf, nodeManager, 128,
-        eventQueue);
+    containerManager = new SCMContainerManager(conf, nodeManager, eventQueue);
     blockManager = new BlockManagerImpl(
         conf, nodeManager, containerManager, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);

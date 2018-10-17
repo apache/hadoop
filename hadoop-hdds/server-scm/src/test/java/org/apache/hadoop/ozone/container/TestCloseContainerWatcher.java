@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
 import org.apache.hadoop.hdds.scm.container.CloseContainerWatcher;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -274,10 +274,12 @@ public class TestCloseContainerWatcher implements EventHandler<ContainerID> {
       throws IOException {
     ContainerInfo containerInfo = Mockito.mock(ContainerInfo.class);
     ContainerInfo containerInfo2 = Mockito.mock(ContainerInfo.class);
-    when(containerManager.getContainer(id1)).thenReturn(containerInfo);
-    when(containerManager.getContainer(id2)).thenReturn(containerInfo2);
-    when(containerInfo.isContainerOpen()).thenReturn(true);
-    when(containerInfo2.isContainerOpen()).thenReturn(isOpen);
+    when(containerManager.getContainer(ContainerID.valueof(id1)))
+        .thenReturn(containerInfo);
+    when(containerManager.getContainer(ContainerID.valueof(id2)))
+        .thenReturn(containerInfo2);
+    when(containerInfo.isOpen()).thenReturn(true);
+    when(containerInfo2.isOpen()).thenReturn(isOpen);
   }
 
   @Override

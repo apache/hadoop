@@ -50,7 +50,7 @@ public class TestCloseContainerEventHandler {
 
   private static Configuration configuration;
   private static MockNodeManager nodeManager;
-  private static SCMContainerManager mapping;
+  private static SCMContainerManager containerManager;
   private static long size;
   private static File testDir;
   private static EventQueue eventQueue;
@@ -65,18 +65,18 @@ public class TestCloseContainerEventHandler {
     configuration
         .set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new SCMContainerManager(configuration, nodeManager, 128,
+    containerManager = new SCMContainerManager(configuration, nodeManager,
         new EventQueue());
     eventQueue = new EventQueue();
     eventQueue.addHandler(CLOSE_CONTAINER,
-        new CloseContainerEventHandler(mapping));
+        new CloseContainerEventHandler(containerManager));
     eventQueue.addHandler(DATANODE_COMMAND, nodeManager);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    if (mapping != null) {
-      mapping.close();
+    if (containerManager != null) {
+      containerManager.close();
     }
     FileUtil.fullyDelete(testDir);
   }
@@ -109,7 +109,7 @@ public class TestCloseContainerEventHandler {
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(CloseContainerEventHandler.LOG);
-    ContainerWithPipeline containerWithPipeline = mapping
+    ContainerWithPipeline containerWithPipeline = containerManager
         .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
             HddsProtos.ReplicationFactor.ONE, "ozone");
     ContainerID id = new ContainerID(
@@ -123,7 +123,7 @@ public class TestCloseContainerEventHandler {
     // command in the Datanode
     Assert.assertEquals(0, nodeManager.getCommandCount(datanode));
     //Execute these state transitions so that we can close the container.
-    mapping.updateContainerState(id.getId(), CREATED);
+    containerManager.updateContainerState(id, CREATED);
     eventQueue.fireEvent(CLOSE_CONTAINER,
         new ContainerID(
             containerWithPipeline.getContainerInfo().getContainerID()));
@@ -131,7 +131,7 @@ public class TestCloseContainerEventHandler {
     Assert.assertEquals(closeCount + 1,
         nodeManager.getCommandCount(datanode));
     Assert.assertEquals(HddsProtos.LifeCycleState.CLOSING,
-        mapping.getStateManager().getContainer(id).getState());
+        containerManager.getContainer(id).getState());
   }
 
   @Test
@@ -139,7 +139,7 @@ public class TestCloseContainerEventHandler {
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(CloseContainerEventHandler.LOG);
-    ContainerWithPipeline containerWithPipeline = mapping
+    ContainerWithPipeline containerWithPipeline = containerManager
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, "ozone");
     ContainerID id = new ContainerID(
@@ -160,7 +160,7 @@ public class TestCloseContainerEventHandler {
       i++;
     }
     //Execute these state transitions so that we can close the container.
-    mapping.updateContainerState(id.getId(), CREATED);
+    containerManager.updateContainerState(id, CREATED);
     eventQueue.fireEvent(CLOSE_CONTAINER, id);
     eventQueue.processAll(1000);
     i = 0;
@@ -170,7 +170,7 @@ public class TestCloseContainerEventHandler {
       Assert.assertEquals(closeCount[i] + 1,
           nodeManager.getCommandCount(details));
       Assert.assertEquals(HddsProtos.LifeCycleState.CLOSING,
-          mapping.getStateManager().getContainer(id).getState());
+          containerManager.getContainer(id).getState());
       i++;
     }
   }

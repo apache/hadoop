@@ -22,12 +22,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -64,14 +66,14 @@ public class ReplicationManager implements Runnable {
 
   private boolean running = true;
 
-  private ContainerStateManager containerStateManager;
+  private ContainerManager containerManager;
 
   public ReplicationManager(ContainerPlacementPolicy containerPlacement,
-      ContainerStateManager containerStateManager, EventQueue eventQueue,
+      ContainerManager containerManager, EventQueue eventQueue,
       LeaseManager<Long> commandWatcherLeaseManager) {
 
     this.containerPlacement = containerPlacement;
-    this.containerStateManager = containerStateManager;
+    this.containerManager = containerManager;
     this.eventPublisher = eventQueue;
 
     this.replicationCommandWatcher =
@@ -106,7 +108,7 @@ public class ReplicationManager implements Runnable {
 
         ContainerID containerID = new ContainerID(request.getContainerId());
         ContainerInfo containerInfo =
-            containerStateManager.getContainer(containerID);
+            containerManager.getContainer(containerID);
 
         Preconditions.checkNotNull(containerInfo,
             "No information about the container " + request.getContainerId());
@@ -116,10 +118,10 @@ public class ReplicationManager implements Runnable {
                 "Container should be in closed state");
 
         //check the current replication
-        List<DatanodeDetails> datanodesWithReplicas =
+        List<ContainerReplica> containerReplicas =
             new ArrayList<>(getCurrentReplicas(request));
 
-        if (datanodesWithReplicas.size() == 0) {
+        if (containerReplicas.size() == 0) {
           LOG.warn(
               "Container {} should be replicated but can't find any existing "
                   + "replicas",
@@ -134,21 +136,23 @@ public class ReplicationManager implements Runnable {
             .size();
 
         int deficit =
-            request.getExpecReplicationCount() - datanodesWithReplicas.size()
+            request.getExpecReplicationCount() - containerReplicas.size()
                 - inFlightReplications;
 
         if (deficit > 0) {
 
+          List<DatanodeDetails> datanodes = containerReplicas.stream()
+              .map(ContainerReplica::getDatanodeDetails)
+              .collect(Collectors.toList());
           List<DatanodeDetails> selectedDatanodes = containerPlacement
-              .chooseDatanodes(datanodesWithReplicas, deficit,
+              .chooseDatanodes(datanodes, deficit,
                   containerInfo.getUsedBytes());
 
           //send the command
           for (DatanodeDetails datanode : selectedDatanodes) {
 
             ReplicateContainerCommand replicateCommand =
-                new ReplicateContainerCommand(containerID.getId(),
-                    datanodesWithReplicas);
+                new ReplicateContainerCommand(containerID.getId(), datanodes);
 
             eventPublisher.fireEvent(SCMEvents.DATANODE_COMMAND,
                 new CommandForDatanode<>(
@@ -174,9 +178,9 @@ public class ReplicationManager implements Runnable {
   }
 
   @VisibleForTesting
-  protected Set<DatanodeDetails> getCurrentReplicas(ReplicationRequest request)
+  protected Set<ContainerReplica> getCurrentReplicas(ReplicationRequest request)
       throws IOException {
-    return containerStateManager
+    return containerManager
         .getContainerReplicas(new ContainerID(request.getContainerId()));
   }
 
@@ -234,7 +238,11 @@ public class ReplicationManager implements Runnable {
     }
   }
 
-  public static class ReplicationCompleted implements IdentifiableEventPayload {
+  /**
+   * Add javadoc.
+   */
+  public static class ReplicationCompleted
+      implements IdentifiableEventPayload {
 
     private final long uuid;
 

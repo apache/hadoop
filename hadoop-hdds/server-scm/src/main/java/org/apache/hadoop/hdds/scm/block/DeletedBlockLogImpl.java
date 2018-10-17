@@ -29,6 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .DeleteBlockTransactionResult;
 import org.apache.hadoop.hdds.scm.command
     .CommandStatusReportHandler.DeleteBlockStatus;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -258,8 +259,8 @@ public class DeletedBlockLogImpl
 
           dnsWithCommittedTxn.add(dnID);
           Pipeline pipeline =
-              containerManager.getContainerWithPipeline(containerId)
-                  .getPipeline();
+              containerManager.getContainerWithPipeline(
+                  ContainerID.valueof(containerId)).getPipeline();
           Collection<DatanodeDetails> containerDnsDetails =
               pipeline.getDatanodes().values();
           // The delete entry can be safely removed from the log if all the
