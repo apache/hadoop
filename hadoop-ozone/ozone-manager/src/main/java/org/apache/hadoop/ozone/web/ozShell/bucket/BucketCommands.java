@@ -38,7 +38,8 @@ import picocli.CommandLine.ParentCommand;
         ListBucketHandler.class,
         CreateBucketHandler.class,
         UpdateBucketHandler.class,
-        DeleteBucketHandler.class
+        DeleteBucketHandler.class,
+        S3BucketMapping.class
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)

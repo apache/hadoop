@@ -1124,6 +1124,48 @@ public class TestOzoneShell {
     executeWithError(shell, args, "the length should be a positive number");
   }
 
+  @Test
+  public void testS3BucketMapping() throws  IOException {
+    String s3Bucket = "bucket1";
+    String commandOutput;
+    createS3Bucket("ozone", s3Bucket);
+    String volumeName = client.getOzoneVolumeName(s3Bucket);
+    String[] args = new String[] {"bucket", "path", url + "/" + s3Bucket};
+    if (url.startsWith("o3")) {
+      execute(shell, args);
+      commandOutput = out.toString();
+      assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
+          volumeName));
+      assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME +"://" +
+          s3Bucket + "." + volumeName));
+      out.reset();
+      //Trying to get map for an unknown bucket
+      args = new String[] {"bucket", "path", url + "/" + "unknownbucket"};
+      executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
+    } else {
+      executeWithError(shell, args, "Ozone REST protocol does not support " +
+          "this operation");
+    }
+
+    // No bucket name
+    args = new String[] {"bucket", "path", url};
+    executeWithError(shell, args, "S3Bucket name is required");
+
+    // Invalid bucket name
+    args = new String[] {"bucket", "path", url + "/" + s3Bucket +
+          "/multipleslash"};
+    executeWithError(shell, args, "Invalid S3Bucket name. Delimiters (/) not" +
+        " allowed");
+  }
+
+  private void createS3Bucket(String userName, String s3Bucket) {
+    try {
+      client.createS3Bucket("ozone", s3Bucket);
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("S3_BUCKET_ALREADY_EXISTS", ex);
+    }
+  }
+
   private OzoneVolume creatVolume() throws OzoneException, IOException {
     String volumeName = RandomStringUtils.randomNumeric(5) + "volume";
     VolumeArgs volumeArgs = VolumeArgs.newBuilder()
