@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_HTTP_SCHEME;
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RPC_SCHEME;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +83,7 @@ public abstract class Handler implements Callable<Void> {
     Configuration conf = new OzoneConfiguration();
     String scheme = ozoneURI.getScheme();
     if (ozoneURI.getScheme() == null || scheme.isEmpty()) {
-      scheme = OZONE_URI_SCHEME;
+      scheme = OZONE_RPC_SCHEME;
     }
     if (scheme.equals(OZONE_HTTP_SCHEME)) {
       if (ozoneURI.getHost() != null) {
@@ -96,7 +96,7 @@ public abstract class Handler implements Callable<Void> {
       } else {
         client = OzoneClientFactory.getRestClient(conf);
       }
-    } else if (scheme.equals(OZONE_URI_SCHEME)) {
+    } else if (scheme.equals(OZONE_RPC_SCHEME)) {
       if (ozoneURI.getHost() != null) {
         if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());

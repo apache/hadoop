@@ -107,7 +107,7 @@ public class OzoneFileSystem extends FileSystem {
 
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Ozone file system url should be "
-          + "in the form o3://bucket.volume");
+          + "in the form o3fs://bucket.volume");
     }
     String bucketStr = matcher.group(1);
     String volumeStr = matcher.group(2);

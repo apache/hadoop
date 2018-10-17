@@ -103,7 +103,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.s3a.");
 
     // O3 properties are in a different subtree.
-    xmlPrefixToSkipCompare.add("fs.o3.");
+    xmlPrefixToSkipCompare.add("fs.o3fs.");
 
     //ftp properties are in a different subtree.
     // - org.apache.hadoop.fs.ftp.FTPFileSystem.
