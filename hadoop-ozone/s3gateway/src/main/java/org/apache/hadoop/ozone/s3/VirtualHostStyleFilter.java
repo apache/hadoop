@@ -49,8 +49,6 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       VirtualHostStyleFilter.class);
-  private static final Pattern URL_SCHEME_PATTERN = Pattern.compile("" +
-      "(?<bucket>(.+))\\.(?<volume>(.+))\\.");
 
   @Inject
   private OzoneConfiguration conf;
@@ -83,24 +81,21 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
     // address length means it is virtual host style, we need to convert to
     // path style.
     if (host.length() > domain.length()) {
-      String bothNames = host.substring(0, host.length() - domain.length());
-      LOG.debug("Both volume name and bucket name is {}", bothNames);
-      Matcher matcher = URL_SCHEME_PATTERN.matcher(bothNames);
+      String bucketName = host.substring(0, host.length() - domain.length());
 
-      if (!matcher.matches()) {
+      if(!bucketName.endsWith(".")) {
+        //Checking this as the virtual host style pattern is http://bucket.host/
         throw getException("Invalid S3 Gateway request {" + requestContext
             .getUriInfo().getRequestUri().toString() +"}:" +" Host: {" + host
             + " is in invalid format");
+      } else {
+        bucketName = bucketName.substring(0, bucketName.length() - 1);
       }
-
-      String bucketStr = matcher.group("bucket");
-      String volumeStr = matcher.group("volume");
-
-      LOG.debug("bucket {}, volumeStr {}", bucketStr, volumeStr);
+      LOG.debug("Bucket name is {}", bucketName);
 
       URI baseURI = requestContext.getUriInfo().getBaseUri();
       String currentPath = requestContext.getUriInfo().getPath();
-      String newPath = String.format("%s/%s", volumeStr, bucketStr);
+          String newPath = bucketName;
       if (currentPath != null) {
         newPath += String.format("%s", currentPath);
       }

@@ -31,6 +31,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.SecurityContext;
 import java.net.URI;
 
+import static org.junit.Assert.fail;
+
 /**
  * This class test virtual host style mapping conversion to path style.
  */
@@ -87,10 +89,10 @@ public class TestVirtualHostStyleFilter {
     virtualHostStyleFilter.setConfiguration(conf);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
-            ".myvolume.localhost:9878", "/myfile", true);
+            ".localhost:9878", "/myfile", true);
     virtualHostStyleFilter.filter(containerRequest);
     URI expected = new URI("http://" + s3HttpAddr +
-        "/myvolume/mybucket/myfile");
+        "/mybucket/myfile");
     Assert.assertEquals(expected, containerRequest.getRequestUri());
   }
 
@@ -102,10 +104,10 @@ public class TestVirtualHostStyleFilter {
     virtualHostStyleFilter.setConfiguration(conf);
 
     ContainerRequest containerRequest = createContainerRequest(s3HttpAddr,
-        "/myvolume/mybucket/myfile", false);
+        "/mybucket/myfile", false);
     virtualHostStyleFilter.filter(containerRequest);
     URI expected = new URI("http://" + s3HttpAddr +
-        "/myvolume/mybucket/myfile");
+        "/mybucket/myfile");
     Assert.assertEquals(expected, containerRequest.getRequestUri());
 
   }
@@ -118,10 +120,9 @@ public class TestVirtualHostStyleFilter {
     virtualHostStyleFilter.setConfiguration(conf);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
-        ".myvolume.localhost:9878", null, true);
+        ".localhost:9878", null, true);
     virtualHostStyleFilter.filter(containerRequest);
-    URI expected = new URI("http://" + s3HttpAddr +
-        "/myvolume/mybucket");
+    URI expected = new URI("http://" + s3HttpAddr + "/mybucket");
     Assert.assertEquals(expected, containerRequest.getRequestUri());
 
   }
@@ -134,7 +135,7 @@ public class TestVirtualHostStyleFilter {
     virtualHostStyleFilter.setConfiguration(conf);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
-        ".myvolume.localhost:9999", null, true);
+        ".localhost:9999", null, true);
     try {
       virtualHostStyleFilter.filter(containerRequest);
     } catch (InvalidRequestException ex) {
@@ -144,16 +145,18 @@ public class TestVirtualHostStyleFilter {
   }
 
   @Test
-  public void testVirtualHostStyleWithoutVolumeName() throws Exception {
+  public void testIncorrectVirtualHostStyle() throws
+      Exception {
 
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
 
-    ContainerRequest containerRequest = createContainerRequest("mybucket." +
-        ".localhost:9878", null, true);
+    ContainerRequest containerRequest = createContainerRequest("mybucket" +
+        "localhost:9878", null, true);
     try {
       virtualHostStyleFilter.filter(containerRequest);
+      fail("testIncorrectVirtualHostStyle failed");
     } catch (InvalidRequestException ex) {
       GenericTestUtils.assertExceptionContains("invalid format", ex);
     }
