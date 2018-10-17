@@ -298,7 +298,7 @@ public class ZStandardCompressor implements Compressor {
   private native static void init(int level, long stream);
   private native int deflateBytesDirect(ByteBuffer src, int srcOffset,
       int srcLen, ByteBuffer dst, int dstLen);
-  private static native int getStreamSize();
+  private native static int getStreamSize();
   private native static void end(long strm);
   private native static void initIDs();
   public native static String getLibraryName();
