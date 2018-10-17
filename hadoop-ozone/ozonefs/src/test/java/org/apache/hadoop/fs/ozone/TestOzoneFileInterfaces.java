@@ -231,7 +231,7 @@ public class TestOzoneFileInterfaces {
         ozoneFs.pathToKey(new Path("key1/key2")));
 
     assertEquals("key1/key2",
-        ozoneFs.pathToKey(new Path("o3://test1/key1/key2")));
+        ozoneFs.pathToKey(new Path("o3fs://test1/key1/key2")));
   }
 
   private String getCurrentUser() {
