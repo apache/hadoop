@@ -34,6 +34,10 @@
                 .then(function (result) {
                     ctrl.nodemanagermetrics = result.data.beans[0];
                 });
+            $http.get("jmx?qry=Hadoop:service=StorageContainerManager,name=StorageContainerManagerInfo,component=ServerRuntime")
+                .then(function (result) {
+                    ctrl.scmmetrics = result.data.beans[0];
+                });
 
             var statusSortOrder = {
                 "HEALTHY": "a",
