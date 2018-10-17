@@ -51,7 +51,7 @@ public class Shell extends GenericCli {
   public static final String OZONE_URI_DESCRIPTION = "Ozone URI could start "
       + "with o3:// or http(s):// or without prefix. REST protocol will "
       + "be used for http(s), RPC otherwise. URI may contain the host and port "
-      + "of the SCM server. Both are optional. "
+      + "of the OM server. Both are optional. "
       + "If they are not specified it will be identified from "
       + "the config files.";
 
@@ -63,6 +63,9 @@ public class Shell extends GenericCli {
 
   public static final String OZONE_KEY_URI_DESCRIPTION =
       "URI of the volume/bucket/key.\n" + OZONE_URI_DESCRIPTION;
+
+  public static final String OZONE_S3BUCKET_URI_DESCRIPTION = "URI of the " +
+      "S3Bucket.\n" + OZONE_URI_DESCRIPTION;
 
   // General options
   public static final int DEFAULT_OZONE_PORT = 50070;
