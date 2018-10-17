@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -35,13 +36,13 @@ public final class PipelineFactory {
 
   private Map<ReplicationType, PipelineProvider> providers;
 
-  PipelineFactory(NodeManager nodeManager,
-      PipelineStateManager stateManager) {
+  PipelineFactory(NodeManager nodeManager, PipelineStateManager stateManager,
+      Configuration conf) {
     providers = new HashMap<>();
     providers.put(ReplicationType.STAND_ALONE,
         new SimplePipelineProvider(nodeManager));
     providers.put(ReplicationType.RATIS,
-        new RatisPipelineProvider(nodeManager, stateManager));
+        new RatisPipelineProvider(nodeManager, stateManager, conf));
   }
 
   public Pipeline create(ReplicationType type, ReplicationFactor factor)

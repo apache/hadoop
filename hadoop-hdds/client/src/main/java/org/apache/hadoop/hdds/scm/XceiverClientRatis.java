@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
@@ -69,6 +70,24 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
     return new XceiverClientRatis(pipeline,
+        SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
+        retryPolicy);
+  }
+
+  public static XceiverClientRatis newXceiverClientRatis(
+      org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
+      Configuration ozoneConf) {
+    final String rpcType = ozoneConf
+        .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
+            ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
+    final int maxOutstandingRequests =
+        HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
+    final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
+    Pipeline pipeline1 =
+        new Pipeline(pipeline.getNodes().get(0).getUuidString(),
+            HddsProtos.LifeCycleState.OPEN, pipeline.getType(),
+            pipeline.getFactor(), PipelineID.valueOf(pipeline.getID().getId()));
+    return new XceiverClientRatis(pipeline1,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
         retryPolicy);
   }

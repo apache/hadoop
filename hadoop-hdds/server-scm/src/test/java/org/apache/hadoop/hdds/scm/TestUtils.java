@@ -18,7 +18,11 @@ package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.server
+    .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
@@ -305,6 +309,19 @@ public final class TestUtils {
 
   public static PipelineReportsProto getRandomPipelineReports() {
     return PipelineReportsProto.newBuilder().build();
+  }
+
+  public static PipelineReportFromDatanode getRandomPipelineReportFromDatanode(
+      DatanodeDetails dn,
+      org.apache.hadoop.hdds.scm.pipeline.PipelineID... pipelineIDs) {
+    PipelineReportsProto.Builder reportBuilder =
+        PipelineReportsProto.newBuilder();
+    for (org.apache.hadoop.hdds.scm.pipeline.PipelineID pipelineID :
+        pipelineIDs) {
+      reportBuilder.addPipelineReport(
+          PipelineReport.newBuilder().setPipelineID(pipelineID.getProtobuf()));
+    }
+    return new PipelineReportFromDatanode(dn, reportBuilder.build());
   }
 
   /**

@@ -23,12 +23,14 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -40,17 +42,17 @@ public final class Pipeline {
   private final ReplicationType type;
   private final ReplicationFactor factor;
 
-  private LifeCycleState state;
-  private List<DatanodeDetails> nodes;
+  private PipelineState state;
+  private Map<DatanodeDetails, Long> nodeStatus;
 
   private Pipeline(PipelineID id, ReplicationType type,
-      ReplicationFactor factor, LifeCycleState state,
-      List<DatanodeDetails> nodes) {
+      ReplicationFactor factor, PipelineState state,
+      Map<DatanodeDetails, Long> nodeStatus) {
     this.id = id;
     this.type = type;
     this.factor = factor;
     this.state = state;
-    this.nodes = nodes;
+    this.nodeStatus = nodeStatus;
   }
 
   /**
@@ -85,8 +87,34 @@ public final class Pipeline {
    *
    * @return - LifeCycleStates.
    */
-  public LifeCycleState getLifeCycleState() {
+  PipelineState getPipelineState() {
+    // TODO: See if we need to expose this.
     return state;
+  }
+
+  public boolean isClosed() {
+    return state == PipelineState.CLOSED;
+  }
+
+  public boolean isOpen() {
+    return state == PipelineState.OPEN;
+  }
+
+  void reportDatanode(DatanodeDetails dn) throws IOException {
+    if (nodeStatus.get(dn) == null) {
+      throw new IOException(
+          String.format("Datanode=%s not part of pipeline=%s", dn, id));
+    }
+    nodeStatus.put(dn, System.currentTimeMillis());
+  }
+
+  boolean isHealthy() {
+    for (Long reportedTime : nodeStatus.values()) {
+      if (reportedTime < 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -95,25 +123,31 @@ public final class Pipeline {
    * @return List of DatanodeDetails
    */
   public List<DatanodeDetails> getNodes() {
-    return new ArrayList<>(nodes);
+    return new ArrayList<>(nodeStatus.keySet());
   }
 
   public HddsProtos.Pipeline getProtobufMessage() {
-    HddsProtos.Pipeline.Builder builder = HddsProtos.Pipeline.newBuilder();
-    builder.setId(id.getProtobuf());
-    builder.setType(type);
-    builder.setState(state);
-    builder.addAllMembers(nodes.stream().map(
-        DatanodeDetails::getProtoBufMessage).collect(Collectors.toList()));
+    HddsProtos.Pipeline.Builder builder = HddsProtos.Pipeline.newBuilder()
+        .setId(id.getProtobuf())
+        .setType(type)
+        .setFactor(factor)
+        .setLeaderID("")
+        .addAllMembers(nodeStatus.keySet().stream()
+            .map(DatanodeDetails::getProtoBufMessage)
+            .collect(Collectors.toList()));
     return builder.build();
   }
 
   public static Pipeline fromProtobuf(HddsProtos.Pipeline pipeline) {
-    return new Pipeline(PipelineID.getFromProtobuf(pipeline.getId()),
-        pipeline.getType(), pipeline.getFactor(), pipeline.getState(),
-        pipeline.getMembersList().stream().map(DatanodeDetails::getFromProtoBuf)
-            .collect(Collectors.toList()));
+    return new Builder().setId(PipelineID.getFromProtobuf(pipeline.getId()))
+        .setFactor(pipeline.getFactor())
+        .setType(pipeline.getType())
+        .setState(PipelineState.ALLOCATED)
+        .setNodes(pipeline.getMembersList().stream()
+            .map(DatanodeDetails::getFromProtoBuf).collect(Collectors.toList()))
+        .build();
   }
+
 
   @Override
   public boolean equals(Object o) {
@@ -131,7 +165,7 @@ public final class Pipeline {
         .append(type, that.type)
         .append(factor, that.factor)
         .append(state, that.state)
-        .append(nodes, that.nodes)
+        .append(nodeStatus, that.nodeStatus)
         .isEquals();
   }
 
@@ -142,7 +176,7 @@ public final class Pipeline {
         .append(type)
         .append(factor)
         .append(state)
-        .append(nodes)
+        .append(nodeStatus)
         .toHashCode();
   }
 
@@ -161,17 +195,17 @@ public final class Pipeline {
     private PipelineID id = null;
     private ReplicationType type = null;
     private ReplicationFactor factor = null;
-    private LifeCycleState state = null;
-    private List<DatanodeDetails> nodes = null;
+    private PipelineState state = null;
+    private Map<DatanodeDetails, Long> nodeStatus = null;
 
     public Builder() {}
 
     public Builder(Pipeline pipeline) {
-      this.id = pipeline.getID();
-      this.type = pipeline.getType();
-      this.factor = pipeline.getFactor();
-      this.state = pipeline.getLifeCycleState();
-      this.nodes = pipeline.getNodes();
+      this.id = pipeline.id;
+      this.type = pipeline.type;
+      this.factor = pipeline.factor;
+      this.state = pipeline.state;
+      this.nodeStatus = pipeline.nodeStatus;
     }
 
     public Builder setId(PipelineID id1) {
@@ -189,13 +223,14 @@ public final class Pipeline {
       return this;
     }
 
-    public Builder setState(LifeCycleState state1) {
+    public Builder setState(PipelineState state1) {
       this.state = state1;
       return this;
     }
 
-    public Builder setNodes(List<DatanodeDetails> nodes1) {
-      this.nodes = nodes1;
+    public Builder setNodes(List<DatanodeDetails> nodes) {
+      this.nodeStatus = new LinkedHashMap<>();
+      nodes.forEach(node -> nodeStatus.put(node, -1L));
       return this;
     }
 
@@ -204,8 +239,12 @@ public final class Pipeline {
       Preconditions.checkNotNull(type);
       Preconditions.checkNotNull(factor);
       Preconditions.checkNotNull(state);
-      Preconditions.checkNotNull(nodes);
-      return new Pipeline(id, type, factor, state, nodes);
+      Preconditions.checkNotNull(nodeStatus);
+      return new Pipeline(id, type, factor, state, nodeStatus);
     }
+  }
+
+  enum PipelineState {
+    ALLOCATED, OPEN, CLOSED
   }
 }

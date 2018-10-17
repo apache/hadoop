@@ -23,11 +23,12 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -44,11 +45,13 @@ public class RatisPipelineProvider implements PipelineProvider {
 
   private final NodeManager nodeManager;
   private final PipelineStateManager stateManager;
+  private final Configuration conf;
 
   RatisPipelineProvider(NodeManager nodeManager,
-      PipelineStateManager stateManager) {
+      PipelineStateManager stateManager, Configuration conf) {
     this.nodeManager = nodeManager;
     this.stateManager = stateManager;
+    this.conf = conf;
   }
 
   /**
@@ -90,7 +93,7 @@ public class RatisPipelineProvider implements PipelineProvider {
   public Pipeline create(ReplicationFactor factor) throws IOException {
     // Get set of datanodes already used for ratis pipeline
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
-    stateManager.getPipelines(ReplicationType.RATIS)
+    stateManager.getPipelinesByType(ReplicationType.RATIS)
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 
     // Get list of healthy nodes
@@ -107,13 +110,15 @@ public class RatisPipelineProvider implements PipelineProvider {
       throw new IOException(e);
     }
 
-    return Pipeline.newBuilder()
+    Pipeline pipeline = Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(LifeCycleState.ALLOCATED)
+        .setState(PipelineState.ALLOCATED)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(dns)
         .build();
+    initializePipeline(pipeline);
+    return pipeline;
   }
 
   @Override
@@ -126,10 +131,19 @@ public class RatisPipelineProvider implements PipelineProvider {
     }
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(LifeCycleState.ALLOCATED)
+        .setState(PipelineState.ALLOCATED)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(nodes)
         .build();
+  }
+
+  private void initializePipeline(Pipeline pipeline)
+      throws IOException {
+    // TODO: remove old code in XceiverClientRatis#newXceiverClientRatis
+    try (XceiverClientRatis client =
+        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
+      client.createPipeline();
+    }
   }
 }
