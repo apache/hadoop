@@ -926,6 +926,14 @@
 </property>
 
 <property>
+  <name>fs.ftp.timeout</name>
+  <value>0</value>
+  <description>
+    FTP filesystem's timeout in seconds.
+  </description>
+</property>
+
+<property>
   <name>fs.df.interval</name>
   <value>60000</value>
   <description>Disk usage statistics refresh interval in msec.</description>

@@ -93,6 +93,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
     xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.timeout");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
