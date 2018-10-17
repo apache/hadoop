@@ -42,16 +42,16 @@ Please add the following entry to the core-site.xml.
 
 {{< highlight xml >}}
 <property>
-  <name>fs.o3.impl</name>
+  <name>fs.o3fs.impl</name>
   <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
 </property>
 <property>
   <name>fs.defaultFS</name>
-  <value>o3://localhost:9864/volume/bucket</value>
+  <value>o3fs://localhost:9864/volume/bucket</value>
 </property>
 {{< /highlight >}}
 
-This will make this bucket to be the default file system for HDFS dfs commands and register the o3 file system type..
+This will make this bucket to be the default file system for HDFS dfs commands and register the o3fs file system type..
 
 You also need to add the ozone-filesystem.jar file to the classpath:
 

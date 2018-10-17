@@ -63,7 +63,10 @@ public final class OzoneConsts {
   public static final String OZONE_USER = "user";
   public static final String OZONE_REQUEST = "request";
 
-  public static final String OZONE_URI_SCHEME = "o3";
+  // Ozone File System scheme
+  public static final String OZONE_URI_SCHEME = "o3fs";
+
+  public static final String OZONE_RPC_SCHEME = "o3";
   public static final String OZONE_HTTP_SCHEME = "http";
   public static final String OZONE_URI_DELIMITER = "/";
 
