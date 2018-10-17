@@ -22,8 +22,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -54,7 +54,7 @@ public class SimplePipelineProvider implements PipelineProvider {
     Collections.shuffle(dns);
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(LifeCycleState.ALLOCATED)
+        .setState(PipelineState.ALLOCATED)
         .setType(ReplicationType.STAND_ALONE)
         .setFactor(factor)
         .setNodes(dns.subList(0, factor.getNumber()))
@@ -71,7 +71,7 @@ public class SimplePipelineProvider implements PipelineProvider {
     }
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(LifeCycleState.ALLOCATED)
+        .setState(PipelineState.ALLOCATED)
         .setType(ReplicationType.STAND_ALONE)
         .setFactor(factor)
         .setNodes(nodes)

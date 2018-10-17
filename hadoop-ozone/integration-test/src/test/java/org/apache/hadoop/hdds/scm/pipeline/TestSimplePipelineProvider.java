@@ -56,8 +56,8 @@ public class TestSimplePipelineProvider {
     Assert.assertEquals(pipeline.getType(),
         HddsProtos.ReplicationType.STAND_ALONE);
     Assert.assertEquals(pipeline.getFactor(), factor);
-    Assert.assertEquals(pipeline.getLifeCycleState(),
-        HddsProtos.LifeCycleState.ALLOCATED);
+    Assert.assertEquals(pipeline.getPipelineState(),
+        Pipeline.PipelineState.ALLOCATED);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
 
     factor = HddsProtos.ReplicationFactor.ONE;
@@ -66,8 +66,8 @@ public class TestSimplePipelineProvider {
     Assert.assertEquals(pipeline1.getType(),
         HddsProtos.ReplicationType.STAND_ALONE);
     Assert.assertEquals(pipeline1.getFactor(), factor);
-    Assert.assertEquals(pipeline1.getLifeCycleState(),
-        HddsProtos.LifeCycleState.ALLOCATED);
+    Assert.assertEquals(pipeline1.getPipelineState(),
+        Pipeline.PipelineState.ALLOCATED);
     Assert.assertEquals(pipeline1.getNodes().size(), factor.getNumber());
   }
 
@@ -86,8 +86,8 @@ public class TestSimplePipelineProvider {
     Assert.assertEquals(pipeline.getType(),
         HddsProtos.ReplicationType.STAND_ALONE);
     Assert.assertEquals(pipeline.getFactor(), factor);
-    Assert.assertEquals(pipeline.getLifeCycleState(),
-        HddsProtos.LifeCycleState.ALLOCATED);
+    Assert.assertEquals(pipeline.getPipelineState(),
+        Pipeline.PipelineState.ALLOCATED);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
 
     factor = HddsProtos.ReplicationFactor.ONE;
@@ -95,8 +95,8 @@ public class TestSimplePipelineProvider {
     Assert.assertEquals(pipeline.getType(),
         HddsProtos.ReplicationType.STAND_ALONE);
     Assert.assertEquals(pipeline.getFactor(), factor);
-    Assert.assertEquals(pipeline.getLifeCycleState(),
-        HddsProtos.LifeCycleState.ALLOCATED);
+    Assert.assertEquals(pipeline.getPipelineState(),
+        Pipeline.PipelineState.ALLOCATED);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
   }
 }

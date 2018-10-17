@@ -41,18 +41,25 @@ public interface PipelineManager extends Closeable {
 
   Pipeline getPipeline(PipelineID pipelineID) throws IOException;
 
+  List<Pipeline> getPipelinesByType(ReplicationType type);
+
+  List<Pipeline> getPipelinesByTypeAndFactor(ReplicationType type,
+      ReplicationFactor factor);
+
   void addContainerToPipeline(PipelineID pipelineID, ContainerID containerID)
       throws IOException;
 
-  void removeContainerFromPipeline(PipelineID pipelineID, ContainerID containerID)
-      throws IOException;
+  void removeContainerFromPipeline(PipelineID pipelineID,
+      ContainerID containerID) throws IOException;
 
   Set<ContainerID> getContainersInPipeline(PipelineID pipelineID)
       throws IOException;
 
+  int getNumberOfContainers(PipelineID pipelineID) throws IOException;
+
   void finalizePipeline(PipelineID pipelineID) throws IOException;
 
-  void closePipeline(PipelineID pipelineId) throws IOException;
+  void openPipeline(PipelineID pipelineId) throws IOException;
 
   void removePipeline(PipelineID pipelineID) throws IOException;
 }

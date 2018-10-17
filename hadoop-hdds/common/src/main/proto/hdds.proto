@@ -47,6 +47,7 @@ message PipelineID {
 message Pipeline {
     required string leaderID = 1;
     repeated DatanodeDetailsProto members = 2;
+    // TODO: remove the state and leaderID from this class
     optional LifeCycleState state = 3 [default = OPEN];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
