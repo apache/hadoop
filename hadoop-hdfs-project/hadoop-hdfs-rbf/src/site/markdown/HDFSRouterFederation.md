@@ -179,11 +179,11 @@ The rest of the options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-
 
 Once the Router is configured, it can be started:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs start dfsrouter
+    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start dfsrouter
 
 And to stop it:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs stop dfsrouter
+    [hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon stop dfsrouter
 
 ### Mount table management
 
