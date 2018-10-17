@@ -174,6 +174,7 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -194,6 +195,7 @@ public class TestClientRMService {
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
+  private File resourceTypesFile = null;
 
   @Test
   public void testGetDecommissioningClusterNodes() throws Exception {
@@ -2492,12 +2494,12 @@ public class TestClientRMService {
   public void testRegisterNMWithDiffUnits() throws Exception {
     ResourceUtils.resetResourceTypes();
     Configuration yarnConf = new YarnConfiguration();
-    String resourceTypesFile = "resource-types-4.xml";
+    String resourceTypesFileName = "resource-types-4.xml";
     InputStream source =
-        yarnConf.getClassLoader().getResourceAsStream(resourceTypesFile);
-    File dest = new File(yarnConf.getClassLoader().
+        yarnConf.getClassLoader().getResourceAsStream(resourceTypesFileName);
+    resourceTypesFile = new File(yarnConf.getClassLoader().
         getResource(".").getPath(), "resource-types.xml");
-    FileUtils.copyInputStreamToFile(source, dest);
+    FileUtils.copyInputStreamToFile(source, resourceTypesFile);
     ResourceUtils.getResourceTypes();
 
     yarnConf.setClass(
@@ -2566,9 +2568,12 @@ public class TestClientRMService {
 
     rpc.stopProxy(client, conf);
     rm.close();
+  }
 
-    if (dest.exists()) {
-      dest.delete();
+  @After
+  public void tearDown(){
+    if (resourceTypesFile != null && resourceTypesFile.exists()) {
+      resourceTypesFile.delete();
     }
   }
 }
