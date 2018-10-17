@@ -230,6 +230,42 @@ public class TestPlacementConstraintParser {
   }
 
   @Test
+  public void testAndConstraintParser2()
+          throws PlacementConstraintParseException {
+    String expressionExpr;
+    ConstraintParser parser;
+    AbstractConstraint constraint;
+    And and;
+
+    expressionExpr = "AND(NOTIN,NODE,foo:NOTIN,NODE,bar)";
+    parser = new ConjunctionConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    Assert.assertTrue(constraint instanceof And);
+    and = (And) constraint;
+    Assert.assertEquals(2, and.getChildren().size());
+    verifyConstraintToString(expressionExpr, constraint);
+
+    expressionExpr = "AND(NOTIN,NODE,foo:cardinality,NODE,foo,0,1)";
+    parser = new ConjunctionConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    Assert.assertTrue(constraint instanceof And);
+    Assert.assertEquals(2, and.getChildren().size());
+    verifyConstraintToString(expressionExpr, constraint);
+
+    expressionExpr =
+            "AND(NOTIN,NODE,foo:AND(NOTIN,NODE,foo:cardinality,NODE,foo,0,1))";
+    parser = new ConjunctionConstraintParser(expressionExpr);
+    constraint = parser.parse();
+    Assert.assertTrue(constraint instanceof And);
+    and = (And) constraint;
+    Assert.assertTrue(and.getChildren().get(0) instanceof SingleConstraint);
+    Assert.assertTrue(and.getChildren().get(1) instanceof And);
+    and = (And) and.getChildren().get(1);
+    Assert.assertEquals(2, and.getChildren().size());
+    verifyConstraintToString(expressionExpr, constraint);
+  }
+
+  @Test
   public void testOrConstraintParser()
       throws PlacementConstraintParseException {
     String expressionExpr;
