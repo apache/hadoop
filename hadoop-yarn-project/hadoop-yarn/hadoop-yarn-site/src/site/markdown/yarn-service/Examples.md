@@ -48,7 +48,7 @@ Note this example requires registry DNS.
       "configuration": {
         "files": [
           {
-            "type": "ENV",
+            "type": "TEMPLATE",
             "dest_file": "/var/www/html/index.html",
             "properties": {
               "content": "<html><header><title>Title</title></header><body>Hello from ${COMPONENT_INSTANCE_NAME}!</body></html>"
