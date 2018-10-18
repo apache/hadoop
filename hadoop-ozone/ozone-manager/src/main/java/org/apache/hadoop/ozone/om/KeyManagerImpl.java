@@ -370,7 +370,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       return OmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(value));
     } catch (IOException ex) {
-      LOG.error("Get key failed for volume:{} bucket:{} key:{}",
+      LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(),
           OMException.ResultCodes.FAILED_KEY_NOT_FOUND);
