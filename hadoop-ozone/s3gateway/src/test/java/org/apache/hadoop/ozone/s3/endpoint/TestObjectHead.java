@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -80,6 +81,10 @@ public class TestObjectHead {
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(value.getBytes().length,
         Long.parseLong(response.getHeaderString("Content-Length")));
+
+    DateTimeFormatter.RFC_1123_DATE_TIME
+        .parse(response.getHeaderString("Last-Modified"));
+
   }
 
   @Test

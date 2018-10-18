@@ -34,6 +34,10 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -180,8 +184,13 @@ public class ObjectEndpoint extends EndpointBase {
       }
     }
 
+    ZonedDateTime lastModificationTime =
+        Instant.ofEpochMilli(key.getModificationTime())
+            .atZone(ZoneId.of("GMT"));
+
     return Response.ok().status(HttpStatus.SC_OK)
-        .header("Last-Modified", key.getModificationTime())
+        .header("Last-Modified",
+            DateTimeFormatter.RFC_1123_DATE_TIME.format(lastModificationTime))
         .header("ETag", "" + key.getModificationTime())
         .header("Content-Length", key.getDataSize())
         .header("Content-Type", "binary/octet-stream")
