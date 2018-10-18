@@ -170,8 +170,10 @@ public class SCMContainerManager implements ContainerManager {
     try {
       for (ContainerInfo container : containerList) {
         containerStateManager.addExistingContainer(container);
-        pipelineSelector.addContainerToPipeline(
-            container.getPipelineID(), container.getContainerID());
+        if (container.isContainerOpen()) {
+          pipelineSelector.addContainerToPipeline(container.getPipelineID(),
+              container.getContainerID());
+        }
       }
     } catch (SCMException ex) {
       LOG.error("Unable to create a container information. ", ex);
