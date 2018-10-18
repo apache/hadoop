@@ -736,7 +736,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       @Override
       protected void authorizeGetAndStopContainerRequest(
           ContainerId containerId, Container container,
-          boolean stopRequest, NMTokenIdentifier identifier)
+          boolean stopRequest, NMTokenIdentifier identifier,
+          String remoteUser)
           throws YarnException {
         if(container == null || container.getUser().equals("Fail")){
           throw new YarnException("Reject this container");

@@ -591,7 +591,8 @@ public class TestNodeManagerResync {
         @Override
         protected void authorizeGetAndStopContainerRequest(
             ContainerId containerId, Container container,
-            boolean stopRequest, NMTokenIdentifier identifier)
+            boolean stopRequest, NMTokenIdentifier identifier,
+            String remoteUser)
             throws YarnException {
           // do nothing
         }
