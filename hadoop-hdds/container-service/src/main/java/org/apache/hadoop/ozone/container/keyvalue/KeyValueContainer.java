@@ -35,7 +35,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -48,7 +49,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerPacker;
 import org.apache.hadoop.ozone.container.common.interfaces.VolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
@@ -107,8 +108,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     Preconditions.checkNotNull(scmId, "scmId cannot be null");
 
     File containerMetaDataPath = null;
-    //acquiring volumeset lock and container lock
-    volumeSet.acquireLock();
+    //acquiring volumeset read lock
+    volumeSet.readLock();
     long maxSize = containerData.getMaxSize();
     try {
       HddsVolume containerVolume = volumeChoosingPolicy.chooseVolume(volumeSet
@@ -165,7 +166,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       throw new StorageContainerException("Container creation failed.", ex,
           CONTAINER_INTERNAL_ERROR);
     } finally {
-      volumeSet.releaseLock();
+      volumeSet.readUnlock();
     }
   }
 
@@ -292,7 +293,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     // It is ok if this operation takes a bit of time.
     // Close container is not expected to be instantaneous.
     try {
-      MetadataStore db = KeyUtils.getDB(containerData, config);
+      MetadataStore db = BlockUtils.getDB(containerData, config);
       db.compactDB();
     } catch (StorageContainerException ex) {
       throw ex;
@@ -507,6 +508,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
   }
 
+  @Override
+  public void updateBlockCommitSequenceId(long blockCommitSequenceId) {
+    containerData.updateBlockCommitSequenceId(blockCommitSequenceId);
+  }
+
+
   /**
    * Returns KeyValueContainerReport for the KeyValueContainer.
    */
@@ -520,9 +527,11 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
         .setWriteCount(containerData.getWriteCount())
         .setReadBytes(containerData.getReadBytes())
         .setWriteBytes(containerData.getWriteBytes())
+        .setKeyCount(containerData.getKeyCount())
         .setUsed(containerData.getBytesUsed())
         .setState(getHddsState())
-        .setDeleteTransactionId(containerData.getDeleteTransactionId());
+        .setDeleteTransactionId(containerData.getDeleteTransactionId())
+        .setBlockCommitSequenceId(containerData.getBlockCommitSequenceId());
     return ciBuilder.build();
   }
 

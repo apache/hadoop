@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * All the constants used with the {@link S3AFileSystem}.
  *
@@ -305,13 +307,6 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
-  /**
-   * The original key name. Never used in ASF releases,
-   * but did get into downstream products.
-   */
-  static final String OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY
-      = "fs.s3a.server-side-encryption-key";
-
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
 
@@ -333,6 +328,14 @@ public final class Constants {
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";
   public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
+  /**
+   * How long a directory listing in the MS is considered as authoritative.
+   */
+  public static final String METADATASTORE_AUTHORITATIVE_DIR_TTL =
+      "fs.s3a.metadatastore.authoritative.dir.ttl";
+  public static final long DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL =
+      TimeUnit.MINUTES.toMillis(60);
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
@@ -419,6 +422,16 @@ public final class Constants {
       "fs.s3a.s3guard.ddb.table";
 
   /**
+   * A prefix for adding tags to the DDB Table upon creation.
+   *
+   * For example:
+   * fs.s3a.s3guard.ddb.table.tag.mytag
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_TABLE_TAG =
+      "fs.s3a.s3guard.ddb.table.tag.";
+
+  /**
    * Test table name to use during DynamoDB integration test.
    *
    * The table will be modified, and deleted in the end of the tests.
@@ -455,12 +468,20 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_MAX_RETRIES =
       "fs.s3a.s3guard.ddb.max.retries";
+
   /**
-   * Max retries on batched DynamoDB operations before giving up and
+   * Max retries on batched/throttled DynamoDB operations before giving up and
    * throwing an IOException.  Default is {@value}. See core-default.xml for
    * more detail.
    */
-  public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT = 9;
+  public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT =
+      DEFAULT_MAX_ERROR_RETRIES;
+
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL =
+      "fs.s3a.s3guard.ddb.throttle.retry.interval";
+  public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL_DEFAULT =
+      "100ms";
 
   /**
    * Period of time (in milliseconds) to sleep between batches of writes.
@@ -486,6 +507,24 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_LOCAL
       = "org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore";
+
+  /**
+   * Maximum number of records in LocalMetadataStore.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_MAX_RECORDS =
+      "fs.s3a.s3guard.local.max_records";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS = 256;
+
+  /**
+   * Time to live in milliseconds in LocalMetadataStore.
+   * If zero, time-based expiration is disabled.
+   */
+  @InterfaceStability.Unstable
+  public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
+      "fs.s3a.s3guard.local.ttl";
+  public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
+      = 10 * 1000;
 
   /**
    * Use DynamoDB for the metadata: {@value}.

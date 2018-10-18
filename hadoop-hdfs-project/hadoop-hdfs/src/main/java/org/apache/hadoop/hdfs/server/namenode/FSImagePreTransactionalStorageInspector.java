@@ -29,8 +29,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileUtil;
@@ -51,8 +51,8 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
-  private static final Log LOG =
-    LogFactory.getLog(FSImagePreTransactionalStorageInspector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSImagePreTransactionalStorageInspector.class);
   
   /* Flag if there is at least one storage dir that doesn't contain the newest
    * fstime */
@@ -136,7 +136,7 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
         in.close();
         in = null;
       } finally {
-        IOUtils.cleanup(LOG, in);
+        IOUtils.cleanupWithLogger(LOG, in);
       }
     }
     return timeStamp;

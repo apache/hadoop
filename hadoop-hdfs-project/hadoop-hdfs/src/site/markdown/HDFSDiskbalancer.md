@@ -78,7 +78,9 @@ Execute command takes a plan command executes it against the datanode that plan 
 `hdfs diskbalancer -execute /system/diskbalancer/nodename.plan.json`
 
 This executes the plan by reading datanode’s address from the plan file.
-
+When DiskBalancer executes the plan, it is the beginning of an asynchronous process that can take a long time.
+So, query command can help to get the current status of execute command.
+ 
 | COMMAND\_OPTION    | Description |
 |:---- |:---- |
 | `-skipDateCheck` |  Skip date check and force execute the plan.|
@@ -127,6 +129,7 @@ There is a set of diskbalancer settings that can be controlled via hdfs-site.xml
 |`dfs.disk.balancer.block.tolerance.percent`| The tolerance percent specifies when we have reached a good enough value for any copy step. For example, if you specify 10% then getting close to 10% of the target value is good enough.|
 |`dfs.disk.balancer.plan.threshold.percent`| The percentage threshold value for volume Data Density in a plan. If the absolute value of volume Data Density which is out of threshold value in a node, it means that the volumes corresponding to the disks should do the balancing in the plan. The default value is 10.|
 |`dfs.disk.balancer.plan.valid.interval`| Maximum amount of time disk balancer plan is valid. Supports the following suffixes (case insensitive): ms(millis), s(sec), m(min), h(hour), d(day) to specify the time (such as 2s, 2m, 1h, etc.). If no suffix is specified then milliseconds is assumed. Default value is 1d|
+
  Debugging
 ---------
 

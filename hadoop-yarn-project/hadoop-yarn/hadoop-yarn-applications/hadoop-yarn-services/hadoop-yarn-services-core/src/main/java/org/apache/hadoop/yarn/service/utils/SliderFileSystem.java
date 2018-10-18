@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.service.utils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -48,4 +50,51 @@ public class SliderFileSystem extends CoreFileSystem {
   public Path getAppDir() {
     return this.appDir;
   }
+
+  /**
+   * Returns the component directory path.
+   *
+   * @param serviceVersion service version
+   * @param compName       component name
+   * @return component directory
+   */
+  public Path getComponentDir(String serviceVersion, String compName) {
+    return new Path(new Path(getAppDir(), "components"),
+        serviceVersion + "/" + compName);
+  }
+
+  /**
+   * Deletes the component directory.
+   *
+   * @param serviceVersion
+   * @param compName
+   * @throws IOException
+   */
+  public void deleteComponentDir(String serviceVersion, String compName)
+      throws IOException {
+    Path path = getComponentDir(serviceVersion, compName);
+    if (fileSystem.exists(path)) {
+      fileSystem.delete(path, true);
+      LOG.debug("deleted dir {}", path);
+    }
+  }
+
+  /**
+   * Deletes the components version directory.
+   *
+   * @param serviceVersion
+   * @throws IOException
+   */
+  public void deleteComponentsVersionDirIfEmpty(String serviceVersion)
+      throws IOException {
+    Path path = new Path(new Path(getAppDir(), "components"), serviceVersion);
+    if (fileSystem.exists(path) && fileSystem.listStatus(path).length == 0) {
+      fileSystem.delete(path, true);
+      LOG.info("deleted dir {}", path);
+    }
+  }
+
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SliderFileSystem.class);
 }

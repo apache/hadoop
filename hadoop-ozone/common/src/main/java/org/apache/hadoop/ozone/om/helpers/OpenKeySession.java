@@ -23,14 +23,14 @@ package org.apache.hadoop.ozone.om.helpers;
  * that servers can recognize this client, and thus know how to close the key.
  */
 public class OpenKeySession {
-  private final int id;
+  private final long id;
   private final OmKeyInfo keyInfo;
   // the version of the key when it is being opened in this session.
   // a block that has a create version equals to open version means it will
   // be committed only when this open session is closed.
   private long openVersion;
 
-  public OpenKeySession(int id, OmKeyInfo info, long version) {
+  public OpenKeySession(long id, OmKeyInfo info, long version) {
     this.id = id;
     this.keyInfo = info;
     this.openVersion = version;
@@ -44,7 +44,7 @@ public class OpenKeySession {
     return keyInfo;
   }
 
-  public int getId() {
+  public long getId() {
     return id;
   }
 }

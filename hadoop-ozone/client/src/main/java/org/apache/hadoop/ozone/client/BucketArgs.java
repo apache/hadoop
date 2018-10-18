@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 
 import java.util.List;
@@ -74,7 +74,7 @@ public final class BucketArgs {
 
   /**
    * Returns the ACL's associated with this bucket.
-   * @return List<OzoneAcl>
+   * @return {@literal List<OzoneAcl>}
    */
   public List<OzoneAcl> getAcls() {
     return acls;

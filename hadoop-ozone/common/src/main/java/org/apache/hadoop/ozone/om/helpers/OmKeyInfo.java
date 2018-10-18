@@ -119,9 +119,9 @@ public final class OmKeyInfo {
    * This will be called when the key is being committed to OzoneManager.
    *
    * @param locationInfoList list of locationInfo
-   * @throws IOException
    */
   public void updateLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
+    long latestVersion = getLatestVersionLocations().getVersion();
     OmKeyLocationInfoGroup keyLocationInfoGroup = getLatestVersionLocations();
     List<OmKeyLocationInfo> currentList =
         keyLocationInfoGroup.getLocationList();
@@ -134,6 +134,9 @@ public final class OmKeyInfo {
     // might get closed. The diff of blocks between these two lists here
     // need to be garbage collected in case the ozone client dies.
     currentList.removeAll(latestVersionList);
+    // set each of the locationInfo object to the latest version
+    locationInfoList.stream().forEach(omKeyLocationInfo -> omKeyLocationInfo
+        .setCreateVersion(latestVersion));
     currentList.addAll(locationInfoList);
   }
 

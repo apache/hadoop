@@ -1282,9 +1282,22 @@
 </property>
 
 <property>
+  <name>dfs.datanode.volumes.replica-add.threadpool.size</name>
+  <value></value>
+  <description>Specifies the maximum number of threads to use for
+  adding block in volume. Default value for this configuration is
+  max of (volume * number of bp_service, number of processor).
+  </description>
+</property>
+
+<property>
   <name>dfs.image.compress</name>
   <value>false</value>
-  <description>Should the dfs image be compressed?
+  <description>When this value is true, the dfs image will be compressed.
+    Enabling this will be very helpful if dfs image is large since it can
+    avoid consuming a lot of network bandwidth when SBN uploads a new dfs
+    image to ANN. The compressed codec is specified by the setting
+    dfs.image.compression.codec.
   </description>
 </property>
 
@@ -2469,6 +2482,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.caching.enabled</name>
+  <value>true</value>
+  <description>
+    Set to true to enable block caching.  This flag enables the NameNode to
+    maintain a mapping of cached blocks to DataNodes via processing DataNode
+    cache reports.  Based on these reports and addition and removal of caching
+    directives, the NameNode will schedule caching and uncaching work.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
   <value>0.25</value>
   <description>
@@ -3111,8 +3135,19 @@
   <name>dfs.client.block.write.locateFollowingBlock.initial.delay.ms</name>
   <value>400</value>
   <description>The initial delay (unit is ms) for locateFollowingBlock,
-    the delay time will increase exponentially(double) for each retry.
+    the delay time will increase exponentially(double) for each retry
+    until dfs.client.block.write.locateFollowingBlock.max.delay.ms is reached,
+    after that the delay for each retry will be
+    dfs.client.block.write.locateFollowingBlock.max.delay.ms.
   </description>
+</property>
+
+<property>
+    <name>dfs.client.block.write.locateFollowingBlock.max.delay.ms</name>
+    <value>60000</value>
+    <description>
+      The maximum delay (unit is ms) before retrying locateFollowingBlock.
+    </description>
 </property>
 
 <property>
@@ -5110,11 +5145,10 @@
     <name>dfs.datanode.disk.check.timeout</name>
     <value>10m</value>
     <description>
-      Maximum allowed time for a disk check to complete during DataNode
-      startup. If the check does not complete within this time interval
-      then the disk is declared as failed. This setting supports
-      multiple time unit suffixes as described in dfs.heartbeat.interval.
-      If no suffix is specified then milliseconds is assumed.
+      Maximum allowed time for a disk check to complete. If the check does not
+      complete within this time interval then the disk is declared as failed.
+      This setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is assumed.
     </description>
   </property>
 

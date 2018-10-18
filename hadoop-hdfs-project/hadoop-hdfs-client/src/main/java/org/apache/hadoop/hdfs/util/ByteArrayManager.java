@@ -54,10 +54,10 @@ public abstract class ByteArrayManager {
 
   /**
    * @return the least power of two greater than or equal to n, i.e. return
-   *         the least integer x with x >= n and x a power of two.
+   *         the least integer x with x &gt;= n and x a power of two.
    *
    * @throws HadoopIllegalArgumentException
-   *           if n <= 0.
+   *           if n &lt;= 0.
    */
   public static int leastPowerOfTwo(final int n) {
     if (n <= 0) {

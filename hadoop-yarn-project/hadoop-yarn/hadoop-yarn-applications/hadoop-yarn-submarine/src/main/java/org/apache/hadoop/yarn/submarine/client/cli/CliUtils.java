@@ -39,17 +39,9 @@ public class CliUtils {
   public static String replacePatternsInLaunchCommand(String specifiedCli,
       RunJobParameters jobRunParameters,
       RemoteDirectoryManager directoryManager) throws IOException {
-    String jobDir = jobRunParameters.getCheckpointPath();
-    if (null == jobDir) {
-      jobDir = directoryManager.getJobCheckpointDir(jobRunParameters.getName(),
-          true).toString();
-    }
-
     String input = jobRunParameters.getInputPath();
+    String jobDir = jobRunParameters.getCheckpointPath();
     String savedModelDir = jobRunParameters.getSavedModelPath();
-    if (null == savedModelDir) {
-      savedModelDir = jobDir;
-    }
 
     Map<String, String> replacePattern = new HashMap<>();
     if (jobDir != null) {

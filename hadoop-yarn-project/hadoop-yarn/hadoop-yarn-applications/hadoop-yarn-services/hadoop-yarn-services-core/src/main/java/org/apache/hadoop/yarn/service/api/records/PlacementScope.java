@@ -32,9 +32,6 @@ import io.swagger.annotations.ApiModel;
 @InterfaceStability.Unstable
 @ApiModel(description = "The scope of placement for the containers of a "
     + "component.")
-@javax.annotation.Generated(
-    value = "class io.swagger.codegen.languages.JavaClientCodegen",
-    date = "2018-02-16T10:20:12.927-07:00")
 public enum PlacementScope {
   NODE(PlacementConstraints.NODE), RACK(PlacementConstraints.RACK);
 

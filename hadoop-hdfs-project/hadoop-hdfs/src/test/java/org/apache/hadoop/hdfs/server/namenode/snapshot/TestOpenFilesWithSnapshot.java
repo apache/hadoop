@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -50,8 +50,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestOpenFilesWithSnapshot {
-  private static final Log LOG =
-      LogFactory.getLog(TestOpenFilesWithSnapshot.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOpenFilesWithSnapshot.class.getName());
   private final Configuration conf = new Configuration();
   MiniDFSCluster cluster = null;
   DistributedFileSystem fs = null;

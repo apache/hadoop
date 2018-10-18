@@ -118,6 +118,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
   public static final String REGION_FLAG = "region";
   public static final String READ_FLAG = "read";
   public static final String WRITE_FLAG = "write";
+  public static final String TAG_FLAG = "tag";
 
   /**
    * Constructor a S3Guard tool with HDFS configuration.
@@ -382,6 +383,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "  -" + REGION_FLAG + " REGION - Service region for connections\n" +
         "  -" + READ_FLAG + " UNIT - Provisioned read throughput units\n" +
         "  -" + WRITE_FLAG + " UNIT - Provisioned write through put units\n" +
+        "  -" + TAG_FLAG + " key=value; list of tags to tag dynamo table\n" +
         "\n" +
         "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
         "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
@@ -393,6 +395,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       getCommandFormat().addOptionWithValue(READ_FLAG);
       // write capacity.
       getCommandFormat().addOptionWithValue(WRITE_FLAG);
+      // tag
+      getCommandFormat().addOptionWithValue(TAG_FLAG);
     }
 
     @Override
@@ -418,6 +422,23 @@ public abstract class S3GuardTool extends Configured implements Tool {
       if (writeCap != null && !writeCap.isEmpty()) {
         int writeCapacity = Integer.parseInt(writeCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, writeCapacity);
+      }
+
+      String tags = getCommandFormat().getOptValue(TAG_FLAG);
+      if (tags != null && !tags.isEmpty()) {
+        String[] stringList = tags.split(";");
+        Map<String, String> tagsKV = new HashMap<>();
+        for(String kv : stringList) {
+          if(kv.isEmpty() || !kv.contains("=")){
+            continue;
+          }
+          String[] kvSplit = kv.split("=");
+          tagsKV.put(kvSplit[0], kvSplit[1]);
+        }
+
+        for (Map.Entry<String, String> kv : tagsKV.entrySet()) {
+          getConf().set(S3GUARD_DDB_TABLE_TAG + kv.getKey(), kv.getValue());
+        }
       }
 
       // Validate parameters.
@@ -479,6 +500,20 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws Exception {
       List<String> paths = parseArgs(args);
       Map<String, String> options = new HashMap<>();
+      String s3Path = paths.get(0);
+
+      // Check if DynamoDB url is set from arguments.
+      String metadataStoreUri = getCommandFormat().getOptValue(META_FLAG);
+      if(metadataStoreUri == null || metadataStoreUri.isEmpty()) {
+        // If not set, check if filesystem is guarded by creating an
+        // S3AFileSystem and check if hasMetadataStore is true
+        try (S3AFileSystem s3AFileSystem = (S3AFileSystem)
+            S3AFileSystem.newInstance(toUri(s3Path), getConf())){
+          Preconditions.checkState(s3AFileSystem.hasMetadataStore(),
+              "The S3 bucket is unguarded. " + getName()
+                  + " can not be used on an unguarded bucket.");
+        }
+      }
 
       String readCap = getCommandFormat().getOptValue(READ_FLAG);
       if (StringUtils.isNotEmpty(readCap)) {

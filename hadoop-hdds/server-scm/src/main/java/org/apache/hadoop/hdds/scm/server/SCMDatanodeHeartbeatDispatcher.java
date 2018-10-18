@@ -20,6 +20,10 @@ package org.apache.hadoop.hdds.scm.server;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerActionsProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
@@ -31,18 +35,23 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import com.google.protobuf.GeneratedMessage;
-import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_ACTIONS;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CMD_STATUS_REPORT;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.PIPELINE_ACTIONS;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.PIPELINE_REPORT;
+
 /**
  * This class is responsible for dispatching heartbeat from datanode to
  * appropriate EventHandler at SCM.
@@ -75,34 +84,79 @@ public final class SCMDatanodeHeartbeatDispatcher {
   public List<SCMCommand> dispatch(SCMHeartbeatRequestProto heartbeat) {
     DatanodeDetails datanodeDetails =
         DatanodeDetails.getFromProtoBuf(heartbeat.getDatanodeDetails());
-    // should we dispatch heartbeat through eventPublisher?
-    List<SCMCommand> commands = nodeManager.processHeartbeat(datanodeDetails);
-    if (heartbeat.hasNodeReport()) {
-      LOG.debug("Dispatching Node Report.");
-      eventPublisher.fireEvent(NODE_REPORT,
-          new NodeReportFromDatanode(datanodeDetails,
-              heartbeat.getNodeReport()));
-    }
+    List<SCMCommand> commands;
 
-    if (heartbeat.hasContainerReport()) {
-      LOG.debug("Dispatching Container Report.");
-      eventPublisher.fireEvent(CONTAINER_REPORT,
-          new ContainerReportFromDatanode(datanodeDetails,
-              heartbeat.getContainerReport()));
+    // If node is not registered, ask the node to re-register. Do not process
+    // Heartbeat for unregistered nodes.
+    if (!nodeManager.isNodeRegistered(datanodeDetails)) {
+      LOG.info("SCM received heartbeat from an unregistered datanode {}. " +
+          "Asking datanode to re-register.", datanodeDetails);
+      UUID dnID = datanodeDetails.getUuid();
+      nodeManager.addDatanodeCommand(dnID, new ReregisterCommand());
 
-    }
+      commands = nodeManager.getCommandQueue(dnID);
 
-    if (heartbeat.hasContainerActions()) {
-      LOG.debug("Dispatching Container Actions.");
-      eventPublisher.fireEvent(CONTAINER_ACTIONS,
-          new ContainerActionsFromDatanode(datanodeDetails,
-              heartbeat.getContainerActions()));
-    }
+    } else {
 
-    if (heartbeat.hasCommandStatusReport()) {
-      eventPublisher.fireEvent(CMD_STATUS_REPORT,
-          new CommandStatusReportFromDatanode(datanodeDetails,
-              heartbeat.getCommandStatusReport()));
+      // should we dispatch heartbeat through eventPublisher?
+      commands = nodeManager.processHeartbeat(datanodeDetails);
+      if (heartbeat.hasNodeReport()) {
+        LOG.debug("Dispatching Node Report.");
+        eventPublisher.fireEvent(
+            NODE_REPORT,
+            new NodeReportFromDatanode(
+                datanodeDetails,
+                heartbeat.getNodeReport()));
+      }
+
+      if (heartbeat.hasContainerReport()) {
+        LOG.debug("Dispatching Container Report.");
+        eventPublisher.fireEvent(
+            CONTAINER_REPORT,
+            new ContainerReportFromDatanode(
+                datanodeDetails,
+                heartbeat.getContainerReport()));
+
+      }
+
+      if (heartbeat.hasContainerActions()) {
+        LOG.debug("Dispatching Container Actions.");
+        eventPublisher.fireEvent(
+            CONTAINER_ACTIONS,
+            new ContainerActionsFromDatanode(
+                datanodeDetails,
+                heartbeat.getContainerActions()));
+      }
+
+      if (heartbeat.hasPipelineReports()) {
+        LOG.debug("Dispatching Pipeline Report.");
+        eventPublisher.fireEvent(
+            PIPELINE_REPORT,
+            new PipelineReportFromDatanode(
+                datanodeDetails,
+                heartbeat.getPipelineReports()));
+
+      }
+
+      if (heartbeat.hasPipelineActions()) {
+        LOG.debug("Dispatching Pipeline Actions.");
+        eventPublisher.fireEvent(
+            PIPELINE_ACTIONS,
+            new PipelineActionsFromDatanode(
+                datanodeDetails,
+                heartbeat.getPipelineActions()));
+      }
+
+      if (heartbeat.getCommandStatusReportsCount() != 0) {
+        for (CommandStatusReportsProto commandStatusReport : heartbeat
+            .getCommandStatusReportsList()) {
+          eventPublisher.fireEvent(
+              CMD_STATUS_REPORT,
+              new CommandStatusReportFromDatanode(
+                  datanodeDetails,
+                  commandStatusReport));
+        }
+      }
     }
 
     return commands;
@@ -163,6 +217,30 @@ public final class SCMDatanodeHeartbeatDispatcher {
 
     public ContainerActionsFromDatanode(DatanodeDetails datanodeDetails,
                                        ContainerActionsProto actions) {
+      super(datanodeDetails, actions);
+    }
+  }
+
+  /**
+   * Pipeline report event payload with origin.
+   */
+  public static class PipelineReportFromDatanode
+          extends ReportFromDatanode<PipelineReportsProto> {
+
+    public PipelineReportFromDatanode(DatanodeDetails datanodeDetails,
+                                      PipelineReportsProto report) {
+      super(datanodeDetails, report);
+    }
+  }
+
+  /**
+   * Pipeline action event payload with origin.
+   */
+  public static class PipelineActionsFromDatanode
+      extends ReportFromDatanode<PipelineActionsProto> {
+
+    public PipelineActionsFromDatanode(DatanodeDetails datanodeDetails,
+        PipelineActionsProto actions) {
       super(datanodeDetails, actions);
     }
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
@@ -71,9 +73,19 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     buffer.append(field);
   }
 
+  static final String CRLF = StringUtils.CR + StringUtils.LF;
+
   private void append(StringBuffer buffer, String field) {
     buffer.append(delimiter);
-    buffer.append(field);
+
+    String escapedField = StringEscapeUtils.escapeCsv(field);
+    if (escapedField.contains(CRLF)) {
+      escapedField = escapedField.replace(CRLF, "%x0D%x0A");
+    } else if (escapedField.contains(StringUtils.LF)) {
+      escapedField = escapedField.replace(StringUtils.LF, "%x0A");
+    }
+
+    buffer.append(escapedField);
   }
 
   @Override
@@ -82,7 +94,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     String inodeName = inode.getName().toStringUtf8();
     Path path = new Path(parent.isEmpty() ? "/" : parent,
       inodeName.isEmpty() ? "/" : inodeName);
-    buffer.append(path.toString());
+    append(buffer, path.toString());
     PermissionStatus p = null;
     boolean isDir = false;
     boolean hasAcl = false;
@@ -136,7 +148,7 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, dirString + p.getPermission().toString() + aclString);
     append(buffer, p.getUserName());
     append(buffer, p.getGroupName());
-    return buffer.toString();
+    return buffer.substring(1);
   }
 
   @Override

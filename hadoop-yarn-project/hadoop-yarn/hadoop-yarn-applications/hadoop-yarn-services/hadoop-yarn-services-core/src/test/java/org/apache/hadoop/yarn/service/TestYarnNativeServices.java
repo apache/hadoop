@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
@@ -437,6 +438,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // wait for upgrade to complete
     waitForServiceToBeStable(client, service);
     Service active = client.getStatus(service.getName());
+    Assert.assertEquals("version mismatch", service.getVersion(),
+        active.getVersion());
     Assert.assertEquals("component not stable", ComponentState.STABLE,
         active.getComponent(component.getName()).getState());
     Assert.assertEquals("compa does not have new env", "val1",
@@ -445,6 +448,49 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Assert.assertEquals("compb does not have new env", "val2",
         active.getComponent(component2.getName()).getConfiguration()
             .getEnv("key2"));
+    LOG.info("Stop/destroy service {}", service);
+    client.actionStop(service.getName(), true);
+    client.actionDestroy(service.getName());
+  }
+
+  @Test(timeout = 200000)
+  public void testCancelUpgrade() throws Exception {
+    setupInternal(NUM_NMS);
+    getConf().setBoolean(YARN_SERVICE_UPGRADE_ENABLED, true);
+    ServiceClient client = createClient(getConf());
+
+    Service service = createExampleApplication();
+    Component component = service.getComponents().iterator().next();
+    component.getConfiguration().getEnv().put("key1", "val0");
+
+    client.actionCreate(service);
+    waitForServiceToBeStable(client, service);
+
+    // upgrade the service
+    service.setState(ServiceState.UPGRADING);
+    service.setVersion("v2");
+    component.getConfiguration().getEnv().put("key1", "val1");
+    client.initiateUpgrade(service);
+
+    // wait for service to be in upgrade state
+    waitForServiceToBeInState(client, service, ServiceState.UPGRADING);
+
+    // upgrade 1 container
+    Service liveService = client.getStatus(service.getName());
+    Container container = liveService.getComponent(component.getName())
+        .getContainers().iterator().next();
+    client.actionUpgrade(service, Lists.newArrayList(container));
+
+    Thread.sleep(500);
+    // cancel the upgrade
+    client.actionCancelUpgrade(service.getName());
+    waitForServiceToBeStable(client, service);
+    Service active = client.getStatus(service.getName());
+    Assert.assertEquals("component not stable", ComponentState.STABLE,
+        active.getComponent(component.getName()).getState());
+    Assert.assertEquals("comp does not have new env", "val0",
+        active.getComponent(component.getName()).getConfiguration()
+            .getEnv("key1"));
     LOG.info("Stop/destroy service {}", service);
     client.actionStop(service.getName(), true);
     client.actionDestroy(service.getName());

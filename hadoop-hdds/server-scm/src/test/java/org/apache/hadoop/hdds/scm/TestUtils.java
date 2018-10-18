@@ -18,6 +18,16 @@ package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineReport;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.server
+    .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
+
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
@@ -37,6 +47,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -128,7 +139,8 @@ public final class TestUtils {
   public static DatanodeDetails createRandomDatanodeAndRegister(
       SCMNodeManager nodeManager) {
     return getDatanodeDetails(
-        nodeManager.register(randomDatanodeDetails(), null));
+        nodeManager.register(randomDatanodeDetails(), null,
+                getRandomPipelineReports()));
   }
 
   /**
@@ -288,6 +300,24 @@ public final class TestUtils {
     return getContainerReports(containerInfos);
   }
 
+
+  public static PipelineReportsProto getRandomPipelineReports() {
+    return PipelineReportsProto.newBuilder().build();
+  }
+
+  public static PipelineReportFromDatanode getRandomPipelineReportFromDatanode(
+      DatanodeDetails dn,
+      org.apache.hadoop.hdds.scm.pipeline.PipelineID... pipelineIDs) {
+    PipelineReportsProto.Builder reportBuilder =
+        PipelineReportsProto.newBuilder();
+    for (org.apache.hadoop.hdds.scm.pipeline.PipelineID pipelineID :
+        pipelineIDs) {
+      reportBuilder.addPipelineReport(
+          PipelineReport.newBuilder().setPipelineID(pipelineID.getProtobuf()));
+    }
+    return new PipelineReportFromDatanode(dn, reportBuilder.build());
+  }
+
   /**
    * Creates container report with the given ContainerInfo(s).
    *
@@ -376,5 +406,21 @@ public final class TestUtils {
     return report.build();
   }
 
+  public static org.apache.hadoop.hdds.scm.container.ContainerInfo
+      allocateContainer(ContainerManager containerManager)
+      throws IOException {
+    return containerManager
+        .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
+            HddsProtos.ReplicationFactor.THREE, "root").getContainerInfo();
 
+  }
+
+  public static void closeContainer(ContainerManager containerManager,
+      ContainerID id) throws IOException {
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.FINALIZE);
+    containerManager.updateContainerState(
+        id, HddsProtos.LifeCycleEvent.CLOSE);
+
+  }
 }

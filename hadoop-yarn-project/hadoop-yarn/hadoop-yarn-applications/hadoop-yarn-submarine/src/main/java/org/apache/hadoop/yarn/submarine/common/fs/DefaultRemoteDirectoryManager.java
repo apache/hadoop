@@ -14,6 +14,7 @@
 
 package org.apache.hadoop.yarn.submarine.common.fs;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
@@ -42,7 +43,10 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
     if (create) {
       createFolderIfNotExist(staging);
     }
-    return staging;
+
+    // Get a file status to make sure it is a absolute path.
+    FileStatus fStatus = fs.getFileStatus(staging);
+    return fStatus.getPath();
   }
 
   @Override
@@ -70,8 +74,21 @@ public class DefaultRemoteDirectoryManager implements RemoteDirectoryManager {
     return fs;
   }
 
+  @Override
+  public Path getUserRootFolder() throws IOException {
+    Path rootPath = new Path("submarine", "jobs");
+    createFolderIfNotExist(rootPath);
+    // Get a file status to make sure it is a absolute path.
+    FileStatus fStatus = fs.getFileStatus(rootPath);
+    return fStatus.getPath();
+  }
+
   private Path getJobRootFolder(String jobName) throws IOException {
-    return new Path(new Path("submarine", "jobs"), jobName);
+    Path jobRootPath = getUserRootFolder();
+    createFolderIfNotExist(jobRootPath);
+    // Get a file status to make sure it is a absolute path.
+    FileStatus fStatus = fs.getFileStatus(jobRootPath);
+    return fStatus.getPath();
   }
 
   private void createFolderIfNotExist(Path path) throws IOException {

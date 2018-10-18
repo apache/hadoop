@@ -33,13 +33,13 @@ import org.slf4j.LoggerFactory;
  * This class implements the {@link DNSToSwitchMapping} interface using a 
  * script configured via the
  * {@link CommonConfigurationKeys#NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY} option.
- * <p/>
+ * <p>
  * It contains a static class <code>RawScriptBasedMapping</code> that performs
  * the work: reading the configuration parameters, executing any defined
  * script, handling errors and such like. The outer
  * class extends {@link CachedDNSToSwitchMapping} to cache the delegated
  * queries.
- * <p/>
+ * <p>
  * This DNS mapper's {@link #isSingleSwitch()} predicate returns
  * true if and only if a script is defined.
  */
@@ -78,7 +78,7 @@ public class ScriptBasedMapping extends CachedDNSToSwitchMapping {
 
   /**
    * Create an instance with the default configuration.
-   * </p>
+   * <p>
    * Calling {@link #setConf(Configuration)} will trigger a
    * re-evaluation of the configuration settings and so be used to
    * set up the mapping script.
@@ -125,7 +125,7 @@ public class ScriptBasedMapping extends CachedDNSToSwitchMapping {
 
   /**
    * {@inheritDoc}
-   * <p/>
+   * <p>
    * This will get called in the superclass constructor, so a check is needed
    * to ensure that the raw mapping is defined before trying to relaying a null
    * configuration.

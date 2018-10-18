@@ -127,6 +127,23 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.replication.level</name>
+    <value>MAJORITY</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Replication level to be used by datanode for submitting a
+      container command to ratis. Available replication levels are ALL and
+      MAJORTIY, MAJORITY is used as the default replication level.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.num.container.op.executors</name>
+    <value>10</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Number of executors that will be used by Ratis to execute
+      container ops.(10 by default).
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.segment.size</name>
     <value>1073741824</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
@@ -149,10 +166,46 @@
     <description>The timeout duration for ratis client request.</description>
   </property>
   <property>
+    <name>dfs.ratis.client.request.max.retries</name>
+    <value>180</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>Number of retries for ratis client request.</description>
+  </property>
+  <property>
+    <name>dfs.ratis.client.request.retry.interval</name>
+    <value>100ms</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>Interval between successive retries for a ratis client request.
+    </description>
+  </property>
+  <property>
+    <name>dfs.ratis.server.retry-cache.timeout.duration</name>
+    <value>600000ms</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>Retry Cache entry timeout for ratis server.</description>
+  </property>
+  <property>
     <name>dfs.ratis.server.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The timeout duration for ratis server request.</description>
+  </property>
+  <property>
+    <name>dfs.ratis.leader.election.minimum.timeout.duration</name>
+    <value>1s</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for ratis leader election.
+        Default is 1s.
+    </description>
+  </property>
+  <property>
+    <name>dfs.ratis.server.failure.duration</name>
+    <value>120s</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server failure detection,
+      once the threshold has reached, the ratis state machine will be informed
+      about the failure in the ratis ring
+    </description>
   </property>
   <property>
     <name>hdds.node.report.interval</name>
@@ -178,6 +231,14 @@
       execution. Each datanode periodically the execution status of commands
       received from SCM to SCM. Unit could be defined with postfix
       (ns,ms,s,m,h,d)</description>
+  </property>
+  <property>
+    <name>hdds.pipeline.report.interval</name>
+    <value>60000ms</value>
+    <tag>OZONE, PIPELINE, MANAGEMENT</tag>
+    <description>Time interval of the datanode to send pipeline report. Each
+      datanode periodically send pipeline report to SCM. Unit could be
+      defined with postfix (ns,ms,s,m,h,d)</description>
   </property>
   <!--Ozone Settings-->
   <property>
@@ -241,6 +302,22 @@
     <value>5000ms</value>
     <tag>OZONE, PERFORMANCE, CLIENT</tag>
     <description>Connection timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.max.retries</name>
+    <value>50</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Maximum number of retries by Ozone Client on encountering
+      exception while fetching committed block length.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.retry.interval</name>
+    <value>200ms</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Interval between retries by Ozone Client on encountering
+      exception while fetching committed block length.
     </description>
   </property>
   <property>
@@ -437,7 +514,7 @@
 
   <property>
     <name>ozone.metastore.rocksdb.statistics</name>
-    <value>ALL</value>
+    <value>OFF</value>
     <tag>OZONE, OM, SCM, STORAGE, PERFORMANCE</tag>
     <description>
       The statistics level of the rocksdb store. If you use any value from
@@ -914,9 +991,9 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.close.threshold</name>
+    <name>hdds.container.close.threshold</name>
     <value>0.9f</value>
-    <tag>OZONE, SCM</tag>
+    <tag>OZONE, DATANODE</tag>
     <description>
       This determines the threshold to be used for closing a container.
       When the container used percentage reaches this threshold,
@@ -966,12 +1043,12 @@
 
   <property>
     <name>hadoop.tags.custom</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
   </property>
 
   <property>
     <name>ozone.tags.system</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
   </property>
 
 
@@ -1037,27 +1114,6 @@
   </property>
 
   <property>
-    <name>hdds.write.lock.reporting.threshold.ms</name>
-    <value>5000</value>
-    <tag>OZONE, DATANODE, MANAGEMENT</tag>
-    <description>
-      When a write lock is held for a long time, this will be logged as the
-      lock is released. This sets how long the lock must be held for logging
-      to occur.
-    </description>
-  </property>
-
-  <property>
-    <name>hdds.lock.suppress.warning.interval.ms</name>
-    <value>10000</value>
-    <tag>OZONE, DATANODE, MANAGEMENT</tag>
-    <description>
-      Instrumentation reporting long critical sections will suppress
-      consecutive warnings within this interval.
-    </description>
-  </property>
-
-  <property>
     <name>hdds.command.status.report.interval</name>
     <value>30s</value>
     <tag>OZONE, DATANODE, MANAGEMENT</tag>
@@ -1079,6 +1135,32 @@
   </property>
 
   <property>
+    <name>hdds.scm.chillmode.threshold.pct</name>
+    <value>0.99</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description> % of containers which should have at least one
+      reported replica before SCM comes out of chill mode.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.chillmode.enabled</name>
+    <value>true</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>Boolean value to enable or disable SCM chill mode.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.chillmode.min.datanode</name>
+    <value>1</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>Minimum DataNodes which should be registered to get SCM out of
+      chill mode.
+    </description>
+  </property>
+
+  <property>
     <name>hdds.container.action.max.limit</name>
     <value>20</value>
     <tag>DATANODE</tag>
@@ -1088,6 +1170,15 @@
     </description>
   </property>
 
+  <property>
+    <name>hdds.pipeline.action.max.limit</name>
+    <value>20</value>
+    <tag>DATANODE</tag>
+    <description>
+      Maximum number of Pipeline Actions sent by the datanode to SCM in a
+      single heartbeat.
+    </description>
+  </property>
   <property>
     <name>hdds.scm.watcher.timeout</name>
     <value>10m</value>
@@ -1100,12 +1191,105 @@
   </property>
 
   <property>
-    <name>ozone.db.profile</name>
-    <value>DBProfile.SSD</value>
-    <tag>OZONE, OM, PERFORMANCE, REQUIRED</tag>
+    <name>hdds.db.profile</name>
+    <value>DISK</value>
+    <tag>OZONE, OM, PERFORMANCE</tag>
     <description>This property allows user to pick a configuration
     that tunes the RocksDB settings for the hardware it is running
     on. Right now, we have SSD and DISK as profile options.</description>
   </property>
+
+  <property>
+    <name>hdds.datanode.replication.work.dir</name>
+    <tag>DATANODE</tag>
+    <description>Temporary which is used during the container replication
+      betweeen datanodes. Should have enough space to store multiple container
+      (in compressed format), but doesn't require fast io access such as SSD.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.lock.max.concurrency</name>
+    <value>100</value>
+    <tag>HDDS</tag>
+    <description>Locks in HDDS/Ozone uses object pool to maintain active locks
+      in the system, this property defines the max limit for the locks that
+      will be maintained in the pool.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.authentication.kerberos.principal</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The server principal used by Ozone S3Gateway server. This is
+      typically set to
+      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
+      HTTP/ by convention.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.domain.name</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>List of Ozone S3Gateway domain names. If multiple
+      domain names to be provided, they should be a "," seperated.
+      This parameter is only required when virtual host style pattern is
+      followed.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http-address</name>
+    <value>0.0.0.0:9878</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The address and the base port where the Ozone S3Gateway
+      Server will
+      listen on.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The actual address the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of ozone.s3g.http-address.
+      This is useful for making the Ozone S3Gateway HTTP server listen on all
+      interfaces by setting it to 0.0.0.0.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.http.enabled</name>
+    <value>true</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The boolean which enables the Ozone S3Gateway server
+      .</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.https-address</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Ozone S3Gateway serverHTTPS server address and port
+      .</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.https-bind-host</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The actual address the HTTPS server will bind to. If this optional address
+      is set, it overrides only the hostname portion of ozone.s3g.https-address.
+      This is useful for making the Ozone S3Gateway HTTPS server listen on all
+      interfaces by setting it to 0.0.0.0.</description>
+  </property>
+
+  <property>
+    <name>ozone.s3g.keytab.file</name>
+    <value/>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>The keytab file used by the S3Gateway server to login as its
+      service principal. </description>
+  </property>
+
 
 </configuration>

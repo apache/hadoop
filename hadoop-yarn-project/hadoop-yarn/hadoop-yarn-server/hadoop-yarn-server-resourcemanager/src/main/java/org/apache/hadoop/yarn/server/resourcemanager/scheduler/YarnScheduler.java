@@ -390,12 +390,17 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   SchedulerNode getSchedulerNode(NodeId nodeId);
 
   /**
-   * Normalize a resource request.
+   * Normalize a resource request using scheduler level maximum resource or
+   * queue based maximum resource.
    *
    * @param requestedResource the resource to be normalized
+   * @param maxResourceCapability Maximum container allocation value, if null or
+   *          empty scheduler level maximum container allocation value will be
+   *          used
    * @return the normalized resource
    */
-  Resource getNormalizedResource(Resource requestedResource);
+  Resource getNormalizedResource(Resource requestedResource,
+      Resource maxResourceCapability);
 
   /**
    * Verify whether a submitted application lifetime is valid as per configured

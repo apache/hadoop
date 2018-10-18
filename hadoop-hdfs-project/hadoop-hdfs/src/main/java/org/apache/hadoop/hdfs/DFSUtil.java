@@ -64,8 +64,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -99,7 +99,8 @@ import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
-  public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(DFSUtil.class.getName());
   
   private DFSUtil() { /* Hidden constructor */ }
   

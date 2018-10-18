@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
@@ -42,8 +43,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -95,7 +96,7 @@ import org.mockito.Mockito;
 import com.google.common.base.Supplier;
 
 public class TestCacheDirectives {
-  static final Log LOG = LogFactory.getLog(TestCacheDirectives.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCacheDirectives.class);
 
   private static final UserGroupInformation unprivilegedUser =
       UserGroupInformation.createRemoteUser("unprivilegedUser");
@@ -1555,5 +1556,53 @@ public class TestCacheDirectives {
     LocatedBlocks locations = Mockito.mock(LocatedBlocks.class);
     cm.setCachedLocations(locations);
     Mockito.verifyZeroInteractions(locations);
+  }
+
+  @Test(timeout=120000)
+  public void testAddingCacheDirectiveInfosWhenCachingIsDisabled()
+          throws Exception {
+    cluster.shutdown();
+    HdfsConfiguration config = createCachingConf();
+    config.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, false);
+    cluster = new MiniDFSCluster.Builder(config)
+            .numDataNodes(NUM_DATANODES).build();
+
+    cluster.waitActive();
+    dfs = cluster.getFileSystem();
+    namenode = cluster.getNameNode();
+    CacheManager cacheManager = namenode.getNamesystem().getCacheManager();
+    assertFalse(cacheManager.isEnabled());
+    assertNull(cacheManager.getCacheReplicationMonitor());
+    // Create the pool
+    String pool = "pool1";
+    namenode.getRpcServer().addCachePool(new CachePoolInfo(pool));
+    // Create some test files
+    final int numFiles = 2;
+    final int numBlocksPerFile = 2;
+    final List<String> paths = new ArrayList<String>(numFiles);
+    for (int i=0; i<numFiles; i++) {
+      Path p = new Path("/testCachePaths-" + i);
+      FileSystemTestHelper.createFile(dfs, p, numBlocksPerFile,
+              (int)BLOCK_SIZE);
+      paths.add(p.toUri().getPath());
+    }
+    // Check the initial statistics at the namenode
+    waitForCachedBlocks(namenode, 0, 0,
+            "testAddingCacheDirectiveInfosWhenCachingIsDisabled:0");
+    // Cache and check each path in sequence
+    int expected = 0;
+    for (int i=0; i<numFiles; i++) {
+      CacheDirectiveInfo directive =
+              new CacheDirectiveInfo.Builder().
+                      setPath(new Path(paths.get(i))).
+                      setPool(pool).
+                      build();
+      dfs.addCacheDirective(directive);
+      waitForCachedBlocks(namenode, expected, 0,
+              "testAddingCacheDirectiveInfosWhenCachingIsDisabled:1");
+    }
+    Thread.sleep(20000);
+    waitForCachedBlocks(namenode, expected, 0,
+            "testAddingCacheDirectiveInfosWhenCachingIsDisabled:2");
   }
 }

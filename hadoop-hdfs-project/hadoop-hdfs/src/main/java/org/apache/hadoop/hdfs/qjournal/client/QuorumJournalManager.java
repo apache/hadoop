@@ -30,8 +30,8 @@ import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -65,7 +65,7 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 public class QuorumJournalManager implements JournalManager {
-  static final Log LOG = LogFactory.getLog(QuorumJournalManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(QuorumJournalManager.class);
 
   // Timeouts for which the QJM will wait for each of the following actions.
   private final int startSegmentTimeoutMs;

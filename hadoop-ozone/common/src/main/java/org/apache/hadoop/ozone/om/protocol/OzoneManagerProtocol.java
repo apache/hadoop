@@ -148,7 +148,7 @@ public interface OzoneManagerProtocol {
    * @param clientID the client identification
    * @throws IOException
    */
-  void commitKey(OmKeyArgs args, int clientID) throws IOException;
+  void commitKey(OmKeyArgs args, long clientID) throws IOException;
 
   /**
    * Allocate a new block, it is assumed that the client is having an open key
@@ -159,7 +159,7 @@ public interface OzoneManagerProtocol {
    * @return an allocated block
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, int clientID)
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
       throws IOException;
 
   /**
@@ -172,9 +172,10 @@ public interface OzoneManagerProtocol {
   OmKeyInfo lookupKey(OmKeyArgs args) throws IOException;
 
   /**
-   * Rename an existing key within a bucket
+   * Rename an existing key within a bucket.
    * @param args the args of the key.
    * @param toKeyName New name to be used for the Key
+   * @throws IOException
    */
   void renameKey(OmKeyArgs args, String toKeyName) throws IOException;
 
@@ -214,7 +215,7 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<OmBucketInfo> listBuckets(String volumeName,
-                                 String startBucketName, String bucketPrefix, int maxNumOfBuckets)
+      String startBucketName, String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
 
   /**
@@ -239,7 +240,7 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<OmKeyInfo> listKeys(String volumeName,
-                           String bucketName, String startKeyName, String keyPrefix, int maxKeys)
+      String bucketName, String startKeyName, String keyPrefix, int maxKeys)
       throws IOException;
 
   /**
@@ -249,4 +250,36 @@ public interface OzoneManagerProtocol {
    * @throws IOException
    */
   List<ServiceInfo> getServiceList() throws IOException;
+
+  /*
+   * S3 Specific functionality that is supported by Ozone Manager.
+   */
+
+  /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  void createS3Bucket(String userName, String s3BucketName) throws IOException;
+
+  /**
+   * Delets an S3 bucket inside Ozone manager and deletes the mapping.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException in case the bucket cannot be deleted.
+   */
+  void deleteS3Bucket(String s3BucketName) throws IOException;
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  String getOzoneBucketMapping(String s3BucketName) throws IOException;
+
 }
+

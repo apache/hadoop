@@ -337,8 +337,8 @@ public class TestAddStripedBlocks {
     int i = groupSize - 1;
     for (DataNode dn : cluster.getDataNodes()) {
       String storageID = storageIDs.get(i);
-      final Block block = new Block(lastBlock.getBlockId() + i--,
-          lastBlock.getGenerationStamp(), 0);
+      final Block block = new Block(lastBlock.getBlockId() + i--, 0,
+          lastBlock.getGenerationStamp());
       DatanodeStorage storage = new DatanodeStorage(storageID);
       List<ReplicaBeingWritten> blocks = new ArrayList<>();
       ReplicaBeingWritten replica = new ReplicaBeingWritten(block, null, null,

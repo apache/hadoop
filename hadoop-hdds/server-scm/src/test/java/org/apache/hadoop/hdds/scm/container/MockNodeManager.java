@@ -16,10 +16,17 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.node.states.Node2PipelineMap;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -27,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
@@ -40,6 +48,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
@@ -71,12 +80,16 @@ public class MockNodeManager implements NodeManager {
   private final SCMNodeStat aggregateStat;
   private boolean chillmode;
   private final Map<UUID, List<SCMCommand>> commandMap;
+  private final Node2PipelineMap node2PipelineMap;
+  private final Node2ContainerMap node2ContainerMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
     this.staleNodes = new LinkedList<>();
     this.deadNodes = new LinkedList<>();
     this.nodeMetricMap = new HashMap<>();
+    this.node2PipelineMap = new Node2PipelineMap();
+    this.node2ContainerMap = new Node2ContainerMap();
     aggregateStat = new SCMNodeStat();
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
@@ -186,64 +199,6 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
-   * Get the minimum number of nodes to get out of chill mode.
-   *
-   * @return int
-   */
-  @Override
-  public int getMinimumChillModeNodes() {
-    return 0;
-  }
-
-  /**
-   * Chill mode is the period when node manager waits for a minimum configured
-   * number of datanodes to report in. This is called chill mode to indicate the
-   * period before node manager gets into action.
-   * <p>
-   * Forcefully exits the chill mode, even if we have not met the minimum
-   * criteria of the nodes reporting in.
-   */
-  @Override
-  public void forceExitChillMode() {
-
-  }
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  @Override
-  public void enterChillMode() {
-
-  }
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  @Override
-  public void exitChillMode() {
-
-  }
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  @Override
-  public boolean isOutOfChillMode() {
-    return !chillmode;
-  }
-
-  /**
-   * Returns a chill mode status string.
-   *
-   * @return String
-   */
-  @Override
-  public String getChillModeStatus() {
-    return null;
-  }
-
-  /**
    * Returns the aggregated node stats.
    * @return the aggregated node stats.
    */
@@ -264,11 +219,16 @@ public class MockNodeManager implements NodeManager {
   /**
    * Return the node stat of the specified datanode.
    * @param datanodeDetails - datanode details.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
-    return new SCMNodeMetric(nodeMetricMap.get(datanodeDetails.getUuid()));
+    SCMNodeStat stat = nodeMetricMap.get(datanodeDetails.getUuid());
+    if (stat == null) {
+      return null;
+    }
+    return new SCMNodeMetric(stat);
   }
 
   /**
@@ -280,6 +240,34 @@ public class MockNodeManager implements NodeManager {
   @Override
   public HddsProtos.NodeState getNodeState(DatanodeDetails dd) {
     return null;
+  }
+
+  /**
+   * Get set of pipelines a datanode is part of.
+   * @param dnId - datanodeID
+   * @return Set of PipelineID
+   */
+  @Override
+  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
+    return node2PipelineMap.getPipelines(dnId);
+  }
+
+  /**
+   * Add pipeline information in the NodeManager.
+   * @param pipeline - Pipeline to be added
+   */
+  @Override
+  public void addPipeline(Pipeline pipeline) {
+    node2PipelineMap.addPipeline(pipeline);
+  }
+
+  /**
+   * Remove a pipeline information from the NodeManager.
+   * @param pipeline - Pipeline to be removed
+   */
+  @Override
+  public void removePipeline(Pipeline pipeline) {
+    node2PipelineMap.removePipeline(pipeline);
   }
 
   @Override
@@ -304,6 +292,54 @@ public class MockNodeManager implements NodeManager {
   @Override
   public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
     // do nothing
+  }
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws SCMException - if datanode is not known. For new datanode use
+   *                        addDatanodeInContainerMap call.
+   */
+  @Override
+  public void setContainersForDatanode(UUID uuid, Set<ContainerID> containerIds)
+      throws SCMException {
+    node2ContainerMap.setContainersForDatanode(uuid, containerIds);
+  }
+
+  /**
+   * Process containerReport received from datanode.
+   * @param uuid - DataonodeID
+   * @param containerIds - Set of containerIDs
+   * @return The result after processing containerReport
+   */
+  @Override
+  public ReportResult<ContainerID> processContainerReport(UUID uuid,
+      Set<ContainerID> containerIds) {
+    return node2ContainerMap.processReport(uuid, containerIds);
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  @Override
+  public Set<ContainerID> getContainers(UUID uuid) {
+    return node2ContainerMap.getContainers(uuid);
+  }
+
+  /**
+   * Insert a new datanode with set of containerIDs for containers available
+   * on it.
+   * @param uuid - DatanodeID
+   * @param containerIDs - Set of ContainerIDs
+   * @throws SCMException - if datanode already exists
+   */
+  @Override
+  public void addDatanodeInContainerMap(UUID uuid,
+      Set<ContainerID> containerIDs) throws SCMException {
+    node2ContainerMap.insertNewDatanode(uuid, containerIDs);
   }
 
   // Returns the number of commands that is queued to this node manager.
@@ -356,7 +392,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public RegisteredCommand register(DatanodeDetails datanodeDetails,
-      NodeReportProto nodeReport) {
+      NodeReportProto nodeReport, PipelineReportsProto pipelineReportsProto) {
     return null;
   }
 
@@ -368,6 +404,12 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public List<SCMCommand> processHeartbeat(DatanodeDetails datanodeDetails) {
+    return null;
+  }
+
+  @Override
+  public Boolean isNodeRegistered(
+      DatanodeDetails datanodeDetails) {
     return null;
   }
 
@@ -417,6 +459,26 @@ public class MockNodeManager implements NodeManager {
                         EventPublisher publisher) {
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
+  }
+
+  /**
+   * Remove the node stats and update the storage stats
+   * in this Node Manager.
+   *
+   * @param dnUuid UUID of the datanode.
+   */
+  @Override
+  public void processDeadNode(UUID dnUuid) {
+    SCMNodeStat stat = this.nodeMetricMap.get(dnUuid);
+    if (stat != null) {
+      aggregateStat.subtract(stat);
+      stat.set(0, 0, 0);
+    }
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return null;
   }
 
   /**

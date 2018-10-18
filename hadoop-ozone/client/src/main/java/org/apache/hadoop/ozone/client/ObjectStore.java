@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -56,6 +57,11 @@ public class ObjectStore {
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
   }
 
+  @VisibleForTesting
+  protected ObjectStore() {
+    proxy = null;
+  }
+
   /**
    * Creates the volume with default values.
    * @param volumeName Name of the volume to be created.
@@ -77,6 +83,63 @@ public class ObjectStore {
   }
 
   /**
+   * Creates an S3 bucket inside Ozone manager and creates the mapping needed
+   * to access via both S3 and Ozone.
+   * @param userName - S3 user name.
+   * @param s3BucketName - S3 bucket Name.
+   * @throws IOException - On failure, throws an exception like Bucket exists.
+   */
+  public void createS3Bucket(String userName, String s3BucketName) throws
+      IOException {
+    proxy.createS3Bucket(userName, s3BucketName);
+  }
+
+  /**
+   * Deletes an s3 bucket and removes mapping of Ozone volume/bucket.
+   * @param bucketName - S3 Bucket Name.
+   * @throws  IOException in case the bucket cannot be deleted.
+   */
+  public void deleteS3Bucket(String bucketName) throws IOException {
+    proxy.deleteS3Bucket(bucketName);
+  }
+
+  /**
+   * Returns the Ozone Namespace for the S3Bucket. It will return the
+   * OzoneVolume/OzoneBucketName.
+   * @param s3BucketName  - S3 Bucket Name.
+   * @return String - The Ozone canonical name for this s3 bucket. This
+   * string is useful for mounting an OzoneFS.
+   * @throws IOException - Error is throw if the s3bucket does not exist.
+   */
+  public String getOzoneBucketMapping(String s3BucketName) throws IOException {
+    return proxy.getOzoneBucketMapping(s3BucketName);
+  }
+
+  /**
+   * Returns the corresponding Ozone volume given an S3 Bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone Volume name.
+   * @throws IOException - Throws if the s3Bucket does not exist.
+   */
+  public String getOzoneVolumeName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[0];
+
+  }
+
+  /**
+   * Returns the corresponding Ozone bucket name for the given S3 bucket.
+   * @param s3BucketName - S3Bucket Name.
+   * @return String - Ozone bucket Name.
+   * @throws IOException - Throws if the s3bucket does not exist.
+   */
+  public String getOzoneBucketName(String s3BucketName) throws IOException {
+    String mapping = getOzoneBucketMapping(s3BucketName);
+    return mapping.split("/")[1];
+  }
+
+
+  /**
    * Returns the volume information.
    * @param volumeName Name of the volume.
    * @return OzoneVolume
@@ -96,7 +159,7 @@ public class ObjectStore {
    * @param volumePrefix Volume prefix to match
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix)
+  public Iterator<? extends OzoneVolume> listVolumes(String volumePrefix)
       throws IOException {
     return listVolumes(volumePrefix, null);
   }
@@ -111,7 +174,7 @@ public class ObjectStore {
    * @param prevVolume Volumes will be listed after this volume name
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix,
+  public Iterator<? extends OzoneVolume> listVolumes(String volumePrefix,
       String prevVolume) throws IOException {
     return new VolumeIterator(null, volumePrefix, prevVolume);
   }
@@ -127,7 +190,7 @@ public class ObjectStore {
    * @param prevVolume Volumes will be listed after this volume name
    * @return {@code Iterator<OzoneVolume>}
    */
-  public Iterator<OzoneVolume> listVolumesByUser(String user,
+  public Iterator<? extends OzoneVolume> listVolumesByUser(String user,
       String volumePrefix, String prevVolume)
       throws IOException {
     if(Strings.isNullOrEmpty(user)) {

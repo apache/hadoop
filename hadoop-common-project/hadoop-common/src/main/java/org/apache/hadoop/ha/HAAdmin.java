@@ -372,7 +372,7 @@ public abstract class HAAdmin extends Configured implements Tool {
 
   /**
    * Return the serviceId as is, we are assuming it was
-   * given as a service address of form <host:ipcport>.
+   * given as a service address of form {@literal <}host:ipcport{@literal >}.
    */
   protected String getServiceAddr(String serviceId) {
     return serviceId;
@@ -574,8 +574,11 @@ public abstract class HAAdmin extends Configured implements Tool {
     }
     return 0;
   }
-  
-  protected static class UsageInfo {
+
+  /**
+   * UsageInfo class holds args and help details.
+   */
+  public static class UsageInfo {
     public final String args;
     public final String help;
     

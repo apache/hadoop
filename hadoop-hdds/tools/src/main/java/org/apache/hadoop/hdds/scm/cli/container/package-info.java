@@ -16,4 +16,7 @@
  * limitations under the License.
  */
 
+/**
+ * Contains all of the container related scm commands.
+ */
 package org.apache.hadoop.hdds.scm.cli.container;

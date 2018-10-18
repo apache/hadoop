@@ -30,9 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @ApiModel(description = "The type of placement - affinity/anti-affinity/"
     + "affinity-with-cardinality with containers of another component or "
     + "containers of the same component (self).")
-@javax.annotation.Generated(
-    value = "class io.swagger.codegen.languages.JavaClientCodegen",
-    date = "2018-02-16T10:20:12.927-07:00")
 public enum PlacementType {
   AFFINITY, ANTI_AFFINITY, AFFINITY_WITH_CARDINALITY;
 }

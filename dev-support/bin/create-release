@@ -617,8 +617,8 @@ function makearelease
   #shellcheck disable=SC2038
   find . -name rat.txt | xargs -I% cat % > "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-rat.txt"
 
-  # Stage CHANGES and RELEASENOTES files
-  for i in CHANGES RELEASENOTES; do
+  # Stage CHANGELOG and RELEASENOTES files
+  for i in CHANGELOG RELEASENOTES; do
     run cp -p \
         "${BASEDIR}/hadoop-common-project/hadoop-common/src/site/markdown/release/${HADOOP_VERSION}"/${i}*.md \
         "${ARTIFACTS_DIR}/${i}.md"

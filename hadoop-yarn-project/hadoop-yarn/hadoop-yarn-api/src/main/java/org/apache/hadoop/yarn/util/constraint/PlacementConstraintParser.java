@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.yarn.util.constraint;
 
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
@@ -44,11 +46,12 @@ import java.util.regex.Pattern;
 @InterfaceStability.Unstable
 public final class PlacementConstraintParser {
 
+  public static final char EXPRESSION_VAL_DELIM = ',';
   private static final char EXPRESSION_DELIM = ':';
   private static final char KV_SPLIT_DELIM = '=';
-  private static final char EXPRESSION_VAL_DELIM = ',';
   private static final char BRACKET_START = '(';
   private static final char BRACKET_END = ')';
+  private static final String KV_NE_DELIM = "!=";
   private static final String IN = "in";
   private static final String NOT_IN = "notin";
   private static final String AND = "and";
@@ -350,6 +353,91 @@ public final class PlacementConstraintParser {
   }
 
   /**
+   * Constraint parser used to parse a given target expression.
+   */
+  public static class NodeConstraintParser extends ConstraintParser {
+
+    public NodeConstraintParser(String expression) {
+      super(new BaseStringTokenizer(expression,
+          String.valueOf(EXPRESSION_VAL_DELIM)));
+    }
+
+    @Override
+    public AbstractConstraint parse()
+        throws PlacementConstraintParseException {
+      PlacementConstraint.AbstractConstraint placementConstraints = null;
+      String attributeName = "";
+      NodeAttributeOpCode opCode = NodeAttributeOpCode.EQ;
+      String scope = SCOPE_NODE;
+
+      Set<String> constraintEntities = new TreeSet<>();
+      while (hasMoreTokens()) {
+        String currentTag = nextToken();
+        StringTokenizer attributeKV = getAttributeOpCodeTokenizer(currentTag);
+
+        // Usually there will be only one k=v pair. However in case when
+        // multiple values are present for same attribute, it will also be
+        // coming as next token. for example, java=1.8,1.9 or python!=2.
+        if (attributeKV.countTokens() > 1) {
+          opCode = getAttributeOpCode(currentTag);
+          attributeName = attributeKV.nextToken();
+          currentTag = attributeKV.nextToken();
+        }
+        constraintEntities.add(currentTag);
+      }
+
+      if(attributeName.isEmpty()) {
+        throw new PlacementConstraintParseException(
+            "expecting valid expression like k=v or k!=v, but get "
+                + constraintEntities);
+      }
+
+      PlacementConstraint.TargetExpression target = null;
+      if (!constraintEntities.isEmpty()) {
+        target = PlacementConstraints.PlacementTargets
+            .nodeAttribute(attributeName,
+                constraintEntities
+                    .toArray(new String[constraintEntities.size()]));
+      }
+
+      placementConstraints = PlacementConstraints
+          .targetNodeAttribute(scope, opCode, target);
+      return placementConstraints;
+    }
+
+    private StringTokenizer getAttributeOpCodeTokenizer(String currentTag) {
+      StringTokenizer attributeKV = new StringTokenizer(currentTag,
+          KV_NE_DELIM);
+
+      // Try with '!=' delim as well.
+      if (attributeKV.countTokens() < 2) {
+        attributeKV = new StringTokenizer(currentTag,
+            String.valueOf(KV_SPLIT_DELIM));
+      }
+      return attributeKV;
+    }
+
+    /**
+     * Below conditions are validated.
+     * java=8   : OpCode = EQUALS
+     * java!=8  : OpCode = NEQUALS
+     * @param currentTag tag
+     * @return Attribute op code.
+     */
+    private NodeAttributeOpCode getAttributeOpCode(String currentTag)
+        throws PlacementConstraintParseException {
+      if (currentTag.contains(KV_NE_DELIM)) {
+        return NodeAttributeOpCode.NE;
+      } else if (currentTag.contains(String.valueOf(KV_SPLIT_DELIM))) {
+        return NodeAttributeOpCode.EQ;
+      }
+      throw new PlacementConstraintParseException(
+          "expecting valid expression like k=v or k!=v, but get "
+              + currentTag);
+    }
+  }
+
+  /**
    * Constraint parser used to parse a given target expression, such as
    * "NOTIN, NODE, foo, bar".
    */
@@ -363,20 +451,23 @@ public final class PlacementConstraintParser {
     @Override
     public AbstractConstraint parse()
         throws PlacementConstraintParseException {
-      PlacementConstraint.AbstractConstraint placementConstraints;
+      PlacementConstraint.AbstractConstraint placementConstraints = null;
       String op = nextToken();
       if (op.equalsIgnoreCase(IN) || op.equalsIgnoreCase(NOT_IN)) {
         String scope = nextToken();
         scope = parseScope(scope);
 
-        Set<String> allocationTags = new TreeSet<>();
+        Set<String> constraintEntities = new TreeSet<>();
         while(hasMoreTokens()) {
           String tag = nextToken();
-          allocationTags.add(tag);
+          constraintEntities.add(tag);
         }
-        PlacementConstraint.TargetExpression target =
-            PlacementConstraints.PlacementTargets.allocationTag(
-                allocationTags.toArray(new String[allocationTags.size()]));
+        PlacementConstraint.TargetExpression target = null;
+        if(!constraintEntities.isEmpty()) {
+          target = PlacementConstraints.PlacementTargets.allocationTag(
+              constraintEntities
+                  .toArray(new String[constraintEntities.size()]));
+        }
         if (op.equalsIgnoreCase(IN)) {
           placementConstraints = PlacementConstraints
               .targetIn(scope, target);
@@ -499,6 +590,14 @@ public final class PlacementConstraintParser {
       this.num = number;
     }
 
+    public static SourceTags emptySourceTags() {
+      return new SourceTags("", 0);
+    }
+
+    public boolean isEmpty() {
+      return Strings.isNullOrEmpty(tag) && num == 0;
+    }
+
     public String getTag() {
       return this.tag;
     }
@@ -551,6 +650,11 @@ public final class PlacementConstraintParser {
         constraintOptional = Optional.ofNullable(jp.tryParse());
       }
       if (!constraintOptional.isPresent()) {
+        NodeConstraintParser np =
+            new NodeConstraintParser(constraintStr);
+        constraintOptional = Optional.ofNullable(np.tryParse());
+      }
+      if (!constraintOptional.isPresent()) {
         throw new PlacementConstraintParseException(
             "Invalid constraint expression " + constraintStr);
       }
@@ -584,32 +688,60 @@ public final class PlacementConstraintParser {
    */
   public static Map<SourceTags, PlacementConstraint> parsePlacementSpec(
       String expression) throws PlacementConstraintParseException {
+    // Continue handling for application tag based constraint otherwise.
     // Respect insertion order.
     Map<SourceTags, PlacementConstraint> result = new LinkedHashMap<>();
     PlacementConstraintParser.ConstraintTokenizer tokenizer =
         new PlacementConstraintParser.MultipleConstraintsTokenizer(expression);
     tokenizer.validate();
-    while(tokenizer.hasMoreElements()) {
+    while (tokenizer.hasMoreElements()) {
       String specStr = tokenizer.nextElement();
       // each spec starts with sourceAllocationTag=numOfContainers and
       // followed by a constraint expression.
       // foo=4,Pn
       String[] splitted = specStr.split(
           String.valueOf(EXPRESSION_VAL_DELIM), 2);
-      if (splitted.length != 2) {
+      final SourceTags st;
+      final String exprs;
+      if (splitted.length == 1) {
+        // source tags not specified
+        exprs = splitted[0];
+        st = SourceTags.emptySourceTags();
+      } else if (splitted.length == 2) {
+        exprs = splitted[1];
+        String tagAlloc = splitted[0];
+        st = SourceTags.parseFrom(tagAlloc);
+      } else {
         throw new PlacementConstraintParseException(
             "Unexpected placement constraint expression " + specStr);
       }
 
-      String tagAlloc = splitted[0];
-      SourceTags st = SourceTags.parseFrom(tagAlloc);
-      String exprs = splitted[1];
       AbstractConstraint constraint =
           PlacementConstraintParser.parseExpression(exprs);
 
       result.put(st, constraint.build());
     }
 
+    // Validation
+    Set<SourceTags> sourceTagSet = result.keySet();
+    if (sourceTagSet.stream()
+        .filter(sourceTags -> sourceTags.isEmpty())
+        .findAny()
+        .isPresent()) {
+      // Source tags, e.g foo=3, is optional for a node-attribute constraint,
+      // but when source tags is absent, the parser only accept single
+      // constraint expression to avoid ambiguous semantic. This is because
+      // DS AM is requesting number of containers per the number specified
+      // in the source tags, we do overwrite when there is no source tags
+      // with num_containers argument from commandline. If that is partially
+      // missed in the constraints, we don't know if it is ought to
+      // overwritten or not.
+      if (result.size() != 1) {
+        throw new PlacementConstraintParseException(
+            "Source allocation tags is required for a multi placement"
+                + " constraint expression.");
+      }
+    }
     return result;
   }
 }

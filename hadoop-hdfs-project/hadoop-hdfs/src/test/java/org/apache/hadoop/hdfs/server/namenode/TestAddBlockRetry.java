@@ -24,8 +24,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.EnumSet;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -46,7 +46,8 @@ import org.mockito.Mockito;
  * FSNamesystem.getAdditionalBlock().
  */
 public class TestAddBlockRetry {
-  public static final Log LOG = LogFactory.getLog(TestAddBlockRetry.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestAddBlockRetry.class);
 
   private static final short REPLICATION = 3;
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm.block;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -63,7 +63,7 @@ public class SCMBlockDeletingService extends BackgroundService {
   // ThreadPoolSize=2, 1 for scheduler and the other for the scanner.
   private final static int BLOCK_DELETING_SERVICE_CORE_POOL_SIZE = 2;
   private final DeletedBlockLog deletedBlockLog;
-  private final Mapping mappingService;
+  private final ContainerManager containerManager;
   private final NodeManager nodeManager;
   private final EventPublisher eventPublisher;
 
@@ -81,12 +81,13 @@ public class SCMBlockDeletingService extends BackgroundService {
   private int blockDeleteLimitSize;
 
   public SCMBlockDeletingService(DeletedBlockLog deletedBlockLog,
-      Mapping mapper, NodeManager nodeManager, EventPublisher eventPublisher,
-      long interval, long serviceTimeout, Configuration conf) {
+      ContainerManager containerManager, NodeManager nodeManager,
+      EventPublisher eventPublisher, long interval, long serviceTimeout,
+      Configuration conf) {
     super("SCMBlockDeletingService", interval, TimeUnit.MILLISECONDS,
         BLOCK_DELETING_SERVICE_CORE_POOL_SIZE, serviceTimeout);
     this.deletedBlockLog = deletedBlockLog;
-    this.mappingService = mapper;
+    this.containerManager = containerManager;
     this.nodeManager = nodeManager;
     this.eventPublisher = eventPublisher;
 
@@ -139,7 +140,7 @@ public class SCMBlockDeletingService extends BackgroundService {
       List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
       Map<Long, Long> transactionMap = null;
       if (datanodes != null) {
-        transactions = new DatanodeDeletedBlockTransactions(mappingService,
+        transactions = new DatanodeDeletedBlockTransactions(containerManager,
             blockDeleteLimitSize, datanodes.size());
         try {
           transactionMap = deletedBlockLog.getTransactions(transactions);
@@ -165,7 +166,7 @@ public class SCMBlockDeletingService extends BackgroundService {
             // We should stop caching new commands if num of un-processed
             // command is bigger than a limit, e.g 50. In case datanode goes
             // offline for sometime, the cached commands be flooded.
-            eventPublisher.fireEvent(SCMEvents.DATANODE_COMMAND,
+            eventPublisher.fireEvent(SCMEvents.RETRIABLE_DATANODE_COMMAND,
                 new CommandForDatanode<>(dnId, new DeleteBlocksCommand(dnTXs)));
             LOG.debug(
                 "Added delete block command for datanode {} in the queue,"
@@ -174,7 +175,7 @@ public class SCMBlockDeletingService extends BackgroundService {
                     transactions.getTransactionIDList(dnId)));
           }
         }
-        mappingService.updateDeleteTransactionId(transactionMap);
+        containerManager.updateDeleteTransactionId(transactionMap);
       }
 
       if (dnTxCount > 0) {

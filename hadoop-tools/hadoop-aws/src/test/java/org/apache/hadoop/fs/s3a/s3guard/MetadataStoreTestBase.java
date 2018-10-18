@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Map;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
@@ -43,6 +42,9 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
+
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isMetadataStoreAuthoritative;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
  * Main test class for MetadataStore implementations.
@@ -511,21 +513,13 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
   }
 
-  private boolean isMetadataStoreAuthoritative() throws IOException {
-    Map<String, String> diags = ms.getDiagnostics();
-    String isAuth =
-        diags.get(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT);
-    if(isAuth == null){
-      return false;
-    }
-    return Boolean.valueOf(isAuth);
-  }
+
 
   @Test
   public void testListChildrenAuthoritative() throws IOException {
     Assume.assumeTrue("MetadataStore should be capable for authoritative "
         + "storage of directories to run this test.",
-        isMetadataStoreAuthoritative());
+        metadataStorePersistsAuthoritativeBit(ms));
 
     setupListStatus();
 

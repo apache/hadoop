@@ -17,6 +17,5 @@
  */
 package org.apache.hadoop.ozone.container.keyvalue.impl;
 /**
- This package contains chunk manager and key manager implementation for
- keyvalue container type.
- **/
+ * Chunk manager and block manager implementations for keyvalue container type.
+ */

@@ -88,7 +88,7 @@ public class TestChunkManagerImpl {
     keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
 
     data = "testing write chunks".getBytes();
-    // Creating KeyData
+    // Creating BlockData
     blockID = new BlockID(1L, 1L);
     chunkInfo = new ChunkInfo(String.format("%d.data.%d", blockID
         .getLocalID(), 0), 0, data.length);

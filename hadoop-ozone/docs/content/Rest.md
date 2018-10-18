@@ -1,33 +1,29 @@
 ---
-title: Ozone REST API
-menu: main
+title: REST API
+menu:
+   main:
+      parent: Client
 ---
 <!---
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
+      http://www.apache.org/licenses/LICENSE-2.0
 
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
-  limitations under the License. See accompanying LICENSE file.
+  limitations under the License.
 -->
-
-Ozone REST API's.
-===================
-
-<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
-
-Overview
---------
 
 The Ozone REST API's allows user to access ozone via  REST protocol.
 
-Authentication and Authorization
---------------------
+## Authentication and Authorization
 
 For time being, The default authentication mode of REST API is insecure access
 mode, which is *Simple* mode. Under this mode, ozone server trusts the user
@@ -47,8 +43,7 @@ authorized to obtain administrator privilege by using HTTP header
 for example set following header *Authorization: OZONE root* in the HTTP request,
 then ozone will authorize the client with administrator privilege.
 
-Common REST Headers
---------------------
+## Common REST Headers
 
 The following HTTP headers must be set for each REST call.
 
@@ -58,8 +53,7 @@ The following HTTP headers must be set for each REST call.
 | Date | Standard HTTP header that represents dates. The format is - day of the week, month, day, year and time (military time format) in GMT. Any other time zone will be rejected by ozone server. Eg. *Date : Mon, Apr 4, 2016 06:22:00 GMT*. This field is required. |
 | x-ozone-version | A required HTTP header to indicate which version of API this call will be communicating to. E.g *x-ozone-version: v1*. Currently ozone only publishes v1 version API. |
 
-Common Reply Headers
---------------------
+## Common Reply Headers
 
 The common reply headers are part of all Ozone server replies.
 
@@ -69,8 +63,7 @@ The common reply headers are part of all Ozone server replies.
 | x-ozone-request-id | This is a UUID string that represents an unique request ID. This ID is used to track the request through the ozone system and is useful for debugging purposes. |
 | x-ozone-server-name | Fully qualified domain name of the sever which handled the request. |
 
-Volume APIs
---------------------
+## Volume APIs
 
 ### Create a Volume
 
@@ -222,8 +215,7 @@ this request gets all volumes owned by *bilbo* and each volume's name contains p
       ]
     }
 
-Bucket APIs
---------------------
+## Bucket APIs
 
 ### Create Bucket
 
@@ -389,8 +381,7 @@ this request lists all the buckets under volume *volume-of-bilbo*, and the resul
       ]
     }
 
-Key APIs
-------------------
+## Key APIs
 
 ### Put Key
 

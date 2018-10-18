@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
+import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.TimeDuration;
 
 /**
@@ -89,7 +90,7 @@ public final class OzoneConfigKeys {
       "ozone.metastore.rocksdb.statistics";
 
   public static final String  OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT =
-      "ALL";
+      "OFF";
   public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF =
       "OFF";
 
@@ -194,6 +195,14 @@ public final class OzoneConfigKeys {
   public static final int
       OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL_DEFAULT = 10;
 
+  public static final String OZONE_CLIENT_MAX_RETRIES =
+      "ozone.client.max.retries";
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 50;
+
+  public static final String OZONE_CLIENT_RETRY_INTERVAL =
+      "ozone.client.retry.interval";
+  public static final String OZONE_CLIENT_RETRY_INTERVAL_DEFAULT = "200ms";
+
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
   public static final boolean DFS_CONTAINER_RATIS_ENABLED_DEFAULT
@@ -206,6 +215,15 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY;
   public static final int DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY;
+  public static final ReplicationLevel
+      DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY;
+  public static final int DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT
+      = ScmConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT;
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY;
   public static final int DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT
@@ -223,11 +241,37 @@ public final class OzoneConfigKeys {
   public static final TimeDuration
       DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT =
       ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT;
+  public static final String DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY;
+  public static final int DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_DEFAULT;
+  public static final String DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY;
+  public static final TimeDuration
+      DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT;
+  public static final String DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY =
+      ScmConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY;
+  public static final TimeDuration
+      DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT;
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
   public static final TimeDuration
       DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT;
+  public static final String
+      DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY =
+      ScmConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY;
+  public static final TimeDuration
+      DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT;
+
+  public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
+      ScmConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_KEY;
+  public static final TimeDuration
+      DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT;
 
   public static final String OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
       "ozone.web.authentication.kerberos.principal";
@@ -246,16 +290,8 @@ public final class OzoneConfigKeys {
   public static final double
       HDDS_DATANODE_STORAGE_UTILIZATION_CRITICAL_THRESHOLD_DEFAULT = 0.75;
 
-  public static final String
-      HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY =
-      "hdds.write.lock.reporting.threshold.ms";
-  public static final long
-      HDDS_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
-  public static final String
-      HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_KEY =
-      "hdds.lock.suppress.warning.interval.ms";
-  public static final long
-      HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT = 10000L;
+  public static final String OZONE_CONTAINER_COPY_WORKDIR =
+      "hdds.datanode.replication.work.dir";
 
   /**
    * There is no need to instantiate this class.

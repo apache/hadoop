@@ -244,26 +244,29 @@ public class TestDFSStripedOutputStreamWithFailure extends
         // Full stripe and a partial on non-cell boundary
         (cellSize * dataBlocks) + 123,
     };
-    try {
-      for (int length: fileLengths) {
-        // select the two DNs with partial block to kill
-        final int[] dnIndex = {dataBlocks - 2, dataBlocks - 1};
-        final int[] killPos = getKillPositions(length, dnIndex.length);
-        try {
-          LOG.info("runTestWithMultipleFailure2: length==" + length
-              + ", killPos=" + Arrays.toString(killPos)
-              + ", dnIndex=" + Arrays.toString(dnIndex));
-          setup(conf);
-          runTest(length, killPos, dnIndex, false);
-        } catch (Throwable e) {
-          final String err = "failed, killPos=" + Arrays.toString(killPos)
-              + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
-          LOG.error(err);
-          throw e;
-        }
+    // select the two DNs with partial block to kill
+    int[] dnIndex = null;
+    if (parityBlocks > 1) {
+      dnIndex = new int[] {dataBlocks - 2, dataBlocks - 1};
+    } else {
+      dnIndex = new int[] {dataBlocks - 1};
+    }
+    for (int length : fileLengths) {
+      final int[] killPos = getKillPositions(length, dnIndex.length);
+      try {
+        LOG.info("runTestWithMultipleFailure2: length==" + length + ", killPos="
+            + Arrays.toString(killPos) + ", dnIndex="
+            + Arrays.toString(dnIndex));
+        setup(conf);
+        runTest(length, killPos, dnIndex, false);
+      } catch (Throwable e) {
+        final String err = "failed, killPos=" + Arrays.toString(killPos)
+            + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+        LOG.error(err);
+        throw e;
+      } finally {
+        tearDown();
       }
-    } finally {
-      tearDown();
     }
   }
 

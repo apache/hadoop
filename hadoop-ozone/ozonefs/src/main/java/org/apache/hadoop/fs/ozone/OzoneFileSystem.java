@@ -107,7 +107,7 @@ public class OzoneFileSystem extends FileSystem {
 
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Ozone file system url should be "
-          + "in the form o3://bucket.volume");
+          + "in the form o3fs://bucket.volume");
     }
     String bucketStr = matcher.group(1);
     String volumeStr = matcher.group(2);
@@ -349,7 +349,7 @@ public class OzoneFileSystem extends FileSystem {
     }
 
     if (srcStatus.isDirectory()) {
-      if (dst.toString().startsWith(src.toString())) {
+      if (dst.toString().startsWith(src.toString() + OZONE_URI_DELIMITER)) {
         LOG.trace("Cannot rename a directory to a subdirectory of self");
         return false;
       }
@@ -448,6 +448,14 @@ public class OzoneFileSystem extends FileSystem {
   }
 
   /**
+   * Get the username of the FS.
+   * @return the short name of the user who instantiated the FS
+   */
+  public String getUsername() {
+    return userName;
+  }
+
+  /**
    * Check whether the path is valid and then create directories.
    * Directory is represented using a key with no value.
    * All the non-existent parent directories are also created.
@@ -528,11 +536,15 @@ public class OzoneFileSystem extends FileSystem {
       throw new FileNotFoundException(f + ": No such file or directory!");
     } else if (isDirectory(meta)) {
       return new FileStatus(0, true, 1, 0,
-          meta.getModificationTime(), qualifiedPath);
+          meta.getModificationTime(), 0,
+          FsPermission.getDirDefault(), getUsername(), getUsername(),
+          qualifiedPath);
     } else {
       //TODO: Fetch replication count from ratis config
       return new FileStatus(meta.getDataSize(), false, 1,
-            getDefaultBlockSize(f), meta.getModificationTime(), qualifiedPath);
+          getDefaultBlockSize(f), meta.getModificationTime(), 0,
+          FsPermission.getFileDefault(), getUsername(), getUsername(),
+          qualifiedPath);
     }
   }
 
@@ -638,7 +650,7 @@ public class OzoneFileSystem extends FileSystem {
     private final Path path;
     private final FileStatus status;
     private String pathKey;
-    private Iterator<OzoneKey> keyIterator;
+    private Iterator<? extends OzoneKey> keyIterator;
 
     OzoneListingIterator(Path path)
         throws IOException {

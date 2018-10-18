@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * CreateFlag specifies the file create semantic. Users can combine flags like: <br>
  * <code>
  * EnumSet.of(CreateFlag.CREATE, CreateFlag.APPEND)
- * <code>
+ * </code>
  * <p>
  * 
  * Use the CreateFlag as follows:

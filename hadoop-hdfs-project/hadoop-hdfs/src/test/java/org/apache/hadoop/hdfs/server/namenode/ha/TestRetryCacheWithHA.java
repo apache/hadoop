@@ -36,8 +36,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CacheFlag;
@@ -92,7 +92,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestRetryCacheWithHA {
-  private static final Log LOG = LogFactory.getLog(TestRetryCacheWithHA.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRetryCacheWithHA.class);
   
   private static final int BlockSize = 1024;
   private static ErasureCodingPolicy defaultEcPolicy =

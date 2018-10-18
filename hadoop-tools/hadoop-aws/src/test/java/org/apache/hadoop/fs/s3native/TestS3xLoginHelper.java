@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.s3native;
 
-import org.apache.hadoop.fs.Path;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test how URIs and login details are extracted from URIs.
@@ -35,14 +37,11 @@ public class TestS3xLoginHelper extends Assert {
   public static final String P = "%2b";
   public static final String P_RAW = "+";
   public static final String USER = "user";
-  public static final String PASS = "pass";
   public static final String PASLASHSLASH = "pa" + S + S;
   public static final String PAPLUS = "pa" + P;
   public static final String PAPLUS_RAW = "pa" + P_RAW;
 
   public static final URI WITH_USER_AND_PASS = uri("s3a://user:pass@bucket");
-  public static final Path PATH_WITH_LOGIN =
-      new Path(uri("s3a://user:pass@bucket/dest"));
 
   public static final URI WITH_SLASH_IN_PASS = uri(
       "s3a://user:" + PASLASHSLASH + "@bucket");
@@ -73,11 +72,22 @@ public class TestS3xLoginHelper extends Assert {
 
   /**
    * Assert that a built up FS URI matches the endpoint.
-   * @param uri URI to build the FS UIR from
+   * @param uri URI to build the FS URI from
    */
   private void assertMatchesEndpoint(URI uri) {
     assertEquals("Source " + uri,
         ENDPOINT, S3xLoginHelper.buildFSURI(uri));
+  }
+
+  /**
+   * Assert that the supplied FS URI is invalid as it contains
+   * username:password secrets.
+   * @param uri URI to build the FS URI from
+   */
+  private void assertInvalid(URI uri) throws Exception {
+    intercept(IllegalArgumentException.class,
+    S3xLoginHelper.LOGIN_WARNING,
+    () -> S3xLoginHelper.buildFSURI(uri));
   }
 
   /**
@@ -89,10 +99,8 @@ public class TestS3xLoginHelper extends Assert {
    */
   private S3xLoginHelper.Login assertMatchesLogin(String user,
       String pass, URI uri) {
-    S3xLoginHelper.Login expected = new S3xLoginHelper.Login(user,
-        pass);
-    S3xLoginHelper.Login actual = S3xLoginHelper.extractLoginDetails(
-        uri);
+    S3xLoginHelper.Login expected = new S3xLoginHelper.Login(user, pass);
+    S3xLoginHelper.Login actual = S3xLoginHelper.extractLoginDetails(uri);
     if (!expected.equals(actual)) {
       Assert.fail("Source " + uri
           + " login expected=:" + toString(expected)
@@ -110,28 +118,6 @@ public class TestS3xLoginHelper extends Assert {
   public void testLoginSimple() throws Throwable {
     S3xLoginHelper.Login login = assertMatchesLogin("", "", ENDPOINT);
     assertFalse("Login of " + login, login.hasLogin());
-  }
-
-  @Test
-  public void testLoginWithUserAndPass() throws Throwable {
-    S3xLoginHelper.Login login = assertMatchesLogin(USER, PASS,
-        WITH_USER_AND_PASS);
-    assertTrue("Login of " + login, login.hasLogin());
-  }
-
-  @Test
-  public void testLoginWithSlashInPass() throws Throwable {
-    assertMatchesLogin(USER, "pa//", WITH_SLASH_IN_PASS);
-  }
-
-  @Test
-  public void testLoginWithPlusInPass() throws Throwable {
-    assertMatchesLogin(USER, "pa+", WITH_PLUS_IN_PASS);
-  }
-
-  @Test
-  public void testLoginWithPlusRawInPass() throws Throwable {
-    assertMatchesLogin(USER, "pa+", WITH_PLUS_RAW_IN_PASS);
   }
 
   @Test
@@ -161,32 +147,32 @@ public class TestS3xLoginHelper extends Assert {
 
   @Test
   public void testFsUriWithUserAndPass() throws Throwable {
-    assertMatchesEndpoint(WITH_USER_AND_PASS);
+    assertInvalid(WITH_USER_AND_PASS);
   }
 
   @Test
   public void testFsUriWithSlashInPass() throws Throwable {
-    assertMatchesEndpoint(WITH_SLASH_IN_PASS);
+    assertInvalid(WITH_SLASH_IN_PASS);
   }
 
   @Test
   public void testFsUriWithPlusInPass() throws Throwable {
-    assertMatchesEndpoint(WITH_PLUS_IN_PASS);
+    assertInvalid(WITH_PLUS_IN_PASS);
   }
 
   @Test
   public void testFsUriWithPlusRawInPass() throws Throwable {
-    assertMatchesEndpoint(WITH_PLUS_RAW_IN_PASS);
+    assertInvalid(WITH_PLUS_RAW_IN_PASS);
   }
 
   @Test
   public void testFsUriWithUser() throws Throwable {
-    assertMatchesEndpoint(USER_NO_PASS);
+    assertInvalid(USER_NO_PASS);
   }
 
   @Test
   public void testFsUriWithUserAndColon() throws Throwable {
-    assertMatchesEndpoint(WITH_USER_AND_COLON);
+    assertInvalid(WITH_USER_AND_COLON);
   }
 
   @Test
@@ -203,12 +189,6 @@ public class TestS3xLoginHelper extends Assert {
   public void testFsUriNoUserNoPassTwoColon() throws Throwable {
     assertMatchesEndpoint(NO_USER_NO_PASS_TWO_COLON);
   }
-
-  @Test
-  public void testPathURIFixup() throws Throwable {
-
-  }
-
 
   /**
    * Stringifier. Kept in the code to avoid accidental logging in production

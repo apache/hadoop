@@ -20,18 +20,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-common</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Common</description>
   <name>Apache Hadoop Ozone Common</name>
   <packaging>jar</packaging>
-
-  <properties>
-    <hadoop.component>ozone</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
 
   <dependencies>
 
@@ -86,12 +81,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <imports>
                 <param>
                   ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs-client/src/main/proto/
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto/
                 </param>
                 <param>
                   ${basedir}/../../hadoop-hdds/common/src/main/proto/

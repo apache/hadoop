@@ -70,6 +70,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
@@ -439,6 +440,8 @@ public class Client implements AutoCloseable {
     
     private final Object sendRpcRequestLock = new Object();
 
+    private AtomicReference<Thread> connectingThread = new AtomicReference<>();
+
     public Connection(ConnectionId remoteId, int serviceClass) throws IOException {
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
@@ -777,6 +780,7 @@ public class Client implements AutoCloseable {
         }
       }
       try {
+        connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
         }
@@ -862,6 +866,8 @@ public class Client implements AutoCloseable {
           markClosed(new IOException("Couldn't set up IO streams: " + t, t));
         }
         close();
+      } finally {
+        connectingThread.set(null);
       }
     }
     
@@ -1215,6 +1221,13 @@ public class Client implements AutoCloseable {
         notifyAll();
       }
     }
+
+    private void interruptConnectingThread() {
+      Thread connThread = connectingThread.get();
+      if (connThread != null) {
+        connThread.interrupt();
+      }
+    }
     
     /** Close the connection. */
     private synchronized void close() {
@@ -1321,6 +1334,7 @@ public class Client implements AutoCloseable {
     // wake up all connections
     for (Connection conn : connections.values()) {
       conn.interrupt();
+      conn.interruptConnectingThread();
     }
     
     // wait until all connections are closed
@@ -1343,7 +1357,7 @@ public class Client implements AutoCloseable {
    * @param remoteId - the target rpc server
    * @param fallbackToSimpleAuth - set to true or false during this method to
    *   indicate if a secure client falls back to simple auth
-   * @returns the rpc response
+   * @return the rpc response
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
    */
@@ -1378,7 +1392,7 @@ public class Client implements AutoCloseable {
    * @param serviceClass - service class for RPC
    * @param fallbackToSimpleAuth - set to true or false during this method to
    *   indicate if a secure client falls back to simple auth
-   * @returns the rpc response
+   * @return the rpc response
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
    */
@@ -1447,7 +1461,7 @@ public class Client implements AutoCloseable {
   /**
    * Check if RPC is in asynchronous mode or not.
    *
-   * @returns true, if RPC is in asynchronous mode, otherwise false for
+   * @return true, if RPC is in asynchronous mode, otherwise false for
    *          synchronous mode.
    */
   @Unstable
@@ -1561,7 +1575,8 @@ public class Client implements AutoCloseable {
   
   /**
    * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by <remoteAddress, protocol, ticket>
+   * to servers are uniquely identified by {@literal <}remoteAddress, protocol,
+   * ticket{@literal >}
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving

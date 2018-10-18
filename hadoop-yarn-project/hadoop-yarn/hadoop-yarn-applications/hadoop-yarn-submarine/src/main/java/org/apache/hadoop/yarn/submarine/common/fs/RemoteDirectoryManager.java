@@ -27,4 +27,6 @@ public interface RemoteDirectoryManager {
   Path getModelDir(String modelName, boolean create) throws IOException;
 
   FileSystem getFileSystem() throws IOException;
+
+  Path getUserRootFolder() throws IOException;
 }

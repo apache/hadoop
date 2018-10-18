@@ -260,6 +260,29 @@ message GetClusterNodeLabelsResponseProto {
   repeated NodeLabelProto nodeLabels = 2;
 }
 
+message GetClusterNodeAttributesRequestProto {
+}
+
+message GetClusterNodeAttributesResponseProto {
+  repeated NodeAttributeInfoProto nodeAttributes = 1;
+}
+
+message GetAttributesToNodesRequestProto {
+  repeated NodeAttributeKeyProto nodeAttributes = 1;
+}
+
+message GetAttributesToNodesResponseProto {
+  repeated AttributeToNodesProto attributesToNodes = 1;
+}
+
+message GetNodesToAttributesRequestProto {
+  repeated string hostnames = 1;
+}
+
+message GetNodesToAttributesResponseProto {
+  repeated NodeToAttributesProto nodesToAttributes = 1;
+}
+
 message UpdateApplicationPriorityRequestProto {
   required ApplicationIdProto applicationId = 1;
   required PriorityProto applicationPriority = 2;

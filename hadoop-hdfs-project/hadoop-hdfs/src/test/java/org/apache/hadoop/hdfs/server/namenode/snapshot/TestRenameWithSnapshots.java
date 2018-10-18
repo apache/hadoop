@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -64,7 +64,8 @@ public class TestRenameWithSnapshots {
   static {
     SnapshotTestHelper.disableLogs();
   }
-  private static final Log LOG = LogFactory.getLog(TestRenameWithSnapshots.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRenameWithSnapshots.class);
   
   private static final long SEED = 0;
   private static final short REPL = 3;

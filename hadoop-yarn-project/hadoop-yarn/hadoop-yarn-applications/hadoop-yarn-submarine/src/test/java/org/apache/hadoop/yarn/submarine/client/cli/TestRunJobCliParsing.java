@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -133,6 +134,44 @@ public class TestRunJobCliParsing {
         jobRunParameters.getWorkerResource());
     Assert.assertTrue(SubmarineLogs.isVerbose());
     Assert.assertTrue(jobRunParameters.isWaitJobFinish());
+  }
+
+  @Test
+  public void testNoInputPathOptionSpecified() throws Exception {
+    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
+    String expectedErrorMessage = "\"--" + CliConstants.INPUT_PATH + "\" is absent";
+    String actualMessage = "";
+    try {
+      runJobCli.run(
+          new String[]{"--name", "my-job", "--docker_image", "tf-docker:1.1.0",
+              "--checkpoint_path", "hdfs://output",
+              "--num_workers", "1", "--worker_launch_cmd", "python run-job.py",
+              "--worker_resources", "memory=4g,vcores=2", "--tensorboard",
+              "true", "--verbose", "--wait_job_finish"});
+    } catch (ParseException e) {
+      actualMessage = e.getMessage();
+      e.printStackTrace();
+    }
+    Assert.assertEquals(expectedErrorMessage, actualMessage);
+  }
+
+  /**
+   * when only run tensorboard, input_path is not needed
+   * */
+  @Test
+  public void testNoInputPathOptionButOnlyRunTensorboard() throws Exception {
+    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
+    boolean success = true;
+    try {
+      runJobCli.run(
+          new String[]{"--name", "my-job", "--docker_image", "tf-docker:1.1.0",
+              "--num_workers", "0", "--tensorboard", "--verbose",
+              "--tensorboard_resources", "memory=2G,vcores=2",
+              "--tensorboard_docker_image", "tb_docker_image:001"});
+    } catch (ParseException e) {
+      success = false;
+    }
+    Assert.assertTrue(success);
   }
 
   @Test

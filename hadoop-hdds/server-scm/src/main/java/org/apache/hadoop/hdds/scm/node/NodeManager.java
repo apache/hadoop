@@ -18,11 +18,16 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -31,6 +36,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -87,26 +93,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   List<DatanodeDetails> getAllNodes();
 
   /**
-   * Chill mode is the period when node manager waits for a minimum
-   * configured number of datanodes to report in. This is called chill mode
-   * to indicate the period before node manager gets into action.
-   *
-   * Forcefully exits the chill mode, even if we have not met the minimum
-   * criteria of the nodes reporting in.
-   */
-  void forceExitChillMode();
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  void enterChillMode();
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  void exitChillMode();
-
-  /**
    * Returns the aggregated node stats.
    * @return the aggregated node stats.
    */
@@ -121,7 +107,8 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   /**
    * Return the node stat of the specified datanode.
    * @param datanodeDetails DatanodeDetails.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails);
 
@@ -131,6 +118,61 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @return Healthy/Stale/Dead.
    */
   NodeState getNodeState(DatanodeDetails datanodeDetails);
+
+  /**
+   * Get set of pipelines a datanode is part of.
+   * @param dnId - datanodeID
+   * @return Set of PipelineID
+   */
+  Set<PipelineID> getPipelineByDnID(UUID dnId);
+
+  /**
+   * Add pipeline information in the NodeManager.
+   * @param pipeline - Pipeline to be added
+   */
+  void addPipeline(Pipeline pipeline);
+
+  /**
+   * Remove a pipeline information from the NodeManager.
+   * @param pipeline - Pipeline to be removed
+   */
+  void removePipeline(Pipeline pipeline);
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws SCMException - if datanode is not known. For new datanode use
+   *                        addDatanodeInContainerMap call.
+   */
+  void setContainersForDatanode(UUID uuid, Set<ContainerID> containerIds)
+      throws SCMException;
+
+  /**
+   * Process containerReport received from datanode.
+   * @param uuid - DataonodeID
+   * @param containerIds - Set of containerIDs
+   * @return The result after processing containerReport
+   */
+  ReportResult<ContainerID> processContainerReport(UUID uuid,
+      Set<ContainerID> containerIds);
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  Set<ContainerID> getContainers(UUID uuid);
+
+  /**
+   * Insert a new datanode with set of containerIDs for containers available
+   * on it.
+   * @param uuid - DatanodeID
+   * @param containerIDs - Set of ContainerIDs
+   * @throws SCMException - if datanode already exists
+   */
+  void addDatanodeInContainerMap(UUID uuid, Set<ContainerID> containerIDs)
+      throws SCMException;
 
   /**
    * Add a {@link SCMCommand} to the command queue, which are
@@ -147,4 +189,18 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param nodeReport
    */
   void processNodeReport(UUID dnUuid, NodeReportProto nodeReport);
+
+  /**
+   * Process a dead node event in this Node Manager.
+   *
+   * @param dnUuid datanode uuid.
+   */
+  void processDeadNode(UUID dnUuid);
+
+  /**
+   * Get list of SCMCommands in the Command Queue for a particular Datanode.
+   * @param dnID - Datanode uuid.
+   * @return list of commands
+   */
+  List<SCMCommand> getCommandQueue(UUID dnID);
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -59,11 +61,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
 
 public class TestContainerAllocation {
 
@@ -982,6 +988,198 @@ public class TestContainerAllocation {
     Assert.assertEquals(4, um.getNumActiveUsers());
     Assert.assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
     Assert.assertEquals(2, lq.getMetrics().getAppsPending());
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testUnreserveWhenClusterResourceHasEmptyResourceType()
+      throws Exception {
+    /**
+     * Test case:
+     * Create a cluster with two nodes whose node resource both are
+     * <8GB, 8core, 0>, create queue "a" whose max-resource is <8GB, 8 core, 0>,
+     * submit app1 to queue "a" whose am use <1GB, 1 core, 0> and launch on nm1,
+     * submit app2 to queue "b" whose am use <1GB, 1 core, 0> and launch on nm1,
+     * app1 asks two <7GB, 1core> containers and nm1 do 1 heartbeat,
+     * then scheduler reserves one container on nm1.
+     *
+     * After nm2 do next node heartbeat, scheduler should unreserve the reserved
+     * container on nm1 then allocate a container on nm2.
+     */
+    TestResourceUtils.addNewTypesToResources("resource1");
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+    newConf
+        .setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
+    // Set maximum capacity of queue "a" to 50
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 50);
+    MockRM rm1 = new MockRM(newConf);
+
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
+    nodeLabelsManager.init(newConf);
+    rm1.getRMContext().setNodeLabelManager(nodeLabelsManager);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
+
+    // launch an app to queue "a", AM container should be launched on nm1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch another app to queue "b", AM container should be launched on nm1
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 7 * GB, 2, new ArrayList<ContainerId>());
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // Do nm1 heartbeats 1 times, will reserve a container on nm1 for app1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    // Do nm2 heartbeats 1 times, will unreserve a container on nm1
+    // and allocate a container on nm2 for app1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testAllocationCannotBeBlockedWhenFormerQueueReachedItsLimit()
+      throws Exception {
+    /**
+     * Queue structure:
+     * <pre>
+     *             Root
+     *            /  |  \
+     *           a   b   c
+     *          10   20  70
+     *                   |  \
+     *                  c1   c2
+     *           10(max=10)  90
+     * </pre>
+     * Test case:
+     * Create a cluster with two nodes whose node resource both are
+     * <10GB, 10core>, create queues as above, among them max-capacity of "c1"
+     * is 10 and others are all 100, so that max-capacity of queue "c1" is
+     * <2GB, 2core>,
+     * submit app1 to queue "c1" and launch am1(resource=<1GB, 1 core>) on nm1,
+     * submit app2 to queue "b" and launch am2(resource=<1GB, 1 core>) on nm1,
+     * app1 and app2 both ask one <2GB, 1core> containers
+     *
+     * Now queue "c" has lower capacity percentage than queue "b", the
+     * allocation sequence will be "a" -> "c" -> "b", queue "c1" has reached
+     * queue limit so that requests of app1 should be pending
+     *
+     * After nm1 do 1 heartbeat, scheduler should allocate one container for
+     * app2 on nm1.
+     */
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".c",
+        new String[] { "c1", "c2" });
+    newConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c1", 10);
+    newConf
+        .setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c1", 10);
+    newConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c2", 90);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+
+    MockRM rm1 = new MockRM(newConf);
+
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
+    nodeLabelsManager.init(newConf);
+    rm1.getRMContext().setNodeLabelManager(nodeLabelsManager);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB);
+
+    // launch an app to queue "c1", AM container should be launched on nm1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c1");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch another app to queue "b", AM container should be launched on nm1
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 2 * GB, 1, new ArrayList<ContainerId>());
+    am2.allocate("*", 2 * GB, 1, new ArrayList<ContainerId>());
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+
+    // Do nm1 heartbeats 1 times, will allocate a container on nm1 for app2
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    rm1.drainEvents();
+    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testContainerRejectionWhenAskBeyondDynamicMax()
+      throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+    newConf.set(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
+        + MAXIMUM_ALLOCATION_MB, "4096");
+
+    MockRM rm1 = new MockRM(newConf);
+    rm1.start();
+
+    // before any node registered or before registration timeout,
+    // submit an app beyond queue max leads to failure.
+    boolean submitFailed = false;
+    MockNM nm1 = rm1.registerNode("h1:1234", 2 * GB, 1);
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    try {
+      am1.allocate("*", 5 * GB, 1, null);
+    } catch (InvalidResourceRequestException e) {
+      submitFailed = true;
+    }
+    Assert.assertTrue(submitFailed);
+
+    // Ask 4GB succeeded.
+    am1.allocate("*", 4 * GB, 1, null);
+
+    // Add a new node, now the cluster maximum should be refreshed to 3GB.
+    CapacityScheduler cs = (CapacityScheduler)rm1.getResourceScheduler();
+    cs.getNodeTracker().setForceConfiguredMaxAllocation(false);
+    rm1.registerNode("h2:1234", 3 * GB, 1);
+
+    // Now ask 4 GB will fail
+    submitFailed = false;
+    try {
+      am1.allocate("*", 4 * GB, 1, null);
+    } catch (InvalidResourceRequestException e) {
+      submitFailed = true;
+    }
+    Assert.assertTrue(submitFailed);
+
+    // But ask 3 GB succeeded.
+    am1.allocate("*", 3 * GB, 1, null);
+
     rm1.close();
   }
 }

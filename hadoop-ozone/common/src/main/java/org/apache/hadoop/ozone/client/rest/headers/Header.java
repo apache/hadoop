@@ -44,6 +44,7 @@ public final class Header {
   public static final String OZONE_INFO_QUERY_VOLUME = "volume";
   public static final String OZONE_INFO_QUERY_BUCKET = "bucket";
   public static final String OZONE_INFO_QUERY_KEY = "key";
+  public static final String OZONE_INFO_QUERY_KEY_DETAIL = "key-detail";
 
   public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
   public static final String OZONE_SERVER_NAME = "x-ozone-server-name";

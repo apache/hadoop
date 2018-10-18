@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.ozone.om.helpers;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.BucketArgs;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
@@ -31,7 +35,7 @@ import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 /**
  * A class that encapsulates Bucket Arguments.
  */
-public final class OmBucketArgs {
+public final class OmBucketArgs implements Auditable {
   /**
    * Name of the volume in which the bucket belongs to.
    */
@@ -96,7 +100,7 @@ public final class OmBucketArgs {
 
   /**
    * Returns the ACL's that are to be added.
-   * @return List<OzoneAclInfo>
+   * @return {@literal List<OzoneAclInfo>}
    */
   public List<OzoneAcl> getAddAcls() {
     return addAcls;
@@ -104,7 +108,7 @@ public final class OmBucketArgs {
 
   /**
    * Returns the ACL's that are to be removed.
-   * @return List<OzoneAclInfo>
+   * @return {@literal List<OzoneAclInfo>}
    */
   public List<OzoneAcl> getRemoveAcls() {
     return removeAcls;
@@ -133,6 +137,25 @@ public final class OmBucketArgs {
    */
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  @Override
+  public Map<String, String> toAuditMap() {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, this.volumeName);
+    auditMap.put(OzoneConsts.BUCKET, this.bucketName);
+    if(this.addAcls != null){
+      auditMap.put(OzoneConsts.ADD_ACLS, this.addAcls.toString());
+    }
+    if(this.removeAcls != null){
+      auditMap.put(OzoneConsts.REMOVE_ACLS, this.removeAcls.toString());
+    }
+    auditMap.put(OzoneConsts.IS_VERSION_ENABLED,
+                String.valueOf(this.isVersionEnabled));
+    if(this.storageType != null){
+      auditMap.put(OzoneConsts.STORAGE_TYPE, this.storageType.name());
+    }
+    return auditMap;
   }
 
   /**
@@ -207,8 +230,7 @@ public final class OmBucketArgs {
       builder.setIsVersionEnabled(isVersionEnabled);
     }
     if(storageType != null) {
-      builder.setStorageType(
-          PBHelperClient.convertStorageType(storageType));
+      builder.setStorageType(storageType.toProto());
     }
     return builder.build();
   }
@@ -227,7 +249,7 @@ public final class OmBucketArgs {
             OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
         bucketArgs.hasIsVersionEnabled() ?
             bucketArgs.getIsVersionEnabled() : null,
-        bucketArgs.hasStorageType() ? PBHelperClient.convertStorageType(
+        bucketArgs.hasStorageType() ? StorageType.valueOf(
             bucketArgs.getStorageType()) : null);
   }
 }

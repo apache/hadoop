@@ -418,8 +418,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Increment number of safe blocks if current block has reached minimal
-   * replication.
+   * Increment number of safe blocks if the current block is contiguous
+   * and it has reached minimal replication or
+   * if the current block is striped and the number of its actual data blocks
+   * reaches the number of data units specified by the erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    * @param storageNum  current number of replicas or number of internal blocks
    *                    of a striped block group
@@ -433,9 +435,9 @@ class BlockManagerSafeMode {
       return;
     }
 
-    final int safe = storedBlock.isStriped() ?
+    final int safeNumberOfNodes = storedBlock.isStriped() ?
         ((BlockInfoStriped)storedBlock).getRealDataBlockNum() : safeReplication;
-    if (storageNum == safe) {
+    if (storageNum == safeNumberOfNodes) {
       this.blockSafe++;
 
       // Report startup progress only if we haven't completed startup yet.
@@ -453,8 +455,10 @@ class BlockManagerSafeMode {
   }
 
   /**
-   * Decrement number of safe blocks if current block has fallen below minimal
-   * replication.
+   * Decrement number of safe blocks if the current block is contiguous
+   * and it has just fallen below minimal replication or
+   * if the current block is striped and its actual data blocks has just fallen
+   * below the number of data units specified by erasure coding policy.
    * If safe mode is not currently on, this is a no-op.
    */
   synchronized void decrementSafeBlockCount(BlockInfo b) {
@@ -463,9 +467,11 @@ class BlockManagerSafeMode {
       return;
     }
 
+    final int safeNumberOfNodes = b.isStriped() ?
+        ((BlockInfoStriped)b).getRealDataBlockNum() : safeReplication;
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     if (storedBlock.isComplete() &&
-        blockManager.countNodes(b).liveReplicas() == safeReplication - 1) {
+        blockManager.countNodes(b).liveReplicas() == safeNumberOfNodes - 1) {
       this.blockSafe--;
       assert blockSafe >= 0;
       checkSafeMode();

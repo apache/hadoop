@@ -197,7 +197,7 @@ to safely save the output of queries directly into S3 object stores
 through the S3A filesystem.
 
 
-### Warning #3: Object stores have differerent authorization models
+### Warning #3: Object stores have different authorization models
 
 The object authorization model of S3 is much different from the file
 authorization model of HDFS and traditional file systems.
@@ -222,13 +222,12 @@ Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
 —they can delete them.
 
-Do not inadvertently share these credentials through means such as
+Do not inadvertently share these credentials through means such as:
 
 1. Checking in to SCM any configuration files containing the secrets.
 1. Logging them to a console, as they invariably end up being seen.
-1. Defining filesystem URIs with the credentials in the URL, such as
-`s3a://AK0010:secret@landsat-pds/`. They will end up in logs and error messages.
 1. Including the secrets in bug reports.
+1. Logging the `AWS_` environment variables.
 
 If you do any of these: change your credentials immediately!
 
@@ -241,6 +240,11 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+
+*Important*: The S3A connector no longer supports username and secrets
+in URLs of the form `s3a://key:secret@bucket/`.
+It is near-impossible to stop those secrets being logged —which is why
+a warning has been printed since Hadoop 2.8 whenever such a URL was used.
 
 ### Authentication properties
 
@@ -281,9 +285,8 @@ of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
 
     If unspecified, then the default list of credential provider classes,
     queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports
-        static configuration of AWS access key ID and secret access key.
-        See also fs.s3a.access.key and fs.s3a.secret.key.
+    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
+       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
         environment variables named AWS_ACCESS_KEY_ID and
@@ -340,8 +343,6 @@ properties in the configuration file.
 
 The S3A client follows the following authentication chain:
 
-1. If login details were provided in the filesystem URI, a warning is printed
-and then the username and password extracted for the AWS key and secret respectively.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
 XML configuration.
 1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
@@ -461,12 +462,11 @@ security and therefore is unsuitable for most use cases.
 then the Anonymous Credential provider *must* come last. If not, credential
 providers listed after it will be ignored.
 
-*Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
+### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
 
-This is is the standard credential provider, which
-supports the secret key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
-values. It does not support authentication with logins credentials declared
-in the URLs.
+This is is the standard credential provider, which supports the secret
+key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
+values.
 
 ```xml
 <property>
@@ -475,9 +475,7 @@ in the URLs.
 </property>
 ```
 
-Apart from its lack of support of user:password details being included in filesystem
-URLs (a dangerous practise that is strongly discouraged), this provider acts
-exactly at the basic authenticator used in the default authentication chain.
+This is the basic authenticator used in the default authentication chain.
 
 This means that the default S3A authentication chain can be defined as
 

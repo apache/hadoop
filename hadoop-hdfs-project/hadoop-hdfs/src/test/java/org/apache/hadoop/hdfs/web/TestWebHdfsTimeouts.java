@@ -36,8 +36,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -64,7 +64,8 @@ import org.junit.Test;
 @RunWith(Parameterized.class)
 public class TestWebHdfsTimeouts {
 
-  private static final Log LOG = LogFactory.getLog(TestWebHdfsTimeouts.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWebHdfsTimeouts.class);
 
   private static final int CLIENTS_TO_CONSUME_BACKLOG = 129;
   private static final int CONNECTION_BACKLOG = 1;
@@ -126,8 +127,9 @@ public class TestWebHdfsTimeouts {
 
   @After
   public void tearDown() throws Exception {
-    IOUtils.cleanup(LOG, clients.toArray(new SocketChannel[clients.size()]));
-    IOUtils.cleanup(LOG, fs);
+    IOUtils.cleanupWithLogger(
+        LOG, clients.toArray(new SocketChannel[clients.size()]));
+    IOUtils.cleanupWithLogger(LOG, fs);
     if (serverSocket != null) {
       try {
         serverSocket.close();
@@ -247,7 +249,7 @@ public class TestWebHdfsTimeouts {
       GenericTestUtils.assertExceptionContains(
           fs.getUri().getAuthority() + ": connect timed out", e);
     } finally {
-      IOUtils.cleanup(LOG, os);
+      IOUtils.cleanupWithLogger(LOG, os);
     }
   }
 
@@ -267,7 +269,7 @@ public class TestWebHdfsTimeouts {
     } catch (SocketTimeoutException e) {
       GenericTestUtils.assertExceptionContains("Read timed out", e);
     } finally {
-      IOUtils.cleanup(LOG, os);
+      IOUtils.cleanupWithLogger(LOG, os);
     }
   }
 
@@ -331,7 +333,7 @@ public class TestWebHdfsTimeouts {
           fail("unexpected IOException in server thread: " + e);
         } finally {
           // Clean it all up.
-          IOUtils.cleanup(LOG, br, isr, in, out);
+          IOUtils.cleanupWithLogger(LOG, br, isr, in, out);
           IOUtils.closeSocket(clientSocket);
         }
       }

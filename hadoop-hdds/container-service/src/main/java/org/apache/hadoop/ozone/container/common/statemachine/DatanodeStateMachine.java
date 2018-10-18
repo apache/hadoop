@@ -16,12 +16,17 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -35,18 +40,20 @@ import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .DeleteBlocksCommandHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .ReplicateContainerCommandHandler;
+import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.container.replication.ContainerReplicator;
+import org.apache.hadoop.ozone.container.replication.DownloadAndImportReplicator;
+import org.apache.hadoop.ozone.container.replication.ReplicationSupervisor;
+import org.apache.hadoop.ozone.container.replication.SimpleContainerDownloader;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * State Machine Class.
@@ -67,6 +74,7 @@ public class DatanodeStateMachine implements Closeable {
   private AtomicLong nextHB;
   private Thread stateMachineThread = null;
   private Thread cmdProcessThread = null;
+  private final ReplicationSupervisor supervisor;
 
   /**
    * Constructs a a datanode state machine.
@@ -87,13 +95,21 @@ public class DatanodeStateMachine implements Closeable {
         new OzoneConfiguration(conf), context);
     nextHB = new AtomicLong(Time.monotonicNow());
 
-     // When we add new handlers just adding a new handler here should do the
+    ContainerReplicator replicator =
+        new DownloadAndImportReplicator(container.getContainerSet(),
+            container.getDispatcher(),
+            new SimpleContainerDownloader(conf), new TarContainerPacker());
+
+    supervisor =
+        new ReplicationSupervisor(container.getContainerSet(), replicator, 10);
+
+    // When we add new handlers just adding a new handler here should do the
      // trick.
     commandDispatcher = CommandDispatcher.newBuilder()
         .addHandler(new CloseContainerCommandHandler())
         .addHandler(new DeleteBlocksCommandHandler(container.getContainerSet(),
             conf))
-        .addHandler(new ReplicateContainerCommandHandler())
+        .addHandler(new ReplicateContainerCommandHandler(conf, supervisor))
         .setConnectionManager(connectionManager)
         .setContainer(container)
         .setContext(context)
@@ -292,6 +308,7 @@ public class DatanodeStateMachine implements Closeable {
   public void startDaemon() {
     Runnable startStateMachineTask = () -> {
       try {
+        supervisor.start();
         start();
         LOG.info("Ozone container server started.");
       } catch (Exception ex) {
@@ -320,6 +337,7 @@ public class DatanodeStateMachine implements Closeable {
    */
   public synchronized void stopDaemon() {
     try {
+      supervisor.stop();
       context.setState(DatanodeStates.SHUTDOWN);
       reportManager.shutdown();
       this.close();

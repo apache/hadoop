@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce NativeTask</name>
 
   <properties>
@@ -135,26 +135,6 @@
                     </requireOS>
                   </rules>
                   <fail>true</fail>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>compile</phase>
-                <goals>
-                  <goal>javah</goal>
-                </goals>
-                <configuration>
-                  <javahPath>${env.JAVA_HOME}/bin/javah</javahPath>
-                  <javahClassNames>
-                    <javaClassName>org.apache.hadoop.mapred.nativetask.NativeBatchProcessor</javaClassName>
-                    <javaClassName>org.apache.hadoop.mapred.nativetask.NativeRuntime</javaClassName>
-                  </javahClassNames>
-                  <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
                 </configuration>
               </execution>
             </executions>

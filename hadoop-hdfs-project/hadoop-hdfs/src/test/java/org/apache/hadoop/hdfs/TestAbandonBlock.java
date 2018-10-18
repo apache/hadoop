@@ -21,8 +21,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +39,8 @@ import org.junit.Test;
  * Test abandoning blocks, which clients do on pipeline creation failure.
  */
 public class TestAbandonBlock {
-  public static final Log LOG = LogFactory.getLog(TestAbandonBlock.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestAbandonBlock.class);
   
   private static final Configuration CONF = new HdfsConfiguration();
   static final String FILE_NAME_PREFIX

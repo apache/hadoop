@@ -360,6 +360,30 @@
     </test>
 
     <test>
+      <description>unsetPolicy : unset on non EC directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -mkdir /ecdir/child</command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir/child</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/child/ecfile</command>
+        <command>-fs NAMENODE -rmdir /ecdir/child</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>NoECPolicySetException: No erasure coding policy explicitly set on /ecdir/child</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Use '-setPolicy -path &lt;PATH&gt; -replicate' to enforce default replication policy irrespective of EC policy defined on parent.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>unsetPolicy : unset policy on non-empty directory</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>

@@ -28,6 +28,8 @@ import com.google.common.base.Preconditions;
 
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -44,6 +46,8 @@ import static org.apache.hadoop.fs.Path.mergePaths;
  *   and then delete the temp directory.</li>
  * </ul>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class FileSystemMultipartUploader extends MultipartUploader {
 
   private final FileSystem fs;
@@ -96,6 +100,14 @@ public class FileSystemMultipartUploader extends MultipartUploader {
     return fs.getPathHandle(status);
   }
 
+  private long totalPartsLen(List<Path> partHandles) throws IOException {
+    long totalLen = 0;
+    for (Path p: partHandles) {
+      totalLen += fs.getFileStatus(p).getLen();
+    }
+    return totalLen;
+  }
+
   @Override
   @SuppressWarnings("deprecation") // rename w/ OVERWRITE
   public PathHandle complete(Path filePath,
@@ -123,12 +135,17 @@ public class FileSystemMultipartUploader extends MultipartUploader {
         .collect(Collectors.toList());
 
     Path collectorPath = createCollectorPath(filePath);
-    Path filePathInsideCollector = mergePaths(collectorPath,
-        new Path(Path.SEPARATOR + filePath.getName()));
-    fs.create(filePathInsideCollector).close();
-    fs.concat(filePathInsideCollector,
-        partHandles.toArray(new Path[handles.size()]));
-    fs.rename(filePathInsideCollector, filePath, Options.Rename.OVERWRITE);
+    boolean emptyFile = totalPartsLen(partHandles) == 0;
+    if (emptyFile) {
+      fs.create(filePath).close();
+    } else {
+      Path filePathInsideCollector = mergePaths(collectorPath,
+          new Path(Path.SEPARATOR + filePath.getName()));
+      fs.create(filePathInsideCollector).close();
+      fs.concat(filePathInsideCollector,
+          partHandles.toArray(new Path[handles.size()]));
+      fs.rename(filePathInsideCollector, filePath, Options.Rename.OVERWRITE);
+    }
     fs.delete(collectorPath, true);
     return getPathHandle(filePath);
   }

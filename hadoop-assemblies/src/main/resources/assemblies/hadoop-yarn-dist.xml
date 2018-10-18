@@ -66,6 +66,14 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/installation</directory>
+      <outputDirectory>/share/hadoop/yarn/submarine-installer</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
       <includes>

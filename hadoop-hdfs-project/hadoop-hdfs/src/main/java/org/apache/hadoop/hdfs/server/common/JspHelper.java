@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -53,7 +53,7 @@ public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
-  private static final Log LOG = LogFactory.getLog(JspHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JspHelper.class);
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {}

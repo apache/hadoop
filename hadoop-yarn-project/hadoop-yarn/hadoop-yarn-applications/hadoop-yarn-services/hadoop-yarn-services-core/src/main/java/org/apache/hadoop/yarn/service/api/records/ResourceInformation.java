@@ -28,8 +28,6 @@ import java.util.Objects;
  * ResourceInformation determines unit/name/value of resource types in addition to memory and vcores. It will be part of Resource object
  */
 @ApiModel(description = "ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen",
-                            date = "2017-11-22T15:15:49.495-08:00")
 public class ResourceInformation {
   @SerializedName("value")
   private Long value = null;

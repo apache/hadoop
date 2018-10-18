@@ -16,16 +16,21 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .SCMConnectionManager;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandProto.Type;
+import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
+import org.apache.hadoop.ozone.container.replication.ReplicationSupervisor;
+import org.apache.hadoop.ozone.container.replication.ReplicationTask;
+import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,22 +38,47 @@ import org.slf4j.LoggerFactory;
  * Command handler to copy containers from sources.
  */
 public class ReplicateContainerCommandHandler implements CommandHandler {
+
   static final Logger LOG =
       LoggerFactory.getLogger(ReplicateContainerCommandHandler.class);
 
   private int invocationCount;
 
   private long totalTime;
-  private boolean cmdExecuted;
+
+  private Configuration conf;
+
+  private ReplicationSupervisor supervisor;
+
+  public ReplicateContainerCommandHandler(
+      Configuration conf,
+      ReplicationSupervisor supervisor) {
+    this.conf = conf;
+    this.supervisor = supervisor;
+  }
 
   @Override
   public void handle(SCMCommand command, OzoneContainer container,
       StateContext context, SCMConnectionManager connectionManager) {
-    LOG.warn("Replicate command is not yet handled");
+
+    ReplicateContainerCommand replicateCommand =
+        (ReplicateContainerCommand) command;
     try {
-      cmdExecuted = true;
+      List<DatanodeDetails> sourceDatanodes =
+          replicateCommand.getSourceDatanodes();
+      long containerID = replicateCommand.getContainerID();
+
+      Preconditions.checkArgument(sourceDatanodes.size() > 0,
+          String.format("Replication command is received for container %d "
+              + "but the size of source datanodes was 0.", containerID));
+
+      ReplicationTask replicationTask =
+          new ReplicationTask(containerID, sourceDatanodes);
+      supervisor.addTask(replicationTask);
+
     } finally {
-      updateCommandStatus(context, command, cmdExecuted, LOG);
+      updateCommandStatus(context, command,
+          (cmdStatus) -> cmdStatus.setStatus(true), LOG);
     }
   }
 

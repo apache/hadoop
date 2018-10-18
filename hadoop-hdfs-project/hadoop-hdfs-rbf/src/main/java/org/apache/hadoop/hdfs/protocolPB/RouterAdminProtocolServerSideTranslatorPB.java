@@ -102,7 +102,7 @@ public class RouterAdminProtocolServerSideTranslatorPB implements
   /**
    * Constructor.
    * @param server The NN server.
-   * @throws IOException
+   * @throws IOException if it cannot create the translator.
    */
   public RouterAdminProtocolServerSideTranslatorPB(RouterAdminServer server)
       throws IOException {

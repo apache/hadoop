@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CancelUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.ComponentCountProto;
@@ -207,5 +209,15 @@ public class ClientAMService extends AbstractService
     return GetCompInstancesResponseProto.newBuilder().setCompInstances(
         ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(containers.toArray(
             new Container[containers.size()]))).build();
+  }
+
+  @Override
+  public CancelUpgradeResponseProto cancelUpgrade(
+      CancelUpgradeRequestProto request) throws IOException, YarnException {
+    LOG.info("Cancel service upgrade by {}",
+        UserGroupInformation.getCurrentUser());
+    ServiceEvent event = new ServiceEvent(ServiceEventType.CANCEL_UPGRADE);
+    context.scheduler.getDispatcher().getEventHandler().handle(event);
+    return CancelUpgradeResponseProto.newBuilder().build();
   }
 }

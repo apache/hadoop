@@ -27,6 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * MultipartUploader is an interface for copying files multipart and across
  * multiple nodes. Users should:
@@ -41,6 +44,8 @@ import org.apache.commons.lang3.tuple.Pair;
  * that 'complete' will reorder parts if the destination FS doesn't already
  * do it for them.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class MultipartUploader {
   public static final Logger LOG =
       LoggerFactory.getLogger(MultipartUploader.class);

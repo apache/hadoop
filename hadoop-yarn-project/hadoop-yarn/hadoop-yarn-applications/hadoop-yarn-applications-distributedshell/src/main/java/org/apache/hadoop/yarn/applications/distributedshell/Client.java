@@ -103,7 +103,7 @@ import org.slf4j.LoggerFactory;
  * the provided shell command on a set of containers. </p>
  * 
  * <p>This client is meant to act as an example on how to write yarn-based applications. </p>
- * 
+ *
  * <p> To submit an application, a client first needs to connect to the <code>ResourceManager</code> 
  * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol} 
  * provides a way for the client to get access to cluster information and to request for a
@@ -192,6 +192,8 @@ public class Client {
 
   // Placement specification
   private String placementSpec = "";
+  // Node Attribute specification
+  private String nodeAttributeSpec = "";
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
   private String log4jPropFile = "";	
@@ -448,6 +450,7 @@ public class Client {
       // Check if it is parsable
       PlacementSpec.parse(this.placementSpec);
     }
+
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
@@ -854,7 +857,9 @@ public class Client {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add(Environment.JAVA_HOME.$$() + "/bin/java");
+    // Need extra quote here because JAVA_HOME might contain space on Windows,
+    // e.g. C:/Program Files/Java...
+    vargs.add("\"" + Environment.JAVA_HOME.$$() + "/bin/java\"");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 

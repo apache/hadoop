@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
@@ -33,9 +34,8 @@ import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingP
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.testutils.BlockDeletingServiceTestImpl;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.statemachine.background
     .BlockDeletingService;
@@ -117,13 +117,13 @@ public class TestBlockDeletingService {
       containerSet.addContainer(container);
       data = (KeyValueContainerData) containerSet.getContainer(
           containerID).getContainerData();
-      MetadataStore metadata = KeyUtils.getDB(data, conf);
+      MetadataStore metadata = BlockUtils.getDB(data, conf);
       for (int j = 0; j<numOfBlocksPerContainer; j++) {
         BlockID blockID =
             ContainerTestHelper.getTestBlockID(containerID);
         String deleteStateName = OzoneConsts.DELETING_KEY_PREFIX +
             blockID.getLocalID();
-        KeyData kd = new KeyData(blockID);
+        BlockData kd = new BlockData(blockID);
         List<ContainerProtos.ChunkInfo> chunks = Lists.newArrayList();
         for (int k = 0; k<numOfChunksPerBlock; k++) {
           // offset doesn't matter here
@@ -200,7 +200,7 @@ public class TestBlockDeletingService {
     containerSet.listContainer(0L, 1, containerData);
     Assert.assertEquals(1, containerData.size());
 
-    MetadataStore meta = KeyUtils.getDB(
+    MetadataStore meta = BlockUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf);
     Map<Long, Container> containerMap = containerSet.getContainerMap();
     // NOTE: this test assumes that all the container is KetValueContainer and
@@ -309,7 +309,7 @@ public class TestBlockDeletingService {
     // get container meta data
     List<ContainerData> containerData = Lists.newArrayList();
     containerSet.listContainer(0L, 1, containerData);
-    MetadataStore meta = KeyUtils.getDB(
+    MetadataStore meta = BlockUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf);
 
     LogCapturer newLog = LogCapturer.captureLogs(BackgroundService.LOG);

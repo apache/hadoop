@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
@@ -101,6 +103,7 @@ public class RMActiveServiceContext {
   private ApplicationMasterService applicationMasterService;
 
   private RMNodeLabelsManager nodeLabelManager;
+  private NodeAttributesManager nodeAttributesManager;
   private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
   private Clock systemClock = SystemClock.getInstance();
@@ -116,6 +119,8 @@ public class RMActiveServiceContext {
   private PlacementConstraintManager placementConstraintManager;
   private ResourceProfilesManager resourceProfilesManager;
   private MultiNodeSortingManager<SchedulerNode> multiNodeSortingManager;
+
+  private ProxyCAManager proxyCAManager;
 
   public RMActiveServiceContext() {
     queuePlacementManager = new PlacementManager();
@@ -407,6 +412,18 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
+  public NodeAttributesManager getNodeAttributesManager() {
+    return nodeAttributesManager;
+  }
+
+  @Private
+  @Unstable
+  public void setNodeAttributesManager(NodeAttributesManager mgr) {
+    nodeAttributesManager = mgr;
+  }
+
+  @Private
+  @Unstable
   public AllocationTagsManager getAllocationTagsManager() {
     return allocationTagsManager;
   }
@@ -539,5 +556,17 @@ public class RMActiveServiceContext {
   public void setResourceProfilesManager(
       ResourceProfilesManager resourceProfilesManager) {
     this.resourceProfilesManager = resourceProfilesManager;
+  }
+
+  @Private
+  @Unstable
+  public ProxyCAManager getProxyCAManager() {
+    return proxyCAManager;
+  }
+
+  @Private
+  @Unstable
+  public void setProxyCAManager(ProxyCAManager proxyCAManager) {
+    this.proxyCAManager = proxyCAManager;
   }
 }

@@ -18,22 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
-import java.util.Set;
-
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 
 /**
- * Interface which will be responsible for fetching the labels
- * 
+ * Abstract class which will be responsible for fetching the node labels.
+ *
  */
-public interface NodeLabelsProvider {
+public abstract class NodeLabelsProvider
+    extends AbstractNodeDescriptorsProvider<NodeLabel>{
 
-  /**
-   * Provides the labels. LabelProvider is expected to give same Labels
-   * continuously until there is a change in labels. 
-   * If null is returned then Empty label set is assumed by the caller.
-   * 
-   * @return Set of node label strings applicable for a node
-   */
-  public abstract Set<NodeLabel> getNodeLabels();
+  public NodeLabelsProvider(String name) {
+    super(name);
+  }
 }

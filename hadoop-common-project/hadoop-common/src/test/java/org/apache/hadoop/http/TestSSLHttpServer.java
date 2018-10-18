@@ -24,8 +24,9 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLHandshakeException;
@@ -34,6 +35,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -60,23 +62,34 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
       LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static final String HTTPS_CIPHER_SUITES_KEY = "https.cipherSuites";
   private static final String JAVAX_NET_DEBUG_KEY = "javax.net.debug";
-  private static Configuration conf;
+  private static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server" +
+          ".keystore";
+  private static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = "ssl.server" +
+          ".truststore";
+
+  private static final String SERVLET_NAME_LONGHEADER = "longheader";
+  private static final String SERVLET_PATH_LONGHEADER =
+      "/" + SERVLET_NAME_LONGHEADER;
+  private static final String SERVLET_NAME_ECHO = "echo";
+  private static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
+
   private static HttpServer2 server;
-  private static String keystoresDir;
+  private static String keystoreDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
   private static String cipherSuitesPropertyValue;
   private static String sslDebugPropertyValue;
-  private static final String excludeCiphers = "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
+  private static final String EXCLUDED_CIPHERS =
+          "TLS_ECDHE_RSA_WITH_RC4_128_SHA,"
       + "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA, \n"
       + "SSL_RSA_WITH_DES_CBC_SHA,"
       + "SSL_DHE_RSA_WITH_DES_CBC_SHA,  "
       + "SSL_RSA_EXPORT_WITH_RC4_40_MD5,\t \n"
       + "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA,"
       + "SSL_RSA_WITH_RC4_128_MD5 \t";
-  private static final String oneEnabledCiphers = excludeCiphers
+  private static final String ONE_ENABLED_CIPHERS = EXCLUDED_CIPHERS
       + ",TLS_RSA_WITH_AES_128_CBC_SHA";
-  private static final String exclusiveEnabledCiphers
+  private static final String EXCLUSIVE_ENABLED_CIPHERS
       = "\tTLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, \n"
       + "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
       + "TLS_RSA_WITH_AES_128_CBC_SHA,"
@@ -90,49 +103,54 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     turnOnSSLDebugLogging();
     storeHttpsCipherSuites();
 
-    conf = new Configuration();
+    Configuration conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
-    keystoresDir = new File(BASEDIR).getAbsolutePath();
+    keystoreDir = new File(BASEDIR).getAbsolutePath();
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
 
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false, true,
-        excludeCiphers);
+    KeyStoreTestUtil.setupSSLConfig(keystoreDir, sslConfDir, conf, false, true,
+        EXCLUDED_CIPHERS);
 
     Configuration sslConf = KeyStoreTestUtil.getSslConfig();
 
     clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
     clientSslFactory.init();
 
-    server = new HttpServer2.Builder()
-        .setName("test")
-        .addEndpoint(new URI("https://localhost"))
-        .setConf(conf)
-        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
-        .keyStore(sslConf.get("ssl.server.keystore.location"),
-            sslConf.get("ssl.server.keystore.password"),
-            sslConf.get("ssl.server.keystore.type", "jks"))
-        .trustStore(sslConf.get("ssl.server.truststore.location"),
-            sslConf.get("ssl.server.truststore.password"),
-            sslConf.get("ssl.server.truststore.type", "jks"))
-        .excludeCiphers(
-            sslConf.get("ssl.server.exclude.cipher.list")).build();
-    server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
-    server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
-    server.start();
+    setupServer(conf, sslConf);
     baseUrl = new URL("https://"
         + NetUtils.getHostPortString(server.getConnectorAddress(0)));
     LOG.info("HTTP server started: " + baseUrl);
+  }
+
+  private static void setupServer(Configuration conf, Configuration sslConf)
+      throws IOException, URISyntaxException {
+    server = new HttpServer2.Builder().setName("test")
+        .addEndpoint(new URI("https://localhost")).setConf(conf)
+        .keyPassword(
+            sslConf.get(SSL_SERVER_KEYSTORE_PROP_PREFIX + ".keypassword"))
+        .keyStore(sslConf.get(SSL_SERVER_KEYSTORE_PROP_PREFIX + ".location"),
+            sslConf.get(SSL_SERVER_KEYSTORE_PROP_PREFIX + ".password"),
+            sslConf.get(SSL_SERVER_KEYSTORE_PROP_PREFIX + ".type", "jks"))
+        .trustStore(
+            sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".location"),
+            sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".password"),
+            sslConf.get(SSL_SERVER_TRUSTSTORE_PROP_PREFIX + ".type", "jks"))
+        .excludeCiphers(sslConf.get("ssl.server.exclude.cipher.list")).build();
+    server.addServlet(SERVLET_NAME_ECHO, SERVLET_PATH_ECHO, EchoServlet.class);
+    server.addServlet(SERVLET_NAME_LONGHEADER, SERVLET_PATH_LONGHEADER,
+        LongHeaderServlet.class);
+    server.start();
   }
 
   @AfterClass
   public static void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));
-    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    KeyStoreTestUtil.cleanupSSLConfig(keystoreDir, sslConfDir);
     clientSslFactory.destroy();
     restoreHttpsCipherSuites();
     restoreSSLDebugLogging();
@@ -181,11 +199,27 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     }
   }
 
+  private HttpsURLConnection getConnectionWithSSLSocketFactory(URL url,
+          String ciphers) throws IOException, GeneralSecurityException {
+    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+    SSLSocketFactory sslSocketFactory = clientSslFactory
+            .createSSLSocketFactory();
+    LOG.info("Creating " +
+        PreferredCipherSSLSocketFactory.class.getCanonicalName() +
+        " with ciphers: " + ciphers);
+    PreferredCipherSSLSocketFactory cipherSSLSocketFactory
+            = new PreferredCipherSSLSocketFactory(sslSocketFactory,
+            StringUtils.getTrimmedStrings(ciphers));
+    conn.setSSLSocketFactory(cipherSSLSocketFactory);
+    return conn;
+  }
+
   @Test
   public void testEcho() throws Exception {
-    assertEquals("a:b\nc:d\n", readOut(new URL(baseUrl, "/echo?a=b&c=d")));
-    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOut(new URL(baseUrl,
-        "/echo?a=b&c<=d&e=>")));
+    assertEquals("a:b\nc:d\n",
+        readFromURL(new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d")));
+    assertEquals("a:b\nc&lt;:d\ne:&gt;\n",
+        readFromURL(new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c<=d&e=>")));
   }
 
   /**
@@ -195,15 +229,20 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    */
   @Test
   public void testLongHeader() throws Exception {
-    URL url = new URL(baseUrl, "/longheader");
+    URL url = new URL(baseUrl, SERVLET_PATH_LONGHEADER);
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
     conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
     testLongHeader(conn);
   }
 
-  private static String readOut(URL url) throws Exception {
+  private static String readFromURL(URL url) throws Exception {
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
     conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
+    return readFromConnection(conn);
+  }
+
+  private static String readFromConnection(HttpsURLConnection conn)
+      throws IOException {
     InputStream in = conn.getInputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(in, out, 1024);
@@ -218,21 +257,15 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    */
   @Test
   public void testExcludedCiphers() throws Exception {
-    URL url = new URL(baseUrl, "/echo?a=b&c=d");
-    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
-    PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
-        = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(excludeCiphers));
-    conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
-    assertFalse("excludedCipher list is empty", excludeCiphers.isEmpty());
+    URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
+    HttpsURLConnection conn = getConnectionWithSSLSocketFactory(url,
+        EXCLUDED_CIPHERS);
+    assertFalse("excludedCipher list is empty", EXCLUDED_CIPHERS.isEmpty());
     try {
-      InputStream in = conn.getInputStream();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      IOUtils.copyBytes(in, out, 1024);
+      readFromConnection(conn);
       fail("No Ciphers in common, SSLHandshake must fail.");
     } catch (SSLHandshakeException ex) {
-      LOG.info("No Ciphers in common, expected succesful test result.", ex);
+      LOG.info("No Ciphers in common, expected successful test result.", ex);
     }
   }
 
@@ -242,25 +275,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    */
   @Test
   public void testOneEnabledCiphers() throws Exception {
-    URL url = new URL(baseUrl, "/echo?a=b&c=d");
-    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
-    PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
-        = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(oneEnabledCiphers));
-    conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
-    assertFalse("excludedCipher list is empty", oneEnabledCiphers.isEmpty());
-    try {
-      InputStream in = conn.getInputStream();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      IOUtils.copyBytes(in, out, 1024);
-      assertEquals(out.toString(), "a:b\nc:d\n");
-      LOG.info("Atleast one additional enabled cipher than excluded ciphers,"
-          + " expected successful test result.");
-    } catch (SSLHandshakeException ex) {
-      fail("Atleast one additional cipher available for successful handshake."
-          + " Unexpected test failure: " + ex);
-    }
+    testEnabledCiphers(ONE_ENABLED_CIPHERS);
   }
 
   /** Test verifies that mutually exclusive server's disabled cipher suites and
@@ -268,33 +283,25 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
    */
   @Test
   public void testExclusiveEnabledCiphers() throws Exception {
-    URL url = new URL(baseUrl, "/echo?a=b&c=d");
-    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
-    PrefferedCipherSSLSocketFactory testPreferredCipherSSLSocketF
-        = new PrefferedCipherSSLSocketFactory(sslSocketF,
-        StringUtils.getTrimmedStrings(exclusiveEnabledCiphers));
-    conn.setSSLSocketFactory(testPreferredCipherSSLSocketF);
-    assertFalse("excludedCipher list is empty",
-        exclusiveEnabledCiphers.isEmpty());
-    try {
-      InputStream in = conn.getInputStream();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      IOUtils.copyBytes(in, out, 1024);
-      assertEquals(out.toString(), "a:b\nc:d\n");
-      LOG.info("Atleast one additional enabled cipher than excluded ciphers,"
-          + " expected successful test result.");
-    } catch (SSLHandshakeException ex) {
-      fail("Atleast one additional cipher available for successful handshake."
-          + " Unexpected test failure: " + ex);
-    }
+    testEnabledCiphers(EXCLUSIVE_ENABLED_CIPHERS);
   }
 
-  private class PrefferedCipherSSLSocketFactory extends SSLSocketFactory {
+  private void testEnabledCiphers(String ciphers) throws
+      IOException, GeneralSecurityException {
+    URL url = new URL(baseUrl, SERVLET_PATH_ECHO + "?a=b&c=d");
+    HttpsURLConnection conn = getConnectionWithSSLSocketFactory(url, ciphers);
+    assertFalse("excludedCipher list is empty", ciphers.isEmpty());
+    String out = readFromConnection(conn);
+    assertEquals(out, "a:b\nc:d\n");
+    LOG.info("At least one additional enabled cipher than excluded ciphers,"
+        + " expected successful test result.");
+  }
+
+  private class PreferredCipherSSLSocketFactory extends SSLSocketFactory {
     private final SSLSocketFactory delegateSocketFactory;
     private final String[] enabledCipherSuites;
 
-    public PrefferedCipherSSLSocketFactory(SSLSocketFactory sslSocketFactory,
+    PreferredCipherSSLSocketFactory(SSLSocketFactory sslSocketFactory,
         String[] pEnabledCipherSuites) {
       delegateSocketFactory = sslSocketFactory;
       if (null != pEnabledCipherSuites && pEnabledCipherSuites.length > 0) {
@@ -319,31 +326,24 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
         throws IOException {
       SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           socket, string, i, bln);
-      if (null != enabledCipherSuites) {
-        sslSocket.setEnabledCipherSuites(enabledCipherSuites);
-      }
+      setEnabledCipherSuites(sslSocket);
       return sslSocket;
     }
 
     @Override
-    public Socket createSocket(String string, int i) throws IOException,
-        UnknownHostException {
+    public Socket createSocket(String string, int i) throws IOException {
       SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           string, i);
-      if (null != enabledCipherSuites) {
-        sslSocket.setEnabledCipherSuites(enabledCipherSuites);
-      }
+      setEnabledCipherSuites(sslSocket);
       return sslSocket;
     }
 
     @Override
     public Socket createSocket(String string, int i, InetAddress ia, int i1)
-        throws IOException, UnknownHostException {
+        throws IOException {
       SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(
           string, i, ia, i1);
-      if (null != enabledCipherSuites) {
-        sslSocket.setEnabledCipherSuites(enabledCipherSuites);
-      }
+      setEnabledCipherSuites(sslSocket);
       return sslSocket;
     }
 
@@ -351,9 +351,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     public Socket createSocket(InetAddress ia, int i) throws IOException {
       SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
           i);
-      if (null != enabledCipherSuites) {
-        sslSocket.setEnabledCipherSuites(enabledCipherSuites);
-      }
+      setEnabledCipherSuites(sslSocket);
       return sslSocket;
     }
 
@@ -362,10 +360,14 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
         throws IOException {
       SSLSocket sslSocket = (SSLSocket) delegateSocketFactory.createSocket(ia,
           i, ia1, i1);
+      setEnabledCipherSuites(sslSocket);
+      return sslSocket;
+    }
+
+    private void setEnabledCipherSuites(SSLSocket sslSocket) {
       if (null != enabledCipherSuites) {
         sslSocket.setEnabledCipherSuites(enabledCipherSuites);
       }
-      return sslSocket;
     }
   }
 }

@@ -54,11 +54,12 @@ public interface Volume {
    *
    * Params :
    * Quota - Specifies the Maximum usable size by the user
-   * the valid parameters for quota are <int>(<BYTES| MB|GB|TB>) | remove.
-   * For example 10GB or "remove".
+   * the valid parameters for quota are {@literal <int>(<BYTES| MB|GB|TB>)}
+   * | remove. For example 10GB or "remove".
    *
    * @param volume Volume Name, this has to be unique at Ozone Level
-   * @param quota Quota for this Storage Volume - <int>(<MB|GB|TB>) | remove
+   * @param quota Quota for this Storage Volume - {@literal <int>(<MB|GB|TB>)}
+   *             | remove
    * @param req - Request Object - Request Object
    * @param uriInfo - Http UriInfo
    * @param headers Http Headers HttpHeaders
@@ -91,11 +92,12 @@ public interface Volume {
    * Params :
    * Owner - Specifies the name of the owner
    * Quota - Specifies the Maximum usable size by the user
-   * the valid parameters for quota are <int>(<MB|GB|TB>) | remove.
+   * the valid parameters for quota are {@literal <int>(<MB|GB|TB>)} | remove.
    * For example 10GB or "remove".
    *
    * @param volume Volume Name, this has to be unique at Ozone Level
-   * @param quota Quota for this Storage Volume - <int>(<MB|GB|TB>) | remove
+   * @param quota Quota for this Storage Volume - {@literal <int>(<MB|GB|TB>)}
+   *             | remove
    * @param req - Request Object - Request Object
    * @param headers Http Headers HttpHeaders
    *

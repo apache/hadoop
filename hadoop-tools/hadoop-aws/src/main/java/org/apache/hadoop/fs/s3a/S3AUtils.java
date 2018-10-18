@@ -27,6 +27,7 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
@@ -358,8 +359,10 @@ public final class S3AUtils {
   /**
    * Is the exception an instance of a throttling exception. That
    * is an AmazonServiceException with a 503 response, any
-   * exception from DynamoDB for limits exceeded, or an
-   * {@link AWSServiceThrottledException}.
+   * exception from DynamoDB for limits exceeded, an
+   * {@link AWSServiceThrottledException},
+   * or anything which the AWS SDK's RetryUtils considers to be
+   * a throttling exception.
    * @param ex exception to examine
    * @return true if it is considered a throttling exception
    */
@@ -368,7 +371,9 @@ public final class S3AUtils {
         || ex instanceof ProvisionedThroughputExceededException
         || ex instanceof LimitExceededException
         || (ex instanceof AmazonServiceException
-            && 503  == ((AmazonServiceException)ex).getStatusCode());
+            && 503  == ((AmazonServiceException)ex).getStatusCode())
+        || (ex instanceof SdkBaseException
+            && RetryUtils.isThrottlingException((SdkBaseException) ex));
   }
 
   /**
@@ -592,9 +597,7 @@ public final class S3AUtils {
     Class<?>[] awsClasses = loadAWSProviderClasses(conf,
         AWS_CREDENTIALS_PROVIDER);
     if (awsClasses.length == 0) {
-      S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
-      credentials.add(new BasicAWSCredentialsProvider(
-              creds.getUser(), creds.getPassword()));
+      credentials.add(new SimpleAWSCredentialsProvider(binding, conf));
       credentials.add(new EnvironmentVariableCredentialsProvider());
       credentials.add(InstanceProfileCredentialsProvider.getInstance());
     } else {
@@ -725,7 +728,6 @@ public final class S3AUtils {
 
   /**
    * Return the access key and secret for S3 API use.
-   * Credentials may exist in configuration, within credential providers
    * or indicated in the UserInfo of the name URI param.
    * @param name the URI for which we need the access keys; may be null
    * @param conf the Configuration object to interrogate for keys.
@@ -734,25 +736,19 @@ public final class S3AUtils {
    */
   public static S3xLoginHelper.Login getAWSAccessKeys(URI name,
       Configuration conf) throws IOException {
-    S3xLoginHelper.Login login =
-        S3xLoginHelper.extractLoginDetailsWithWarnings(name);
+    S3xLoginHelper.rejectSecretsInURIs(name);
     Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
         conf, S3AFileSystem.class);
     String bucket = name != null ? name.getHost() : "";
 
-    // build the secrets. as getPassword() uses the last arg as
-    // the return value if non-null, the ordering of
-    // login -> bucket -> base is critical
+    // get the secrets from the configuration
 
-    // get the bucket values
-    String accessKey = lookupPassword(bucket, c, ACCESS_KEY,
-        login.getUser());
+    // get the access key
+    String accessKey = lookupPassword(bucket, c, ACCESS_KEY);
 
-    // finally the base
-    String secretKey = lookupPassword(bucket, c, SECRET_KEY,
-        login.getPassword());
+    // and the secret
+    String secretKey = lookupPassword(bucket, c, SECRET_KEY);
 
-    // and override with any per bucket values
     return new S3xLoginHelper.Login(accessKey, secretKey);
   }
 
@@ -768,6 +764,7 @@ public final class S3AUtils {
    * @throws IOException on any IO problem
    * @throws IllegalArgumentException bad arguments
    */
+  @Deprecated
   public static String lookupPassword(
       String bucket,
       Configuration conf,
@@ -775,6 +772,24 @@ public final class S3AUtils {
       String overrideVal)
       throws IOException {
     return lookupPassword(bucket, conf, baseKey, overrideVal, "");
+  }
+
+  /**
+   * Get a password from a configuration, including JCEKS files, handling both
+   * the absolute key and bucket override.
+   * @param bucket bucket or "" if none known
+   * @param conf configuration
+   * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
+   * @return a password or "".
+   * @throws IOException on any IO problem
+   * @throws IllegalArgumentException bad arguments
+   */
+  public static String lookupPassword(
+      String bucket,
+      Configuration conf,
+      String baseKey)
+      throws IOException {
+    return lookupPassword(bucket, conf, baseKey, null, "");
   }
 
   /**
@@ -1387,10 +1402,7 @@ public final class S3AUtils {
   static String getServerSideEncryptionKey(String bucket,
       Configuration conf) {
     try {
-      return lookupPassword(bucket, conf,
-          SERVER_SIDE_ENCRYPTION_KEY,
-          getPassword(conf, OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
-              null, null));
+      return lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
     } catch (IOException e) {
       LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
       return "";
@@ -1412,7 +1424,7 @@ public final class S3AUtils {
       Configuration conf) throws IOException {
     S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
-            SERVER_SIDE_ENCRYPTION_ALGORITHM, null));
+            SERVER_SIDE_ENCRYPTION_ALGORITHM));
     String sseKey = getServerSideEncryptionKey(bucket, conf);
     int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
     String diagnostics = passwordDiagnostics(sseKey, "key");

@@ -21,7 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -96,8 +96,7 @@ public class ContainerOperationClient implements ScmClient {
               xceiverClientManager.getType(),
               xceiverClientManager.getFactor(), owner);
       Pipeline pipeline = containerWithPipeline.getPipeline();
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
 
       // Allocated State means that SCM has allocated this pipeline in its
       // namespace. The client needs to create the pipeline on the machines
@@ -180,7 +179,7 @@ public class ContainerOperationClient implements ScmClient {
     //    ObjectStageChangeRequestProto.Op.create,
     //    ObjectStageChangeRequestProto.Stage.begin);
 
-    client.createPipeline(pipeline);
+    client.createPipeline();
 
     //storageContainerLocationClient.notifyObjectStageChange(
     //    ObjectStageChangeRequestProto.Type.pipeline,
@@ -207,8 +206,7 @@ public class ContainerOperationClient implements ScmClient {
           storageContainerLocationClient.allocateContainer(type, factor,
               owner);
       Pipeline pipeline = containerWithPipeline.getPipeline();
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
 
       // Allocated State means that SCM has allocated this pipeline in its
       // namespace. The client needs to create the pipeline on the machines
@@ -217,8 +215,7 @@ public class ContainerOperationClient implements ScmClient {
         createPipeline(client, pipeline);
       }
       // connect to pipeline leader and allocate container on leader datanode.
-      client = xceiverClientManager.acquireClient(pipeline,
-          containerWithPipeline.getContainerInfo().getContainerID());
+      client = xceiverClientManager.acquireClient(pipeline);
       createContainer(client,
           containerWithPipeline.getContainerInfo().getContainerID());
       return containerWithPipeline;
@@ -279,7 +276,7 @@ public class ContainerOperationClient implements ScmClient {
       boolean force) throws IOException {
     XceiverClientSpi client = null;
     try {
-      client = xceiverClientManager.acquireClient(pipeline, containerId);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ContainerProtocolCalls
           .deleteContainer(client, containerId, force, traceID);
@@ -334,7 +331,7 @@ public class ContainerOperationClient implements ScmClient {
       Pipeline pipeline) throws IOException {
     XceiverClientSpi client = null;
     try {
-      client = xceiverClientManager.acquireClient(pipeline, containerID);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
       ReadContainerResponseProto response =
           ContainerProtocolCalls.readContainer(client, containerID, traceID);
@@ -421,7 +418,7 @@ public class ContainerOperationClient implements ScmClient {
       For now, take the #2 way.
        */
       // Actually close the container on Datanode
-      client = xceiverClientManager.acquireClient(pipeline, containerId);
+      client = xceiverClientManager.acquireClient(pipeline);
       String traceID = UUID.randomUUID().toString();
 
       storageContainerLocationClient.notifyObjectStageChange(

@@ -23,16 +23,21 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
+import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
@@ -41,6 +46,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 
 import org.apache.hadoop.io.IOUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -89,7 +95,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private static DynamoDBMetadataStore ddbmsStatic;
 
-  private static String TEST_DYNAMODB_TABLE_NAME;
+  private static String testDynamoDBTableName;
 
   /**
    * Create a path under the test path provided by
@@ -107,8 +113,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Configuration conf = prepareTestConfiguration(new Configuration());
     assertThatDynamoMetadataStoreImpl(conf);
     Assume.assumeTrue("Test DynamoDB table name should be set to run "
-            + "integration tests.", TEST_DYNAMODB_TABLE_NAME != null);
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, TEST_DYNAMODB_TABLE_NAME);
+            + "integration tests.", testDynamoDBTableName != null);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
 
     s3AContract = new S3AContract(conf);
     s3AContract.init();
@@ -134,10 +140,10 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public static void beforeClassSetup() throws IOException {
     Configuration conf = prepareTestConfiguration(new Configuration());
     assertThatDynamoMetadataStoreImpl(conf);
-    TEST_DYNAMODB_TABLE_NAME = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
+    testDynamoDBTableName = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
     Assume.assumeTrue("Test DynamoDB table name should be set to run "
-        + "integration tests.", TEST_DYNAMODB_TABLE_NAME != null);
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, TEST_DYNAMODB_TABLE_NAME);
+        + "integration tests.", testDynamoDBTableName != null);
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
 
     LOG.debug("Creating static ddbms which will be shared between tests.");
     ddbmsStatic = new DynamoDBMetadataStore();
@@ -618,6 +624,42 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       } catch (IOException ignored) {
       }
       ddbms.destroy();
+    }
+  }
+
+  @Test
+  public void testTableTagging() throws IOException {
+    final Configuration conf = getFileSystem().getConf();
+
+    // clear all table tagging config before this test
+    conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG).keySet().forEach(
+        propKey -> conf.unset(S3GUARD_DDB_TABLE_TAG + propKey)
+    );
+
+    String tableName = "testTableTagging-" + UUID.randomUUID();
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, "true");
+
+    Map<String, String> tagMap = new HashMap<>();
+    tagMap.put("hello", "dynamo");
+    tagMap.put("tag", "youre it");
+    for (Map.Entry<String, String> tagEntry : tagMap.entrySet()) {
+      conf.set(S3GUARD_DDB_TABLE_TAG + tagEntry.getKey(), tagEntry.getValue());
+    }
+
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
+      ddbms.initialize(conf);
+      assertNotNull(ddbms.getTable());
+      assertEquals(tableName, ddbms.getTable().getTableName());
+      ListTagsOfResourceRequest listTagsOfResourceRequest =
+          new ListTagsOfResourceRequest()
+              .withResourceArn(ddbms.getTable().getDescription().getTableArn());
+      List<Tag> tags = ddbms.getAmazonDynamoDB()
+          .listTagsOfResource(listTagsOfResourceRequest).getTags();
+      assertEquals(tagMap.size(), tags.size());
+      for (Tag tag : tags) {
+        Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
+      }
     }
   }
 

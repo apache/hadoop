@@ -18,6 +18,12 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.CommandStatusReportsProto;
 import org.apache.hadoop.hdds.protocol.proto.
     StorageContainerDatanodeProtocolProtos.CommandStatus;
 import org.apache.hadoop.hdds.scm.VersionInfo;
@@ -25,11 +31,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos
-    .ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
@@ -192,10 +193,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       sendHeartbeat(SCMHeartbeatRequestProto heartbeat) throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
-    if(heartbeat.hasCommandStatusReport()){
-      cmdStatusList.addAll(heartbeat.getCommandStatusReport()
-          .getCmdStatusList());
-      commandStatusReport.incrementAndGet();
+    if (heartbeat.getCommandStatusReportsCount() != 0) {
+      for (CommandStatusReportsProto statusReport : heartbeat
+          .getCommandStatusReportsList()) {
+        cmdStatusList.addAll(statusReport.getCmdStatusList());
+        commandStatusReport.incrementAndGet();
+      }
     }
     sleepIfNeeded();
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(
@@ -214,8 +217,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   public StorageContainerDatanodeProtocolProtos
       .SCMRegisteredResponseProto register(
           DatanodeDetailsProto datanodeDetailsProto, NodeReportProto nodeReport,
-          StorageContainerDatanodeProtocolProtos.ContainerReportsProto
-              containerReportsRequestProto)
+          ContainerReportsProto containerReportsRequestProto,
+          PipelineReportsProto pipelineReportsProto)
       throws IOException {
     rpcCount.incrementAndGet();
     updateNodeReport(datanodeDetailsProto, nodeReport);
@@ -299,13 +302,6 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
       return cr.size();
     }
     return 0;
-  }
-
-  @Override
-  public ContainerBlocksDeletionACKResponseProto sendContainerBlocksDeletionACK(
-      ContainerBlocksDeletionACKProto request) throws IOException {
-    return ContainerBlocksDeletionACKResponseProto
-        .newBuilder().getDefaultInstanceForType();
   }
 
   /**

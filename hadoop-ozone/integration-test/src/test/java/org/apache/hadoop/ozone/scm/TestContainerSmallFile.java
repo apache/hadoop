@@ -86,8 +86,7 @@ public class TestContainerSmallFile {
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
 
@@ -103,20 +102,19 @@ public class TestContainerSmallFile {
   }
 
   @Test
-  public void testInvalidKeyRead() throws Exception {
+  public void testInvalidBlockRead() throws Exception {
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
 
     thrown.expect(StorageContainerException.class);
-    thrown.expectMessage("Unable to find the key");
+    thrown.expectMessage("Unable to find the block");
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());
@@ -135,8 +133,7 @@ public class TestContainerSmallFile {
             xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(),
-            container.getContainerInfo().getContainerID());
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
         container.getContainerInfo().getContainerID(), traceID);
     BlockID blockID = ContainerTestHelper.getTestBlockID(

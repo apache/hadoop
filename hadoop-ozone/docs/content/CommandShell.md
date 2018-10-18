@@ -1,158 +1,109 @@
 ---
-title: Command Shell
-menu: main
+title: Ozone CLI
+menu:
+   main:
+      parent: Client
+      weight: 1
 ---
 <!---
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
+      http://www.apache.org/licenses/LICENSE-2.0
 
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
-  limitations under the License. See accompanying LICENSE file.
+  limitations under the License.
 -->
-# Ozone Command Shell
+
+Ozone has a set of command line tools that can be used to manage ozone.
+
+All these commands are invoked via the ```ozone``` script.
+
+The commands supported by ozone are:
+
+   * **classpath** - Prints the class path needed to get the hadoop jar and the
+    required libraries.
+   * **fs** - Runs a command on ozone file system.
+   * **datanode** - Via daemon command, the HDDS data nodes can be started or
+   stopped.
+   * **envvars** - Display computed Hadoop environment variables.
+   * **freon** -  Runs the ozone load generator.
+   * **genesis**  - Developer Only, Ozone micro-benchmark application.
+   * **getconf** -  Reads ozone config values from configuration.
+   * **jmxget**  - Get JMX exported values from NameNode or DataNode.
+   * **om** -   Ozone Manager, via daemon command can be started or stopped.
+   * **sh** -  Primary command line interface for ozone.
+   * **scm** -  Storage Container Manager service, via daemon can be
+   stated or stopped.
+   * **scmcli** -  Developer only, Command Line Interface for the Storage
+   Container Manager.
+   * **version** - Prints the version of Ozone and HDDS.
+   * **genconf** -  Generate minimally required ozone configs and output to
+   ozone-site.xml.
+
+## Understanding Ozone command shell
+The most used command when working with Ozone is the Ozone command shell.
+Ozone command shell gives a command shell interface to work against
+Ozone.
+
+The Ozone shell commands take the following format.
+
+> _ozone sh object action url_
+
+**ozone** script is used to invoke all Ozone sub-commands. The ozone shell is
+invoked via ```sh``` command.
+
+The object can be a volume, bucket or a key. The action is various verbs like
+ create, list, delete etc.
 
 
-Ozone command shell gives a command shell interface to work against Ozone.
-Please note that this  document assumes that cluster is deployed
-with simple authentication.
+Ozone URL can point to a volume, bucket or keys in the following format:
 
-The Ozone commands take the following format.
-```
-ozone oz --command_ /volume/bucket/key -user <username> [-root]
-```
-
-The `port` specified in command should match the port mentioned in the config
-property `hdds.rest.http-address`. This property can be set in `ozone-site.xml`.
-The default value for the port is `9880` and is used in below commands.
-
-The `-root` option is a command line short cut that allows *ozone oz*
-commands to be run as the user that started the cluster. This is useful to
-indicate that you want the commands to be run as some admin user. The only
-reason for this option is that it makes the life of a lazy developer more
-easier.
-
-## Volume Commands
+_\[scheme\]\[server:port\]/volume/bucket/key_
 
 
-The volume commands allow users to create, delete and list the volumes in the
-ozone cluster.
+Where,
 
-### Create Volume
-Volumes can be created only by administrators. Here is an example of creating a volume.
-```
-ozone oz -createVolume hive -user bilbo -quota 100TB -root
-```
-The above command creates a volume called `hive` owned by user `bilbo`. The
-`-root` option allows the command to be executed as user `hdfs` which is an
-admin in the cluster.
+1. Scheme - Can be one of the following
+    * o3  - Ozone's native RPC protocol. If you specify this scheme, the
+    native RPC protocol is used while communicating with Ozone Manager and
+    data nodes.
+    * http/https - If an HTTP protocol is specified, then Ozone shell assumes
+     that you are interested in using the Ozone Rest protocol and falls back
+     to using the REST protocol instead of RPC.
+ If no protocol is specified, the Ozone shell defaults to the native RPC
+ protocol.
 
-### Update Volume
-Updates information like ownership and quota on an existing volume.
-```
-ozone oz -updateVolume hive -quota 500TB -root
-```
+2. Server:Port - This is the address of the Ozone Manager. This can be server
+ only, in that case, the default port is used. If this value is omitted
+then the defaults specified in the ozone-site.xml will be used for Ozone
+Manager address.
 
-The above command changes the volume quota of hive from 100TB to 500TB.
+Depending on the call, the volume/bucket/key names will be part of the URL.
+Please see volume commands, bucket commands, and key commands section for more
+detail.
 
-### Delete Volume
-Deletes a Volume if it is empty.
-```
-ozone oz -deleteVolume /hive -root
-```
+## Invoking help
 
-### Info Volume
-Info volume command allows the owner or the administrator of the cluster
-to read meta-data about a specific volume.
-```
-ozone oz -infoVolume /hive -root
-```
+Ozone shell help can be invoked at _object_ level or at _action_ level.
+For example:
 
-### List Volumes
-List volume command can be used by administrator to list volumes of any
-user. It can also be used by any user to list their own volumes.
-```
-ozone oz -listVolume / -user bilbo
-```
+{{< highlight bash >}}
+ozone sh volume --help
+{{< /highlight >}}
 
-The above command lists all volumes owned by user bilbo.
+This will show all possible actions for volumes.
 
-## Bucket Commands
-
-Bucket commands follow a similar pattern as volume commands. However bucket
-commands are designed to be run by the owner of the volume.
-Following examples assume that these commands are run by the owner of the
-volume or bucket.
-
-### Create Bucket
-Create bucket call allows the owner of a volume to create a bucket.
-```
-ozone oz -createBucket /hive/january
-```
-
-This call creates a bucket called `january` in the volume called `hive`. If
-the volume does not exist, then this call will fail.
-
-### Update Bucket
-Updates bucket meta-data, like ACLs.
-```
-ozone oz -updateBucket /hive/january -addAcl user:spark:rw
-```
-### Delete Bucket
-Deletes a bucket if it is empty.
-```
-ozone oz -deleteBucket /hive/january
-```
-
-### Info Bucket
-Returns information about a given bucket.
-```
-ozone oz -infoBucket /hive/january
-```
-
-### List Buckets
-List buckets in a given volume.
-```
-ozone oz -listBucket /hive
-```
-
-## Ozone Key Commands
-
-Ozone key commands allows users to put, delete and get keys from Ozone buckets.
-
-### Put Key
-Creates or overwrites a key in Ozone store, -file points to the file you want
-to upload.
-```
-ozone oz -putKey /hive/january/processed.orc -file processed.orc
-```
-
-### Get Key
-Downloads a file from the Ozone bucket.
-```
-ozone oz -getKey /hive/january/processed.orc -file processed.orc.copy
-```
-
-### Delete Key
-Deletes a key from the Ozone store.
-```
-ozone oz -deleteKey /hive/january/processed.orc
-```
-
-### Info Key
-Reads  key metadata from the Ozone store.
-```
-ozone oz -infoKey /hive/january/processed.orc
-```
-
-### List Keys
-List all keys in an Ozone bucket.
-```
-ozone oz -listKey /hive/january
-```
+or it can be invoked to explain a specific action like
+{{< highlight bash >}}
+ozone sh volume create --help
+{{< /highlight >}}
+This command will give you command line options of the create command.
 

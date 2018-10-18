@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyInfo
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.utils.MetadataStore;
@@ -57,10 +57,8 @@ import java.sql.Statement;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_BUCKET_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OM_VOLUME_PREFIX;
-import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
  * This is the CLI that can be use to convert an ozone metadata DB into
@@ -85,7 +83,6 @@ public class SQLCLI  extends Configured implements Tool {
           "replicationType TEXT NOT NULL," +
           "replicationFactor TEXT NOT NULL," +
           "usedBytes LONG NOT NULL," +
-          "allocatedBytes LONG NOT NULL," +
           "owner TEXT," +
           "numberOfKeys LONG)";
   private static final String CREATE_DATANODE_INFO =
@@ -96,8 +93,8 @@ public class SQLCLI  extends Configured implements Tool {
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
       "INSERT INTO containerInfo (containerID, replicationType, "
-          + "replicationFactor, usedBytes, allocatedBytes, owner, "
-          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", \"%d\", "
+          + "replicationFactor, usedBytes, owner, "
+          + "numberOfKeys) VALUES (\"%d\", \"%s\", \"%s\", \"%d\", "
           + "\"%s\", \"%d\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
@@ -271,9 +268,6 @@ public class SQLCLI  extends Configured implements Tool {
     if (dbName.toString().endsWith(CONTAINER_DB_SUFFIX)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
-    } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
-      LOG.info("Converting open container DB");
-      convertOpenContainerDB(dbPath, outPath);
     } else if (dbName.toString().equals(OM_DB_NAME)) {
       LOG.info("Converting om DB");
       convertOMDB(dbPath, outPath);
@@ -412,12 +406,15 @@ public class SQLCLI  extends Configured implements Tool {
     }
   }
 
+  // TODO: This has to be fixed.
+  // we don't have prefix anymore. now each key is written into different
+  // table. The logic has to be changed.
   private KeyType getKeyType(String key) {
     if (key.startsWith(OM_USER_PREFIX)) {
       return KeyType.USER;
-    } else if (key.startsWith(OM_VOLUME_PREFIX)) {
-      return key.replaceFirst(OM_VOLUME_PREFIX, "")
-          .contains(OM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
+    } else if (key.startsWith(OM_KEY_PREFIX)) {
+      return key.replaceFirst(OM_KEY_PREFIX, "")
+          .contains(OM_KEY_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
     }else {
       return KeyType.KEY;
     }
@@ -500,7 +497,6 @@ public class SQLCLI  extends Configured implements Tool {
         containerInfo.getReplicationType(),
         containerInfo.getReplicationFactor(),
         containerInfo.getUsedBytes(),
-        containerInfo.getAllocatedBytes(),
         containerInfo.getOwner(),
         containerInfo.getNumberOfKeys());
 

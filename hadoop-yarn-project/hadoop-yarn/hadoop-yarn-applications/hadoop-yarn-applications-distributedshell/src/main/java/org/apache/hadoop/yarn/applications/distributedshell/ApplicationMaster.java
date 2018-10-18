@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Strings;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -523,9 +524,15 @@ public class ApplicationMaster {
 
     if (cliParser.hasOption("placement_spec")) {
       String placementSpec = cliParser.getOptionValue("placement_spec");
-      LOG.info("Placement Spec received [{}]", placementSpec);
-      parsePlacementSpecs(placementSpec);
+      String decodedSpec = getDecodedPlacementSpec(placementSpec);
+      LOG.info("Placement Spec received [{}]", decodedSpec);
+
+      this.numTotalContainers = 0;
+      int globalNumOfContainers = Integer
+          .parseInt(cliParser.getOptionValue("num_containers", "0"));
+      parsePlacementSpecs(decodedSpec, globalNumOfContainers);
       LOG.info("Total num containers requested [{}]", numTotalContainers);
+
       if (numTotalContainers == 0) {
         throw new IllegalArgumentException(
             "Cannot run distributed shell with no containers");
@@ -694,21 +701,31 @@ public class ApplicationMaster {
     return true;
   }
 
-  private void parsePlacementSpecs(String placementSpecifications) {
-    // Client sends placement spec in encoded format
+  private void parsePlacementSpecs(String decodedSpec,
+      int globalNumOfContainers) {
+    Map<String, PlacementSpec> pSpecs =
+        PlacementSpec.parse(decodedSpec);
+    this.placementSpecs = new HashMap<>();
+    for (PlacementSpec pSpec : pSpecs.values()) {
+      // Use global num of containers when the spec doesn't specify
+      // source tags. This is allowed when using node-attribute constraints.
+      if (Strings.isNullOrEmpty(pSpec.sourceTag)
+          && pSpec.getNumContainers() == 0
+          && globalNumOfContainers > 0) {
+        pSpec.setNumContainers(globalNumOfContainers);
+      }
+      this.numTotalContainers += pSpec.getNumContainers();
+      this.placementSpecs.put(pSpec.sourceTag, pSpec);
+    }
+  }
+
+  private String getDecodedPlacementSpec(String placementSpecifications) {
     Base64.Decoder decoder = Base64.getDecoder();
     byte[] decodedBytes = decoder.decode(
         placementSpecifications.getBytes(StandardCharsets.UTF_8));
     String decodedSpec = new String(decodedBytes, StandardCharsets.UTF_8);
     LOG.info("Decode placement spec: " + decodedSpec);
-    Map<String, PlacementSpec> pSpecs =
-        PlacementSpec.parse(decodedSpec);
-    this.placementSpecs = new HashMap<>();
-    this.numTotalContainers = 0;
-    for (PlacementSpec pSpec : pSpecs.values()) {
-      this.numTotalContainers += pSpec.numContainers;
-      this.placementSpecs.put(pSpec.sourceTag, pSpec);
-    }
+    return decodedSpec;
   }
 
   /**
@@ -793,11 +810,13 @@ public class ApplicationMaster {
       placementConstraintMap = new HashMap<>();
       for (PlacementSpec spec : this.placementSpecs.values()) {
         if (spec.constraint != null) {
-          placementConstraintMap.put(
-              Collections.singleton(spec.sourceTag), spec.constraint);
+          Set<String> allocationTags = Strings.isNullOrEmpty(spec.sourceTag) ?
+              Collections.emptySet() : Collections.singleton(spec.sourceTag);
+          placementConstraintMap.put(allocationTags, spec.constraint);
         }
       }
     }
+
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
             appMasterTrackingUrl, placementConstraintMap);
@@ -845,14 +864,18 @@ public class ApplicationMaster {
     // Keep looping until all the containers are launched and shell script
     // executed on them ( regardless of success/failure).
     if (this.placementSpecs == null) {
+      LOG.info("placementSpecs null");
       for (int i = 0; i < numTotalContainersToRequest; ++i) {
         ContainerRequest containerAsk = setupContainerAskForRM();
         amRMClient.addContainerRequest(containerAsk);
       }
     } else {
+      LOG.info("placementSpecs to create req:" + placementSpecs);
       List<SchedulingRequest> schedReqs = new ArrayList<>();
       for (PlacementSpec pSpec : this.placementSpecs.values()) {
-        for (int i = 0; i < pSpec.numContainers; i++) {
+        LOG.info("placementSpec :" + pSpec + ", container:" + pSpec
+            .getNumContainers());
+        for (int i = 0; i < pSpec.getNumContainers(); i++) {
           SchedulingRequest sr = setupSchedulingRequest(pSpec);
           schedReqs.add(sr);
         }
@@ -944,7 +967,7 @@ public class ApplicationMaster {
 
     // When the application completes, it should send a finish application
     // signal to the RM
-    LOG.info("Application completed. Signalling finish to RM");
+    LOG.info("Application completed. Signalling finished to RM");
 
     FinalApplicationStatus appStatus;
     boolean success = true;

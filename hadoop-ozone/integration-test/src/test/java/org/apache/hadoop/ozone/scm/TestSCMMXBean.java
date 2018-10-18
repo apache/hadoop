@@ -24,15 +24,9 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.ContainerStat;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.IOException;
@@ -44,6 +38,10 @@ import java.util.concurrent.TimeoutException;
 
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.TabularData;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  *
@@ -110,30 +108,14 @@ public class TestSCMMXBean {
       assertEquals("nodeID", key);
       assertEquals(stat.toJsonString(), value);
     }
-  }
 
-  @Test
-  public void testSCMNodeManagerMXBean() throws Exception {
-    final NodeManager scmNm = scm.getScmNodeManager();
-    ObjectName bean = new ObjectName(
-        "Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo");
+    boolean inChillMode = (boolean) mbs.getAttribute(bean,
+        "InChillMode");
+    assertEquals(scm.isInChillMode(), inChillMode);
 
-    Integer minChillNodes = (Integer)mbs.getAttribute(bean,
-        "MinimumChillModeNodes");
-    assertEquals(scmNm.getMinimumChillModeNodes(),
-        minChillNodes.intValue());
-
-    boolean isOutOfChillMode = (boolean)mbs.getAttribute(bean,
-        "OutOfChillMode");
-    assertEquals(scmNm.isOutOfChillMode(), isOutOfChillMode);
-
-    String chillStatus = (String)mbs.getAttribute(bean,
-        "ChillModeStatus");
-    assertEquals(scmNm.getChillModeStatus(), chillStatus);
-
-    TabularData nodeCountObj = (TabularData)mbs.getAttribute(bean,
-        "NodeCount");
-    verifyEquals(nodeCountObj, scm.getScmNodeManager().getNodeCount());
+    double containerThreshold = (double) mbs.getAttribute(bean,
+        "ChillModeCurrentContainerThreshold");
+    assertEquals(scm.getCurrentContainerThreshold(), containerThreshold, 0);
   }
 
   /**

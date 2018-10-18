@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
@@ -115,7 +116,7 @@ public class HsTaskPage extends HsView {
        StringBuilder attemptsTableData = new StringBuilder("[\n");
 
        for (TaskAttempt attempt : getTaskAttempts()) {
-        final TaskAttemptInfo ta = new TaskAttemptInfo(attempt, false);
+        final TaskAttemptInfo ta = new MapTaskAttemptInfo(attempt, false);
         String taid = ta.getId();
 
         String nodeHttpAddr = ta.getNode();

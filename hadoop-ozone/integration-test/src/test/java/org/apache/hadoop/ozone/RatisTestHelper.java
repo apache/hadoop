@@ -20,10 +20,14 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.ratis.RatisHelper;
+import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.slf4j.Logger;
@@ -32,7 +36,11 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 
 /**
  * Helpers for Ratis tests.
@@ -56,6 +64,7 @@ public interface RatisTestHelper {
     public RatisTestSuite()
         throws IOException, TimeoutException, InterruptedException {
       conf = newOzoneConfiguration(RPC);
+
       cluster = newMiniOzoneCluster(NUM_DATANODES, conf);
     }
 
@@ -92,6 +101,8 @@ public interface RatisTestHelper {
   static void initRatisConf(RpcType rpc, Configuration conf) {
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY, true);
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY, rpc.name());
+    conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 30, TimeUnit.SECONDS);
     LOG.info(OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY
         + " = " + rpc.name());
   }
@@ -100,8 +111,19 @@ public interface RatisTestHelper {
       int numDatanodes, OzoneConfiguration conf)
       throws IOException, TimeoutException, InterruptedException {
     final MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setHbInterval(1000)
+        .setHbProcessorInterval(1000)
         .setNumDatanodes(numDatanodes).build();
     cluster.waitForClusterToBeReady();
     return cluster;
+  }
+
+  static void initXceiverServerRatis(
+      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
+    final RaftPeer p = RatisHelper.toRaftPeer(dd);
+    final OzoneConfiguration conf = new OzoneConfiguration();
+    final RaftClient client =
+        RatisHelper.newRaftClient(rpc, p, RatisHelper.createRetryPolicy(conf));
+    client.groupAdd(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
 }

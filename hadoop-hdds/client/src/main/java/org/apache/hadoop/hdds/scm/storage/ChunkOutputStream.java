@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.BlockData;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.client.BlockID;
 
@@ -32,7 +34,8 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls.putKey;
+import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
+    .putBlock;
 import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
     .writeChunk;
 
@@ -57,13 +60,14 @@ public class ChunkOutputStream extends OutputStream {
   private final BlockID blockID;
   private final String key;
   private final String traceID;
-  private final KeyData.Builder containerKeyData;
+  private final BlockData.Builder containerBlockData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
   private ByteBuffer buffer;
   private final String streamId;
   private int chunkIndex;
   private int chunkSize;
+  private long blockCommitSequenceId;
 
   /**
    * Creates a new ChunkOutputStream.
@@ -84,7 +88,7 @@ public class ChunkOutputStream extends OutputStream {
     this.chunkSize = chunkSize;
     KeyValue keyValue = KeyValue.newBuilder()
         .setKey("TYPE").setValue("KEY").build();
-    this.containerKeyData = KeyData.newBuilder()
+    this.containerBlockData = BlockData.newBuilder()
         .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
@@ -92,10 +96,15 @@ public class ChunkOutputStream extends OutputStream {
     this.buffer = ByteBuffer.allocate(chunkSize);
     this.streamId = UUID.randomUUID().toString();
     this.chunkIndex = 0;
+    blockCommitSequenceId = 0;
   }
 
   public ByteBuffer getBuffer() {
     return buffer;
+  }
+
+  public long getBlockCommitSequenceId() {
+    return blockCommitSequenceId;
   }
 
   @Override
@@ -154,7 +163,10 @@ public class ChunkOutputStream extends OutputStream {
         writeChunkToContainer();
       }
       try {
-        putKey(xceiverClient, containerKeyData.build(), traceID);
+        ContainerProtos.PutBlockResponseProto responseProto =
+            putBlock(xceiverClient, containerBlockData.build(), traceID);
+        blockCommitSequenceId =
+            responseProto.getCommittedBlockLength().getBlockCommitSequenceId();
       } catch (IOException e) {
         throw new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
@@ -230,6 +242,6 @@ public class ChunkOutputStream extends OutputStream {
       throw new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);
     }
-    containerKeyData.addChunks(chunk);
+    containerBlockData.addChunks(chunk);
   }
 }

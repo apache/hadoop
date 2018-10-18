@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -26,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,7 @@ import java.util.stream.Collectors;
 /**
  * A class that encapsulates the OmVolumeArgs Args.
  */
-public final class OmVolumeArgs {
+public final class OmVolumeArgs implements Auditable{
   private final String adminName;
   private final String ownerName;
   private final String volume;
@@ -122,6 +125,17 @@ public final class OmVolumeArgs {
     return new Builder();
   }
 
+  @Override
+  public Map<String, String> toAuditMap() {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.ADMIN, this.adminName);
+    auditMap.put(OzoneConsts.OWNER, this.ownerName);
+    auditMap.put(OzoneConsts.VOLUME, this.volume);
+    auditMap.put(OzoneConsts.CREATION_TIME, String.valueOf(this.creationTime));
+    auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
+    return auditMap;
+  }
+
   /**
    * Builder for OmVolumeArgs.
    */
@@ -137,7 +151,7 @@ public final class OmVolumeArgs {
     /**
      * Constructs a builder.
      */
-    Builder() {
+    public Builder() {
       keyValueMap = new HashMap<>();
       aclMap = new OmOzoneAclMap();
     }

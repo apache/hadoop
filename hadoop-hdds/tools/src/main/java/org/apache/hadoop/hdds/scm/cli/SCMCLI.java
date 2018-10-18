@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,69 +17,73 @@
  */
 package org.apache.hadoop.hdds.scm.cli;
 
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.cli.GenericCli;
+import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.cli.container.ContainerCommandHandler;
-import org.apache.hadoop.hdds.scm.cli.container.CreateContainerHandler;
+import org.apache.hadoop.hdds.scm.cli.container.CloseSubcommand;
+import org.apache.hadoop.hdds.scm.cli.container.CreateSubcommand;
+import org.apache.hadoop.hdds.scm.cli.container.DeleteSubcommand;
+import org.apache.hadoop.hdds.scm.cli.container.InfoSubcommand;
+import org.apache.hadoop.hdds.scm.cli.container.ListSubcommand;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.NativeCodeLoader;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-
+import org.apache.commons.lang3.StringUtils;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_SIZE_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_SIZE;
-import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
-import static org.apache.hadoop.hdds.scm.cli.ResultCode.EXECUTION_ERROR;
-import static org.apache.hadoop.hdds.scm.cli.ResultCode.SUCCESS;
-import static org.apache.hadoop.hdds.scm.cli.ResultCode.UNRECOGNIZED_CMD;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 /**
  * This class is the CLI of SCM.
  */
-public class SCMCLI extends OzoneBaseCLI {
 
-  public static final String HELP_OP = "help";
-  public static final int CMD_WIDTH = 80;
+/**
+ * Container subcommand.
+ */
+@Command(name = "ozone scmcli", hidden = true, description =
+    "Developer tools to handle SCM specific "
+        + "operations.",
+    versionProvider = HddsVersionProvider.class,
+    subcommands = {
+        ListSubcommand.class,
+        InfoSubcommand.class,
+        DeleteSubcommand.class,
+        CreateSubcommand.class,
+        CloseSubcommand.class
+    },
+    mixinStandardHelpOptions = true)
+public class SCMCLI extends GenericCli {
 
-  private final ScmClient scmClient;
-  private final PrintStream out;
-  private final PrintStream err;
-
-  private final Options options;
-
-  public SCMCLI(ScmClient scmClient) {
-    this(scmClient, System.out, System.err);
-  }
-
-  public SCMCLI(ScmClient scmClient, PrintStream out, PrintStream err) {
-    this.scmClient = scmClient;
-    this.out = out;
-    this.err = err;
-    this.options = getOptions();
-  }
+  @Option(names = {"--scm"}, description = "The destination scm (host:port)")
+  private String scm = "";
 
   /**
    * Main for the scm shell Command handling.
@@ -88,30 +92,40 @@ public class SCMCLI extends OzoneBaseCLI {
    * @throws Exception
    */
   public static void main(String[] argv) throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
-    ScmClient scmClient = getScmClient(conf);
-    SCMCLI shell = new SCMCLI(scmClient);
-    conf.setQuietMode(false);
-    shell.setConf(conf);
-    int res = 0;
-    try {
-      res = ToolRunner.run(shell, argv);
-    } catch (Exception ex) {
-      System.exit(1);
-    }
-    System.exit(res);
+
+    LogManager.resetConfiguration();
+    Logger.getRootLogger().setLevel(Level.INFO);
+    Logger.getRootLogger()
+        .addAppender(new ConsoleAppender(new PatternLayout("%m%n")));
+    Logger.getLogger(NativeCodeLoader.class).setLevel(Level.ERROR);
+
+    new SCMCLI().run(argv);
   }
 
-  private static ScmClient getScmClient(OzoneConfiguration ozoneConf)
+  public ScmClient createScmClient()
       throws IOException {
+
+    OzoneConfiguration ozoneConf = createOzoneConfiguration();
+    if (StringUtils.isNotEmpty(scm)) {
+      ozoneConf.set(OZONE_SCM_CLIENT_ADDRESS_KEY, scm);
+    }
+    if (!HddsUtils.getHostNameFromConfigKeys(ozoneConf,
+        ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY).isPresent()) {
+
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY
+              + " should be set in ozone-site.xml or with the --scm option");
+    }
+
     long version = RPC.getProtocolVersion(
         StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress =
         getScmAddressForClients(ozoneConf);
-    int containerSizeGB = (int)ozoneConf.getStorageSize(
+    int containerSizeGB = (int) ozoneConf.getStorageSize(
         OZONE_SCM_CONTAINER_SIZE, OZONE_SCM_CONTAINER_SIZE_DEFAULT,
         StorageUnit.GB);
-    ContainerOperationClient.setContainerSizeB(containerSizeGB*OzoneConsts.GB);
+    ContainerOperationClient
+        .setContainerSizeB(containerSizeGB * OzoneConsts.GB);
 
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -121,116 +135,16 @@ public class SCMCLI extends OzoneBaseCLI {
                 scmAddress, UserGroupInformation.getCurrentUser(), ozoneConf,
                 NetUtils.getDefaultSocketFactory(ozoneConf),
                 Client.getRpcTimeout(ozoneConf)));
-    ScmClient storageClient = new ContainerOperationClient(
+    return new ContainerOperationClient(
         client, new XceiverClientManager(ozoneConf));
-    return storageClient;
   }
 
-  /**
-   * Adds ALL the options that hdfs scm command supports. Given the hierarchy
-   * of commands, the options are added in a cascading manner, e.g.:
-   * {@link SCMCLI} asks {@link ContainerCommandHandler} to add it's options,
-   * which then asks it's sub command, such as
-   * {@link CreateContainerHandler}
-   * to add it's own options.
-   *
-   * We need to do this because {@link BasicParser} need to take all the options
-   * when paring args.
-   * @return ALL the options supported by this CLI.
-   */
-  @Override
-  protected Options getOptions() {
-    Options newOptions = new Options();
-    // add the options
-    addTopLevelOptions(newOptions);
-    ContainerCommandHandler.addOptions(newOptions);
-    // TODO : add pool, node and pipeline commands.
-    addHelpOption(newOptions);
-    return newOptions;
-  }
-
-  private static void addTopLevelOptions(Options options) {
-    Option containerOps =
-        new Option(ContainerCommandHandler.CONTAINER_CMD, false,
-            "Container related options");
-    options.addOption(containerOps);
-    // TODO : add pool, node and pipeline commands.
-  }
-
-  private static void addHelpOption(Options options) {
-    Option helpOp = new Option(HELP_OP, false, "display help message");
-    options.addOption(helpOp);
-  }
-
-  @Override
-  protected void displayHelp() {
-    HelpFormatter helpFormatter = new HelpFormatter();
-    Options topLevelOptions = new Options();
-    addTopLevelOptions(topLevelOptions);
-    helpFormatter.printHelp(CMD_WIDTH, "hdfs scmcli <commands> [<options>]",
-        "where <commands> can be one of the following",
-        topLevelOptions, "");
-  }
-
-  @Override
-  public int run(String[] args) throws Exception {
-    CommandLine cmd = parseArgs(args, options);
-    if (cmd == null) {
-      err.println("Unrecognized options:" + Arrays.asList(args));
-      displayHelp();
-      return UNRECOGNIZED_CMD;
-    }
-    return dispatch(cmd, options);
-  }
-
-  /**
-   * This function parses all command line arguments
-   * and returns the appropriate values.
-   *
-   * @param argv - Argv from main
-   *
-   * @return CommandLine
-   */
-  @Override
-  protected CommandLine parseArgs(String[] argv, Options opts)
-      throws ParseException {
-    try {
-      BasicParser parser = new BasicParser();
-      return parser.parse(opts, argv);
-    } catch (ParseException ex) {
-      err.println(ex.getMessage());
-    }
-    return null;
-  }
-
-  @Override
-  protected int dispatch(CommandLine cmd, Options opts)
-      throws IOException, URISyntaxException {
-    OzoneCommandHandler handler = null;
-    try {
-      if (cmd.hasOption(ContainerCommandHandler.CONTAINER_CMD)) {
-        handler = new ContainerCommandHandler(scmClient);
-      }
-
-      if (handler == null) {
-        if (cmd.hasOption(HELP_OP)) {
-          displayHelp();
-          return SUCCESS;
-        } else {
-          displayHelp();
-          err.println("Unrecognized command: " + Arrays.asList(cmd.getArgs()));
-          return UNRECOGNIZED_CMD;
-        }
-      } else {
-        // Redirect stdout and stderr if necessary.
-        handler.setOut(this.out);
-        handler.setErr(this.err);
-        handler.execute(cmd);
-        return SUCCESS;
-      }
-    } catch (IOException ioe) {
-      err.println("Error executing command:" + ioe);
-      return EXECUTION_ERROR;
+  public void checkContainerExists(ScmClient scmClient, long containerId)
+      throws IOException {
+    ContainerInfo container = scmClient.getContainer(containerId);
+    if (container == null) {
+      throw new IllegalArgumentException("No such container " + containerId);
     }
   }
+
 }

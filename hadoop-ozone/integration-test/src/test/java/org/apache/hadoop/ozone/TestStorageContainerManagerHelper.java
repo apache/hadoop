@@ -22,12 +22,12 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -165,10 +165,10 @@ public class TestStorageContainerManagerHelper {
     DatanodeDetails leadDN = containerWithPipeline.getPipeline().getLeader();
     OzoneContainer containerServer =
         getContainerServerByDatanodeUuid(leadDN.getUuidString());
-    KeyValueContainerData containerData = (KeyValueContainerData) containerServer
-        .getContainerSet()
+    KeyValueContainerData containerData =
+        (KeyValueContainerData) containerServer.getContainerSet()
         .getContainer(containerID).getContainerData();
-    return KeyUtils.getDB(containerData, conf);
+    return BlockUtils.getDB(containerData, conf);
   }
 
   private OzoneContainer getContainerServerByDatanodeUuid(String dnUUID)

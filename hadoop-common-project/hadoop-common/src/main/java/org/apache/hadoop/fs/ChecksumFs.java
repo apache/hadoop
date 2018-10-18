@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * Abstract Checksumed Fs.
  * It provide a basic implementation of a Checksumed Fs,
  * which creates a checksum file for each raw file.
- * It generates & verifies checksums at the client side.
+ * It generates &amp; verifies checksums at the client side.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */

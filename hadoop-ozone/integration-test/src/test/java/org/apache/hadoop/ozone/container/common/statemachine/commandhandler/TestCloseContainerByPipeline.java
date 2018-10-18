@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -102,7 +103,8 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(
+            ContainerID.valueof(containerID))
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(datanodes.size(), 1);
@@ -132,7 +134,6 @@ public class TestCloseContainerByPipeline {
     // Make sure the closeContainerCommandHandler is Invoked
     Assert.assertTrue(
         closeContainerHandler.getInvocationCount() > lastInvocationCount);
-
   }
 
   @Test
@@ -158,7 +159,8 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(
+            ContainerID.valueof(containerID))
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(datanodes.size(), 1);
@@ -190,6 +192,7 @@ public class TestCloseContainerByPipeline {
     Assert.assertFalse((logCapturer.getOutput().contains(
         "submitting CloseContainer request over RATIS server for container "
             + containerID)));
+    logCapturer.stopCapturing();
   }
 
   @Test
@@ -214,7 +217,8 @@ public class TestCloseContainerByPipeline {
 
     long containerID = omKeyLocationInfo.getContainerID();
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getScmContainerManager().getContainerWithPipeline(containerID)
+        .getContainerManager().getContainerWithPipeline(
+            ContainerID.valueof(containerID))
         .getPipeline();
     List<DatanodeDetails> datanodes = pipeline.getMachines();
     Assert.assertEquals(3, datanodes.size());
@@ -239,13 +243,14 @@ public class TestCloseContainerByPipeline {
       Assert.assertTrue(isContainerClosed(cluster,
           containerID, datanodeDetails));
     }
+    // Make sure it was really closed via Ratis not STAND_ALONE server
     Assert.assertFalse(logCapturer.getOutput().contains(
         "submitting CloseContainer request over STAND_ALONE "
             + "server for container " + containerID));
-    // Make sure it was really closed via StandAlone not Ratis server
     Assert.assertTrue((logCapturer.getOutput().contains(
         "submitting CloseContainer request over RATIS server for container "
             + containerID)));
+    logCapturer.stopCapturing();
   }
 
   private Boolean isContainerClosed(MiniOzoneCluster cluster, long containerID,

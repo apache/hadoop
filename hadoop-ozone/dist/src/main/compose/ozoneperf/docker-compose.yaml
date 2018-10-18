@@ -1,0 +1,64 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "3"
+services:
+   datanode:
+      image: apache/hadoop-runner
+      volumes:
+        - ../..:/opt/hadoop
+        - ./jmxpromo.jar:/opt/jmxpromo.jar
+      ports:
+        - 9864
+      command: ["/opt/hadoop/bin/ozone","datanode"]
+      env_file:
+        - ./docker-config
+   ozoneManager:
+      image: apache/hadoop-runner
+      volumes:
+        - ../..:/opt/hadoop
+        - ./jmxpromo.jar:/opt/jmxpromo.jar
+      ports:
+         - 9874:9874
+      environment:
+         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
+      env_file:
+          - ./docker-config
+      command: ["/opt/hadoop/bin/ozone","om"]
+   scm:
+      image: apache/hadoop-runner
+      volumes:
+         - ../..:/opt/hadoop
+         - ./jmxpromo.jar:/opt/jmxpromo.jar
+      ports:
+         - 9876:9876
+      env_file:
+          - ./docker-config
+      environment:
+          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+      command: ["/opt/hadoop/bin/ozone","scm"]
+   consul:
+      image: consul
+      command: ["agent", "-dev", "-ui", "-client", "0.0.0.0"]
+      ports:
+         - 8500:8500
+   prometheus:
+     image: prom/prometheus
+     volumes:
+       - "./prometheus.yml:/etc/prometheus.yml"
+     command: ["--config.file","/etc/prometheus.yml"]
+     ports:
+        - 9090:9090

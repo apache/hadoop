@@ -18,16 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import static org.apache.hadoop.yarn.api.records.ContainerUpdateType.INCREASE_RESOURCE;
+import static org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils.RESOURCE_OUTSIDE_ALLOWED_RANGE;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +29,97 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerError;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
+
 public class TestRMServerUtils {
+
+  @Test
+  public void testValidateAndSplitUpdateResourceRequests() {
+    List<UpdateContainerRequest> updateRequests = new ArrayList<>();
+    int containerVersion = 10;
+    int resource = 10;
+    Resource maxAllocation = Resource.newInstance(resource, resource);
+
+    UpdateContainerRequestPBImpl updateContainerRequestPBFail =
+        new UpdateContainerRequestPBImpl();
+    updateContainerRequestPBFail.setContainerVersion(containerVersion);
+    updateContainerRequestPBFail
+        .setCapability(Resource.newInstance(resource + 1, resource + 1));
+    updateContainerRequestPBFail
+        .setContainerId(Mockito.mock(ContainerId.class));
+
+    ContainerId containerIdOk = Mockito.mock(ContainerId.class);
+    Resource capabilityOk = Resource.newInstance(resource - 1, resource - 1);
+    UpdateContainerRequestPBImpl updateContainerRequestPBOk =
+        new UpdateContainerRequestPBImpl();
+    updateContainerRequestPBOk.setContainerVersion(containerVersion);
+    updateContainerRequestPBOk.setCapability(capabilityOk);
+    updateContainerRequestPBOk.setContainerUpdateType(INCREASE_RESOURCE);
+    updateContainerRequestPBOk.setContainerId(containerIdOk);
+
+    updateRequests.add(updateContainerRequestPBOk);
+    updateRequests.add(updateContainerRequestPBFail);
+
+    Dispatcher dispatcher = Mockito.mock(Dispatcher.class);
+    RMContext rmContext = Mockito.mock(RMContext.class);
+    ResourceScheduler scheduler = Mockito.mock(ResourceScheduler.class);
+
+    Mockito.when(rmContext.getScheduler()).thenReturn(scheduler);
+    Mockito.when(rmContext.getDispatcher()).thenReturn(dispatcher);
+
+    RMContainer rmContainer = Mockito.mock(RMContainer.class);
+    Mockito.when(scheduler.getRMContainer(Mockito.any()))
+        .thenReturn(rmContainer);
+    Container container = Mockito.mock(Container.class);
+    Mockito.when(container.getVersion()).thenReturn(containerVersion);
+    Mockito.when(rmContainer.getContainer()).thenReturn(container);
+    Mockito.when(scheduler.getNormalizedResource(capabilityOk, maxAllocation))
+        .thenReturn(capabilityOk);
+
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(1, 0.5f, new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>(), updateRequests, null);
+
+    List<UpdateContainerError> updateErrors = new ArrayList<>();
+    ContainerUpdates containerUpdates =
+        RMServerUtils.validateAndSplitUpdateResourceRequests(rmContext,
+            allocateRequest, maxAllocation, updateErrors);
+    Assert.assertEquals(1, updateErrors.size());
+    Assert.assertEquals(resource + 1, updateErrors.get(0)
+        .getUpdateContainerRequest().getCapability().getMemorySize());
+    Assert.assertEquals(resource + 1, updateErrors.get(0)
+        .getUpdateContainerRequest().getCapability().getVirtualCores());
+    Assert.assertEquals(RESOURCE_OUTSIDE_ALLOWED_RANGE,
+        updateErrors.get(0).getReason());
+
+    Assert.assertEquals(1, containerUpdates.getIncreaseRequests().size());
+    UpdateContainerRequest increaseRequest =
+        containerUpdates.getIncreaseRequests().get(0);
+    Assert.assertEquals(capabilityOk.getVirtualCores(),
+        increaseRequest.getCapability().getVirtualCores());
+    Assert.assertEquals(capabilityOk.getMemorySize(),
+        increaseRequest.getCapability().getMemorySize());
+    Assert.assertEquals(containerIdOk, increaseRequest.getContainerId());
+  }
+
   @Test
   public void testGetApplicableNodeCountForAMLocality() throws Exception {
     List<NodeId> rack1Nodes = new ArrayList<>();

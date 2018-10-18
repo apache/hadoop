@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.2.0-SNAPSHOT</version>
+   <version>3.3.0-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-runtime</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -158,6 +158,12 @@
                       <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
+                      <exclude>org.eclipse.jetty.websocket:*</exclude>
+                      <exclude>org.eclipse.jetty:jetty-servlet</exclude>
+                      <exclude>org.eclipse.jetty:jetty-security</exclude>
+                      <exclude>org.ow2.asm:*</exclude>
+                      <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
+                      <exclude>org.bouncycastle:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -210,6 +216,17 @@
                       <excludes>
                         <exclude>keytab.txt</exclude>
                         <exclude>ccache.txt</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- remove utility classes which are not required from
+                         dnsjava -->
+                    <filter>
+                      <artifact>dnsjava:dnsjava</artifact>
+                      <excludes>
+                        <exclude>dig*</exclude>
+                        <exclude>jnamed*</exclude>
+                        <exclude>lookup*</exclude>
+                        <exclude>update*</exclude>
                       </excludes>
                     </filter>
                   </filters>
@@ -294,6 +311,13 @@
                     <relocation>
                       <pattern>javax/servlet/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/activation/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.activation.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>

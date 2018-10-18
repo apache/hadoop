@@ -36,8 +36,8 @@ import java.util.concurrent.TimeoutException;
 
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,8 +53,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -73,7 +71,7 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class EditLogTailer {
-  public static final Log LOG = LogFactory.getLog(EditLogTailer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(EditLogTailer.class);
 
   /**
    * StandbyNode will hold namesystem lock to apply at most this many journal
@@ -382,15 +380,6 @@ public class EditLogTailer {
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof RemoteException) {
-        IOException ioe = ((RemoteException) cause).unwrapRemoteException();
-        if (ioe instanceof StandbyException) {
-          LOG.info("Skipping log roll. Remote node is not in Active state: " +
-              ioe.getMessage().split("\n")[0]);
-          return;
-        }
-      }
       LOG.warn("Unable to trigger a roll of the active NN", e);
     } catch (TimeoutException e) {
       if (future != null) {
@@ -471,7 +460,7 @@ public class EditLogTailer {
           // interrupter should have already set shouldRun to false
           continue;
         } catch (Throwable t) {
-          LOG.fatal("Unknown error encountered while tailing edits. " +
+          LOG.error("Unknown error encountered while tailing edits. " +
               "Shutting down standby NN.", t);
           terminate(1, t);
         }
@@ -497,7 +486,8 @@ public class EditLogTailer {
    * This mechanism is <b>very bad</b> for cases where we care about being <i>fast</i>; it just
    * blindly goes and tries namenodes.
    */
-  private abstract class MultipleNameNodeProxy<T> implements Callable<T> {
+  @VisibleForTesting
+  abstract class MultipleNameNodeProxy<T> implements Callable<T> {
 
     /**
      * Do the actual work to the remote namenode via the {@link #cachedActiveProxy}.
@@ -513,19 +503,13 @@ public class EditLogTailer {
         try {
           T ret = doWork();
           return ret;
-        } catch (RemoteException e) {
-          Throwable cause = e.unwrapRemoteException(StandbyException.class);
-          // if its not a standby exception, then we need to re-throw it, something bad has happened
-          if (cause == e) {
-            throw e;
-          } else {
-            // it is a standby exception, so we try the other NN
-            LOG.warn("Failed to reach remote node: " + currentNN
-                + ", retrying with remaining remote NNs");
-            cachedActiveProxy = null;
-            // this NN isn't responding to requests, try the next one
-            nnLoopCount++;
-          }
+        } catch (IOException e) {
+          LOG.warn("Exception from remote name node " + currentNN
+              + ", try next.", e);
+
+          // Try next name node if exception happens.
+          cachedActiveProxy = null;
+          nnLoopCount++;
         }
       }
       throw new IOException("Cannot find any valid remote NN to service request!");

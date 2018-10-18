@@ -676,7 +676,7 @@ public class UserGroupInformation {
 
   /**
    * remove the login method that is followed by a space from the username
-   * e.g. "jack (auth:SIMPLE)" -> "jack"
+   * e.g. "jack (auth:SIMPLE)" {@literal ->} "jack"
    *
    * @param userName
    * @return userName without login method
@@ -920,8 +920,8 @@ public class UserGroupInformation {
           final long now = Time.now();
 
           if (tgt.isDestroyed()) {
-            LOG.error("TGT is destroyed. Aborting renew thread for {}.",
-                getUserName());
+            LOG.error(String.format("TGT is destroyed. " +
+                    "Aborting renew thread for %s.", getUserName()), ie);
             return;
           }
 
@@ -933,16 +933,18 @@ public class UserGroupInformation {
           try {
             tgtEndTime = tgt.getEndTime().getTime();
           } catch (NullPointerException npe) {
-            LOG.error("NPE thrown while getting KerberosTicket endTime. "
-                + "Aborting renew thread for {}.", getUserName());
+            LOG.error(String.format("NPE thrown while getting " +
+                "KerberosTicket endTime. Aborting renew thread for %s.",
+                getUserName()), ie);
             return;
           }
 
-          LOG.warn("Exception encountered while running the renewal "
-                  + "command for {}. (TGT end time:{}, renewalFailures: {},"
-                  + "renewalFailuresTotal: {})", getUserName(), tgtEndTime,
+          LOG.warn(String.format("Exception encountered while running the " +
+                  "renewal command for %s. " +
+                  "(TGT end time:%d, renewalFailures: %d, " +
+                  "renewalFailuresTotal: %d)", getUserName(), tgtEndTime,
               metrics.renewalFailures.value(),
-              metrics.renewalFailuresTotal.value(), ie);
+              metrics.renewalFailuresTotal.value()), ie);
           if (rp == null) {
             // Use a dummy maxRetries to create the policy. The policy will
             // only be used to get next retry time with exponential back-off.

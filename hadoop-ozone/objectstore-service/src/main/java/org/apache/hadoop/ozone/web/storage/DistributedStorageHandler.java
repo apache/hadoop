@@ -21,6 +21,8 @@ package org.apache.hadoop.ozone.web.storage;
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -52,18 +54,13 @@ import org.apache.hadoop.ozone.web.handlers.ListArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
-import org.apache.hadoop.ozone.web.response.ListVolumes;
-import org.apache.hadoop.ozone.web.response.VolumeInfo;
-import org.apache.hadoop.ozone.web.response.VolumeOwner;
-import org.apache.hadoop.ozone.web.response.ListBuckets;
-import org.apache.hadoop.ozone.web.response.BucketInfo;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
-import org.apache.hadoop.ozone.web.response.ListKeys;
+import org.apache.hadoop.ozone.web.response.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -85,6 +82,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final boolean useRatis;
   private final HddsProtos.ReplicationType type;
   private final HddsProtos.ReplicationFactor factor;
+  private final RetryPolicy retryPolicy;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -119,6 +117,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
     groupRights = conf.getEnum(OMConfigKeys.OZONE_OM_GROUP_RIGHTS,
         OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
+    retryPolicy = OzoneClientUtils.createRetryPolicy(conf);
     if(chunkSize > ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
               + " the maximum size ({}),"
@@ -420,6 +419,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setRequestID(args.getRequestID())
             .setType(xceiverClientManager.getType())
             .setFactor(xceiverClientManager.getFactor())
+            .setRetryPolicy(retryPolicy)
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
@@ -487,6 +487,30 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfo.setModifiedOn(
         HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
     return keyInfo;
+  }
+
+  @Override
+  public KeyInfo getKeyInfoDetails(KeyArgs args) throws IOException{
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    OmKeyInfo omKeyInfo = ozoneManagerClient.lookupKey(keyArgs);
+    List<KeyLocation> keyLocations = new ArrayList<>();
+    omKeyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly()
+        .forEach((a) -> keyLocations.add(new KeyLocation(a.getContainerID(),
+            a.getLocalID(), a.getLength(), a.getOffset())));
+    KeyInfoDetails keyInfoDetails = new KeyInfoDetails();
+    keyInfoDetails.setVersion(0);
+    keyInfoDetails.setKeyName(omKeyInfo.getKeyName());
+    keyInfoDetails.setSize(omKeyInfo.getDataSize());
+    keyInfoDetails.setCreatedOn(
+        HddsClientUtils.formatDateTime(omKeyInfo.getCreationTime()));
+    keyInfoDetails.setModifiedOn(
+        HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
+    keyInfoDetails.setKeyLocations(keyLocations);
+    return keyInfoDetails;
   }
 
   @Override

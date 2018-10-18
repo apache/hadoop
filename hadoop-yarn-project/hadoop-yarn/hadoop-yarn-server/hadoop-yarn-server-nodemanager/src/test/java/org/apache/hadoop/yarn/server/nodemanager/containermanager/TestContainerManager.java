@@ -1723,7 +1723,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     strExceptionMsg = "";
     try {
-      cMgrImpl.authorizeGetAndStopContainerRequest(null, null, true, null);
+      cMgrImpl.authorizeGetAndStopContainerRequest(null, null, true, null,
+          null);
     } catch(YarnException ye) {
       strExceptionMsg = ye.getMessage();
     }

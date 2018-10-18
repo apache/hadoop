@@ -29,8 +29,8 @@ export default AbstractRoute.extend({
       componentName: params.component_name,
       instanceName: instanceName,
       container: this.store.query('yarn-component-instance', {appId: params.appid}).then(function(instances) {
-        if (instances && instances.findBy('instanceName', instanceName)) {
-          return instances.findBy('instanceName', instanceName);
+        if (instances && instances.findBy('containerId', params.containerid)) {
+          return instances.findBy('containerId', params.containerid);
         }
         return null;
       }, function() {

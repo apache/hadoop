@@ -28,7 +28,6 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdds;
 
-import "hdfs.proto";
 import "hdds.proto";
 
 
@@ -104,9 +103,9 @@ message AllocateScmBlockResponseProto {
     unknownFailure = 4;
   }
   required Error errorCode = 1;
-  required BlockID blockID = 2;
-  required hadoop.hdds.Pipeline pipeline = 3;
-  required bool createContainer = 4;
+  optional BlockID blockID = 2;
+  optional hadoop.hdds.Pipeline pipeline = 3;
+  optional bool createContainer = 4;
   optional string errorMessage = 5;
 }
 

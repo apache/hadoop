@@ -280,7 +280,8 @@ public class TestEndPoint {
           .register(nodeToRegister.getProtoBufMessage(), TestUtils
                   .createNodeReport(
                       getStorageReports(nodeToRegister.getUuid())),
-              TestUtils.getRandomContainerReports(10));
+              TestUtils.getRandomContainerReports(10),
+                  TestUtils.getRandomPipelineReports());
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(nodeToRegister.getUuidString(),
           responseProto.getDatanodeUUID());
@@ -308,6 +309,8 @@ public class TestEndPoint {
         .createNodeReport(getStorageReports(UUID.randomUUID())));
     when(ozoneContainer.getContainerReport()).thenReturn(
         TestUtils.getRandomContainerReports(10));
+    when(ozoneContainer.getPipelineReport()).thenReturn(
+            TestUtils.getRandomPipelineReports());
     RegisterEndpointTask endpointTask =
         new RegisterEndpointTask(rpcEndPoint, conf, ozoneContainer,
             mock(StateContext.class));

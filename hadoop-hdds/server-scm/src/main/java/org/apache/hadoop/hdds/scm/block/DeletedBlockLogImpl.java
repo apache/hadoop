@@ -23,10 +23,17 @@ import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto
     .DeleteBlockTransactionResult;
-import org.apache.hadoop.hdds.scm.container.Mapping;
+import org.apache.hadoop.hdds.scm.command
+    .CommandStatusReportHandler.DeleteBlockStatus;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.server.events.EventHandler;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
@@ -75,9 +82,10 @@ import static org.apache.hadoop.ozone.OzoneConsts.DELETED_BLOCK_DB;
  * equally same chance to be retrieved which only depends on the nature
  * order of the transaction ID.
  */
-public class DeletedBlockLogImpl implements DeletedBlockLog {
+public class DeletedBlockLogImpl
+    implements DeletedBlockLog, EventHandler<DeleteBlockStatus> {
 
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(DeletedBlockLogImpl.class);
 
   private static final byte[] LATEST_TXID =
@@ -85,15 +93,15 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
 
   private final int maxRetry;
   private final MetadataStore deletedStore;
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
   private final Lock lock;
   // The latest id of deleted blocks in the db.
   private long lastTxID;
   // Maps txId to set of DNs which are successful in committing the transaction
   private Map<Long, Set<UUID>> transactionToDNsCommitMap;
 
-  public DeletedBlockLogImpl(Configuration conf, Mapping containerManager)
-      throws IOException {
+  public DeletedBlockLogImpl(Configuration conf,
+     ContainerManager containerManager) throws IOException {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
 
@@ -123,7 +131,7 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
   }
 
   @VisibleForTesting
-  MetadataStore getDeletedStore() {
+  public MetadataStore getDeletedStore() {
     return deletedStore;
   }
 
@@ -251,8 +259,8 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
 
           dnsWithCommittedTxn.add(dnID);
           Pipeline pipeline =
-              containerManager.getContainerWithPipeline(containerId)
-                  .getPipeline();
+              containerManager.getContainerWithPipeline(
+                  ContainerID.valueof(containerId)).getPipeline();
           Collection<DatanodeDetails> containerDnsDetails =
               pipeline.getDatanodes().values();
           // The delete entry can be safely removed from the log if all the
@@ -269,6 +277,8 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
               deletedStore.delete(Longs.toByteArray(txID));
             }
           }
+          LOG.debug("Datanode txId={} containerId={} committed by dnId={}",
+              txID, containerId, dnID);
         } catch (IOException e) {
           LOG.warn("Could not commit delete block transaction: " +
               transactionResult.getTxID(), e);
@@ -406,5 +416,14 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     } finally {
       lock.unlock();
     }
+  }
+
+  @Override
+  public void onMessage(DeleteBlockStatus deleteBlockStatus,
+      EventPublisher publisher) {
+    ContainerBlocksDeletionACKProto ackProto =
+        deleteBlockStatus.getCmdStatus().getBlockDeletionAck();
+    commitTransactions(ackProto.getResultsList(),
+        UUID.fromString(ackProto.getDnId()));
   }
 }

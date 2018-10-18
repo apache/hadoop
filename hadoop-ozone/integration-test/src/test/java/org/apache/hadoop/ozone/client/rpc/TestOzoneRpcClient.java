@@ -20,24 +20,23 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.BucketArgs;
-import org.apache.hadoop.ozone.client.ObjectStore;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.hdds.client.OzoneQuota;
-import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueBlockIterator;
+import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -47,14 +46,17 @@ import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -198,6 +200,67 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(bucketName, bucket.getName());
     Assert.assertTrue(bucket.getCreationTime() >= currentTime);
     Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+  @Test
+  public void testCreateS3Bucket()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
+  }
+
+  @Test
+  public void testDeleteS3Bucket()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone1";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
+    store.deleteS3Bucket(bucketName);
+    thrown.expect(IOException.class);
+    store.getOzoneVolumeName(bucketName);
+  }
+
+  @Test
+  public void testDeleteS3NonExistingBucket() {
+    try {
+      store.deleteS3Bucket(UUID.randomUUID().toString());
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains("NOT_FOUND", ex);
+    }
+  }
+
+  @Test
+  public void testCreateS3BucketMapping()
+      throws IOException, OzoneException {
+    long currentTime = Time.now();
+    String userName = "ozone";
+    String bucketName = UUID.randomUUID().toString();
+    store.createS3Bucket(userName, bucketName);
+    String volumeName = store.getOzoneVolumeName(bucketName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, bucket.getName());
+
+    String mapping = store.getOzoneBucketMapping(bucketName);
+    Assert.assertEquals("s3"+userName+"/"+bucketName, mapping);
+    Assert.assertEquals(bucketName, store.getOzoneBucketName(bucketName));
+    Assert.assertEquals("s3"+userName, store.getOzoneVolumeName(bucketName));
+
   }
 
   @Test
@@ -535,6 +598,89 @@ public class TestOzoneRpcClient {
   }
 
   @Test
+  public void testGetKeyDetails() throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    String keyName = UUID.randomUUID().toString();
+    String keyValue = RandomStringUtils.random(128);
+    //String keyValue = "this is a test value.glx";
+    // create the initial key with size 0, write will allocate the first block.
+    OzoneOutputStream out = bucket.createKey(keyName,
+        keyValue.getBytes().length, ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE);
+    out.write(keyValue.getBytes());
+    out.close();
+
+    OzoneInputStream is = bucket.readKey(keyName);
+    byte[] fileContent = new byte[32];
+    is.read(fileContent);
+
+    // First, confirm the key info from the client matches the info in OM.
+    OmKeyArgs.Builder builder = new OmKeyArgs.Builder();
+    builder.setVolumeName(volumeName).setBucketName(bucketName)
+        .setKeyName(keyName);
+    OmKeyLocationInfo keyInfo = ozoneManager.lookupKey(builder.build()).
+        getKeyLocationVersions().get(0).getBlocksLatestVersionOnly().get(0);
+    long containerID = keyInfo.getContainerID();
+    long localID = keyInfo.getLocalID();
+    OzoneKeyDetails keyDetails = (OzoneKeyDetails)bucket.getKey(keyName);
+    Assert.assertEquals(keyName, keyDetails.getName());
+
+    List<OzoneKeyLocation> keyLocations = keyDetails.getOzoneKeyLocations();
+    Assert.assertEquals(1, keyLocations.size());
+    Assert.assertEquals(containerID, keyLocations.get(0).getContainerID());
+    Assert.assertEquals(localID, keyLocations.get(0).getLocalID());
+
+    // Make sure that the data size matched.
+    Assert.assertEquals(keyValue.getBytes().length,
+        keyLocations.get(0).getLength());
+
+    // Second, sum the data size from chunks in Container via containerID
+    // and localID, make sure the size equals to the size from keyDetails.
+    Pipeline pipeline = cluster.getStorageContainerManager()
+        .getContainerManager().getContainerWithPipeline(
+            ContainerID.valueof(containerID))
+        .getPipeline();
+    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    Assert.assertEquals(datanodes.size(), 1);
+
+    DatanodeDetails datanodeDetails = datanodes.get(0);
+    Assert.assertNotNull(datanodeDetails);
+    HddsDatanodeService datanodeService = null;
+    for (HddsDatanodeService datanodeServiceItr : cluster.getHddsDatanodes()) {
+      if (datanodeDetails.equals(datanodeServiceItr.getDatanodeDetails())) {
+        datanodeService = datanodeServiceItr;
+        break;
+      }
+    }
+    KeyValueContainerData containerData =
+        (KeyValueContainerData)(datanodeService.getDatanodeStateMachine()
+        .getContainer().getContainerSet().getContainer(containerID)
+        .getContainerData());
+    String containerPath = new File(containerData.getMetadataPath())
+        .getParent();
+    KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
+        containerID, new File(containerPath));
+    while (keyValueBlockIterator.hasNext()) {
+      BlockData blockData = keyValueBlockIterator.nextBlock();
+      if (blockData.getBlockID().getLocalID() == localID) {
+        long length = 0;
+        List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
+        for (ContainerProtos.ChunkInfo chunk : chunks) {
+          length += chunk.getLen();
+        }
+        Assert.assertEquals(length, keyValue.getBytes().length);
+        break;
+      }
+    }
+  }
+
+  @Test
   public void testDeleteKey()
       throws IOException, OzoneException {
     thrown.expectMessage("Lookup key failed, error");
@@ -601,6 +747,9 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(toKeyName, key.getName());
   }
 
+  // Listing all volumes in the cluster feature has to be fixed after HDDS-357.
+  // TODO: fix this
+  @Ignore
   @Test
   public void testListVolume() throws IOException, OzoneException {
     String volBase = "vol-" + RandomStringUtils.randomNumeric(3);
@@ -616,26 +765,29 @@ public class TestOzoneRpcClient {
       store.createVolume(
           volBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
     }
-    Iterator<OzoneVolume> volIterator = store.listVolumes(volBase);
+    Iterator<? extends OzoneVolume> volIterator = store.listVolumes(volBase);
     int totalVolumeCount = 0;
     while(volIterator.hasNext()) {
       volIterator.next();
       totalVolumeCount++;
     }
     Assert.assertEquals(20, totalVolumeCount);
-    Iterator<OzoneVolume> volAIterator = store.listVolumes(volBaseNameA);
+    Iterator<? extends OzoneVolume> volAIterator = store.listVolumes(
+        volBaseNameA);
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volAIterator.next().getName()
           .startsWith(volBaseNameA + i + "-"));
     }
     Assert.assertFalse(volAIterator.hasNext());
-    Iterator<OzoneVolume> volBIterator = store.listVolumes(volBaseNameB);
+    Iterator<? extends OzoneVolume> volBIterator = store.listVolumes(
+        volBaseNameB);
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volBIterator.next().getName()
           .startsWith(volBaseNameB + i + "-"));
     }
     Assert.assertFalse(volBIterator.hasNext());
-    Iterator<OzoneVolume> iter = store.listVolumes(volBaseNameA + "1-");
+    Iterator<? extends OzoneVolume> iter = store.listVolumes(volBaseNameA +
+        "1-");
     Assert.assertTrue(iter.next().getName().startsWith(volBaseNameA + "1-"));
     Assert.assertFalse(iter.hasNext());
   }
@@ -666,7 +818,7 @@ public class TestOzoneRpcClient {
       volB.createBucket(
           bucketBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
     }
-    Iterator<OzoneBucket> volABucketIter =
+    Iterator<? extends OzoneBucket> volABucketIter =
         volA.listBuckets("bucket-");
     int volABucketCount = 0;
     while(volABucketIter.hasNext()) {
@@ -674,7 +826,7 @@ public class TestOzoneRpcClient {
       volABucketCount++;
     }
     Assert.assertEquals(20, volABucketCount);
-    Iterator<OzoneBucket> volBBucketIter =
+    Iterator<? extends OzoneBucket> volBBucketIter =
         volA.listBuckets("bucket-");
     int volBBucketCount = 0;
     while(volBBucketIter.hasNext()) {
@@ -683,7 +835,7 @@ public class TestOzoneRpcClient {
     }
     Assert.assertEquals(20, volBBucketCount);
 
-    Iterator<OzoneBucket> volABucketAIter =
+    Iterator<? extends OzoneBucket> volABucketAIter =
         volA.listBuckets("bucket-a-");
     int volABucketACount = 0;
     while(volABucketAIter.hasNext()) {
@@ -691,7 +843,7 @@ public class TestOzoneRpcClient {
       volABucketACount++;
     }
     Assert.assertEquals(10, volABucketACount);
-    Iterator<OzoneBucket> volBBucketBIter =
+    Iterator<? extends OzoneBucket> volBBucketBIter =
         volA.listBuckets("bucket-b-");
     int volBBucketBCount = 0;
     while(volBBucketBIter.hasNext()) {
@@ -699,13 +851,15 @@ public class TestOzoneRpcClient {
       volBBucketBCount++;
     }
     Assert.assertEquals(10, volBBucketBCount);
-    Iterator<OzoneBucket> volABucketBIter = volA.listBuckets("bucket-b-");
+    Iterator<? extends OzoneBucket> volABucketBIter = volA.listBuckets(
+        "bucket-b-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketBIter.next().getName()
           .startsWith(bucketBaseNameB + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
-    Iterator<OzoneBucket> volBBucketAIter = volB.listBuckets("bucket-a-");
+    Iterator<? extends OzoneBucket> volBBucketAIter = volB.listBuckets(
+        "bucket-a-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volBBucketAIter.next().getName()
           .startsWith(bucketBaseNameA + i + "-"));
@@ -720,7 +874,7 @@ public class TestOzoneRpcClient {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);
     store.createVolume(volume);
     OzoneVolume vol = store.getVolume(volume);
-    Iterator<OzoneBucket> buckets = vol.listBuckets("");
+    Iterator<? extends OzoneBucket> buckets = vol.listBuckets("");
     while(buckets.hasNext()) {
       Assert.fail();
     }
@@ -804,7 +958,7 @@ public class TestOzoneRpcClient {
       four.write(value);
       four.close();
     }
-    Iterator<OzoneKey> volABucketAIter =
+    Iterator<? extends OzoneKey> volABucketAIter =
         volAbucketA.listKeys("key-");
     int volABucketAKeyCount = 0;
     while(volABucketAIter.hasNext()) {
@@ -812,7 +966,7 @@ public class TestOzoneRpcClient {
       volABucketAKeyCount++;
     }
     Assert.assertEquals(20, volABucketAKeyCount);
-    Iterator<OzoneKey> volABucketBIter =
+    Iterator<? extends OzoneKey> volABucketBIter =
         volAbucketB.listKeys("key-");
     int volABucketBKeyCount = 0;
     while(volABucketBIter.hasNext()) {
@@ -820,7 +974,7 @@ public class TestOzoneRpcClient {
       volABucketBKeyCount++;
     }
     Assert.assertEquals(20, volABucketBKeyCount);
-    Iterator<OzoneKey> volBBucketAIter =
+    Iterator<? extends OzoneKey> volBBucketAIter =
         volBbucketA.listKeys("key-");
     int volBBucketAKeyCount = 0;
     while(volBBucketAIter.hasNext()) {
@@ -828,7 +982,7 @@ public class TestOzoneRpcClient {
       volBBucketAKeyCount++;
     }
     Assert.assertEquals(20, volBBucketAKeyCount);
-    Iterator<OzoneKey> volBBucketBIter =
+    Iterator<? extends OzoneKey> volBBucketBIter =
         volBbucketB.listKeys("key-");
     int volBBucketBKeyCount = 0;
     while(volBBucketBIter.hasNext()) {
@@ -836,7 +990,7 @@ public class TestOzoneRpcClient {
       volBBucketBKeyCount++;
     }
     Assert.assertEquals(20, volBBucketBKeyCount);
-    Iterator<OzoneKey> volABucketAKeyAIter =
+    Iterator<? extends OzoneKey> volABucketAKeyAIter =
         volAbucketA.listKeys("key-a-");
     int volABucketAKeyACount = 0;
     while(volABucketAKeyAIter.hasNext()) {
@@ -844,7 +998,7 @@ public class TestOzoneRpcClient {
       volABucketAKeyACount++;
     }
     Assert.assertEquals(10, volABucketAKeyACount);
-    Iterator<OzoneKey> volABucketAKeyBIter =
+    Iterator<? extends OzoneKey> volABucketAKeyBIter =
         volAbucketA.listKeys("key-b-");
     for(int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketAKeyBIter.next().getName()
@@ -862,7 +1016,7 @@ public class TestOzoneRpcClient {
     OzoneVolume vol = store.getVolume(volume);
     vol.createBucket(bucket);
     OzoneBucket buc = vol.getBucket(bucket);
-    Iterator<OzoneKey> keys = buc.listKeys("");
+    Iterator<? extends OzoneKey> keys = buc.listKeys("");
     while(keys.hasNext()) {
       Assert.fail();
     }

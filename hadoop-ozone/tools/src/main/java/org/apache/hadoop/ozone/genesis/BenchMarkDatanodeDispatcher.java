@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.ozone.genesis;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine.DatanodeStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -50,29 +48,27 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .PutBlockRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .GetBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .PutKeyRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .GetKeyRequestProto;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
+/**
+ * Benchmarks DatanodeDispatcher class.
+ */
 @State(Scope.Benchmark)
 public class BenchMarkDatanodeDispatcher {
 
   private String baseDir;
   private String datanodeUuid;
-  private Pipeline pipeline;
   private HddsDispatcher dispatcher;
   private ByteString data;
   private Random random;
@@ -80,20 +76,17 @@ public class BenchMarkDatanodeDispatcher {
   private AtomicInteger keyCount;
   private AtomicInteger chunkCount;
 
-  final int initContainers = 100;
-  final int initKeys = 50;
-  final int initChunks = 100;
+  private static final int INIT_CONTAINERS = 100;
+  private static final int INIT_KEYS = 50;
+  private static final int INIT_CHUNKS = 100;
 
-  List<Long> containers;
-  List<Long> keys;
-  List<String> chunks;
+  private List<Long> containers;
+  private List<Long> keys;
+  private List<String> chunks;
 
   @Setup(Level.Trial)
   public void initialize() throws IOException {
     datanodeUuid = UUID.randomUUID().toString();
-    pipeline = new Pipeline("127.0.0.1",
-        LifeCycleState.OPEN, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE, PipelineID.randomId());
 
     // 1 MB of data
     data = ByteString.copyFromUtf8(RandomStringUtils.randomAscii(1048576));
@@ -121,7 +114,7 @@ public class BenchMarkDatanodeDispatcher {
     chunks = new ArrayList<>();
 
     // Create containers
-    for (int x = 0; x < initContainers; x++) {
+    for (int x = 0; x < INIT_CONTAINERS; x++) {
       long containerID = Time.getUtcTime() + x;
       ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
       dispatcher.dispatch(req);
@@ -129,25 +122,25 @@ public class BenchMarkDatanodeDispatcher {
       containerCount.getAndIncrement();
     }
 
-    for (int x = 0; x < initKeys; x++) {
+    for (int x = 0; x < INIT_KEYS; x++) {
       keys.add(Time.getUtcTime()+x);
     }
 
-    for (int x = 0; x < initChunks; x++) {
+    for (int x = 0; x < INIT_CHUNKS; x++) {
       chunks.add("chunk-" + x);
     }
 
     // Add chunk and keys to the containers
-    for (int x = 0; x < initKeys; x++) {
+    for (int x = 0; x < INIT_KEYS; x++) {
       String chunkName = chunks.get(x);
       chunkCount.getAndIncrement();
       long key = keys.get(x);
       keyCount.getAndIncrement();
-      for (int y = 0; y < initContainers; y++) {
+      for (int y = 0; y < INIT_CONTAINERS; y++) {
         long containerID = containers.get(y);
         BlockID  blockID = new BlockID(containerID, key);
         dispatcher
-            .dispatch(getPutKeyCommand(blockID, chunkName));
+            .dispatch(getPutBlockCommand(blockID, chunkName));
         dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName));
       }
     }
@@ -219,38 +212,39 @@ public class BenchMarkDatanodeDispatcher {
     return builder.build();
   }
 
-  private ContainerCommandRequestProto getPutKeyCommand(
+  private ContainerCommandRequestProto getPutBlockCommand(
       BlockID blockID, String chunkKey) {
-    PutKeyRequestProto.Builder putKeyRequest = PutKeyRequestProto
+    PutBlockRequestProto.Builder putBlockRequest = PutBlockRequestProto
         .newBuilder()
-        .setKeyData(getKeyData(blockID, chunkKey));
+        .setBlockData(getBlockData(blockID, chunkKey));
 
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder();
-    request.setCmdType(ContainerProtos.Type.PutKey)
+    request.setCmdType(ContainerProtos.Type.PutBlock)
         .setContainerID(blockID.getContainerID())
         .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
-        .setPutKey(putKeyRequest);
+        .setPutBlock(putBlockRequest);
     return request.build();
   }
 
-  private ContainerCommandRequestProto getGetKeyCommand(BlockID blockID) {
-    GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto.newBuilder()
+  private ContainerCommandRequestProto getGetBlockCommand(BlockID blockID) {
+    GetBlockRequestProto.Builder readBlockRequest =
+        GetBlockRequestProto.newBuilder()
         .setBlockID(blockID.getDatanodeBlockIDProtobuf());
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder()
-        .setCmdType(ContainerProtos.Type.GetKey)
+        .setCmdType(ContainerProtos.Type.GetBlock)
         .setContainerID(blockID.getContainerID())
         .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
-        .setGetKey(readKeyRequest);
+        .setGetBlock(readBlockRequest);
     return request.build();
   }
 
-  private ContainerProtos.KeyData getKeyData(
+  private ContainerProtos.BlockData getBlockData(
       BlockID blockID, String chunkKey) {
-    ContainerProtos.KeyData.Builder builder =  ContainerProtos.KeyData
+    ContainerProtos.BlockData.Builder builder =  ContainerProtos.BlockData
         .newBuilder()
         .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .addChunks(getChunkInfo(blockID, chunkKey));
@@ -281,20 +275,20 @@ public class BenchMarkDatanodeDispatcher {
   }
 
   @Benchmark
-  public void putKey(BenchMarkDatanodeDispatcher bmdd) {
+  public void putBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
     String chunkKey = getNewChunkToWrite();
-    bmdd.dispatcher.dispatch(getPutKeyCommand(blockID, chunkKey));
+    bmdd.dispatcher.dispatch(getPutBlockCommand(blockID, chunkKey));
   }
 
   @Benchmark
-  public void getKey(BenchMarkDatanodeDispatcher bmdd) {
+  public void getBlock(BenchMarkDatanodeDispatcher bmdd) {
     BlockID blockID = getRandomBlockID();
-    bmdd.dispatcher.dispatch(getGetKeyCommand(blockID));
+    bmdd.dispatcher.dispatch(getGetBlockCommand(blockID));
   }
 
   // Chunks writes from benchmark only reaches certain containers
-  // Use initChunks instead of updated counters to guarantee
+  // Use INIT_CHUNKS instead of updated counters to guarantee
   // key/chunks are readable.
 
   private BlockID getRandomBlockID() {
@@ -302,15 +296,15 @@ public class BenchMarkDatanodeDispatcher {
   }
 
   private long getRandomContainerID() {
-    return containers.get(random.nextInt(initContainers));
+    return containers.get(random.nextInt(INIT_CONTAINERS));
   }
 
   private long getRandomKeyID() {
-    return keys.get(random.nextInt(initKeys));
+    return keys.get(random.nextInt(INIT_KEYS));
   }
 
   private String getRandomChunkToRead() {
-    return chunks.get(random.nextInt(initChunks));
+    return chunks.get(random.nextInt(INIT_CHUNKS));
   }
 
   private String getNewChunkToWrite() {

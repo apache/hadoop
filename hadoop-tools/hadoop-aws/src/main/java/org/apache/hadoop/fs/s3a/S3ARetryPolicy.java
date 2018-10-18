@@ -124,12 +124,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
     // rejected the call entirely
-    throttlePolicy = exponentialBackoffRetry(
-        conf.getInt(RETRY_THROTTLE_LIMIT, RETRY_THROTTLE_LIMIT_DEFAULT),
-        conf.getTimeDuration(RETRY_THROTTLE_INTERVAL,
-            RETRY_THROTTLE_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS);
+    throttlePolicy = createThrottleRetryPolicy(conf);
 
     // client connectivity: fixed retries without care for idempotency
     connectivityFailure = fixedRetries;
@@ -137,6 +132,22 @@ public class S3ARetryPolicy implements RetryPolicy {
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();
     retryPolicy = retryByException(retryIdempotentCalls, policyMap);
+  }
+
+  /**
+   * Create the throttling policy.
+   * This will be called from the S3ARetryPolicy constructor, so
+   * subclasses must assume they are not initialized.
+   * @param conf configuration to use.
+   * @return the retry policy for throttling events.
+   */
+  protected RetryPolicy createThrottleRetryPolicy(final Configuration conf) {
+    return exponentialBackoffRetry(
+        conf.getInt(RETRY_THROTTLE_LIMIT, RETRY_THROTTLE_LIMIT_DEFAULT),
+        conf.getTimeDuration(RETRY_THROTTLE_INTERVAL,
+            RETRY_THROTTLE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS),
+        TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -206,6 +217,7 @@ public class S3ARetryPolicy implements RetryPolicy {
       int retries,
       int failovers,
       boolean idempotent) throws Exception {
+    Preconditions.checkArgument(exception != null, "Null exception");
     Exception ex = exception;
     if (exception instanceof AmazonClientException) {
       // uprate the amazon client exception for the purpose of exception

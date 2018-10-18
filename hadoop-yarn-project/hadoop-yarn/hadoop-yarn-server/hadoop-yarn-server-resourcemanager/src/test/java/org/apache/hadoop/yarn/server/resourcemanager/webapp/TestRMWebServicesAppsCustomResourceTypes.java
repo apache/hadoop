@@ -25,24 +25,18 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.fairscheduler.CustomResourceTypesConfigurationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.AppInfoJsonVerifications;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.AppInfoXmlVerifications;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.BufferedClientResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomResourceTypeTestcase;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.ResourceRequestsJsonVerifications;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.ResourceRequestsXmlVerifications;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -54,12 +48,15 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp
+        .TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp
+        .TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -116,7 +113,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   @Test
-  public void testRunningAppXml() throws Exception {
+  public void testRunningAppsXml() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
@@ -140,14 +137,14 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
               .getElementsByTagName("app");
       assertEquals("incorrect number of app elements", 1, appArray.getLength());
 
-      verifyAppsXML(appArray, app1);
+      verifyAppsXML(appArray, app1, rm);
     });
 
     rm.stop();
   }
 
   @Test
-  public void testRunningAppJson() throws Exception {
+  public void testRunningAppsJson() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
@@ -171,7 +168,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
         JSONArray array = apps.getJSONArray("app");
         assertEquals("incorrect count of app", 1, array.length());
 
-        verifyAppInfoJson(array.getJSONObject(0), app1);
+        verifyAppInfoJson(array.getJSONObject(0), app1, rm);
       } catch (JSONException e) {
         throw new RuntimeException(e);
       }
@@ -179,64 +176,4 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
 
     rm.stop();
   }
-
-  private void verifyAppsXML(NodeList appArray, RMApp app) {
-    for (int i = 0; i < appArray.getLength(); i++) {
-      Element element = (Element) appArray.item(i);
-      AppInfoXmlVerifications.verify(element, app);
-
-      NodeList resourceRequests =
-          element.getElementsByTagName("resourceRequests");
-      assertEquals(1, resourceRequests.getLength());
-      Node resourceRequest = resourceRequests.item(0);
-      ResourceRequest rr =
-          ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
-              .getApplicationAttempt(
-                  app.getCurrentAppAttempt().getAppAttemptId())
-              .getAppSchedulingInfo().getAllResourceRequests().get(0);
-      ResourceRequestsXmlVerifications.verifyWithCustomResourceTypes(
-              (Element) resourceRequest, rr,
-          CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
-    }
-  }
-
-  private void verifyAppInfoJson(JSONObject info, RMApp app) throws
-          JSONException {
-    int expectedNumberOfElements = getExpectedNumberOfElements(app);
-
-    assertEquals("incorrect number of elements", expectedNumberOfElements,
-        info.length());
-
-    AppInfoJsonVerifications.verify(info, app);
-
-    JSONArray resourceRequests = info.getJSONArray("resourceRequests");
-    JSONObject requestInfo = resourceRequests.getJSONObject(0);
-    ResourceRequest rr =
-        ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
-            .getApplicationAttempt(app.getCurrentAppAttempt().getAppAttemptId())
-            .getAppSchedulingInfo().getAllResourceRequests().get(0);
-
-    ResourceRequestsJsonVerifications.verifyWithCustomResourceTypes(
-            requestInfo, rr,
-            CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
-  }
-
-  private int getExpectedNumberOfElements(RMApp app) {
-    int expectedNumberOfElements = 40 + 2; // 2 -> resourceRequests
-    if (app.getApplicationSubmissionContext()
-        .getNodeLabelExpression() != null) {
-      expectedNumberOfElements++;
-    }
-
-    if (app.getAMResourceRequests().get(0).getNodeLabelExpression() != null) {
-      expectedNumberOfElements++;
-    }
-
-    if (AppInfo
-        .getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()) != null) {
-      expectedNumberOfElements++;
-    }
-    return expectedNumberOfElements;
-  }
-
 }

@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
@@ -73,7 +73,8 @@ import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 @InterfaceAudience.Private
 public class NameNodeProxies {
   
-  private static final Log LOG = LogFactory.getLog(NameNodeProxies.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NameNodeProxies.class);
 
   /**
    * Creates the namenode proxy with the passed protocol. This will handle

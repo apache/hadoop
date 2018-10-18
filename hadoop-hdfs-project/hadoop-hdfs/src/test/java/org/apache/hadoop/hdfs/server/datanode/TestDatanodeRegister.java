@@ -27,8 +27,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
@@ -39,7 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestDatanodeRegister { 
-  public static final Log LOG = LogFactory.getLog(TestDatanodeRegister.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDatanodeRegister.class);
 
   // Invalid address
   private static final InetSocketAddress INVALID_ADDR =

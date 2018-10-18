@@ -151,6 +151,7 @@ public class ConnectionPool {
 
   /**
    * Get the clientIndex used to calculate index for lookup.
+   * @return Client index.
    */
   @VisibleForTesting
   public AtomicInteger getClientIndex() {
@@ -300,7 +301,7 @@ public class ConnectionPool {
    * Create a new proxy wrapper for a client NN connection.
    * @return Proxy for the target ClientProtocol that contains the user's
    *         security context.
-   * @throws IOException
+   * @throws IOException If it cannot get a new connection.
    */
   public ConnectionContext newConnection() throws IOException {
     return newConnection(

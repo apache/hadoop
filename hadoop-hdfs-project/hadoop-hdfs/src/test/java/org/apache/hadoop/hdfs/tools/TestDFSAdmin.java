@@ -28,8 +28,8 @@ import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationUtil;
 import org.apache.hadoop.fs.ChecksumException;
@@ -99,7 +99,7 @@ import static org.mockito.Mockito.when;
  * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
  */
 public class TestDFSAdmin {
-  private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;

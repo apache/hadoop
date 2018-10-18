@@ -74,8 +74,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -98,7 +98,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.timeout;
 
 public class TestDataNodeHotSwapVolumes {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
     TestDataNodeHotSwapVolumes.class);
   private static final int BLOCK_SIZE = 512;
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
@@ -757,7 +757,7 @@ public class TestDataNodeHotSwapVolumes {
       try {
         FsDatasetTestUtil.assertFileLockReleased(dir);
       } catch (IOException e) {
-        LOG.warn(e);
+        LOG.warn("{}", e);
       }
     }
   }

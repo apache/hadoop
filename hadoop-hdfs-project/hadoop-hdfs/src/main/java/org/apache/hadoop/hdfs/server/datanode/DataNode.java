@@ -1086,7 +1086,7 @@ public class DataNode extends ReconfigurableBase
       reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      directoryScanner = new DirectoryScanner(this, data, conf);
+      directoryScanner = new DirectoryScanner(data, conf);
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan " +
@@ -1695,7 +1695,7 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.get(bpid);
   }
   
-  int getBpOsCount() {
+  public int getBpOsCount() {
     return blockPoolManager.getAllNamenodeThreads().size();
   }
   

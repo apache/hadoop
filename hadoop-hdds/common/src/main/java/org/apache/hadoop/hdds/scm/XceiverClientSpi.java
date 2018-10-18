@@ -95,8 +95,14 @@ public abstract class XceiverClientSpi implements Closeable {
    * @return Response to the command
    * @throws IOException
    */
-  public abstract ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request) throws IOException;
+  public ContainerCommandResponseProto sendCommand(
+      ContainerCommandRequestProto request) throws IOException {
+    try {
+      return sendCommandAsync(request).get();
+    } catch (ExecutionException | InterruptedException e) {
+      throw new IOException("Failed to command " + request, e);
+    }
+  }
 
   /**
    * Sends a given command to server gets a waitable future back.
@@ -111,10 +117,14 @@ public abstract class XceiverClientSpi implements Closeable {
 
   /**
    * Create a pipeline.
-   *
-   * @param pipeline -  pipeline to be created.
    */
-  public abstract void createPipeline(Pipeline pipeline) throws IOException;
+  public abstract void createPipeline() throws IOException;
+
+  /**
+   * Destroy a pipeline.
+   * @throws IOException
+   */
+  public abstract void destroyPipeline() throws IOException;
 
   /**
    * Returns pipeline Type.

@@ -165,6 +165,28 @@ public abstract class AbstractContractMultipartUploaderTest extends
   }
 
   /**
+   * Assert that a multipart upload is successful when a single empty part is
+   * uploaded.
+   * @throws Exception failure
+   */
+  @Test
+  public void testMultipartUploadEmptyPart() throws Exception {
+    FileSystem fs = getFileSystem();
+    Path file = path("testMultipartUpload");
+    MultipartUploader mpu = MultipartUploaderFactory.get(fs, null);
+    UploadHandle uploadHandle = mpu.initialize(file);
+    List<Pair<Integer, PartHandle>> partHandles = new ArrayList<>();
+    MessageDigest origDigest = DigestUtils.getMd5Digest();
+    byte[] payload = new byte[0];
+    origDigest.update(payload);
+    InputStream is = new ByteArrayInputStream(payload);
+    PartHandle partHandle = mpu.putPart(file, is, 0, uploadHandle,
+        payload.length);
+      partHandles.add(Pair.of(0, partHandle));
+    completeUpload(file, mpu, uploadHandle, partHandles, origDigest, 0);
+  }
+
+  /**
    * Assert that a multipart upload is successful even when the parts are
    * given in the reverse order.
    */

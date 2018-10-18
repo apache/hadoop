@@ -33,9 +33,9 @@ import java.security.CodeSource;
  * This entry point exists for diagnosing classloader problems:
  * is a class or resource present -and if so, where?
  *
- * <p/>
+ * <p>
  * Actions
- * <p/>
+ * <br>
  * <ul>
  *   <li><pre>load</pre>: load a class but do not attempt to create it </li>
  *   <li><pre>create</pre>: load and create a class, print its string value</li>

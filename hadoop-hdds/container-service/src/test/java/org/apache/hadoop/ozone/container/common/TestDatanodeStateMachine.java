@@ -311,6 +311,48 @@ public class TestDatanodeStateMachine {
     }
   }
 
+  @Test
+  public void testDatanodeStateMachineWithIdWriteFail() throws Exception {
+
+    File idPath = new File(
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
+    idPath.delete();
+    DatanodeDetails datanodeDetails = getNewDatanodeDetails();
+    DatanodeDetails.Port port = DatanodeDetails.newPort(
+        DatanodeDetails.Port.Name.STANDALONE,
+        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    datanodeDetails.setPort(port);
+
+    try (DatanodeStateMachine stateMachine =
+             new DatanodeStateMachine(datanodeDetails, conf)) {
+      DatanodeStateMachine.DatanodeStates currentState =
+          stateMachine.getContext().getState();
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
+          currentState);
+
+      DatanodeState<DatanodeStateMachine.DatanodeStates> task =
+          stateMachine.getContext().getTask();
+      Assert.assertEquals(InitDatanodeState.class, task.getClass());
+
+      //Set the idPath to read only, state machine will fail to write
+      // datanodeId file and set the state to shutdown.
+      idPath.getParentFile().mkdirs();
+      idPath.getParentFile().setReadOnly();
+
+      task.execute(executorService);
+      DatanodeStateMachine.DatanodeStates newState =
+          task.await(2, TimeUnit.SECONDS);
+
+      //As, we have changed the permission of idPath to readable, writing
+      // will fail and it will set the state to shutdown.
+      Assert.assertEquals(DatanodeStateMachine.DatanodeStates.SHUTDOWN,
+          newState);
+
+      //Setting back to writable.
+      idPath.getParentFile().setWritable(true);
+    }
+  }
+
   /**
    * Test state transition with a list of invalid scm configurations,
    * and verify the state transits to SHUTDOWN each time.

@@ -18,42 +18,48 @@
 
 package org.apache.hadoop.ozone.web.ozShell;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.Callable;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.cli.GenericParentCommand;
+import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_HTTP_SCHEME;
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RPC_SCHEME;
+import org.apache.http.client.utils.URIBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
 /**
  * Common interface for command handling.
  */
-public abstract class Handler {
+@Command(mixinStandardHelpOptions = true,
+    versionProvider = HddsVersionProvider.class)
+public abstract class Handler implements Callable<Void> {
 
   protected static final Logger LOG = LoggerFactory.getLogger(Handler.class);
+
   protected OzoneClient client;
 
-  /**
-   * Executes the Client command.
-   *
-   * @param cmd - CommandLine
-   * @throws IOException
-   * @throws OzoneException
-   * @throws URISyntaxException
-   */
-  protected abstract void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException;
+  @ParentCommand
+  private GenericParentCommand parent;
+
+  @Override
+  public Void call() throws Exception {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * verifies user provided URI.
@@ -77,7 +83,7 @@ public abstract class Handler {
     Configuration conf = new OzoneConfiguration();
     String scheme = ozoneURI.getScheme();
     if (ozoneURI.getScheme() == null || scheme.isEmpty()) {
-      scheme = OZONE_URI_SCHEME;
+      scheme = OZONE_RPC_SCHEME;
     }
     if (scheme.equals(OZONE_HTTP_SCHEME)) {
       if (ozoneURI.getHost() != null) {
@@ -90,7 +96,7 @@ public abstract class Handler {
       } else {
         client = OzoneClientFactory.getRestClient(conf);
       }
-    } else if (scheme.equals(OZONE_URI_SCHEME)) {
+    } else if (scheme.equals(OZONE_RPC_SCHEME)) {
       if (ozoneURI.getHost() != null) {
         if (ozoneURI.getPort() == -1) {
           client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
@@ -148,4 +154,35 @@ public abstract class Handler {
       throw new IllegalArgumentException(e);
     }
   }
+
+  /**
+   *
+   * @param uri
+   * @return volumeName
+   * @throws Exception
+   * @throws OzoneClientException when uri is null or invalid volume name
+   */
+  protected String parseVolumeName(String uri) throws Exception{
+    URI ozoneURI = verifyURI(uri);
+    Path path = Paths.get(ozoneURI.getPath());
+    int pathNameCount = path.getNameCount();
+    if (pathNameCount != 1) {
+      String errorMessage;
+      if (pathNameCount < 1) {
+        errorMessage = "Volume name is required to perform volume " +
+            "operations like info, update, create and delete. ";
+      } else {
+        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
+            "volume name";
+      }
+      throw new OzoneClientException(errorMessage);
+    }
+
+    return ozoneURI.getPath().replaceAll("^/+", "");
+  }
+
+  public boolean isVerbose() {
+    return parent.isVerbose();
+  }
+
 }

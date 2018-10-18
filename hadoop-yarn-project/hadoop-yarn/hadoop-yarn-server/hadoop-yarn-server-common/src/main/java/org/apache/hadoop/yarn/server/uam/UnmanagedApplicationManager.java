@@ -116,13 +116,14 @@ public class UnmanagedApplicationManager {
    * @param queueName the queue of the UAM
    * @param submitter user name of the app
    * @param appNameSuffix the app name suffix to use
+   * @param rmName name of the YarnRM
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery. See {@link ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)}
    */
   public UnmanagedApplicationManager(Configuration conf, ApplicationId appId,
       String queueName, String submitter, String appNameSuffix,
-      boolean keepContainersAcrossApplicationAttempts) {
+      boolean keepContainersAcrossApplicationAttempts, String rmName) {
     Preconditions.checkNotNull(conf, "Configuration cannot be null");
     Preconditions.checkNotNull(appId, "ApplicationId cannot be null");
     Preconditions.checkNotNull(submitter, "App submitter cannot be null");
@@ -132,9 +133,13 @@ public class UnmanagedApplicationManager {
     this.queueName = queueName;
     this.submitter = submitter;
     this.appNameSuffix = appNameSuffix;
-    this.heartbeatHandler =
-        new AMHeartbeatRequestHandler(this.conf, this.applicationId);
-    this.rmProxyRelayer = null;
+    this.userUgi = null;
+    // Relayer's rmClient will be set after the RM connection is created
+    this.rmProxyRelayer =
+        new AMRMClientRelayer(null, this.applicationId, rmName);
+    this.heartbeatHandler = createAMHeartbeatRequestHandler(this.conf,
+        this.applicationId, this.rmProxyRelayer);
+
     this.connectionInitiated = false;
     this.registerRequest = null;
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
@@ -145,6 +150,13 @@ public class UnmanagedApplicationManager {
             DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     this.keepContainersAcrossApplicationAttempts =
         keepContainersAcrossApplicationAttempts;
+  }
+
+  @VisibleForTesting
+  protected AMHeartbeatRequestHandler createAMHeartbeatRequestHandler(
+      Configuration config, ApplicationId appId,
+      AMRMClientRelayer relayer) {
+    return new AMHeartbeatRequestHandler(config, appId, relayer);
   }
 
   /**
@@ -186,11 +198,8 @@ public class UnmanagedApplicationManager {
       throws IOException {
     this.userUgi = UserGroupInformation.createProxyUser(
         this.applicationId.toString(), UserGroupInformation.getCurrentUser());
-    this.rmProxyRelayer =
-        new AMRMClientRelayer(createRMProxy(ApplicationMasterProtocol.class,
-            this.conf, this.userUgi, amrmToken), this.applicationId);
-
-    this.heartbeatHandler.setAMRMClientRelayer(this.rmProxyRelayer);
+    this.rmProxyRelayer.setRMClient(createRMProxy(
+        ApplicationMasterProtocol.class, this.conf, this.userUgi, amrmToken));
     this.heartbeatHandler.setUGI(this.userUgi);
   }
 
@@ -223,6 +232,10 @@ public class UnmanagedApplicationManager {
       LOG.debug("RegisterUAM returned existing NM token for node "
           + nmToken.getNodeId());
     }
+    LOG.info(
+        "RegisterUAM returned {} existing running container and {} NM tokens",
+        response.getContainersFromPreviousAttempts().size(),
+        response.getNMTokensFromPreviousAttempts().size());
 
     // Only when register succeed that we start the heartbeat thread
     this.heartbeatHandler.setDaemon(true);
@@ -245,7 +258,7 @@ public class UnmanagedApplicationManager {
 
     this.heartbeatHandler.shutdown();
 
-    if (this.rmProxyRelayer == null) {
+    if (this.userUgi == null) {
       if (this.connectionInitiated) {
         // This is possible if the async launchUAM is still
         // blocked and retrying. Return a dummy response in this case.
@@ -299,7 +312,7 @@ public class UnmanagedApplicationManager {
     //
     // In case 2, we have already save the allocate request above, so if the
     // registration succeed later, no request is lost.
-    if (this.rmProxyRelayer == null) {
+    if (this.userUgi == null) {
       if (this.connectionInitiated) {
         LOG.info("Unmanaged AM still not successfully launched/registered yet."
             + " Saving the allocate request and send later.");
@@ -513,5 +526,10 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   public int getRequestQueueSize() {
     return this.heartbeatHandler.getRequestQueueSize();
+  }
+
+  @VisibleForTesting
+  protected void drainHeartbeatThread() {
+    this.heartbeatHandler.drainHeartbeatThread();
   }
 }

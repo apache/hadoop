@@ -25,9 +25,9 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.ratis.shaded.com.google.protobuf
+import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +72,7 @@ public class BlockDeletingService extends BackgroundService{
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockDeletingService.class);
 
-  ContainerSet containerSet;
+  private ContainerSet containerSet;
   private ContainerDeletionChoosingPolicy containerDeletionPolicy;
   private final Configuration conf;
 
@@ -185,7 +185,7 @@ public class BlockDeletingService extends BackgroundService{
       ContainerBackgroundTaskResult crr = new ContainerBackgroundTaskResult();
       long startTime = Time.monotonicNow();
       // Scan container's db and get list of under deletion blocks
-      MetadataStore meta = KeyUtils.getDB(
+      MetadataStore meta = BlockUtils.getDB(
           (KeyValueContainerData) containerData, conf);
       // # of blocks to delete is throttled
       KeyPrefixFilter filter =
@@ -211,8 +211,8 @@ public class BlockDeletingService extends BackgroundService{
         String blockName = DFSUtil.bytes2String(entry.getKey());
         LOG.debug("Deleting block {}", blockName);
         try {
-          ContainerProtos.KeyData data =
-              ContainerProtos.KeyData.parseFrom(entry.getValue());
+          ContainerProtos.BlockData data =
+              ContainerProtos.BlockData.parseFrom(entry.getValue());
           for (ContainerProtos.ChunkInfo chunkInfo : data.getChunksList()) {
             File chunkFile = dataDir.toPath()
                 .resolve(chunkInfo.getChunkName()).toFile();

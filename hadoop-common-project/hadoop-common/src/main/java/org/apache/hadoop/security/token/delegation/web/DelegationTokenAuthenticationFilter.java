@@ -60,7 +60,7 @@ import java.util.Properties;
 /**
  *  The <code>DelegationTokenAuthenticationFilter</code> filter is a
  *  {@link AuthenticationFilter} with Hadoop Delegation Token support.
- *  <p/>
+ *  <p>
  *  By default it uses it own instance of the {@link
  *  AbstractDelegationTokenSecretManager}. For situations where an external
  *  <code>AbstractDelegationTokenSecretManager</code> is required (i.e. one that
@@ -86,7 +86,7 @@ public class DelegationTokenAuthenticationFilter
   /**
    * Sets an external <code>DelegationTokenSecretManager</code> instance to
    * manage creation and verification of Delegation Tokens.
-   * <p/>
+   * <p>
    * This is useful for use cases where secrets must be shared across multiple
    * services.
    */
@@ -148,7 +148,7 @@ public class DelegationTokenAuthenticationFilter
   /**
    * Returns the proxyuser configuration. All returned properties must start
    * with <code>proxyuser.</code>'
-   * <p/>
+   * <p>
    * Subclasses may override this method if the proxyuser configuration is 
    * read from other place than the filter init parameters.
    *

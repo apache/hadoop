@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -429,5 +430,10 @@ public final class ErasureCodingPolicyManager {
     }
     allPolicies =
         policiesByName.values().toArray(new ErasureCodingPolicyInfo[0]);
+  }
+
+  public String getEnabledPoliciesMetric() {
+    return StringUtils.join(", ",
+            enabledPoliciesByName.keySet());
   }
 }

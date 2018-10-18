@@ -102,13 +102,13 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
     queue.addHandler(startEvent, this::handleStartEvent);
 
     queue.addHandler(completionEvent, (completionPayload, publisher) -> {
-      long id = completionPayload.getId();
       try {
-        handleCompletion(id, publisher);
+        handleCompletion(completionPayload, publisher);
       } catch (LeaseNotFoundException e) {
         //It's already done. Too late, we already retried it.
         //Not a real problem.
-        LOG.warn("Completion event without active lease. Id={}", id);
+        LOG.warn("Completion event without active lease. Id={}",
+            completionPayload.getId());
       }
     });
 
@@ -140,9 +140,11 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
     }
   }
 
-  private synchronized void handleCompletion(long id,
-      EventPublisher publisher) throws LeaseNotFoundException {
+  protected synchronized void handleCompletion(COMPLETION_PAYLOAD
+      completionPayload, EventPublisher publisher) throws
+      LeaseNotFoundException {
     metrics.incrementCompletedEvents();
+    long id = completionPayload.getId();
     leaseManager.release(id);
     TIMEOUT_PAYLOAD payload = trackedEventsByID.remove(id);
     trackedEvents.remove(payload);
@@ -195,5 +197,13 @@ public abstract class EventWatcher<TIMEOUT_PAYLOAD extends
   @VisibleForTesting
   protected EventWatcherMetrics getMetrics() {
     return metrics;
+  }
+
+  /**
+   * Returns a tracked event to which the specified id is
+   * mapped, or {@code null} if there is no mapping for the id.
+   */
+  public TIMEOUT_PAYLOAD getTrackedEventbyId(long id) {
+    return trackedEventsByID.get(id);
   }
 }

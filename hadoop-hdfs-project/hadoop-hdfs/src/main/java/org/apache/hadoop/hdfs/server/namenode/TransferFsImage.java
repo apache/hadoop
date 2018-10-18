@@ -32,8 +32,8 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -95,7 +95,8 @@ public class TransferFsImage {
 
   @VisibleForTesting
   static int timeout = 0;
-  private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TransferFsImage.class);
   
   public static void downloadMostRecentImageToDirectory(URL infoServer,
       File dir) throws IOException {

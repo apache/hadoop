@@ -27,11 +27,11 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
-import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
@@ -114,8 +114,8 @@ public class TestKeyValueBlockIterator {
 
     int counter = 0;
     while(keyValueBlockIterator.hasNext()) {
-      KeyData keyData = keyValueBlockIterator.nextBlock();
-      assertEquals(keyData.getLocalID(), counter++);
+      BlockData blockData = keyValueBlockIterator.nextBlock();
+      assertEquals(blockData.getLocalID(), counter++);
     }
 
     assertFalse(keyValueBlockIterator.hasNext());
@@ -123,8 +123,8 @@ public class TestKeyValueBlockIterator {
     keyValueBlockIterator.seekToFirst();
     counter = 0;
     while(keyValueBlockIterator.hasNext()) {
-      KeyData keyData = keyValueBlockIterator.nextBlock();
-      assertEquals(keyData.getLocalID(), counter++);
+      BlockData blockData = keyValueBlockIterator.nextBlock();
+      assertEquals(blockData.getLocalID(), counter++);
     }
     assertFalse(keyValueBlockIterator.hasNext());
 
@@ -214,8 +214,8 @@ public class TestKeyValueBlockIterator {
 
     int counter = 5;
     while(keyValueBlockIterator.hasNext()) {
-      KeyData keyData = keyValueBlockIterator.nextBlock();
-      assertEquals(keyData.getLocalID(), counter++);
+      BlockData blockData = keyValueBlockIterator.nextBlock();
+      assertEquals(blockData.getLocalID(), counter++);
     }
   }
 
@@ -250,7 +250,7 @@ public class TestKeyValueBlockIterator {
     container = new KeyValueContainer(containerData, conf);
     container.create(volumeSet, new RoundRobinVolumeChoosingPolicy(), UUID
         .randomUUID().toString());
-    MetadataStore metadataStore = KeyUtils.getDB(containerData, conf);
+    MetadataStore metadataStore = BlockUtils.getDB(containerData, conf);
 
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     ChunkInfo info = new ChunkInfo("chunkfile", 0, 1024);
@@ -258,18 +258,18 @@ public class TestKeyValueBlockIterator {
 
     for (int i=0; i<normalBlocks; i++) {
       BlockID blockID = new BlockID(containerId, i);
-      KeyData keyData = new KeyData(blockID);
-      keyData.setChunks(chunkList);
-      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), keyData
+      BlockData blockData = new BlockData(blockID);
+      blockData.setChunks(chunkList);
+      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), blockData
           .getProtoBufMessage().toByteArray());
     }
 
     for (int i=normalBlocks; i<deletedBlocks; i++) {
       BlockID blockID = new BlockID(containerId, i);
-      KeyData keyData = new KeyData(blockID);
-      keyData.setChunks(chunkList);
+      BlockData blockData = new BlockData(blockID);
+      blockData.setChunks(chunkList);
       metadataStore.put(DFSUtil.string2Bytes(OzoneConsts
-          .DELETING_KEY_PREFIX + blockID.getLocalID()), keyData
+          .DELETING_KEY_PREFIX + blockID.getLocalID()), blockData
           .getProtoBufMessage().toByteArray());
     }
   }

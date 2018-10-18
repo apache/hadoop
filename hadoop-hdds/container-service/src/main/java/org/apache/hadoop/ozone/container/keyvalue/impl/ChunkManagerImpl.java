@@ -87,6 +87,32 @@ public class ChunkManagerImpl implements ChunkManager {
 
       switch (stage) {
       case WRITE_DATA:
+        if (isOverwrite) {
+          // if the actual chunk file already exists here while writing the temp
+          // chunk file, then it means the same ozone client request has
+          // generated two raft log entries. This can happen either because
+          // retryCache expired in Ratis (or log index mismatch/corruption in
+          // Ratis). This can be solved by two approaches as of now:
+          // 1. Read the complete data in the actual chunk file ,
+          //    verify the data integrity and in case it mismatches , either
+          // 2. Delete the chunk File and write the chunk again. For now,
+          //    let's rewrite the chunk file
+          // TODO: once the checksum support for write chunks gets plugged in,
+          // the checksum needs to be verified for the actual chunk file and
+          // the data to be written here which should be efficient and
+          // it matches we can safely return without rewriting.
+          LOG.warn("ChunkFile already exists" + chunkFile + ".Deleting it.");
+          FileUtil.fullyDelete(chunkFile);
+        }
+        if (tmpChunkFile.exists()) {
+          // If the tmp chunk file already exists it means the raft log got
+          // appended, but later on the log entry got truncated in Ratis leaving
+          // behind garbage.
+          // TODO: once the checksum support for data chunks gets plugged in,
+          // instead of rewriting the chunk here, let's compare the checkSums
+          LOG.warn(
+              "tmpChunkFile already exists" + tmpChunkFile + "Overwriting it.");
+        }
         // Initially writes to temporary chunk file.
         ChunkUtils.writeData(tmpChunkFile, info, data, volumeIOStats);
         // No need to increment container stats here, as still data is not
@@ -95,6 +121,15 @@ public class ChunkManagerImpl implements ChunkManager {
       case COMMIT_DATA:
         // commit the data, means move chunk data from temporary chunk file
         // to actual chunk file.
+        if (isOverwrite) {
+          // if the actual chunk file already exists , it implies the write
+          // chunk transaction in the containerStateMachine is getting
+          // reapplied. This can happen when a node restarts.
+          // TODO: verify the checkSums for the existing chunkFile and the
+          // chunkInfo to be committed here
+          LOG.warn("ChunkFile already exists" + chunkFile);
+          return;
+        }
         commitChunk(tmpChunkFile, chunkFile);
         // Increment container stats here, as we commit the data.
         containerData.incrBytesUsed(info.getLen());
@@ -200,6 +235,14 @@ public class ChunkManagerImpl implements ChunkManager {
     if (containerData.getLayOutVersion() == ChunkLayOutVersion
         .getLatestVersion().getVersion()) {
       File chunkFile = ChunkUtils.getChunkFile(containerData, info);
+
+      // if the chunk file does not exist, it might have already been deleted.
+      // The call might be because of reapply of transactions on datanode
+      // restart.
+      if (!chunkFile.exists()) {
+        LOG.warn("Chunk file doe not exist. chunk info :" + info.toString());
+        return;
+      }
       if ((info.getOffset() == 0) && (info.getLen() == chunkFile.length())) {
         FileUtil.fullyDelete(chunkFile);
         containerData.decrBytesUsed(chunkFile.length());

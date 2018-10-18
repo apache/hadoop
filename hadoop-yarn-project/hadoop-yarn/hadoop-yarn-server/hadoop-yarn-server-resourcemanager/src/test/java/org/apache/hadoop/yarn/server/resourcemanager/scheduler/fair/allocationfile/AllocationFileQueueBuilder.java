@@ -94,6 +94,12 @@ public abstract class AllocationFileQueueBuilder {
     return this;
   }
 
+  public AllocationFileQueueBuilder maxContainerAllocation(
+      String maxContainerAllocation) {
+    this.queuePropertiesBuilder.maxContainerAllocation(maxContainerAllocation);
+    return this;
+  }
+
   public AllocationFileQueueBuilder subQueue(String queueName) {
     if (this instanceof AllocationFileSimpleQueueBuilder) {
       return new AllocationFileSubQueueBuilder(

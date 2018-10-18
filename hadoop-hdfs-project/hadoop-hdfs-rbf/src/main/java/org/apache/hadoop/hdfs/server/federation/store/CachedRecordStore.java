@@ -167,7 +167,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * expired state.
    *
    * @param query RecordQueryResult containing the data to be inspected.
-   * @throws IOException
+   * @throws IOException If the values cannot be updated.
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
@@ -194,7 +194,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * expired state.
    *
    * @param record Record record to be updated.
-   * @throws IOException
+   * @throws IOException If the values cannot be updated.
    */
   public void overrideExpiredRecord(R record) throws IOException {
     List<R> newRecords = Collections.singletonList(record);

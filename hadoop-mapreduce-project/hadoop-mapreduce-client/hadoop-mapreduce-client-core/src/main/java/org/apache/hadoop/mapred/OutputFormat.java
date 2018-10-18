@@ -71,6 +71,9 @@ public interface OutputFormat<K, V> {
    * throwing an exception when it already exists, so that output is not
    * overwritten.</p>
    *
+   * Implementations which write to filesystems which support delegation
+   * tokens usually collect the tokens for the destination path(s)
+   * and attach them to the job configuration.
    * @param ignored
    * @param job job configuration.
    * @throws IOException when output should not be attempted

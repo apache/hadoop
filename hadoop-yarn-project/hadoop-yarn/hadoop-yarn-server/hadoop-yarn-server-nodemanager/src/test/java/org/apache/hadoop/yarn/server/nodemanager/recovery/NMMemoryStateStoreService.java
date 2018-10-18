@@ -292,13 +292,23 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   private LocalResourceTrackerState loadTrackerState(TrackerState ts) {
-    LocalResourceTrackerState result = new LocalResourceTrackerState();
-    result.localizedResources.addAll(ts.localizedResources.values());
+    List<LocalizedResourceProto> completedResources =
+        new ArrayList<LocalizedResourceProto>(ts.localizedResources.values());
+    RecoveryIterator<LocalizedResourceProto> crIt =
+        new NMMemoryRecoveryIterator<LocalizedResourceProto>(
+            completedResources.iterator());
+
+    Map<LocalResourceProto, Path> inProgressMap =
+        new HashMap<LocalResourceProto, Path>();
     for (Map.Entry<Path, LocalResourceProto> entry :
          ts.inProgressMap.entrySet()) {
-      result.inProgressResources.put(entry.getValue(), entry.getKey());
+      inProgressMap.put(entry.getValue(), entry.getKey());
     }
-    return result;
+    RecoveryIterator<Map.Entry<LocalResourceProto, Path>> srIt =
+        new NMMemoryRecoveryIterator<Map.Entry<LocalResourceProto, Path>>(
+            inProgressMap.entrySet().iterator());
+
+    return new LocalResourceTrackerState(crIt, srIt);
   }
 
   private TrackerState getTrackerState(TrackerKey key) {

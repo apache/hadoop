@@ -81,8 +81,9 @@ public class CallQueueManager<E extends Schedulable>
     this.clientBackOffEnabled = clientBackOffEnabled;
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
-    LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
-        maxQueueSize + " scheduler: " + schedulerClass);
+    LOG.info("Using callQueue: {}, queueCapacity: {}, " +
+        "scheduler: {}, ipcBackoff: {}.",
+        backingClass, maxQueueSize, schedulerClass, clientBackOffEnabled);
   }
 
   @VisibleForTesting // only!

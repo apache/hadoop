@@ -43,8 +43,8 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -75,7 +75,8 @@ import com.google.common.io.Files;
  */
 public abstract class FSImageTestUtil {
   
-  public static final Log LOG = LogFactory.getLog(FSImageTestUtil.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSImageTestUtil.class);
   
   /**
    * The position in the fsimage header where the txid is
@@ -562,28 +563,15 @@ public abstract class FSImageTestUtil {
     assertNotNull(image);
   }
 
-  public static void logStorageContents(Log LOG, NNStorage storage) {
-    LOG.info("current storages and corresponding sizes:");
+  public static void logStorageContents(Logger log, NNStorage storage) {
+    log.info("current storages and corresponding sizes:");
     for (StorageDirectory sd : storage.dirIterable(null)) {
       File curDir = sd.getCurrentDir();
-      LOG.info("In directory " + curDir);
+      log.info("In directory " + curDir);
       File[] files = curDir.listFiles();
       Arrays.sort(files);
       for (File f : files) {
-        LOG.info("  file " + f.getAbsolutePath() + "; len = " + f.length());  
-      }
-    }
-  }
-
-  public static void logStorageContents(org.slf4j.Logger LOG, NNStorage storage) {
-    LOG.info("current storages and corresponding sizes:");
-    for (StorageDirectory sd : storage.dirIterable(null)) {
-      File curDir = sd.getCurrentDir();
-      LOG.info("In directory {}", curDir);
-      File[] files = curDir.listFiles();
-      Arrays.sort(files);
-      for (File f : files) {
-        LOG.info("  file {}; len = {}",  f.getAbsolutePath(), f.length());
+        log.info("  file " + f.getAbsolutePath() + "; len = " + f.length());
       }
     }
   }

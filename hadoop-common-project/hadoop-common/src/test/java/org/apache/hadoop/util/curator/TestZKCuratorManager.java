@@ -19,6 +19,7 @@ package org.apache.hadoop.util.curator;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,6 +99,27 @@ public class TestZKCuratorManager {
     assertEquals(2, children.size());
   }
 
+  @Test
+  public void testGetStringData() throws Exception {
+    String node1 = "/node1";
+    String node2 = "/node2";
+    assertFalse(curator.exists(node1));
+    curator.create(node1);
+    assertNull(curator.getStringData(node1));
+
+    byte[] setData = "setData".getBytes("UTF-8");
+    curator.setData(node1, setData, -1);
+    assertEquals("setData", curator.getStringData(node1));
+
+    Stat stat = new Stat();
+    assertFalse(curator.exists(node2));
+    curator.create(node2);
+    assertNull(curator.getStringData(node2, stat));
+
+    curator.setData(node2, setData, -1);
+    assertEquals("setData", curator.getStringData(node2, stat));
+
+  }
   @Test
   public void testTransaction() throws Exception {
     List<ACL> zkAcl = ZKUtil.parseACLs(CommonConfigurationKeys.ZK_ACL_DEFAULT);

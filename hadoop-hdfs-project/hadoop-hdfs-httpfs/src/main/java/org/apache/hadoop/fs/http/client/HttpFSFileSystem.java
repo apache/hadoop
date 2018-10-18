@@ -45,6 +45,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -199,7 +202,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
-  public static final String SNAPSHOT_BIT_JSON = "seBit";
+  public static final String SNAPSHOT_BIT_JSON = "snapshotEnabled";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -230,8 +233,10 @@ public class HttpFSFileSystem extends FileSystem
     REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
     GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
     SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
+    ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
-    RENAMESNAPSHOT(HTTP_PUT);
+    RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET);
 
     private String httpMethod;
 
@@ -1412,6 +1417,22 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
+  public void allowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.ALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.ALLOWSNAPSHOT.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void disallowSnapshot(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.DISALLOWSNAPSHOT.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.DISALLOWSNAPSHOT.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
   @Override
   public final Path createSnapshot(Path path, String snapshotName)
       throws IOException {
@@ -1448,6 +1469,31 @@ public class HttpFSFileSystem extends FileSystem
     HttpURLConnection conn = getConnection(Operation.DELETESNAPSHOT.getMethod(),
         params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public SnapshotDiffReport getSnapshotDiffReport(Path path,
+      String snapshotOldName, String snapshotNewName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTDIFF.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTDIFF.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshotDiffReport(json);
+  }
+
+  public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTTABLEDIRECTORYLIST.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTTABLEDIRECTORYLIST.getMethod(),
+        params, new Path(getUri().toString(), "/"), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshottableDirectoryList(json);
   }
 
 }

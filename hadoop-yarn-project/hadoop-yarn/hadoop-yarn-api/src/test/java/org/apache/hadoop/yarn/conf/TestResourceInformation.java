@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.conf;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,5 +72,46 @@ public class TestResourceInformation {
     Assert.assertEquals("Resource name incorrect", name, ri.getName());
     Assert.assertEquals("Resource value incorrect", value, ri.getValue());
     Assert.assertEquals("Resource units incorrect", units, ri.getUnits());
+  }
+
+  @Test
+  public void testEqualsWithTagsAndAttributes() {
+    // Same tags but different order
+    ResourceInformation ri01 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100,
+        ImmutableSet.of("A", "B"), null);
+    ResourceInformation ri02 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of("B", "A"), null);
+    Assert.assertEquals(ri01, ri02);
+
+    // Different tags
+    ResourceInformation ri11 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null, null);
+    ResourceInformation ri12 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of("B", "A"), null);
+    Assert.assertNotEquals(ri11, ri12);
+
+    // Different attributes
+    ResourceInformation ri21 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null,
+        ImmutableMap.of("A", "A1", "B", "B1"));
+    ResourceInformation ri22 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null,
+        ImmutableMap.of("A", "A1", "B", "B2"));
+    Assert.assertNotEquals(ri21, ri22);
+
+    // No tags or attributes
+    ResourceInformation ri31 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null, null);
+    ResourceInformation ri32 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null, null);
+    Assert.assertEquals(ri31, ri32);
+
+    // Null tags/attributes same as empty ones
+    ResourceInformation ri41 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, ImmutableSet.of(), null);
+    ResourceInformation ri42 = ResourceInformation.newInstance("r1", "M", 100,
+        ResourceTypes.COUNTABLE, 0, 100, null, ImmutableMap.of());
+    Assert.assertEquals(ri41, ri42);
   }
 }

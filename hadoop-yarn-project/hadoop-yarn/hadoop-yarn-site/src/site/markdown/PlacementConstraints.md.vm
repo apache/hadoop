@@ -87,6 +87,7 @@ An example of PlacementSpec is the following:
 zk=3,NOTIN,NODE,zk:hbase=5,IN,RACK,zk:spark=7,CARDINALITY,NODE,hbase,1,3
 ```
 The above encodes three constraints:
+
 * place 3 containers with tag "zk" (standing for ZooKeeper) with node anti-affinity to each other, i.e., do not place more than one container per node (notice that in this first constraint, the SourceTag and the TargetTag of the constraint coincide);
 * place 5 containers with tag "hbase" with affinity to a rack on which containers with tag "zk" are running (i.e., an "hbase" container should not be placed at a rack where an "zk" container is running, given that "zk" is the TargetTag of the second constraint);
 * place 7 containers with tag "spark" in nodes that have at least one, but no more than three, containers with tag "hbase".
@@ -132,6 +133,7 @@ The example constraints used above could be extended with namespaces as follows:
 zk=3,NOTIN,NODE,not-self/zk:hbase=5,IN,RACK,all/zk:spark=7,CARDINALITY,NODE,app-id/appID_0023/hbase,1,3
 ```
 The semantics of these constraints are the following:
+
 * place 3 containers with tag "zk" (standing for ZooKeeper) to nodes that do not have "zk" containers from other applications running;
 * place 5 containers with tag "hbase" with affinity to a rack on which containers with tag "zk" (from any application, be it the same or a different one) are running;
 * place 7 containers with tag "spark" in nodes that have at least one, but no more than three, containers with tag "hbase" belonging to application with ID `appID_0023`.

@@ -227,9 +227,9 @@ public class CompressionCodecFactory {
     /**
      * Find the relevant compression codec for the codec's canonical class name
      * or by codec alias.
-     * <p/>
+     * <p>
      * Codec aliases are case insensitive.
-     * <p/>
+     * <p>
      * The code alias is the short class name (without the package name).
      * If the short class name ends with 'Codec', then there are two aliases for
      * the codec, the complete short class name and the short class name without
@@ -255,9 +255,9 @@ public class CompressionCodecFactory {
     /**
      * Find the relevant compression codec for the codec's canonical class name
      * or by codec alias and returns its implemetation class.
-     * <p/>
+     * <p>
      * Codec aliases are case insensitive.
-     * <p/>
+     * <p>
      * The code alias is the short class name (without the package name).
      * If the short class name ends with 'Codec', then there are two aliases for
      * the codec, the complete short class name and the short class name without

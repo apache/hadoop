@@ -22,7 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.ratis.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.ratis.thirdparty.com.google.common.annotations.
+    VisibleForTesting;
 import org.rocksdb.DbPath;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
@@ -94,7 +95,7 @@ public class RocksDBStore implements MetadataStore {
     }
   }
 
-  private IOException toIOException(String msg, RocksDBException e) {
+  public static IOException toIOException(String msg, RocksDBException e) {
     String statusCode = e.getStatus() == null ? "N/A" :
         e.getStatus().getCodeString();
     String errMessage = e.getMessage() == null ? "Unknown error" :

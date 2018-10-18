@@ -1544,6 +1544,7 @@ public class ContainerImpl implements Container {
       // TODO: Add containerWorkDir to the deletion service.
 
       if (DockerLinuxContainerRuntime.isDockerContainerRequested(
+          container.daemonConf,
           container.getLaunchContext().getEnvironment())) {
         removeDockerContainer(container);
       }
@@ -1584,6 +1585,7 @@ public class ContainerImpl implements Container {
       // TODO: Add containerOuputDir to the deletion service.
 
       if (DockerLinuxContainerRuntime.isDockerContainerRequested(
+          container.daemonConf,
           container.getLaunchContext().getEnvironment())) {
         removeDockerContainer(container);
       }
@@ -1858,6 +1860,7 @@ public class ContainerImpl implements Container {
       }
 
       if (DockerLinuxContainerRuntime.isDockerContainerRequested(
+          container.daemonConf,
           container.getLaunchContext().getEnvironment())) {
         removeDockerContainer(container);
       }

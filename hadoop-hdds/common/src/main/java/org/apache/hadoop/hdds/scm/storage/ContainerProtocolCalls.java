@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hdds.scm.container.common.helpers
+    .BlockNotCommittedException;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
@@ -33,16 +35,16 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .DatanodeBlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .GetKeyRequestProto;
+    .GetBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .GetKeyResponseProto;
+    .GetBlockResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .GetSmallFileResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.BlockData;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .PutKeyRequestProto;
+    .PutBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .PutSmallFileRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -74,33 +76,33 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
-   * Calls the container protocol to get a container key.
+   * Calls the container protocol to get a container block.
    *
    * @param xceiverClient client to perform call
    * @param datanodeBlockID blockID to identify container
    * @param traceID container protocol call args
-   * @return container protocol get key response
+   * @return container protocol get block response
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static GetKeyResponseProto getKey(XceiverClientSpi xceiverClient,
+  public static GetBlockResponseProto getBlock(XceiverClientSpi xceiverClient,
       DatanodeBlockID datanodeBlockID, String traceID) throws IOException {
-    GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto
+    GetBlockRequestProto.Builder readBlockRequest = GetBlockRequestProto
         .newBuilder()
         .setBlockID(datanodeBlockID);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
 
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
-        .setCmdType(Type.GetKey)
+        .setCmdType(Type.GetBlock)
         .setContainerID(datanodeBlockID.getContainerID())
         .setTraceID(traceID)
         .setDatanodeUuid(id)
-        .setGetKey(readKeyRequest)
+        .setGetBlock(readBlockRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
     validateContainerResponse(response);
 
-    return response.getGetKey();
+    return response.getGetBlock();
   }
 
   /**
@@ -134,29 +136,28 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
-   * Calls the container protocol to put a container key.
+   * Calls the container protocol to put a container block.
    *
    * @param xceiverClient client to perform call
-   * @param containerKeyData key data to identify container
+   * @param containerBlockData block data to identify container
    * @param traceID container protocol call args
+   * @return putBlockResponse
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static void putKey(XceiverClientSpi xceiverClient,
-      KeyData containerKeyData, String traceID) throws IOException {
-    PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
-        .newBuilder()
-        .setKeyData(containerKeyData);
+  public static ContainerProtos.PutBlockResponseProto putBlock(
+      XceiverClientSpi xceiverClient, BlockData containerBlockData,
+      String traceID) throws IOException {
+    PutBlockRequestProto.Builder createBlockRequest =
+        PutBlockRequestProto.newBuilder().setBlockData(containerBlockData);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
-    ContainerCommandRequestProto request = ContainerCommandRequestProto
-        .newBuilder()
-        .setCmdType(Type.PutKey)
-        .setContainerID(containerKeyData.getBlockID().getContainerID())
-        .setTraceID(traceID)
-        .setDatanodeUuid(id)
-        .setPutKey(createKeyRequest)
-        .build();
+    ContainerCommandRequestProto request =
+        ContainerCommandRequestProto.newBuilder().setCmdType(Type.PutBlock)
+            .setContainerID(containerBlockData.getBlockID().getContainerID())
+            .setTraceID(traceID).setDatanodeUuid(id)
+            .setPutBlock(createBlockRequest).build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
     validateContainerResponse(response);
+    return response.getPutBlock();
   }
 
   /**
@@ -222,9 +223,9 @@ public final class ContainerProtocolCalls  {
 
   /**
    * Allows writing a small file using single RPC. This takes the container
-   * name, key name and data to write sends all that data to the container using
-   * a single RPC. This API is designed to be used for files which are smaller
-   * than 1 MB.
+   * name, block name and data to write sends all that data to the container
+   * using a single RPC. This API is designed to be used for files which are
+   * smaller than 1 MB.
    *
    * @param client - client that communicates with the container.
    * @param blockID - ID of the block
@@ -236,12 +237,12 @@ public final class ContainerProtocolCalls  {
       BlockID blockID, byte[] data, String traceID)
       throws IOException {
 
-    KeyData containerKeyData =
-        KeyData.newBuilder().setBlockID(blockID.getDatanodeBlockIDProtobuf())
+    BlockData containerBlockData =
+        BlockData.newBuilder().setBlockID(blockID.getDatanodeBlockIDProtobuf())
             .build();
-    PutKeyRequestProto.Builder createKeyRequest =
-        PutKeyRequestProto.newBuilder()
-            .setKeyData(containerKeyData);
+    PutBlockRequestProto.Builder createBlockRequest =
+        PutBlockRequestProto.newBuilder()
+            .setBlockData(containerBlockData);
 
     KeyValue keyValue =
         KeyValue.newBuilder().setKey("OverWriteRequested").setValue("true")
@@ -253,7 +254,7 @@ public final class ContainerProtocolCalls  {
 
     PutSmallFileRequestProto putSmallFileRequest =
         PutSmallFileRequestProto.newBuilder().setChunkInfo(chunk)
-            .setKey(createKeyRequest).setData(ByteString.copyFrom(data))
+            .setBlock(createBlockRequest).setData(ByteString.copyFrom(data))
             .build();
 
     String id = client.getPipeline().getLeader().getUuidString();
@@ -385,12 +386,12 @@ public final class ContainerProtocolCalls  {
    */
   public static GetSmallFileResponseProto readSmallFile(XceiverClientSpi client,
       BlockID blockID, String traceID) throws IOException {
-    GetKeyRequestProto.Builder getKey = GetKeyRequestProto
+    GetBlockRequestProto.Builder getBlock = GetBlockRequestProto
         .newBuilder()
         .setBlockID(blockID.getDatanodeBlockIDProtobuf());
     ContainerProtos.GetSmallFileRequestProto getSmallFileRequest =
         GetSmallFileRequestProto
-            .newBuilder().setKey(getKey)
+            .newBuilder().setBlock(getBlock)
             .build();
     String id = client.getPipeline().getLeader().getUuidString();
 
@@ -420,6 +421,9 @@ public final class ContainerProtocolCalls  {
   ) throws StorageContainerException {
     if (response.getResult() == ContainerProtos.Result.SUCCESS) {
       return;
+    } else if (response.getResult()
+        == ContainerProtos.Result.BLOCK_NOT_COMMITTED) {
+      throw new BlockNotCommittedException(response.getMessage());
     }
     throw new StorageContainerException(
         response.getMessage(), response.getResult());

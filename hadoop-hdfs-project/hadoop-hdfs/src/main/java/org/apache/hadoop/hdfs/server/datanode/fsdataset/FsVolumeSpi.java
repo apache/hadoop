@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,9 +32,9 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
@@ -362,13 +362,13 @@ public interface FsVolumeSpi
     public File getMetaFile() {
       if (metaSuffix == null) {
         return null;
-      } else if (blockSuffix == null) {
-        return new File(new File(volume.getBaseURI()).getAbsolutePath(),
-            metaSuffix);
-      } else {
-        return new File(new File(volume.getBaseURI()).getAbsolutePath(),
-            blockSuffix + metaSuffix);
       }
+      String fileSuffix = metaSuffix;
+      if (blockSuffix != null) {
+        fileSuffix = blockSuffix + metaSuffix;
+      }
+      return new File(new File(volume.getBaseURI()).getAbsolutePath(),
+          fileSuffix);
     }
 
     /**
@@ -389,18 +389,12 @@ public interface FsVolumeSpi
       return volume;
     }
 
-    @Override // Comparable
+    @Override
     public int compareTo(ScanInfo b) {
-      if (blockId < b.blockId) {
-        return -1;
-      } else if (blockId == b.blockId) {
-        return 0;
-      } else {
-        return 1;
-      }
+      return Long.compare(this.blockId, b.blockId);
     }
 
-    @Override // Object
+    @Override
     public boolean equals(Object o) {
       if (this == o) {
         return true;
@@ -411,9 +405,9 @@ public interface FsVolumeSpi
       return blockId == ((ScanInfo) o).blockId;
     }
 
-    @Override // Object
+    @Override
     public int hashCode() {
-      return (int)(blockId^(blockId>>>32));
+      return Long.hashCode(this.blockId);
     }
 
     public long getGenStamp() {
@@ -447,8 +441,8 @@ public interface FsVolumeSpi
    * @param reportCompiler
    * @throws IOException
    */
-  LinkedList<ScanInfo> compileReport(String bpid,
-      LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
+  void compileReport(String bpid,
+      Collection<ScanInfo> report, ReportCompiler reportCompiler)
       throws InterruptedException, IOException;
 
   /**

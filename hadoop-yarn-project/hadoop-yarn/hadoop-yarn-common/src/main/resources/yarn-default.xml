@@ -265,6 +265,11 @@
   </property>
 
   <property>
+   <name>yarn.resourcemanager.resource-tracker.nm.ip-hostname-check</name>
+   <value>false</value>
+  </property>
+
+  <property>
     <description>Are acls enabled.</description>
     <name>yarn.acl.enable</name>
     <value>false</value>
@@ -1726,6 +1731,12 @@
   </property>
 
   <property>
+    <description>Default container runtime to use.</description>
+    <name>yarn.nodemanager.runtime.linux.type</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>This configuration setting determines the capabilities
       assigned to docker containers when they are launched. While these may not
       be case-sensitive from a docker perspective, it is best to keep these
@@ -1733,6 +1744,13 @@
       "none" or "NONE"</description>
     <name>yarn.nodemanager.runtime.linux.docker.capabilities</name>
     <value>CHOWN,DAC_OVERRIDE,FSETID,FOWNER,MKNOD,NET_RAW,SETGID,SETUID,SETFCAP,SETPCAP,NET_BIND_SERVICE,SYS_CHROOT,KILL,AUDIT_WRITE</value>
+  </property>
+
+  <property>
+    <description>Default docker image to be used when the docker runtime is
+    selected.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.image-name</name>
+    <value></value>
   </property>
 
   <property>
@@ -2901,6 +2919,68 @@
     <value>1800000</value>
   </property>
 
+  <!-- Distributed Node Attributes Configuration -->
+  <property>
+    <description>
+      This property determines which provider will be plugged by the
+      node manager to collect node-attributes. Administrators can
+      configure "config", "script" or the class name of the provider.
+      Configured class needs to extend
+      org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider.
+      If "config" is configured, then "ConfigurationNodeLabelsProvider" and if
+      "script" is configured, then "ScriptBasedNodeAttributesProvider"
+      will be used.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider</name>
+  </property>
+
+  <property>
+    <description>
+      The node attribute script NM runs to collect node attributes.
+      Script output Line starting with "NODE_ATTRIBUTE:" will be
+      considered as a record of node attribute, attribute name, type
+      and value should be delimited by comma. Each of such lines
+      will be parsed to a node attribute.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.script.path</name>
+  </property>
+
+  <property>
+    <description>
+      Command arguments passed to the node attribute script.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.script.opts</name>
+  </property>
+
+  <property>
+    <description>
+      Time interval that determines how long NM fetches node attributes
+      from a given provider. If -1 is configured then node labels are
+      retrieved from provider only during initialization. Defaults to 10 mins.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.fetch-interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>
+      Timeout period after which NM will interrupt the node attribute
+      provider script which queries node attributes. Defaults to 20 mins.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.fetch-timeout-ms</name>
+    <value>1200000</value>
+  </property>
+
+  <property>
+    <description>
+      When "yarn.nodemanager.node-attributes.provider" is configured with
+      "config" then ConfigurationNodeAttributesProvider fetches node attributes
+      from this parameter.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.configured-node-attributes</name>
+    <value></value>
+  </property>
+
   <property>
     <description>
     Timeout in seconds for YARN node graceful decommission.
@@ -3425,6 +3505,24 @@
 
   <property>
     <description>
+      Specifies what the RM does regarding HTTPS enforcement for communication
+      with AM Web Servers, as well as generating and providing certificates.
+      Possible values are:
+      - NONE - the RM will do nothing special.
+      - LENIENT - the RM will generate and provide a keystore and truststore
+      to the AM, which it is free to use for HTTPS in its tracking URL web
+      server.  The RM proxy will still allow HTTP connections to AMs that opt
+      not to use HTTPS.
+      - STRICT - this is the same as LENIENT, except that the RM proxy will
+      only allow HTTPS connections to AMs; HTTP connections will be blocked
+      and result in a warning page to the user.
+    </description>
+    <name>yarn.resourcemanager.application-https.policy</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
+    <description>
       Defines the limit of the diagnostics message of an application
       attempt, in kilo characters (character count * 1024).
       When using ZooKeeper to store application state behavior, its
@@ -3468,6 +3566,14 @@
     </description>
     <name>yarn.router.clientrm.interceptor-class.pipeline</name>
     <value>org.apache.hadoop.yarn.server.router.clientrm.DefaultClientRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+      The thread pool executor size of per user in Router ClientRM Service FederationClientInterceptor.
+    </description>
+    <name>yarn.router.interceptor.user.threadpool-size</name>
+    <value>5</value>
   </property>
 
   <property>
@@ -3894,5 +4000,21 @@
     </description>
     <name>yarn.nodemanager.elastic-memory-control.timeout-sec</name>
     <value>5</value>
+  </property>
+  <property>
+    <description>
+      URI for NodeAttributeManager. The default value is
+      /tmp/hadoop-yarn-${user}/node-attribute/ in the local filesystem.
+    </description>
+    <name>yarn.node-attribute.fs-store.root-dir</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Choose different implementation of node attribute's storage
+    </description>
+    <name>yarn.node-attribute.fs-store.impl.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore</value>
   </property>
 </configuration>

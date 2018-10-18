@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
@@ -28,20 +26,20 @@ import java.util.Date;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 
@@ -57,17 +55,36 @@ public class DelegationTokenFetcher {
   private static final String CANCEL = "cancel";
   private static final String HELP = "help";
   private static final String HELP_SHORT = "h";
-  private static final Log LOG = LogFactory
-      .getLog(DelegationTokenFetcher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DelegationTokenFetcher.class);
   private static final String PRINT = "print";
   private static final String RENEW = "renew";
   private static final String RENEWER = "renewer";
   private static final String VERBOSE = "verbose";
   /**
-   * Command-line interface
+   * Command-line interface.
+   * @param args argument list.
+   * @throws Exception on a failure.
+   * @throws org.apache.hadoop.util.ExitUtil.ExitException if the command
+   * failed and exiting was disabled.
    */
   public static void main(final String[] args) throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    main(new HdfsConfiguration(), args);
+  }
+
+  /**
+   * Command line interface with a specific configuration.
+   * Errors in this operation will call {@link ExitUtil#terminate(int)} to
+   * exit the process.
+   * @param conf configuration to create filesystems with.
+   * @param args argument list.
+   * @throws Exception on a failure.
+   * @throws org.apache.hadoop.util.ExitUtil.ExitException if the command
+   * failed and exiting was disabled.
+   */
+  @VisibleForTesting
+  public static void main(Configuration conf, final String[] args)
+      throws Exception {
     Options fetcherOptions = new Options();
     fetcherOptions
       .addOption(WEBSERVICE, true, "HTTP url to reach the NameNode at")
@@ -96,17 +113,19 @@ public class DelegationTokenFetcher {
     // check option validity
     if (help) {
       printUsage(System.out);
-      System.exit(0);
+      return;
     }
 
     int commandCount = (cancel ? 1 : 0) + (renew ? 1 : 0) + (print ? 1 : 0);
     if (commandCount > 1) {
       System.err.println("ERROR: Only specify cancel, renew or print.");
       printUsage(System.err);
+      return;
     }
     if (remaining.length != 1 || remaining[0].charAt(0) == '-') {
       System.err.println("ERROR: Must specify exactly one token file");
       printUsage(System.err);
+      return;
     }
     // default to using the local file system
     FileSystem local = FileSystem.getLocal(conf);
@@ -195,19 +214,22 @@ public class DelegationTokenFetcher {
   }
 
   @VisibleForTesting
-  static String printTokensToString(
+  public static String printTokensToString(
       final Configuration conf,
       final Path tokenFile,
       final boolean verbose) throws IOException {
     StringBuilder sbld = new StringBuilder();
     final String nl = System.getProperty("line.separator");
-    DelegationTokenIdentifier id = new DelegationTokenSecretManager(0, 0, 0,
-            0, null).createIdentifier();
     for (Token<?> token : readTokens(tokenFile, conf)) {
-      DataInputStream in = new DataInputStream(new ByteArrayInputStream(token
-              .getIdentifier()));
-      id.readFields(in);
-      String idStr = (verbose? id.toString() : id.toStringStable());
+      TokenIdentifier tokenId = token.decodeIdentifier();
+
+      String idStr;
+      if (tokenId instanceof DelegationTokenIdentifier) {
+        DelegationTokenIdentifier id = (DelegationTokenIdentifier) tokenId;
+        idStr = (verbose? id.toString() : id.toStringStable());
+      } else {
+        idStr = tokenId.toString();
+      }
       sbld
           .append("Token (").append(idStr)
           .append(") for ").append(token.getService()).append(nl);
@@ -222,13 +244,19 @@ public class DelegationTokenFetcher {
     System.out.print(printTokensToString(conf, tokenFile, verbose));
   }
 
+  /**
+   * Print usage to the error stream, then
+   * call {@link ExitUtil#terminate(int)} with status code 1.
+   * This will exit or raise an exception if that's been disabled.
+   * @param err stream for the messages.
+   */
   private static void printUsage(PrintStream err) {
     err.println("fetchdt retrieves delegation tokens from the NameNode");
     err.println();
     err.println("fetchdt <opts> <token file>");
     err.println("Options:");
-    err.println("  --webservice <url>  Url to contact NN on (starts with " +
-            "http:// or https://)");
+    err.println("  --webservice <url>  URL to contact NN on (starts with " +
+            "http:// or https://), or other filesystem URL");
     err.println("  --renewer <name>    Name of the delegation token renewer");
     err.println("  --cancel            Cancel the delegation token");
     err.println("  --renew             Renew the delegation token.  " +

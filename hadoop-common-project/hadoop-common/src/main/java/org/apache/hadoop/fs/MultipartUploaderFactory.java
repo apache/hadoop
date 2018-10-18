@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,8 @@ import java.util.ServiceLoader;
  * {@link ServiceLoader}-driven uploader API for storage services supporting
  * multipart uploads.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class MultipartUploaderFactory {
   public static final Logger LOG =
       LoggerFactory.getLogger(MultipartUploaderFactory.class);

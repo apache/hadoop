@@ -93,6 +93,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
     xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.timeout");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
@@ -102,7 +103,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.s3a.");
 
     // O3 properties are in a different subtree.
-    xmlPrefixToSkipCompare.add("fs.o3.");
+    xmlPrefixToSkipCompare.add("fs.o3fs.");
 
     //ftp properties are in a different subtree.
     // - org.apache.hadoop.fs.ftp.FTPFileSystem.
@@ -113,6 +114,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.wasb.impl");
     xmlPrefixToSkipCompare.add("fs.wasbs.impl");
     xmlPrefixToSkipCompare.add("fs.azure.");
+    xmlPrefixToSkipCompare.add("fs.abfs.impl");
+    xmlPrefixToSkipCompare.add("fs.abfss.impl");
+
 
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys

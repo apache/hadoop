@@ -20,29 +20,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdds</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-hdds-container-service</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Container Service</description>
   <name>Apache Hadoop HDDS Container Service</name>
   <packaging>jar</packaging>
-
-  <properties>
-    <hadoop.component>hdds</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-  </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-server-framework</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -80,15 +73,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <protocVersion>${protobuf.version}</protocVersion>
               <protocCommand>${protoc.path}</protocCommand>
               <imports>
-                <param>
-                  ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs-client/src/main/proto/
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto/
-                </param>
                 <param>
                   ${basedir}/../../hadoop-hdds/common/src/main/proto/
                 </param>

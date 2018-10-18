@@ -57,9 +57,8 @@ import org.slf4j.LoggerFactory;
  * slots in the set of existing segments, falling back to getting a new segment
  * from the DataNode via {@link DataTransferProtocol#requestShortCircuitFds}.
  *
- * The counterpart to this class on the DataNode is
- * {@link ShortCircuitRegistry}. See {@link ShortCircuitRegistry} for more
- * information on the communication protocol.
+ * The counterpart to this class on the DataNode is ShortCircuitRegistry.
+ * See ShortCircuitRegistry for more information on the communication protocol.
  */
 @InterfaceAudience.Private
 public class DfsClientShmManager implements Closeable {

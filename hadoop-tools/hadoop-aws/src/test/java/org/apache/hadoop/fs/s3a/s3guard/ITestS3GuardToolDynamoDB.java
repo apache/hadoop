@@ -19,15 +19,20 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.Tag;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -39,8 +44,12 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test S3Guard related CLI commands against DynamoDB.
@@ -91,6 +100,65 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
           }
         });
   }
+
+  @Test
+  public void testDynamoTableTagging() throws Exception {
+    Configuration conf = getConfiguration();
+    // If the region is not set in conf, skip the test.
+    String ddbRegion = conf.get(S3GUARD_DDB_REGION_KEY);
+    Assume.assumeTrue(
+        S3GUARD_DDB_REGION_KEY + " should be set to run this test",
+        ddbRegion != null && !ddbRegion.isEmpty()
+    );
+
+    // setup
+    // clear all table tagging config before this test
+    conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG).keySet().forEach(
+        propKey -> conf.unset(S3GUARD_DDB_TABLE_TAG + propKey)
+    );
+
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
+        "testDynamoTableTagging-" + UUID.randomUUID());
+    S3GuardTool.Init cmdR = new S3GuardTool.Init(conf);
+    Map<String, String> tagMap = new HashMap<>();
+    tagMap.put("hello", "dynamo");
+    tagMap.put("tag", "youre it");
+
+    String[] argsR = new String[]{
+        cmdR.getName(),
+        "-tag", tagMapToStringParams(tagMap)
+    };
+
+    // run
+    cmdR.run(argsR);
+
+    // Check. Should create new metadatastore with the table name set.
+    try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
+      ddbms.initialize(conf);
+      ListTagsOfResourceRequest listTagsOfResourceRequest = new ListTagsOfResourceRequest()
+          .withResourceArn(ddbms.getTable().getDescription().getTableArn());
+      List<Tag> tags = ddbms.getAmazonDynamoDB().listTagsOfResource(listTagsOfResourceRequest).getTags();
+
+      // assert
+      assertEquals(tagMap.size(), tags.size());
+      for (Tag tag : tags) {
+        Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
+      }
+      // be sure to clean up - delete table
+      ddbms.destroy();
+    }
+  }
+
+  private String tagMapToStringParams(Map<String, String> tagMap) {
+    StringBuilder stringBuilder = new StringBuilder();
+
+    for (Map.Entry<String, String> kv : tagMap.entrySet()) {
+      stringBuilder.append(kv.getKey() + "=" + kv.getValue() + ";");
+    }
+
+    return stringBuilder.toString();
+  }
+
 
   private static class Capacities {
     private final long read, write;
@@ -220,38 +288,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       // that call does not change the values
       original.checkEquals("unchanged", getCapacities());
 
-      // now update the value
-      long readCap = original.getRead();
-      long writeCap = original.getWrite();
-      long rc2 = readCap + 1;
-      long wc2 = writeCap + 1;
-      Capacities desired = new Capacities(rc2, wc2);
-      capacityOut = exec(newSetCapacity(),
-          S3GuardTool.SetCapacity.NAME,
-          "-" + READ_FLAG, Long.toString(rc2),
-          "-" + WRITE_FLAG, Long.toString(wc2),
-          fsURI);
-      LOG.info("Set Capacity output=\n{}", capacityOut);
-
-      // to avoid race conditions, spin for the state change
-      AtomicInteger c = new AtomicInteger(0);
-      LambdaTestUtils.eventually(60000,
-          new LambdaTestUtils.VoidCallable() {
-            @Override
-            public void call() throws Exception {
-                c.incrementAndGet();
-                Map<String, String> diags = getMetadataStore().getDiagnostics();
-                Capacities updated = getCapacities(diags);
-                String tableInfo = String.format("[%02d] table state: %s",
-                    c.intValue(), diags.get(STATUS));
-                LOG.info("{}; capacities {}",
-                    tableInfo, updated);
-                desired.checkEquals(tableInfo, updated);
-            }
-          },
-          new LambdaTestUtils.ProportionalRetryInterval(500, 5000));
-
-      // Destroy MetadataStore
+         // Destroy MetadataStore
       Destroy destroyCmd = new Destroy(fs.getConf());
 
       String destroyed = exec(destroyCmd,

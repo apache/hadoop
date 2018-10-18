@@ -29,6 +29,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -53,6 +54,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
@@ -296,20 +298,37 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testSetCapacityFailFast() throws Exception{
+  public void testSetCapacityFailFastOnReadWriteOfZero() throws Exception{
     Configuration conf = getConfiguration();
+    String bucket = getFileSystem().getBucket();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, getFileSystem().getBucket());
 
     S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
-    String[] argsR = new String[]{cmdR.getName(), "-read", "0", "s3a://bucket"};
+    String[] argsR =
+        new String[]{cmdR.getName(), "-read", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
         S3GuardTool.SetCapacity.READ_CAP_INVALID, () -> cmdR.run(argsR));
 
     S3GuardTool.SetCapacity cmdW = new S3GuardTool.SetCapacity(conf);
-    String[] argsW = new String[]{cmdW.getName(), "-write", "0",
-        "s3a://bucket"};
+    String[] argsW =
+        new String[]{cmdW.getName(), "-write", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
         S3GuardTool.SetCapacity.WRITE_CAP_INVALID, () -> cmdW.run(argsW));
+  }
+
+  @Test
+  public void testSetCapacityFailFastIfNotGuarded() throws Exception{
+    Configuration conf = getConfiguration();
+    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, UUID.randomUUID().toString());
+    conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+
+    S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
+    String[] argsR = new String[]{cmdR.getName(),
+        "s3a://" + getFileSystem().getBucket()};
+
+    intercept(IllegalStateException.class, "unguarded",
+        () -> run(argsR));
   }
 
   @Test

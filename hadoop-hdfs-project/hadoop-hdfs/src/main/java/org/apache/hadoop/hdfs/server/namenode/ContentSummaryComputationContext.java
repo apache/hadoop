@@ -22,8 +22,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -48,8 +48,8 @@ public class ContentSummaryComputationContext {
   private int sleepNanoSec = 0;
 
   public static final String REPLICATED = "Replicated";
-  public static final Log LOG = LogFactory
-      .getLog(ContentSummaryComputationContext.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(ContentSummaryComputationContext.class);
 
   private FSPermissionChecker pc;
   /**

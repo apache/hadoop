@@ -19,19 +19,19 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project-dist</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project-dist</relativePath>
+    <artifactId>hadoop-project</artifactId>
+    <version>3.3.0-SNAPSHOT</version>
+    <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Project</description>
   <name>Apache Hadoop Ozone</name>
   <packaging>pom</packaging>
 
   <properties>
-    <ozone.version>0.2.1-SNAPSHOT</ozone.version>
-    <ozone.release>Acadia</ozone.release>
+    <ozone.version>0.4.0-SNAPSHOT</ozone.version>
+    <ozone.release>Badlands</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
   </properties>
   <modules>
@@ -42,6 +42,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>ozonefs</module>
     <module>integration-test</module>
     <module>objectstore-service</module>
+    <module>datanode</module>
+    <module>s3gateway</module>
+    <module>dist</module>
     <module>docs</module>
   </modules>
 
@@ -49,47 +52,38 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-server-framework</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-server-scm</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-container-service</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-client</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-tools</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -129,38 +123,37 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>**/*.json</exclude>
+            <exclude>**/hs_err*.log</exclude>
             <exclude>**/target/**</exclude>
-            <exclude>acceptance-test/hadoop-ozone-acceptance-test.iml</exclude>
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
+            <exclude>dev-support/*tests</exclude>
             <exclude>dev-support/checkstyle*</exclude>
             <exclude>dev-support/jdiff/**</exclude>
-            <exclude>dev-support/*tests</exclude>
-            <exclude>src/test/empty-file</exclude>
-            <exclude>src/test/all-tests</exclude>
-            <exclude>src/test/resources/*.tgz</exclude>
-            <exclude>src/test/resources/data*</exclude>
-            <exclude>**/*.json</exclude>
-            <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/contrib/**</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/webapps/hdfs/robots.txt</exclude>
             <exclude>src/main/webapps/journal/robots.txt</exclude>
-            <exclude>src/main/webapps/secondary/robots.txt</exclude>
             <exclude>src/main/webapps/router/robots.txt</exclude>
-            <exclude>src/contrib/**</exclude>
+            <exclude>src/main/webapps/secondary/robots.txt</exclude>
             <exclude>src/site/resources/images/*</exclude>
+            <exclude>src/test/all-tests</exclude>
+            <exclude>src/test/empty-file</exclude>
+            <exclude>src/test/resources/*.tgz</exclude>
+            <exclude>src/test/resources/data*</exclude>
+            <exclude>src/test/resources/empty-file</exclude>
+            <exclude>webapps/static/angular-1.6.4.min.js</exclude>
+            <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
+            <exclude>webapps/static/angular-route-1.6.4.min.js</exclude>
             <exclude>webapps/static/bootstrap-3.3.7/**</exclude>
+            <exclude>webapps/static/d3-3.5.17.min.js</exclude>
             <exclude>webapps/static/jquery-3.3.1.min.js</exclude>
             <exclude>webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css.map</exclude>
-            <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
-            <exclude>webapps/static/angular-route-1.6.4.min.js
-            </exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.css</exclude>
-            <exclude>webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
-            <exclude>webapps/static/angular-1.6.4.min.js</exclude>
-            <exclude>webapps/static/d3-3.5.17.min.js</exclude>
+            <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -170,6 +163,36 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-classpath-descriptor</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <attach>true</attach>
+              <prefix>$HDDS_LIB_JARS_DIR</prefix>
+              <outputFilterFile>true</outputFilterFile>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

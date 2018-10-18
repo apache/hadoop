@@ -42,6 +42,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       "dfs.federation.router.";
   public static final String DFS_ROUTER_DEFAULT_NAMESERVICE =
       FEDERATION_ROUTER_PREFIX + "default.nameserviceId";
+  public static final String DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "default.nameservice.enable";
+  public static final boolean DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT =
+      true;
   public static final String DFS_ROUTER_HANDLER_COUNT_KEY =
       FEDERATION_ROUTER_PREFIX + "handler.count";
   public static final int DFS_ROUTER_HANDLER_COUNT_DEFAULT = 10;

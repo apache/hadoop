@@ -839,7 +839,7 @@ public interface ClientProtocol {
    * percentage called threshold of blocks, which satisfy the minimal
    * replication condition.
    * The minimal replication condition is that each block must have at least
-   * <tt>dfs.namenode.replication.min</tt> replicas.
+   * {@code dfs.namenode.replication.min} replicas.
    * When the threshold is reached the name node extends safe mode
    * for a configurable amount of time
    * to let the remaining data nodes to check in before it
@@ -855,12 +855,13 @@ public interface ClientProtocol {
    * Current state of the name node can be verified using
    * {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean)
    * setSafeMode(SafeModeAction.SAFEMODE_GET,false)}
-   * <h4>Configuration parameters:</h4>
-   * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
-   * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
-   * <tt>dfs.namenode.replication.min</tt> is the minimal replication parameter.
    *
-   * <h4>Special cases:</h4>
+   * <p><b>Configuration parameters:</b></p>
+   * {@code dfs.safemode.threshold.pct} is the threshold parameter.<br>
+   * {@code dfs.safemode.extension} is the safe mode extension parameter.<br>
+   * {@code dfs.namenode.replication.min} is the minimal replication parameter.
+   *
+   * <p><b>Special cases:</b></p>
    * The name node does not enter safe mode at startup if the threshold is
    * set to 0 or if the name space is empty.<br>
    * If the threshold is set to 1 then all blocks need to have at least
@@ -1211,7 +1212,6 @@ public interface ClientProtocol {
    * Get a valid Delegation Token.
    *
    * @param renewer the designated renewer for the token
-   * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
   @Idempotent
@@ -1490,7 +1490,7 @@ public interface ClientProtocol {
     throws IOException;
 
   /**
-   * Used to implement cursor-based batched listing of {@EncryptionZone}s.
+   * Used to implement cursor-based batched listing of {@link EncryptionZone}s.
    *
    * @param prevId ID of the last item in the previous batch. If there is no
    *               previous batch, a negative value can be used.
@@ -1513,7 +1513,7 @@ public interface ClientProtocol {
 
   /**
    * Used to implement cursor-based batched listing of
-   * {@ZoneReencryptionStatus}s.
+   * {@link ZoneReencryptionStatus}s.
    *
    * @param prevId ID of the last item in the previous batch. If there is no
    *               previous batch, a negative value can be used.
@@ -1528,7 +1528,7 @@ public interface ClientProtocol {
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
@@ -1545,12 +1545,12 @@ public interface ClientProtocol {
    * If xAttrs is null or empty, this is the same as getting all xattrs of the
    * file or directory.  Only those xattrs for which the logged-in user has
    * permissions to view are returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
    * @param xAttrs xAttrs to get
-   * @return List<XAttr> <code>XAttr</code> list
+   * @return <code>XAttr</code> list
    * @throws IOException
    */
   @Idempotent
@@ -1561,11 +1561,11 @@ public interface ClientProtocol {
    * List the xattrs names for a file or directory.
    * Only the xattr names for which the logged in user has the permissions to
    * access will be returned.
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory
-   * @return List<XAttr> <code>XAttr</code> list
+   * @return <code>XAttr</code> list
    * @throws IOException
    */
   @Idempotent
@@ -1576,7 +1576,7 @@ public interface ClientProtocol {
    * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
-   * <p/>
+   * <p>
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param src file or directory

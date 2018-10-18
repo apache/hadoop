@@ -21,6 +21,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 import org.apache.hadoop.hdds.protocol.proto
@@ -40,7 +42,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 /**
- * Register a container with SCM.
+ * Register a datanode with SCM.
  */
 public final class RegisterEndpointTask implements
     Callable<EndpointStateMachine.EndPointStates> {
@@ -108,13 +110,15 @@ public final class RegisterEndpointTask implements
     rpcEndPoint.lock();
     try {
 
-      ContainerReportsProto contianerReport = datanodeContainerManager
+      ContainerReportsProto containerReport = datanodeContainerManager
           .getContainerReport();
       NodeReportProto nodeReport = datanodeContainerManager.getNodeReport();
+      PipelineReportsProto pipelineReportsProto =
+              datanodeContainerManager.getPipelineReport();
       // TODO : Add responses to the command Queue.
       SCMRegisteredResponseProto response = rpcEndPoint.getEndPoint()
           .register(datanodeDetails.getProtoBufMessage(), nodeReport,
-              contianerReport);
+                  containerReport, pipelineReportsProto);
       Preconditions.checkState(UUID.fromString(response.getDatanodeUUID())
               .equals(datanodeDetails.getUuid()),
           "Unexpected datanode ID in the response.");

@@ -17,43 +17,50 @@
  */
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
-
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 /**
  * Allows users to add and remove acls and from a bucket.
  */
+@Command(name = "update",
+    description = "allows changing bucket attributes")
 public class UpdateBucketHandler extends Handler {
-  private String volumeName;
-  private String bucketName;
+
+  @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
+  private String uri;
+
+  @Option(names = {"--addAcl"},
+      description = "Comma separated list of acl rules to add (eg. " +
+          "user:bilbo:rw)")
+  private String addAcl;
+
+  @Option(names = {"--removeAcl"},
+      description = "Comma separated list of acl rules to remove (eg. "
+          + "user:bilbo:rw)")
+  private String removeAcl;
 
   @Override
-  protected void execute(CommandLine cmd)
-      throws IOException, OzoneException, URISyntaxException {
-    if (!cmd.hasOption(Shell.UPDATE_BUCKET)) {
-      throw new OzoneClientException(
-          "Incorrect call : updateBucket is missing");
-    }
+  public Void call() throws Exception {
 
-    String ozoneURIString = cmd.getOptionValue(Shell.UPDATE_BUCKET);
-    URI ozoneURI = verifyURI(ozoneURIString);
+    URI ozoneURI = verifyURI(uri);
     Path path = Paths.get(ozoneURI.getPath());
 
     if (path.getNameCount() < 2) {
@@ -61,28 +68,26 @@ public class UpdateBucketHandler extends Handler {
           "volume and bucket name required in update bucket");
     }
 
-    volumeName = path.getName(0).toString();
-    bucketName = path.getName(1).toString();
+    String volumeName = path.getName(0).toString();
+    String bucketName = path.getName(1).toString();
 
-    if (cmd.hasOption(Shell.VERBOSE)) {
+    if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
     }
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
-    if (cmd.hasOption(Shell.ADD_ACLS)) {
-      String aclString = cmd.getOptionValue(Shell.ADD_ACLS);
-      String[] aclArray = aclString.split(",");
+    if (addAcl != null) {
+      String[] aclArray = addAcl.split(",");
       List<OzoneAcl> aclList =
           Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl))
               .collect(Collectors.toList());
       bucket.addAcls(aclList);
     }
 
-    if (cmd.hasOption(Shell.REMOVE_ACLS)) {
-      String aclString = cmd.getOptionValue(Shell.REMOVE_ACLS);
-      String[] aclArray = aclString.split(",");
+    if (removeAcl != null) {
+      String[] aclArray = removeAcl.split(",");
       List<OzoneAcl> aclList =
           Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl))
               .collect(Collectors.toList());
@@ -91,5 +96,6 @@ public class UpdateBucketHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(OzoneClientUtils.asBucketInfo(bucket))));
+    return null;
   }
 }

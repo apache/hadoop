@@ -25,6 +25,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -50,6 +51,7 @@ import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
 import javax.security.auth.x500.X500Principal;
+
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 
 public class KeyStoreTestUtil {
@@ -127,9 +129,16 @@ public class KeyStoreTestUtil {
       String password, String alias,
       Key privateKey, Certificate cert)
       throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
-    ks.setKeyEntry(alias, privateKey, password.toCharArray(),
+    createKeyStore(filename, password, alias, privateKey,
         new Certificate[]{cert});
+  }
+
+  public static void createKeyStore(String filename,
+      String password, String alias,
+      Key privateKey, Certificate[] certs)
+      throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore();
+    ks.setKeyEntry(alias, privateKey, password.toCharArray(), certs);
     saveKeyStore(ks, filename, password);
   }
 
@@ -172,6 +181,14 @@ public class KeyStoreTestUtil {
       ks.setCertificateEntry(cert.getKey(), cert.getValue());
     }
     saveKeyStore(ks, filename, password);
+  }
+
+  public static KeyStore bytesToKeyStore(byte[] bytes, String password)
+      throws GeneralSecurityException, IOException {
+    KeyStore keyStore = createEmptyKeyStore();
+    ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+    keyStore.load(bais, password.toCharArray());
+    return keyStore;
   }
 
   public static void cleanupSSLConfig(String keystoresDir, String sslConfDir)

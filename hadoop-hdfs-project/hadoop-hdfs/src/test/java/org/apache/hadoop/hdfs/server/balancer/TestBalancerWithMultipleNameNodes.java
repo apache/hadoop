@@ -30,7 +30,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +50,7 @@ import org.apache.hadoop.hdfs.server.balancer.BalancerParameters;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -58,10 +58,10 @@ import org.junit.Test;
  * Test balancer with multiple NameNodes
  */
 public class TestBalancerWithMultipleNameNodes {
-  static final Log LOG = Balancer.LOG;
+  static final Logger LOG = Balancer.LOG;
   {
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
+    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
   }
 
   
@@ -352,7 +352,7 @@ public class TestBalancerWithMultipleNameNodes {
     try {
       Thread.sleep(ms);
     } catch(InterruptedException e) {
-      LOG.error(e);
+      LOG.error("{}", e);
     }
   }
   

@@ -53,6 +53,8 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -60,6 +62,9 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -85,11 +90,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
 
 import static org.junit.Assert.assertTrue;
@@ -1203,21 +1211,7 @@ public class TestRMAdminService {
 
     ((RMContextImpl) rm.getRMContext())
         .setHAServiceState(HAServiceState.ACTIVE);
-    Map<NodeId, RMNode> rmNodes = rm.getRMContext().getRMNodes();
-    rmNodes.put(NodeId.newInstance("host1", 1111),
-        new RMNodeImpl(null, rm.getRMContext(), "host1", 0, 0, null, null,
-                null));
-    rmNodes.put(NodeId.newInstance("host2", 2222),
-            new RMNodeImpl(null, rm.getRMContext(), "host2", 0, 0, null, null,
-                null));
-    rmNodes.put(NodeId.newInstance("host3", 3333),
-            new RMNodeImpl(null, rm.getRMContext(), "host3", 0, 0, null, null,
-                null));
-    Map<NodeId, RMNode> rmInactiveNodes = rm.getRMContext()
-        .getInactiveRMNodes();
-    rmInactiveNodes.put(NodeId.newInstance("host4", 4444),
-        new RMNodeImpl(null, rm.getRMContext(), "host4", 0, 0, null, null,
-                null));
+    setActiveAndInactiveNodes(rm);
     RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
 
     // by default, distributed configuration for node label is disabled, this
@@ -1551,5 +1545,152 @@ public class TestRMAdminService {
     NodeLabel labelY = NodeLabel.newInstance("b");
     Assert.assertTrue(
         response.getNodeLabelList().containsAll(Arrays.asList(labelX, labelY)));
+  }
+
+  @Test(timeout = 30000)
+  public void testMapAttributesToNodes() throws Exception, YarnException {
+    // 1. Need to test for the Invalid Node
+    // 1.1. Need to test for active nodes
+    // 1.2. Need to test for Inactive nodes
+    // 1.3. Test with Single Node invalid
+    // 1.4. Need to test with port (should fail)
+    // 1.5. Test with unknown node when failOnUnknownNodes is false
+
+    // also test : 3. Ensure Appropriate manager Method call is done
+    Configuration newConf = NodeAttributeTestUtils.getRandomDirConf(null);
+    rm = new MockRM(newConf);
+
+    NodeAttributesManager spiedAttributesManager =
+        Mockito.spy(rm.getRMContext().getNodeAttributesManager());
+    rm.getRMContext().setNodeAttributesManager(spiedAttributesManager);
+
+    ((RMContextImpl) rm.getRMContext())
+        .setHAServiceState(HAServiceState.ACTIVE);
+    setActiveAndInactiveNodes(rm);
+    // by default, distributed configuration for node label is disabled, this
+    // should pass
+    NodesToAttributesMappingRequest request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD,
+                ImmutableList.of(NodeToAttributes.newInstance("host1",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+    } catch (Exception ex) {
+      fail("should not fail on known node in active state" + ex.getMessage());
+    }
+    Mockito.verify(spiedAttributesManager, Mockito.times(1))
+        .addNodeAttributes(Mockito.anyMap());
+
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.REMOVE,
+                ImmutableList.of(NodeToAttributes.newInstance("host4",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+    } catch (Exception ex) {
+      fail("should not fail on known node in inactive state" + ex.getMessage());
+    }
+    Mockito.verify(spiedAttributesManager, Mockito.times(1))
+        .removeNodeAttributes(Mockito.anyMap());
+
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD,
+                ImmutableList.of(NodeToAttributes.newInstance("host5",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+      fail("host5 is not a valid node, It should have failed");
+    } catch (YarnException ex) {
+      Assert.assertEquals("Exception Message is not as desired",
+          " Following nodes does not exist : [host5]",
+          ex.getCause().getMessage());
+    }
+
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD, ImmutableList.of(
+                NodeToAttributes.newInstance("host4:8889",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf"))),
+                NodeToAttributes.newInstance("host2:8889",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                true);
+    try {
+      // port if added in CLI it fails in the client itself. Here we just check
+      // against hostname hence the message as : nodes does not exist.
+      rm.adminService.mapAttributesToNodes(request);
+      fail("host with the port should fail as only hostnames are validated");
+    } catch (YarnException ex) {
+      Assert.assertEquals("Exception Message is not as desired",
+          " Following nodes does not exist : [host4:8889, host2:8889]",
+          ex.getCause().getMessage());
+    }
+
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.REPLACE,
+                ImmutableList.of(NodeToAttributes.newInstance("host5",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_CENTRALIZED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                false);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+    } catch (Exception ex) {
+      fail("This operation should not fail as failOnUnknownNodes is false : "
+          + ex.getMessage());
+    }
+    Mockito.verify(spiedAttributesManager, Mockito.times(1))
+        .replaceNodeAttributes(Mockito.eq(NodeAttribute.PREFIX_CENTRALIZED),
+            Mockito.anyMap());
+
+    // 2. fail on invalid prefix
+    request =
+        NodesToAttributesMappingRequest
+            .newInstance(AttributeMappingOperationType.ADD,
+                ImmutableList.of(NodeToAttributes.newInstance("host5",
+                    ImmutableList.of(NodeAttribute.newInstance(
+                        NodeAttribute.PREFIX_DISTRIBUTED, "x",
+                        NodeAttributeType.STRING, "dfasdf")))),
+                false);
+    try {
+      rm.adminService.mapAttributesToNodes(request);
+      fail("This operation should fail as prefix should be \"nm.yarn.io\".");
+    } catch (YarnException ex) {
+      Assert.assertEquals("Exception Message is not as desired",
+          "Invalid Attribute Mapping for the node host5. Prefix should be "
+              + "rm.yarn.io", ex.getCause().getMessage());
+    }
+
+    rm.close();
+  }
+
+  private void setActiveAndInactiveNodes(ResourceManager resourceManager) {
+    Map<NodeId, RMNode> rmNodes = resourceManager.getRMContext().getRMNodes();
+    rmNodes.put(NodeId.newInstance("host1", 1111), new RMNodeImpl(null,
+        resourceManager.getRMContext(), "host1", 0, 0, null, null, null));
+    rmNodes.put(NodeId.newInstance("host2", 2222), new RMNodeImpl(null,
+        resourceManager.getRMContext(), "host2", 0, 0, null, null, null));
+    rmNodes.put(NodeId.newInstance("host3", 3333), new RMNodeImpl(null,
+        resourceManager.getRMContext(), "host3", 0, 0, null, null, null));
+    Map<NodeId, RMNode> rmInactiveNodes =
+        resourceManager.getRMContext().getInactiveRMNodes();
+    rmInactiveNodes.put(NodeId.newInstance("host4", 4444), new RMNodeImpl(null,
+        resourceManager.getRMContext(), "host4", 0, 0, null, null, null));
   }
 }

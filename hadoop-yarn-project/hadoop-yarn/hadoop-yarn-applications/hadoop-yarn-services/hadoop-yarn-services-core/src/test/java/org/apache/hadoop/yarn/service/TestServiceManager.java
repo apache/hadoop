@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
@@ -65,7 +66,7 @@ public class TestServiceManager {
     initUpgrade(context, "v2", false, false, false);
     ServiceManager manager = context.getServiceManager();
     //make components stable by upgrading all instances
-    upgradeAllInstances(context);
+    upgradeAndReadyAllInstances(context);
 
     context.scheduler.getDispatcher().getEventHandler().handle(
         new ServiceEvent(ServiceEventType.START));
@@ -83,7 +84,7 @@ public class TestServiceManager {
     initUpgrade(context, "v2", false, true, false);
     ServiceManager manager = context.getServiceManager();
     //make components stable by upgrading all instances
-    upgradeAllInstances(context);
+    upgradeAndReadyAllInstances(context);
 
     GenericTestUtils.waitFor(()->
         context.service.getState().equals(ServiceState.STABLE),
@@ -115,7 +116,7 @@ public class TestServiceManager {
         manager.getServiceSpec().getState());
 
     //make components stable by upgrading all instances
-    upgradeAllInstances(context);
+    upgradeAndReadyAllInstances(context);
 
     // finalize service
     context.scheduler.getDispatcher().getEventHandler().handle(
@@ -138,7 +139,7 @@ public class TestServiceManager {
     initUpgrade(context, "v2", true, true, false);
 
     // make components stable
-    upgradeAllInstances(context);
+    upgradeAndReadyAllInstances(context);
 
     GenericTestUtils.waitFor(() ->
         context.service.getState().equals(ServiceState.STABLE),
@@ -174,18 +175,17 @@ public class TestServiceManager {
   public void testExpressUpgrade() throws Exception {
     ServiceContext context = createServiceContext("testExpressUpgrade");
     ServiceManager manager = context.getServiceManager();
-    manager.getServiceSpec().setState(
-        ServiceState.EXPRESS_UPGRADING);
+    manager.getServiceSpec().setState(ServiceState.EXPRESS_UPGRADING);
     initUpgrade(context, "v2", true, true, true);
 
     List<String> comps = ServiceApiUtil.resolveCompsDependency(context.service);
-    // wait till instances of first component are in upgrade
-    String comp1 = comps.get(0);
-    upgradeInstancesOf(context, comp1);
+    // wait till instances of first component are upgraded and ready
+    String compA = comps.get(0);
+    makeInstancesReadyAfterUpgrade(context, compA);
 
-    // wait till instances of second component are in upgrade
-    String comp2 = comps.get(1);
-    upgradeInstancesOf(context, comp2);
+    // wait till instances of second component are upgraded and ready
+    String compB = comps.get(1);
+    makeInstancesReadyAfterUpgrade(context, compB);
 
     GenericTestUtils.waitFor(() ->
             context.service.getState().equals(ServiceState.STABLE),
@@ -194,6 +194,57 @@ public class TestServiceManager {
     Assert.assertEquals("service not stable",
         ServiceState.STABLE, manager.getServiceSpec().getState());
     validateUpgradeFinalization(manager.getName(), "v2");
+  }
+
+  @Test(timeout = TIMEOUT)
+  public void testCancelUpgrade() throws Exception {
+    ServiceContext context = createServiceContext("testCancelUpgrade");
+    writeInitialDef(context.service);
+    initUpgrade(context, "v2", true, false, false);
+    ServiceManager manager = context.getServiceManager();
+    Assert.assertEquals("service not upgrading", ServiceState.UPGRADING,
+        manager.getServiceSpec().getState());
+
+    List<String> comps = ServiceApiUtil.resolveCompsDependency(context.service);
+    // wait till instances of first component are upgraded and ready
+    String compA = comps.get(0);
+    // upgrade the instances
+    upgradeInstances(context, compA);
+    makeInstancesReadyAfterUpgrade(context, compA);
+
+    // cancel upgrade
+    context.scheduler.getDispatcher().getEventHandler().handle(
+        new ServiceEvent(ServiceEventType.CANCEL_UPGRADE));
+    makeInstancesReadyAfterUpgrade(context, compA);
+
+    GenericTestUtils.waitFor(()->
+            context.service.getState().equals(ServiceState.STABLE),
+        CHECK_EVERY_MILLIS, TIMEOUT);
+    Assert.assertEquals("service upgrade not cancelled", ServiceState.STABLE,
+        manager.getServiceSpec().getState());
+
+    validateUpgradeFinalization(manager.getName(), "v1");
+  }
+
+  @Test(timeout = TIMEOUT)
+  public void testCancelUpgradeAfterInitiate() throws Exception {
+    ServiceContext context = createServiceContext("testCancelUpgrade");
+    writeInitialDef(context.service);
+    initUpgrade(context, "v2", true, false, false);
+    ServiceManager manager = context.getServiceManager();
+    Assert.assertEquals("service not upgrading", ServiceState.UPGRADING,
+        manager.getServiceSpec().getState());
+
+    // cancel upgrade
+    context.scheduler.getDispatcher().getEventHandler().handle(
+        new ServiceEvent(ServiceEventType.CANCEL_UPGRADE));
+    GenericTestUtils.waitFor(()->
+            context.service.getState().equals(ServiceState.STABLE),
+        CHECK_EVERY_MILLIS, TIMEOUT);
+    Assert.assertEquals("service upgrade not cancelled", ServiceState.STABLE,
+        manager.getServiceSpec().getState());
+
+    validateUpgradeFinalization(manager.getName(), "v1");
   }
 
   private void validateUpgradeFinalization(String serviceName,
@@ -225,19 +276,21 @@ public class TestServiceManager {
     }
     writeUpgradedDef(upgradedDef);
     serviceManager.processUpgradeRequest(version, autoFinalize, expressUpgrade);
-    ServiceEvent upgradeEvent = new ServiceEvent(ServiceEventType.UPGRADE);
-    upgradeEvent.setVersion(version).setExpressUpgrade(expressUpgrade)
-        .setAutoFinalize(autoFinalize);
-
-    GenericTestUtils.waitFor(()-> {
-      ServiceState serviceState = context.service.getState();
-      if (serviceState.equals(ServiceState.UPGRADING) ||
-          serviceState.equals(ServiceState.UPGRADING_AUTO_FINALIZE) ||
-          serviceState.equals(ServiceState.EXPRESS_UPGRADING)) {
-        return true;
+    GenericTestUtils.waitFor(() -> {
+      for (Component comp : context.scheduler.getAllComponents().values()) {
+        if (!comp.getComponentSpec().getState().equals(
+            ComponentState.NEEDS_UPGRADE)) {
+          return false;
+        }
       }
-      return false;
+      return true;
     }, CHECK_EVERY_MILLIS, TIMEOUT);
+  }
+
+  private void upgradeAndReadyAllInstances(ServiceContext context) throws
+      TimeoutException, InterruptedException {
+    upgradeAllInstances(context);
+    makeAllInstancesReady(context);
   }
 
   private void upgradeAllInstances(ServiceContext context) throws
@@ -248,8 +301,10 @@ public class TestServiceManager {
           ComponentInstanceEventType.UPGRADE);
       context.scheduler.getDispatcher().getEventHandler().handle(event);
     }));
+  }
 
-    // become ready
+  private void makeAllInstancesReady(ServiceContext context)
+      throws TimeoutException, InterruptedException {
     context.scheduler.getLiveInstances().forEach(((containerId, instance) -> {
       ComponentInstanceEvent event = new ComponentInstanceEvent(containerId,
           ComponentInstanceEventType.BECOME_READY);
@@ -267,7 +322,19 @@ public class TestServiceManager {
     }, CHECK_EVERY_MILLIS, TIMEOUT);
   }
 
-  private void upgradeInstancesOf(ServiceContext context, String compName)
+  private void upgradeInstances(ServiceContext context, String compName) {
+    Collection<ComponentInstance> compInstances = context.scheduler
+        .getAllComponents().get(compName).getAllComponentInstances();
+    compInstances.forEach(instance -> {
+      ComponentInstanceEvent event = new ComponentInstanceEvent(
+          instance.getContainer().getId(),
+          ComponentInstanceEventType.UPGRADE);
+      context.scheduler.getDispatcher().getEventHandler().handle(event);
+    });
+  }
+
+  private void makeInstancesReadyAfterUpgrade(ServiceContext context,
+      String compName)
       throws TimeoutException, InterruptedException {
     Collection<ComponentInstance> compInstances = context.scheduler
         .getAllComponents().get(compName).getAllComponentInstances();
@@ -289,6 +356,15 @@ public class TestServiceManager {
 
       context.scheduler.getDispatcher().getEventHandler().handle(event);
     });
+
+    GenericTestUtils.waitFor(() -> {
+      for (ComponentInstance instance : compInstances) {
+        if (!instance.getContainerState().equals(ContainerState.READY)) {
+          return false;
+        }
+      }
+      return true;
+    }, CHECK_EVERY_MILLIS, TIMEOUT);
   }
 
   private ServiceContext createServiceContext(String name)
@@ -324,6 +400,14 @@ public class TestServiceManager {
     return artifact;
   }
 
+  private void writeInitialDef(Service service)
+      throws IOException, SliderException {
+    Path servicePath = rule.getFs().buildClusterDirPath(
+        service.getName());
+    ServiceApiUtil.createDirAndPersistApp(rule.getFs(), servicePath,
+        service);
+  }
+
   private void writeUpgradedDef(Service upgradedDef)
       throws IOException, SliderException {
     Path upgradePath = rule.getFs().buildClusterUpgradeDirPath(
@@ -332,6 +416,6 @@ public class TestServiceManager {
         upgradedDef);
   }
 
-  private static final int TIMEOUT = 200000;
+  private static final int TIMEOUT = 10000;
   private static final int CHECK_EVERY_MILLIS = 100;
 }

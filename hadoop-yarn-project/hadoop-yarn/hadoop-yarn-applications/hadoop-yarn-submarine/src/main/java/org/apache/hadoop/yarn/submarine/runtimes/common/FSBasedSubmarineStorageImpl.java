@@ -32,11 +32,9 @@ import java.util.Map;
  * A super naive FS-based storage.
  */
 public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
-  ClientContext clientContext;
   RemoteDirectoryManager rdm;
 
   public FSBasedSubmarineStorageImpl(ClientContext clientContext) {
-    this.clientContext = clientContext;
     rdm = clientContext.getRemoteDirectoryManager();
   }
 
@@ -89,7 +87,7 @@ public class FSBasedSubmarineStorageImpl extends SubmarineStorage {
   private Map<String, String> deserializeMap(FSDataInputStream fis)
       throws IOException {
     ObjectInput oi = new ObjectInputStream(fis);
-    Map<String, String> newMap = null;
+    Map<String, String> newMap;
     try {
       newMap = (Map<String, String>) oi.readObject();
     } catch (ClassNotFoundException e) {

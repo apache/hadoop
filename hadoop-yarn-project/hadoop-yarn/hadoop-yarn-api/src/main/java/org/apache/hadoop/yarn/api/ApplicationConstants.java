@@ -48,6 +48,28 @@ public interface ApplicationConstants {
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
   /**
+   * The file into which the keystore containing the AM's certificate is
+   * written.
+   */
+  String KEYSTORE_FILE_LOCATION_ENV_NAME = "KEYSTORE_FILE_LOCATION";
+
+  /**
+   * The password for the AM's keystore.
+   */
+  String KEYSTORE_PASSWORD_ENV_NAME = "KEYSTORE_PASSWORD";
+
+  /**
+   * The file into which the truststore containing the AM's certificate is
+   * written.
+   */
+  String TRUSTSTORE_FILE_LOCATION_ENV_NAME = "TRUSTSTORE_FILE_LOCATION";
+
+  /**
+   * The password for the AM's truststore.
+   */
+  String TRUSTSTORE_PASSWORD_ENV_NAME = "TRUSTSTORE_PASSWORD";
+
+  /**
    * The environmental variable for APPLICATION_WEB_PROXY_BASE. Set in
    * ApplicationMaster's environment only. This states that for all non-relative
    * web URLs in the app masters web UI what base should they have.

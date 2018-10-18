@@ -85,7 +85,7 @@ container ID.
 ## The binding problem
 Hadoop YARN allows applications to run on the Hadoop cluster. Some of these are
 batch jobs or queries that can managed via YARN’s existing API using its
-application ID. In addition YARN can deploy ong-lived services instances such a
+application ID. In addition YARN can deploy long-lived services instances such a
 pool of Apache Tomcat web servers or an Apache HBase cluster. YARN will deploy
 them across the cluster depending on the individual each component requirements
 and server availability. These service instances need to be discovered by
@@ -378,21 +378,6 @@ future record types *and* permits rapid rejection of byte arrays that
 lack this string before attempting to parse the data with a JSON parser.
 
 ### YARN Persistence policies
-
-The YARN Resource Manager integration integrates cleanup of service records
-as an application, attempt or container is completed.
-
-This allows service to register entries which have a lifespan bound to one of
-these aspects of YARN applications' lifecycles. This is a feature which is only
-supported when the RM has had its registry integration enabled via the
-configuration option `hadoop.registry.rm.enabled`.
-
-If this option is enabled, and the YARN resource manager is running,
-it will clean up service records as defined
-below.
-
-If the option is disabled, the RM does not provide any registry support at all.
-
 
 The attributes, `yarn:id` and `yarn:persistence` specify which records
 *and any child entries* may be deleted as the associated YARN components complete.

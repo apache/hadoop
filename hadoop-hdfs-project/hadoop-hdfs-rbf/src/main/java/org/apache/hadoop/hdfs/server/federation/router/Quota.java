@@ -18,12 +18,14 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -32,6 +34,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 
 /**
  * Module that implements the quota relevant RPC calls
@@ -62,7 +67,7 @@ public class Quota {
    * @param namespaceQuota Name space quota.
    * @param storagespaceQuota Storage space quota.
    * @param type StorageType that the space quota is intended to be set on.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public void setQuota(String path, long namespaceQuota,
       long storagespaceQuota, StorageType type) throws IOException {
@@ -91,7 +96,7 @@ public class Quota {
    * Get quota usage for the federation path.
    * @param path Federation path.
    * @return Aggregated quota.
-   * @throws IOException
+   * @throws IOException If the quota system is disabled.
    */
   public QuotaUsage getQuotaUsage(String path) throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
@@ -121,37 +126,31 @@ public class Quota {
     final List<RemoteLocation> locations = getQuotaRemoteLocations(path);
 
     // NameService -> Locations
-    Map<String, List<RemoteLocation>> validLocations = new HashMap<>();
-    for (RemoteLocation loc : locations) {
-      String nsId = loc.getNameserviceId();
-      List<RemoteLocation> dests = validLocations.get(nsId);
-      if (dests == null) {
-        dests = new LinkedList<>();
-        dests.add(loc);
-        validLocations.put(nsId, dests);
-      } else {
-        // Ensure the paths in the same nameservice is different.
-        // Don't include parent-child paths.
-        boolean isChildPath = false;
-        for (RemoteLocation d : dests) {
-          if (loc.getDest().startsWith(d.getDest())) {
-            isChildPath = true;
-            break;
-          }
-        }
+    ListMultimap<String, RemoteLocation> validLocations =
+        ArrayListMultimap.create();
 
-        if (!isChildPath) {
-          dests.add(loc);
+    for (RemoteLocation loc : locations) {
+      final String nsId = loc.getNameserviceId();
+      final Collection<RemoteLocation> dests = validLocations.get(nsId);
+
+      // Ensure the paths in the same nameservice is different.
+      // Do not include parent-child paths.
+      boolean isChildPath = false;
+
+      for (RemoteLocation d : dests) {
+        if (StringUtils.startsWith(loc.getDest(), d.getDest())) {
+          isChildPath = true;
+          break;
         }
+      }
+
+      if (!isChildPath) {
+        validLocations.put(nsId, loc);
       }
     }
 
-    List<RemoteLocation> quotaLocs = new LinkedList<>();
-    for (List<RemoteLocation> locs : validLocations.values()) {
-      quotaLocs.addAll(locs);
-    }
-
-    return quotaLocs;
+    return Collections
+        .unmodifiableList(new ArrayList<>(validLocations.values()));
   }
 
   /**
@@ -209,7 +208,7 @@ public class Quota {
    */
   private List<RemoteLocation> getQuotaRemoteLocations(String path)
       throws IOException {
-    List<RemoteLocation> locations = new LinkedList<>();
+    List<RemoteLocation> locations = new ArrayList<>();
     RouterQuotaManager manager = this.router.getQuotaManager();
     if (manager != null) {
       Set<String> childrenPaths = manager.getPaths(path);
@@ -217,7 +216,6 @@ public class Quota {
         locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
       }
     }
-
     return locations;
   }
 }

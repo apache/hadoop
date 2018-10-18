@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
@@ -1558,5 +1559,32 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       }
     }
     assertTrue(found);
+  }
+
+  @Test
+  public void testMaxLoad() {
+    FSClusterStats statistics = mock(FSClusterStats.class);
+    DatanodeDescriptor node = mock(DatanodeDescriptor.class);
+
+    when(statistics.getInServiceXceiverAverage()).thenReturn(0.0);
+    when(node.getXceiverCount()).thenReturn(1);
+
+    final Configuration conf = new Configuration();
+    final Class<? extends BlockPlacementPolicy> replicatorClass = conf
+        .getClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+            DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
+            BlockPlacementPolicy.class);
+    BlockPlacementPolicy bpp = ReflectionUtils.
+        newInstance(replicatorClass, conf);
+    assertTrue(bpp instanceof  BlockPlacementPolicyDefault);
+
+    BlockPlacementPolicyDefault bppd = (BlockPlacementPolicyDefault) bpp;
+    bppd.initialize(conf, statistics, null, null);
+    assertFalse(bppd.excludeNodeByLoad(node));
+
+    when(statistics.getInServiceXceiverAverage()).thenReturn(1.0);
+    when(node.getXceiverCount()).thenReturn(10);
+    assertTrue(bppd.excludeNodeByLoad(node));
+
   }
 }

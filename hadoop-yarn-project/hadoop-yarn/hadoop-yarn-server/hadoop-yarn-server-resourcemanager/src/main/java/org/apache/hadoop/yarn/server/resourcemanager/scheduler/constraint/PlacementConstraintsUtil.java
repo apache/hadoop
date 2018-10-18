@@ -24,8 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
@@ -114,20 +113,112 @@ public final class PlacementConstraintsUtil {
             || maxScopeCardinality <= desiredMaxCardinality);
   }
 
-  private static boolean canSatisfyNodePartitionConstraintExpresssion(
-      TargetExpression targetExpression, SchedulerNode schedulerNode) {
+  private static boolean canSatisfyNodeConstraintExpression(
+      SingleConstraint sc, TargetExpression targetExpression,
+      SchedulerNode schedulerNode) {
     Set<String> values = targetExpression.getTargetValues();
-    if (values == null || values.isEmpty()) {
-      return schedulerNode.getPartition().equals(
-          RMNodeLabelsManager.NO_LABEL);
-    } else{
-      String nodePartition = values.iterator().next();
-      if (!nodePartition.equals(schedulerNode.getPartition())) {
-        return false;
+
+    if (targetExpression.getTargetKey().equals(NODE_PARTITION)) {
+      if (values == null || values.isEmpty()) {
+        return schedulerNode.getPartition()
+            .equals(RMNodeLabelsManager.NO_LABEL);
+      } else {
+        String nodePartition = values.iterator().next();
+        if (!nodePartition.equals(schedulerNode.getPartition())) {
+          return false;
+        }
       }
+    } else {
+      NodeAttributeOpCode opCode = sc.getNodeAttributeOpCode();
+      // compare attributes.
+      String inputAttribute = values.iterator().next();
+      NodeAttribute requestAttribute = getNodeConstraintFromRequest(
+          targetExpression.getTargetKey(), inputAttribute);
+      if (requestAttribute == null) {
+        return true;
+      }
+
+      return getNodeConstraintEvaluatedResult(schedulerNode, opCode,
+          requestAttribute);
+    }
+    return true;
+  }
+
+  private static boolean getNodeConstraintEvaluatedResult(
+      SchedulerNode schedulerNode,
+      NodeAttributeOpCode opCode, NodeAttribute requestAttribute) {
+    // In case, attributes in a node is empty or incoming attributes doesn't
+    // exist on given node, accept such nodes for scheduling if opCode is
+    // equals to NE. (for eg. java != 1.8 could be scheduled on a node
+    // where java is not configured.)
+    if (schedulerNode.getNodeAttributes() == null ||
+        !schedulerNode.getNodeAttributes().contains(requestAttribute)) {
+      if (opCode == NodeAttributeOpCode.NE) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Incoming requestAttribute:" + requestAttribute
+              + "is not present in " + schedulerNode.getNodeID()
+              + ", however opcode is NE. Hence accept this node.");
+        }
+        return true;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Incoming requestAttribute:" + requestAttribute
+            + "is not present in " + schedulerNode.getNodeID()
+            + ", skip such node.");
+      }
+      return false;
     }
 
+    boolean found = false;
+    for (Iterator<NodeAttribute> it = schedulerNode.getNodeAttributes()
+        .iterator(); it.hasNext();) {
+      NodeAttribute nodeAttribute = it.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Starting to compare Incoming requestAttribute :"
+            + requestAttribute
+            + " with requestAttribute value= " + requestAttribute
+            .getAttributeValue()
+            + ", stored nodeAttribute value=" + nodeAttribute
+            .getAttributeValue());
+      }
+      if (requestAttribute.equals(nodeAttribute)) {
+        if (isOpCodeMatches(requestAttribute, nodeAttribute, opCode)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Incoming requestAttribute:" + requestAttribute
+                    + " matches with node:" + schedulerNode.getNodeID());
+          }
+          found = true;
+          return found;
+        }
+      }
+    }
+    if (!found) {
+      if (LOG.isDebugEnabled()) {
+        LOG.info("skip this node:" + schedulerNode.getNodeID()
+            + " for requestAttribute:" + requestAttribute);
+      }
+      return false;
+    }
     return true;
+  }
+
+  private static boolean isOpCodeMatches(NodeAttribute requestAttribute,
+      NodeAttribute nodeAttribute, NodeAttributeOpCode opCode) {
+    boolean retCode = false;
+    switch (opCode) {
+    case EQ:
+      retCode = requestAttribute.getAttributeValue()
+          .equals(nodeAttribute.getAttributeValue());
+      break;
+    case NE:
+      retCode = !(requestAttribute.getAttributeValue()
+          .equals(nodeAttribute.getAttributeValue()));
+      break;
+    default:
+      break;
+    }
+    return retCode;
   }
 
   private static boolean canSatisfySingleConstraint(ApplicationId applicationId,
@@ -146,10 +237,12 @@ public final class PlacementConstraintsUtil {
             singleConstraint, currentExp, schedulerNode, tagsManager)) {
           return false;
         }
-      } else if (currentExp.getTargetType().equals(TargetType.NODE_ATTRIBUTE)
-          && currentExp.getTargetKey().equals(NODE_PARTITION)) {
-        // This is a node partition expression, check it.
-        canSatisfyNodePartitionConstraintExpresssion(currentExp, schedulerNode);
+      } else if (currentExp.getTargetType().equals(TargetType.NODE_ATTRIBUTE)) {
+        // This is a node attribute expression, check it.
+        if (!canSatisfyNodeConstraintExpression(singleConstraint, currentExp,
+            schedulerNode)) {
+          return false;
+        }
       }
     }
     // return true if all targetExpressions are satisfied
@@ -203,6 +296,11 @@ public final class PlacementConstraintsUtil {
       AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
     if (constraint == null) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Constraint is found empty during constraint validation for app:"
+                + appId);
+      }
       return true;
     }
 
@@ -262,5 +360,25 @@ public final class PlacementConstraintsUtil {
     return canSatisfyConstraints(applicationId,
         pcm.getMultilevelConstraint(applicationId, sourceTags, pc),
         schedulerNode, atm);
+  }
+
+  private static NodeAttribute getNodeConstraintFromRequest(String attrKey,
+      String attrString) {
+    NodeAttribute nodeAttribute = null;
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Incoming node attribute: " + attrKey + "=" + attrString);
+    }
+
+    // Input node attribute could be like 1.8
+    String[] name = attrKey.split("/");
+    if (name == null || name.length == 1) {
+      nodeAttribute = NodeAttribute
+          .newInstance(attrKey, NodeAttributeType.STRING, attrString);
+    } else {
+      nodeAttribute = NodeAttribute
+          .newInstance(name[0], name[1], NodeAttributeType.STRING, attrString);
+    }
+
+    return nodeAttribute;
   }
 }

@@ -31,11 +31,11 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRe
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 
 /**
- * Management API for
- * {@link org.apache.hadoop.hdfs.server.federation.store.records.RouterState
- *  RouterState} records in the state store. Accesses the data store via the
- * {@link org.apache.hadoop.hdfs.server.federation.store.driver.
- * StateStoreDriver StateStoreDriver} interface. No data is cached.
+ * Management API for {@link
+ * org.apache.hadoop.hdfs.server.federation.store.records.RouterState
+ * RouterState} records in the state store. Accesses the data store via the
+ * {@link org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver
+ * StateStoreDriver} interface. No data is cached.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

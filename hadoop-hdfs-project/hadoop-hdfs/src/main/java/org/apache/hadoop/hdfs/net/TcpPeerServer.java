@@ -23,8 +23,8 @@ import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ServerSocketChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
@@ -32,7 +32,7 @@ import org.apache.hadoop.ipc.Server;
 
 @InterfaceAudience.Private
 public class TcpPeerServer implements PeerServer {
-  static final Log LOG = LogFactory.getLog(TcpPeerServer.class);
+  static final Logger LOG = LoggerFactory.getLogger(TcpPeerServer.class);
 
   private final ServerSocket serverSocket;
 

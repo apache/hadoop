@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm.protocol;
 
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -133,4 +133,20 @@ public interface StorageContainerLocationProtocol {
    * @throws IOException
    */
   ScmInfo getScmInfo() throws IOException;
+
+  /**
+   * Check if SCM is in chill mode.
+   *
+   * @return Returns true if SCM is in chill mode else returns false.
+   * @throws IOException
+   */
+  boolean inChillMode() throws IOException;
+
+  /**
+   * Force SCM out of Chill mode.
+   *
+   * @return returns true if operation is successful.
+   * @throws IOException
+   */
+  boolean forceExitChillMode() throws IOException;
 }

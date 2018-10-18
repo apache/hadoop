@@ -54,17 +54,6 @@ public interface RegistryConstants {
    * flag to indicate whether or not the registry should
    * be enabled in the RM: {@value}.
    */
-  String KEY_REGISTRY_ENABLED = REGISTRY_PREFIX + "rm.enabled";
-
-  /**
-   * Defaut value for enabling the registry in the RM: {@value}.
-   */
-  boolean DEFAULT_REGISTRY_ENABLED = false;
-
-  /**
-   * flag to indicate whether or not the registry should
-   * be enabled in the RM: {@value}.
-   */
   String KEY_DNS_ENABLED = DNS_PREFIX + "enabled";
 
   /**

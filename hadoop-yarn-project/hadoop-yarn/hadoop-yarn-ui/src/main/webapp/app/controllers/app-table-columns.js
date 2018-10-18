@@ -85,7 +85,7 @@ export default Ember.Controller.extend({
           contentPath: 'startTime',
           facetType: null,
           getCellContent: function(row) {
-            return Converter.timeStampToDate(row.get('startTime'));
+            return row.get('formattedStartTime');
           }
       }, {
           id: 'elTime',
@@ -100,7 +100,10 @@ export default Ember.Controller.extend({
           headerTitle: 'Finished Time',
           contentPath: 'validatedFinishedTs',
           facetType: null,
-          observePath: true
+          observePath: true,
+          getCellContent: function(row) {
+            return row.get('formattedFinishedTime');
+          }
       }, {
           id: 'priority',
           headerTitle: 'Priority',
@@ -174,14 +177,17 @@ export default Ember.Controller.extend({
       contentPath: 'startTime',
       facetType: null,
       getCellContent: function(row) {
-        return Converter.timeStampToDate(row.get('startTime'));
+        return row.get('formattedStartTime');
       }
     }, {
       id: 'finishTime',
       headerTitle: 'Finished Time',
       contentPath: 'validatedFinishedTs',
       facetType: null,
-      observePath: true
+      observePath: true,
+      getCellContent: function(row) {
+        return row.get('formattedFinishedTime');
+      }
     });
     return ColumnDef.make(colums);
   }.property(),

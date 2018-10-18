@@ -20,18 +20,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdds</artifactId>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-hdds-common</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Common</description>
   <name>Apache Hadoop HDDS Common</name>
   <packaging>jar</packaging>
 
   <properties>
-    <hdds.version>0.2.1-SNAPSHOT</hdds.version>
-    <hadoop.component>hdds</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
+    <hdds.version>0.4.0-SNAPSHOT</hdds.version>
     <log4j2.version>2.11.0</log4j2.version>
     <disruptor.version>3.4.2</disruptor.version>
     <declared.hdds.version>${hdds.version}</declared.hdds.version>
@@ -99,6 +97,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>com.lmax</groupId>
       <artifactId>disruptor</artifactId>
       <version>${disruptor.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-pool2</artifactId>
+      <version>2.6.0</version>
     </dependency>
 
   </dependencies>
@@ -169,10 +172,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <phase>generate-sources</phase>
             <configuration>
               <tasks>
-                <replace token="com.google.protobuf" value="org.apache.ratis.shaded.com.google.protobuf"
+                <replace token="com.google.protobuf" value="org.apache.ratis.thirdparty.com.google.protobuf"
                   dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
                 </replace>
-                <replace token="io.grpc" value="org.apache.ratis.shaded.io.grpc"
+                <replace token="io.grpc" value="org.apache.ratis.thirdparty.io.grpc"
                   dir="target/generated-sources/java/org/apache/hadoop/hdds/protocol/datanode/proto">
                 </replace>
               </tasks>
@@ -214,12 +217,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <imports>
                 <param>
                   ${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs-client/src/main/proto/
-                </param>
-                <param>
-                  ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto/
                 </param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

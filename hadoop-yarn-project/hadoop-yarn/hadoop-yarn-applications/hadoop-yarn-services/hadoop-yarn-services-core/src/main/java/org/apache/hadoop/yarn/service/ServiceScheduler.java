@@ -389,6 +389,8 @@ public class ServiceScheduler extends CompositeService {
     // Since AM has been started and registered, the service is in STARTED state
     app.setState(ServiceState.STARTED);
 
+    ServiceApiUtil.checkServiceDependencySatisified(context.service);
+
     // recover components based on containers sent from RM
     recoverComponents(response);
 

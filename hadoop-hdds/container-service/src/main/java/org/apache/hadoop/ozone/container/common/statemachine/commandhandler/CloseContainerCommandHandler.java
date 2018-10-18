@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
+import org.apache.ratis.protocol.NotLeaderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +74,17 @@ public class CloseContainerCommandHandler implements CommandHandler {
           CloseContainerCommandProto
               .parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
+      if (container.getContainerSet().getContainer(containerID)
+          .getContainerData().isClosed()) {
+        LOG.debug("Container {} is already closed", containerID);
+        // It might happen that the where the first attempt of closing the
+        // container failed with NOT_LEADER_EXCEPTION. In such cases, SCM will
+        // retry to check the container got really closed via Ratis.
+        // In such cases of the retry attempt, if the container is already
+        // closed via Ratis, we should just return.
+        cmdExecuted = true;
+        return;
+      }
       HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
       HddsProtos.ReplicationType replicationType =
           closeContainerProto.getReplicationType();
@@ -89,11 +101,24 @@ public class CloseContainerCommandHandler implements CommandHandler {
       // submit the close container request for the XceiverServer to handle
       container.submitContainerRequest(
           request.build(), replicationType, pipelineID);
-      cmdExecuted = true;
     } catch (Exception e) {
-      LOG.error("Can't close container " + containerID, e);
+      if (e instanceof NotLeaderException) {
+        // If the particular datanode is not the Ratis leader, the close
+        // container command will not be executed by the follower but will be
+        // executed by Ratis stateMachine transactions via leader to follower.
+        // There can also be case where the datanode is in candidate state.
+        // In these situations, NotLeaderException is thrown. Remove the status
+        // from cmdStatus Map here so that it will be retried only by SCM if the
+        // leader could not not close the container after a certain time.
+        context.removeCommandStatus(containerID);
+        LOG.info(e.getLocalizedMessage());
+      } else {
+        LOG.error("Can't close container " + containerID, e);
+        cmdExecuted = false;
+      }
     } finally {
-      updateCommandStatus(context, command, cmdExecuted, LOG);
+      updateCommandStatus(context, command,
+          (cmdStatus) -> cmdStatus.setStatus(cmdExecuted), LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }

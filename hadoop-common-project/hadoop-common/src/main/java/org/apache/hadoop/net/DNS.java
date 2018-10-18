@@ -141,7 +141,7 @@ public class DNS {
   }
 
   /**
-   * Like {@link DNS#getIPs(String, boolean), but returns all
+   * Like {@link DNS#getIPs(String, boolean)}, but returns all
    * IPs associated with the given interface and its subinterfaces.
    */
   public static String[] getIPs(String strInterface)

@@ -41,8 +41,8 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import static org.junit.Assert.assertTrue;
 
@@ -57,7 +57,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
  */
 public class TestJournalNodeRespectsBindHostKeys {
 
-  public static final Log LOG = LogFactory.getLog(
+  public static final Logger LOG = LoggerFactory.getLogger(
       TestJournalNodeRespectsBindHostKeys.class);
   private static final String WILDCARD_ADDRESS = "0.0.0.0";
   private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1:0";

@@ -226,8 +226,9 @@ class FsVolumeList {
       throw exceptions.get(0);
     }
     long totalTimeTaken = Time.monotonicNow() - totalStartTime;
-    FsDatasetImpl.LOG.info("Total time to add all replicas to map: "
-        + totalTimeTaken + "ms");
+    FsDatasetImpl.LOG
+        .info("Total time to add all replicas to map for block pool " + bpid
+            + ": " + totalTimeTaken + "ms");
   }
 
   /**

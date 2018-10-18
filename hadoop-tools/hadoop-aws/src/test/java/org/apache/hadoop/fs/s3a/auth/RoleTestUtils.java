@@ -76,12 +76,6 @@ public final class RoleTestUtils {
       DENY_S3_GET_OBJECT, STATEMENT_ALL_DDB, ALLOW_S3_GET_BUCKET_LOCATION
       );
 
-  /**
-   * Error message to get from the AWS SDK if you can't assume the role.
-   */
-  public static final String E_BAD_ROLE
-      = "Not authorized to perform sts:AssumeRole";
-
   private RoleTestUtils() {
   }
 

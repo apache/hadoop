@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test getFileStatus and related listing operations.
@@ -275,35 +276,22 @@ public abstract class AbstractContractGetFileStatusTest extends
   @Test
   public void testLocatedStatusNoDir() throws Throwable {
     describe("test the LocatedStatus call on a path which is not present");
-    try {
-      RemoteIterator<LocatedFileStatus> iterator
-          = getFileSystem().listLocatedStatus(path("missing"));
-      fail("Expected an exception, got an iterator: " + iterator);
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listLocatedStatus(path("missing")));
   }
 
   @Test
   public void testListStatusNoDir() throws Throwable {
     describe("test the listStatus(path) call on a path which is not present");
-    try {
-      getFileSystem().listStatus(path("missing"));
-      fail("Expected an exception");
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listStatus(path("missing")));
   }
 
   @Test
   public void testListStatusFilteredNoDir() throws Throwable {
     describe("test the listStatus(path, filter) call on a missing path");
-    try {
-      getFileSystem().listStatus(path("missing"), ALL_PATHS);
-      fail("Expected an exception");
-    } catch (FileNotFoundException expected) {
-      // expected
-    }
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listStatus(path("missing"), ALL_PATHS));
   }
 
   @Test

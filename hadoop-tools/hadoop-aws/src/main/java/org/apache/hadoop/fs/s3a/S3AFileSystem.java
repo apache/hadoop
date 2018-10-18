@@ -205,17 +205,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
   private AWSCredentialProviderList credentials;
 
+  private S3Guard.ITtlTimeProvider ttlTimeProvider;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
-    Configuration.addDeprecations(
-        new Configuration.DeprecationDelta[]{
-            // never shipped in an ASF release, but did get into the wild.
-            new Configuration.DeprecationDelta(
-                OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
-                SERVER_SIDE_ENCRYPTION_KEY)
-        });
-    Configuration.reloadExistingConfigurations();
+    // this is retained as a placeholder for when new deprecated keys
+    // need to be added.
+    Configuration.DeprecationDelta[] deltas = {
+    };
+
+    if (deltas.length > 0) {
+      Configuration.addDeprecations(deltas);
+      Configuration.reloadExistingConfigurations();
+    }
   }
 
   static {
@@ -344,6 +347,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
+      long authDirTtl = conf.getLong(METADATASTORE_AUTHORITATIVE_DIR_TTL,
+          DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
+      ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -1130,6 +1136,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
   /**
    * Increment a statistic by 1.
+   * This increments both the instrumentation and storage statistics.
    * @param statistic The operation to increment
    */
   protected void incrementStatistic(Statistic statistic) {
@@ -1138,6 +1145,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
   /**
    * Increment a statistic by a specific value.
+   * This increments both the instrumentation and storage statistics.
    * @param statistic The operation to increment
    * @param count the count to increment
    */
@@ -1174,8 +1182,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     Statistic stat = isThrottleException(ex)
         ? STORE_IO_THROTTLED
         : IGNORED_ERRORS;
-    instrumentation.incrementCounter(stat, 1);
-    storageStatistics.incrementCounter(stat, 1);
+    incrementStatistic(stat);
   }
 
   /**
@@ -1196,6 +1203,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   /**
    * Callback from {@link Invoker} when an operation against a metastore
    * is retried.
+   * Always increments the {@link Statistic#S3GUARD_METADATASTORE_RETRY}
+   * statistic/counter;
+   * if it is a throttling exception will update the associated
+   * throttled metrics/statistics.
+   *
    * @param ex exception
    * @param retries number of retries
    * @param idempotent is the method idempotent
@@ -1204,6 +1216,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       int retries,
       boolean idempotent) {
     operationRetried(ex);
+    incrementStatistic(S3GUARD_METADATASTORE_RETRY);
+    if (isThrottleException(ex)) {
+      incrementStatistic(S3GUARD_METADATASTORE_THROTTLED);
+      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+    }
   }
 
   /**
@@ -1895,7 +1912,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         key = key + '/';
       }
 
-      DirListingMetadata dirMeta = metadataStore.listChildren(path);
+      DirListingMetadata dirMeta =
+          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
       if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
@@ -1913,7 +1931,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         result.add(files.next());
       }
       return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta,
-          allowAuthoritative);
+          allowAuthoritative, ttlTimeProvider);
     } else {
       LOG.debug("Adding: rd (not a dir): {}", path);
       FileStatus[] stats = new FileStatus[1];
@@ -2123,7 +2141,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           // We have a definitive true / false from MetadataStore, we are done.
           return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
         } else {
-          DirListingMetadata children = metadataStore.listChildren(path);
+          DirListingMetadata children =
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
           if (children != null) {
             tombstones = children.listTombstones();
           }
@@ -2430,11 +2449,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Wait for an upload to complete.
    * If the waiting for completion is interrupted, the upload will be
    * aborted before an {@code InterruptedIOException} is thrown.
-   * @param upload upload to wait for
+   * If the upload (or its result collection) failed, this is where
+   * the failure is raised as an AWS exception
    * @param key destination key
+   * @param uploadInfo upload to wait for
    * @return the upload result
    * @throws InterruptedIOException if the blocking was interrupted.
    */
+  @Retries.OnceRaw
   UploadResult waitForUploadCompletion(String key, UploadInfo uploadInfo)
       throws InterruptedIOException {
     Upload upload = uploadInfo.getUpload();
@@ -3110,7 +3132,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           tombstones = metadataStoreListFilesIterator.listTombstones();
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
-          DirListingMetadata meta = metadataStore.listChildren(path);
+          DirListingMetadata meta =
+              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
           if (meta != null) {
             tombstones = meta.listTombstones();
           } else {
@@ -3183,7 +3206,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             final String key = maybeAddTrailingSlash(pathToKey(path));
             final Listing.FileStatusAcceptor acceptor =
                 new Listing.AcceptAllButSelfAndS3nDirs(path);
-            DirListingMetadata meta = metadataStore.listChildren(path);
+            DirListingMetadata meta =
+                S3Guard.listChildrenWithTtl(metadataStore, path,
+                    ttlTimeProvider);
             final RemoteIterator<FileStatus> cachedFileStatusIterator =
                 listing.createProvidedFileStatusIterator(
                     S3Guard.dirMetaToStatuses(meta), filter, acceptor);
@@ -3333,5 +3358,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public AWSCredentialProviderList shareCredentials(final String purpose) {
     LOG.debug("Sharing credentials for: {}", purpose);
     return credentials.share();
+  }
+
+  @VisibleForTesting
+  protected S3Guard.ITtlTimeProvider getTtlTimeProvider() {
+    return ttlTimeProvider;
+  }
+
+  @VisibleForTesting
+  protected void setTtlTimeProvider(S3Guard.ITtlTimeProvider ttlTimeProvider) {
+    this.ttlTimeProvider = ttlTimeProvider;
   }
 }

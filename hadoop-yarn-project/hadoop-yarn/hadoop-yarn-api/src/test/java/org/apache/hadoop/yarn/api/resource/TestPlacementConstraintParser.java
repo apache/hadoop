@@ -22,6 +22,8 @@ import com.google.common.collect.Sets;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.Or;
@@ -38,8 +40,14 @@ import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.Multiple
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.SourceTagsTokenizer;
 import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.ConstraintTokenizer;
 
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.*;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.and;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNodeAttribute;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -441,6 +449,79 @@ public class TestPlacementConstraintParser {
     } catch (PlacementConstraintParseException e) {
       Assert.fail("The parser is unable to parse the expression: "
           + constrainExpr + ", caused by: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testParseNodeAttributeSpec()
+      throws PlacementConstraintParseException {
+    Map<SourceTags, PlacementConstraint> result;
+    PlacementConstraint.AbstractConstraint expectedPc1, expectedPc2;
+    PlacementConstraint actualPc1, actualPc2;
+
+    // A single node attribute constraint
+    result = PlacementConstraintParser
+        .parsePlacementSpec("xyz=4,rm.yarn.io/foo=true");
+    Assert.assertEquals(1, result.size());
+    TargetExpression target = PlacementTargets
+        .nodeAttribute("rm.yarn.io/foo", "true");
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    // A single node attribute constraint
+    result = PlacementConstraintParser
+        .parsePlacementSpec("xyz=3,rm.yarn.io/foo!=abc");
+    Assert.assertEquals(1, result.size());
+    target = PlacementTargets
+        .nodeAttribute("rm.yarn.io/foo", "abc");
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.NE, target);
+
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    // A single node attribute constraint
+    result = PlacementConstraintParser
+        .parsePlacementSpec(
+            "xyz=1,rm.yarn.io/foo!=abc:zxy=1,rm.yarn.io/bar=true");
+    Assert.assertEquals(2, result.size());
+    target = PlacementTargets
+        .nodeAttribute("rm.yarn.io/foo", "abc");
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.NE, target);
+    target = PlacementTargets
+        .nodeAttribute("rm.yarn.io/bar", "true");
+    expectedPc2 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+
+    Iterator<PlacementConstraint> valueIt = result.values().iterator();
+    actualPc1 = valueIt.next();
+    actualPc2 = valueIt.next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    Assert.assertEquals(expectedPc2, actualPc2.getConstraintExpr());
+
+    // A single node attribute constraint w/o source tags
+    result = PlacementConstraintParser
+        .parsePlacementSpec("rm.yarn.io/foo=true");
+    Assert.assertEquals(1, result.size());
+    target = PlacementTargets.nodeAttribute("rm.yarn.io/foo", "true");
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+
+    SourceTags actualSourceTags = result.keySet().iterator().next();
+    Assert.assertTrue(actualSourceTags.isEmpty());
+    actualPc1 = result.values().iterator().next();
+    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    // If source tags is not specified for a node-attribute constraint,
+    // then this expression must be single constraint expression.
+    try {
+      PlacementConstraintParser
+          .parsePlacementSpec("rm.yarn.io/foo=true:xyz=1,notin,node,xyz");
+      Assert.fail("Expected a failure!");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof PlacementConstraintParseException);
     }
   }
 }

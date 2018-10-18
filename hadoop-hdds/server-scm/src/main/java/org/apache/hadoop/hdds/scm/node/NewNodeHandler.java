@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -31,17 +30,17 @@ import java.util.Collections;
  */
 public class NewNodeHandler implements EventHandler<DatanodeDetails> {
 
-  private final Node2ContainerMap node2ContainerMap;
+  private final NodeManager nodeManager;
 
-  public NewNodeHandler(Node2ContainerMap node2ContainerMap) {
-    this.node2ContainerMap = node2ContainerMap;
+  public NewNodeHandler(NodeManager nodeManager) {
+    this.nodeManager = nodeManager;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
     try {
-      node2ContainerMap.insertNewDatanode(datanodeDetails.getUuid(),
+      nodeManager.addDatanodeInContainerMap(datanodeDetails.getUuid(),
           Collections.emptySet());
     } catch (SCMException e) {
       // TODO: log exception message.

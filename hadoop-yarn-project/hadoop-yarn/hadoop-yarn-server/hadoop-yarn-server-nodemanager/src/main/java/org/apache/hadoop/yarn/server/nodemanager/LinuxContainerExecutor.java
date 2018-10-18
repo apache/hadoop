@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,9 +62,14 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -611,17 +618,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (exitCode ==
           ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
           exitCode ==
-              ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
-          exitCode ==
-              ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
+              ExitCode.INVALID_CONFIG_FILE.getExitCode()) {
         throw new ConfigurationException(
             "Linux Container Executor reached unrecoverable exception", e);
       }
@@ -661,6 +658,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         ctx.getNmPrivateContainerScriptPath())
       .setExecutionAttribute(NM_PRIVATE_TOKENS_PATH,
         ctx.getNmPrivateTokensPath())
+      .setExecutionAttribute(NM_PRIVATE_KEYSTORE_PATH,
+        ctx.getNmPrivateKeystorePath())
+      .setExecutionAttribute(NM_PRIVATE_TRUSTSTORE_PATH,
+        ctx.getNmPrivateTruststorePath())
       .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
       .setExecutionAttribute(LOCAL_DIRS, ctx.getLocalDirs())
       .setExecutionAttribute(LOG_DIRS, ctx.getLogDirs())
@@ -787,6 +788,32 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       postComplete(container.getContainerId());
     }
     return true;
+  }
+
+  /**
+   * Performs container exec.
+   *
+   * @param ctx Encapsulates information necessary for exec container.
+   * @return stdin and stdout of container exec.
+   * @throws ContainerExecutionException if container exec fails.
+   */
+  @Override
+  public IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException {
+    // TODO: calls PrivilegedOperationExecutor and return IOStream pairs
+    InputStream in = null;
+    OutputStream out = null;
+    int byteSize = 4000;
+    try {
+      in = new ByteArrayInputStream(
+          "This is input command".getBytes(Charset.forName("UTF-8")));
+      out = new ByteArrayOutputStream(byteSize);
+    } catch (IllegalArgumentException e) {
+      LOG.error("Failed to execute command to container runtime", e);
+    }
+    IOStreamPair pair = new IOStreamPair(in, out);
+    System.out.println(pair);
+    return new IOStreamPair(in, out);
   }
 
   @Override
@@ -947,7 +974,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           DockerCommandExecutor.getContainerStatus(containerId, privOpExecutor,
               nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
-        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId,
+            ResourceHandlerModule.getCgroupsRelativeRoot());
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
             null, privOpExecutor, false, nmContext);
       }

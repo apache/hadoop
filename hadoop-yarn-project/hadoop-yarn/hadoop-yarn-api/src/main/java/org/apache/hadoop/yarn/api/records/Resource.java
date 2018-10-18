@@ -397,7 +397,7 @@ public abstract class Resource implements Comparable<Resource> {
   protected void throwExceptionWhenArrayOutOfBound(int index) {
     String exceptionMsg = String.format(
         "Trying to access ResourceInformation for given index=%d. "
-            + "Acceptable index range is [0,%d), please check double check "
+            + "Acceptable index range is [0,%d), please double check "
             + "configured resources in resource-types.xml",
         index, ResourceUtils.getNumberOfKnownResourceTypes());
 

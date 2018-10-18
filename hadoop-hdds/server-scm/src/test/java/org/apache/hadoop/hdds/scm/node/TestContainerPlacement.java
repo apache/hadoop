@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
@@ -56,8 +56,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for different container placement policy.
@@ -96,17 +94,16 @@ public class TestContainerPlacement {
         Mockito.mock(DeadNodeHandler.class));
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString(), null, eventQueue);
-    assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfChillMode());
     return nodeManager;
   }
 
-  ContainerMapping createContainerManager(Configuration config,
+  SCMContainerManager createContainerManager(Configuration config,
       NodeManager scmNodeManager) throws IOException {
     EventQueue eventQueue = new EventQueue();
     final int cacheSize = config.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    return new ContainerMapping(config, scmNodeManager, cacheSize, eventQueue);
+    return new SCMContainerManager(config, scmNodeManager,
+        eventQueue);
 
   }
 
@@ -135,7 +132,7 @@ public class TestContainerPlacement {
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
 
     SCMNodeManager nodeManager = createNodeManager(conf);
-    ContainerMapping containerManager =
+    SCMContainerManager containerManager =
         createContainerManager(conf, nodeManager);
     List<DatanodeDetails> datanodes =
         TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
@@ -153,8 +150,6 @@ public class TestContainerPlacement {
           (long) nodeManager.getStats().getScmUsed().get());
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
-
-      assertTrue(nodeManager.isOutOfChillMode());
 
       ContainerWithPipeline containerWithPipeline = containerManager
           .allocateContainer(

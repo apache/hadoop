@@ -344,7 +344,7 @@ public class ValueQueue <E> {
    * <code>SyncGenerationPolicy</code> specified by the user.
    * @param keyName String key name
    * @param num Minimum number of values to return.
-   * @return List<E> values returned
+   * @return {@literal List<E>} values returned
    * @throws IOException
    * @throws ExecutionException
    */

@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import com.google.common.base.Supplier;
@@ -88,6 +89,7 @@ public class TestNameNodeMetadataConsistency {
     final long genStamp = block.getGenerationStamp();
     final int datanodeIndex = 0;
     cluster.changeGenStampOfBlock(datanodeIndex, block, genStamp + 1);
+    DataNodeTestUtils.runDirectoryScanner(cluster.getDataNodes().get(0));
     // stop the data node so that it won't remove block
     final DataNodeProperties dnProps = cluster.stopDataNode(datanodeIndex);
 

@@ -19,8 +19,15 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto
+        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -45,7 +52,6 @@ import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
-import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
 import org.slf4j.Logger;
@@ -54,13 +60,11 @@ import org.slf4j.LoggerFactory;
 import javax.management.ObjectName;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Maintains information about the Datanodes on SCM side.
@@ -83,31 +87,13 @@ public class SCMNodeManager
   static final Logger LOG =
       LoggerFactory.getLogger(SCMNodeManager.class);
 
-
   private final NodeStateManager nodeStateManager;
-  // Individual live node stats
-  // TODO: NodeStat should be moved to NodeStatemanager (NodeStateMap)
-  private final ConcurrentHashMap<UUID, SCMNodeStat> nodeStats;
   // Should we maintain aggregated stats? If this is not frequently used, we
   // can always calculate it from nodeStats whenever required.
   // Aggregated node stats
   private SCMNodeStat scmStat;
-  // Should we create ChillModeManager and extract all the chill mode logic
-  // to a new class?
-  private int chillModeNodeCount;
   private final String clusterID;
   private final VersionInfo version;
-  /**
-   * During start up of SCM, it will enter into chill mode and will be there
-   * until number of Datanodes registered reaches {@code chillModeNodeCount}.
-   * This flag is for tracking startup chill mode.
-   */
-  private AtomicBoolean inStartupChillMode;
-  /**
-   * Administrator can put SCM into chill mode manually.
-   * This flag is for tracking manual chill mode.
-   */
-  private AtomicBoolean inManualChillMode;
   private final CommandQueue commandQueue;
   // Node manager MXBean
   private ObjectName nmInfoBean;
@@ -122,15 +108,10 @@ public class SCMNodeManager
       StorageContainerManager scmManager, EventPublisher eventPublisher)
       throws IOException {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
-    this.nodeStats = new ConcurrentHashMap<>();
     this.scmStat = new SCMNodeStat();
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
-    // TODO: Support this value as a Percentage of known machines.
-    this.chillModeNodeCount = 1;
-    this.inStartupChillMode = new AtomicBoolean(true);
-    this.inManualChillMode = new AtomicBoolean(false);
     this.scmManager = scmManager;
     LOG.info("Entering startup chill mode.");
     registerMXBean();
@@ -183,91 +164,6 @@ public class SCMNodeManager
   }
 
   /**
-   * Get the minimum number of nodes to get out of Chill mode.
-   *
-   * @return int
-   */
-  @Override
-  public int getMinimumChillModeNodes() {
-    return chillModeNodeCount;
-  }
-
-  /**
-   * Sets the Minimum chill mode nodes count, used only in testing.
-   *
-   * @param count - Number of nodes.
-   */
-  @VisibleForTesting
-  public void setMinimumChillModeNodes(int count) {
-    chillModeNodeCount = count;
-  }
-
-  /**
-   * Returns chill mode Status string.
-   * @return String
-   */
-  @Override
-  public String getChillModeStatus() {
-    if (inStartupChillMode.get()) {
-      return "Still in chill mode, waiting on nodes to report in." +
-          String.format(" %d nodes reported, minimal %d nodes required.",
-              nodeStateManager.getTotalNodeCount(), getMinimumChillModeNodes());
-    }
-    if (inManualChillMode.get()) {
-      return "Out of startup chill mode, but in manual chill mode." +
-          String.format(" %d nodes have reported in.",
-              nodeStateManager.getTotalNodeCount());
-    }
-    return "Out of chill mode." +
-        String.format(" %d nodes have reported in.",
-            nodeStateManager.getTotalNodeCount());
-  }
-
-  /**
-   * Forcefully exits the chill mode even if we have not met the minimum
-   * criteria of exiting the chill mode. This will exit from both startup
-   * and manual chill mode.
-   */
-  @Override
-  public void forceExitChillMode() {
-    if(inStartupChillMode.get()) {
-      LOG.info("Leaving startup chill mode.");
-      inStartupChillMode.set(false);
-    }
-    if(inManualChillMode.get()) {
-      LOG.info("Leaving manual chill mode.");
-      inManualChillMode.set(false);
-    }
-  }
-
-  /**
-   * Puts the node manager into manual chill mode.
-   */
-  @Override
-  public void enterChillMode() {
-    LOG.info("Entering manual chill mode.");
-    inManualChillMode.set(true);
-  }
-
-  /**
-   * Brings node manager out of manual chill mode.
-   */
-  @Override
-  public void exitChillMode() {
-    LOG.info("Leaving manual chill mode.");
-    inManualChillMode.set(false);
-  }
-
-  /**
-   * Returns true if node manager is out of chill mode, else false.
-   * @return true if out of chill mode, else false
-   */
-  @Override
-  public boolean isOutOfChillMode() {
-    return !(inStartupChillMode.get() || inManualChillMode.get());
-  }
-
-  /**
    * Returns the Number of Datanodes by State they are in.
    *
    * @return int -- count
@@ -295,9 +191,11 @@ public class SCMNodeManager
 
 
   private void updateNodeStat(UUID dnId, NodeReportProto nodeReport) {
-    SCMNodeStat stat = nodeStats.get(dnId);
-    if (stat == null) {
-      LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
+    SCMNodeStat stat;
+    try {
+      stat = nodeStateManager.getNodeStat(dnId);
+    } catch (NodeNotFoundException e) {
+      LOG.debug("SCM updateNodeStat based on heartbeat from previous " +
           "dead datanode {}", dnId);
       stat = new SCMNodeStat();
     }
@@ -315,9 +213,9 @@ public class SCMNodeManager
       }
       scmStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
-      nodeStats.put(dnId, stat);
       scmStat.add(stat);
     }
+    nodeStateManager.setNodeStat(dnId, stat);
   }
 
   /**
@@ -363,7 +261,8 @@ public class SCMNodeManager
    */
   @Override
   public RegisteredCommand register(
-      DatanodeDetails datanodeDetails, NodeReportProto nodeReport) {
+      DatanodeDetails datanodeDetails, NodeReportProto nodeReport,
+      PipelineReportsProto pipelineReportsProto) {
 
     InetAddress dnAddress = Server.getRemoteIp();
     if (dnAddress != null) {
@@ -374,15 +273,10 @@ public class SCMNodeManager
     UUID dnId = datanodeDetails.getUuid();
     try {
       nodeStateManager.addNode(datanodeDetails);
-      nodeStats.put(dnId, new SCMNodeStat());
-      if(inStartupChillMode.get() &&
-          nodeStateManager.getTotalNodeCount() >= getMinimumChillModeNodes()) {
-        inStartupChillMode.getAndSet(false);
-        LOG.info("Leaving startup chill mode.");
-      }
+      nodeStateManager.setNodeStat(dnId, new SCMNodeStat());
       // Updating Node Report, as registration is successful
       updateNodeStat(datanodeDetails.getUuid(), nodeReport);
-      LOG.info("Data node with ID: {} Registered.", datanodeDetails.getUuid());
+      LOG.info("Registered Data node : {}", datanodeDetails);
     } catch (NodeAlreadyExistsException e) {
       LOG.trace("Datanode is already registered. Datanode: {}",
           datanodeDetails.toString());
@@ -409,12 +303,20 @@ public class SCMNodeManager
     try {
       nodeStateManager.updateLastHeartbeatTime(datanodeDetails);
     } catch (NodeNotFoundException e) {
-      LOG.warn("SCM receive heartbeat from unregistered datanode {}",
-          datanodeDetails);
-      commandQueue.addCommand(datanodeDetails.getUuid(),
-          new ReregisterCommand());
+      LOG.error("SCM trying to process heartbeat from an " +
+          "unregistered node {}. Ignoring the heartbeat.", datanodeDetails);
     }
     return commandQueue.getCommand(datanodeDetails.getUuid());
+  }
+
+  @Override
+  public Boolean isNodeRegistered(DatanodeDetails datanodeDetails) {
+    try {
+      nodeStateManager.getNode(datanodeDetails);
+      return true;
+    } catch (NodeNotFoundException e) {
+      return false;
+    }
   }
 
   /**
@@ -443,17 +345,25 @@ public class SCMNodeManager
    */
   @Override
   public Map<UUID, SCMNodeStat> getNodeStats() {
-    return Collections.unmodifiableMap(nodeStats);
+    return nodeStateManager.getNodeStatsMap();
   }
 
   /**
    * Return the node stat of the specified datanode.
    * @param datanodeDetails - datanode ID.
-   * @return node stat if it is live/stale, null if it is dead or does't exist.
+   * @return node stat if it is live/stale, null if it is decommissioned or
+   * doesn't exist.
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
-    return new SCMNodeMetric(nodeStats.get(datanodeDetails.getUuid()));
+    try {
+      return new SCMNodeMetric(
+          nodeStateManager.getNodeStat(datanodeDetails.getUuid()));
+    } catch (NodeNotFoundException e) {
+      LOG.info("SCM getNodeStat from a decommissioned or removed datanode {}",
+          datanodeDetails.getUuid());
+      return null;
+    }
   }
 
   @Override
@@ -463,6 +373,83 @@ public class SCMNodeManager
       nodeCountMap.put(state.toString(), getNodeCount(state));
     }
     return nodeCountMap;
+  }
+
+  /**
+   * Get set of pipelines a datanode is part of.
+   * @param dnId - datanodeID
+   * @return Set of PipelineID
+   */
+  @Override
+  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
+    return nodeStateManager.getPipelineByDnID(dnId);
+  }
+
+
+  /**
+   * Add pipeline information in the NodeManager.
+   * @param pipeline - Pipeline to be added
+   */
+  @Override
+  public void addPipeline(Pipeline pipeline) {
+    nodeStateManager.addPipeline(pipeline);
+  }
+
+  /**
+   * Remove a pipeline information from the NodeManager.
+   * @param pipeline - Pipeline to be removed
+   */
+  @Override
+  public void removePipeline(Pipeline pipeline) {
+    nodeStateManager.removePipeline(pipeline);
+  }
+
+  /**
+   * Update set of containers available on a datanode.
+   * @param uuid - DatanodeID
+   * @param containerIds - Set of containerIDs
+   * @throws SCMException - if datanode is not known. For new datanode use
+   *                        addDatanodeInContainerMap call.
+   */
+  @Override
+  public void setContainersForDatanode(UUID uuid,
+      Set<ContainerID> containerIds) throws SCMException {
+    nodeStateManager.setContainersForDatanode(uuid, containerIds);
+  }
+
+  /**
+   * Process containerReport received from datanode.
+   * @param uuid - DataonodeID
+   * @param containerIds - Set of containerIDs
+   * @return The result after processing containerReport
+   */
+  @Override
+  public ReportResult<ContainerID> processContainerReport(UUID uuid,
+      Set<ContainerID> containerIds) {
+    return nodeStateManager.processContainerReport(uuid, containerIds);
+  }
+
+  /**
+   * Return set of containerIDs available on a datanode.
+   * @param uuid - DatanodeID
+   * @return - set of containerIDs
+   */
+  @Override
+  public Set<ContainerID> getContainers(UUID uuid) {
+    return nodeStateManager.getContainers(uuid);
+  }
+
+  /**
+   * Insert a new datanode with set of containerIDs for containers available
+   * on it.
+   * @param uuid - DatanodeID
+   * @param containerIDs - Set of ContainerIDs
+   * @throws SCMException - if datanode already exists
+   */
+  @Override
+  public void addDatanodeInContainerMap(UUID uuid,
+      Set<ContainerID> containerIDs) throws SCMException {
+    nodeStateManager.addDatanodeInContainerMap(uuid, containerIDs);
   }
 
   // TODO:
@@ -486,5 +473,30 @@ public class SCMNodeManager
       EventPublisher ignored) {
     addDatanodeCommand(commandForDatanode.getDatanodeId(),
         commandForDatanode.getCommand());
+  }
+
+  /**
+   * Update the node stats and cluster storage stats in this SCM Node Manager.
+   *
+   * @param dnUuid datanode uuid.
+   */
+  @Override
+  public void processDeadNode(UUID dnUuid) {
+    try {
+      SCMNodeStat stat = nodeStateManager.getNodeStat(dnUuid);
+      if (stat != null) {
+        LOG.trace("Update stat values as Datanode {} is dead.", dnUuid);
+        scmStat.subtract(stat);
+        stat.set(0, 0, 0);
+      }
+    } catch (NodeNotFoundException e) {
+      LOG.warn("Can't update stats based on message of dead Datanode {}, it"
+          + " doesn't exist or decommissioned already.", dnUuid);
+    }
+  }
+
+  @Override
+  public List<SCMCommand> getCommandQueue(UUID dnID) {
+    return commandQueue.getCommand(dnID);
   }
 }

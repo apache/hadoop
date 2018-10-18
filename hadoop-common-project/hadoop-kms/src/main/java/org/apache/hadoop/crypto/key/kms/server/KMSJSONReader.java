@@ -38,6 +38,7 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 @InterfaceAudience.Private
 public class KMSJSONReader implements MessageBodyReader<Object> {
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
@@ -51,7 +52,6 @@ public class KMSJSONReader implements MessageBodyReader<Object> {
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, String> httpHeaders, InputStream entityStream)
       throws IOException, WebApplicationException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(entityStream, type);
+    return MAPPER.readValue(entityStream, type);
   }
 }

@@ -17,18 +17,19 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.CLOSE_CONTAINER_RETRYABLE_REQ;
 
 /**
  * In case of a node failure, volume failure, volume out of spapce, node
@@ -44,9 +45,9 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       LoggerFactory.getLogger(CloseContainerEventHandler.class);
 
 
-  private final Mapping containerManager;
+  private final ContainerManager containerManager;
 
-  public CloseContainerEventHandler(Mapping containerManager) {
+  public CloseContainerEventHandler(ContainerManager containerManager) {
     this.containerManager = containerManager;
   }
 
@@ -55,11 +56,11 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
 
     LOG.info("Close container Event triggered for container : {}",
         containerID.getId());
-    ContainerWithPipeline containerWithPipeline = null;
+    ContainerWithPipeline containerWithPipeline;
     ContainerInfo info;
     try {
       containerWithPipeline =
-          containerManager.getContainerWithPipeline(containerID.getId());
+          containerManager.getContainerWithPipeline(containerID);
       info = containerWithPipeline.getContainerInfo();
       if (info == null) {
         LOG.error("Failed to update the container state. Container with id : {}"
@@ -72,39 +73,87 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
       return;
     }
 
-    if (info.getState() == HddsProtos.LifeCycleState.OPEN) {
-      for (DatanodeDetails datanode :
-          containerWithPipeline.getPipeline().getMachines()) {
-        CommandForDatanode closeContainerCommand = new CommandForDatanode<>(
-            datanode.getUuid(),
-            new CloseContainerCommand(containerID.getId(),
-                info.getReplicationType(), info.getPipelineID()));
-        publisher.fireEvent(DATANODE_COMMAND, closeContainerCommand);
-      }
-      try {
-        // Finalize event will make sure the state of the container transitions
-        // from OPEN to CLOSING in containerStateManager.
-        containerManager.updateContainerState(containerID.getId(),
-            HddsProtos.LifeCycleEvent.FINALIZE);
-      } catch (IOException ex) {
-        LOG.error("Failed to update the container state to FINALIZE for"
-            + "container : {}" + containerID, ex);
-      }
-    } else if (info.getState() == HddsProtos.LifeCycleState.ALLOCATED) {
-      try {
-        // Create event will make sure the state of the container transitions
-        // from OPEN to CREATING in containerStateManager, this will move
-        // the container out of active allocation path.
-        containerManager.updateContainerState(containerID.getId(),
+    HddsProtos.LifeCycleState state = info.getState();
+    try {
+      switch (state) {
+      case ALLOCATED:
+        // We cannot close a container in ALLOCATED state, moving the
+        // container to CREATING state, this should eventually
+        // timeout and the container will be moved to DELETING state.
+        LOG.debug("Closing container #{} in {} state", containerID, state);
+        containerManager.updateContainerState(containerID,
             HddsProtos.LifeCycleEvent.CREATE);
-      } catch (IOException ex) {
-        LOG.error("Failed to update the container state to CREATE for"
-            + "container:{}" + containerID, ex);
+        break;
+      case CREATING:
+        // We cannot close a container in CREATING state, it will eventually
+        // timeout and moved to DELETING state.
+        LOG.debug("Closing container {} in {} state", containerID, state);
+        break;
+      case OPEN:
+        containerManager.updateContainerState(containerID,
+            HddsProtos.LifeCycleEvent.FINALIZE);
+        fireCloseContainerEvents(containerWithPipeline, info, publisher);
+        break;
+      case CLOSING:
+        fireCloseContainerEvents(containerWithPipeline, info, publisher);
+        break;
+      case CLOSED:
+      case DELETING:
+      case DELETED:
+        LOG.info("Cannot close container #{}, it is already in {} state.",
+            containerID.getId(), state);
+        break;
+      default:
+        throw new IOException("Invalid container state for container #"
+            + containerID);
       }
-    } else {
-      LOG.info("container with id : {} is in {} state and need not be closed.",
-          containerID.getId(), info.getState());
+    } catch (IOException ex) {
+      LOG.error("Failed to update the container state for container #{}"
+          + containerID, ex);
+    }
+  }
+
+  private void fireCloseContainerEvents(
+      ContainerWithPipeline containerWithPipeline, ContainerInfo info,
+      EventPublisher publisher) {
+    ContainerID containerID = info.containerID();
+    // fire events.
+    CloseContainerCommand closeContainerCommand =
+        new CloseContainerCommand(containerID.getId(),
+            info.getReplicationType(), info.getPipelineID());
+
+    Pipeline pipeline = containerWithPipeline.getPipeline();
+    pipeline.getMachines().stream()
+        .map(node ->
+            new CommandForDatanode<>(node.getUuid(), closeContainerCommand))
+        .forEach(command -> publisher.fireEvent(DATANODE_COMMAND, command));
+
+    publisher.fireEvent(CLOSE_CONTAINER_RETRYABLE_REQ,
+        new CloseContainerRetryableReq(containerID));
+
+    LOG.trace("Issuing {} on Pipeline {} for container", closeContainerCommand,
+        pipeline, containerID);
+  }
+
+  /**
+   * Class to create retryable event. Prevents redundant requests for same
+   * container Id.
+   */
+  public static class CloseContainerRetryableReq implements
+      IdentifiableEventPayload {
+
+    private ContainerID containerID;
+    public CloseContainerRetryableReq(ContainerID containerID) {
+      this.containerID = containerID;
     }
 
+    public ContainerID getContainerID() {
+      return containerID;
+    }
+
+    @Override
+    public long getId() {
+      return containerID.getId();
+    }
   }
 }

@@ -28,8 +28,8 @@ import java.io.Writer;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
@@ -64,8 +64,8 @@ import org.junit.Test;
  * values before interpreting them.)
  */
 public class TestAclsEndToEnd {
-  private static final Log LOG =
-      LogFactory.getLog(TestAclsEndToEnd.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAclsEndToEnd.class.getName());
   private static final String TEXT =
       "The blue zone is for loading and unloading only. "
       + "Please park in the red zone.";

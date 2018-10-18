@@ -138,9 +138,7 @@ public class TestReportPublisher {
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("Unit test ReportManager Thread - %d").build());
     publisher.init(dummyContext, executorService);
-    Assert.assertEquals(0,
-        ((CommandStatusReportPublisher) publisher).getReport()
-            .getCmdStatusCount());
+    Assert.assertNull(((CommandStatusReportPublisher) publisher).getReport());
 
     // Insert to status object to state context map and then get the report.
     CommandStatus obj1 = CommandStatus.CommandStatusBuilder.newBuilder()
@@ -155,19 +153,10 @@ public class TestReportPublisher {
         .build();
     cmdStatusMap.put(obj1.getCmdId(), obj1);
     cmdStatusMap.put(obj2.getCmdId(), obj2);
-    Assert.assertEquals("Should publish report with 2 status objects", 2,
+    // We are not sending the commands whose status is PENDING.
+    Assert.assertEquals("Should publish report with 2 status objects", 1,
         ((CommandStatusReportPublisher) publisher).getReport()
             .getCmdStatusCount());
-    Assert.assertEquals(
-        "Next report should have 1 status objects as command status o"
-            + "bjects are still in Pending state",
-        1, ((CommandStatusReportPublisher) publisher).getReport()
-            .getCmdStatusCount());
-    Assert.assertTrue(
-        "Next report should have 1 status objects as command status "
-            + "objects are still in Pending state",
-        ((CommandStatusReportPublisher) publisher).getReport()
-            .getCmdStatusList().get(0).getStatus().equals(Status.PENDING));
     executorService.shutdown();
   }
 

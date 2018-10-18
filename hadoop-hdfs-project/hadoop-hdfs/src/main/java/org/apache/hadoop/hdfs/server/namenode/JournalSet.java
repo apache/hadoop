@@ -30,8 +30,8 @@ import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -54,7 +54,7 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public class JournalSet implements JournalManager {
 
-  static final Log LOG = LogFactory.getLog(FSEditLog.class);
+  static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
 
   // we want local logs to be ordered earlier in the collection, and true
   // is considered larger than false, so reverse the comparator
@@ -387,7 +387,7 @@ public class JournalSet implements JournalManager {
         if (jas.isRequired()) {
           final String msg = "Error: " + status + " failed for required journal ("
             + jas + ")";
-          LOG.fatal(msg, t);
+          LOG.error(msg, t);
           // If we fail on *any* of the required journals, then we must not
           // continue on any of the other journals. Abort them to ensure that
           // retry behavior doesn't allow them to keep going in any way.

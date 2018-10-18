@@ -42,9 +42,9 @@ export default DS.JSONAPISerializer.extend({
           user: payload.user,
           queue: payload.queue,
           state: payload.state,
-          startTime: payload.startedTime, // will be formatted in em-table
+          startTime: payload.startedTime, // will be formatted in yarn-app model
           elapsedTime: payload.elapsedTime,
-          finishedTime: Converter.timeStampToDate(payload.finishedTime),
+          finishedTime: payload.finishedTime, // will be formatted in yarn-app model
           finalStatus: payload.finalStatus,
           progress: payload.progress,
           applicationType: payload.applicationType,

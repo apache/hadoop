@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -46,7 +46,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * {@link QuorumCall} instances.
  */
 class AsyncLoggerSet {
-  static final Log LOG = LogFactory.getLog(AsyncLoggerSet.class);
+  static final Logger LOG = LoggerFactory.getLogger(AsyncLoggerSet.class);
 
   private final List<AsyncLogger> loggers;
   

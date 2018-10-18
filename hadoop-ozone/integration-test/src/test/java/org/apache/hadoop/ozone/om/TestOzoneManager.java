@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.om;
 
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
@@ -56,8 +56,8 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.TableIterator;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -75,7 +75,6 @@ import java.nio.file.Paths;
 import java.net.InetSocketAddress;
 import java.text.ParseException;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.List;
@@ -83,8 +82,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
-import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_CLIENT_ADDRESS_KEY;
@@ -277,10 +276,28 @@ public class TestOzoneManager {
     Assert.assertTrue(volumeInfo.getVolumeName().equals(volumeName2));
 
     // Make sure volume with _A suffix is successfully deleted.
-    exception.expect(IOException.class);
-    exception.expectMessage("Info Volume failed, error:VOLUME_NOT_FOUND");
-    volumeArgs = new VolumeArgs(volumeName1, userArgs);
-    storageHandler.getVolumeInfo(volumeArgs);
+    try {
+      volumeArgs = new VolumeArgs(volumeName1, userArgs);
+      storageHandler.getVolumeInfo(volumeArgs);
+      Assert.fail("Volume is not deleted");
+    } catch (IOException ex) {
+      Assert.assertEquals("Info Volume failed, error:VOLUME_NOT_FOUND",
+          ex.getMessage());
+    }
+    //delete the _AA volume, too
+    storageHandler.deleteVolume(new VolumeArgs(volumeName2, userArgs));
+
+    //Make sure there is no volume information for the specific user
+    OMMetadataManager metadataManager =
+        cluster.getOzoneManager().getMetadataManager();
+
+    byte[] userKey = metadataManager.getUserKey(userName);
+    byte[] volumes = metadataManager.getUserTable().get(userKey);
+
+    //that was the last volume of the user, shouldn't be any record here
+    Assert.assertNull(volumes);
+
+
   }
 
   // Create a volume and a bucket inside the volume,
@@ -631,13 +648,16 @@ public class TestOzoneManager {
     storageHandler.deleteKey(keyArgs);
     Assert.assertEquals(1 + numKeyDeletes, omMetrics.getNumKeyDeletes());
 
-    // Make sure the deleted key has been renamed.
-    MetadataStore store = cluster.getOzoneManager().
-        getMetadataManager().getStore();
-    List<Map.Entry<byte[], byte[]>> list = store.getRangeKVs(null, 10,
-        new MetadataKeyFilters.KeyPrefixFilter()
-            .addFilter(DELETING_KEY_PREFIX));
-    Assert.assertEquals(1, list.size());
+    // Make sure the deleted key has been moved to the deleted table.
+    OMMetadataManager manager = cluster.getOzoneManager().
+        getMetadataManager();
+
+    try(TableIterator<Table.KeyValue> iter =
+            manager.getDeletedTable().iterator()) {
+      iter.seekToFirst();
+      Table.KeyValue kv = iter.next();
+      Assert.assertNotNull(kv);
+    }
 
     // Delete the key again to test deleting non-existing key.
     try {
@@ -1016,13 +1036,14 @@ public class TestOzoneManager {
       storageHandler.createVolume(createVolumeArgs);
     }
 
-    // Test list all volumes
+    // Test list all volumes - Removed Support for this operation for time
+    // being. TODO: we will need to bring this back if needed.
     UserArgs userArgs0 = new UserArgs(user0, OzoneUtils.getRequestID(),
         null, null, null, null);
-    listVolumeArgs = new ListArgs(userArgs0, "Vol-testListVolumes", 100, null);
-    listVolumeArgs.setRootScan(true);
-    volumes = storageHandler.listVolumes(listVolumeArgs);
-    Assert.assertEquals(20, volumes.getVolumes().size());
+    //listVolumeArgs = new ListArgs(userArgs0,"Vol-testListVolumes", 100, null);
+    // listVolumeArgs.setRootScan(true);
+    // volumes = storageHandler.listVolumes(listVolumeArgs);
+    // Assert.assertEquals(20, volumes.getVolumes().size());
 
     // Test list all volumes belongs to an user
     listVolumeArgs = new ListArgs(userArgs0, null, 100, null);
@@ -1188,8 +1209,8 @@ public class TestOzoneManager {
   //Disabling this test
   @Ignore("Disabling this test until Open Key is fixed.")
   public void testExpiredOpenKey() throws Exception {
-//    BackgroundService openKeyCleanUpService = ((KeyManagerImpl)cluster
-//        .getOzoneManager().getKeyManager()).getOpenKeyCleanupService();
+//    BackgroundService openKeyCleanUpService = ((BlockManagerImpl)cluster
+//        .getOzoneManager().getBlockManager()).getOpenKeyCleanupService();
 
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);

@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDE
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -173,6 +174,31 @@ public class TestMountTableResolver {
     assertEquals("2->/tmp/tesfile1.txt",
         mountTable.getDestinationForPath("/readonly/tesfile1.txt").toString());
 
+  }
+
+  @Test
+  public void testDefaultNameServiceEnable() throws IOException {
+    assertTrue(mountTable.isDefaultNSEnable());
+    mountTable.setDefaultNameService("3");
+    mountTable.removeEntry("/");
+
+    assertEquals("3->/unknown",
+        mountTable.getDestinationForPath("/unknown").toString());
+
+    Map<String, String> map = getMountTableEntry("4", "/unknown");
+    mountTable.addEntry(MountTable.newInstance("/unknown", map));
+    mountTable.setDefaultNSEnable(false);
+    assertFalse(mountTable.isDefaultNSEnable());
+
+    assertEquals("4->/unknown",
+        mountTable.getDestinationForPath("/unknown").toString());
+    try {
+      mountTable.getDestinationForPath("/");
+      fail("The getDestinationForPath call should fail.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "the default nameservice is disabled to read or write", ioe);
+    }
   }
 
   private void compareLists(List<String> list1, String[] list2) {

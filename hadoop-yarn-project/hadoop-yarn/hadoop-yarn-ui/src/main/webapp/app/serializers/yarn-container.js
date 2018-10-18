@@ -34,7 +34,7 @@ export default DS.JSONAPISerializer.extend({
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           elapsedTime: payload.elapsedTime,
           logUrl: payload.logUrl,
-          containerExitStatus: payload.containerExitStatus,
+          containerExitStatus: payload.containerExitStatus + '',
           containerState: payload.containerState,
           nodeId : payload.nodeId,
           nodeHttpAddress: payload.nodeHttpAddress

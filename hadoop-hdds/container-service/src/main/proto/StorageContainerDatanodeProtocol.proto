@@ -52,6 +52,7 @@ message SCMRegisterRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   required NodeReportProto nodeReport = 2;
   required ContainerReportsProto containerReport = 3;
+  required PipelineReportsProto pipelineReports = 4;
 }
 
 /**
@@ -79,8 +80,10 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  optional CommandStatusReportsProto commandStatusReport = 4;
+  repeated CommandStatusReportsProto commandStatusReports = 4;
   optional ContainerActionsProto containerActions = 5;
+  optional PipelineActionsProto pipelineActions = 6;
+  optional PipelineReportsProto pipelineReports = 7;
 }
 
 /*
@@ -142,6 +145,7 @@ message CommandStatus {
   required Status status = 2 [default = PENDING];
   required SCMCommandProto.Type type = 3;
   optional string msg = 4;
+  optional ContainerBlocksDeletionACKProto blockDeletionAck = 5;
 }
 
 message ContainerActionsProto {
@@ -155,11 +159,45 @@ message ContainerAction {
 
   enum Reason {
     CONTAINER_FULL = 1;
+    CONTAINER_UNHEALTHY = 2;
   }
 
   required int64 containerID = 1;
   required Action action = 2;
   optional Reason reason = 3;
+}
+
+message PipelineReport {
+  required PipelineID pipelineID = 1;
+}
+
+message PipelineReportsProto {
+  repeated PipelineReport pipelineReport = 1;
+}
+
+message PipelineActionsProto {
+  repeated PipelineAction pipelineActions = 1;
+}
+
+message ClosePipelineInfo {
+  enum Reason {
+    PIPELINE_FAILED = 1;
+  }
+  required PipelineID pipelineID = 1;
+  optional Reason reason = 3;
+  optional string detailedReason = 4;
+}
+
+message PipelineAction {
+  enum Action {
+    CLOSE = 1;
+  }
+
+  /**
+   * Action will be used to identify the correct pipeline action.
+   */
+  required Action action = 1;
+  optional ClosePipelineInfo closePipeline = 2;
 }
 
 /**
@@ -178,6 +216,7 @@ message ContainerInfo {
   optional string finalhash = 9;
   optional hadoop.hdds.LifeCycleState state = 10;
   optional int64 deleteTransactionId = 11;
+  optional uint64 blockCommitSequenceId = 12;
 }
 
 /*
@@ -234,10 +273,6 @@ message ContainerBlocksDeletionACKProto {
   }
   repeated DeleteBlockTransactionResult results = 1;
   required string dnId = 2;
-}
-
-// SendACK response returned by datanode to SCM, currently empty.
-message ContainerBlocksDeletionACKResponseProto {
 }
 
 /**
@@ -350,8 +385,4 @@ service StorageContainerDatanodeProtocolService {
    */
   rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
 
-  /**
-   * Sends the block deletion ACK to SCM.
-   */
-  rpc sendContainerBlocksDeletionACK (ContainerBlocksDeletionACKProto) returns (ContainerBlocksDeletionACKResponseProto);
 }

@@ -158,14 +158,15 @@ public abstract class CryptoCodec implements Configurable, Closeable {
    * For example a {@link javax.crypto.Cipher} will maintain its encryption 
    * context internally when we do encryption/decryption using the 
    * Cipher#update interface. 
-   * <p/>
+   * <p>
    * Encryption/Decryption is not always on the entire file. For example,
    * in Hadoop, a node may only decrypt a portion of a file (i.e. a split).
    * In these situations, the counter is derived from the file position.
-   * <p/>
+   * <p>
    * The IV can be calculated by combining the initial IV and the counter with 
    * a lossless operation (concatenation, addition, or XOR).
-   * @see http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_.28CTR.29
+   * See http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_
+   * .28CTR.29
    * 
    * @param initIV initial IV
    * @param counter counter for input stream position 

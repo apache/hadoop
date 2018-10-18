@@ -19,7 +19,10 @@
 package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.math3.util.MathUtils;
+import com.google.common.primitives.Longs;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  * Container ID is an integer that is a value between 1..MAX_CONTAINER ID.
@@ -27,18 +30,17 @@ import org.apache.commons.math3.util.MathUtils;
  * We are creating a specific type for this to avoid mixing this with
  * normal integers in code.
  */
-public class ContainerID implements Comparable {
+public final class ContainerID implements Comparable<ContainerID> {
 
   private final long id;
 
+  // TODO: make this private.
   /**
    * Constructs ContainerID.
    *
    * @param id int
    */
   public ContainerID(long id) {
-    Preconditions.checkState(id > 0,
-        "Container ID should be a positive long. "+ id);
     this.id = id;
   }
 
@@ -47,8 +49,9 @@ public class ContainerID implements Comparable {
    * @param containerID  long
    * @return ContainerID.
    */
-  public static ContainerID valueof(long containerID) {
-    Preconditions.checkState(containerID > 0);
+  public static ContainerID valueof(final long containerID) {
+    Preconditions.checkState(containerID > 0,
+        "Container ID should be a positive long. "+ containerID);
     return new ContainerID(containerID);
   }
 
@@ -61,33 +64,40 @@ public class ContainerID implements Comparable {
     return id;
   }
 
+  public byte[] getBytes() {
+    return Longs.toByteArray(id);
+  }
+
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
+
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    ContainerID that = (ContainerID) o;
+    final ContainerID that = (ContainerID) o;
 
-    return id == that.id;
+    return new EqualsBuilder()
+        .append(getId(), that.getId())
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return MathUtils.hash(id);
+    return new HashCodeBuilder(61, 71)
+        .append(getId())
+        .toHashCode();
   }
 
   @Override
-  public int compareTo(Object o) {
-    Preconditions.checkNotNull(o);
-    if (o instanceof ContainerID) {
-      return Long.compare(((ContainerID) o).getId(), this.getId());
-    }
-    throw new IllegalArgumentException("Object O, should be an instance " +
-        "of ContainerID");
+  public int compareTo(final ContainerID that) {
+    Preconditions.checkNotNull(that);
+    return new CompareToBuilder()
+        .append(this.getId(), that.getId())
+        .build();
   }
 
   @Override

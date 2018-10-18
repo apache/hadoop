@@ -35,7 +35,7 @@ import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.impl.ChunkManagerImpl;
-import org.apache.ratis.shaded.com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.ozone.container.common.volume.VolumeIOStats;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -231,21 +231,18 @@ public final class ChunkUtils {
    *
    * @param chunkFile - chunkFile to write data into.
    * @param info - chunk info.
-   * @return boolean isOverwrite
-   * @throws StorageContainerException
+   * @return true if the chunkFile exists and chunkOffset < chunkFile length,
+   *         false otherwise.
    */
   public static boolean validateChunkForOverwrite(File chunkFile,
-      ChunkInfo info) throws StorageContainerException {
+      ChunkInfo info) {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
     if (isOverWriteRequested(chunkFile, info)) {
       if (!isOverWritePermitted(info)) {
-        log.error("Rejecting write chunk request. Chunk overwrite " +
+        log.warn("Duplicate write chunk request. Chunk overwrite " +
             "without explicit request. {}", info.toString());
-        throw new StorageContainerException("Rejecting write chunk request. " +
-            "OverWrite flag required." + info.toString(),
-            OVERWRITE_FLAG_REQUIRED);
       }
       return true;
     }

@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.3.0-SNAPSHOT</version>
     <relativePath>../hadoop-project-dist</relativePath>
   </parent>
 
   <artifactId>hadoop-hdds</artifactId>
-  <version>0.2.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Project</description>
   <name>Apache Hadoop HDDS</name>
   <packaging>pom</packaging>
@@ -44,17 +44,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -67,6 +64,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>hadoop-hdfs</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+      <version>3.5.2</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -91,6 +93,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>**/hs_err*.log</exclude>
             <exclude>**/target/**</exclude>
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
@@ -98,13 +101,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/resources/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
             <exclude>src/main/resources/webapps/static/angular-route-1.6.4.min.js</exclude>
             <exclude>src/main/resources/webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css.map</exclude>
-            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.css</exclude>
             <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js.map</exclude>
-            <exclude>src/test/resources/incorrect.container</exclude>
+            <exclude>src/main/resources/webapps/static/nvd3-1.8.5.min.js</exclude>
             <exclude>src/test/resources/additionalfields.container</exclude>
             <exclude>src/test/resources/incorrect.checksum.container</exclude>
+            <exclude>src/test/resources/incorrect.container</exclude>
             <exclude>src/test/resources/test.db.ini</exclude>
           </excludes>
         </configuration>
@@ -115,6 +118,36 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <configuration>
           <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-classpath-descriptor</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <attach>true</attach>
+              <prefix>$HDDS_LIB_JARS_DIR</prefix>
+              <outputFilterFile>true</outputFilterFile>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

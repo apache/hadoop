@@ -91,8 +91,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
-    XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
@@ -107,7 +106,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // Now, explicitly make a putKey request for the block.
     ContainerProtos.ContainerCommandRequestProto putKeyRequest =
         ContainerTestHelper
-            .getPutKeyRequest(pipeline, writeChunkRequest.getWriteChunk());
+            .getPutBlockRequest(pipeline, writeChunkRequest.getWriteChunk());
     client.sendCommand(putKeyRequest);
     response = ContainerProtocolCalls
         .getCommittedBlockLength(client, blockID, traceID);
@@ -128,7 +127,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
     XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+        xceiverClientManager.acquireClient(pipeline);
     // create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
@@ -155,14 +154,14 @@ public class TestGetCommittedBlockLengthAndPutKey {
   }
 
   @Test
-  public void tesGetCommittedBlockLengthForInvalidBlock() throws Exception {
+  public void testGetCommittedBlockLengthForInvalidBlock() throws Exception {
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
         .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(), containerID);
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
@@ -174,7 +173,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
       ContainerProtocolCalls.getCommittedBlockLength(client, blockID, traceID);
       Assert.fail("Expected exception not thrown");
     } catch (StorageContainerException sce) {
-      Assert.assertTrue(sce.getMessage().contains("Unable to find the key"));
+      Assert.assertTrue(sce.getMessage().contains("Unable to find the block"));
     }
     xceiverClientManager.releaseClient(client);
   }
@@ -187,7 +186,7 @@ public class TestGetCommittedBlockLengthAndPutKey {
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     XceiverClientSpi client = xceiverClientManager
-        .acquireClient(container.getPipeline(), containerID);
+        .acquireClient(container.getPipeline());
     ContainerProtocolCalls
         .createContainer(client, containerID, traceID);
 
@@ -216,15 +215,14 @@ public class TestGetCommittedBlockLengthAndPutKey {
 
   @Test
   public void tesPutKeyResposne() throws Exception {
-    ContainerProtos.PutKeyResponseProto response;
+    ContainerProtos.PutBlockResponseProto response;
     String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
-        .allocateContainer(xceiverClientManager.getType(),
+        .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.ONE, containerOwner);
     long containerID = container.getContainerInfo().getContainerID();
     Pipeline pipeline = container.getPipeline();
-    XceiverClientSpi client =
-        xceiverClientManager.acquireClient(pipeline, containerID);
+    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     //create the container
     ContainerProtocolCalls.createContainer(client, containerID, traceID);
 
@@ -239,8 +237,8 @@ public class TestGetCommittedBlockLengthAndPutKey {
     // Now, explicitly make a putKey request for the block.
     ContainerProtos.ContainerCommandRequestProto putKeyRequest =
         ContainerTestHelper
-            .getPutKeyRequest(pipeline, writeChunkRequest.getWriteChunk());
-    response = client.sendCommand(putKeyRequest).getPutKey();
+            .getPutBlockRequest(pipeline, writeChunkRequest.getWriteChunk());
+    response = client.sendCommand(putKeyRequest).getPutBlock();
     // make sure the block ids in the request and response are same.
     // This will also ensure that closing the container committed the block
     // on the Datanodes.
@@ -249,6 +247,8 @@ public class TestGetCommittedBlockLengthAndPutKey {
         blockID);
     Assert.assertEquals(
         response.getCommittedBlockLength().getBlockLength(), data.length);
+    Assert.assertTrue(
+        response.getCommittedBlockLength().getBlockCommitSequenceId() > 0);
     xceiverClientManager.releaseClient(client);
   }
 }

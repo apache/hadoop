@@ -38,8 +38,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
@@ -87,7 +87,7 @@ import static org.hamcrest.core.StringContains.containsString;
  * This class tests commands from DFSShell.
  */
 public class TestDFSShell {
-  private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDFSShell.class);
   private static final AtomicInteger counter = new AtomicInteger();
   private final int SUCCESS = 0;
   private final int ERROR = 1;

@@ -19,9 +19,14 @@ package org.apache.hadoop.fs;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Byte array backed part handle.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class BBPartHandle implements PartHandle {
 
   private static final long serialVersionUID = 0x23ce3eb1;

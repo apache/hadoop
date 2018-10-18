@@ -366,6 +366,27 @@ public class HttpFSServer {
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETSNAPSHOTDIFF: {
+      String oldSnapshotName = params.get(OldSnapshotNameParam.NAME,
+          OldSnapshotNameParam.class);
+      String snapshotName = params.get(SnapshotNameParam.NAME,
+          SnapshotNameParam.class);
+      FSOperations.FSGetSnapshotDiff command =
+          new FSOperations.FSGetSnapshotDiff(path, oldSnapshotName,
+              snapshotName);
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETSNAPSHOTTABLEDIRECTORYLIST: {
+      FSOperations.FSGetSnapshottableDirListing command =
+          new FSOperations.FSGetSnapshottableDirListing();
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", "/");
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -598,6 +619,22 @@ public class HttpFSServer {
                   unmaskedPermission});
           response = Response.status(Response.Status.CREATED).build();
         }
+        break;
+      }
+      case ALLOWSNAPSHOT: {
+        FSOperations.FSAllowSnapshot command =
+            new FSOperations.FSAllowSnapshot(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] allowed snapshot", path);
+        response = Response.ok().build();
+        break;
+      }
+      case DISALLOWSNAPSHOT: {
+        FSOperations.FSDisallowSnapshot command =
+            new FSOperations.FSDisallowSnapshot(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] disallowed snapshot", path);
+        response = Response.ok().build();
         break;
       }
       case CREATESNAPSHOT: {

@@ -116,7 +116,7 @@ public class TestNode2ContainerMap {
     Assert.assertTrue(map.isKnownDatanode(key));
     ReportResult result = map.processReport(key, values);
     Assert.assertEquals(result.getStatus(),
-        Node2ContainerMap.ReportStatus.ALL_IS_WELL);
+        ReportResult.ReportStatus.ALL_IS_WELL);
   }
 
   @Test
@@ -181,9 +181,9 @@ public class TestNode2ContainerMap {
     UUID key = getFirstKey();
     TreeSet<ContainerID> values = testData.get(key);
     ReportResult result = map.processReport(key, values);
-    Assert.assertEquals(Node2ContainerMap.ReportStatus.NEW_DATANODE_FOUND,
+    Assert.assertEquals(ReportResult.ReportStatus.NEW_DATANODE_FOUND,
         result.getStatus());
-    Assert.assertEquals(result.getNewContainers().size(), values.size());
+    Assert.assertEquals(result.getNewEntries().size(), values.size());
   }
 
   /**
@@ -202,8 +202,7 @@ public class TestNode2ContainerMap {
     map.insertNewDatanode(key, values);
 
     final int newCount = 100;
-    // This is not a mistake, the treeset seems to be reverse sorted.
-    ContainerID last = values.first();
+    ContainerID last = values.last();
     TreeSet<ContainerID> addedContainers = new TreeSet<>();
     for (int x = 1; x <= newCount; x++) {
       long cTemp = last.getId() + x;
@@ -217,15 +216,15 @@ public class TestNode2ContainerMap {
     ReportResult result = map.processReport(key, newContainersSet);
 
     //Assert that expected size of missing container is same as addedContainers
-    Assert.assertEquals(Node2ContainerMap.ReportStatus.NEW_CONTAINERS_FOUND,
+    Assert.assertEquals(ReportResult.ReportStatus.NEW_ENTRIES_FOUND,
         result.getStatus());
 
     Assert.assertEquals(addedContainers.size(),
-        result.getNewContainers().size());
+        result.getNewEntries().size());
 
     // Assert that the Container IDs are the same as we added new.
     Assert.assertTrue("All objects are not removed.",
-        result.getNewContainers().removeAll(addedContainers));
+        result.getNewEntries().removeAll(addedContainers));
   }
 
   /**
@@ -244,7 +243,7 @@ public class TestNode2ContainerMap {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.last();
+    ContainerID first = values.first();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.
@@ -262,14 +261,14 @@ public class TestNode2ContainerMap {
 
 
     //Assert that expected size of missing container is same as addedContainers
-    Assert.assertEquals(Node2ContainerMap.ReportStatus.MISSING_CONTAINERS,
+    Assert.assertEquals(ReportResult.ReportStatus.MISSING_ENTRIES,
         result.getStatus());
     Assert.assertEquals(removedContainers.size(),
-        result.getMissingContainers().size());
+        result.getMissingEntries().size());
 
     // Assert that the Container IDs are the same as we added new.
     Assert.assertTrue("All missing containers not found.",
-        result.getMissingContainers().removeAll(removedContainers));
+        result.getMissingEntries().removeAll(removedContainers));
   }
 
   @Test
@@ -290,7 +289,7 @@ public class TestNode2ContainerMap {
     final int removeCount = 100;
     Random r = new Random();
 
-    ContainerID first = values.last();
+    ContainerID first = values.first();
     TreeSet<ContainerID> removedContainers = new TreeSet<>();
 
     // Pick a random container to remove it is ok to collide no issues.
@@ -308,21 +307,21 @@ public class TestNode2ContainerMap {
 
 
     Assert.assertEquals(
-        Node2ContainerMap.ReportStatus.MISSING_AND_NEW_CONTAINERS_FOUND,
+            ReportResult.ReportStatus.MISSING_AND_NEW_ENTRIES_FOUND,
         result.getStatus());
     Assert.assertEquals(removedContainers.size(),
-        result.getMissingContainers().size());
+        result.getMissingEntries().size());
 
 
     // Assert that the Container IDs are the same as we added new.
     Assert.assertTrue("All missing containers not found.",
-        result.getMissingContainers().removeAll(removedContainers));
+        result.getMissingEntries().removeAll(removedContainers));
 
     Assert.assertEquals(insertedSet.size(),
-        result.getNewContainers().size());
+        result.getNewEntries().size());
 
     // Assert that the Container IDs are the same as we added new.
     Assert.assertTrue("All inserted containers are not found.",
-        result.getNewContainers().removeAll(insertedSet));
+        result.getNewEntries().removeAll(insertedSet));
   }
 }

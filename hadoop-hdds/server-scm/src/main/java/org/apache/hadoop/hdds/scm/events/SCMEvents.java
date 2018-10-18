@@ -23,11 +23,17 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .CloseContainerStatus;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
-    .DeleteBlockCommandStatus;
+import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
+import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
+        .CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+        .PipelineReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .PipelineActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerActionsFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -41,6 +47,7 @@ import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager
     .ReplicationCompleted;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeProtocolServer.NodeRegistrationContainerReport;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -56,10 +63,18 @@ public final class SCMEvents {
    */
   public static final TypedEvent<NodeReportFromDatanode> NODE_REPORT =
       new TypedEvent<>(NodeReportFromDatanode.class, "Node_Report");
+
+  /**
+   * Event generated on DataNode registration.
+   */
+  public static final TypedEvent<NodeRegistrationContainerReport>
+      NODE_REGISTRATION_CONT_REPORT = new TypedEvent<>(
+      NodeRegistrationContainerReport.class,
+      "Node_Registration_Container_Report");
+
   /**
    * ContainerReports are send out by Datanodes. This report is received by
-   * SCMDatanodeHeartbeatDispatcher and Container_Report Event
-   * isTestSCMDatanodeHeartbeatDispatcher generated.
+   * SCMDatanodeHeartbeatDispatcher and Container_Report Event is generated.
    */
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
@@ -71,6 +86,30 @@ public final class SCMEvents {
   public static final TypedEvent<ContainerActionsFromDatanode>
       CONTAINER_ACTIONS = new TypedEvent<>(ContainerActionsFromDatanode.class,
       "Container_Actions");
+
+  /**
+   * PipelineReports are send out by Datanodes. This report is received by
+   * SCMDatanodeHeartbeatDispatcher and Pipeline_Report Event is generated.
+   */
+  public static final TypedEvent<PipelineReportFromDatanode> PIPELINE_REPORT =
+          new TypedEvent<>(PipelineReportFromDatanode.class, "Pipeline_Report");
+
+  /**
+   * PipelineActions are sent by Datanode. This event is received by
+   * SCMDatanodeHeartbeatDispatcher and PIPELINE_ACTIONS event is generated.
+   */
+  public static final TypedEvent<PipelineActionsFromDatanode>
+      PIPELINE_ACTIONS = new TypedEvent<>(PipelineActionsFromDatanode.class,
+      "Pipeline_Actions");
+
+  /**
+   * Pipeline close event are triggered to close pipeline because of failure,
+   * stale node, decommissioning etc.
+   */
+  public static final TypedEvent<PipelineID>
+      PIPELINE_CLOSE = new TypedEvent<>(PipelineID.class,
+      "Pipeline_Close");
+
   /**
    * A Command status report will be sent by datanodes. This repoort is received
    * by SCMDatanodeHeartbeatDispatcher and CommandReport event is generated.
@@ -88,6 +127,10 @@ public final class SCMEvents {
   public static final Event<CommandForDatanode> DATANODE_COMMAND =
       new TypedEvent<>(CommandForDatanode.class, "Datanode_Command");
 
+  public static final TypedEvent<CommandForDatanode>
+      RETRIABLE_DATANODE_COMMAND =
+      new TypedEvent<>(CommandForDatanode.class, "Retriable_Datanode_Command");
+
   /**
    * A Close Container Event can be triggered under many condition. Some of them
    * are: 1. A Container is full, then we stop writing further information to
@@ -102,6 +145,16 @@ public final class SCMEvents {
    */
   public static final TypedEvent<ContainerID> CLOSE_CONTAINER =
       new TypedEvent<>(ContainerID.class, "Close_Container");
+
+  /**
+   * A CLOSE_CONTAINER_RETRYABLE_REQ will be triggered by
+   * CloseContainerEventHandler after sending a SCMCommand to DataNode.
+   * CloseContainerWatcher will track this event. Watcher will be responsible
+   * for retrying it in event of failure or timeout.
+   */
+  public static final TypedEvent<CloseContainerRetryableReq>
+      CLOSE_CONTAINER_RETRYABLE_REQ = new TypedEvent<>(
+      CloseContainerRetryableReq.class, "Close_Container_Retryable");
 
   /**
    * This event will be triggered whenever a new datanode is registered with
@@ -129,7 +182,7 @@ public final class SCMEvents {
    * status for Replication SCMCommand is received.
    */
   public static final Event<ReplicationStatus> REPLICATION_STATUS = new
-      TypedEvent<>(ReplicationStatus.class, "ReplicateCommandStatus");
+      TypedEvent<>(ReplicationStatus.class, "Replicate_Command_Status");
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for CloseContainer SCMCommand is received.
@@ -137,15 +190,15 @@ public final class SCMEvents {
   public static final Event<CloseContainerStatus>
       CLOSE_CONTAINER_STATUS =
       new TypedEvent<>(CloseContainerStatus.class,
-          "CloseContainerCommandStatus");
+          "Close_Container_Command_Status");
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for DeleteBlock SCMCommand is received.
    */
-  public static final Event<DeleteBlockCommandStatus>
+  public static final TypedEvent<CommandStatusReportHandler.DeleteBlockStatus>
       DELETE_BLOCK_STATUS =
-      new TypedEvent(DeleteBlockCommandStatus.class,
-          "DeleteBlockCommandStatus");
+      new TypedEvent<>(CommandStatusReportHandler.DeleteBlockStatus.class,
+          "Delete_Block_Status");
 
   /**
    * This event will be triggered while processing container reports from DN
@@ -153,7 +206,7 @@ public final class SCMEvents {
    * deleteTransactionID on SCM.
    */
   public static final Event<PendingDeleteStatusList> PENDING_DELETE_STATUS =
-      new TypedEvent(PendingDeleteStatusList.class, "PendingDeleteStatus");
+      new TypedEvent<>(PendingDeleteStatusList.class, "Pending_Delete_Status");
 
   /**
    * This is the command for ReplicationManager to handle under/over
@@ -189,6 +242,8 @@ public final class SCMEvents {
    * available from the datanodes.
    */
   public static final TypedEvent<Boolean> START_REPLICATION =
+      new TypedEvent<>(Boolean.class);
+  public static final TypedEvent<Boolean> CHILL_MODE_STATUS =
       new TypedEvent<>(Boolean.class);
 
   /**

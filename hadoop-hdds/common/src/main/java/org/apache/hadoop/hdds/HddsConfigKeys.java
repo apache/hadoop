@@ -46,6 +46,11 @@ public final class HddsConfigKeys {
   public static final String HDDS_CONTAINER_REPORT_INTERVAL_DEFAULT =
       "60s";
 
+  public static final String HDDS_PIPELINE_REPORT_INTERVAL =
+          "hdds.pipeline.report.interval";
+  public static final String HDDS_PIPELINE_REPORT_INTERVAL_DEFAULT =
+          "60s";
+
   public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL =
       "hdds.command.status.report.interval";
   public static final String HDDS_COMMAND_STATUS_REPORT_INTERVAL_DEFAULT =
@@ -56,12 +61,40 @@ public final class HddsConfigKeys {
   public static final int HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT =
       20;
 
+  public static final String HDDS_PIPELINE_ACTION_MAX_LIMIT =
+      "hdds.pipeline.action.max.limit";
+  public static final int HDDS_PIPELINE_ACTION_MAX_LIMIT_DEFAULT =
+      20;
+
   // Configuration to allow volume choosing policy.
   public static final String HDDS_DATANODE_VOLUME_CHOOSING_POLICY =
       "hdds.datanode.volume.choosing.policy";
 
   // DB Profiles used by ROCKDB instances.
   public static final String HDDS_DB_PROFILE = "hdds.db.profile";
-  public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.SSD;
+  public static final DBProfile HDDS_DEFAULT_DB_PROFILE = DBProfile.DISK;
+
+  // Once a container usage crosses this threshold, it is eligible for
+  // closing.
+  public static final String HDDS_CONTAINER_CLOSE_THRESHOLD =
+      "hdds.container.close.threshold";
+  public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
+
+  public static final String HDDS_SCM_CHILLMODE_ENABLED =
+      "hdds.scm.chillmode.enabled";
+  public static final boolean HDDS_SCM_CHILLMODE_ENABLED_DEFAULT = true;
+  public static final String HDDS_SCM_CHILLMODE_MIN_DATANODE =
+      "hdds.scm.chillmode.min.datanode";
+  public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
+
+  // % of containers which should have at least one reported replica
+  // before SCM comes out of chill mode.
+  public static final String HDDS_SCM_CHILLMODE_THRESHOLD_PCT =
+      "hdds.scm.chillmode.threshold.pct";
+  public static final double HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT = 0.99;
+
+  public static final String HDDS_LOCK_MAX_CONCURRENCY =
+      "hdds.lock.max.concurrency";
+  public static final int HDDS_LOCK_MAX_CONCURRENCY_DEFAULT = 100;
 
 }

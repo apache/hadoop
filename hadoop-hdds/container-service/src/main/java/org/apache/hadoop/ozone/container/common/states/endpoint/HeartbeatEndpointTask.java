@@ -25,6 +25,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerActionsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
@@ -50,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -57,6 +62,10 @@ import static org.apache.hadoop.hdds.HddsConfigKeys
     .HDDS_CONTAINER_ACTION_MAX_LIMIT;
 import static org.apache.hadoop.hdds.HddsConfigKeys
     .HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_PIPELINE_ACTION_MAX_LIMIT;
+import static org.apache.hadoop.hdds.HddsConfigKeys
+    .HDDS_PIPELINE_ACTION_MAX_LIMIT_DEFAULT;
 
 /**
  * Heartbeat class for SCMs.
@@ -70,6 +79,7 @@ public class HeartbeatEndpointTask
   private DatanodeDetailsProto datanodeDetailsProto;
   private StateContext context;
   private int maxContainerActionsPerHB;
+  private int maxPipelineActionsPerHB;
 
   /**
    * Constructs a SCM heart beat.
@@ -83,6 +93,8 @@ public class HeartbeatEndpointTask
     this.context = context;
     this.maxContainerActionsPerHB = conf.getInt(HDDS_CONTAINER_ACTION_MAX_LIMIT,
         HDDS_CONTAINER_ACTION_MAX_LIMIT_DEFAULT);
+    this.maxPipelineActionsPerHB = conf.getInt(HDDS_PIPELINE_ACTION_MAX_LIMIT,
+        HDDS_PIPELINE_ACTION_MAX_LIMIT_DEFAULT);
   }
 
   /**
@@ -113,25 +125,46 @@ public class HeartbeatEndpointTask
   @Override
   public EndpointStateMachine.EndPointStates call() throws Exception {
     rpcEndpoint.lock();
+    SCMHeartbeatRequestProto.Builder requestBuilder = null;
     try {
       Preconditions.checkState(this.datanodeDetailsProto != null);
 
-      SCMHeartbeatRequestProto.Builder requestBuilder =
-          SCMHeartbeatRequestProto.newBuilder()
-              .setDatanodeDetails(datanodeDetailsProto);
+      requestBuilder = SCMHeartbeatRequestProto.newBuilder()
+          .setDatanodeDetails(datanodeDetailsProto);
       addReports(requestBuilder);
       addContainerActions(requestBuilder);
+      addPipelineActions(requestBuilder);
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
           .sendHeartbeat(requestBuilder.build());
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
+      // put back the reports which failed to be sent
+      putBackReports(requestBuilder);
       rpcEndpoint.logIfNeeded(ex);
     } finally {
       rpcEndpoint.unlock();
     }
     return rpcEndpoint.getState();
+  }
+
+  // TODO: Make it generic.
+  private void putBackReports(SCMHeartbeatRequestProto.Builder requestBuilder) {
+    List<GeneratedMessage> reports = new LinkedList<>();
+    if (requestBuilder.hasContainerReport()) {
+      reports.add(requestBuilder.getContainerReport());
+    }
+    if (requestBuilder.hasNodeReport()) {
+      reports.add(requestBuilder.getNodeReport());
+    }
+    if (requestBuilder.getCommandStatusReportsCount() != 0) {
+      for (GeneratedMessage msg : requestBuilder
+          .getCommandStatusReportsList()) {
+        reports.add(msg);
+      }
+    }
+    context.putBackReports(reports);
   }
 
   /**
@@ -146,7 +179,11 @@ public class HeartbeatEndpointTask
           SCMHeartbeatRequestProto.getDescriptor().getFields()) {
         String heartbeatFieldName = descriptor.getMessageType().getFullName();
         if (heartbeatFieldName.equals(reportName)) {
-          requestBuilder.setField(descriptor, report);
+          if (descriptor.isRepeated()) {
+            requestBuilder.addRepeatedField(descriptor, report);
+          } else {
+            requestBuilder.setField(descriptor, report);
+          }
         }
       }
     }
@@ -169,6 +206,22 @@ public class HeartbeatEndpointTask
     }
   }
 
+  /**
+   * Adds all the pending PipelineActions to the heartbeat.
+   *
+   * @param requestBuilder builder to which the report has to be added.
+   */
+  private void addPipelineActions(
+      SCMHeartbeatRequestProto.Builder requestBuilder) {
+    List<PipelineAction> actions = context.getPendingPipelineAction(
+        maxPipelineActionsPerHB);
+    if (!actions.isEmpty()) {
+      PipelineActionsProto pap = PipelineActionsProto.newBuilder()
+          .addAllPipelineActions(actions)
+          .build();
+      requestBuilder.setPipelineActions(pap);
+    }
+  }
 
   /**
    * Returns a builder class for HeartbeatEndpointTask task.

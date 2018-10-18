@@ -39,6 +39,7 @@ public class WebAppProxy extends AbstractService {
   public static final String FETCHER_ATTRIBUTE= "AppUrlFetcher";
   public static final String IS_SECURITY_ENABLED_ATTRIBUTE = "IsSecurityEnabled";
   public static final String PROXY_HOST_ATTRIBUTE = "proxyHost";
+  public static final String PROXY_CA = "ProxyCA";
   private static final Logger LOG = LoggerFactory.getLogger(
       WebAppProxy.class);
   

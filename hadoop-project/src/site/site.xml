@@ -142,6 +142,7 @@
       <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Resource Model" href="hadoop-yarn/hadoop-yarn-site/ResourceModel.html"/>
       <item name="Node Labels" href="hadoop-yarn/hadoop-yarn-site/NodeLabel.html"/>
+      <item name="Node Attributes" href="hadoop-yarn/hadoop-yarn-site/NodeAttributes.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html"/>
@@ -177,6 +178,12 @@
       <item name="Yarn Service API" href="hadoop-yarn/hadoop-yarn-site/yarn-service/YarnServiceAPI.html"/>
       <item name="Service Discovery" href="hadoop-yarn/hadoop-yarn-site/yarn-service/ServiceDiscovery.html"/>
       <item name="System Services" href="hadoop-yarn/hadoop-yarn-site/yarn-service/SystemServices.html"/>
+    </menu>
+
+    <menu name="Submarine" inherit="top">
+      <item name="Index" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Index.html"/>
+      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/QuickStart.html"/>
+      <item name="Examples" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Examples.html"/>
     </menu>
 
     <menu name="Hadoop Compatible File Systems" inherit="top">

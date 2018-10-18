@@ -34,7 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 
 /**
@@ -83,7 +83,31 @@ public class Pipeline {
     this.type = replicationType;
     this.factor = replicationFactor;
     this.id = id;
-    datanodes = new TreeMap<>();
+    datanodes = new ConcurrentHashMap<>();
+  }
+
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    Pipeline that = (Pipeline) o;
+
+    return id.equals(that.id)
+            && factor.equals(that.factor)
+            && type.equals(that.type)
+            && lifeCycleState.equals(that.lifeCycleState)
+            && leaderID.equals(that.leaderID);
+
   }
 
   /**
@@ -127,13 +151,29 @@ public class Pipeline {
     return getDatanodes().get(leaderID);
   }
 
-  public void addMember(DatanodeDetails datanodeDetails) {
-    datanodes.put(datanodeDetails.getUuid().toString(),
-        datanodeDetails);
+  /**
+   * Adds a datanode to pipeline
+   * @param datanodeDetails datanode to be added.
+   * @return true if the dn was not earlier present, false otherwise
+   */
+  public boolean addMember(DatanodeDetails datanodeDetails) {
+    return datanodes.put(datanodeDetails.getUuid().toString(),
+        datanodeDetails) == null;
+
+  }
+
+  public void resetPipeline() {
+    // reset datanodes in pipeline and learn about them through
+    // pipeline reports on SCM restart
+    datanodes.clear();
   }
 
   public Map<String, DatanodeDetails> getDatanodes() {
     return datanodes;
+  }
+
+  public boolean isEmpty() {
+    return datanodes.isEmpty();
   }
   /**
    * Returns the leader host.

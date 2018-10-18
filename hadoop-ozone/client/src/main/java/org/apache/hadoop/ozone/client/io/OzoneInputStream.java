@@ -45,6 +45,11 @@ public class OzoneInputStream extends InputStream {
   }
 
   @Override
+  public int read(byte[] b, int off, int len) throws IOException {
+    return inputStream.read(b, off, len);
+  }
+
+  @Override
   public synchronized void close() throws IOException {
     inputStream.close();
   }

@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -92,7 +92,8 @@ public class MiniJournalCluster {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(MiniJournalCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniJournalCluster.class);
   private final File baseDir;
   private final JNInfo[] nodes;
   

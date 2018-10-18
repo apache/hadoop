@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.node.states.Node2ContainerMap;
+import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -28,15 +28,15 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
  */
 public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
 
-  private final Node2ContainerMap node2ContainerMap;
+  private final PipelineSelector pipelineSelector;
 
-  public StaleNodeHandler(Node2ContainerMap node2ContainerMap) {
-    this.node2ContainerMap = node2ContainerMap;
+  public StaleNodeHandler(PipelineSelector pipelineSelector) {
+    this.pipelineSelector = pipelineSelector;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
-    //TODO: logic to handle stale node.
+    pipelineSelector.handleStaleNode(datanodeDetails);
   }
 }

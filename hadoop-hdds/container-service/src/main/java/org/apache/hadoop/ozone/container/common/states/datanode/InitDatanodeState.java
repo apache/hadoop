@@ -93,6 +93,16 @@ public class InitDatanodeState implements DatanodeState,
       return DatanodeStateMachine.DatanodeStates.SHUTDOWN;
     } else {
       for (InetSocketAddress addr : addresses) {
+        if (addr.isUnresolved()) {
+          LOG.warn("One SCM address ({}) can't (yet?) be resolved. Postpone "
+              + "initialization.", addr);
+
+          //skip any further initialization. DatanodeStateMachine will try it
+          // again after the hb frequency
+          return this.context.getState();
+        }
+      }
+      for (InetSocketAddress addr : addresses) {
         connectionManager.addSCMServer(addr);
       }
     }
@@ -106,7 +116,7 @@ public class InitDatanodeState implements DatanodeState,
   /**
    * Persist DatanodeDetails to datanode.id file.
    */
-  private void persistContainerDatanodeDetails() throws IOException {
+  private void persistContainerDatanodeDetails() {
     String dataNodeIDPath = HddsUtils.getDatanodeIdFilePath(conf);
     if (Strings.isNullOrEmpty(dataNodeIDPath)) {
       LOG.error("A valid file path is needed for config setting {}",
@@ -118,7 +128,15 @@ public class InitDatanodeState implements DatanodeState,
     DatanodeDetails datanodeDetails = this.context.getParent()
         .getDatanodeDetails();
     if (datanodeDetails != null && !idPath.exists()) {
-      ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
+      try {
+        ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
+      } catch (IOException ex) {
+        // As writing DatanodeDetails in to datanodeid file failed, which is
+        // a critical thing, so shutting down the state machine.
+        LOG.error("Writing to {} failed {}", dataNodeIDPath, ex.getMessage());
+        this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
+        return;
+      }
       LOG.info("DatanodeDetails is persisted to {}", dataNodeIDPath);
     }
   }

@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -44,15 +45,16 @@ public class OzoneTestUtils {
       StorageContainerManager scm) throws IOException {
     return performOperationOnKeyContainers((blockID) -> {
       try {
-        scm.getScmContainerManager()
-            .updateContainerState(blockID.getContainerID(),
+        scm.getContainerManager()
+            .updateContainerState(ContainerID.valueof(blockID.getContainerID()),
                 HddsProtos.LifeCycleEvent.FINALIZE);
-        scm.getScmContainerManager()
-            .updateContainerState(blockID.getContainerID(),
+        scm.getContainerManager()
+            .updateContainerState(ContainerID.valueof(blockID.getContainerID()),
                 HddsProtos.LifeCycleEvent.CLOSE);
-        Assert.assertFalse(scm.getScmContainerManager()
-            .getContainerWithPipeline(blockID.getContainerID())
-            .getContainerInfo().isContainerOpen());
+        Assert.assertFalse(scm.getContainerManager()
+            .getContainerWithPipeline(ContainerID.valueof(
+                blockID.getContainerID()))
+            .getContainerInfo().isOpen());
       } catch (IOException e) {
         e.printStackTrace();
       }

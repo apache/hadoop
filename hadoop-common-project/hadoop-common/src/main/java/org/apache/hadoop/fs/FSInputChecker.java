@@ -101,7 +101,7 @@ abstract public class FSInputChecker extends FSInputStream {
    *     Implementors should simply pass through to the underlying data stream.
    * or
    *  (b) needChecksum() will return true:
-   *    - len >= maxChunkSize
+   *    - len {@literal >=} maxChunkSize
    *    - checksum.length is a multiple of CHECKSUM_SIZE
    *    Implementors should read an integer number of data chunks into
    *    buf. The amount read should be bounded by len or by 

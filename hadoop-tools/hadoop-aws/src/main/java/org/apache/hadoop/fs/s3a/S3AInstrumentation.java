@@ -1032,15 +1032,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      * Throttled request.
      */
     public void throttled() {
-      incrementCounter(S3GUARD_METADATASTORE_THROTTLED, 1);
-      addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+      // counters are incremented by owner.
     }
 
     /**
      * S3Guard is retrying after a (retryable) failure.
      */
     public void retrying() {
-      incrementCounter(S3GUARD_METADATASTORE_RETRY, 1);
+      // counters are incremented by owner.
     }
   }
 
