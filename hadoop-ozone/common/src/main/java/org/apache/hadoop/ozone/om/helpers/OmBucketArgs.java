@@ -100,7 +100,7 @@ public final class OmBucketArgs implements Auditable {
 
   /**
    * Returns the ACL's that are to be added.
-   * @return List<OzoneAclInfo>
+   * @return {@literal List<OzoneAclInfo>}
    */
   public List<OzoneAcl> getAddAcls() {
     return addAcls;
@@ -108,7 +108,7 @@ public final class OmBucketArgs implements Auditable {
 
   /**
    * Returns the ACL's that are to be removed.
-   * @return List<OzoneAclInfo>
+   * @return {@literal List<OzoneAclInfo>}
    */
   public List<OzoneAcl> getRemoveAcls() {
     return removeAcls;
