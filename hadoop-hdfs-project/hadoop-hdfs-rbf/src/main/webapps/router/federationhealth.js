@@ -156,7 +156,7 @@
           $('#tab-namenode').html(out);
           $('#ui-tabs a[href="#tab-namenode"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function load_router_info() {
@@ -220,7 +220,7 @@
           $('#tab-router').html(out);
           $('#ui-tabs a[href="#tab-router"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   // TODO Copied directly from dfshealth.js; is there a way to import this function?
@@ -306,7 +306,7 @@
             ]});
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function load_mount_table() {
@@ -337,7 +337,7 @@
           $('#tab-mounttable').html(out);
           $('#ui-tabs a[href="#tab-mounttable"]').tab('show');
         });
-      })).error(ajax_error_handler);
+      })).fail(ajax_error_handler);
   }
 
   function toTitleCase(str) {
