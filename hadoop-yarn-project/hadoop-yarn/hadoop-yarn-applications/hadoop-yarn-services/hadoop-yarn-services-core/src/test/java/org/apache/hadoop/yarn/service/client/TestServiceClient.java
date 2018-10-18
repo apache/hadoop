@@ -149,6 +149,29 @@ public class TestServiceClient {
     client.stop();
   }
 
+  @Test
+  public void testUpgradeDisabledWhenAllCompsHaveNeverRestartPolicy()
+      throws Exception {
+    Service service = createService();
+    service.getComponents().forEach(comp ->
+        comp.setRestartPolicy(Component.RestartPolicyEnum.NEVER));
+
+    ServiceClient client = MockServiceClient.create(rule, service, true);
+
+    //upgrade the service
+    service.setVersion("v2");
+    try {
+      client.initiateUpgrade(service);
+    } catch (YarnException ex) {
+      Assert.assertEquals("All the components of the service " +
+              service.getName() + " have " + Component.RestartPolicyEnum.NEVER
+              + " restart policy, so it cannot be upgraded.",
+          ex.getMessage());
+      return;
+    }
+    Assert.fail();
+  }
+
   private Service createService() throws IOException,
       YarnException {
     Service service = ServiceTestUtils.createExampleApplication();
