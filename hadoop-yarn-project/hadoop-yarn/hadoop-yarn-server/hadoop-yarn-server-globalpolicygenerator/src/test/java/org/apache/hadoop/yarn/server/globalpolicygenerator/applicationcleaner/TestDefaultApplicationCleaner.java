@@ -24,15 +24,21 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContextImpl;
@@ -50,6 +56,8 @@ public class TestDefaultApplicationCleaner {
   private FederationStateStoreFacade facade;
   private ApplicationCleaner appCleaner;
   private GPGContext gpgContext;
+  private RegistryOperations registry;
+  private FederationRegistryClient registryClient;
 
   private List<ApplicationId> appIds;
   // The list of applications returned by mocked router
@@ -68,8 +76,18 @@ public class TestDefaultApplicationCleaner {
     facade = FederationStateStoreFacade.getInstance();
     facade.reinitialize(stateStore, conf);
 
+    registry = new FSRegistryOperationsService();
+    registry.init(conf);
+    registry.start();
+
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    registryClient = new FederationRegistryClient(conf, registry, user);
+    registryClient.cleanAllApplications();
+    Assert.assertEquals(0, registryClient.getAllApplications().size());
+
     gpgContext = new GPGContextImpl();
     gpgContext.setStateStoreFacade(facade);
+    gpgContext.setRegistryClient(registryClient);
 
     appCleaner = new TestableDefaultApplicationCleaner();
     appCleaner.init(conf, gpgContext);
@@ -87,13 +105,24 @@ public class TestDefaultApplicationCleaner {
       stateStore.addApplicationHomeSubCluster(
           AddApplicationHomeSubClusterRequest.newInstance(
               ApplicationHomeSubCluster.newInstance(appId, subClusterId)));
+
+      // Write some registry entries for the app
+      registryClient.writeAMRMTokenForUAM(appId, subClusterId.toString(),
+          new Token<AMRMTokenIdentifier>());
     }
+    Assert.assertEquals(3, registryClient.getAllApplications().size());
   }
 
   @After
   public void breakDown() throws Exception {
     if (stateStore != null) {
       stateStore.close();
+    }
+    if (registryClient != null) {
+      registryClient.cleanAllApplications();
+    }
+    if (registry != null) {
+      registry.stop();
     }
   }
 
@@ -115,6 +144,9 @@ public class TestDefaultApplicationCleaner {
             .getApplicationsHomeSubCluster(
                 GetApplicationsHomeSubClusterRequest.newInstance())
             .getAppsHomeSubClusters().size());
+
+    // The known app should not be cleaned in registry
+    Assert.assertEquals(1, registryClient.getAllApplications().size());
   }
 
   /**

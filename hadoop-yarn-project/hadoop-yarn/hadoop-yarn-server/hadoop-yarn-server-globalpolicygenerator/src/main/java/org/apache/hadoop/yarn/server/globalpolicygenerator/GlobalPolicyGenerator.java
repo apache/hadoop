@@ -25,11 +25,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.ApplicationCleaner;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.PolicyGenerator;
@@ -60,6 +63,7 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   // Federation Variables
   private GPGContext gpgContext;
+  private RegistryOperations registry;
 
   // Scheduler service that runs tasks periodically
   private ScheduledThreadPoolExecutor scheduledExecutorService;
@@ -80,6 +84,17 @@ public class GlobalPolicyGenerator extends CompositeService {
     this.gpgContext
         .setPolicyFacade(new GPGPolicyFacade(
             this.gpgContext.getStateStoreFacade(), conf));
+
+    this.registry = FederationStateStoreFacade.createInstance(conf,
+        YarnConfiguration.YARN_REGISTRY_CLASS,
+        YarnConfiguration.DEFAULT_YARN_REGISTRY_CLASS,
+        RegistryOperations.class);
+    this.registry.init(conf);
+
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    FederationRegistryClient registryClient =
+        new FederationRegistryClient(conf, this.registry, user);
+    this.gpgContext.setRegistryClient(registryClient);
 
     this.scheduledExecutorService = new ScheduledThreadPoolExecutor(
         conf.getInt(YarnConfiguration.GPG_SCHEDULED_EXECUTOR_THREADS,
@@ -104,6 +119,8 @@ public class GlobalPolicyGenerator extends CompositeService {
   @Override
   protected void serviceStart() throws Exception {
     super.serviceStart();
+
+    this.registry.start();
 
     // Schedule SubClusterCleaner service
     long scCleanerIntervalMs = getConfig().getLong(
@@ -141,6 +158,10 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+    if (this.registry != null) {
+      this.registry.stop();
+    }
+
     try {
       if (this.scheduledExecutorService != null
           && !this.scheduledExecutorService.isShutdown()) {

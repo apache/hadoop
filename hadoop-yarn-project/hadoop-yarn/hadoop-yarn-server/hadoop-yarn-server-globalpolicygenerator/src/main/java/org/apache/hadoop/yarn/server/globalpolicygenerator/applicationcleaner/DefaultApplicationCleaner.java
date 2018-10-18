@@ -74,6 +74,8 @@ public class DefaultApplicationCleaner extends ApplicationCleaner {
         }
       }
 
+      // Clean up registry entries
+      cleanupAppRecordInRegistry(routerApps);
     } catch (Throwable e) {
       LOG.error("Application cleaner started at time " + now + " fails: ", e);
     }

@@ -202,21 +202,27 @@ public class FederationRegistryClient {
    * Remove an application from registry.
    *
    * @param appId application id
+   * @param ignoreMemoryState whether to ignore the memory data in terms of
+   *          known application
    */
-  public synchronized void removeAppFromRegistry(ApplicationId appId) {
+  public synchronized void removeAppFromRegistry(ApplicationId appId,
+      boolean ignoreMemoryState) {
     Map<String, Token<AMRMTokenIdentifier>> subClusterTokenMap =
         this.appSubClusterTokenMap.get(appId);
-    LOG.info("Removing all registry entries for {}", appId);
-
-    if (subClusterTokenMap == null || subClusterTokenMap.size() == 0) {
-      return;
+    if (!ignoreMemoryState) {
+      if (subClusterTokenMap == null || subClusterTokenMap.size() == 0) {
+        return;
+      }
     }
+    LOG.info("Removing all registry entries for {}", appId);
 
     // Lastly remove the application directory
     String key = getRegistryKey(appId, null);
     try {
       removeKeyRegistry(this.registry, this.user, key, true, true);
-      subClusterTokenMap.clear();
+      if (subClusterTokenMap != null) {
+        subClusterTokenMap.clear();
+      }
     } catch (YarnException e) {
       LOG.error("Failed removing registry directory key " + key, e);
     }

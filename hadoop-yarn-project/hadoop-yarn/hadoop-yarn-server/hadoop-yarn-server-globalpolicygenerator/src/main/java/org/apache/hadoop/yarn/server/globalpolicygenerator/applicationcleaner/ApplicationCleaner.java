@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -27,9 +28,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.DeSelectFields;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -46,6 +49,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
   private Configuration conf;
   private GPGContext gpgContext;
+  private FederationRegistryClient registryClient;
 
   private int minRouterSuccessCount;
   private int maxRouterRetry;
@@ -56,6 +60,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
     this.gpgContext = context;
     this.conf = config;
+    this.registryClient = context.getRegistryClient();
 
     String routerSpecString =
         this.conf.get(YarnConfiguration.GPG_APPCLEANER_CONTACT_ROUTER_SPEC,
@@ -102,7 +107,7 @@ public abstract class ApplicationCleaner implements Runnable {
 
     LOG.info(String.format("Contacting router at: %s", webAppAddress));
     AppsInfo appsInfo = (AppsInfo) GPGUtils.invokeRMWebService(conf,
-        webAppAddress, "apps", AppsInfo.class,
+        webAppAddress, RMWSConsts.APPS, AppsInfo.class,
         DeSelectFields.DeSelectType.RESOURCE_REQUESTS.toString());
 
     Set<ApplicationId> appSet = new HashSet<ApplicationId>();
@@ -147,6 +152,18 @@ public abstract class ApplicationCleaner implements Runnable {
     }
     throw new YarnException("Only " + successCount
         + " success Router queries after " + totalAttemptCount + " retries");
+  }
+
+  protected void cleanupAppRecordInRegistry(Set<ApplicationId> knownApps) {
+    List<String> allApps = this.registryClient.getAllApplications();
+    LOG.info("Got " + allApps.size() + " existing apps in registry");
+    for (String app : allApps) {
+      ApplicationId appId = ApplicationId.fromString(app);
+      if (!knownApps.contains(appId)) {
+        LOG.info("removing finished application entry for {}", app);
+        this.registryClient.removeAppFromRegistry(appId, true);
+      }
+    }
   }
 
   @Override

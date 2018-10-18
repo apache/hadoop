@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
@@ -815,13 +816,14 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     if (failedToUnRegister) {
       homeResponse.setIsUnregistered(false);
-    } else {
+    } else if (request.getFinalApplicationStatus()
+        .equals(FinalApplicationStatus.SUCCEEDED)) {
       // Clean up UAMs only when the app finishes successfully, so that no more
       // attempt will be launched.
       this.uamPool.stop();
       if (this.registryClient != null) {
         this.registryClient
-            .removeAppFromRegistry(this.attemptId.getApplicationId());
+            .removeAppFromRegistry(this.attemptId.getApplicationId(), false);
       }
     }
     return homeResponse;
