@@ -328,8 +328,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAX_ASSIGN_PER_HEARTBEAT = PREFIX
       + "per-node-heartbeat.maximum-container-assignments";
 
+  /**
+   * Avoid potential risk that greedy assign multiple may involve
+   * */
   @Private
-  public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
+  public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = 100;
 
   AppPriorityACLConfigurationParser priorityACLConfig = new AppPriorityACLConfigurationParser();
 
