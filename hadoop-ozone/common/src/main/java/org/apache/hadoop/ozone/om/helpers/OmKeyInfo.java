@@ -119,7 +119,6 @@ public final class OmKeyInfo {
    * This will be called when the key is being committed to OzoneManager.
    *
    * @param locationInfoList list of locationInfo
-   * @throws IOException
    */
   public void updateLocationInfoList(List<OmKeyLocationInfo> locationInfoList) {
     long latestVersion = getLatestVersionLocations().getVersion();

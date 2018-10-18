@@ -72,7 +72,7 @@ public interface KeyManager {
    *
    * @param args the args of the key provided by client.
    * @return a OpenKeySession instance client uses to talk to container.
-   * @throws Exception
+   * @throws IOException
    */
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
 

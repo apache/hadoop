@@ -40,7 +40,7 @@ import java.util.List;
  * This tool generates an ozone-site.xml with minimally required configs.
  * This tool can be invoked as follows:<br>
  * <ul>
- * <li>ozone genconf <Path to output file></li>
+ * <li>ozone genconf {@literal <Path to output file>}</li>
  * <li>ozone genconf --help</li>
  * <li>ozone genconf -h</li>
  * </ul>

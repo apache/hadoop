@@ -25,7 +25,7 @@ package org.apache.hadoop.ozone.web.interfaces;
  * TODO : Technically we need to report bucket creation and deletion too
  * since the bucket names and metadata consume storage.
  * <p>
- * TODO : We should separate out reporting metadata & data --
+ * TODO : We should separate out reporting metadata &amp; data --
  * <p>
  * In some cases end users will only want to account for the data they are
  * storing since metadata is mostly a cost of business.
