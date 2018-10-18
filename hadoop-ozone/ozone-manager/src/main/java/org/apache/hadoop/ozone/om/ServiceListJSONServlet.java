@@ -41,7 +41,7 @@ import java.io.PrintWriter;
  *
  * The return format is of JSON and in the form
  * <p>
- *  <code><pre>
+ *  <pre><code>
  *  {
  *    "services" : [
  *      {
@@ -54,7 +54,7 @@ import java.io.PrintWriter;
  *      }
  *    ]
  *  }
- *  </pre></code>
+ *  </code></pre>
  *  <p>
  *
  */

@@ -101,7 +101,7 @@ public final class OmBucketInfo implements Auditable {
 
   /**
    * Returns the ACL's associated with this bucket.
-   * @return List<OzoneAcl>
+   * @return {@literal List<OzoneAcl>}
    */
   public List<OzoneAcl> getAcls() {
     return acls;

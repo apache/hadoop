@@ -33,6 +33,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
  * We also maintain lock hierarchy, based on the weight.
  *
  * <table>
+ *   <caption></caption>
  *   <tr>
  *     <td><b> WEIGHT </b></td> <td><b> LOCK </b></td>
  *   </tr>
@@ -53,9 +54,9 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
  * <p>
  * For example:
  * <br>
- * -> acquireVolumeLock (will work)<br>
- *   +-> acquireBucketLock (will work)<br>
- *     +--> acquireUserLock (will throw Exception)<br>
+ * {@literal ->} acquireVolumeLock (will work)<br>
+ *   {@literal +->} acquireBucketLock (will work)<br>
+ *     {@literal +-->} acquireUserLock (will throw Exception)<br>
  * </p>
  * <br>
  * To acquire a user lock you should not hold any Volume/Bucket lock. Similarly

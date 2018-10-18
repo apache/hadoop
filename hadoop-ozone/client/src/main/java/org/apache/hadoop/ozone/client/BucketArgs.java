@@ -74,7 +74,7 @@ public final class BucketArgs {
 
   /**
    * Returns the ACL's associated with this bucket.
-   * @return List<OzoneAcl>
+   * @return {@literal List<OzoneAcl>}
    */
   public List<OzoneAcl> getAcls() {
     return acls;
