@@ -349,7 +349,7 @@ public class OzoneFileSystem extends FileSystem {
     }
 
     if (srcStatus.isDirectory()) {
-      if (dst.toString().startsWith(src.toString())) {
+      if (dst.toString().startsWith(src.toString() + OZONE_URI_DELIMITER)) {
         LOG.trace("Cannot rename a directory to a subdirectory of self");
         return false;
       }
