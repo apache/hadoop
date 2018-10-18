@@ -238,7 +238,22 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.error(message);
       throw new YarnException(message);
     }
-
+    boolean foundNotNeverComp = false;
+    for (Component comp : persistedService.getComponents()) {
+      // If restart policy of any component is not NEVER then upgrade is
+      // allowed.
+      if (!comp.getRestartPolicy().equals(Component.RestartPolicyEnum.NEVER)) {
+        foundNotNeverComp = true;
+        break;
+      }
+    }
+    if (!foundNotNeverComp) {
+      String message = "All the components of the service " + service.getName()
+          + " have " + Component.RestartPolicyEnum.NEVER + " restart policy, " +
+          "so it cannot be upgraded.";
+      LOG.error(message);
+      throw new YarnException(message);
+    }
     Service liveService = getStatus(service.getName());
     if (!liveService.getState().equals(ServiceState.STABLE)) {
       String message = service.getName() + " is at " + liveService.getState()
