@@ -271,6 +271,7 @@ public class WebAppProxyServlet extends HttpServlet {
   
   private static Cookie makeCheckCookie(ApplicationId id, boolean isSet) {
     Cookie c = new Cookie(getCheckCookieName(id),String.valueOf(isSet));
+    c.setHttpOnly(true);
     c.setPath(ProxyUriUtils.getPath(id));
     c.setMaxAge(60 * 60 * 2); //2 hours in seconds
     return c;
