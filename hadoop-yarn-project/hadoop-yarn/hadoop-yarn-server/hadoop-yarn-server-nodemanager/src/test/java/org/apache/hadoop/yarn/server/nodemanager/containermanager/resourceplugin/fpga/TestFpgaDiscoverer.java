@@ -32,9 +32,8 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Field;
+import java.util.*;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -60,8 +59,41 @@ public class TestFpgaDiscoverer {
     f.mkdirs();
   }
 
+  // A dirty hack to modify the env of the current JVM itself - Dirty, but
+  // should be okay for testing.
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  private static void setNewEnvironmentHack(Map<String, String> newenv)
+      throws Exception {
+    try {
+      Class<?> cl = Class.forName("java.lang.ProcessEnvironment");
+      Field field = cl.getDeclaredField("theEnvironment");
+      field.setAccessible(true);
+      Map<String, String> env = (Map<String, String>) field.get(null);
+      env.clear();
+      env.putAll(newenv);
+      Field ciField = cl.getDeclaredField("theCaseInsensitiveEnvironment");
+      ciField.setAccessible(true);
+      Map<String, String> cienv = (Map<String, String>) ciField.get(null);
+      cienv.clear();
+      cienv.putAll(newenv);
+    } catch (NoSuchFieldException e) {
+      Class[] classes = Collections.class.getDeclaredClasses();
+      Map<String, String> env = System.getenv();
+      for (Class cl : classes) {
+        if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+          Field field = cl.getDeclaredField("m");
+          field.setAccessible(true);
+          Object obj = field.get(env);
+          Map<String, String> map = (Map<String, String>) obj;
+          map.clear();
+          map.putAll(newenv);
+        }
+      }
+    }
+  }
+
   @Test
-  public void testLinuxFpgaResourceDiscoverPluginConfig() throws YarnException, IOException {
+  public void testLinuxFpgaResourceDiscoverPluginConfig() throws Exception {
     Configuration conf = new Configuration(false);
     FpgaDiscoverer discoverer = FpgaDiscoverer.getInstance();
 
@@ -73,8 +105,9 @@ public class TestFpgaDiscoverer {
     openclPlugin.setShell(mockPuginShell());
 
     discoverer.initialize(conf);
-    // Case 1. No configuration set for binary
-    Assert.assertEquals("No configuration should return just a single binary name",
+    // Case 1. No configuration set for binary(no environment "ALTERAOCLSDKROOT" set)
+    Assert.assertEquals("No configuration(no environment ALTERAOCLSDKROOT set)" +
+            "should return just a single binary name",
         "aocl", openclPlugin.getPathToExecutable());
 
     // Case 2. With correct configuration and file exists
@@ -90,6 +123,25 @@ public class TestFpgaDiscoverer {
     discoverer.initialize(conf);
     Assert.assertEquals("Correct configuration but file doesn't exists should return just a single binary name",
         "aocl", openclPlugin.getPathToExecutable());
+
+    // Case 4. Set a empty value
+    conf.set(YarnConfiguration.NM_FPGA_PATH_TO_EXEC, "");
+    discoverer.initialize(conf);
+    Assert.assertEquals("configuration with empty string value, should use aocl",
+        "aocl", openclPlugin.getPathToExecutable());
+
+    // Case 5. No configuration set for binary, but set environment "ALTERAOCLSDKROOT"
+    // we load the default configuration to start with
+    conf = new Configuration(true);
+    fakeBinary = new File(getTestParentFolder() + "/bin/aocl");
+    fakeBinary.getParentFile().mkdirs();
+    touchFile(fakeBinary);
+    Map<String, String> newEnv = new HashMap<String, String>();
+    newEnv.put("ALTERAOCLSDKROOT", getTestParentFolder());
+    setNewEnvironmentHack(newEnv);
+    discoverer.initialize(conf);
+    Assert.assertEquals("No configuration but with environment ALTERAOCLSDKROOT set",
+        getTestParentFolder() + "/bin/aocl", openclPlugin.getPathToExecutable());
 
   }
 

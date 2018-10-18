@@ -124,7 +124,9 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
       } else {
         binaryPath = new File(pluginDefaultPreferredPath + "/bin", pluginDefaultBinaryName);
         if (binaryPath.exists()) {
-          pathToExecutable = pluginDefaultPreferredPath;
+          pathToExecutable = binaryPath.getAbsolutePath();
+          LOG.info("Succeed in finding FPGA discoverer executable: " +
+              pathToExecutable);
         } else {
           pathToExecutable = pluginDefaultBinaryName;
           LOG.warn("Failed to find FPGA discoverer executable in " +
