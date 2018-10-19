@@ -44,7 +44,9 @@ public class TestBucketGet {
     getBucket.setClient(client);
 
     ListObjectResponse getBucketResponse =
-        getBucket.list("b1", "/", null, null, 100, "", null);
+        (ListObjectResponse) getBucket
+            .list("b1", "/", null, null, 100, "", null, null)
+            .getEntity();
 
     Assert.assertEquals(1, getBucketResponse.getCommonPrefixes().size());
     Assert.assertEquals("dir1/",
@@ -66,7 +68,8 @@ public class TestBucketGet {
     getBucket.setClient(client);
 
     ListObjectResponse getBucketResponse =
-        getBucket.list("b1", "/", null, null, 100, "dir1", null);
+        (ListObjectResponse) getBucket
+            .list("b1", "/", null, null, 100, "dir1", null, null).getEntity();
 
     Assert.assertEquals(1, getBucketResponse.getCommonPrefixes().size());
     Assert.assertEquals("dir1/",
@@ -87,7 +90,8 @@ public class TestBucketGet {
     getBucket.setClient(ozoneClient);
 
     ListObjectResponse getBucketResponse =
-        getBucket.list("b1", "/", null, null, 100, "dir1/", null);
+        (ListObjectResponse) getBucket
+            .list("b1", "/", null, null, 100, "dir1/", null, null).getEntity();
 
     Assert.assertEquals(1, getBucketResponse.getCommonPrefixes().size());
     Assert.assertEquals("dir1/dir2/",
