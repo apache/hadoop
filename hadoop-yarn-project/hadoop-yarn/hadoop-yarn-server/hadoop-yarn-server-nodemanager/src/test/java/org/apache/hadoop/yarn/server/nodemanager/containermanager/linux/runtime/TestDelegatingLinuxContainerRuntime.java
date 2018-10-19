@@ -63,7 +63,7 @@ public class TestDelegatingLinuxContainerRuntime {
   @Test
   public void testIsRuntimeAllowedDocker() throws Exception {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
-        "docker");
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DOCKER.name()));
@@ -153,7 +153,8 @@ public class TestDelegatingLinuxContainerRuntime {
   @Test
   public void testJavaSandboxNotAllowedButPermissiveDockerRequested()
       throws Exception {
-    env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    env.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "default,docker");
     conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX, "permissive");
