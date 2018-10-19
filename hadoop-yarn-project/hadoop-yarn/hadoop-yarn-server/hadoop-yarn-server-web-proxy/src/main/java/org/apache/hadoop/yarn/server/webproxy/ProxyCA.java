@@ -69,6 +69,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -107,7 +108,24 @@ public class ProxyCA {
 
   public void init() throws GeneralSecurityException, IOException {
     createCACertAndKeyPair();
+    initInternal();
+  }
 
+  public void init(X509Certificate caCert, PrivateKey caPrivateKey)
+      throws GeneralSecurityException, IOException {
+    if (caCert == null || caPrivateKey == null
+        || !verifyCertAndKeys(caCert, caPrivateKey)) {
+      LOG.warn("Could not verify Certificate, Public Key, and Private Key: " +
+          "regenerating");
+      createCACertAndKeyPair();
+    } else {
+      this.caCert = caCert;
+      this.caKeyPair = new KeyPair(caCert.getPublicKey(), caPrivateKey);
+    }
+    initInternal();
+  }
+
+  private void initInternal() throws GeneralSecurityException, IOException {
     defaultTrustManager = null;
     TrustManagerFactory factory = TrustManagerFactory.getInstance(
         TrustManagerFactory.getDefaultAlgorithm());
@@ -404,5 +422,20 @@ public class ProxyCA {
   @VisibleForTesting
   public KeyPair getCaKeyPair() {
     return caKeyPair;
+  }
+
+  private boolean verifyCertAndKeys(X509Certificate cert,
+      PrivateKey privateKey) throws GeneralSecurityException {
+    PublicKey publicKey = cert.getPublicKey();
+    byte[] data = new byte[2000];
+    srand.nextBytes(data);
+    Signature signer = Signature.getInstance("SHA512withRSA");
+    signer.initSign(privateKey);
+    signer.update(data);
+    byte[] sig = signer.sign();
+    signer = Signature.getInstance("SHA512withRSA");
+    signer.initVerify(publicKey);
+    signer.update(data);
+    return signer.verify(sig);
   }
 }

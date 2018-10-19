@@ -28,6 +28,11 @@ import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+
 /**
  * Manager for {@link ProxyCA}, which contains the Certificate Authority for
  * AMs to have certificates for HTTPS communication with the RM Proxy.
@@ -40,16 +45,23 @@ public class ProxyCAManager extends AbstractService implements Recoverable {
 
   private ProxyCA proxyCA;
   private RMContext rmContext;
+  private boolean wasRecovered;
 
   public ProxyCAManager(ProxyCA proxyCA, RMContext rmContext) {
     super(ProxyCAManager.class.getName());
     this.proxyCA = proxyCA;
     this.rmContext = rmContext;
+    wasRecovered = false;
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    proxyCA.init();
+    if (!wasRecovered) {
+      proxyCA.init();
+    }
+    wasRecovered = false;
+    rmContext.getStateStore().storeProxyCACert(
+        proxyCA.getCaCert(), proxyCA.getCaKeyPair().getPrivate());
     super.serviceStart();
   }
 
@@ -62,7 +74,12 @@ public class ProxyCAManager extends AbstractService implements Recoverable {
     return proxyCA;
   }
 
-  public void recover(RMState state) {
-    // TODO: RM HA YARN-8449
+  public void recover(RMState state)
+      throws GeneralSecurityException, IOException {
+    LOG.info("Recovering CA Certificate and Private Key");
+    X509Certificate caCert = state.getProxyCAState().getCaCert();
+    PrivateKey caPrivateKey = state.getProxyCAState().getCaPrivateKey();
+    proxyCA.init(caCert, caPrivateKey);
+    wasRecovered = true;
   }
 }

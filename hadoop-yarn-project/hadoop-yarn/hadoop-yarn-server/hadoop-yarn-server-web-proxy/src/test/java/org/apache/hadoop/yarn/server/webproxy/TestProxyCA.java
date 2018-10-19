@@ -34,6 +34,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -65,6 +66,89 @@ public class TestProxyCA {
     proxyCA.init();
     Assert.assertNotNull(proxyCA.getCaCert());
     Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
+  }
+
+  @Test
+  public void testInit2Null() throws Exception {
+    ProxyCA proxyCA = new ProxyCA();
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
+
+    // null certificate and private key
+    proxyCA.init(null, null);
+    Assert.assertNotNull(proxyCA.getCaCert());
+    Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
+  }
+
+  @Test
+  public void testInit2Mismatch() throws Exception {
+    ProxyCA proxyCA = new ProxyCA();
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
+
+    // certificate and private key don't match
+    CertKeyPair pair1 = createCertAndKeyPair();
+    CertKeyPair pair2 = createCertAndKeyPair();
+    Assert.assertNotEquals(pair1.getCert(), pair2.getCert());
+    Assert.assertNotEquals(pair1.getKeyPair().getPrivate(),
+        pair2.getKeyPair().getPrivate());
+    Assert.assertNotEquals(pair1.getKeyPair().getPublic(),
+        pair2.getKeyPair().getPublic());
+    proxyCA.init(pair1.getCert(), pair2.getKeyPair().getPrivate());
+    Assert.assertNotNull(proxyCA.getCaCert());
+    Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
+    Assert.assertNotEquals(proxyCA.getCaCert(), pair1.getCert());
+    Assert.assertNotEquals(proxyCA.getCaKeyPair().getPrivate(),
+        pair2.getKeyPair().getPrivate());
+    Assert.assertNotEquals(proxyCA.getCaKeyPair().getPublic(),
+        pair2.getKeyPair().getPublic());
+  }
+
+  @Test
+  public void testInit2Invalid() throws Exception {
+    ProxyCA proxyCA = new ProxyCA();
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
+
+    // Invalid key - fail the verification
+    X509Certificate certificate = Mockito.mock(X509Certificate.class);
+    PrivateKey privateKey = Mockito.mock(PrivateKey.class);
+    try {
+      proxyCA.init(certificate, privateKey);
+      Assert.fail("Expected InvalidKeyException");
+    } catch (InvalidKeyException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testInit2() throws Exception {
+    ProxyCA proxyCA = new ProxyCA();
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
+
+    // certificate and private key do match
+    CertKeyPair pair = createCertAndKeyPair();
+    proxyCA.init(pair.getCert(), pair.getKeyPair().getPrivate());
+    Assert.assertEquals(pair.getCert(), proxyCA.getCaCert());
+    Assert.assertEquals(pair.getKeyPair().getPrivate(),
+        proxyCA.getCaKeyPair().getPrivate());
+    Assert.assertEquals(pair.getKeyPair().getPublic(),
+        proxyCA.getCaKeyPair().getPublic());
     Assert.assertNotNull(proxyCA.getX509KeyManager());
     Assert.assertNotNull(proxyCA.getHostnameVerifier());
   }
@@ -514,5 +598,30 @@ public class TestProxyCA {
   private X509Certificate[] castCertificateArrayToX509CertificateArray(
       Certificate[] certs) {
     return Arrays.copyOf(certs, certs.length, X509Certificate[].class);
+  }
+
+  private static class CertKeyPair {
+    private X509Certificate cert;
+    private KeyPair keyPair;
+
+    public CertKeyPair(X509Certificate cert, KeyPair keyPair) {
+      this.cert = cert;
+      this.keyPair = keyPair;
+    }
+
+    public X509Certificate getCert() {
+      return cert;
+    }
+
+    public KeyPair getKeyPair() {
+      return keyPair;
+    }
+  }
+
+  private CertKeyPair createCertAndKeyPair() throws Exception {
+    // Re-use a ProxyCA to generate a valid Certificate and KeyPair
+    ProxyCA proxyCA = new ProxyCA();
+    proxyCA.init();
+    return new CertKeyPair(proxyCA.getCaCert(), proxyCA.getCaKeyPair());
   }
 }

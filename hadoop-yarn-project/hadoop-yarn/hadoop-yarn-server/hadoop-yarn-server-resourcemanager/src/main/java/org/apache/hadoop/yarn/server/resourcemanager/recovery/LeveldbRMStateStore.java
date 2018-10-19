@@ -27,6 +27,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Timer;
@@ -127,6 +129,14 @@ public class LeveldbRMStateStore extends RMStateStore {
       String reservationId) {
     return RESERVATION_SYSTEM_ROOT + SEPARATOR + planName + SEPARATOR
         + reservationId;
+  }
+
+  private String getProxyCACertNodeKey() {
+    return PROXY_CA_ROOT + SEPARATOR + PROXY_CA_CERT_NODE;
+  }
+
+  private String getProxyCAPrivateKeyNodeKey() {
+    return PROXY_CA_ROOT + SEPARATOR + PROXY_CA_PRIVATE_KEY_NODE;
   }
 
   @Override
@@ -274,6 +284,7 @@ public class LeveldbRMStateStore extends RMStateStore {
      loadRMApps(rmState);
      loadAMRMTokenSecretManagerState(rmState);
     loadReservationState(rmState);
+    loadProxyCAManagerState(rmState);
     return rmState;
    }
 
@@ -578,6 +589,34 @@ public class LeveldbRMStateStore extends RMStateStore {
     }
   }
 
+  private void loadProxyCAManagerState(RMState rmState) throws Exception {
+    byte[] caCertData;
+    byte[] caPrivateKeyData;
+
+    String caCertKey = getProxyCACertNodeKey();
+    String caPrivateKeyKey = getProxyCAPrivateKeyNodeKey();
+
+    try {
+      caCertData = db.get(bytes(caCertKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    try {
+      caPrivateKeyData = db.get(bytes(caPrivateKeyKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    if (caCertData == null || caPrivateKeyData == null) {
+      LOG.warn("Couldn't find Proxy CA data");
+      return;
+    }
+
+    rmState.proxyCAState.setCaCert(caCertData);
+    rmState.proxyCAState.setCaPrivateKey(caPrivateKeyData);
+  }
+
   @Override
   protected void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateData) throws IOException {
@@ -809,6 +848,29 @@ public class LeveldbRMStateStore extends RMStateStore {
         AMRMTokenSecretManagerState.newInstance(state);
     byte[] stateData = data.getProto().toByteArray();
     db.put(bytes(AMRMTOKEN_SECRET_MANAGER_ROOT), stateData);
+  }
+
+  @Override
+  protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    byte[] caCertData = caCert.getEncoded();
+    byte[] caPrivateKeyData = caPrivateKey.getEncoded();
+
+    String caCertKey = getProxyCACertNodeKey();
+    String caPrivateKeyKey = getProxyCAPrivateKeyNodeKey();
+
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        batch.put(bytes(caCertKey), caCertData);
+        batch.put(bytes(caPrivateKeyKey), caPrivateKeyData);
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
