@@ -291,7 +291,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
     LOG.info("XAttrs enabled? " + xattrsEnabled);
-    this.xattrMaxSize = conf.getInt(
+    this.xattrMaxSize = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
     Preconditions.checkArgument(xattrMaxSize > 0,
@@ -327,7 +327,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
     
     // filesystem limits
-    this.maxComponentLength = conf.getInt(
+    this.maxComponentLength = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
     this.maxDirItems = conf.getInt(

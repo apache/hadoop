@@ -348,7 +348,8 @@
       corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
-      then dfs.datanode.du.reserved will be used.
+      then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
+      as described in dfs.blocksize.
       Note: In case of using tune2fs to set reserved-blocks-percentage, or other filesystem tools,
       then you can possibly run into out of disk errors because hadoop will not check those
       external tool configurations.
@@ -390,7 +391,9 @@
   <name>dfs.namenode.fs-limits.max-component-length</name>
   <value>255</value>
   <description>Defines the maximum number of bytes in UTF-8 encoding in each
-      component of a path.  A value of 0 will disable the check.</description>
+      component of a path.  A value of 0 will disable the check. Support
+      multiple size unit suffix(case insensitive), as described in dfs.blocksize.
+  </description>
 </property>
 
 <property>
@@ -406,8 +409,9 @@
   <value>1048576</value>
   <description>Minimum block size in bytes, enforced by the Namenode at create
       time. This prevents the accidental creation of files with tiny block
-      sizes (and thus many blocks), which can degrade
-      performance.</description>
+      sizes (and thus many blocks), which can degrade performance. Support multiple
+      size unit suffix(case insensitive), as described in dfs.blocksize.
+  </description>
 </property>
 
 <property>
@@ -945,7 +949,8 @@
   <value>104857600</value>
   <description>
     The amount of space to reserve/require for a NameNode storage directory
-    in bytes. The default is 100MB.
+    in bytes. The default is 100MB. Support multiple size unit
+    suffix(case insensitive), as described in dfs.blocksize.
   </description>
 </property>
 
@@ -1331,6 +1336,8 @@
         A default value of 0 indicates that throttling is disabled.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
+        Support multiple size unit suffix(case insensitive), as described
+        in dfs.blocksize.
   </description>
 </property>
 
@@ -1344,6 +1351,8 @@
       value should be used in most cases, to ensure timely HA operations.
       The maximum bandwidth used for regular image transfers is configured
       with dfs.image.transfer.bandwidthPerSec.
+      Support multiple size unit suffix(case insensitive), as described in
+      dfs.blocksize.
     </description>
   </property>
 
@@ -1354,6 +1363,8 @@
         Chunksize in bytes to upload the checkpoint.
         Chunked streaming is used to avoid internal buffering of contents
         of image file of huge size.
+        Support multiple size unit suffix(case insensitive), as described
+        in dfs.blocksize.
   </description>
 </property>
 
@@ -2293,7 +2304,8 @@
     bytes of free disk space before they are considered imbalanced. If the free
     space of all the volumes are within this range of each other, the volumes
     will be considered balanced and block assignments will be done on a pure
-    round robin basis.
+    round robin basis. Support multiple size unit suffix(case insensitive), as
+    described in dfs.blocksize.
   </description>
 </property>
 
@@ -2366,7 +2378,8 @@
     read ahead in the block file using posix_fadvise, potentially decreasing
     I/O wait times.  Unlike dfs.datanode.readahead.bytes, this is a client-side
     setting rather than a setting for the entire datanode.  If present, this
-    setting will override the DataNode default.
+    setting will override the DataNode default. Support multiple size unit
+    suffix(case insensitive), as described in dfs.blocksize.
 
     When using local reads, this setting determines how much readahead we do in
     BlockReaderLocal.
@@ -2510,7 +2523,8 @@
     The amount of memory in bytes to use for caching of block replicas in
     memory on the datanode. The datanode's maximum locked memory soft ulimit
     (RLIMIT_MEMLOCK) must be set to at least this value, else the datanode
-    will abort on startup.
+    will abort on startup. Support multiple size unit suffix(case insensitive),
+    as described in dfs.blocksize.
 
     By default, this parameter is set to 0, which disables in-memory caching.
 
@@ -2835,6 +2849,8 @@
     The maximum combined size of the name and value of an extended attribute
     in bytes. It should be larger than 0, and less than or equal to maximum
     size hard limit which is 32768.
+    Support multiple size unit suffix(case insensitive), as described in
+    dfs.blocksize.
   </description>
 </property>
 

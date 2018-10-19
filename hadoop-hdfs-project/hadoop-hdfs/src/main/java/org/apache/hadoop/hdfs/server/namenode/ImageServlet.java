@@ -220,9 +220,9 @@ public class ImageServlet extends HttpServlet {
    * @return a data transfer throttler
    */
   public static DataTransferThrottler getThrottler(Configuration conf) {
-    long transferBandwidth =
-      conf.getLong(DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY,
-                   DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_DEFAULT);
+    long transferBandwidth = conf.getLongBytes(
+        DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY,
+        DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_DEFAULT);
     DataTransferThrottler throttler = null;
     if (transferBandwidth > 0) {
       throttler = new DataTransferThrottler(transferBandwidth);
@@ -233,7 +233,7 @@ public class ImageServlet extends HttpServlet {
   private static DataTransferThrottler getThrottlerForBootstrapStandby(
       Configuration conf) {
     long transferBandwidth =
-        conf.getLong(
+        conf.getLongBytes(
             DFSConfigKeys.DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY,
             DFSConfigKeys.DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_DEFAULT);
     DataTransferThrottler throttler = null;

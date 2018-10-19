@@ -111,7 +111,7 @@ public class NameNodeResourceChecker {
     this.conf = conf;
     volumes = new HashMap<String, CheckedVolume>();
 
-    duReserved = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY,
+    duReserved = conf.getLongBytes(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY,
         DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_DEFAULT);
     
     Collection<URI> extraCheckedVolumes = Util.stringCollectionAsURIs(conf
