@@ -69,7 +69,6 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean overwrite = false;
   private boolean targetPathExists = true;
   private boolean ignoreFailures = false;
-  private int blocksPerChunk = 0;
 
   /**
    * Create a output committer
@@ -80,9 +79,6 @@ public class CopyCommitter extends FileOutputCommitter {
    */
   public CopyCommitter(Path outputPath, TaskAttemptContext context) throws IOException {
     super(outputPath, context);
-    blocksPerChunk = context.getConfiguration().getInt(
-        DistCpOptionSwitch.BLOCKS_PER_CHUNK.getConfigLabel(), 0);
-    LOG.debug("blocks per chunk {}", blocksPerChunk);
     this.taskAttemptContext = context;
   }
 
@@ -97,9 +93,7 @@ public class CopyCommitter extends FileOutputCommitter {
     ignoreFailures = conf.getBoolean(
         DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), false);
 
-    if (blocksPerChunk > 0) {
-      concatFileChunks(conf);
-    }
+    concatFileChunks(conf);
 
     super.commitJob(jobContext);
 
