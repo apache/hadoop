@@ -613,3 +613,11 @@ which has the following notices:
    Written by Doug Lea with assistance from members of JCP JSR-166
    Expert Group and released to the public domain, as explained at
    http://creativecommons.org/publicdomain/zero/1.0/
+
+
+The source and binary distribution of this product bundles modified version of
+  github.com/awslabs/aws-js-s3-explorer licensed under Apache 2.0 license
+  with the following notice:
+
+AWS JavaScript S3 Explorer
+Copyright 2014-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
