@@ -21,9 +21,11 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -34,10 +36,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.Iterator;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteRequest.DeleteObject;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.DeletedObject;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.Error;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
@@ -206,6 +213,50 @@ public class BucketEndpoint extends EndpointBase {
     return Response
         .status(HttpStatus.SC_NO_CONTENT)
         .build();
+
+  }
+
+  /**
+   * Implement multi delete.
+   * <p>
+   * see: https://docs.aws.amazon
+   * .com/AmazonS3/latest/API/multiobjectdeleteapi.html
+   */
+  @POST
+  @Produces(MediaType.APPLICATION_XML)
+  public Response multiDelete(@PathParam("bucket") String bucketName,
+      @QueryParam("delete") String delete,
+      MultiDeleteRequest request) throws OS3Exception, IOException {
+    OzoneBucket bucket = getBucket(bucketName);
+    MultiDeleteResponse result = new MultiDeleteResponse();
+    if (request.getObjects() != null) {
+      for (DeleteObject keyToDelete : request.getObjects()) {
+        try {
+          bucket.deleteKey(keyToDelete.getKey());
+
+          if (!request.isQuiet()) {
+            result.addDeleted(new DeletedObject(keyToDelete.getKey()));
+          }
+        } catch (IOException ex) {
+          if (!ex.getMessage().contains("KEY_NOT_FOUND")) {
+            result.addError(
+                new Error(keyToDelete.getKey(), "InternalError",
+                    ex.getMessage()));
+          } else if (!request.isQuiet()) {
+            result.addDeleted(new DeletedObject(keyToDelete.getKey()));
+          }
+        } catch (Exception ex) {
+          result.addError(
+              new Error(keyToDelete.getKey(), "InternalError",
+                  ex.getMessage()));
+        }
+      }
+    }
+    ResponseBuilder response = Response.ok();
+    if (!request.isQuiet() || result.getErrors().size() > 0) {
+      response = response.entity(result);
+    }
+    return response.build();
 
   }
 }
