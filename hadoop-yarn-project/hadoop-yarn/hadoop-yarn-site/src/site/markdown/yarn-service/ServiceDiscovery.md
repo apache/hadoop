@@ -14,15 +14,15 @@
 
 # Service Discovery
 
-This document describes the mechanism of service discovery on YARN and the
+This document describes the mechanism of service discovery on Hadoop and the
 steps for enabling it.
 
 ## Overview
-A [DNS server](RegistryDNS.html) is implemented to enable discovering services on YARN via
+A [DNS server](../registry/registry-dns.html) is implemented to enable discovering services on Hadoop via
 the standard mechanism: DNS lookup.
 
 The framework ApplicationMaster posts the container information such as hostname and IP address into
-the YARN service registry. The DNS server exposes the information in YARN service registry by translating them into DNS
+the Hadoop service registry. The DNS server exposes the information in Hadoop service registry by translating them into DNS
 records such as A record and SRV record. Clients can then discover the IPs of containers via standard DNS lookup.
 
 For non-docker containers (containers with null `Artifact` or with `Artifact` type set to `TARBALL`), since all containers on the same host share the same ip address,
@@ -52,7 +52,7 @@ With the DNS support, user can simply access their services in a well-defined na
 ```
 ${COMPONENT_INSTANCE_NAME}.${SERVICE_NAME}.${USER}.${DOMAIN}
 ```
-For example, in a cluster whose domain name is `yarncluster` (as defined by the `hadoop.registry.dns.domain-name` in `yarn-site.xml`), a service named `hbase` deployed by user `devuser`
+For example, in a cluster whose domain name is `yarncluster` (as defined by the `hadoop.registry.dns.domain-name` in `core-site.xml`), a service named `hbase` deployed by user `devuser`
 with two components `hbasemaster` and `regionserver` can be accessed as below:
 
 This URL points to the usual hbase master UI
@@ -78,78 +78,3 @@ www.app.chuck.example.com IN A 123.123.123.1
 ```
 
 `Disclaimer`: The DNS implementation is still experimental. It should not be used as a fully-functional DNS.
-
-
-## Configure Registry DNS
-
-Below is the set of configurations in `yarn-site.xml` required for enabling Registry DNS. A full list of properties can be found in the Configuration
-section of [Registry DNS](RegistryDNS.html).
-
-
-```
-  <property>
-    <description>The domain name for Hadoop cluster associated records.</description>
-    <name>hadoop.registry.dns.domain-name</name>
-    <value>ycluster</value>
-  </property>
-
-  <property>
-    <description>The port number for the DNS listener. The default port is 5335.
-    If the standard privileged port 53 is used, make sure start the DNS with jsvc support.</description>
-    <name>hadoop.registry.dns.bind-port</name>
-    <value>5335</value>
-  </property>
-
-  <property>
-    <description>The DNS functionality is enabled for the cluster. Default is false.</description>
-    <name>hadoop.registry.dns.enabled</name>
-    <value>true</value>
-  </property>
-
-  <property>
-    <description>Address associated with the network interface to which the DNS listener should bind.</description>
-    <name>hadoop.registry.dns.bind-address</name>
-    <value>localhost</value>
-  </property>
-
-  <property>
-    <description> A comma separated list of hostname:port pairs defining the zookeeper quorum for the YARN registry</description>
-    <name>hadoop.registry.zk.quorum</name>
-    <value>localhost:2181</value>
-  </property>
-```
-To configure Registry DNS to serve reverse lookup for `172.17.0.0/24`
-```
-  <property>
-    <description>The network mask associated with the zone IP range. If specified, it is utilized to ascertain the
-    IP range possible and come up with an appropriate reverse zone name.</description>
-    <name>hadoop.registry.dns.zone-mask</name>
-    <value>255.255.255.0</value>
-  </property>
-
-  <property>
-    <description>An indicator of the IP range associated with the cluster containers. The setting is utilized for the
-     generation of the reverse zone name.</description>
-    <name>hadoop.registry.dns.zone-subnet</name>
-    <value>172.17.0.0</value>
-  </property>
-```
-## Start Registry DNS Server
-By default, the DNS server runs on non-privileged port `5335`. Start the server
-with:
-```
-yarn --daemon start registrydns
-```
-
-If the DNS server is configured to use the standard privileged port `53`, the
-environment variables `YARN_REGISTRYDNS_SECURE_USER` and
-`YARN_REGISTRYDNS_SECURE_EXTRA_OPTS` must be uncommented in the `yarn-env.sh`
-file. The DNS server should then be launched as `root` and jsvc will be used to
-reduce the privileges of the daemon after the port has been bound.
-
-## Make your cluster use Registry DNS
-You can edit the `/etc/resolv.conf` to make your system use the registry DNS such as below, where `192.168.154.3` is the ip address of your DNS host. It should appear before any nameservers that would return NXDOMAIN for lookups in the domain used by the cluster.
-```
-nameserver 192.168.154.3
-```
-Alternatively, if you have a corporate DNS in your organization, you can configure zone forwarding so that the Registry DNS resolves hostnames for the domain used by the cluster.
