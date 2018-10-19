@@ -27,9 +27,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.Iterator;
 
@@ -60,14 +62,24 @@ public class BucketEndpoint extends EndpointBase {
    * for more details.
    */
   @GET
-  public ListObjectResponse list(
+  public Response list(
       @PathParam("bucket") String bucketName,
       @QueryParam("delimiter") String delimiter,
       @QueryParam("encoding-type") String encodingType,
       @QueryParam("marker") String marker,
       @DefaultValue("1000") @QueryParam("max-keys") int maxKeys,
       @QueryParam("prefix") String prefix,
+      @QueryParam("browser") String browser,
       @Context HttpHeaders hh) throws OS3Exception, IOException {
+
+    if (browser != null) {
+      try (InputStream browserPage = getClass()
+          .getResourceAsStream("/browser.html")) {
+        return Response.ok(browserPage,
+            MediaType.TEXT_HTML_TYPE)
+            .build();
+      }
+    }
 
     if (delimiter == null) {
       delimiter = "/";
@@ -125,7 +137,7 @@ public class BucketEndpoint extends EndpointBase {
     }
     response.setKeyCount(
         response.getCommonPrefixes().size() + response.getContents().size());
-    return response;
+    return Response.ok(response).build();
   }
 
   @PUT
