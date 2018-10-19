@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.util.DataChecksum;
@@ -104,4 +105,17 @@ public interface ReplicaInPipeline extends Replica {
    * @throws IOException the waiting is interrupted
    */
   void stopWriter(long xceiverStopTimeout) throws IOException;
+
+  /**
+   * Causes the current thread to wait until a minimum length is reached, the
+   * thread is interrupted, or the specified waiting time elapses.
+   *
+   * @param minLength The minimum length to achieve
+   * @param time the maximum time to wait
+   * @param unit the time unit of the time argument
+   * @throws IOException if the current thread is interrupted or the minimum
+   *           length is not achieved within the time allowed.
+   */
+  void waitForMinLength(long minLength, long time, TimeUnit unit)
+      throws IOException;
 }
