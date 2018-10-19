@@ -22,14 +22,14 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.ext.Provider;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -95,11 +95,16 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
 
       URI baseURI = requestContext.getUriInfo().getBaseUri();
       String currentPath = requestContext.getUriInfo().getPath();
-          String newPath = bucketName;
+      String newPath = bucketName;
       if (currentPath != null) {
         newPath += String.format("%s", currentPath);
       }
-      URI requestAddr = UriBuilder.fromUri(baseURI).path(newPath).build();
+      MultivaluedMap<String, String> queryParams = requestContext.getUriInfo()
+          .getQueryParameters();
+      UriBuilder requestAddrBuilder = UriBuilder.fromUri(baseURI).path(newPath);
+      queryParams.forEach((k, v) -> requestAddrBuilder.queryParam(k,
+          v.toArray()));
+      URI requestAddr = requestAddrBuilder.build();
       requestContext.setRequestUri(baseURI, requestAddr);
     }
   }
