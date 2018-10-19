@@ -160,6 +160,25 @@ public class TestGenerateOzoneRequiredConfigurations {
   }
 
   /**
+   * Generates ozone-site.xml at specified path.
+   * Verify that it does not overwrite if file already exists in path.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testDoesNotOverwrite() throws Exception {
+    File tempPath = getRandomTempDir();
+    String[] args = new String[]{tempPath.getAbsolutePath()};
+    execute(args, "ozone-site.xml has been generated at " +
+        tempPath.getAbsolutePath());
+
+    //attempt overwrite
+    execute(args, "ozone-site.xml already exists at " +
+            tempPath.getAbsolutePath() + " and will not be overwritten");
+
+  }
+
+  /**
    * Test to avoid generating ozone-site.xml when insufficient permission.
    * @throws Exception
    */
