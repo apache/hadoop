@@ -266,7 +266,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (type == null) {
       type = daemonConf.get(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE);
     }
-    return type != null && type.equals("docker");
+    return type != null && type.equals(
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
   }
 
   /**
