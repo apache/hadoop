@@ -18,23 +18,32 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMStateStoreEventType {
-  STORE_APP_ATTEMPT,
-  STORE_APP,
-  UPDATE_APP,
-  UPDATE_APP_ATTEMPT,
-  REMOVE_APP,
-  REMOVE_APP_ATTEMPT,
-  FENCED,
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
-  // Below events should be called synchronously
-  STORE_MASTERKEY,
-  REMOVE_MASTERKEY,
-  STORE_DELEGATION_TOKEN,
-  REMOVE_DELEGATION_TOKEN,
-  UPDATE_DELEGATION_TOKEN,
-  UPDATE_AMRM_TOKEN,
-  STORE_RESERVATION,
-  REMOVE_RESERVATION,
-  STORE_PROXY_CA_CERT,
+/**
+ * A event used to store ProxyCA information.
+ */
+public class RMStateStoreProxyCAEvent extends RMStateStoreEvent {
+  private X509Certificate caCert;
+  private PrivateKey caPrivateKey;
+
+  public RMStateStoreProxyCAEvent(RMStateStoreEventType type) {
+    super(type);
+  }
+
+  public RMStateStoreProxyCAEvent(X509Certificate caCert,
+      PrivateKey caPrivateKey, RMStateStoreEventType type) {
+    this(type);
+    this.caCert = caCert;
+    this.caPrivateKey = caPrivateKey;
+  }
+
+  public X509Certificate getCaCert() {
+    return caCert;
+  }
+
+  public PrivateKey getCaPrivateKey() {
+    return caPrivateKey;
+  }
 }

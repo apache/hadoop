@@ -68,6 +68,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -153,6 +155,10 @@ import java.util.Set;
  *        |      ....
  *        |------PLAN_2
  *        ....
+ * |-- PROXY_CA_ROOT
+ *        |----- caCert
+ *        |----- caPrivateKey
+ *
  * Note: Changes from 1.1 to 1.2 - AMRMTokenSecretManager state has been saved
  * separately. The currentMasterkey and nextMasterkey have been stored.
  * Also, AMRMToken has been removed from ApplicationAttemptState.
@@ -198,6 +204,7 @@ public class ZKRMStateStore extends RMStateStore {
   private String dtSequenceNumberPath;
   private String amrmTokenSecretManagerRoot;
   private String reservationRoot;
+  private String proxyCARoot;
 
   @VisibleForTesting
   protected String znodeWorkingPath;
@@ -357,6 +364,7 @@ public class ZKRMStateStore extends RMStateStore {
         RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
+    proxyCARoot = getNodePath(zkRootNodePath, PROXY_CA_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
     zkManager = resourceManager.getZKManager();
     if(zkManager==null) {
@@ -402,6 +410,7 @@ public class ZKRMStateStore extends RMStateStore {
     create(dtSequenceNumberPath);
     create(amrmTokenSecretManagerRoot);
     create(reservationRoot);
+    create(proxyCARoot);
   }
 
   private void logRootNodeAcls(String prefix) throws Exception {
@@ -517,7 +526,8 @@ public class ZKRMStateStore extends RMStateStore {
     loadAMRMTokenSecretManagerState(rmState);
     // recover reservation state
     loadReservationSystemState(rmState);
-
+    // recover ProxyCAManager state
+    loadProxyCAManagerState(rmState);
     return rmState;
   }
 
@@ -811,6 +821,28 @@ public class ZKRMStateStore extends RMStateStore {
         }
       }
     }
+  }
+
+  private void loadProxyCAManagerState(RMState rmState) throws Exception {
+    String caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    String caPrivateKeyPath = getNodePath(proxyCARoot,
+        PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (!exists(caCertPath) || !exists(caPrivateKeyPath)) {
+      LOG.warn("Couldn't find Proxy CA data");
+      return;
+    }
+
+    byte[] caCertData = getData(caCertPath);
+    byte[] caPrivateKeyData = getData(caPrivateKeyPath);
+
+    if (caCertData == null || caPrivateKeyData == null) {
+      LOG.warn("Couldn't recover Proxy CA data");
+      return;
+    }
+
+    rmState.getProxyCAState().setCaCert(caCertData);
+    rmState.getProxyCAState().setCaPrivateKey(caPrivateKeyData);
   }
 
   @Override
@@ -1240,6 +1272,32 @@ public class ZKRMStateStore extends RMStateStore {
       }
       trx.create(reservationPath, reservationData, zkAcl,
           CreateMode.PERSISTENT);
+    }
+  }
+
+  @Override
+  protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    byte[] caCertData = caCert.getEncoded();
+    byte[] caPrivateKeyData = caPrivateKey.getEncoded();
+
+    String caCertPath = getNodePath(proxyCARoot, PROXY_CA_CERT_NODE);
+    String caPrivateKeyPath = getNodePath(proxyCARoot,
+        PROXY_CA_PRIVATE_KEY_NODE);
+
+    if (exists(caCertPath)) {
+      zkManager.safeSetData(caCertPath, caCertData, -1, zkAcl,
+          fencingNodePath);
+    } else {
+      zkManager.safeCreate(caCertPath, caCertData, zkAcl,
+          CreateMode.PERSISTENT, zkAcl, fencingNodePath);
+    }
+    if (exists(caPrivateKeyPath)) {
+      zkManager.safeSetData(caPrivateKeyPath, caPrivateKeyData, -1, zkAcl,
+          fencingNodePath);
+    } else {
+      zkManager.safeCreate(caPrivateKeyPath, caPrivateKeyData, zkAcl,
+          CreateMode.PERSISTENT, zkAcl, fencingNodePath);
     }
   }
 
