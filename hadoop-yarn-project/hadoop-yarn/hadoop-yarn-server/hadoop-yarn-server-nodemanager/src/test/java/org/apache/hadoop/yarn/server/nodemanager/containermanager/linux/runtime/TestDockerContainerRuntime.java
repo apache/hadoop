@@ -334,7 +334,8 @@ public class TestDockerContainerRuntime {
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
-    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
     Assert.assertEquals(false, DockerLinuxContainerRuntime
@@ -350,8 +351,10 @@ public class TestDockerContainerRuntime {
     Map<String, String> envDockerType = new HashMap<>();
     Map<String, String> envOtherType = new HashMap<>();
 
-    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE, "docker");
-    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
     Assert.assertEquals(true, DockerLinuxContainerRuntime
@@ -368,7 +371,8 @@ public class TestDockerContainerRuntime {
     Map<String, String> envOtherType = new HashMap<>();
 
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_TYPE, "default");
-    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "docker");
+    envDockerType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE,
+        ContainerRuntimeConstants.CONTAINER_RUNTIME_DOCKER);
     envOtherType.put(ContainerRuntimeConstants.ENV_CONTAINER_TYPE, "other");
 
     Assert.assertEquals(false, DockerLinuxContainerRuntime
