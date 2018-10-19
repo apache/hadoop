@@ -1653,10 +1653,17 @@ public class ContainerImpl implements Container {
 
     private void doRelaunch(final ContainerImpl container,
         int remainingRetryAttempts, final int retryInterval) {
-      LOG.info("Relaunching Container " + container.getContainerId()
-          + ". Remaining retry attempts(after relaunch) : "
-          + remainingRetryAttempts + ". Interval between retries is "
-          + retryInterval + "ms");
+      if (remainingRetryAttempts == ContainerRetryContext.RETRY_FOREVER) {
+        LOG.info("Relaunching Container {}. " +
+                "retry interval {} ms", container.getContainerId(),
+            retryInterval);
+      } else {
+        LOG.info("Relaunching Container {}. " +
+                "remaining retry attempts(after relaunch) {}, " +
+                "retry interval {} ms", container.getContainerId(),
+            remainingRetryAttempts, retryInterval);
+      }
+
       container.wasLaunched  = false;
       container.metrics.endRunningContainer();
       if (retryInterval == 0) {
