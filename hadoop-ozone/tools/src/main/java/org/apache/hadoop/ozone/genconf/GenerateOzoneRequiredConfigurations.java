@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.genconf;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.PicocliException;
@@ -29,6 +30,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -79,7 +81,7 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli {
    * @throws JAXBException
    */
   public static void generateConfigurations(String path) throws
-      PicocliException, JAXBException {
+      PicocliException, JAXBException, IOException {
 
     if (!isValidPath(path)) {
       throw new PicocliException("Invalid directory path.");
@@ -104,6 +106,9 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli {
 
     for (OzoneConfiguration.Property p : allProperties) {
       if (p.getTag() != null && p.getTag().contains("REQUIRED")) {
+        if(p.getName().equalsIgnoreCase(OzoneConfigKeys.OZONE_ENABLED)) {
+          p.setValue(String.valueOf(Boolean.TRUE));
+        }
         requiredProperties.add(p);
       }
     }
@@ -112,13 +117,20 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli {
         new OzoneConfiguration.XMLConfiguration();
     requiredConfig.setProperties(requiredProperties);
 
-    JAXBContext context =
-        JAXBContext.newInstance(OzoneConfiguration.XMLConfiguration.class);
-    Marshaller m = context.createMarshaller();
-    m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-    m.marshal(requiredConfig, new File(path, "ozone-site.xml"));
+    File output = new File(path, "ozone-site.xml");
+    if(output.createNewFile()){
+      JAXBContext context =
+          JAXBContext.newInstance(OzoneConfiguration.XMLConfiguration.class);
+      Marshaller m = context.createMarshaller();
+      m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+      m.marshal(requiredConfig, output);
 
-    System.out.println("ozone-site.xml has been generated at " + path);
+      System.out.println("ozone-site.xml has been generated at " + path);
+    } else {
+      System.out.printf("ozone-site.xml already exists at %s and " +
+          "will not be overwritten%n", path);
+    }
+
   }
 
   /**

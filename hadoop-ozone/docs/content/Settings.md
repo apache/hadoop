@@ -56,9 +56,9 @@ the specified path (directory).
 ozone genconf <path>
 {{< /highlight >}}
 
-Let us look at the settings inside the generated file (ozone-site.xml)  and
+Let us look at the settings inside the generated file (ozone-site.xml) and
 how they control ozone. Once the right values are defined, this file
-needs to be copied to ```ozone directory/etc/Hadoop```.
+needs to be copied to ```ozone directory/etc/hadoop```.
 
 
 * **ozone.enabled** This is the most critical setting for ozone.
