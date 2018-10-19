@@ -230,9 +230,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     ContainerReportHandler containerReportHandler =
         new ContainerReportHandler(containerManager, scmNodeManager,
             replicationStatus);
-    scmChillModeManager = new SCMChillModeManager(conf,
-        containerManager.getContainers(),
-        eventQueue);
+
     PipelineActionEventHandler pipelineActionEventHandler =
         new PipelineActionEventHandler();
 
@@ -292,8 +290,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.CMD_STATUS_REPORT, cmdStatusReportHandler);
     eventQueue.addHandler(SCMEvents.START_REPLICATION,
         replicationStatus.getReplicationStatusListener());
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        replicationStatus.getChillModeStatusListener());
     eventQueue
         .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
     eventQueue.addHandler(SCMEvents.DELETE_BLOCK_STATUS,
@@ -301,13 +297,20 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
         pipelineActionEventHandler);
     eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
-    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
-        scmChillModeManager);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        (BlockManagerImpl) scmBlockManager);
+
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, clientProtocolServer);
     eventQueue.addHandler(SCMEvents.PIPELINE_REPORT, pipelineReportHandler);
 
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        replicationStatus.getChillModeStatusListener());
+    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
+        (BlockManagerImpl) scmBlockManager);
+    scmChillModeManager = new SCMChillModeManager(conf,
+        containerManager.getContainers(),
+        eventQueue);
+
+    eventQueue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
+        scmChillModeManager);
     registerMXBean();
   }
 

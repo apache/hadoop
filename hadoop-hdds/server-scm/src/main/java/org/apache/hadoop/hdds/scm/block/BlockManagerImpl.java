@@ -123,7 +123,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
             nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
-    chillModePrecheck = new ChillModePrecheck();
+    chillModePrecheck = new ChillModePrecheck(conf);
   }
 
   /**

@@ -86,12 +86,13 @@ public class SCMClientProtocolServer implements
   private final InetSocketAddress clientRpcAddress;
   private final StorageContainerManager scm;
   private final OzoneConfiguration conf;
-  private ChillModePrecheck chillModePrecheck = new ChillModePrecheck();
+  private ChillModePrecheck chillModePrecheck;
 
   public SCMClientProtocolServer(OzoneConfiguration conf,
       StorageContainerManager scm) throws IOException {
     this.scm = scm;
     this.conf = conf;
+    chillModePrecheck = new ChillModePrecheck(conf);
     final int handlerCount =
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
@@ -357,8 +358,8 @@ public class SCMClientProtocolServer implements
    * Set chill mode status based on SCMEvents.CHILL_MODE_STATUS event.
    */
   @Override
-  public void onMessage(Boolean inChillMOde, EventPublisher publisher) {
-    chillModePrecheck.setInChillMode(inChillMOde);
+  public void onMessage(Boolean inChillMode, EventPublisher publisher) {
+    chillModePrecheck.setInChillMode(inChillMode);
   }
 
   /**

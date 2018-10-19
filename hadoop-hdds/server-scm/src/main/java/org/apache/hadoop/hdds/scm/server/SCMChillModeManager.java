@@ -58,6 +58,7 @@ public class SCMChillModeManager implements
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMChillModeManager.class);
+  private final boolean isChillModeEnabled;
   private AtomicBoolean inChillMode = new AtomicBoolean(true);
   private AtomicLong containerWithMinReplicas = new AtomicLong(0);
   private Map<String, ChillModeExitRule> exitRules = new HashMap(1);
@@ -70,14 +71,17 @@ public class SCMChillModeManager implements
       EventQueue eventQueue) {
     this.config = conf;
     this.eventPublisher = eventQueue;
-    exitRules.put(CONT_EXIT_RULE,
-        new ContainerChillModeRule(config, allContainers));
-    exitRules.put(DN_EXIT_RULE, new DataNodeChillModeRule(config));
-    if (!conf.getBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT)) {
+    this.isChillModeEnabled = conf.getBoolean(
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
+        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
+    if (isChillModeEnabled) {
+      exitRules.put(CONT_EXIT_RULE,
+          new ContainerChillModeRule(config, allContainers));
+      exitRules.put(DN_EXIT_RULE, new DataNodeChillModeRule(config));
+      emitChillModeStatus();
+    } else {
       exitChillMode(eventQueue);
     }
-    emitChillModeStatus();
   }
 
   /**
@@ -85,7 +89,7 @@ public class SCMChillModeManager implements
    */
   @VisibleForTesting
   public void emitChillModeStatus() {
-    eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS, inChillMode.get());
+    eventPublisher.fireEvent(SCMEvents.CHILL_MODE_STATUS, getInChillMode());
   }
 
   private void validateChillModeExitRules(EventPublisher eventQueue) {
@@ -99,7 +103,7 @@ public class SCMChillModeManager implements
 
   /**
    * Exit chill mode. It does following actions:
-   * 1. Set chill mode status to fale.
+   * 1. Set chill mode status to false.
    * 2. Emits START_REPLICATION for ReplicationManager.
    * 3. Cleanup resources.
    * 4. Emit chill mode status.
@@ -131,6 +135,9 @@ public class SCMChillModeManager implements
   }
 
   public boolean getInChillMode() {
+    if (!isChillModeEnabled) {
+      return false;
+    }
     return inChillMode.get();
   }
 
@@ -218,7 +225,7 @@ public class SCMChillModeManager implements
           }
         }
       });
-      if(inChillMode.get()) {
+      if(getInChillMode()) {
         LOG.info("SCM in chill mode. {} % containers have at least one"
                 + " reported replica.",
             (containerWithMinReplicas.get() / maxContainer) * 100);
@@ -268,7 +275,7 @@ public class SCMChillModeManager implements
         return;
       }
 
-      if(inChillMode.get()) {
+      if(getInChillMode()) {
         registeredDnSet.add(reportsProto.getDatanodeDetails().getUuid());
         registeredDns = registeredDnSet.size();
         LOG.info("SCM in chill mode. {} DataNodes registered, {} required.",
