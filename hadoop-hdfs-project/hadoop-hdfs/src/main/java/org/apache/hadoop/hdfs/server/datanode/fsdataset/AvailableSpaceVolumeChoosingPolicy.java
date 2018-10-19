@@ -76,7 +76,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
 
   @Override
   public void setConf(Configuration conf) {
-    balancedSpaceThreshold = conf.getLong(
+    balancedSpaceThreshold = conf.getLongBytes(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY,
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT);
     balancedPreferencePercent = conf.getFloat(
