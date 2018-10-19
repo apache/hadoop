@@ -360,7 +360,11 @@ public class FileStatus implements Writable, Comparable<Object>,
    */
   public void setSnapShotEnabledFlag(boolean isSnapShotEnabled) {
     if (isSnapShotEnabled) {
-      attr.add(AttrFlags.SNAPSHOT_ENABLED);
+      if (attr == NONE) {
+        attr = EnumSet.of(AttrFlags.SNAPSHOT_ENABLED);
+      } else {
+        attr.add(AttrFlags.SNAPSHOT_ENABLED);
+      }
     } else {
       attr.remove(AttrFlags.SNAPSHOT_ENABLED);
     }
