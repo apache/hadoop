@@ -85,10 +85,6 @@ public class TestCopyCommitter {
   @Before
   public void createMetaFolder() throws IOException {
     config.set(DistCpConstants.CONF_LABEL_META_FOLDER, "/meta");
-    // Unset listing file path since the config is shared by
-    // multiple tests, and some test doesn't set it, such as
-    // testNoCommitAction, but the distcp code will check it.
-    config.set(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH, "");
     Path meta = new Path("/meta");
     cluster.getFileSystem().mkdirs(meta);
   }
