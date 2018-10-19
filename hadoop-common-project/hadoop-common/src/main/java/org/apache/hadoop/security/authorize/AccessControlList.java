@@ -20,11 +20,13 @@ package org.apache.hadoop.security.authorize;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +36,6 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Class representing a configured access control list.
@@ -43,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 public class AccessControlList implements Writable {
 
-  static {                                      // register a ctor
+  static { // register a ctor
     WritableFactories.setFactory
     (AccessControlList.class,
       new WritableFactory() {
@@ -57,9 +58,9 @@ public class AccessControlList implements Writable {
   private static final int INITIAL_CAPACITY = 256;
 
   // Set of users who are granted access.
-  private Collection<String> users;
+  private final Set<String> users = new TreeSet<>();
   // Set of groups which are granted access
-  private Collection<String> groups;
+  private final Set<String> groups = new TreeSet<>();
   // Whether all users are granted access.
   private boolean allAllowed;
 
@@ -73,22 +74,22 @@ public class AccessControlList implements Writable {
 
   /**
    * Construct a new ACL from a String representation of the same.
-   * 
+   *
    * The String is a a comma separated list of users and groups.
-   * The user list comes first and is separated by a space followed 
+   * The user list comes first and is separated by a space followed
    * by the group list. For e.g. "user1,user2 group1,group2"
-   * 
+   *
    * @param aclString String representation of the ACL
    */
   public AccessControlList(String aclString) {
     buildACL(aclString.split(" ", 2));
   }
-  
+
   /**
-   * Construct a new ACL from String representation of users and groups
-   * 
+   * Construct a new ACL from String representation of users and groups.
+   *
    * The arguments are comma separated lists
-   * 
+   *
    * @param users comma separated list of users
    * @param groups comma separated list of groups
    */
@@ -103,49 +104,49 @@ public class AccessControlList implements Writable {
    * @param aclString build ACL from array of Strings
    */
   private void buildACL(String[] userGroupStrings) {
-    users = new HashSet<String>();
-    groups = new HashSet<String>();
     for (String aclPart : userGroupStrings) {
       if (aclPart != null && isWildCardACLValue(aclPart)) {
         allAllowed = true;
-        break;
+        return;
       }
     }
-    if (!allAllowed) {      
-      if (userGroupStrings.length >= 1 && userGroupStrings[0] != null) {
-        users = StringUtils.getTrimmedStringCollection(userGroupStrings[0]);
-      } 
-      
-      if (userGroupStrings.length == 2 && userGroupStrings[1] != null) {
-        groups = StringUtils.getTrimmedStringCollection(userGroupStrings[1]);
-        groupsMapping.cacheGroupsAdd(new LinkedList<String>(groups));
+    if (userGroupStrings.length >= 1 && userGroupStrings[0] != null) {
+      String[] userList = userGroupStrings[0].split(",");
+      for (String user : userList) {
+        if (StringUtils.isNotBlank(user)) {
+          users.add(user.trim());
+        }
       }
+    }
+    if (userGroupStrings.length == 2 && userGroupStrings[1] != null) {
+      String[] groupList = userGroupStrings[1].split(",");
+      for (String group : groupList) {
+        if (StringUtils.isNotBlank(group)) {
+          groups.add(group.trim());
+        }
+      }
+      groupsMapping.cacheGroupsAdd(new ArrayList<>(groups));
     }
   }
-  
+
   /**
-   * Checks whether ACL string contains wildcard
+   * Checks whether ACL string contains wildcard.
    *
    * @param aclString check this ACL string for wildcard
    * @return true if ACL string contains wildcard false otherwise
    */
   private boolean isWildCardACLValue(String aclString) {
-    if (aclString.contains(WILDCARD_ACL_VALUE) && 
-        aclString.trim().equals(WILDCARD_ACL_VALUE)) {
-      return true;
-    }
-    return false;
+    return WILDCARD_ACL_VALUE.equals(aclString.trim());
   }
 
   public boolean isAllAllowed() {
     return allAllowed;
   }
-  
+
   /**
    * Add user to the names of users allowed for this service.
-   * 
-   * @param user
-   *          The user name
+   *
+   * @param user The user name
    */
   public void addUser(String user) {
     if (isWildCardACLValue(user)) {
@@ -158,27 +159,24 @@ public class AccessControlList implements Writable {
 
   /**
    * Add group to the names of groups allowed for this service.
-   * 
-   * @param group
-   *          The group name
+   *
+   * @param group The group name
    */
   public void addGroup(String group) {
     if (isWildCardACLValue(group)) {
-      throw new IllegalArgumentException("Group " + group + " can not be added");
+      throw new IllegalArgumentException(
+          "Group " + group + " can not be added");
     }
     if (!isAllAllowed()) {
-      List<String> groupsList = new LinkedList<String>();
-      groupsList.add(group);
-      groupsMapping.cacheGroupsAdd(groupsList);
+      groupsMapping.cacheGroupsAdd(Collections.singletonList(group));
       groups.add(group);
     }
   }
 
   /**
    * Remove user from the names of users allowed for this service.
-   * 
-   * @param user
-   *          The user name
+   *
+   * @param user The user name
    */
   public void removeUser(String user) {
     if (isWildCardACLValue(user)) {
@@ -191,14 +189,13 @@ public class AccessControlList implements Writable {
 
   /**
    * Remove group from the names of groups allowed for this service.
-   * 
-   * @param group
-   *          The group name
+   *
+   * @param group The group name
    */
   public void removeGroup(String group) {
     if (isWildCardACLValue(group)) {
-      throw new IllegalArgumentException("Group " + group
-          + " can not be removed");
+      throw new IllegalArgumentException(
+          "Group " + group + " can not be removed");
     }
     if (!isAllAllowed()) {
       groups.remove(group);
@@ -207,18 +204,20 @@ public class AccessControlList implements Writable {
 
   /**
    * Get the names of users allowed for this service.
-   * @return the set of user names. the set must not be modified.
+   *
+   * @return an unmodifiable set of user names in alphabetic order.
    */
   public Collection<String> getUsers() {
-    return users;
+    return Collections.unmodifiableSet(users);
   }
-  
+
   /**
    * Get the names of user groups allowed for this service.
-   * @return the set of group names. the set must not be modified.
+   *
+   * @return an unmodifiable set of group names in alphabetic order.
    */
   public Collection<String> getGroups() {
-    return groups;
+    return Collections.unmodifiableSet(groups);
   }
 
   /**
@@ -230,7 +229,8 @@ public class AccessControlList implements Writable {
   public final boolean isUserInList(UserGroupInformation ugi) {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
-    } else if (!groups.isEmpty()) {
+    }
+    if (!groups.isEmpty()) {
       for (String group : ugi.getGroups()) {
         if (groups.contains(group)) {
           return true;
@@ -326,7 +326,7 @@ public class AccessControlList implements Writable {
    * @return comma separated list of users
    */
   private String getUsersString() {
-    return getString(users);
+    return String.join(",", users);
   }
 
   /**
@@ -335,26 +335,6 @@ public class AccessControlList implements Writable {
    * @return comma separated list of groups
    */
   private String getGroupsString() {
-    return getString(groups);
-  }
-
-  /**
-   * Returns comma-separated concatenated single String of all strings of
-   * the given set
-   *
-   * @param strings set of strings to concatenate
-   */
-  private String getString(Collection<String> strings) {
-    StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);
-    boolean first = true;
-    for(String str: strings) {
-      if (!first) {
-        sb.append(",");
-      } else {
-        first = false;
-      }
-      sb.append(str);
-    }
-    return sb.toString();
+    return String.join(",", groups);
   }
 }
