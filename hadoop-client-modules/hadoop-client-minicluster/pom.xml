@@ -477,7 +477,7 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-registry</artifactId>
+          <artifactId>hadoop-registry</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>

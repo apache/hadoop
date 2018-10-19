@@ -142,6 +142,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
     ;;
     registrydns)
+      echo "DEPRECATED: Use of this command is deprecated." 1>&2
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
       HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'

@@ -43,6 +43,7 @@ function hadoop_usage
   hadoop_add_subcommand "jnipath" client "prints the java.library.path"
   hadoop_add_subcommand "kerbname" client "show auth_to_local principal conversion"
   hadoop_add_subcommand "key" client "manage keys via the KeyProvider"
+  hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
   hadoop_add_subcommand "trace" client "view and modify Hadoop tracing settings"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
@@ -154,6 +155,11 @@ function hadoopcmd_case
     ;;
     key)
       HADOOP_CLASSNAME=org.apache.hadoop.crypto.key.KeyShell
+    ;;
+    registrydns)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
+      HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
     ;;
     trace)
       HADOOP_CLASSNAME=org.apache.hadoop.tracing.TraceAdmin
