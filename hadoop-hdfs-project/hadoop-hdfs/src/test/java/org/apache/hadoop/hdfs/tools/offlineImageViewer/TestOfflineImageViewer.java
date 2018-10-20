@@ -355,8 +355,10 @@ public class TestOfflineImageViewer {
     File truncatedFile = new File(tempDir, "truncatedFsImage");
     PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
     copyPartOfFile(originalFsimage, truncatedFile);
-    new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
-        .visit(new RandomAccessFile(truncatedFile, "r"));
+    try (RandomAccessFile r = new RandomAccessFile(truncatedFile, "r")) {
+      new FileDistributionCalculator(new Configuration(), 0, 0, false, output)
+        .visit(r);
+    }
   }
 
   private void copyPartOfFile(File src, File dest) throws IOException {
@@ -377,38 +379,41 @@ public class TestOfflineImageViewer {
 
   @Test
   public void testFileDistributionCalculator() throws IOException {
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-    PrintStream o = new PrintStream(output);
-    new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
-        .visit(new RandomAccessFile(originalFsimage, "r"));
-    o.close();
+    try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream o = new PrintStream(output);
+        RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
+      new FileDistributionCalculator(new Configuration(), 0, 0, false, o)
+        .visit(r);
+      o.close();
 
-    String outputString = output.toString();
-    Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
-    Matcher matcher = p.matcher(outputString);
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
+      String outputString = output.toString();
+      Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
+      Matcher matcher = p.matcher(outputString);
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      int totalFiles = Integer.parseInt(matcher.group(1));
+      assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
 
-    p = Pattern.compile("totalDirectories = (\\d+)\n");
-    matcher = p.matcher(outputString);
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory
-    assertEquals(dirCount + 1, totalDirs);
+      p = Pattern.compile("totalDirectories = (\\d+)\n");
+      matcher = p.matcher(outputString);
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      int totalDirs = Integer.parseInt(matcher.group(1));
+      // totalDirs includes root directory
+      assertEquals(dirCount + 1, totalDirs);
 
-    FileStatus maxFile = Collections.max(writtenFiles.values(),
-        new Comparator<FileStatus>() {
-      @Override
-      public int compare(FileStatus first, FileStatus second) {
-        return first.getLen() < second.getLen() ? -1 :
-            ((first.getLen() == second.getLen()) ? 0 : 1);
-      }
-    });
-    p = Pattern.compile("maxFileSize = (\\d+)\n");
-    matcher = p.matcher(output.toString("UTF-8"));
-    assertTrue(matcher.find() && matcher.groupCount() == 1);
-    assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
+      FileStatus maxFile = Collections.max(writtenFiles.values(),
+          new Comparator<FileStatus>() {
+            @Override
+            public int compare(FileStatus first, FileStatus second) {
+              return first.getLen() < second.getLen() ?
+                  -1 :
+                  ((first.getLen() == second.getLen()) ? 0 : 1);
+            }
+          });
+      p = Pattern.compile("maxFileSize = (\\d+)\n");
+      matcher = p.matcher(output.toString("UTF-8"));
+      assertTrue(matcher.find() && matcher.groupCount() == 1);
+      assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
+    }
   }
 
   @Test
@@ -514,7 +519,9 @@ public class TestOfflineImageViewer {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     PrintStream o = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
-    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    try (RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
+      v.visit(r);
+    }
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
@@ -667,10 +674,11 @@ public class TestOfflineImageViewer {
     final String DELIMITER = "\t";
     ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-    try (PrintStream o = new PrintStream(output)) {
+    try (PrintStream o = new PrintStream(output);
+        RandomAccessFile r = new RandomAccessFile(originalFsimage, "r")) {
       PBImageDelimitedTextWriter v =
           new PBImageDelimitedTextWriter(o, DELIMITER, db);
-      v.visit(new RandomAccessFile(originalFsimage, "r"));
+      v.visit(r);
     }
 
     Set<String> fileNames = new HashSet<>();
