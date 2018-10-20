@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -135,7 +136,7 @@ public class OfflineImageViewerPB {
    */
   public static void main(String[] args) throws Exception {
     int status = run(args);
-    System.exit(status);
+    ExitUtil.terminate(status);
   }
 
   public static int run(String[] args) throws Exception {
@@ -175,19 +176,24 @@ public class OfflineImageViewerPB {
     String tempPath = cmd.getOptionValue("t", "");
 
     Configuration conf = new Configuration();
-    try (PrintStream out = outputFile.equals("-") ?
-        System.out : new PrintStream(outputFile, "UTF-8")) {
+    PrintStream out = null;
+    try {
+      out = outputFile.equals("-") || "REVERSEXML".equalsIgnoreCase(processor) ?
+        System.out : new PrintStream(outputFile, "UTF-8");
       switch (StringUtils.toUpperCase(processor)) {
       case "FILEDISTRIBUTION":
         long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
         int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
         boolean formatOutput = cmd.hasOption("format");
-        new FileDistributionCalculator(conf, maxSize, step, formatOutput, out)
-            .visit(new RandomAccessFile(inputFile, "r"));
+        try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          new FileDistributionCalculator(conf, maxSize, step, formatOutput, out)
+            .visit(r);
+        }
         break;
       case "XML":
-        new PBImageXmlWriter(conf, out).visit(new RandomAccessFile(inputFile,
-            "r"));
+        try (RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          new PBImageXmlWriter(conf, out).visit(r);
+        }
         break;
       case "REVERSEXML":
         try {
@@ -196,7 +202,7 @@ public class OfflineImageViewerPB {
           System.err.println("OfflineImageReconstructor failed: "
               + e.getMessage());
           e.printStackTrace(System.err);
-          System.exit(1);
+          ExitUtil.terminate(1);
         }
         break;
       case "WEB":
@@ -208,8 +214,9 @@ public class OfflineImageViewerPB {
         break;
       case "DELIMITED":
         try (PBImageDelimitedTextWriter writer =
-            new PBImageDelimitedTextWriter(out, delimiter, tempPath)) {
-          writer.visit(new RandomAccessFile(inputFile, "r"));
+            new PBImageDelimitedTextWriter(out, delimiter, tempPath);
+            RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
+          writer.visit(r);
         }
         break;
       default:
@@ -223,6 +230,10 @@ public class OfflineImageViewerPB {
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
       e.printStackTrace(System.err);
+    } finally {
+      if (out != null && out != System.out) {
+        out.close();
+      }
     }
     return -1;
   }
