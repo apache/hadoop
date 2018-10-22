@@ -299,6 +299,10 @@ public class Pipeline {
     return b.toString();
   }
 
+  public void setType(HddsProtos.ReplicationType type) {
+    this.type = type;
+  }
+
   /**
    * Returns a JSON string of this object.
    *
