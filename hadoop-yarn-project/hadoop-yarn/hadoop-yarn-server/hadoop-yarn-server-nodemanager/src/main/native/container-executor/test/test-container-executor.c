@@ -1440,32 +1440,26 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (mkdirs(TEST_ROOT, 0777) != 0) {
+  printf("\nMaking test dir\n");
+  if (mkdirs(TEST_ROOT, 0755) != 0) {
     exit(1);
   }
-  if (chmod(TEST_ROOT, 0777) != 0) {    // in case of umask
-    exit(1);
-  }
-
-  if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
+  if (chmod(TEST_ROOT, 0755) != 0) {    // in case of umask
     exit(1);
   }
 
+  // We need a valid config before the test really starts for the check_user
+  // and set_user calls
+  printf("\nCreating test.cfg\n");
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
-
-  printf("\nOur executable is %s\n",get_executable(argv[0]));
-
+  printf("\nLoading test.cfg\n");
   read_executor_config(TEST_ROOT "/test.cfg");
-
-  local_dirs = split(strdup(NM_LOCAL_DIRS));
-  log_dirs = split(strdup(NM_LOG_DIRS));
-
-  create_nm_roots(local_dirs);
 
   // See the description above of various ways this test
   // can be executed in order to understand the following logic
+  printf("\nDetermining user details\n");
   char* current_username = strdup(getpwuid(getuid())->pw_name);
   if (getuid() == 0 && (argc == 2 || argc == 3)) {
     username = argv[1];
@@ -1474,11 +1468,36 @@ int main(int argc, char **argv) {
     username = current_username;
     yarn_username = (argc == 2) ? argv[1] : current_username;
   }
-  set_nm_uid(geteuid(), getegid());
+  struct passwd *username_info = check_user(username);
+  printf("\nSetting NM UID\n");
+  set_nm_uid(username_info->pw_uid, username_info->pw_gid);
 
+  // Make sure that username owns all the files now
+  printf("\nEnsuring ownership of test dir\n");
+  if (chown(TEST_ROOT, username_info->pw_uid, username_info->pw_gid) != 0) {
+    exit(1);
+  }
+  if (chown(TEST_ROOT "/test.cfg",
+       username_info->pw_uid, username_info->pw_gid) != 0) {
+    exit(1);
+  }
+
+  printf("\nSetting effective user\n");
   if (set_user(username)) {
     exit(1);
   }
+
+  printf("\nCreating userlogs dir\n");
+  if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
+    exit(1);
+  }
+
+  printf("\nOur executable is %s\n",get_executable(argv[0]));
+
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
+
+  create_nm_roots(local_dirs);
 
   printf("\nStarting tests\n");
 
@@ -1608,6 +1627,11 @@ int main(int argc, char **argv) {
 
   test_trim_function();
   printf("\nFinished tests\n");
+
+  printf("\nAttempting to clean up from the run\n");
+  if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
+    exit(1);
+  }
 
   free(current_username);
   free_executor_configurations();
