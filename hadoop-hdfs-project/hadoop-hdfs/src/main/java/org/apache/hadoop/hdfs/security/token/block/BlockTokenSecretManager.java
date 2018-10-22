@@ -294,6 +294,23 @@ public class BlockTokenSecretManager extends
     }
   }
 
+  /**
+   * Check if access should be allowed. userID is not checked if null. This
+   * method doesn't check if token password is correct. It should be used only
+   * when token password has already been verified (e.g., in the RPC layer).
+   *
+   * Some places need to check the access using StorageTypes and for other
+   * places the StorageTypes is not relevant.
+   */
+  public void checkAccess(BlockTokenIdentifier id, String userId,
+      ExtendedBlock block, BlockTokenIdentifier.AccessMode mode,
+      StorageType[] storageTypes) throws InvalidToken {
+    checkAccess(id, userId, block, mode);
+    if (ArrayUtils.isNotEmpty(storageTypes)) {
+      checkAccess(id.getStorageTypes(), storageTypes, "StorageTypes");
+    }
+  }
+
   public void checkAccess(BlockTokenIdentifier id, String userId,
       ExtendedBlock block, BlockTokenIdentifier.AccessMode mode)
       throws InvalidToken {
