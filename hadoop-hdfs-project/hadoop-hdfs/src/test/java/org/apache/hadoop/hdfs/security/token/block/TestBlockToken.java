@@ -215,7 +215,11 @@ public class TestBlockToken {
   private static void checkAccess(BlockTokenSecretManager m,
       Token<BlockTokenIdentifier> t, ExtendedBlock blk,
       BlockTokenIdentifier.AccessMode mode, StorageType[] storageTypes,
-      String[] storageIds) throws SecretManager.InvalidToken {
+      String[] storageIds) throws IOException {
+    if(storageIds == null) {
+      // Test overloaded checkAccess method.
+      m.checkAccess(t.decodeIdentifier(), null, blk, mode, storageTypes);
+    }
     m.checkAccess(t, null, blk, mode, storageTypes, storageIds);
   }
 
@@ -801,6 +805,7 @@ public class TestBlockToken {
         emptyStorageIds);
     sm.checkAccess(id, null, block3, mode, storageTypes,
         null);
+    sm.checkAccess(id, null, block3, mode, storageTypes);
   }
 
   @Test
