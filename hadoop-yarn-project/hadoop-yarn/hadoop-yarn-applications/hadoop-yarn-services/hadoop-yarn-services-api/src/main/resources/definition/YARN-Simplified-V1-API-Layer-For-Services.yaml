@@ -192,6 +192,41 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
+  /app/v1/services/{service_name}/component-instances:
+    get:
+      summary: Get component instances.
+      description: Get component instances which match the query params.
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: componentName
+          in: query
+          description: Component name. Multiple values are allowed.
+          type: string
+        - name: version
+          in: query
+          description: Version of the service.
+          type: string
+        - name: containerState
+          in: query
+          description: Container state. Multiple values are allowed.
+          schema:
+            $ref: '#/definitions/ContainerState'
+      responses:
+        200:
+          description: Component instances.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ComponentContainers'
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          type: string
 definitions:
   Service:
     description: a service resource has the following attributes.
@@ -594,6 +629,18 @@ definitions:
       keytab:
         type: string
         description: The URI of the kerberos keytab. Currently supports only files present on the bare host. URI starts with "file\://" - A path on the local host where the keytab is stored. It is assumed that admin pre-installs the keytabs on the local host before AM launches.
-
+  ComponentContainers:
+    description: Containers of a component.
+    required:
+    - component_name
+    properties:
+      component_name:
+        type: string
+        description: Name of the component.
+      containers:
+        type: array
+        description: Containers of the component.
+        items:
+          $ref: '#/definitions/Container'
 
 

@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
-import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType;
@@ -205,10 +205,11 @@ public class ClientAMService extends AbstractService
   @Override
   public GetCompInstancesResponseProto getCompInstances(
       GetCompInstancesRequestProto request) throws IOException {
-    List<Container> containers = FilterUtils.filterInstances(context, request);
+    List<ComponentContainers> containers = FilterUtils.filterInstances(context,
+        request);
     return GetCompInstancesResponseProto.newBuilder().setCompInstances(
-        ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(containers.toArray(
-            new Container[containers.size()]))).build();
+        ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.toJson(containers.toArray(
+            new ComponentContainers[containers.size()]))).build();
   }
 
   @Override

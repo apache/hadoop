@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
@@ -807,12 +808,12 @@ public class ApiServer {
     });
   }
 
-  private Container[] getContainers(UserGroupInformation ugi,
+  private ComponentContainers[] getContainers(UserGroupInformation ugi,
       String serviceName, List<String> componentNames, String version,
       List<ContainerState> containerStates) throws IOException,
       InterruptedException {
-    return ugi.doAs((PrivilegedExceptionAction<Container[]>) () -> {
-      Container[] result;
+    return ugi.doAs((PrivilegedExceptionAction<ComponentContainers[]>) () -> {
+      ComponentContainers[] result;
       ServiceClient sc = getServiceClient();
       sc.init(YARN_CONFIG);
       sc.start();
