@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.service.MockRunningServiceContext;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
@@ -143,9 +144,13 @@ public class TestServiceClient {
     ContainerId containerId = ContainerId.newContainerId(client.attemptId, 1L);
     comp.addContainer(new Container().id(containerId.toString()));
 
-    Container[] containers = client.getContainers(service.getName(),
-        Lists.newArrayList("compa"), "v1", null);
-    Assert.assertEquals("num containers", 2, containers.length);
+    ComponentContainers[] compContainers = client.getContainers(
+        service.getName(), Lists.newArrayList("compa"), "v1", null);
+    Assert.assertEquals("num comp", 1, compContainers.length);
+    Assert.assertEquals("comp name", "compa",
+        compContainers[0].getComponentName());
+    Assert.assertEquals("num containers", 2,
+        compContainers[0].getContainers().size());
     client.stop();
   }
 
@@ -239,17 +244,20 @@ public class TestServiceClient {
           GetCompInstancesRequestProto.class))).thenAnswer(
           (Answer<GetCompInstancesResponseProto>) invocation -> {
 
-            GetCompInstancesRequestProto req = (GetCompInstancesRequestProto)
-                invocation.getArguments()[0];
-            List<Container> containers = FilterUtils.filterInstances(
-                client.context, req);
-            GetCompInstancesResponseProto response =
-                GetCompInstancesResponseProto.newBuilder().setCompInstances(
-                    ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(
-                        containers.toArray(new Container[containers.size()])))
-                    .build();
-            client.proxyResponse = response;
-            return response;
+              GetCompInstancesRequestProto req = (GetCompInstancesRequestProto)
+                  invocation.getArguments()[0];
+
+              List<ComponentContainers> compContainers =
+                  FilterUtils.filterInstances(client.context, req);
+              GetCompInstancesResponseProto response =
+                  GetCompInstancesResponseProto.newBuilder().setCompInstances(
+                      ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.toJson(
+                          compContainers.toArray(
+                              new ComponentContainers[compContainers.size()])))
+                      .build();
+
+              client.proxyResponse = response;
+              return response;
           });
 
       client.setFileSystem(rule.getFs());

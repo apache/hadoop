@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.ServiceMaster;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -407,14 +408,15 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return result.getCompInstances();
   }
 
-  public Container[] getContainers(String appName, List<String> components,
+  public ComponentContainers[] getContainers(String appName,
+      List<String> components,
       String version, List<ContainerState> containerStates)
       throws IOException, YarnException {
     GetCompInstancesResponseProto result = filterContainers(appName, components,
         version, containerStates != null ? containerStates.stream()
             .map(Enum::toString).collect(Collectors.toList()) : null);
 
-    return ServiceApiUtil.CONTAINER_JSON_SERDE.fromJson(
+    return ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.fromJson(
         result.getCompInstances());
   }
 
