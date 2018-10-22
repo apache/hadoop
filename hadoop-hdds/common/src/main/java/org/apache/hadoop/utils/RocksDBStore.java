@@ -21,6 +21,7 @@ package org.apache.hadoop.utils;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.ratis.thirdparty.com.google.common.annotations.
     VisibleForTesting;
@@ -72,7 +73,8 @@ public class RocksDBStore implements MetadataStore {
 
         Map<String, String> jmxProperties = new HashMap<String, String>();
         jmxProperties.put("dbName", dbFile.getName());
-        statMBeanName = MBeans.register("Ozone", "RocksDbStore", jmxProperties,
+        statMBeanName = HddsUtils.registerWithJmxProperties(
+            "Ozone", "RocksDbStore", jmxProperties,
             new RocksDBStoreMBean(dbOptions.statistics()));
         if (statMBeanName == null) {
           LOG.warn("jmx registration failed during RocksDB init, db path :{}",

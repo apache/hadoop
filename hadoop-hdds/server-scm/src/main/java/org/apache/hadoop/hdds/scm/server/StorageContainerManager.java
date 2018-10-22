@@ -611,12 +611,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   private void registerMXBean() {
-    Map<String, String> jmxProperties = new HashMap<>();
+    final Map<String, String> jmxProperties = new HashMap<>();
     jmxProperties.put("component", "ServerRuntime");
-    this.scmInfoBeanName =
-        MBeans.register(
-            "StorageContainerManager", "StorageContainerManagerInfo",
-            jmxProperties, this);
+    this.scmInfoBeanName = HddsUtils.registerWithJmxProperties(
+        "StorageContainerManager", "StorageContainerManagerInfo",
+        jmxProperties, this);
   }
 
   private void unregisterMXBean() {
