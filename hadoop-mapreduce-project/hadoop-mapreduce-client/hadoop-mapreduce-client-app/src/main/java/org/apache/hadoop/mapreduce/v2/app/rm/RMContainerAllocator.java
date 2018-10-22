@@ -1020,12 +1020,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
   }
 
-  private void handleJobPriorityChange(AllocateResponse response) {
-    Priority priorityFromResponse = Priority.newInstance(response
-        .getApplicationPriority().getPriority());
-
-    // Update the job priority to Job directly.
-    getJob().setJobPriority(priorityFromResponse);
+  void handleJobPriorityChange(AllocateResponse response) {
+    Priority applicationPriority = response.getApplicationPriority();
+    if (null != applicationPriority) {
+      Priority priorityFromResponse = Priority
+          .newInstance(applicationPriority.getPriority());
+      // Update the job priority to Job directly.
+      getJob().setJobPriority(priorityFromResponse);
+    }
   }
 
   @Private
