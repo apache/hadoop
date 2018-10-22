@@ -50,7 +50,7 @@ public final class S3ErrorTable {
       "is invalid.", HTTP_NOT_FOUND);
 
   public static final OS3Exception NO_SUCH_KEY = new OS3Exception(
-      "NoSuchObject", "The specified key does not exist", HTTP_NOT_FOUND);
+      "NoSuchKey", "The specified key does not exist", HTTP_NOT_FOUND);
 
   /**
    * Create a new instance of Error.
