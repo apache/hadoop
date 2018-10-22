@@ -99,8 +99,6 @@ public abstract class PublishedConfigurationOutputter {
         return new PropertiesOutputter(owner);
       case JSON:
         return new JsonOutputter(owner);
-      case ENV:
-        return new EnvOutputter(owner);
       case TEMPLATE:
         return new TemplateOutputter(owner);
       case YAML:
