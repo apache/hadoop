@@ -119,6 +119,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.ratis.snapshot.threshold</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Number of transactions after which a ratis snapshot should be
+      taken.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.num.write.chunk.threads</name>
     <value>60</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>

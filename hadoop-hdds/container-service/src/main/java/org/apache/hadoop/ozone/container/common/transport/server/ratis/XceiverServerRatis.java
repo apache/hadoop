@@ -130,6 +130,10 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .build();
   }
 
+  @VisibleForTesting
+  public ContainerStateMachine getStateMachine() {
+    return stateMachine;
+  }
 
   private RaftProperties newRaftProperties(Configuration conf) {
     final RaftProperties properties = new RaftProperties();
@@ -254,6 +258,15 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     } else if (rpc == SupportedRpcType.NETTY) {
       NettyConfigKeys.Server.setPort(properties, port);
     }
+
+    long snapshotThreshold =
+        conf.getLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY,
+            OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT);
+    RaftServerConfigKeys.Snapshot.
+      setAutoTriggerEnabled(properties, true);
+    RaftServerConfigKeys.Snapshot.
+      setAutoTriggerThreshold(properties, snapshotThreshold);
+
     return properties;
   }
 
@@ -298,7 +311,6 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public void stop() {
     try {
       chunkExecutor.shutdown();
-      stateMachine.close();
       server.close();
     } catch (IOException e) {
       throw new RuntimeException(e);

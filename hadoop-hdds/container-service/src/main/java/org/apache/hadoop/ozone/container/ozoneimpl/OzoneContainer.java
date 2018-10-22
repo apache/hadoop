@@ -230,6 +230,11 @@ public class OzoneContainer {
     return this.hddsDispatcher;
   }
 
+  @VisibleForTesting
+  public XceiverServerSpi getServer(ReplicationType replicationType) {
+    return servers.get(replicationType);
+  }
+
   public VolumeSet getVolumeSet() {
     return volumeSet;
   }
