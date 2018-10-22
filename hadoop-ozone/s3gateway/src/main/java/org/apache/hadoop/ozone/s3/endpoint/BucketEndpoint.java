@@ -199,11 +199,11 @@ public class BucketEndpoint extends EndpointBase {
     } catch (IOException ex) {
       if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .BUCKET_NOT_EMPTY, S3ErrorTable.Resource.BUCKET);
+            .BUCKET_NOT_EMPTY, bucketName);
         throw os3Exception;
       } else if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .NO_SUCH_BUCKET, S3ErrorTable.Resource.BUCKET);
+            .NO_SUCH_BUCKET, bucketName);
         throw os3Exception;
       } else {
         throw ex;

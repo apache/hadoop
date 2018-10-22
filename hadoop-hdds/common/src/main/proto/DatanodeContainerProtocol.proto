@@ -140,6 +140,8 @@ enum Result {
   UNKNOWN_CONTAINER_TYPE = 34;
   BLOCK_NOT_COMMITTED = 35;
   CONTAINER_UNHEALTHY = 36;
+  UNKNOWN_BCSID = 37;
+  BCSID_MISMATCH = 38;
 }
 
 /**
@@ -315,6 +317,7 @@ message  PutBlockResponseProto {
 
 message  GetBlockRequestProto  {
   required DatanodeBlockID blockID = 1;
+  required uint64 blockCommitSequenceId = 2;
 }
 
 message  GetBlockResponseProto  {

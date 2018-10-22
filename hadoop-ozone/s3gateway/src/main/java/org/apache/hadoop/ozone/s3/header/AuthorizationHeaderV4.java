@@ -64,8 +64,7 @@ public class AuthorizationHeaderV4 {
     String[] split = authHeader.split(" ");
 
     if (split.length != 4) {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
-          .Resource.HEADER);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     algorithm = split[0];
@@ -78,24 +77,21 @@ public class AuthorizationHeaderV4 {
       credential = credential.substring(CREDENTIAL.length(), credential
           .length() - 1);
     } else {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
-          .Resource.HEADER);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     if (signedHeaders.startsWith(SIGNEDHEADERS)) {
       signedHeaders = signedHeaders.substring(SIGNEDHEADERS.length(),
           signedHeaders.length() - 1);
     } else {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
-          .Resource.HEADER);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     if (signature.startsWith(SIGNATURE)) {
       signature = signature.substring(SIGNATURE.length(), signature
           .length());
     } else {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
-          .Resource.HEADER);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
     }
 
     // Parse credential. Other parts of header are not validated yet. When

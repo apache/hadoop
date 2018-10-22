@@ -45,7 +45,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.NO_SUCH_BLOCK;
-
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNKNOWN_BCSID;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.BCSID_MISMATCH;
 /**
  * This class is for performing block related operations on the KeyValue
  * Container.
@@ -66,6 +67,12 @@ public class BlockManagerImpl implements BlockManager {
   public BlockManagerImpl(Configuration conf) {
     Preconditions.checkNotNull(conf, "Config cannot be null");
     this.config = conf;
+  }
+
+  private long getBlockCommitSequenceId(MetadataStore db)
+      throws IOException {
+    byte[] bscId = db.get(blockCommitSequenceIdKey);
+    return bscId == null ? 0 : Longs.fromByteArray(bscId);
   }
 
   /**
@@ -91,21 +98,19 @@ public class BlockManagerImpl implements BlockManager {
     Preconditions.checkNotNull(db, "DB cannot be null here");
 
     long blockCommitSequenceId = data.getBlockCommitSequenceId();
-    byte[] blockCommitSequenceIdValue = db.get(blockCommitSequenceIdKey);
+    long blockCommitSequenceIdValue = getBlockCommitSequenceId(db);
 
     // default blockCommitSequenceId for any block is 0. It the putBlock
     // request is not coming via Ratis(for test scenarios), it will be 0.
     // In such cases, we should overwrite the block as well
-    if (blockCommitSequenceIdValue != null && blockCommitSequenceId != 0) {
-      if (blockCommitSequenceId <= Longs
-          .fromByteArray(blockCommitSequenceIdValue)) {
+    if (blockCommitSequenceId != 0) {
+      if (blockCommitSequenceId <= blockCommitSequenceIdValue) {
         // Since the blockCommitSequenceId stored in the db is greater than
         // equal to blockCommitSequenceId to be updated, it means the putBlock
         // transaction is reapplied in the ContainerStateMachine on restart.
         // It also implies that the given block must already exist in the db.
         // just log and return
-        LOG.warn("blockCommitSequenceId " + Longs
-            .fromByteArray(blockCommitSequenceIdValue)
+        LOG.warn("blockCommitSequenceId " + blockCommitSequenceIdValue
             + " in the Container Db is greater than" + " the supplied value "
             + blockCommitSequenceId + " .Ignoring it");
         return data.getSize();
@@ -129,10 +134,12 @@ public class BlockManagerImpl implements BlockManager {
    *
    * @param container - Container from which block need to be fetched.
    * @param blockID - BlockID of the block.
+   * @param bcsId latest commit Id of the block
    * @return Key Data.
    * @throws IOException
    */
-  public BlockData getBlock(Container container, BlockID blockID)
+  @Override
+  public BlockData getBlock(Container container, BlockID blockID, long bcsId)
       throws IOException {
     Preconditions.checkNotNull(blockID,
         "BlockID cannot be null in GetBlock request");
@@ -145,6 +152,14 @@ public class BlockManagerImpl implements BlockManager {
     // This is a post condition that acts as a hint to the user.
     // Should never fail.
     Preconditions.checkNotNull(db, "DB cannot be null here");
+
+    long containerBCSId = getBlockCommitSequenceId(db);
+    if (containerBCSId < bcsId) {
+      throw new StorageContainerException(
+          "Unable to find the block with bcsID " + bcsId + " .Container "
+              + container.getContainerData().getContainerID() + " bcsId is "
+              + containerBCSId + ".", UNKNOWN_BCSID);
+    }
     byte[] kData = db.get(Longs.toByteArray(blockID.getLocalID()));
     if (kData == null) {
       throw new StorageContainerException("Unable to find the block.",
@@ -152,6 +167,12 @@ public class BlockManagerImpl implements BlockManager {
     }
     ContainerProtos.BlockData blockData =
         ContainerProtos.BlockData.parseFrom(kData);
+    long id = blockData.getBlockCommitSequenceId();
+    if (id != bcsId) {
+      throw new StorageContainerException(
+          "bcsId " + bcsId + " mismatches with existing block Id "
+              + id + " for block " + blockID + ".", BCSID_MISMATCH);
+    }
     return BlockData.getFromProtoBuf(blockData);
   }
 

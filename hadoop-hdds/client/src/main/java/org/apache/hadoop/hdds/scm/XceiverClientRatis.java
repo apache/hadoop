@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.hdds.scm;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
@@ -52,6 +54,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -209,6 +212,11 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         getClient().sendAsync(() -> byteString);
   }
 
+  @VisibleForTesting
+  public void watchForCommit(long index, long timeout) throws Exception {
+    getClient().sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED)
+        .get(timeout, TimeUnit.MILLISECONDS);
+  }
   /**
    * Sends a given command to server gets a waitable future back.
    *
