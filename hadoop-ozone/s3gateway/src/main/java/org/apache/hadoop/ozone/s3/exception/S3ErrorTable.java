@@ -45,13 +45,12 @@ public final class S3ErrorTable {
       "BucketNotEmpty", "The bucket you tried to delete is not empty.",
       HTTP_CONFLICT);
 
-  public static final OS3Exception NO_SUCH_OBJECT = new OS3Exception(
-      "NoSuchObject", "The specified object does not exist", HTTP_NOT_FOUND);
-
-
   public static final OS3Exception MALFORMED_HEADER = new OS3Exception(
       "AuthorizationHeaderMalformed", "The authorization header you provided " +
       "is invalid.", HTTP_NOT_FOUND);
+
+  public static final OS3Exception NO_SUCH_KEY = new OS3Exception(
+      "NoSuchObject", "The specified key does not exist", HTTP_NOT_FOUND);
 
   /**
    * Create a new instance of Error.
@@ -59,38 +58,10 @@ public final class S3ErrorTable {
    * @param resource Resource associated with this exception
    * @return creates a new instance of error based on the template
    */
-  public static OS3Exception newError(OS3Exception e, Resource resource) {
+  public static OS3Exception newError(OS3Exception e, String resource) {
     OS3Exception err =  new OS3Exception(e.getCode(), e.getErrorMessage(),
         e.getHttpCode());
-    err.setResource(resource.getResource());
+    err.setResource(resource);
     return err;
-  }
-
-  /**
-   * Resources, which can be defined in OS3Exception.
-   */
-  public enum Resource {
-    BUCKET("Bucket"),
-    OBJECT("Object"),
-    HEADER("header"),
-    VOLUME("Volume");
-
-    private final String resource;
-
-    /**
-     * Constructs resource.
-     * @param value
-     */
-    Resource(String value) {
-      this.resource = value;
-    }
-
-    /**
-     * Get resource.
-     * @return string
-     */
-    public String getResource() {
-      return  this.resource;
-    }
   }
 }
