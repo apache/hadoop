@@ -185,8 +185,10 @@ public class EndpointBase {
     LOG.info("Auth header string {}", auth);
 
     if (auth == null) {
+      // In this case, adding resource as Authorization, need to revisit in
+      // future if it needs to be changed.
       throw S3ErrorTable
-          .newError(S3ErrorTable.MALFORMED_HEADER, auth);
+          .newError(S3ErrorTable.MALFORMED_HEADER, "Authorization");
     }
 
     String userName;
