@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -1041,13 +1042,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   private void registerMXBean() {
-    Map<String, String> jmxProperties = new HashMap<String, String>();
+    Map<String, String> jmxProperties = new HashMap<>();
     jmxProperties.put("component", "ServerRuntime");
-    this.omInfoBeanName =
-        MBeans.register("OzoneManager",
-            "OzoneManagerInfo",
-            jmxProperties,
-            this);
+    this.omInfoBeanName = HddsUtils.registerWithJmxProperties(
+        "OzoneManager", "OzoneManagerInfo", jmxProperties, this);
   }
 
   private void unregisterMXBean() {
