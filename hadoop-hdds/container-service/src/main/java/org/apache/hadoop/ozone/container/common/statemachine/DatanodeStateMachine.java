@@ -308,7 +308,6 @@ public class DatanodeStateMachine implements Closeable {
   public void startDaemon() {
     Runnable startStateMachineTask = () -> {
       try {
-        supervisor.start();
         start();
         LOG.info("Ozone container server started.");
       } catch (Exception ex) {
