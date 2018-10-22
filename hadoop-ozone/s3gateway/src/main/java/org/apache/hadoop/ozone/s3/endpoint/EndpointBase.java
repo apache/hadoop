@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable.Resource;
 import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV2;
 import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV4;
 
@@ -60,7 +61,7 @@ public class EndpointBase {
       LOG.error("Error occurred is {}", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
+            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, Resource.BUCKET);
         throw oex;
       } else {
         throw ex;
@@ -79,7 +80,7 @@ public class EndpointBase {
       LOG.error("Error occurred is {}", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
+            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, Resource.BUCKET);
         throw oex;
       } else {
         throw ex;
@@ -186,7 +187,7 @@ public class EndpointBase {
 
     if (auth == null) {
       throw S3ErrorTable
-          .newError(S3ErrorTable.MALFORMED_HEADER, auth);
+          .newError(S3ErrorTable.MALFORMED_HEADER, Resource.HEADER);
     }
 
     String userName;

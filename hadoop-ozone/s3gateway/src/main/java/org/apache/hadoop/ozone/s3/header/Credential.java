@@ -63,7 +63,8 @@ public class Credential {
       awsService = split[3];
       awsRequest = split[4];
     } else {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, credential);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
     }
   }
 

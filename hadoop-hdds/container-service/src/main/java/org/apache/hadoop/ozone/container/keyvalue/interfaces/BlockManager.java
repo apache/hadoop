@@ -45,12 +45,10 @@ public interface BlockManager {
    *
    * @param container - Container from which block need to be get.
    * @param blockID - BlockID of the Block.
-   * @param bcsId latest commit id of the block
    * @return Block Data.
    * @throws IOException
    */
-  BlockData getBlock(Container container, BlockID blockID, long bcsId)
-      throws IOException;
+  BlockData getBlock(Container container, BlockID blockID) throws IOException;
 
   /**
    * Deletes an existing block.
