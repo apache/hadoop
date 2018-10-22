@@ -256,6 +256,6 @@ public class TestCloseContainerHandler {
         openContainerBlockMap.getBlockDataMap(testContainerID));
     // Make sure the key got committed
     Assert.assertNotNull(handler.getBlockManager()
-        .getBlock(container, blockID));
+        .getBlock(container, blockID, 0));
   }
 }
