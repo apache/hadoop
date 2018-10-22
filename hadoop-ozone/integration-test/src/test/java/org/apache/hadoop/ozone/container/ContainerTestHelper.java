@@ -468,7 +468,6 @@ public final class ContainerTestHelper {
     ContainerProtos.GetBlockRequestProto.Builder getRequest =
         ContainerProtos.GetBlockRequestProto.newBuilder();
     getRequest.setBlockID(blockID);
-    getRequest.setBlockCommitSequenceId(0);
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();

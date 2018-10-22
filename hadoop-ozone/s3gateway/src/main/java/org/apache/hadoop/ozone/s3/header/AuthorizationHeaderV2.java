@@ -52,24 +52,28 @@ public class AuthorizationHeaderV2 {
   public void parseHeader() throws OS3Exception {
     String[] split = authHeader.split(" ");
     if (split.length != 2) {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
     }
 
     identifier = split[0];
     if (!IDENTIFIER.equals(identifier)) {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
     }
 
     String[] remainingSplit = split[1].split(":");
 
     if (remainingSplit.length != 2) {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
     }
 
     accessKeyID = remainingSplit[0];
     signature = remainingSplit[1];
     if (isBlank(accessKeyID) || isBlank(signature)) {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, authHeader);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
+          .Resource.HEADER);
     }
   }
 

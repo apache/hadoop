@@ -483,8 +483,7 @@ public class KeyValueHandler extends Handler {
     try {
       BlockID blockID = BlockID.getFromProtobuf(
           request.getGetBlock().getBlockID());
-      responseData = blockManager.getBlock(kvContainer, blockID,
-          request.getGetBlock().getBlockCommitSequenceId());
+      responseData = blockManager.getBlock(kvContainer, blockID);
       long numBytes = responseData.getProtoBufMessage().toByteArray().length;
       metrics.incContainerBytesStats(Type.GetBlock, numBytes);
 
@@ -756,8 +755,7 @@ public class KeyValueHandler extends Handler {
     try {
       BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getBlock()
           .getBlockID());
-      BlockData responseData = blockManager.getBlock(kvContainer, blockID,
-          getSmallFileReq.getBlock().getBlockCommitSequenceId());
+      BlockData responseData = blockManager.getBlock(kvContainer, blockID);
 
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;

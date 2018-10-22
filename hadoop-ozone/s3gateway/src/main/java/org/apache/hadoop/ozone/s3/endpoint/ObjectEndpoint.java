@@ -150,7 +150,7 @@ public class ObjectEndpoint extends EndpointBase {
     } catch (IOException ex) {
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .NO_SUCH_KEY, keyPath);
+            .NO_SUCH_OBJECT, S3ErrorTable.Resource.OBJECT);
         throw os3Exception;
       } else {
         throw ex;
@@ -176,8 +176,9 @@ public class ObjectEndpoint extends EndpointBase {
     } catch (IOException ex) {
       LOG.error("Exception occurred in HeadObject", ex);
       if (ex.getMessage().contains("KEY_NOT_FOUND")) {
-        // Just return 404 with no content
-        return Response.status(Status.NOT_FOUND).build();
+        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
+            .NO_SUCH_OBJECT, S3ErrorTable.Resource.OBJECT);
+        throw os3Exception;
       } else {
         throw ex;
       }
@@ -214,7 +215,7 @@ public class ObjectEndpoint extends EndpointBase {
     } catch (IOException ex) {
       if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
         throw S3ErrorTable.newError(S3ErrorTable
-            .NO_SUCH_BUCKET, bucketName);
+            .NO_SUCH_BUCKET, S3ErrorTable.Resource.BUCKET);
       } else if (!ex.getMessage().contains("NOT_FOUND")) {
         throw ex;
       }

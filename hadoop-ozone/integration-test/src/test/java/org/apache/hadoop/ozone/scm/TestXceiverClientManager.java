@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm;
 import com.google.common.cache.Cache;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -106,7 +107,7 @@ public class TestXceiverClientManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
-    Cache<String, XceiverClientSpi> cache =
+    Cache<PipelineID, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
     ContainerWithPipeline container1 =
@@ -129,9 +130,8 @@ public class TestXceiverClientManager {
     Assert.assertNotEquals(client1, client2);
 
     // least recent container (i.e containerName1) is evicted
-    XceiverClientSpi nonExistent1 = cache.getIfPresent(
-        container1.getContainerInfo().getPipelineID().getId().toString()
-            + container1.getContainerInfo().getReplicationType());
+    XceiverClientSpi nonExistent1 = cache
+        .getIfPresent(container1.getContainerInfo().getPipelineID());
     Assert.assertEquals(null, nonExistent1);
     // However container call should succeed because of refcount on the client.
     String traceID1 = "trace" + RandomStringUtils.randomNumeric(4);
@@ -160,7 +160,7 @@ public class TestXceiverClientManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
-    Cache<String, XceiverClientSpi> cache =
+    Cache<PipelineID, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
     ContainerWithPipeline container1 =
@@ -183,9 +183,8 @@ public class TestXceiverClientManager {
     Assert.assertNotEquals(client1, client2);
 
     // now client 1 should be evicted
-    XceiverClientSpi nonExistent = cache.getIfPresent(
-        container1.getContainerInfo().getPipelineID().getId().toString()
-            + container1.getContainerInfo().getReplicationType());
+    XceiverClientSpi nonExistent = cache
+        .getIfPresent(container1.getContainerInfo().getPipelineID());
     Assert.assertEquals(null, nonExistent);
 
     // Any container operation should now fail

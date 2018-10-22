@@ -699,8 +699,8 @@ public class TestKeys {
                   .KeyValueContainer);
           KeyValueContainer container = (KeyValueContainer) cm.getContainerSet()
               .getContainer(location.getBlockID().getContainerID());
-          BlockData blockInfo = keyValueHandler.getBlockManager()
-              .getBlock(container, location.getBlockID(), 0);
+          BlockData blockInfo = keyValueHandler
+              .getBlockManager().getBlock(container, location.getBlockID());
           KeyValueContainerData containerData =
               (KeyValueContainerData) container.getContainerData();
           File dataDir = new File(containerData.getChunksPath());
