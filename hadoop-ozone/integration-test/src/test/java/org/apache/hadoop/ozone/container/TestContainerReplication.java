@@ -151,7 +151,7 @@ public class TestContainerReplication {
         .getHandler(ContainerType.KeyValueContainer);
 
     BlockData key = handler.getBlockManager()
-        .getBlock(container, BlockID.getFromProtobuf(blockID));
+        .getBlock(container, BlockID.getFromProtobuf(blockID), 0);
 
     Assert.assertNotNull(key);
     Assert.assertEquals(1, key.getChunks().size());

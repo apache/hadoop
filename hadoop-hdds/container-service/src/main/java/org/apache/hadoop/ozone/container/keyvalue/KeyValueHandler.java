@@ -483,7 +483,8 @@ public class KeyValueHandler extends Handler {
     try {
       BlockID blockID = BlockID.getFromProtobuf(
           request.getGetBlock().getBlockID());
-      responseData = blockManager.getBlock(kvContainer, blockID);
+      responseData = blockManager.getBlock(kvContainer, blockID,
+          request.getGetBlock().getBlockCommitSequenceId());
       long numBytes = responseData.getProtoBufMessage().toByteArray().length;
       metrics.incContainerBytesStats(Type.GetBlock, numBytes);
 
@@ -722,6 +723,7 @@ public class KeyValueHandler extends Handler {
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       blockData.setChunks(chunks);
+      // TODO: add bcsId as a part of putSmallFile transaction
       blockManager.putBlock(kvContainer, blockData);
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
 
@@ -755,7 +757,9 @@ public class KeyValueHandler extends Handler {
     try {
       BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getBlock()
           .getBlockID());
-      BlockData responseData = blockManager.getBlock(kvContainer, blockID);
+      // TODO: add bcsId as a part of getSmallFile transaction
+      // by default its 0
+      BlockData responseData = blockManager.getBlock(kvContainer, blockID, 0);
 
       ContainerProtos.ChunkInfo chunkInfo = null;
       ByteString dataBuf = ByteString.EMPTY;

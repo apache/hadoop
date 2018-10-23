@@ -73,6 +73,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.BCSID_MISMATCH;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.UNKNOWN_BCSID;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Stage.COMBINED;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
@@ -556,7 +558,63 @@ public class TestContainerPersistence {
     blockData.setChunks(chunkList);
     blockManager.putBlock(container, blockData);
     BlockData readBlockData = blockManager.
-        getBlock(container, blockData.getBlockID());
+        getBlock(container, blockData.getBlockID(), 0);
+    ChunkInfo readChunk =
+        ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
+    Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
+  }
+
+  /**
+   * Tests a put block and read block with invalid bcsId.
+   *
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  @Test
+  public void testPutBlockWithInvalidBCSId()
+      throws IOException, NoSuchAlgorithmException {
+    long testContainerID = getTestContainerID();
+    Container container = addContainer(containerSet, testContainerID);
+
+    BlockID blockID1 = ContainerTestHelper.getTestBlockID(testContainerID);
+    ChunkInfo info = writeChunkHelper(blockID1);
+    BlockData blockData = new BlockData(blockID1);
+    List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
+    chunkList.add(info.getProtoBufMessage());
+    blockData.setChunks(chunkList);
+    blockData.setBlockCommitSequenceId(3);
+    blockManager.putBlock(container, blockData);
+    chunkList.clear();
+
+    // write a 2nd block
+    BlockID blockID2 = ContainerTestHelper.getTestBlockID(testContainerID);
+    info = writeChunkHelper(blockID2);
+    blockData = new BlockData(blockID2);
+    chunkList.add(info.getProtoBufMessage());
+    blockData.setChunks(chunkList);
+    blockData.setBlockCommitSequenceId(4);
+    blockManager.putBlock(container, blockData);
+    BlockData readBlockData;
+    try {
+      // read with bcsId higher than container bcsId
+      blockManager.
+          getBlock(container, blockID1, 5);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert.assertTrue(sce.getResult() == UNKNOWN_BCSID);
+    }
+
+    try {
+      // read with bcsId lower than container bcsId but greater than committed
+      // bcsId.
+      blockManager.
+          getBlock(container, blockID1, 4);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert.assertTrue(sce.getResult() == BCSID_MISMATCH);
+    }
+    readBlockData = blockManager.
+        getBlock(container, blockData.getBlockID(), 4);
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
     Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
@@ -608,7 +666,7 @@ public class TestContainerPersistence {
     blockData.setChunks(chunkProtoList);
     blockManager.putBlock(container, blockData);
     BlockData readBlockData = blockManager.
-        getBlock(container, blockData.getBlockID());
+        getBlock(container, blockData.getBlockID(), 0);
     ChunkInfo lastChunk = chunkList.get(chunkList.size() - 1);
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(readBlockData
@@ -636,7 +694,7 @@ public class TestContainerPersistence {
     blockManager.deleteBlock(container, blockID);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the block.");
-    blockManager.getBlock(container, blockData.getBlockID());
+    blockManager.getBlock(container, blockData.getBlockID(), 0);
   }
 
   /**

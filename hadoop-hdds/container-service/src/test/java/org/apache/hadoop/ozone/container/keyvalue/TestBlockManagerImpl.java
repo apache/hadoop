@@ -113,7 +113,7 @@ public class TestBlockManagerImpl {
     assertEquals(1, keyValueContainer.getContainerData().getKeyCount());
     //Get Block
     BlockData fromGetBlockData = blockManager.getBlock(keyValueContainer,
-        blockData.getBlockID());
+        blockData.getBlockID(), 0);
 
     assertEquals(blockData.getContainerID(), fromGetBlockData.getContainerID());
     assertEquals(blockData.getLocalID(), fromGetBlockData.getLocalID());
@@ -139,7 +139,7 @@ public class TestBlockManagerImpl {
       assertEquals(0,
           keyValueContainer.getContainerData().getKeyCount());
       try {
-        blockManager.getBlock(keyValueContainer, blockID);
+        blockManager.getBlock(keyValueContainer, blockID, 0);
         fail("testDeleteBlock");
       } catch (StorageContainerException ex) {
         GenericTestUtils.assertExceptionContains(
@@ -197,7 +197,7 @@ public class TestBlockManagerImpl {
           keyValueContainer.getContainerData().getKeyCount());
       try {
         //Since the block has been deleted, we should not be able to find it
-        blockManager.getBlock(keyValueContainer, blockID);
+        blockManager.getBlock(keyValueContainer, blockID, 0);
         fail("testGetNoSuchBlock failed");
       } catch (StorageContainerException ex) {
         GenericTestUtils.assertExceptionContains(
