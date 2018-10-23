@@ -87,11 +87,12 @@ public class RouterQuotaUpdateService extends PeriodicService {
 
         QuotaUsage currentQuotaUsage = null;
 
-        // Check whether destination path exists in filesystem. If destination
-        // is not present, reset the usage. For other mount entry get current
-        // quota usage
+        // Check whether destination path exists in filesystem. When the
+        // mtime is zero, the destination is not present and reset the usage.
+        // This is because mount table does not have mtime.
+        // For other mount entry get current quota usage
         HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
-        if (ret == null) {
+        if (ret == null || ret.getModificationTime() == 0) {
           currentQuotaUsage = new RouterQuotaUsage.Builder()
               .fileAndDirectoryCount(0)
               .quota(nsQuota)
