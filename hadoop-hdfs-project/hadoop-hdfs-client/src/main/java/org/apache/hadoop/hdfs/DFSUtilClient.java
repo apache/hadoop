@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -31,6 +28,7 @@ import java.net.URISyntaxException;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -41,6 +39,9 @@ import java.util.Map;
 
 import javax.net.SocketFactory;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Maps;
+import com.google.common.primitives.SignedBytes;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -72,9 +73,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Maps;
-import com.google.common.primitives.SignedBytes;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.*;
+
 
 public class DFSUtilClient {
   public static final byte[] EMPTY_BYTES = {};
@@ -162,7 +162,7 @@ public class DFSUtilClient {
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
       Configuration conf) {
     return DFSUtilClient.getAddresses(conf, null,
-      HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+      DFS_NAMENODE_RPC_ADDRESS_KEY);
   }
 
   /**
@@ -365,7 +365,7 @@ public class DFSUtilClient {
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
       String suffix = concatSuffixes(nsId, nnId);
-      String address = getConfValue(defaultValue, suffix, conf, keys);
+      String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
       if (address != null) {
         InetSocketAddress isa = NetUtils.createSocketAddr(address);
         if (isa.isUnresolved()) {
@@ -377,6 +377,86 @@ public class DFSUtilClient {
       }
     }
     return ret;
+  }
+
+  /**
+   * Return address from configuration. Take a list of keys as preference.
+   * If the address to be returned is the value of DFS_NAMENODE_RPC_ADDRESS_KEY,
+   * will check to see if auxiliary ports are enabled. If so, call to replace
+   * address port with auxiliary port. If the address is not the value of
+   * DFS_NAMENODE_RPC_ADDRESS_KEY, return the original address. If failed to
+   * find any address, return the given default value.
+   *
+   * @param defaultValue the default value if no values found for given keys
+   * @param suffix suffix to append to keys
+   * @param conf the configuration
+   * @param keys a list of keys, ordered by preference
+   * @return
+   */
+  private static String checkKeysAndProcess(String defaultValue, String suffix,
+      Configuration conf, String... keys) {
+    String succeededKey = null;
+    String address = null;
+    for (String key : keys) {
+      address = getConfValue(null, suffix, conf, key);
+      if (address != null) {
+        succeededKey = key;
+        break;
+      }
+    }
+    String ret;
+    if (address == null) {
+      ret = defaultValue;
+    } else if(DFS_NAMENODE_RPC_ADDRESS_KEY.equals(succeededKey))  {
+      ret = checkRpcAuxiliary(conf, suffix, address);
+    } else {
+      ret = address;
+    }
+    return ret;
+  }
+
+  /**
+   * Check if auxiliary port is enabled, if yes, check if the given address
+   * should have its port replaced by an auxiliary port. If the given address
+   * does not contain a port, append the auxiliary port to enforce using it.
+   *
+   * @param conf configuration.
+   * @param address the address to check and modify (if needed).
+   * @return the new modified address containing auxiliary port, or original
+   * address if auxiliary port not enabled.
+   */
+  private static String checkRpcAuxiliary(Configuration conf, String suffix,
+      String address) {
+    String key = DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
+    key = addSuffix(key, suffix);
+    int[] ports = conf.getInts(key);
+    if (ports == null || ports.length == 0) {
+      return address;
+    }
+    LOG.info("Using server auxiliary ports " + Arrays.toString(ports));
+    URI uri;
+    try {
+      uri = new URI(address);
+    } catch (URISyntaxException e) {
+      // return the original address untouched if it is not a valid URI. This
+      // happens in unit test, as MiniDFSCluster sets the value to
+      // 127.0.0.1:0, without schema (i.e. "hdfs://"). While in practice, this
+      // should not be the case. So log a warning message here.
+      LOG.warn("NameNode address is not a valid uri:" + address);
+      return address;
+    }
+    // Ignore the port, only take the schema(e.g. hdfs) and host (e.g.
+    // localhost), then append port
+    // TODO : revisit if there is a better way
+    StringBuilder sb = new StringBuilder();
+    sb.append(uri.getScheme());
+    sb.append("://");
+    sb.append(uri.getHost());
+    sb.append(":");
+    // TODO : currently, only the very first auxiliary port is being used.
+    // But actually NN supports running multiple auxiliary
+    sb.append(ports[0]);
+    return sb.toString();
   }
 
   /**
