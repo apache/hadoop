@@ -127,6 +127,23 @@ public interface StorageContainerLocationProtocol {
       throws IOException;
 
   /**
+   * Returns the list of active PipelineIDs.
+   *
+   * @return list of PipelineID
+   *
+   * @throws IOException in case of any exception
+   */
+  List<Pipeline> listPipelines() throws IOException;
+
+  /**
+   * Closes a pipeline given the pipelineID.
+   *
+   * @param pipelineID ID of the pipeline to demolish
+   * @throws IOException
+   */
+  void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
    * Returns information about SCM.
    *
    * @return {@link ScmInfo}

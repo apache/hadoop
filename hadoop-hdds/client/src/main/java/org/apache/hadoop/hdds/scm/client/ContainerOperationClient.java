@@ -255,6 +255,17 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
+  public List<Pipeline> listPipelines() throws IOException {
+    return storageContainerLocationClient.listPipelines();
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    storageContainerLocationClient.closePipeline(pipelineID);
+  }
+
+  @Override
   public void close() {
     try {
       xceiverClientManager.close();

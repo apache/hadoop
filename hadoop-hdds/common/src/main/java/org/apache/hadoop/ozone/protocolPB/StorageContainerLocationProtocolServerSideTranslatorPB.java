@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolPro
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -43,6 +44,14 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ContainerResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ClosePipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.GetContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -209,6 +218,34 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       throws ServiceException {
     // TODO : Wiring this up requires one more patch.
     return null;
+  }
+
+  @Override
+  public ListPipelineResponseProto listPipelines(
+      RpcController controller, ListPipelineRequestProto request)
+      throws ServiceException {
+    try {
+      ListPipelineResponseProto.Builder builder = ListPipelineResponseProto
+          .newBuilder();
+      List<Pipeline> pipelineIDs = impl.listPipelines();
+      pipelineIDs.stream().map(Pipeline::getProtobufMessage)
+           .forEach(builder::addPipelines);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ClosePipelineResponseProto closePipeline(
+      RpcController controller, ClosePipelineRequestProto request)
+      throws ServiceException {
+    try {
+      impl.closePipeline(request.getPipelineID());
+      return ClosePipelineResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override

@@ -149,6 +149,19 @@ message  PipelineResponseProto {
   optional string errorMessage = 3;
 }
 
+message ListPipelineRequestProto {
+}
+
+message ListPipelineResponseProto {
+  repeated Pipeline pipelines = 1;
+}
+
+message ClosePipelineRequestProto {
+  required PipelineID pipelineID = 1;
+}
+
+message ClosePipelineResponseProto {
+}
 
 message InChillModeRequestProto {
 }
@@ -217,6 +230,18 @@ service StorageContainerLocationProtocolService {
   */
   rpc allocatePipeline(PipelineRequestProto)
       returns (PipelineResponseProto);
+
+  /**
+   * Returns the list of Pipelines managed by SCM.
+   */
+  rpc listPipelines(ListPipelineRequestProto)
+      returns (ListPipelineResponseProto);
+
+  /**
+   * Closes a pipeline.
+   */
+  rpc closePipeline(ClosePipelineRequestProto)
+      returns (ClosePipelineResponseProto);
 
   /**
   *  Returns information about SCM.

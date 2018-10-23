@@ -54,6 +54,8 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.HashMap;
@@ -167,9 +169,15 @@ public class PipelineSelector {
 
   public void removeContainerFromPipeline(PipelineID pipelineID,
                                           long containerID) throws IOException {
-    pipeline2ContainerMap.get(pipelineID)
-            .remove(ContainerID.valueof(containerID));
-    closePipelineIfNoOpenContainers(pipelineMap.get(pipelineID));
+    if (pipeline2ContainerMap.containsKey(pipelineID)) {
+      pipeline2ContainerMap.get(pipelineID)
+          .remove(ContainerID.valueof(containerID));
+      closePipelineIfNoOpenContainers(pipelineMap.get(pipelineID));
+    } else {
+      LOG.warn("Cannot remove container #{} from pipeline." +
+              " Pipeline #{} not found.",
+          containerID, pipelineID.getId());
+    }
   }
 
   /**
@@ -339,6 +347,31 @@ public class PipelineSelector {
             pipeline2ContainerMap.get(pipeline.getId());
     Preconditions.checkArgument(containers.size() == 0);
     manager.closePipeline(pipeline);
+  }
+
+  public List<Pipeline> listPipelines() {
+    return Collections.unmodifiableList(new ArrayList<>(pipelineMap.values()));
+  }
+
+  /**
+   * Closes the given pipeline.
+   */
+  public void closePipeline(PipelineID pipelineID) throws IOException {
+    final Pipeline pipeline = pipelineMap.get(pipelineID);
+    if (pipeline == null) {
+      // pipeline not found;
+      LOG.warn("Cannot close the pipeline. {} not found!", pipelineID);
+      return;
+    }
+    LOG.info("Closing pipeline. pipelineID: {}", pipeline.getId());
+    finalizePipeline(pipeline);
+    if (pipeline.getLifeCycleState() != LifeCycleState.CLOSED) {
+      pipelineManagerMap.get(pipeline.getType()).closePipeline(pipeline);
+      pipeline2ContainerMap.remove(pipeline.getId());
+      nodeManager.removePipeline(pipeline);
+      pipelineMap.remove(pipeline.getId());
+    }
+    pipelineStore.delete(pipelineID.getProtobuf().toByteArray());
   }
 
   /**

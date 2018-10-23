@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
@@ -58,6 +59,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
 import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos
@@ -290,6 +292,18 @@ public class SCMClientProtocolServer implements
     // This is needed only for debugging purposes to make sure cluster is
     // working correctly.
     return null;
+  }
+
+  @Override
+  public List<Pipeline> listPipelines() {
+    return scm.getContainerManager().getPipelineSelector().listPipelines();
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    PipelineID id = PipelineID.valueOf(UUID.fromString(pipelineID.getId()));
+    scm.getContainerManager().getPipelineSelector().closePipeline(id);
   }
 
   @Override

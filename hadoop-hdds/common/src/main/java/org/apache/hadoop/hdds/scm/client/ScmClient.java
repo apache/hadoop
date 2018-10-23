@@ -171,4 +171,22 @@ public interface ScmClient extends Closeable {
   Pipeline createReplicationPipeline(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, HddsProtos.NodePool nodePool)
       throws IOException;
+
+  /**
+   * Returns the list of active PipelineIDs.
+   *
+   * @return list of PipelineID
+   *
+   * @throws IOException in case of any exception
+   */
+  List<Pipeline> listPipelines() throws IOException;
+
+  /**
+   * Closes the pipeline given a pipeline ID.
+   *
+   * @param pipelineID PipelineID to close.
+   *
+   * @throws IOException In case of exception while closing the pipeline
+   */
+  void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
 }

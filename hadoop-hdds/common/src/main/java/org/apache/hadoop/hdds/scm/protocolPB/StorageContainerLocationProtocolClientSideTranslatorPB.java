@@ -20,6 +20,9 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
@@ -64,6 +67,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -299,6 +303,35 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
             response.hasErrorMessage() ? response.getErrorMessage() : "");
         throw new IOException(errorMessage);
       }
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public List<Pipeline> listPipelines() throws IOException {
+    try {
+      ListPipelineRequestProto request = ListPipelineRequestProto
+          .newBuilder().build();
+      ListPipelineResponseProto response = rpcProxy.listPipelines(
+          NULL_RPC_CONTROLLER, request);
+      return response.getPipelinesList().stream()
+          .map(Pipeline::getFromProtoBuf)
+          .collect(Collectors.toList());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    try {
+      ClosePipelineRequestProto request =
+          ClosePipelineRequestProto.newBuilder()
+          .setPipelineID(pipelineID)
+          .build();
+      rpcProxy.closePipeline(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

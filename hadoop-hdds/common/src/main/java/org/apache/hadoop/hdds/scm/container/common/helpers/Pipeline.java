@@ -284,18 +284,20 @@ public class Pipeline {
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
         .append("[");
-    getDatanodes().keySet().forEach(
-        node -> b.append(node.endsWith(getLeaderID()) ? "*" + id : id));
-    b.append(" id:").append(id);
+    b.append(" Id: ").append(id.getId());
+    b.append(", Nodes: ");
+    getDatanodes().values().forEach(b::append);
+
     if (getType() != null) {
-      b.append(" type:").append(getType().toString());
+      b.append(", Type:").append(getType().toString());
     }
     if (getFactor() != null) {
-      b.append(" factor:").append(getFactor().toString());
+      b.append(", Factor:").append(getFactor().toString());
     }
     if (getLifeCycleState() != null) {
-      b.append(" State:").append(getLifeCycleState().toString());
+      b.append(", State:").append(getLifeCycleState().toString());
     }
+    b.append("]");
     return b.toString();
   }
 
