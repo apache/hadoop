@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_RATIO_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_LENGTH;
 import static org.apache.hadoop.util.Time.now;
@@ -537,6 +538,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (lifelineRpcServer != null) {
       lifelineRpcServer.setTracer(nn.tracer);
     }
+    int[] auxiliaryPorts =
+        conf.getInts(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY);
+    if (auxiliaryPorts != null && auxiliaryPorts.length != 0) {
+      for (int auxiliaryPort : auxiliaryPorts) {
+        this.clientRpcServer.addAuxiliaryListener(auxiliaryPort);
+      }
+    }
   }
 
   /** Allow access to the lifeline RPC server for testing */
@@ -606,8 +614,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return serviceRPCAddress;
   }
 
-  InetSocketAddress getRpcAddress() {
+  @VisibleForTesting
+  public InetSocketAddress getRpcAddress() {
     return clientRpcAddress;
+  }
+
+  @VisibleForTesting
+  public Set<InetSocketAddress> getAuxiliaryRpcAddresses() {
+    return clientRpcServer.getAuxiliaryListenerAddresses();
   }
 
   private static UserGroupInformation getRemoteUser() throws IOException {

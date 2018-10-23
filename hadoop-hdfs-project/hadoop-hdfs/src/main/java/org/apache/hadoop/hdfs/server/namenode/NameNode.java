@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1049,10 +1050,39 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
+   * @return The auxiliary nameNode RPC addresses, or empty set if there
+   * is none.
+   */
+  public Set<InetSocketAddress> getAuxiliaryNameNodeAddresses() {
+    return rpcServer.getAuxiliaryRpcAddresses();
+  }
+
+  /**
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
     return NetUtils.getHostPortString(getNameNodeAddress());
+  }
+
+  /**
+   * Return a host:port format string corresponds to an auxiliary
+   * port configured on NameNode. If there are multiple auxiliary ports,
+   * an arbitrary one is returned. If there is no auxiliary listener, returns
+   * null.
+   *
+   * @return a string of format host:port that points to an auxiliary NameNode
+   *         address, or null if there is no such address.
+   */
+  @VisibleForTesting
+  public String getNNAuxiliaryRpcAddress() {
+    Set<InetSocketAddress> auxiliaryAddrs = getAuxiliaryNameNodeAddresses();
+    if (auxiliaryAddrs.isEmpty()) {
+      return null;
+    }
+    // since set has no particular order, returning the first element of
+    // from the iterator is effectively arbitrary.
+    InetSocketAddress addr = auxiliaryAddrs.iterator().next();
+    return NetUtils.getHostPortString(addr);
   }
 
   /**

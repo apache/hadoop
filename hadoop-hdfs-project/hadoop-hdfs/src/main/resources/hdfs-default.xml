@@ -5220,4 +5220,15 @@
       ensure that other waiters on the lock can get in.
     </description>
   </property>
+
+  <property>
+    <name>dfs.namenode.rpc-address.auxiliary-ports</name>
+    <value></value>
+    <description>
+      A comma separated list of auxiliary ports for the NameNode to listen on.
+      This allows exposing multiple NN addresses to clients.
+      Particularly, it is used to enforce different SASL levels on different ports.
+      Empty list indicates that auxiliary ports are disabled.
+    </description>
+  </property>
 </configuration>
