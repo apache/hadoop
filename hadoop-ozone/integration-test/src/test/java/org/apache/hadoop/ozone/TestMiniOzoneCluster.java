@@ -102,7 +102,7 @@ public class TestMiniOzoneCluster {
       // Verify client is able to connect to the container
       try (XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf)){
         client.connect();
-        assertTrue(client.isConnected());
+        assertTrue(client.isConnected(pipeline.getLeader()));
       }
     }
   }

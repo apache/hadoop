@@ -22,7 +22,9 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -276,8 +278,13 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       long containerID = blockID.getContainerID();
       ContainerWithPipeline containerWithPipeline =
           storageContainerLocationClient.getContainerWithPipeline(containerID);
+      Pipeline pipeline = containerWithPipeline.getPipeline();
+
+      // irrespective of the container state, we will always read via Standalone
+      // protocol.
+      pipeline.setType(HddsProtos.ReplicationType.STAND_ALONE);
       XceiverClientSpi xceiverClient = xceiverClientManager
-          .acquireClient(containerWithPipeline.getPipeline());
+          .acquireClient(pipeline);
       boolean success = false;
       containerKey = omKeyLocationInfo.getLocalID();
       try {
