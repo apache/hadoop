@@ -81,14 +81,17 @@ public final class ContainerProtocolCalls  {
    * @param xceiverClient client to perform call
    * @param datanodeBlockID blockID to identify container
    * @param traceID container protocol call args
+   * @param blockCommitSequenceId latest commit Id of the block
    * @return container protocol get block response
    * @throws IOException if there is an I/O error while performing the call
    */
   public static GetBlockResponseProto getBlock(XceiverClientSpi xceiverClient,
-      DatanodeBlockID datanodeBlockID, String traceID) throws IOException {
+      DatanodeBlockID datanodeBlockID, String traceID,
+      long blockCommitSequenceId) throws IOException {
     GetBlockRequestProto.Builder readBlockRequest = GetBlockRequestProto
         .newBuilder()
-        .setBlockID(datanodeBlockID);
+        .setBlockID(datanodeBlockID)
+        .setBlockCommitSequenceId(blockCommitSequenceId);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
 
     ContainerCommandRequestProto request = ContainerCommandRequestProto
