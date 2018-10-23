@@ -95,18 +95,6 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
-   * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier,
-   * String, ExtendedBlock, BlockTokenIdentifier.AccessMode,
-   * StorageType[])}
-   */
-  public void checkAccess(BlockTokenIdentifier id, String userId,
-      ExtendedBlock block, AccessMode mode, StorageType[] storageTypes)
-      throws InvalidToken {
-    get(block.getBlockPoolId()).checkAccess(id, userId, block, mode,
-        storageTypes);
-  }
-
-  /**
    * See {@link BlockTokenSecretManager#checkAccess(Token, String,
    *                ExtendedBlock, BlockTokenIdentifier.AccessMode,
    *                StorageType[], String[])}
@@ -120,7 +108,7 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
-   * See {@link BlockTokenSecretManager#addKeys(ExportedBlockKeys)}.
+   * See {@link BlockTokenSecretManager#addKeys(ExportedBlockKeys)}
    */
   public void addKeys(String bpid, ExportedBlockKeys exportedKeys)
       throws IOException {
