@@ -162,10 +162,35 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
+  /app/v1/services/{service_name}/components:
+    put:
+      summary: Upgrade multiple components.
+      description: Set a component's desired number of instanes
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: components
+          in: body
+          description: Components to be upgraded with state set to UPGRADING
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Component'
+      responses:
+        200:
+          description: Upgrading components.
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
   /app/v1/services/{service_name}/components/{component_name}:
     put:
-      summary: Flex a component's number of instances.
-      description: Set a component's desired number of instanes
+      summary: Flex a component's number of instances or upgrade all the instances of the component.
+      description: Set a component's desired number of instanes or upgrade the component.
       parameters:
         - name: service_name
           in: path
@@ -179,7 +204,7 @@ paths:
           type: string
         - name: Component
           in: body
-          description: The definition of a component which contains the updated number of instances.
+          description: For flex, the definition of a component which contains the updated number of instances with state set to FLEXING. For upgrade, component definition with state set to UPGRADING.
           required: true
           schema:
             $ref: '#/definitions/Component'
@@ -213,8 +238,7 @@ paths:
         - name: containerState
           in: query
           description: Container state. Multiple values are allowed.
-          schema:
-            $ref: '#/definitions/ContainerState'
+          type: string
       responses:
         200:
           description: Component instances.
@@ -226,7 +250,63 @@ paths:
           description: Service does not exist
         default:
           description: Unexpected error
+    put:
+      summary: Upgrade multiple component instances.
+      description: Upgrades multiple component instances
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
           type: string
+        - name: component instances
+          in: body
+          description: Component instances with state set to UPGRADING
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Container'
+      responses:
+        200:
+          description: Upgrading component instance
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+  /app/v1/services/{service_name}/components/{component_name}/component-instances/{component_instance_name}:
+    put:
+      summary: Upgrade a single component instance.
+      description: Upgrades a single component instance
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: component_name
+          in: path
+          description: Component name
+          required: true
+          type: string
+        - name: component_instance_name
+          in: path
+          description: Component instance name
+          required: true
+          type: string
+        - name: component instance
+          in: body
+          description: Component instance with state UPGRADING
+          required: true
+          schema:
+            $ref: '#/definitions/Container'
+      responses:
+        200:
+          description: Upgrading component instance
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
 definitions:
   Service:
     description: a service resource has the following attributes.
@@ -586,6 +666,10 @@ definitions:
           - FAILED
           - FLEX
           - UPGRADING
+          - UPGRADING_AUTO_FINALIZE
+          - EXPRESS_UPGRADING
+          - SUCCEEDED
+          - CANCEL_UPGRADING
   ContainerState:
     description: The current state of the container of a service.
     properties:
@@ -593,9 +677,14 @@ definitions:
         type: string
         description: enum of the state of the container
         enum:
-          - INIT
-          - STARTED
+          - RUNNING_BUT_UNREADY
           - READY
+          - STOPPED
+          - NEEDS_UPGRADE
+          - UPGRADING
+          - SUCCEEDED
+          - FAILED
+          - FAILED_UPGRADE
   ComponentState:
     description: The state of the component
     properties:
@@ -603,10 +692,12 @@ definitions:
         type: string
         description: enum of the state of the component
         enum:
-          - INIT
           - FLEXING
           - STABLE
+          - NEEDS_UPGRADE
           - UPGRADING
+          - SUCCEEDED
+          - FAILED
   ServiceStatus:
     description: The current status of a submitted service, returned as a response to the GET API.
     properties:
@@ -642,5 +733,3 @@ definitions:
         description: Containers of the component.
         items:
           $ref: '#/definitions/Container'
-
-
