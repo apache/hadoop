@@ -170,7 +170,7 @@ public class TestLeaseRecovery2 {
     // set the soft limit to be 1 hour but recoverLease should
     // close the file immediately
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, LONG_LEASE_PERIOD);
-    int size = AppendTestUtil.nextInt(FILE_SIZE);
+    int size = AppendTestUtil.nextInt((int) BLOCK_SIZE);
     String filestr = "/testCloseWhileRecoverLease";
 
     AppendTestUtil.LOG.info("filestr=" + filestr);
