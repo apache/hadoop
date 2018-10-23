@@ -25,6 +25,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -136,14 +137,18 @@ public class MRClientService extends AbstractService implements ClientService {
         server.getListenerAddress().getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     try {
-      // Explicitly disabling SSL for map reduce task as we can't allow MR users
-      // to gain access to keystore file for opening SSL listener. We can trust
-      // RM/NM to issue SSL certificates but definitely not MR-AM as it is
-      // running in user-land.
+      HttpConfig.Policy httpPolicy = conf.getBoolean(
+          MRJobConfig.MR_AM_WEBAPP_HTTPS_ENABLED,
+          MRJobConfig.DEFAULT_MR_AM_WEBAPP_HTTPS_ENABLED)
+          ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY;
+      boolean needsClientAuth = conf.getBoolean(
+          MRJobConfig.MR_AM_WEBAPP_HTTPS_CLIENT_AUTH,
+          MRJobConfig.DEFAULT_MR_AM_WEBAPP_HTTPS_CLIENT_AUTH);
       webApp =
           WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
-            .withHttpPolicy(conf, Policy.HTTP_ONLY)
+            .withHttpPolicy(conf, httpPolicy)
             .withPortRange(conf, MRJobConfig.MR_AM_WEBAPP_PORT_RANGE)
+            .needsClientAuth(needsClientAuth)
             .start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);
