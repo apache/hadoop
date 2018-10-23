@@ -726,6 +726,9 @@ public class RouterClientProtocol implements ClientProtocol {
           date = dates.get(src);
         }
         ret = getMountPointStatus(src, children.size(), date);
+      } else if (children != null) {
+        // The src is a mount point, but there are no files or directories
+        ret = getMountPointStatus(src, 0, 0);
       }
     }
 
@@ -1734,13 +1737,26 @@ public class RouterClientProtocol implements ClientProtocol {
     FsPermission permission = FsPermission.getDirDefault();
     String owner = this.superUser;
     String group = this.superGroup;
-    try {
-      // TODO support users, it should be the user for the pointed folder
-      UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
-      owner = ugi.getUserName();
-      group = ugi.getPrimaryGroupName();
-    } catch (IOException e) {
-      LOG.error("Cannot get the remote user: {}", e.getMessage());
+    if (subclusterResolver instanceof MountTableResolver) {
+      try {
+        MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+        MountTable entry = mountTable.getMountPoint(name);
+        if (entry != null) {
+          permission = entry.getMode();
+          owner = entry.getOwnerName();
+          group = entry.getGroupName();
+        }
+      } catch (IOException e) {
+        LOG.error("Cannot get mount point: {}", e.getMessage());
+      }
+    } else {
+      try {
+        UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+        owner = ugi.getUserName();
+        group = ugi.getPrimaryGroupName();
+      } catch (IOException e) {
+        LOG.error("Cannot get remote user: {}", e.getMessage());
+      }
     }
     long inodeId = 0;
     return new HdfsFileStatus.Builder()

@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -43,8 +44,12 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.util.Time;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,9 +64,11 @@ public class TestRouterMountTable {
   private static RouterContext routerContext;
   private static MountTableResolver mountTable;
   private static ClientProtocol routerProtocol;
+  private static long startTime;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
+    startTime = Time.now();
 
     // Build and start a federated cluster
     cluster = new StateStoreDFSCluster(false, 1);
@@ -89,6 +96,21 @@ public class TestRouterMountTable {
       cluster.stopRouter(routerContext);
       cluster.shutdown();
       cluster = null;
+    }
+  }
+
+  @After
+  public void clearMountTable() throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    GetMountTableEntriesRequest req1 =
+        GetMountTableEntriesRequest.newInstance("/");
+    GetMountTableEntriesResponse response =
+        mountTableManager.getMountTableEntries(req1);
+    for (MountTable entry : response.getEntries()) {
+      RemoveMountTableEntryRequest req2 =
+          RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
+      mountTableManager.removeMountTableEntry(req2);
     }
   }
 
@@ -157,7 +179,6 @@ public class TestRouterMountTable {
    */
   @Test
   public void testListFilesTime() throws Exception {
-    Long beforeCreatingTime = Time.now();
     // Add mount table entry
     MountTable addEntry = MountTable.newInstance(
         "/testdir", Collections.singletonMap("ns0", "/testdir"));
@@ -211,10 +232,40 @@ public class TestRouterMountTable {
       Long expectedTime = pathModTime.get(currentFile);
 
       assertEquals(currentFile, fileName);
-      assertTrue(currentTime > beforeCreatingTime);
+      assertTrue(currentTime > startTime);
       assertEquals(currentTime, expectedTime);
     }
     // Verify the total number of results found/matched
     assertEquals(pathModTime.size(), listing.getPartialListing().length);
+  }
+
+  /**
+   * Verify that the file listing contains correct permission.
+   */
+  @Test
+  public void testMountTablePermissions() throws Exception {
+    // Add mount table entries
+    MountTable addEntry = MountTable.newInstance(
+        "/testdir1", Collections.singletonMap("ns0", "/testdir1"));
+    addEntry.setGroupName("group1");
+    addEntry.setOwnerName("owner1");
+    addEntry.setMode(FsPermission.createImmutable((short)0775));
+    assertTrue(addMountTable(addEntry));
+    addEntry = MountTable.newInstance(
+        "/testdir2", Collections.singletonMap("ns0", "/testdir2"));
+    addEntry.setGroupName("group2");
+    addEntry.setOwnerName("owner2");
+    addEntry.setMode(FsPermission.createImmutable((short)0755));
+    assertTrue(addMountTable(addEntry));
+
+    HdfsFileStatus fs = routerProtocol.getFileInfo("/testdir1");
+    assertEquals("group1", fs.getGroup());
+    assertEquals("owner1", fs.getOwner());
+    assertEquals((short) 0775, fs.getPermission().toShort());
+
+    fs = routerProtocol.getFileInfo("/testdir2");
+    assertEquals("group2", fs.getGroup());
+    assertEquals("owner2", fs.getOwner());
+    assertEquals((short) 0755, fs.getPermission().toShort());
   }
 }

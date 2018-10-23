@@ -123,8 +123,9 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     RouterContext rc = getRouterContext();
     Router router = rc.getRouter();
     FileSubclusterResolver subclusterResolver = router.getSubclusterResolver();
-    for (String mount : subclusterResolver.getMountPoints(path)) {
-      requiredPaths.add(mount);
+    List<String> mountList = subclusterResolver.getMountPoints(path);
+    if (mountList != null) {
+      requiredPaths.addAll(mountList);
     }
 
     // Get files/dirs from the Namenodes
