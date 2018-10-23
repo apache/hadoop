@@ -762,6 +762,28 @@ public interface MRJobConfig {
    */
   String MR_AM_WEBAPP_PORT_RANGE = MR_AM_PREFIX + "webapp.port-range";
 
+  /**
+   * True if the MR AM should use HTTPS for its webapp.  If
+   * {@link org.apache.hadoop.yarn.conf.YarnConfiguration#RM_APPLICATION_HTTPS_POLICY}
+   * is set to LENIENT or STRICT, the MR AM will automatically use the
+   * keystore provided by YARN with a certificate for the MR AM webapp, unless
+   * provided by the user.
+   */
+  String MR_AM_WEBAPP_HTTPS_ENABLED = MR_AM_PREFIX + "webapp.https.enabled";
+  boolean DEFAULT_MR_AM_WEBAPP_HTTPS_ENABLED = false;
+
+  /**
+   * True if the MR AM webapp should require client HTTPS authentication (i.e.
+   * the proxy server (RM) should present a certificate to the MR AM webapp).
+   * If {@link org.apache.hadoop.yarn.conf.YarnConfiguration#RM_APPLICATION_HTTPS_POLICY}
+   * is set to LENIENT or STRICT, the MR AM will automatically use the
+   * truststore provided by YARN with the RMs certificate, unless provided by
+   * the user.
+   */
+  String MR_AM_WEBAPP_HTTPS_CLIENT_AUTH =
+      MR_AM_PREFIX + "webapp.https.client.auth";
+  boolean DEFAULT_MR_AM_WEBAPP_HTTPS_CLIENT_AUTH = false;
+
   /** Enable blacklisting of nodes in the job.*/
   public static final String MR_AM_JOB_NODE_BLACKLISTING_ENABLE = 
     MR_AM_PREFIX  + "job.node-blacklisting.enable";
