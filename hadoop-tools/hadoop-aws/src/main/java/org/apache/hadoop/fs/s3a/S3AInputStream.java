@@ -607,8 +607,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public synchronized long remainingInFile() {
-    return this.contentLength - this.pos;
+  public synchronized long remainingInFile() throws IOException {
+    return this.contentLength - this.getPos();
   }
 
   /**
