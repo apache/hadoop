@@ -1275,6 +1275,7 @@ grizzly-http 2.2.21
 grizzly-http-server 2.2.21
 grizzly-http-servlet 2.2.21
 grizzly-rcm 2.2.21
+JavaBeans Activation Framework 1.2.0
 --------------------------------------------------------------------------------
 (CDDL 1.1)
 COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL)Version 1.1
