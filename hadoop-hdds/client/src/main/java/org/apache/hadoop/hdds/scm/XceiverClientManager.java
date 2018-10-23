@@ -27,6 +27,7 @@ import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -58,7 +59,7 @@ public class XceiverClientManager implements Closeable {
 
   //TODO : change this to SCM configuration class
   private final Configuration conf;
-  private final Cache<String, XceiverClientSpi> clientCache;
+  private final Cache<PipelineID, XceiverClientSpi> clientCache;
   private final boolean useRatis;
 
   private static XceiverClientMetrics metrics;
@@ -82,10 +83,10 @@ public class XceiverClientManager implements Closeable {
         .expireAfterAccess(staleThresholdMs, TimeUnit.MILLISECONDS)
         .maximumSize(maxSize)
         .removalListener(
-            new RemovalListener<String, XceiverClientSpi>() {
+            new RemovalListener<PipelineID, XceiverClientSpi>() {
             @Override
             public void onRemoval(
-                RemovalNotification<String, XceiverClientSpi>
+                RemovalNotification<PipelineID, XceiverClientSpi>
                   removalNotification) {
               synchronized (clientCache) {
                 // Mark the entry as evicted
@@ -97,7 +98,7 @@ public class XceiverClientManager implements Closeable {
   }
 
   @VisibleForTesting
-  public Cache<String, XceiverClientSpi> getClientCache() {
+  public Cache<PipelineID, XceiverClientSpi> getClientCache() {
     return clientCache;
   }
 
@@ -139,14 +140,13 @@ public class XceiverClientManager implements Closeable {
 
   private XceiverClientSpi getClient(Pipeline pipeline)
       throws IOException {
-    HddsProtos.ReplicationType type = pipeline.getType();
     try {
-      return clientCache.get(pipeline.getId().getId().toString() + type,
+      return clientCache.get(pipeline.getId(),
           new Callable<XceiverClientSpi>() {
           @Override
           public XceiverClientSpi call() throws Exception {
             XceiverClientSpi client = null;
-            switch (type) {
+            switch (pipeline.getType()) {
             case RATIS:
               client = XceiverClientRatis.newXceiverClientRatis(pipeline, conf);
               break;

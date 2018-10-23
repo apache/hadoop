@@ -116,10 +116,6 @@ public class ChunkGroupOutputStream extends OutputStream {
   public List<ChunkOutputStreamEntry> getStreamEntries() {
     return streamEntries;
   }
-  @VisibleForTesting
-  public XceiverClientManager getXceiverClientManager() {
-    return xceiverClientManager;
-  }
 
   public List<OmKeyLocationInfo> getLocationInfoList() throws IOException {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
