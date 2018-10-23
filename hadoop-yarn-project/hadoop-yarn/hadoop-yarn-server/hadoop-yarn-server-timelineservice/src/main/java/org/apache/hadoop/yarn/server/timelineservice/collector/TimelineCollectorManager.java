@@ -220,7 +220,7 @@ public class TimelineCollectorManager extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
-    if (collectors != null && collectors.size() > 1) {
+    if (collectors != null && collectors.size() > 0) {
       synchronized (collectors) {
         for (TimelineCollector c : collectors.values()) {
           c.serviceStop();
