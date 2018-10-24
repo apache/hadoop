@@ -110,9 +110,6 @@ public final class AzureADAuthenticator {
    */
   public static AzureADToken getTokenFromMsi(String tenantGuid, String clientId,
                                              boolean bypassCache) throws IOException {
-    Preconditions.checkNotNull(tenantGuid, "tenantGuid");
-    Preconditions.checkNotNull(clientId, "clientId");
-
     String authEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token";
 
     QueryParams qp = new QueryParams();
@@ -120,12 +117,12 @@ public final class AzureADAuthenticator {
     qp.add("resource", RESOURCE_NAME);
 
 
-    if (tenantGuid.length() > 0) {
+    if (tenantGuid != null && tenantGuid.length() > 0) {
       String authority = "https://login.microsoftonline.com/" + tenantGuid;
       qp.add("authority", authority);
     }
 
-    if (clientId.length() > 0) {
+    if (clientId != null && clientId.length() > 0) {
       qp.add("client_id", clientId);
     }
 
