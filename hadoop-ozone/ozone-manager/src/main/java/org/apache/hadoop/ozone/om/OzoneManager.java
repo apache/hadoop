@@ -314,17 +314,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
 
   /**
-   * Login KSM service user if security and Kerberos are enabled.
+   * Login OM service user if security and Kerberos are enabled.
    *
    * @param  conf
    * @throws IOException, AuthenticationException
    */
-  private static void loginKSMUser(OzoneConfiguration conf)
+  private static void loginOMUser(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
 
     if (SecurityUtil.getAuthenticationMethod(conf).equals
         (AuthenticationMethod.KERBEROS)) {
-      LOG.debug("Ozone security is enabled. Attempting login for KSM user. "
+      LOG.debug("Ozone security is enabled. Attempting login for OM user. "
               + "Principal: {},keytab: {}", conf.get(
           OZONE_OM_KERBEROS_PRINCIPAL_KEY),
           conf.get(OZONE_OM_KERBEROS_KEYTAB_FILE_KEY));
@@ -336,10 +336,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           OZONE_OM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     } else {
       throw new AuthenticationException(SecurityUtil.getAuthenticationMethod
-          (conf) + " authentication method not supported. KSM user login "
+          (conf) + " authentication method not supported. OM user login "
           + "failed.");
     }
-    LOG.info("KSM login successful.");
+    LOG.info("Ozone Manager login successful.");
   }
 
   /**
@@ -495,7 +495,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     // Authenticate KSM if security is enabled
     if (conf.getBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY, true)) {
-      loginKSMUser(conf);
+      loginOMUser(conf);
     }
     switch (startOpt) {
     case INIT:
