@@ -1654,6 +1654,11 @@
             <source>${javac.version}</source>
             <target>${javac.version}</target>
             <useIncrementalCompilation>false</useIncrementalCompilation>
+            <!-- add flags to generate native headers -->
+            <compilerArgs combine.children="append">
+              <arg>-h</arg>
+              <arg>${project.build.directory}/native/javah/</arg>
+            </compilerArgs>
           </configuration>
         </plugin>
         <plugin>
@@ -2119,27 +2124,6 @@
           </dependency>
         </dependencies>
       </dependencyManagement>
-    </profile>
-    <profile>
-      <id>native</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <!-- add flags to generate native headers -->
-              <compilerArgs combine.children="append">
-                <arg>-h</arg>
-                <arg>${project.build.directory}/native/javah/</arg>
-              </compilerArgs>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 
