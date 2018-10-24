@@ -263,6 +263,8 @@ public class FSDirectory implements Closeable {
   };
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
+    // used to enable/disable the use of expanded string tables.
+    SerialNumberManager.initialize(conf);
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);

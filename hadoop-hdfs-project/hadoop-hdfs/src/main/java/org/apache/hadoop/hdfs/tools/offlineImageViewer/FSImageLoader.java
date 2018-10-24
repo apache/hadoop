@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
@@ -67,7 +68,7 @@ import com.google.common.collect.Maps;
 class FSImageLoader {
   public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
 
-  private final String[] stringTable;
+  private final SerialNumberManager.StringTable stringTable;
   // byte representation of inodes, sorted by id
   private final byte[][] inodes;
   private final Map<Long, long[]> dirmap;
@@ -93,8 +94,8 @@ class FSImageLoader {
     }
   };
 
-  private FSImageLoader(String[] stringTable, byte[][] inodes,
-                        Map<Long, long[]> dirmap) {
+  private FSImageLoader(SerialNumberManager.StringTable stringTable,
+                        byte[][] inodes, Map<Long, long[]> dirmap) {
     this.stringTable = stringTable;
     this.inodes = inodes;
     this.dirmap = dirmap;
@@ -119,7 +120,7 @@ class FSImageLoader {
     try (FileInputStream fin = new FileInputStream(file.getFD())) {
       // Map to record INodeReference to the referred id
       ImmutableList<Long> refIdList = null;
-      String[] stringTable = null;
+      SerialNumberManager.StringTable stringTable = null;
       byte[][] inodes = null;
       Map<Long, long[]> dirmap = null;
 
@@ -242,16 +243,17 @@ class FSImageLoader {
     return inodes;
   }
 
-  static String[] loadStringTable(InputStream in) throws
-  IOException {
+  static SerialNumberManager.StringTable loadStringTable(InputStream in)
+        throws IOException {
     FsImageProto.StringTableSection s = FsImageProto.StringTableSection
         .parseDelimitedFrom(in);
     LOG.info("Loading " + s.getNumEntry() + " strings");
-    String[] stringTable = new String[s.getNumEntry() + 1];
+    SerialNumberManager.StringTable stringTable =
+        SerialNumberManager.newStringTable(s.getNumEntry(), s.getMaskBits());
     for (int i = 0; i < s.getNumEntry(); ++i) {
       FsImageProto.StringTableSection.Entry e = FsImageProto
           .StringTableSection.Entry.parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
+      stringTable.put(e.getId(), e.getStr());
     }
     return stringTable;
   }
