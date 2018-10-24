@@ -74,8 +74,7 @@ public class AllocationBasedResourceTracker
     if (allocationClone.getCPU() <= 0 &&
         allocationClone.getPhysicalMemory() <= 0 &&
         allocationClone.getVirtualMemory() <= 0) {
-      int cpu = Math.round(allocationClone.getCPU() *
-          getContainersMonitor().getVCoresAllocatedForContainers());
+      int cpu = Math.round(allocationClone.getCPU());
       long memory = allocationClone.getPhysicalMemory();
       unallocated = Resource.newInstance(-memory, -cpu);
     }
