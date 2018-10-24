@@ -82,7 +82,7 @@ fi
 
 if [ -n "$ENSURE_SCM_INITIALIZED" ]; then
   if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
-    /opt/hadoop/bin/ozone scm -init
+    /opt/hadoop/bin/ozone scm --init
   fi
 fi
 
@@ -92,7 +92,7 @@ if [ -n "$ENSURE_OM_INITIALIZED" ]; then
     # Could be removed after HDFS-13203
     echo "Waiting 15 seconds for SCM startup"
     sleep 15
-    /opt/hadoop/bin/ozone om -createObjectStore
+    /opt/hadoop/bin/ozone om --init
   fi
 fi
 
