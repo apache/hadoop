@@ -52,6 +52,12 @@ public final class S3ErrorTable {
   public static final OS3Exception NO_SUCH_KEY = new OS3Exception(
       "NoSuchKey", "The specified key does not exist", HTTP_NOT_FOUND);
 
+  public static final OS3Exception INVALID_ARGUMENT = new OS3Exception(
+      "InvalidArgument", "Invalid Argument", HTTP_BAD_REQUEST);
+
+  public static final OS3Exception INVALID_REQUEST = new OS3Exception(
+      "InvalidRequest", "Invalid Request", HTTP_BAD_REQUEST);
+
   /**
    * Create a new instance of Error.
    * @param e Error Template

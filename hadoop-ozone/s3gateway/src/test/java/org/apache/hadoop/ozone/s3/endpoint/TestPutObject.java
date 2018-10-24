@@ -38,6 +38,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 /**
@@ -48,6 +50,9 @@ public class TestPutObject {
   private String userName = "ozone";
   private String bucketName = "b1";
   private String keyName = "key1";
+  private String destBucket = "b2";
+  private String destkey = "key2";
+  private String nonexist = "nonexist";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
   private ObjectEndpoint objectEndpoint;
@@ -60,6 +65,7 @@ public class TestPutObject {
 
     // Create bucket
     objectStoreStub.createS3Bucket(userName, bucketName);
+    objectStoreStub.createS3Bucket("ozone1", destBucket);
 
     // Create PutObject and setClient to OzoneClientStub
     objectEndpoint = new ObjectEndpoint();
@@ -75,8 +81,8 @@ public class TestPutObject {
 
     //WHEN
     Response response = objectEndpoint.put(bucketName, keyName,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "32 * 1024 * 1024",
-        CONTENT.length(), body);
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+        body);
 
     //THEN
     String volumeName = clientStub.getObjectStore()
@@ -109,7 +115,6 @@ public class TestPutObject {
     Response response = objectEndpoint.put(bucketName, keyName,
         ReplicationType.STAND_ALONE,
         ReplicationFactor.ONE,
-        "32 * 1024 * 1024",
         chunkedContent.length(),
         new ByteArrayInputStream(chunkedContent.getBytes()));
 
@@ -124,5 +129,108 @@ public class TestPutObject {
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals("1234567890abcde", keyContent);
+  }
+
+  @Test
+  public void testCopyObject() throws IOException, OS3Exception {
+    // Put object in to source bucket
+    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    objectEndpoint.setHeaders(headers);
+    keyName = "sourceKey";
+
+    Response response = objectEndpoint.put(bucketName, keyName,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+        body);
+
+    String volumeName = clientStub.getObjectStore().getOzoneVolumeName(
+        bucketName);
+
+    OzoneInputStream ozoneInputStream = clientStub.getObjectStore().getVolume(
+        volumeName).getBucket(bucketName).readKey(keyName);
+
+    String keyContent = IOUtils.toString(ozoneInputStream, Charset.forName(
+        "UTF-8"));
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(CONTENT, keyContent);
+
+
+    // Add copy header, and then call put
+    when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+        bucketName  + "/" + keyName);
+
+    response = objectEndpoint.put(destBucket, destkey,
+        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+        body);
+
+    // Check destination key and response
+    volumeName = clientStub.getObjectStore().getOzoneVolumeName(destBucket);
+    ozoneInputStream = clientStub.getObjectStore().getVolume(volumeName)
+        .getBucket(destBucket).readKey(destkey);
+
+    keyContent = IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(CONTENT, keyContent);
+
+    // source and dest same
+    try {
+      objectEndpoint.put(bucketName, keyName, ReplicationType.STAND_ALONE,
+          ReplicationFactor.ONE, CONTENT.length(), body);
+      fail("test copy object failed");
+    } catch (OS3Exception ex) {
+      Assert.assertTrue(ex.getErrorMessage().contains("This copy request is " +
+          "illegal"));
+    }
+
+    // source bucket not found
+    try {
+      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+          nonexist + "/"  + keyName);
+      response = objectEndpoint.put(destBucket, destkey,
+          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+          body);
+      fail("test copy object failed");
+    } catch (OS3Exception ex) {
+      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
+    }
+
+    // dest bucket not found
+    try {
+      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+          bucketName + "/" + keyName);
+      response = objectEndpoint.put(nonexist, destkey,
+          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+          body);
+      fail("test copy object failed");
+    } catch (OS3Exception ex) {
+      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
+    }
+
+    //Both source and dest bucket not found
+    try {
+      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+          nonexist + "/" + keyName);
+      response = objectEndpoint.put(nonexist, destkey,
+          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+          body);
+      fail("test copy object failed");
+    } catch (OS3Exception ex) {
+      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
+    }
+
+    // source key not found
+    try {
+      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+          bucketName + "/" + nonexist);
+      response = objectEndpoint.put("nonexistent", keyName,
+          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+          body);
+      fail("test copy object failed");
+    } catch (OS3Exception ex) {
+      Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
+    }
+
   }
 }

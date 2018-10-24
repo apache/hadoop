@@ -41,11 +41,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
@@ -56,6 +53,7 @@ import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,18 +95,27 @@ public class ObjectEndpoint extends EndpointBase {
           ReplicationType replicationType,
       @DefaultValue("ONE") @QueryParam("replicationFactor")
           ReplicationFactor replicationFactor,
-      @DefaultValue("32 * 1024 * 1024") @QueryParam("chunkSize")
-          String chunkSize,
       @HeaderParam("Content-Length") long length,
       InputStream body) throws IOException, OS3Exception {
 
+    OzoneOutputStream output = null;
     try {
-      Configuration config = new OzoneConfiguration();
-      config.set(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY, chunkSize);
+      String copyHeader = headers.getHeaderString("x-amz-copy-source");
 
+      if (copyHeader != null) {
+        //Copy object, as copy source available.
+        CopyObjectResponse copyObjectResponse = copyObject(
+            copyHeader, bucketName, keyPath, replicationType,
+            replicationFactor);
+        return Response.status(Status.OK).entity(copyObjectResponse).header(
+            "Connection", "close").build();
+      }
+
+      // Normal put object
       OzoneBucket bucket = getBucket(bucketName);
-      OzoneOutputStream output = bucket
-          .createKey(keyPath, length, replicationType, replicationFactor);
+
+      output = bucket.createKey(keyPath, length, replicationType,
+          replicationFactor);
 
       if ("STREAMING-AWS4-HMAC-SHA256-PAYLOAD"
           .equals(headers.getHeaderString("x-amz-content-sha256"))) {
@@ -116,13 +123,16 @@ public class ObjectEndpoint extends EndpointBase {
       }
 
       IOUtils.copy(body, output);
-      output.close();
 
       return Response.ok().status(HttpStatus.SC_OK)
           .build();
     } catch (IOException ex) {
       LOG.error("Exception occurred in PutObject", ex);
       throw ex;
+    } finally {
+      if (output != null) {
+        output.close();
+      }
     }
   }
 
@@ -238,5 +248,87 @@ public class ObjectEndpoint extends EndpointBase {
   @VisibleForTesting
   public void setHeaders(HttpHeaders headers) {
     this.headers = headers;
+  }
+
+  private CopyObjectResponse copyObject(String copyHeader,
+                                        String destBucket,
+                                        String destkey,
+                                        ReplicationType replicationType,
+                                        ReplicationFactor replicationFactor)
+      throws OS3Exception, IOException {
+
+    if (copyHeader.startsWith("/")) {
+      copyHeader = copyHeader.substring(1);
+    }
+    int pos = copyHeader.indexOf("/");
+    if (pos == -1) {
+      OS3Exception ex = S3ErrorTable.newError(S3ErrorTable
+          .INVALID_ARGUMENT, copyHeader);
+      ex.setErrorMessage("Copy Source must mention the source bucket and " +
+          "key: sourcebucket/sourcekey");
+      throw ex;
+    }
+    String sourceBucket = copyHeader.substring(0, pos);
+    String sourceKey = copyHeader.substring(pos + 1);
+
+    OzoneInputStream sourceInputStream = null;
+    OzoneOutputStream destOutputStream = null;
+    boolean closed = false;
+    try {
+      // Checking whether we trying to copying to it self.
+      if (sourceBucket.equals(destBucket)) {
+        if (sourceKey.equals(destkey)) {
+          OS3Exception ex = S3ErrorTable.newError(S3ErrorTable
+              .INVALID_REQUEST, copyHeader);
+          ex.setErrorMessage("This copy request is illegal because it is " +
+              "trying to copy an object to it self itself without changing " +
+              "the object's metadata, storage class, website redirect " +
+              "location or encryption attributes.");
+          throw ex;
+        }
+      }
+
+      OzoneBucket sourceOzoneBucket = getBucket(sourceBucket);
+      OzoneBucket destOzoneBucket = getBucket(destBucket);
+
+      OzoneKeyDetails sourceKeyDetails = sourceOzoneBucket.getKey(sourceKey);
+      long sourceKeyLen = sourceKeyDetails.getDataSize();
+
+      sourceInputStream = sourceOzoneBucket.readKey(sourceKey);
+
+      destOutputStream = destOzoneBucket.createKey(destkey, sourceKeyLen,
+          replicationType, replicationFactor);
+
+      IOUtils.copy(sourceInputStream, destOutputStream);
+
+      // Closing here, as if we don't call close this key will not commit in
+      // OM, and getKey fails.
+      sourceInputStream.close();
+      destOutputStream.close();
+      closed = true;
+
+      OzoneKeyDetails destKeyDetails = destOzoneBucket.getKey(destkey);
+
+      CopyObjectResponse copyObjectResponse = new CopyObjectResponse();
+      copyObjectResponse.setETag(OzoneUtils.getRequestID());
+      copyObjectResponse.setLastModified(Instant.ofEpochMilli(destKeyDetails
+          .getModificationTime()));
+      return copyObjectResponse;
+    } catch (IOException ex) {
+      if (ex.getMessage().contains("KEY_NOT_FOUND")) {
+        throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_KEY, sourceKey);
+      }
+      LOG.error("Exception occurred in PutObject", ex);
+      throw ex;
+    } finally {
+      if (!closed) {
+        if (sourceInputStream != null) {
+          sourceInputStream.close();
+        }
+        if (destOutputStream != null) {
+          destOutputStream.close();
+        }
+      }
+    }
   }
 }
