@@ -192,7 +192,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   }
 
   @Override
-  public synchronized long getPos() throws IOException {
+  public synchronized long getPos() {
     return (nextReadPos < 0) ? 0 : nextReadPos;
   }
 
@@ -619,7 +619,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public synchronized long remainingInCurrentRequest() {
-    return this.contentRangeFinish - this.pos;
+    return this.contentRangeFinish - this.getPos();
   }
 
   @InterfaceAudience.Private

@@ -99,14 +99,18 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("seek and read a 0 byte file");
     instream = getFileSystem().open(zeroByteFile);
     assertEquals(0, instream.getPos());
+    assertEquals(0,instream.available());
     //expect initial read to fai;
     int result = instream.read();
     assertMinusOne("initial byte read", result);
+    assertEquals(0,instream.available());
     byte[] buffer = new byte[1];
     //expect that seek to 0 works
     instream.seek(0);
+    assertEquals(0,instream.available());
     //reread, expect same exception
     result = instream.read();
+    assertEquals(0,instream.available());
     assertMinusOne("post-seek byte read", result);
     result = instream.read(buffer, 0, 1);
     assertMinusOne("post-seek buffer read", result);
@@ -172,6 +176,11 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       // sure there's no other exception like an NPE.
 
     }
+    try{
+      instream.available();
+    }catch (IOException | IllegalStateException e) {
+      // expected a closed file
+    }
     //and close again
     instream.close();
   }
@@ -194,6 +203,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       //bad seek -expected, but not as preferred as an EOFException
       handleRelaxedException("a negative seek", "EOFException", e);
     }
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertEquals(0, instream.getPos());
   }
 
@@ -205,6 +215,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertEquals(0, result);
     assertEquals(1, instream.read());
     assertEquals(2, instream.getPos());
@@ -226,7 +237,9 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //go just before the end
     instream.seek(TEST_FILE_LEN - 2);
     assertTrue("Premature EOF", instream.read() != -1);
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertTrue("Premature EOF", instream.read() != -1);
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertMinusOne("read past end of file", instream.read());
   }
 
@@ -261,6 +274,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //now go back and try to read from a valid point in the file
     instream.seek(1);
     assertTrue("Premature EOF", instream.read() != -1);
+    assertTrue("The available should be positive integer",instream.available() > 0);
   }
 
   /**
@@ -278,6 +292,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertEquals(0, result);
     assertEquals(1, instream.read());
     assertEquals(2, instream.read());
@@ -296,6 +311,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream.seek(0);
     assertEquals(0, instream.getPos());
     instream.read();
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertEquals(1, instream.getPos());
     byte[] buf = new byte[80 * 1024];
     instream.readFully(1, buf, 0, buf.length);
@@ -314,7 +330,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream.seek(39999);
     assertTrue(-1 != instream.read());
     assertEquals(40000, instream.getPos());
-
+    assertTrue("The available should be positive integer",instream.available() > 0);
     int v = 256;
     byte[] readBuffer = new byte[v];
     assertEquals(v, instream.read(128, readBuffer, 0, v));
@@ -322,6 +338,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertEquals(40000, instream.getPos());
     //content is the same too
     assertEquals("@40000", block[40000], (byte) instream.read());
+    assertTrue("The available should be positive integer",instream.available() > 0);
     //now verify the picked up data
     for (int i = 0; i < 256; i++) {
       assertEquals("@" + i, block[i + 128], readBuffer[i]);
@@ -376,6 +393,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertEquals(0, instream.getPos());
     byte[] buffer = new byte[1];
     instream.readFully(0, buffer, 0, 0);
+    assertEquals(0,instream.available());
     assertEquals(0, instream.getPos());
     // seek to 0 read 0 bytes from it
     instream.seek(0);
@@ -587,6 +605,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     instream = getFileSystem().open(smallSeekFile);
     instream.seek(TEST_FILE_LEN -1);
     assertTrue("read at last byte", instream.read() > 0);
+    assertTrue("The available should be positive integer",instream.available() > 0);
     assertEquals("read just past EOF", -1, instream.read());
   }
 }
