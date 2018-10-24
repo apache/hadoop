@@ -266,7 +266,7 @@ public class TestCGroupsHandlerImpl {
     Assert.assertEquals(expectedPath, path);
 
     String expectedPathTasks = expectedPath + Path.SEPARATOR
-        + CGroupsHandler.CGROUP_FILE_TASKS;
+        + CGroupsHandler.CGROUP_PROCS_FILE;
     path = cGroupsHandler.getPathForCGroupTasks(controller, testCGroup);
     Assert.assertEquals(expectedPathTasks, path);
 
