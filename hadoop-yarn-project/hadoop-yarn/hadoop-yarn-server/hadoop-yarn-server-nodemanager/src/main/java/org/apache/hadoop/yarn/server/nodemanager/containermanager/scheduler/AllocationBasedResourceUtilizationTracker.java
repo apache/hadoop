@@ -123,33 +123,12 @@ public class AllocationBasedResourceUtilizationTracker implements
           this.containersAllocation.getCPU(),
           getContainersMonitor().getVCoresAllocatedForContainers());
     }
-    // Check CPU. Compare using integral values of cores to avoid decimal
-    // inaccuracies.
-    if (!hasEnoughCpu(this.containersAllocation.getCPU(),
-        getContainersMonitor().getVCoresAllocatedForContainers(), cpuVcores)) {
+    // Check CPU.
+    if (this.containersAllocation.getCPU() + cpuVcores >
+        getContainersMonitor().getVCoresAllocatedForContainers()) {
       return false;
     }
     return true;
-  }
-
-  /**
-   * Returns whether there is enough space for coresRequested in totalCores.
-   * Converts currentAllocation usage to nearest integer count before comparing,
-   * as floats are inherently imprecise. NOTE: this calculation assumes that
-   * requested core counts must be integers, and currentAllocation core count
-   * must also be an integer.
-   *
-   * @param currentAllocation The current allocation, a float value from 0 to 1.
-   * @param totalCores The total cores in the system.
-   * @param coresRequested The number of cores requested.
-   * @return True if currentAllocationtotalCores*coresRequested &lt;=
-   *         totalCores.
-   */
-  public boolean hasEnoughCpu(float currentAllocation, long totalCores,
-      int coresRequested) {
-    // Must not cast here, as it would truncate the decimal digits.
-    return Math.round(currentAllocation * totalCores)
-        + coresRequested <= totalCores;
   }
 
   public ContainersMonitor getContainersMonitor() {

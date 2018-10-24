@@ -594,10 +594,7 @@ public class ContainerScheduler extends AbstractService implements
       ResourceUtilization resourcesToFreeUp) {
     return resourcesToFreeUp.getPhysicalMemory() <= 0 &&
         resourcesToFreeUp.getVirtualMemory() <= 0 &&
-        // Convert the number of cores to nearest integral number, due to
-        // imprecision of direct float comparison.
-        Math.round(resourcesToFreeUp.getCPU()
-            * getContainersMonitor().getVCoresAllocatedForContainers()) <= 0;
+        resourcesToFreeUp.getCPU() <= 0;
   }
 
   private ResourceUtilization resourcesToFreeUp(
