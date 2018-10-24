@@ -89,7 +89,6 @@ public final class CsiGrpcClient implements AutoCloseable {
   /**
    * Shutdown the communication channel gracefully,
    * wait for 5 seconds before it is enforced.
-   * @throws InterruptedException
    */
   @Override
   public void close() {
