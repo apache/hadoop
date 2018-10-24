@@ -15,5 +15,7 @@
    limitations under the License.
 -->
 <FindBugsFilter>
-
+    <Match>
+        <Package name="csi.v0" />
+    </Match>
 </FindBugsFilter>
