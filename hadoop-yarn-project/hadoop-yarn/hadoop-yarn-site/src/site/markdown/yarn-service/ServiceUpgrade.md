@@ -47,8 +47,21 @@ A service can be auto-finalized when the upgrade is initialized with
 `-autoFinalize` option. With auto-finalization, when all the component-instances of
 the service have been upgraded, finalization will be performed automatically by the
 service framework.\
-\
-**NOTE**: Cancel of upgrade is not implemented yet.
+
+Hadoop 3.2.0 onwards canceling upgrade and express upgrade is also supported.
+
+1. Cancel upgrade.\
+Before the upgrade of the service is finalized, the user has an option to cancel
+the upgrade. This step resolves the dependencies between the components and then
+sequentially rolls back each component which was upgraded.
+
+2. Express upgrade.\
+This is a one-step process to upgrade all the components of the service. It involves
+providing the service spec of the newer version of the service. The service master
+then performs the following steps automatically:\
+a. Discovers all the components that require an upgrade.\
+b. Resolve dependencies between these components.\
+c. Triggers upgrade of the components sequentially.
 
 ## Upgrade Example
 This example shows upgrade of sleeper service. Below is the sleeper service
@@ -194,4 +207,25 @@ yarn app -upgrade ${service_name} -finalize
 e.g. The command below finalizes the upgrade of `my-sleeper`:
 ```
 yarn app -upgrade my-sleeper -finalize
+```
+
+### Cancel Upgrade
+User can cancel an upgrade before it is finalized using the below command:
+```
+yarn app -upgrade ${service_name} -cancel
+```
+e.g. Before the upgrade is finalized, the command below cancels the upgrade of
+`my-sleeper`:
+```
+yarn app -upgrade my-sleeper -cancel
+```
+
+### Express Upgrade
+User can upgrade a service in one using the below command:
+```
+yarn app -upgrade ${service_name} -express ${path_to_new_service_def_file}
+```
+e.g. The command below express upgrades `my-sleeper`:
+```
+yarn app -upgrade my-sleeper -express sleeper_v101.json
 ```
