@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -42,7 +43,6 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -591,11 +591,11 @@ public final class ContainerTestHelper {
     // Add 2ms delay so that localID based on UtcTime
     // won't collide.
     sleep(2);
-    return new BlockID(containerID, Time.getUtcTime());
+    return new BlockID(containerID, HddsUtils.getUtcTime());
   }
 
   public static long getTestContainerID() {
-    return Time.getUtcTime();
+    return HddsUtils.getUtcTime();
   }
 
   public static boolean isContainerClosed(MiniOzoneCluster cluster,
