@@ -38,7 +38,9 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,6 +265,16 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
               throw ite.getCause();
             }
             Exception e = (Exception) ite.getCause();
+            if (e instanceof RemoteException) {
+              RemoteException re = (RemoteException) e;
+              Exception unwrapped = re.unwrapRemoteException(
+                  ObserverRetryOnActiveException.class);
+              if (unwrapped instanceof ObserverRetryOnActiveException) {
+                LOG.info("Encountered ObserverRetryOnActiveException from {}." +
+                    " Retry active namenode directly.", current.proxyInfo);
+                break;
+              }
+            }
             RetryAction retryInfo = observerRetryPolicy.shouldRetry(e, 0, 0,
                 method.isAnnotationPresent(Idempotent.class)
                     || method.isAnnotationPresent(AtMostOnce.class));
