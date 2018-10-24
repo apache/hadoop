@@ -949,7 +949,8 @@ public class ContainersMonitorImpl extends AbstractService implements
   public void subtractNodeResourcesFromResourceUtilization(
       ResourceUtilization resourceUtil) {
     resourceUtil.subtractFrom((int) (getPmemAllocatedForContainers() >> 20),
-        (int) (getVmemAllocatedForContainers() >> 20), 1.0f);
+        (int) (getVmemAllocatedForContainers() >> 20),
+        getVCoresAllocatedForContainers());
   }
 
   @Override

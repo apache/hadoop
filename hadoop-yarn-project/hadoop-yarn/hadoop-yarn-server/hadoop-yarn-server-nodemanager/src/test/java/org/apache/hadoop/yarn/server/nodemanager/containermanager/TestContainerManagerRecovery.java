@@ -527,7 +527,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
 
     ResourceUtilization utilization =
-        ResourceUtilization.newInstance(1024, 2048, 0.25F);
+        ResourceUtilization.newInstance(1024, 2048, 1.0F);
     assertEquals(cm.getContainerScheduler().getNumRunningContainers(), 1);
     assertEquals(utilization,
         cm.getContainerScheduler().getCurrentUtilization());
