@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -465,7 +465,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
      * @return unique long value
      */
     public static synchronized long next() {
-      long utcTime = Time.getUtcTime();
+      long utcTime = HddsUtils.getUtcTime();
       if ((utcTime & 0xFFFF000000000000L) == 0) {
         return utcTime << Short.SIZE | (offset++ & 0x0000FFFF);
       }
