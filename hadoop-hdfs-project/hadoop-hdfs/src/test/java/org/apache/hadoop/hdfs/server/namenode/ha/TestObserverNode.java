@@ -283,12 +283,11 @@ public class TestObserverNode {
 
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the (retriable) safe mode exception.
-    final DatanodeInfo[] empty = {};
     BlockManager bmSpy =
         NameNodeAdapter.spyOnBlockManager(dfsCluster.getNameNode(2));
     doAnswer((invocation) -> {
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
-      LocatedBlock fakeBlock = new LocatedBlock(b, empty);
+      LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
       fakeBlocks.add(fakeBlock);
       return new LocatedBlocks(0, false, fakeBlocks, null, true, null, null);
@@ -300,10 +299,42 @@ public class TestObserverNode {
     dfs.open(testPath).close();
     assertSentTo(0);
 
+    Mockito.reset(bmSpy);
+
     // Remove safe mode on observer, request should still go to it.
     dfsCluster.getFileSystem(2).setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     dfs.open(testPath).close();
     assertSentTo(2);
+  }
+
+  @Test
+  public void testObserverNodeBlockMissingRetry() throws Exception {
+    setObserverRead(true);
+
+    dfs.create(testPath, (short)1).close();
+    assertSentTo(0);
+
+    dfsCluster.rollEditLogAndTail(0);
+
+    // Mock block manager for observer to generate some fake blocks which
+    // will trigger the block missing exception.
+
+    BlockManager bmSpy = NameNodeAdapter
+        .spyOnBlockManager(dfsCluster.getNameNode(2));
+    doAnswer((invocation) -> {
+      List<LocatedBlock> fakeBlocks = new ArrayList<>();
+      // Remove the datanode info for the only block so it will throw
+      // BlockMissingException and retry.
+      ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
+      LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
+      fakeBlocks.add(fakeBlock);
+      return new LocatedBlocks(0, false, fakeBlocks, null, true, null, null);
+    }).when(bmSpy).createLocatedBlocks(Mockito.any(), anyLong(),
+        anyBoolean(), anyLong(), anyLong(), anyBoolean(), anyBoolean(),
+        Mockito.any(), Mockito.any());
+
+    dfs.open(testPath);
+    assertSentTo(0);
 
     Mockito.reset(bmSpy);
   }

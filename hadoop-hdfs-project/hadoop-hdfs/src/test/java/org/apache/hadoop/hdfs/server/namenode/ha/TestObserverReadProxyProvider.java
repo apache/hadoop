@@ -32,6 +32,7 @@ import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -279,6 +280,26 @@ public class TestObserverReadProxyProvider {
     assertHandledBy(1);
   }
 
+  @Test
+  public void testObserverRetriableException() throws Exception {
+    setupProxyProvider(3);
+    namenodeAnswers[0].setActiveState();
+    namenodeAnswers[1].setObserverState();
+    namenodeAnswers[2].setObserverState();
+
+    // Set the first observer to throw "ObserverRetryOnActiveException" so that
+    // the request should skip the second observer and be served by the active.
+    namenodeAnswers[1].setRetryActive(true);
+
+    doRead();
+    assertHandledBy(0);
+
+    namenodeAnswers[1].setRetryActive(false);
+
+    doRead();
+    assertHandledBy(1);
+  }
+
   private void doRead() throws Exception {
     doRead(proxyProvider.getProxy().proxy);
   }
@@ -310,6 +331,8 @@ public class TestObserverReadProxyProvider {
   private static class NameNodeAnswer {
 
     private volatile boolean unreachable = false;
+    private volatile boolean retryActive = false;
+
     // Standby state by default
     private volatile boolean allowWrites = false;
     private volatile boolean allowReads = false;
@@ -339,6 +362,12 @@ public class TestObserverReadProxyProvider {
       public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
         if (unreachable) {
           throw new IOException("Unavailable");
+        }
+        if (retryActive) {
+          throw new RemoteException(
+              ObserverRetryOnActiveException.class.getCanonicalName(),
+              "Try active!"
+          );
         }
         switch (invocationOnMock.getMethod().getName()) {
         case "reportBadBlocks":
@@ -379,6 +408,9 @@ public class TestObserverReadProxyProvider {
       allowWrites = false;
     }
 
+    void setRetryActive(boolean shouldRetryActive) {
+      retryActive = shouldRetryActive;
+    }
   }
 
 }
