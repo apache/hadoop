@@ -41,9 +41,11 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TimeZone;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys
     .DFS_DATANODE_DNS_INTERFACE_KEY;
@@ -69,6 +71,8 @@ public final class HddsUtils {
   public static final String OZONE_SCM_SERVICE_ID = "OzoneScmService";
   public static final String OZONE_SCM_SERVICE_INSTANCE_ID =
       "OzoneScmServiceInstance";
+  private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
+
 
   private static final int NO_PORT = -1;
 
@@ -391,4 +395,11 @@ public final class HddsUtils {
     }
   }
 
+  /**
+   * Get the current UTC time in milliseconds.
+   * @return the current UTC time in milliseconds.
+   */
+  public static long getUtcTime() {
+    return Calendar.getInstance(UTC_ZONE).getTimeInMillis();
+  }
 }

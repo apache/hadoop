@@ -21,6 +21,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -68,8 +69,8 @@ public class TestOmMetrics {
   @Test
   public void testVolumeOps() throws IOException {
     VolumeManager volumeManager =
-        (VolumeManager) org.apache.hadoop.test.Whitebox
-            .getInternalState(ozoneManager, "volumeManager");
+        (VolumeManager) HddsWhiteboxTestUtils.getInternalState(
+            ozoneManager, "volumeManager");
     VolumeManager mockVm = Mockito.spy(volumeManager);
 
     Mockito.doNothing().when(mockVm).createVolume(null);
@@ -79,7 +80,7 @@ public class TestOmMetrics {
     Mockito.doNothing().when(mockVm).setOwner(null, null);
     Mockito.doReturn(null).when(mockVm).listVolumes(null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(
+    HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "volumeManager", mockVm);
     doVolumeOps();
 
@@ -100,7 +101,7 @@ public class TestOmMetrics {
     Mockito.doThrow(exception).when(mockVm).setOwner(null, null);
     Mockito.doThrow(exception).when(mockVm).listVolumes(null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(ozoneManager,
+    HddsWhiteboxTestUtils.setInternalState(ozoneManager,
         "volumeManager", mockVm);
     doVolumeOps();
 
@@ -124,8 +125,8 @@ public class TestOmMetrics {
   @Test
   public void testBucketOps() throws IOException {
     BucketManager bucketManager =
-        (BucketManager) org.apache.hadoop.test.Whitebox
-            .getInternalState(ozoneManager, "bucketManager");
+        (BucketManager) HddsWhiteboxTestUtils.getInternalState(
+            ozoneManager, "bucketManager");
     BucketManager mockBm = Mockito.spy(bucketManager);
 
     Mockito.doNothing().when(mockBm).createBucket(null);
@@ -134,7 +135,7 @@ public class TestOmMetrics {
     Mockito.doNothing().when(mockBm).setBucketProperty(null);
     Mockito.doReturn(null).when(mockBm).listBuckets(null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(
+    HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "bucketManager", mockBm);
     doBucketOps();
 
@@ -153,7 +154,7 @@ public class TestOmMetrics {
     Mockito.doThrow(exception).when(mockBm).setBucketProperty(null);
     Mockito.doThrow(exception).when(mockBm).listBuckets(null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(
+    HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "bucketManager", mockBm);
     doBucketOps();
 
@@ -174,7 +175,7 @@ public class TestOmMetrics {
 
   @Test
   public void testKeyOps() throws IOException {
-    KeyManager bucketManager = (KeyManager) org.apache.hadoop.test.Whitebox
+    KeyManager bucketManager = (KeyManager) HddsWhiteboxTestUtils
         .getInternalState(ozoneManager, "keyManager");
     KeyManager mockKm = Mockito.spy(bucketManager);
 
@@ -183,7 +184,7 @@ public class TestOmMetrics {
     Mockito.doReturn(null).when(mockKm).lookupKey(null);
     Mockito.doReturn(null).when(mockKm).listKeys(null, null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(
+    HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "keyManager", mockKm);
     doKeyOps();
 
@@ -201,7 +202,7 @@ public class TestOmMetrics {
     Mockito.doThrow(exception).when(mockKm).listKeys(
         null, null, null, null, 0);
 
-    org.apache.hadoop.test.Whitebox.setInternalState(
+    HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "keyManager", mockKm);
     doKeyOps();
 
