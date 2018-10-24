@@ -33,7 +33,7 @@ public interface CsiClient {
    * Gets some basic info about the CSI plugin, including the driver name,
    * version and optionally some manifest info.
    * @return {@link GetPluginInfoResponse}
-   * @throws IOException
+   * @throws IOException when unable to get plugin info from the driver.
    */
   GetPluginInfoResponse getPluginInfo() throws IOException;
 }
