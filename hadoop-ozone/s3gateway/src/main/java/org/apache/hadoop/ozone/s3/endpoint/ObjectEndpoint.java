@@ -50,9 +50,11 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
@@ -66,6 +68,9 @@ public class ObjectEndpoint extends EndpointBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ObjectEndpoint.class);
+
+  @Context
+  private HttpHeaders headers;
 
   private List<String> customizableGetHeaders = new ArrayList<>();
 
@@ -86,7 +91,6 @@ public class ObjectEndpoint extends EndpointBase {
    */
   @PUT
   public Response put(
-      @Context HttpHeaders headers,
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
       @DefaultValue("STAND_ALONE") @QueryParam("replicationType")
@@ -105,6 +109,11 @@ public class ObjectEndpoint extends EndpointBase {
       OzoneBucket bucket = getBucket(bucketName);
       OzoneOutputStream output = bucket
           .createKey(keyPath, length, replicationType, replicationFactor);
+
+      if ("STREAMING-AWS4-HMAC-SHA256-PAYLOAD"
+          .equals(headers.getHeaderString("x-amz-content-sha256"))) {
+        body = new SignedChunksInputStream(body);
+      }
 
       IOUtils.copy(body, output);
       output.close();
@@ -125,7 +134,6 @@ public class ObjectEndpoint extends EndpointBase {
    */
   @GET
   public Response get(
-      @Context HttpHeaders headers,
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
       InputStream body) throws IOException, OS3Exception {
@@ -227,4 +235,8 @@ public class ObjectEndpoint extends EndpointBase {
 
   }
 
+  @VisibleForTesting
+  public void setHeaders(HttpHeaders headers) {
+    this.headers = headers;
+  }
 }
