@@ -441,6 +441,8 @@ public class TestPendingReconstruction {
       // 1. create a file
       Path filePath = new Path("/tmp.txt");
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 3, 0L);
+      DFSTestUtil.waitForReplication(cluster.getFileSystem(), filePath,
+          (short) 3, 10000);
 
       // 2. disable the heartbeats
       for (DataNode dn : cluster.getDataNodes()) {
