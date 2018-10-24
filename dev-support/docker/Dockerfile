@@ -57,6 +57,7 @@ RUN apt-get -q update && apt-get -q install -y \
     libsnappy-dev \
     libssl-dev \
     libtool \
+    libzstd1-dev \
     locales \
     make \
     pinentry-curses \
