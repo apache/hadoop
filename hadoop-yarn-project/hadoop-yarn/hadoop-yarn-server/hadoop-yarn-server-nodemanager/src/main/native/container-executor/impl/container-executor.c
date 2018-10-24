@@ -2006,20 +2006,22 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   docker_binary, container_id);
   fprintf(LOGFILE, "Obtaining the exit code...\n");
   fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
-  FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
-  if(inspect_exitcode_docker == NULL) {
-    fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
-    fflush(ERRORFILE);
-    exit_code = -1;
-    goto cleanup;
-  }
-  res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
-  if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
-  fprintf (ERRORFILE,
-   "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
-    fflush(ERRORFILE);
-    exit_code = -1;
-    goto cleanup;
+  int count = 0;
+  int max_retries = get_max_retries(&CFG);
+  while (count < max_retries) {
+    FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
+    res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
+    if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
+      fprintf (ERRORFILE, "Could not inspect docker to get Exit code %s.\n", docker_inspect_exitcode_command);
+      fflush(ERRORFILE);
+      exit_code = -1;
+    } else {
+      if (exit_code != 0) {
+        break;
+      }
+    }
+    sleep(3);
+    count++;
   }
   fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
 
