@@ -139,9 +139,8 @@ enum Result {
   CONTAINER_CHECKSUM_ERROR = 33;
   UNKNOWN_CONTAINER_TYPE = 34;
   BLOCK_NOT_COMMITTED = 35;
-  CONTAINER_UNHEALTHY = 36;
-  UNKNOWN_BCSID = 37;
-  BCSID_MISMATCH = 38;
+  UNKNOWN_BCSID = 36;
+  BCSID_MISMATCH = 37;
 }
 
 /**
@@ -164,8 +163,7 @@ enum ContainerLifeCycleState {
     OPEN = 1;
     CLOSING = 2;
     CLOSED = 3;
-    UNHEALTHY = 4;
-    INVALID = 5;
+    INVALID = 4;
 }
 
 message ContainerCommandRequestProto {

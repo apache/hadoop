@@ -159,7 +159,6 @@ message ContainerAction {
 
   enum Reason {
     CONTAINER_FULL = 1;
-    CONTAINER_UNHEALTHY = 2;
   }
 
   required int64 containerID = 1;
