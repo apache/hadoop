@@ -62,11 +62,11 @@ public class TestObjectGet {
     ObjectEndpoint rest = new ObjectEndpoint();
     rest.setClient(client);
     HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-
+    rest.setHeaders(headers);
     ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
 
     //WHEN
-    rest.get(headers, "b1", "key1", body);
+    rest.get("b1", "key1", body);
 
     //THEN
     OzoneInputStream ozoneInputStream =

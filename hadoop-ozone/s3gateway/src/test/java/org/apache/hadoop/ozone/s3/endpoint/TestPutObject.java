@@ -38,6 +38,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
 
 /**
  * Test put object.
@@ -70,11 +71,12 @@ public class TestPutObject {
     //GIVEN
     HttpHeaders headers = Mockito.mock(HttpHeaders.class);
     ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    objectEndpoint.setHeaders(headers);
 
     //WHEN
-    Response response = objectEndpoint.put(headers, bucketName, keyName,
+    Response response = objectEndpoint.put(bucketName, keyName,
         ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "32 * 1024 * 1024",
-            CONTENT.length(), body);
+        CONTENT.length(), body);
 
     //THEN
     String volumeName = clientStub.getObjectStore()
@@ -87,5 +89,40 @@ public class TestPutObject {
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(CONTENT, keyContent);
+  }
+
+  @Test
+  public void testPutObjectWithSignedChunks() throws IOException, OS3Exception {
+    //GIVEN
+    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    objectEndpoint.setHeaders(headers);
+
+    String chunkedContent = "0a;chunk-signature=signature\r\n"
+        + "1234567890\r\n"
+        + "05;chunk-signature=signature\r\n"
+        + "abcde\r\n";
+
+    when(headers.getHeaderString("x-amz-content-sha256"))
+        .thenReturn("STREAMING-AWS4-HMAC-SHA256-PAYLOAD");
+
+    //WHEN
+    Response response = objectEndpoint.put(bucketName, keyName,
+        ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE,
+        "32 * 1024 * 1024",
+        chunkedContent.length(),
+        new ByteArrayInputStream(chunkedContent.getBytes()));
+
+    //THEN
+    String volumeName = clientStub.getObjectStore()
+        .getOzoneVolumeName(bucketName);
+    OzoneInputStream ozoneInputStream =
+        clientStub.getObjectStore().getVolume(volumeName).getBucket(bucketName)
+            .readKey(keyName);
+    String keyContent =
+        IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals("1234567890abcde", keyContent);
   }
 }
