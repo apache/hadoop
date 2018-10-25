@@ -217,9 +217,14 @@ public class TestBlockToken {
       Token<BlockTokenIdentifier> t, ExtendedBlock blk,
       BlockTokenIdentifier.AccessMode mode, StorageType[] storageTypes,
       String[] storageIds) throws IOException {
-    if(storageIds == null) {
+    if (storageIds == null) {
       // Test overloaded checkAccess method.
       m.checkAccess(t.decodeIdentifier(), null, blk, mode, storageTypes);
+
+      if (storageTypes == null) {
+        // Test overloaded checkAccess method.
+        m.checkAccess(t, null, blk, mode);
+      }
     }
     m.checkAccess(t, null, blk, mode, storageTypes, storageIds);
   }
@@ -807,6 +812,7 @@ public class TestBlockToken {
     sm.checkAccess(id, null, block3, mode, storageTypes,
         null);
     sm.checkAccess(id, null, block3, mode, storageTypes);
+    sm.checkAccess(id, null, block3, mode);
   }
 
   @Test
