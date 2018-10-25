@@ -76,6 +76,7 @@ static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0}
 static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
 static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
 static const int DEFAULT_MOUNT_CGROUP_SUPPORT_ENABLED = 0;
+static const int DEFAULT_YARN_SYSFS_SUPPORT_ENABLED = 0;
 
 static const char* PROC_PATH = "/proc";
 
@@ -504,6 +505,11 @@ int is_mount_cgroups_support_enabled() {
     return is_feature_enabled(MOUNT_CGROUP_SUPPORT_ENABLED_KEY,
                               DEFAULT_MOUNT_CGROUP_SUPPORT_ENABLED,
                               &executor_cfg);
+}
+
+int is_yarn_sysfs_support_enabled() {
+  return is_feature_enabled(YARN_SYSFS_SUPPORT_ENABLED_KEY,
+                            DEFAULT_YARN_SYSFS_SUPPORT_ENABLED, &executor_cfg);
 }
 
 /**
@@ -1778,6 +1784,27 @@ int create_user_filecache_dirs(const char * user, char* const* local_dirs) {
   return rc;
 }
 
+int create_yarn_sysfs(const char* user, const char *app_id,
+    const char *container_id, const char *work_dir, char* const* local_dirs) {
+  int result = OUT_OF_MEMORY;
+  const mode_t perms = S_IRWXU | S_IXGRP;
+  char* const* local_dir_ptr;
+  for(local_dir_ptr = local_dirs; *local_dir_ptr != NULL; ++local_dir_ptr) {
+    char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id,
+                                                container_id);
+    if (container_dir == NULL) {
+      return OUT_OF_MEMORY;
+    }
+    char *yarn_sysfs_dir = make_string("%s/%s", container_dir, "sysfs");
+    if (mkdir(yarn_sysfs_dir, perms) == 0) {
+      result = 0;
+    }
+    free(yarn_sysfs_dir);
+    free(container_dir);
+  }
+  return result;
+}
+
 int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
@@ -1831,6 +1858,14 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create user filecache directory");
     fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  exit_code = create_yarn_sysfs(user, app_id, container_id, work_dir, local_dirs);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create user yarn sysfs directory");
+    fflush(ERRORFILE);
+    exit(-1);
     goto cleanup;
   }
 
@@ -2797,6 +2832,68 @@ int traffic_control_read_stats(char *command_file) {
  */
 struct configuration* get_cfg() {
   return &CFG;
+}
+
+char *locate_sysfs_path(const char *src) {
+  char *result = NULL;
+  DIR *dir;
+  struct dirent *entry;
+  if (!(dir = opendir(src))) {
+    return NULL;
+  }
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+    char *new_src = make_string("%s/%s", src, entry->d_name);
+    if (str_ends_with(new_src, "/sysfs.tar/sysfs")) {
+      result = new_src;
+      goto cleanup;
+    }
+    result = locate_sysfs_path(new_src);
+    if (result != NULL) {
+      goto cleanup;
+    }
+  }
+cleanup:
+  closedir(dir);
+  return result;
+}
+
+int sync_yarn_sysfs(char* const* local_dir, const char *running_user, const char *end_user, const char *app_id) {
+  int result = OUT_OF_MEMORY;
+  char *src = NULL;
+  char *dest = NULL;
+  char* const* local_dir_ptr;
+
+  for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
+    char *appcache_dir = make_string("%s/usercache/%s/appcache/%s", *local_dir_ptr, end_user, app_id);
+    char *sysfs_dir = locate_sysfs_path(appcache_dir);
+    char *nm_private_app_dir = make_string("%s/nmPrivate/%s/sysfs", *local_dir_ptr, app_id);
+    if (sysfs_dir == NULL) {
+      return OUT_OF_MEMORY;
+    }
+    src = make_string("%s/%s", nm_private_app_dir, "app.json");
+    dest = make_string("%s/%s", sysfs_dir, "app.json");
+    // open up the spec file
+    int spec_file = open_file_as_nm(src);
+    if (spec_file == -1) {
+      continue;
+    }
+
+    delete_path(dest, 0);
+    if (copy_file(spec_file, src, dest, S_IRWXU | S_IRGRP | S_IXGRP) == 0) {
+      result = 0;
+    }
+    // continue on to create other work directories
+    free(sysfs_dir);
+    free(src);
+    free(dest);
+    if (result == 0) {
+      break;
+    }
+  }
+  return result;
 }
 
 /**

@@ -287,6 +287,7 @@ The following properties are optional:
 | `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
 | `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
 | `feature.tc.enabled` | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed. |
+| `feature.yarn.sysfs.enabled` | Must be "true" or "false". See YARN sysfs support for detail. The default setting is disabled. |
 
 Part of a container-executor.cfg which allows Docker containers to be launched is below:
 
@@ -369,6 +370,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as `source:dest[:mode]` and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. If neither is specified, read-write will be  assumed. The mode may include a bind propagation option. In that case, the mode should either be of the form `[option]`, `rw+[option]`, or `ro+[option]`. Valid bind propagation options are shared, rshared, slave, rslave, private, and rprivate. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for `docker.allowed.ro-mounts` and `docker.allowed.rw-mounts`. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS` | Adds additional tmpfs mounts to the Docker container. The value of the environment variable should be a comma-separated list of absolute mount points within the container. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
+| `YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE` | Enable mounting of container working directory sysfs sub-directory into Docker container /hadoop/yarn/sysfs.  This is useful for populating cluster information into container. |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -767,3 +769,17 @@ In yarn-env.sh, define:
 ```
 export YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE=true
 ```
+
+Docker Container YARN SysFS Support
+-----------------------------------
+
+YARN SysFS is a pseudo file system provided by the YARN framework that
+exports information about clustering information to Docker container.
+Cluster information is exported to /hadoop/yarn/sysfs path.  This
+API allows application developer to obtain clustering information
+without external service dependencies.  Custom application master can
+populate cluster information by calling node manager REST API.
+YARN service framework automatically populates cluster information
+to /hadoop/yarn/sysfs/app.json.  For more information about
+YARN service, see: [YARN Service](./yarn-service/Overview.html).
+

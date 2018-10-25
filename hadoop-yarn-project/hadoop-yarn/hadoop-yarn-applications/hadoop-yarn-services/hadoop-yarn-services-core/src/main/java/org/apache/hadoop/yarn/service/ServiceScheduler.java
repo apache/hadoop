@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource.Builder;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +41,7 @@ import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -77,6 +81,7 @@ import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceMetricsSink;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.utils.HttpUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
@@ -90,6 +95,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -1026,5 +1032,66 @@ public class ServiceScheduler extends CompositeService {
 
   public ServiceUtils.ProcessTerminationHandler getTerminationHandler() {
     return terminationHandler;
+  }
+
+  public void syncSysFs(Service yarnApp) {
+    boolean success = true;
+    Configuration conf = getConfig();
+    String spec;
+    boolean useKerberos = UserGroupInformation.isSecurityEnabled();
+    boolean printSyncResult = false;
+    try {
+      String port = conf.get("yarn.nodemanager.webapp.address").split(":")[1];
+      spec = ServiceApiUtil.jsonSerDeser.toJson(yarnApp);
+      for (org.apache.hadoop.yarn.service.api.records.Component c :
+          yarnApp.getComponents()) {
+        Set<String> nodes = new HashSet<String>();
+        boolean update = Boolean.parseBoolean(c.getConfiguration()
+            .getEnv(ApplicationConstants.Environment
+                .YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE.name()));
+        if (!update) {
+          continue;
+        }
+        printSyncResult = true;
+        for (org.apache.hadoop.yarn.service.api.records.Container container :
+            c.getContainers()) {
+          String bareHost = container.getBareHost();
+          nodes.add(bareHost);
+        }
+        for (String bareHost : nodes) {
+          StringBuilder requestPath = new StringBuilder();
+          if (YarnConfiguration.useHttps(conf)) {
+            requestPath.append("https://");
+          } else {
+            requestPath.append("http://");
+          }
+          requestPath.append(bareHost);
+          requestPath.append(":");
+          requestPath.append(port);
+          requestPath.append("/ws/v1/node/yarn/sysfs/");
+          requestPath.append(UserGroupInformation.getCurrentUser()
+              .getShortUserName());
+          requestPath.append("/");
+          requestPath.append(yarnApp.getId());
+          if (!useKerberos) {
+            requestPath.append("?user.name=");
+            requestPath.append(UserGroupInformation.getCurrentUser()
+                .getShortUserName());
+          }
+          Builder builder = HttpUtil.connect(requestPath.toString());
+          ClientResponse response = builder.put(ClientResponse.class, spec);
+          if (response.getStatus()!=ClientResponse.Status.OK.getStatusCode()) {
+            LOG.warn("Error synchronize YARN sysfs: " +
+                response.getEntity(String.class));
+            success = false;
+          }
+        }
+      }
+      if (printSyncResult && success) {
+        LOG.info("YARN sysfs synchronized.");
+      }
+    } catch (IOException | URISyntaxException | InterruptedException e) {
+      LOG.error("Fail to sync service spec: {}", e);
+    }
   }
 }

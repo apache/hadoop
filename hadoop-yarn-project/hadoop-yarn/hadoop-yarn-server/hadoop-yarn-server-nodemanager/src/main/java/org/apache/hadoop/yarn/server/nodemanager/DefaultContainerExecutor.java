@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ExitCodeException;
@@ -1037,5 +1038,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       paths.add(new Path(dirs.get(i)));
     }
     return paths;
+  }
+
+  @Override
+  public void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException {
+    throw new ServiceStateException("Implementation unavailable");
   }
 }
