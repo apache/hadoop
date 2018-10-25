@@ -217,4 +217,10 @@ public class DockerRunCommand extends DockerCommand {
   public final void addEnv(Map<String, String> environment) {
     userEnv.putAll(environment);
   }
+
+  public DockerRunCommand setYarnSysFS(boolean toggle) {
+    String value = Boolean.toString(toggle);
+    super.addCommandArguments("use-yarn-sysfs", value);
+    return this;
+  }
 }

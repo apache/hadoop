@@ -56,7 +56,8 @@ public class PrivilegedOperation {
     LIST_AS_USER(""), // no CLI switch supported yet.
     ADD_NUMA_PARAMS(""), // no CLI switch supported yet.
     REMOVE_DOCKER_CONTAINER("--remove-docker-container"),
-    INSPECT_DOCKER_CONTAINER("--inspect-docker-container");
+    INSPECT_DOCKER_CONTAINER("--inspect-docker-container"),
+    SYNC_YARN_SYSFS("");
 
     private final String option;
 
@@ -153,7 +154,8 @@ public class PrivilegedOperation {
     SIGNAL_CONTAINER(2),
     DELETE_AS_USER(3),
     LAUNCH_DOCKER_CONTAINER(4),
-    LIST_AS_USER(5);
+    LIST_AS_USER(5),
+    SYNC_YARN_SYSFS(6);
 
     private int value;
     RunAsUserCommand(int value) {

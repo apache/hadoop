@@ -259,6 +259,18 @@ public abstract class ContainerExecutor implements Configurable {
       throws IOException;
 
   /**
+   * Update cluster information inside container.
+   *
+   * @param ctx ContainerRuntimeContext
+   * @param user Owner of application
+   * @param appId YARN application ID
+   * @param spec Service Specification
+   * @throws IOException if there is a failure while writing spec to disk
+   */
+  public abstract void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException;
+
+  /**
    * Recover an already existing container. This is a blocking call and returns
    * only when the container exits.  Note that the container must have been
    * activated prior to this call.

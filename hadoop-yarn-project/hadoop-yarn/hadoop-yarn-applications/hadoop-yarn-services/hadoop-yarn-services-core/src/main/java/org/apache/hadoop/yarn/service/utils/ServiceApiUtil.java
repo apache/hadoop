@@ -95,8 +95,6 @@ public class ServiceApiUtil {
   private static final PatternValidator userNamePattern
       = new PatternValidator("[a-z][a-z0-9-.]*");
 
-
-
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
     jsonSerDeser = jsd;

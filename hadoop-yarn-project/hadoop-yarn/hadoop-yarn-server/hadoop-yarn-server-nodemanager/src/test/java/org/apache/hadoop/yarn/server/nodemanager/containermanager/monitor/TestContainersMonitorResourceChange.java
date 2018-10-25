@@ -128,6 +128,10 @@ public class TestContainersMonitorResourceChange {
         throws IOException {
       return true;
     }
+    @Override
+    public void updateYarnSysFS(Context ctx, String user, String appId,
+        String spec) throws IOException {
+    }
   }
 
   private static class MockContainerEventHandler implements

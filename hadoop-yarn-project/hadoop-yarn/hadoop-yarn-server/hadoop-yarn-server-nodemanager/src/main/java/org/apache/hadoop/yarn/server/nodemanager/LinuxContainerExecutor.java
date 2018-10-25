@@ -67,6 +67,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
@@ -996,4 +997,46 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           "containerId: {}. Exception: ", containerId, e);
     }
   }
+
+  @Override
+  public synchronized void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException {
+    LocalDirsHandlerService dirsHandler = nmContext.getLocalDirsHandler();
+    Path sysFSPath = dirsHandler.getLocalPathForWrite(
+        "nmPrivate/" + appId + "/sysfs/app.json");
+    File file = new File(sysFSPath.toString());
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    if (file.exists()) {
+      if (!file.delete()) {
+        LOG.warn("Unable to delete " + sysFSPath.toString());
+      }
+    }
+    if (file.createNewFile()) {
+      FileOutputStream output = new FileOutputStream(file);
+      try {
+        output.write(spec.getBytes("UTF-8"));
+      } finally {
+        output.close();
+      }
+    }
+    PrivilegedOperation privOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.SYNC_YARN_SYSFS);
+    String runAsUser = getRunAsUser(user);
+    privOp.appendArgs(runAsUser,
+        user,
+        Integer.toString(PrivilegedOperation.RunAsUserCommand
+        .SYNC_YARN_SYSFS.getValue()),
+        appId, StringUtils.join(PrivilegedOperation
+            .LINUX_FILE_PATH_SEPARATOR, localDirs));
+    privOp.disableFailureLogging();
+    PrivilegedOperationExecutor privilegedOperationExecutor =
+        PrivilegedOperationExecutor.getInstance(nmContext.getConf());
+    try {
+      privilegedOperationExecutor.executePrivilegedOperation(null,
+            privOp, null, null, false, false);
+    } catch (PrivilegedOperationException e) {
+      throw new IOException(e);
+    }
+  }
+
 }
