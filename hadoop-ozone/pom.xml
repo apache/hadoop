@@ -20,8 +20,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <version>3.2.1-SNAPSHOT</version>
+    <relativePath/>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
   <version>0.4.0-SNAPSHOT</version>
@@ -30,9 +30,15 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>pom</packaging>
 
   <properties>
+    <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
+    <hdds.version>0.4.0-SNAPSHOT</hdds.version>
     <ozone.version>0.4.0-SNAPSHOT</ozone.version>
+    <ratis.version>0.3.0-aa38160-SNAPSHOT</ratis.version>
+    <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Badlands</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
+
+
   </properties>
   <modules>
     <module>common</module>
@@ -48,6 +54,119 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>docs</module>
   </modules>
 
+  <repositories>
+    <repository>
+      <id>apache.snapshots.https</id>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+
+    <dependencies>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-common</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-client</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-ozone-manager</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-objectstore-service</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-s3gateway</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-datanode</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-tools</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-filesystem</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-integration-test</artifactId>
+        <version>${ozone.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-ozone-manager</artifactId>
+        <version>${ozone.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-common</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-server-framework</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-server-scm</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-container-service</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-client</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-tools</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-container-service</artifactId>
+        <version>${hdds.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-server-scm</artifactId>
+        <type>test-jar</type>
+        <version>${hdds.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -118,6 +237,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <configuration>
+              <rules>
+                <DependencyConvergence>
+                  <uniqueVersions>false</uniqueVersions>
+                </DependencyConvergence>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
