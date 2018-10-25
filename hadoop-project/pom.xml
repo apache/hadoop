@@ -112,7 +112,7 @@
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
-    <protobuf-compile.version>3.5.0</protobuf-compile.version>
+    <protobuf-compile.version>3.5.1</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
     <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
 
