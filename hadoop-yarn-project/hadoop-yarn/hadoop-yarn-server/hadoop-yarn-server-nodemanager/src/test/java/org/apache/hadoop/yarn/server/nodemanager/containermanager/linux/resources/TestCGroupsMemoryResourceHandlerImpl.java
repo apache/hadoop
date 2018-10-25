@@ -31,9 +31,6 @@ import org.junit.Test;
 import org.junit.Assert;
 
 import java.util.List;
-import java.util.Optional;
-
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler.CGROUP_PARAM_MEMORY_OOM_CONTROL;
 import static org.mockito.Mockito.*;
 
 /**
@@ -243,46 +240,5 @@ public class TestCGroupsMemoryResourceHandlerImpl {
     verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
             CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES, "1024M");
-  }
-
-  @Test
-  public void testContainerUnderOom() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
-    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
-
-    cGroupsMemoryResourceHandler.bootstrap(conf);
-
-    ContainerId containerId = mock(ContainerId.class);
-    when(containerId.toString()).thenReturn("container_01_01");
-
-    when(mockCGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        containerId.toString(),
-        CGROUP_PARAM_MEMORY_OOM_CONTROL)).thenReturn(CGroupsHandler.UNDER_OOM);
-    Optional<Boolean> outOfOom =
-        cGroupsMemoryResourceHandler.isUnderOOM(containerId);
-    Assert.assertTrue("The container should be reported to run under oom",
-        outOfOom.isPresent() && outOfOom.get().equals(true));
-
-    when(mockCGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        containerId.toString(),
-        CGROUP_PARAM_MEMORY_OOM_CONTROL)).thenReturn("");
-    outOfOom = cGroupsMemoryResourceHandler.isUnderOOM(containerId);
-    Assert.assertTrue(
-        "The container should not be reported to run under oom",
-        outOfOom.isPresent() && outOfOom.get().equals(false));
-
-    when(mockCGroupsHandler.getCGroupParam(
-        CGroupsHandler.CGroupController.MEMORY,
-        containerId.toString(),
-        CGROUP_PARAM_MEMORY_OOM_CONTROL)).
-        thenThrow(new ResourceHandlerException());
-    outOfOom = cGroupsMemoryResourceHandler.isUnderOOM(containerId);
-    Assert.assertFalse(
-        "No report of the oom status should be available.",
-        outOfOom.isPresent());
-
   }
 }
