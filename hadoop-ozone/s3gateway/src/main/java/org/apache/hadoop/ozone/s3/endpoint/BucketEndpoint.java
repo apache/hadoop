@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.Iterator;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -151,7 +150,7 @@ public class BucketEndpoint extends EndpointBase {
   public Response put(@PathParam("bucket") String bucketName, @Context
       HttpHeaders httpHeaders) throws IOException, OS3Exception {
 
-    String userName = parseUsername(httpHeaders);
+    String userName = getAuthenticationHeaderParser().getAccessKeyID();
 
     String location = createS3Bucket(userName, bucketName);
 

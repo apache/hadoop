@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.s3;
 
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.glassfish.jersey.internal.PropertiesDelegate;
 import org.glassfish.jersey.server.ContainerRequest;
@@ -41,6 +42,7 @@ public class TestVirtualHostStyleFilter {
 
   private static OzoneConfiguration conf;
   private static String s3HttpAddr;
+  private AuthenticationHeaderParser authenticationHeaderParser;
 
   @Before
   public void setup() {
@@ -48,6 +50,8 @@ public class TestVirtualHostStyleFilter {
     s3HttpAddr = "localhost:9878";
     conf.set(S3GatewayConfigKeys.OZONE_S3G_HTTP_ADDRESS_KEY, s3HttpAddr);
     conf.set(S3GatewayConfigKeys.OZONE_S3G_DOMAIN_NAME, s3HttpAddr);
+    authenticationHeaderParser = new AuthenticationHeaderParser();
+    authenticationHeaderParser.setAuthHeader("AWS ozone:scret");
   }
 
   /**
@@ -99,6 +103,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
             ".localhost:9878", "/myfile", null, true);
@@ -114,6 +120,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest(s3HttpAddr,
         "/mybucket/myfile", null, false);
@@ -130,6 +138,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
         ".localhost:9878", null, null, true);
@@ -145,6 +155,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
         ".localhost:9878", null, "?prefix=bh", true);
@@ -169,6 +181,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
         ".localhost:9999", null, null, true);
@@ -187,6 +201,8 @@ public class TestVirtualHostStyleFilter {
     VirtualHostStyleFilter virtualHostStyleFilter =
         new VirtualHostStyleFilter();
     virtualHostStyleFilter.setConfiguration(conf);
+    virtualHostStyleFilter.setAuthenticationHeaderParser(
+        authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
         "localhost:9878", null, null, true);
