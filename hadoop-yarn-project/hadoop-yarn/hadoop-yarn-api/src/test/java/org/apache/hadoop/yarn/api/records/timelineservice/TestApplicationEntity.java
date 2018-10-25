@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 /**
  * Various tests for the ApplicationEntity class.
  *
  */
-public class TestApplicationEntity {
+class TestApplicationEntity {
 
   @Test
-  public void testIsApplicationEntity() {
+  void testIsApplicationEntity() {
     TimelineEntity te = new TimelineEntity();
     te.setType(TimelineEntityType.YARN_APPLICATION.toString());
     assertTrue(ApplicationEntity.isApplicationEntity(te));
@@ -43,7 +43,7 @@ public class TestApplicationEntity {
   }
 
   @Test
-  public void testGetApplicationEvent() {
+  void testGetApplicationEvent() {
     TimelineEntity te = null;
     TimelineEvent tEvent = ApplicationEntity.getApplicationEvent(te,
         "no event");
