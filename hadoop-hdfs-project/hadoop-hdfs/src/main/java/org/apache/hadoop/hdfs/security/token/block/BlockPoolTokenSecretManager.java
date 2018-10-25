@@ -107,6 +107,26 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
+   * See {@link BlockTokenSecretManager#checkAccess(BlockTokenIdentifier,
+   * String, ExtendedBlock, BlockTokenIdentifier.AccessMode)}.
+   */
+  public void checkAccess(BlockTokenIdentifier id, String userId,
+                          ExtendedBlock block, AccessMode mode)
+      throws InvalidToken {
+    get(block.getBlockPoolId()).checkAccess(id, userId, block, mode);
+  }
+
+  /**
+   * See {@link BlockTokenSecretManager#checkAccess(Token, String,
+   *                ExtendedBlock, BlockTokenIdentifier.AccessMode)}.
+   */
+  public void checkAccess(Token<BlockTokenIdentifier> token,
+      String userId, ExtendedBlock block, AccessMode mode)
+      throws InvalidToken {
+    get(block.getBlockPoolId()).checkAccess(token, userId, block, mode);
+  }
+
+  /**
    * See {@link BlockTokenSecretManager#checkAccess(Token, String,
    *                ExtendedBlock, BlockTokenIdentifier.AccessMode,
    *                StorageType[], String[])}
