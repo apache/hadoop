@@ -424,7 +424,7 @@ public final class SecurityUtil {
    */
   public static void setTokenService(Token<?> token, InetSocketAddress addr) {
     Text service = buildTokenService(addr);
-    if (token != null) {
+    if (token != null && service != null) {
       token.setService(service);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Acquired token "+token);  // Token#toString() prints service
@@ -444,9 +444,10 @@ public final class SecurityUtil {
     String host = null;
     if (useIpForTokenService) {
       if (addr.isUnresolved()) { // host has no ip address
-        throw new IllegalArgumentException(
-            new UnknownHostException(addr.getHostName())
-        );
+        LOG.warn("unable to resolve host name " + addr
+            + ". Failure to construct a correct token service "
+            + "name may result in operation failures");
+        return null;
       }
       host = addr.getAddress().getHostAddress();
     } else {
