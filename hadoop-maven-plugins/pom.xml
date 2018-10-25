@@ -94,6 +94,10 @@
           <groupId>org.vafer</groupId>
           <artifactId>jdependency</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.sonatype.sisu</groupId>
+          <artifactId>sisu-inject-plexus</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
   </dependencies>
