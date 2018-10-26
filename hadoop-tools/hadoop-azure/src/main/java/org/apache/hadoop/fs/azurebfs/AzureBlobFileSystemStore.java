@@ -688,9 +688,7 @@ public class AzureBlobFileSystemStore {
       }
     }
 
-    for (Map.Entry<String, String> defaultAclEntry : defaultAclEntries.entrySet()) {
-      aclEntries.remove(defaultAclEntry.getKey());
-    }
+    aclEntries.keySet().removeAll(defaultAclEntries.keySet());
 
     client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
         AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
