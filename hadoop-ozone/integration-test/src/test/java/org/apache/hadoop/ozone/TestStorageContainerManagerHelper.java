@@ -162,9 +162,10 @@ public class TestStorageContainerManagerHelper {
         .getStorageContainerManager().getClientProtocolServer()
         .getContainerWithPipeline(containerID);
 
-    DatanodeDetails leadDN = containerWithPipeline.getPipeline().getLeader();
+    DatanodeDetails dn =
+        containerWithPipeline.getPipeline().getFirstNode();
     OzoneContainer containerServer =
-        getContainerServerByDatanodeUuid(leadDN.getUuidString());
+        getContainerServerByDatanodeUuid(dn.getUuidString());
     KeyValueContainerData containerData =
         (KeyValueContainerData) containerServer.getContainerSet()
         .getContainer(containerID).getContainerData();

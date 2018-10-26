@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
@@ -103,7 +103,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     }
     AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
         .setBlockID(BlockID.getFromProtobuf(response.getBlockID()))
-        .setPipeline(Pipeline.getFromProtoBuf(response.getPipeline()))
+        .setPipeline(Pipeline.getFromProtobuf(response.getPipeline()))
         .setShouldCreateContainer(response.getCreateContainer());
     return builder.build();
   }

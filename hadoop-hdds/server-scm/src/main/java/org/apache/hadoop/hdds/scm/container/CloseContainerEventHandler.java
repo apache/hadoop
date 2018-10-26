@@ -19,7 +19,7 @@ package org.apache.hadoop.hdds.scm.container;
 import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
@@ -123,7 +123,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
             info.getReplicationType(), info.getPipelineID());
 
     Pipeline pipeline = containerWithPipeline.getPipeline();
-    pipeline.getMachines().stream()
+    pipeline.getNodes().stream()
         .map(node ->
             new CommandForDatanode<>(node.getUuid(), closeContainerCommand))
         .forEach(command -> publisher.fireEvent(DATANODE_COMMAND, command));

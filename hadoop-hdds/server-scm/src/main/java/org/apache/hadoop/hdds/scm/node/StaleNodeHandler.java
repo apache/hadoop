@@ -19,24 +19,44 @@
 package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Set;
 
 /**
  * Handles Stale node event.
  */
 public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StaleNodeHandler.class);
 
-  private final PipelineSelector pipelineSelector;
+  private final NodeManager nodeManager;
+  private final PipelineManager pipelineManager;
 
-  public StaleNodeHandler(PipelineSelector pipelineSelector) {
-    this.pipelineSelector = pipelineSelector;
+  public StaleNodeHandler(NodeManager nodeManager,
+      PipelineManager pipelineManager) {
+    this.nodeManager = nodeManager;
+    this.pipelineManager = pipelineManager;
   }
 
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
-    pipelineSelector.handleStaleNode(datanodeDetails);
+    Set<PipelineID> pipelineIds =
+        nodeManager.getPipelineByDnID(datanodeDetails.getUuid());
+    for (PipelineID pipelineID : pipelineIds) {
+      try {
+        pipelineManager.finalizePipeline(pipelineID);
+      } catch (IOException e) {
+        LOG.info("Could not finalize pipeline={} for dn={}", pipelineID,
+            datanodeDetails);
+      }
+    }
   }
 }

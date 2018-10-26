@@ -54,7 +54,7 @@ public class SimplePipelineProvider implements PipelineProvider {
     Collections.shuffle(dns);
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.STAND_ALONE)
         .setFactor(factor)
         .setNodes(dns.subList(0, factor.getNumber()))
@@ -62,16 +62,11 @@ public class SimplePipelineProvider implements PipelineProvider {
   }
 
   @Override
-  public Pipeline create(List<DatanodeDetails> nodes) throws IOException {
-    ReplicationFactor factor = ReplicationFactor.valueOf(nodes.size());
-    if (factor == null) {
-      throw new IOException(String
-          .format("Nodes size=%d does not match any replication factor",
-              nodes.size()));
-    }
+  public Pipeline create(ReplicationFactor factor,
+      List<DatanodeDetails> nodes) {
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.STAND_ALONE)
         .setFactor(factor)
         .setNodes(nodes)

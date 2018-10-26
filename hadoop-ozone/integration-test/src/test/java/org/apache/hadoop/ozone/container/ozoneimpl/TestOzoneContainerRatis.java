@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.util.CheckedBiConsumer;
@@ -88,12 +88,12 @@ public class TestOzoneContainerRatis {
       // Create Ratis cluster
 //      final String ratisId = "ratis1";
 //      final PipelineManager manager = RatisManagerImpl.newRatisManager(conf);
-//      manager.createPipeline(ratisId, pipeline.getMachines());
+//      manager.createPipeline(ratisId, pipeline.getNodes());
 //      LOG.info("Created RatisCluster " + ratisId);
 //
 //      // check Ratis cluster members
 //      final List<DatanodeDetails> dns = manager.getMembers(ratisId);
-//      Assert.assertEquals(pipeline.getMachines(), dns);
+//      Assert.assertEquals(pipeline.getNodes(), dns);
 //
 //      // run test
 //      final XceiverClientSpi client = XceiverClientRatis

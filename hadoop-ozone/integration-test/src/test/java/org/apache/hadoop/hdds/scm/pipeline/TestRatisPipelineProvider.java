@@ -58,7 +58,7 @@ public class TestRatisPipelineProvider {
     Assert.assertEquals(pipeline.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline.getFactor(), factor);
     Assert.assertEquals(pipeline.getPipelineState(),
-        Pipeline.PipelineState.ALLOCATED);
+        Pipeline.PipelineState.OPEN);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
 
     factor = HddsProtos.ReplicationFactor.ONE;
@@ -71,7 +71,7 @@ public class TestRatisPipelineProvider {
     Assert.assertEquals(pipeline1.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline1.getFactor(), factor);
     Assert.assertEquals(pipeline1.getPipelineState(),
-        Pipeline.PipelineState.ALLOCATED);
+        Pipeline.PipelineState.OPEN);
     Assert.assertEquals(pipeline1.getNodes().size(), factor.getNumber());
   }
 
@@ -86,19 +86,20 @@ public class TestRatisPipelineProvider {
   @Test
   public void testCreatePipelineWithNodes() throws IOException {
     HddsProtos.ReplicationFactor factor = HddsProtos.ReplicationFactor.THREE;
-    Pipeline pipeline = provider.create(createListOfNodes(factor.getNumber()));
+    Pipeline pipeline =
+        provider.create(factor, createListOfNodes(factor.getNumber()));
     Assert.assertEquals(pipeline.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline.getFactor(), factor);
     Assert.assertEquals(
-        pipeline.getPipelineState(), Pipeline.PipelineState.ALLOCATED);
+        pipeline.getPipelineState(), Pipeline.PipelineState.OPEN);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
 
     factor = HddsProtos.ReplicationFactor.ONE;
-    pipeline = provider.create(createListOfNodes(factor.getNumber()));
+    pipeline = provider.create(factor, createListOfNodes(factor.getNumber()));
     Assert.assertEquals(pipeline.getType(), HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipeline.getFactor(), factor);
     Assert.assertEquals(pipeline.getPipelineState(),
-        Pipeline.PipelineState.ALLOCATED);
+        Pipeline.PipelineState.OPEN);
     Assert.assertEquals(pipeline.getNodes().size(), factor.getNumber());
   }
 }

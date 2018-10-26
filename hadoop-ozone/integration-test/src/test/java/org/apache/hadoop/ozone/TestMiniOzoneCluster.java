@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
@@ -29,7 +29,7 @@ import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
 import org.junit.AfterClass;
@@ -40,6 +40,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -91,18 +92,20 @@ public class TestMiniOzoneCluster {
     assertEquals(numberOfNodes, datanodes.size());
     for(HddsDatanodeService dn : datanodes) {
       // Create a single member pipe line
-      DatanodeDetails datanodeDetails = dn.getDatanodeDetails();
-      final Pipeline pipeline =
-          new Pipeline(datanodeDetails.getUuidString(),
-              HddsProtos.LifeCycleState.OPEN,
-              HddsProtos.ReplicationType.STAND_ALONE,
-              HddsProtos.ReplicationFactor.ONE, PipelineID.randomId());
-      pipeline.addMember(datanodeDetails);
+      List<DatanodeDetails> dns = new ArrayList<>();
+      dns.add(dn.getDatanodeDetails());
+      Pipeline pipeline = Pipeline.newBuilder()
+          .setState(Pipeline.PipelineState.OPEN)
+          .setId(PipelineID.randomId())
+          .setType(HddsProtos.ReplicationType.STAND_ALONE)
+          .setFactor(HddsProtos.ReplicationFactor.ONE)
+          .setNodes(dns)
+          .build();
 
       // Verify client is able to connect to the container
       try (XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf)){
         client.connect();
-        assertTrue(client.isConnected(pipeline.getLeader()));
+        assertTrue(client.isConnected(pipeline.getFirstNode()));
       }
     }
   }

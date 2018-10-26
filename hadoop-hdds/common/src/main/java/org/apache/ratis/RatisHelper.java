@@ -19,7 +19,7 @@
 package org.apache.ratis;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.ratis.client.RaftClient;
@@ -40,6 +40,7 @@ import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -88,7 +89,7 @@ public interface RatisHelper {
   }
 
   static List<RaftPeer> toRaftPeers(Pipeline pipeline) {
-    return toRaftPeers(pipeline.getMachines());
+    return toRaftPeers(pipeline.getNodes());
   }
 
   static <E extends DatanodeDetails> List<RaftPeer> toRaftPeers(
@@ -125,15 +126,15 @@ public interface RatisHelper {
   }
 
   static RaftGroup newRaftGroup(Pipeline pipeline) {
-    return RaftGroup.valueOf(pipeline.getId().getRaftGroupID(),
+    return RaftGroup.valueOf(RaftGroupId.valueOf(pipeline.getId().getId()),
         toRaftPeers(pipeline));
   }
 
   static RaftClient newRaftClient(RpcType rpcType, Pipeline pipeline,
-      RetryPolicy retryPolicy) {
-    return newRaftClient(rpcType, toRaftPeerId(pipeline.getLeader()),
-        newRaftGroup(pipeline.getId().getRaftGroupID(), pipeline.getMachines()),
-        retryPolicy);
+      RetryPolicy retryPolicy) throws IOException {
+    return newRaftClient(rpcType, toRaftPeerId(pipeline.getFirstNode()),
+        newRaftGroup(RaftGroupId.valueOf(pipeline.getId().getId()),
+            pipeline.getNodes()), retryPolicy);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,

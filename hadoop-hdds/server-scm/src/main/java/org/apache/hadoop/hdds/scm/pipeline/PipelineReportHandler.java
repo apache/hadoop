@@ -76,7 +76,13 @@ public class PipelineReportHandler implements
   private void processPipelineReport(PipelineReport report, DatanodeDetails dn)
       throws IOException {
     PipelineID pipelineID = PipelineID.getFromProtobuf(report.getPipelineID());
-    Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
+    Pipeline pipeline = null;
+    try {
+      pipeline = pipelineManager.getPipeline(pipelineID);
+    } catch (PipelineNotFoundException e) {
+      //TODO: introduce per datanode command for pipeline destroy
+      return;
+    }
 
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
       pipeline.reportDatanode(dn);
@@ -87,14 +93,14 @@ public class PipelineReportHandler implements
     } else if (pipeline.isClosed()) {
       int numContainers = pipelineManager.getNumberOfContainers(pipelineID);
       if (numContainers == 0) {
-        // if all the containers have been closed the pipeline can be destroyed
+        // remove the pipeline from the pipeline manager
+        pipelineManager.removePipeline(pipelineID);
+        // since all the containers have been closed the pipeline can be
+        // destroyed
         try (XceiverClientRatis client =
             XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
           client.destroyPipeline();
         }
-        // after successfully destroying the pipeline, the pipeline can be
-        // removed from the pipeline manager
-        pipelineManager.removePipeline(pipelineID);
       }
     } else {
       // In OPEN state case just report the datanode

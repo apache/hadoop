@@ -25,7 +25,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.Closeable;
@@ -115,8 +115,8 @@ public class XceiverClientManager implements Closeable {
   public XceiverClientSpi acquireClient(Pipeline pipeline)
       throws IOException {
     Preconditions.checkNotNull(pipeline);
-    Preconditions.checkArgument(pipeline.getMachines() != null);
-    Preconditions.checkArgument(!pipeline.getMachines().isEmpty());
+    Preconditions.checkArgument(pipeline.getNodes() != null);
+    Preconditions.checkArgument(!pipeline.getNodes().isEmpty());
 
     synchronized (clientCache) {
       XceiverClientSpi info = getClient(pipeline);

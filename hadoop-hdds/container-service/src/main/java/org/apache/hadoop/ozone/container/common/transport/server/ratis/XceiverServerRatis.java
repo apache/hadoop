@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -372,7 +372,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID,
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
-        PipelineID.getFromProtobuf(pipelineID).getRaftGroupID(),
+        RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
         nextCallId(), 0, Message.valueOf(request.toByteString()), type);
   }
 
@@ -405,7 +405,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
           + roleInfoProto.getRole());
     }
 
-    PipelineID pipelineID = PipelineID.valueOf(groupId);
+    PipelineID pipelineID = PipelineID.valueOf(groupId.getUuid());
     ClosePipelineInfo.Builder closePipelineInfo =
         ClosePipelineInfo.newBuilder()
             .setPipelineID(pipelineID.getProtobuf())
@@ -429,8 +429,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       List<PipelineReport> reports = new ArrayList<>();
       for (RaftGroupId groupId : gids) {
         reports.add(PipelineReport.newBuilder()
-                .setPipelineID(PipelineID.valueOf(groupId).getProtobuf())
-                .build());
+            .setPipelineID(PipelineID.valueOf(groupId.getUuid()).getProtobuf())
+            .build());
       }
       return reports;
     } catch (Exception e) {

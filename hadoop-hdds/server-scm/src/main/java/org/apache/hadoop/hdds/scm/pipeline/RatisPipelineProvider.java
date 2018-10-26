@@ -93,7 +93,7 @@ public class RatisPipelineProvider implements PipelineProvider {
   public Pipeline create(ReplicationFactor factor) throws IOException {
     // Get set of datanodes already used for ratis pipeline
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
-    stateManager.getPipelinesByType(ReplicationType.RATIS)
+    stateManager.getPipelines(ReplicationType.RATIS)
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 
     // Get list of healthy nodes
@@ -112,7 +112,7 @@ public class RatisPipelineProvider implements PipelineProvider {
 
     Pipeline pipeline = Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(dns)
@@ -122,16 +122,11 @@ public class RatisPipelineProvider implements PipelineProvider {
   }
 
   @Override
-  public Pipeline create(List<DatanodeDetails> nodes) throws IOException {
-    ReplicationFactor factor = ReplicationFactor.valueOf(nodes.size());
-    if (factor == null) {
-      throw new IOException(String
-          .format("Nodes size=%d does not match any replication factor",
-              nodes.size()));
-    }
+  public Pipeline create(ReplicationFactor factor,
+      List<DatanodeDetails> nodes) {
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(nodes)

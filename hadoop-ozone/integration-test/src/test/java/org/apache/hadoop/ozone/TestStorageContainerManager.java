@@ -140,7 +140,7 @@ public class TestStorageContainerManager {
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
-          Assert.assertEquals(1, container2.getPipeline().getMachines().size());
+          Assert.assertEquals(1, container2.getPipeline().getNodes().size());
         }
       } catch (Exception e) {
         verifyPermissionDeniedException(e, fakeRemoteUsername);
@@ -153,7 +153,7 @@ public class TestStorageContainerManager {
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
-          Assert.assertEquals(1, container3.getPipeline().getMachines().size());
+          Assert.assertEquals(1, container3.getPipeline().getNodes().size());
         }
       } catch (Exception e) {
         verifyPermissionDeniedException(e, fakeRemoteUsername);

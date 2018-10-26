@@ -36,14 +36,14 @@ public interface PipelineManager extends Closeable {
   Pipeline createPipeline(ReplicationType type, ReplicationFactor factor)
       throws IOException;
 
-  Pipeline createPipeline(ReplicationType type, List<DatanodeDetails> nodes)
-      throws IOException;
+  Pipeline createPipeline(ReplicationType type, ReplicationFactor factor,
+      List<DatanodeDetails> nodes);
 
-  Pipeline getPipeline(PipelineID pipelineID) throws IOException;
+  Pipeline getPipeline(PipelineID pipelineID) throws PipelineNotFoundException;
 
-  List<Pipeline> getPipelinesByType(ReplicationType type);
+  List<Pipeline> getPipelines(ReplicationType type);
 
-  List<Pipeline> getPipelinesByTypeAndFactor(ReplicationType type,
+  List<Pipeline> getPipelines(ReplicationType type,
       ReplicationFactor factor);
 
   void addContainerToPipeline(PipelineID pipelineID, ContainerID containerID)

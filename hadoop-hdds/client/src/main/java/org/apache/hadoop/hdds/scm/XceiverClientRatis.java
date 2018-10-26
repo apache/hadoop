@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.hdds.HddsUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.retry.RetryPolicy;
@@ -27,7 +26,7 @@ import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -64,19 +63,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientRatis.class);
 
   public static XceiverClientRatis newXceiverClientRatis(
-      Pipeline pipeline, Configuration ozoneConf) {
-    final String rpcType = ozoneConf.get(
-        ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
-        ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
-    final int maxOutstandingRequests =
-        HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
-    final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
-    return new XceiverClientRatis(pipeline,
-        SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
-        retryPolicy);
-  }
-
-  public static XceiverClientRatis newXceiverClientRatis(
       org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
       Configuration ozoneConf) {
     final String rpcType = ozoneConf
@@ -85,11 +71,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final int maxOutstandingRequests =
         HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
     final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
-    Pipeline pipeline1 =
-        new Pipeline(pipeline.getNodes().get(0).getUuidString(),
-            HddsProtos.LifeCycleState.OPEN, pipeline.getType(),
-            pipeline.getFactor(), PipelineID.valueOf(pipeline.getID().getId()));
-    return new XceiverClientRatis(pipeline1,
+    return new XceiverClientRatis(pipeline,
         SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests,
         retryPolicy);
   }
@@ -118,7 +100,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public void createPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getMachines(),
+    callRatisRpc(pipeline.getNodes(),
         (raftClient, peer) -> raftClient.groupAdd(group, peer.getId()));
   }
 
@@ -128,7 +110,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public void destroyPipeline() throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("destroying pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getMachines(), (raftClient, peer) -> raftClient
+    callRatisRpc(pipeline.getNodes(), (raftClient, peer) -> raftClient
         .groupRemove(group.getGroupId(), true, peer.getId()));
   }
 
@@ -174,9 +156,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    LOG.debug("Connecting to pipeline:{} leader:{}",
-        getPipeline().getId(),
-        RatisHelper.toRaftPeerId(pipeline.getLeader()));
+    LOG.debug("Connecting to pipeline:{} datanode:{}", getPipeline().getId(),
+        RatisHelper.toRaftPeerId(pipeline.getFirstNode()));
     // TODO : XceiverClient ratis should pass the config value of
     // maxOutstandingRequests so as to set the upper bound on max no of async
     // requests to be handled by raft client

@@ -33,7 +33,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.scm.*;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
@@ -93,7 +93,7 @@ public class TestCSMMetrics {
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for (DatanodeDetails dn : pipeline.getMachines()) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();

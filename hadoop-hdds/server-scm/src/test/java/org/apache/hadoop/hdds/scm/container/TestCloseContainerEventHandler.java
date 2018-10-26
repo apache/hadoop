@@ -25,6 +25,8 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -65,8 +67,11 @@ public class TestCloseContainerEventHandler {
     configuration
         .set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     nodeManager = new MockNodeManager(true, 10);
-    containerManager = new SCMContainerManager(configuration, nodeManager,
-        new EventQueue());
+    PipelineManager pipelineManager =
+        new SCMPipelineManager(configuration, nodeManager, eventQueue);
+    containerManager = new
+        SCMContainerManager(configuration, nodeManager,
+        pipelineManager, new EventQueue());
     eventQueue = new EventQueue();
     eventQueue.addHandler(CLOSE_CONTAINER,
         new CloseContainerEventHandler(containerManager));
@@ -110,11 +115,12 @@ public class TestCloseContainerEventHandler {
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
         .captureLogs(CloseContainerEventHandler.LOG);
     ContainerWithPipeline containerWithPipeline = containerManager
-        .allocateContainer(HddsProtos.ReplicationType.STAND_ALONE,
+        .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.ONE, "ozone");
     ContainerID id = new ContainerID(
         containerWithPipeline.getContainerInfo().getContainerID());
-    DatanodeDetails datanode = containerWithPipeline.getPipeline().getLeader();
+    DatanodeDetails datanode =
+        containerWithPipeline.getPipeline().getFirstNode();
     int closeCount = nodeManager.getCommandCount(datanode);
     eventQueue.fireEvent(CLOSE_CONTAINER, id);
     eventQueue.processAll(1000);
@@ -149,13 +155,13 @@ public class TestCloseContainerEventHandler {
     eventQueue.processAll(1000);
     int i = 0;
     for (DatanodeDetails details : containerWithPipeline.getPipeline()
-        .getMachines()) {
+        .getNodes()) {
       closeCount[i] = nodeManager.getCommandCount(details);
       i++;
     }
     i = 0;
     for (DatanodeDetails details : containerWithPipeline.getPipeline()
-        .getMachines()) {
+        .getNodes()) {
       Assert.assertEquals(closeCount[i], nodeManager.getCommandCount(details));
       i++;
     }
@@ -166,7 +172,7 @@ public class TestCloseContainerEventHandler {
     i = 0;
     // Make sure close is queued for each datanode on the pipeline
     for (DatanodeDetails details : containerWithPipeline.getPipeline()
-        .getMachines()) {
+        .getNodes()) {
       Assert.assertEquals(closeCount[i] + 1,
           nodeManager.getCommandCount(details));
       Assert.assertEquals(HddsProtos.LifeCycleState.CLOSING,

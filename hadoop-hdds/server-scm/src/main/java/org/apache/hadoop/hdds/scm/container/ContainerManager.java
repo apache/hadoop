@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -73,7 +73,7 @@ public interface ContainerManager extends Closeable {
    * @throws IOException
    */
   ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
-      throws ContainerNotFoundException;
+      throws ContainerNotFoundException, PipelineNotFoundException;
 
   /**
    * Returns containers under certain conditions.
@@ -175,6 +175,4 @@ public interface ContainerManager extends Closeable {
   ContainerWithPipeline getMatchingContainerWithPipeline(long size,
       String owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) throws IOException;
-
-  PipelineSelector getPipelineSelector();
 }

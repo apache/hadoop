@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.scm.command
     .CommandStatusReportHandler.DeleteBlockStatus;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -261,8 +261,7 @@ public class DeletedBlockLogImpl
           Pipeline pipeline =
               containerManager.getContainerWithPipeline(
                   ContainerID.valueof(containerId)).getPipeline();
-          Collection<DatanodeDetails> containerDnsDetails =
-              pipeline.getDatanodes().values();
+          Collection<DatanodeDetails> containerDnsDetails = pipeline.getNodes();
           // The delete entry can be safely removed from the log if all the
           // corresponding nodes commit the txn. It is required to check that
           // the nodes returned in the pipeline match the replication factor.

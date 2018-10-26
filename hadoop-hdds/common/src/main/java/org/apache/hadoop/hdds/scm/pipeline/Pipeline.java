@@ -60,7 +60,7 @@ public final class Pipeline {
    *
    * @return PipelineID
    */
-  public PipelineID getID() {
+  public PipelineID getId() {
     return id;
   }
 
@@ -87,9 +87,24 @@ public final class Pipeline {
    *
    * @return - LifeCycleStates.
    */
-  PipelineState getPipelineState() {
-    // TODO: See if we need to expose this.
+  public PipelineState getPipelineState() {
     return state;
+  }
+
+  /**
+   * Returns the list of nodes which form this pipeline.
+   *
+   * @return List of DatanodeDetails
+   */
+  public List<DatanodeDetails> getNodes() {
+    return new ArrayList<>(nodeStatus.keySet());
+  }
+
+  public DatanodeDetails getFirstNode() throws IOException {
+    if (nodeStatus.isEmpty()) {
+      throw new IOException(String.format("Pipeline=%s is empty", id));
+    }
+    return nodeStatus.keySet().iterator().next();
   }
 
   public boolean isClosed() {
@@ -117,13 +132,8 @@ public final class Pipeline {
     return true;
   }
 
-  /**
-   * Returns the list of nodes which form this pipeline.
-   *
-   * @return List of DatanodeDetails
-   */
-  public List<DatanodeDetails> getNodes() {
-    return new ArrayList<>(nodeStatus.keySet());
+  public boolean isEmpty() {
+    return nodeStatus.isEmpty();
   }
 
   public HddsProtos.Pipeline getProtobufMessage() {
@@ -138,7 +148,7 @@ public final class Pipeline {
     return builder.build();
   }
 
-  public static Pipeline fromProtobuf(HddsProtos.Pipeline pipeline) {
+  public static Pipeline getFromProtobuf(HddsProtos.Pipeline pipeline) {
     return new Builder().setId(PipelineID.getFromProtobuf(pipeline.getId()))
         .setFactor(pipeline.getFactor())
         .setType(pipeline.getType())
@@ -164,8 +174,7 @@ public final class Pipeline {
         .append(id, that.id)
         .append(type, that.type)
         .append(factor, that.factor)
-        .append(state, that.state)
-        .append(nodeStatus, that.nodeStatus)
+        .append(getNodes(), that.getNodes())
         .isEquals();
   }
 
@@ -175,7 +184,6 @@ public final class Pipeline {
         .append(id)
         .append(type)
         .append(factor)
-        .append(state)
         .append(nodeStatus)
         .toHashCode();
   }
@@ -244,7 +252,10 @@ public final class Pipeline {
     }
   }
 
-  enum PipelineState {
+  /**
+   * Possible Pipeline states in SCM.
+   */
+  public enum PipelineState {
     ALLOCATED, OPEN, CLOSED
   }
 }
