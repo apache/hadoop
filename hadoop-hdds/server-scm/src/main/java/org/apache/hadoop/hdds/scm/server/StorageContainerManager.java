@@ -63,9 +63,10 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodeReportHandler;
 import org.apache.hadoop.hdds.scm.node.SCMNodeManager;
 import org.apache.hadoop.hdds.scm.node.StaleNodeHandler;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineCloseHandler;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineActionEventHandler;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineReportHandler;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineActionHandler;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineReportHandler;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -149,6 +150,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * State Managers of SCM.
    */
   private final NodeManager scmNodeManager;
+  private final PipelineManager pipelineManager;
   private final ContainerManager containerManager;
   private final BlockManager scmBlockManager;
   private final SCMStorage scmStorage;
@@ -201,8 +203,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     scmNodeManager = new SCMNodeManager(
         conf, scmStorage.getClusterID(), this, eventQueue);
+    pipelineManager = new SCMPipelineManager(conf, scmNodeManager, eventQueue);
     containerManager = new SCMContainerManager(
-        conf, scmNodeManager, eventQueue);
+        conf, scmNodeManager, pipelineManager, eventQueue);
     scmBlockManager = new BlockManagerImpl(
         conf, scmNodeManager, containerManager, eventQueue);
 
@@ -213,14 +216,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     NodeReportHandler nodeReportHandler =
         new NodeReportHandler(scmNodeManager);
     PipelineReportHandler pipelineReportHandler =
-            new PipelineReportHandler(
-                    containerManager.getPipelineSelector());
+            new PipelineReportHandler(pipelineManager, conf);
     CommandStatusReportHandler cmdStatusReportHandler =
         new CommandStatusReportHandler();
 
     NewNodeHandler newNodeHandler = new NewNodeHandler(scmNodeManager);
     StaleNodeHandler staleNodeHandler =
-        new StaleNodeHandler(containerManager.getPipelineSelector());
+        new StaleNodeHandler(scmNodeManager, pipelineManager);
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
         containerManager);
     ContainerActionsHandler actionsHandler = new ContainerActionsHandler();
@@ -231,11 +233,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new ContainerReportHandler(containerManager, scmNodeManager,
             replicationStatus);
 
-    PipelineActionEventHandler pipelineActionEventHandler =
-        new PipelineActionEventHandler();
-
-    PipelineCloseHandler pipelineCloseHandler =
-        new PipelineCloseHandler(containerManager.getPipelineSelector());
+    PipelineActionHandler pipelineActionHandler =
+        new PipelineActionHandler(pipelineManager);
 
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
@@ -294,10 +293,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         .addHandler(SCMEvents.PENDING_DELETE_STATUS, pendingDeleteHandler);
     eventQueue.addHandler(SCMEvents.DELETE_BLOCK_STATUS,
         (DeletedBlockLogImpl) scmBlockManager.getDeletedBlockLog());
-    eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS,
-        pipelineActionEventHandler);
-    eventQueue.addHandler(SCMEvents.PIPELINE_CLOSE, pipelineCloseHandler);
-
+    eventQueue.addHandler(SCMEvents.PIPELINE_ACTIONS, pipelineActionHandler);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, clientProtocolServer);
     eventQueue.addHandler(SCMEvents.PIPELINE_REPORT, pipelineReportHandler);
 
@@ -771,6 +767,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       LOG.error("SCM Event Queue stop failed", ex);
     }
     IOUtils.cleanupWithLogger(LOG, containerManager);
+    IOUtils.cleanupWithLogger(LOG, pipelineManager);
   }
 
   /**
@@ -813,6 +810,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public NodeManager getScmNodeManager() {
     return scmNodeManager;
+  }
+
+  /**
+   * Returns pipeline manager.
+   *
+   * @return - Pipeline Manager
+   */
+  @VisibleForTesting
+  public PipelineManager getPipelineManager() {
+    return pipelineManager;
   }
 
   @VisibleForTesting

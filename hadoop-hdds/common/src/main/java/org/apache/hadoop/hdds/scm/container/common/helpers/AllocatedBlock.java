@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.client.BlockID;
 
 /**

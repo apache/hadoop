@@ -44,7 +44,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.util.CheckedBiConsumer;
@@ -56,7 +56,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
 import static org.apache.ratis.rpc.SupportedRpcType.NETTY;
@@ -80,15 +79,15 @@ public class TestContainerServer {
   public void testClientServer() throws Exception {
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
     ContainerSet containerSet = new ContainerSet();
-    runTestClientServer(1,
-        (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-            pipeline.getLeader()
-                .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
+    runTestClientServer(1, (pipeline, conf) -> conf
+            .setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+                pipeline.getFirstNode()
+                    .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue()),
         XceiverClientGrpc::new,
         (dn, conf) -> new XceiverServerGrpc(datanodeDetails, conf,
             new TestContainerDispatcher(),
-            createReplicationService(containerSet)),
-        (dn, p) -> {});
+            createReplicationService(containerSet)), (dn, p) -> {
+        });
   }
 
   @FunctionalInterface
@@ -131,7 +130,7 @@ public class TestContainerServer {
 
   static void runTestClientServer(
       int numDatanodes,
-      BiConsumer<Pipeline, OzoneConfiguration> initConf,
+      CheckedBiConsumer<Pipeline, OzoneConfiguration, IOException> initConf,
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
           IOException> createClient,
       CheckedBiFunction<DatanodeDetails, OzoneConfiguration, XceiverServerSpi,
@@ -146,7 +145,7 @@ public class TestContainerServer {
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for(DatanodeDetails dn : pipeline.getMachines()) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
@@ -181,7 +180,7 @@ public class TestContainerServer {
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          pipeline.getLeader()
+          pipeline.getFirstNode()
               .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
 
       ContainerSet containerSet = new ContainerSet();

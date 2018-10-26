@@ -23,8 +23,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,9 +36,6 @@ import java.util.Set;
  * by a read write lock.
  */
 class PipelineStateManager {
-
-  private static final Logger LOG = LoggerFactory.getLogger(
-      org.apache.hadoop.hdds.scm.pipelines.PipelineStateManager.class);
 
   private final PipelineStateMap pipelineStateMap;
 
@@ -57,17 +52,20 @@ class PipelineStateManager {
     pipelineStateMap.addContainerToPipeline(pipelineId, containerID);
   }
 
-  Pipeline getPipeline(PipelineID pipelineID) throws IOException {
+  Pipeline getPipeline(PipelineID pipelineID) throws PipelineNotFoundException {
     return pipelineStateMap.getPipeline(pipelineID);
   }
 
-  List<Pipeline> getPipelinesByType(ReplicationType type) {
-    return pipelineStateMap.getPipelinesByType(type);
+  List<Pipeline> getPipelines(ReplicationType type) {
+    return pipelineStateMap.getPipelines(type);
   }
 
-  List<Pipeline> getPipelinesByTypeAndFactor(ReplicationType type,
-      ReplicationFactor factor) {
-    return pipelineStateMap.getPipelinesByTypeAndFactor(type, factor);
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor) {
+    return pipelineStateMap.getPipelines(type, factor);
+  }
+
+  List<Pipeline> getPipelines(ReplicationType type, PipelineState... states) {
+    return pipelineStateMap.getPipelines(type, states);
   }
 
   Set<ContainerID> getContainers(PipelineID pipelineID) throws IOException {
@@ -78,8 +76,8 @@ class PipelineStateManager {
     return pipelineStateMap.getNumberOfContainers(pipelineID);
   }
 
-  void removePipeline(PipelineID pipelineID) throws IOException {
-    pipelineStateMap.removePipeline(pipelineID);
+  Pipeline removePipeline(PipelineID pipelineID) throws IOException {
+    return pipelineStateMap.removePipeline(pipelineID);
   }
 
   void removeContainerFromPipeline(PipelineID pipelineID,
@@ -87,7 +85,8 @@ class PipelineStateManager {
     pipelineStateMap.removeContainerFromPipeline(pipelineID, containerID);
   }
 
-  Pipeline finalizePipeline(PipelineID pipelineId) throws IOException {
+  Pipeline finalizePipeline(PipelineID pipelineId)
+      throws PipelineNotFoundException {
     Pipeline pipeline = pipelineStateMap.getPipeline(pipelineId);
     if (!pipeline.isClosed()) {
       pipeline = pipelineStateMap

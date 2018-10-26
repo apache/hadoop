@@ -22,7 +22,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
@@ -39,11 +39,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState
-    .ALLOCATED;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState
-    .OPEN;
 
 /**
  * This class provides the client-facing APIs of container operations.
@@ -98,14 +93,10 @@ public class ContainerOperationClient implements ScmClient {
       Pipeline pipeline = containerWithPipeline.getPipeline();
       client = xceiverClientManager.acquireClient(pipeline);
 
-      // Allocated State means that SCM has allocated this pipeline in its
-      // namespace. The client needs to create the pipeline on the machines
-      // which was choosen by the SCM.
-      Preconditions.checkState(pipeline.getLifeCycleState() == ALLOCATED ||
-          pipeline.getLifeCycleState() == OPEN, "Unexpected pipeline state");
-      if (pipeline.getLifeCycleState() == ALLOCATED) {
-        createPipeline(client, pipeline);
-      }
+      Preconditions.checkState(pipeline.isOpen(), String
+          .format("Unexpected state=%s for pipeline=%s, expected state=%s",
+              pipeline.getPipelineState(), pipeline.getId(),
+              Pipeline.PipelineState.OPEN));
       createContainer(client,
           containerWithPipeline.getContainerInfo().getContainerID());
       return containerWithPipeline;
@@ -142,8 +133,7 @@ public class ContainerOperationClient implements ScmClient {
     // creation state.
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created container " + containerId
-          + " leader:" + client.getPipeline().getLeader()
-          + " machines:" + client.getPipeline().getMachines());
+          + " machines:" + client.getPipeline().getNodes());
     }
   }
 
@@ -208,12 +198,6 @@ public class ContainerOperationClient implements ScmClient {
       Pipeline pipeline = containerWithPipeline.getPipeline();
       client = xceiverClientManager.acquireClient(pipeline);
 
-      // Allocated State means that SCM has allocated this pipeline in its
-      // namespace. The client needs to create the pipeline on the machines
-      // which was choosen by the SCM.
-      if (pipeline.getLifeCycleState() == ALLOCATED) {
-        createPipeline(client, pipeline);
-      }
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline);
       createContainer(client,
@@ -283,10 +267,8 @@ public class ContainerOperationClient implements ScmClient {
       storageContainerLocationClient
           .deleteContainer(containerId);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleted container {}, leader: {}, machines: {} ",
-            containerId,
-            pipeline.getLeader(),
-            pipeline.getMachines());
+        LOG.debug("Deleted container {}, machines: {} ", containerId,
+            pipeline.getNodes());
       }
     } finally {
       if (client != null) {
@@ -336,10 +318,8 @@ public class ContainerOperationClient implements ScmClient {
       ReadContainerResponseProto response =
           ContainerProtocolCalls.readContainer(client, containerID, traceID);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Read container {}, leader: {}, machines: {} ",
-            containerID,
-            pipeline.getLeader(),
-            pipeline.getMachines());
+        LOG.debug("Read container {}, machines: {} ", containerID,
+            pipeline.getNodes());
       }
       return response.getContainerData();
     } finally {

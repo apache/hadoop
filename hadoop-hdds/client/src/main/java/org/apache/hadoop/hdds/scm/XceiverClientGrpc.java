@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServi
 import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServiceGrpc.XceiverClientProtocolServiceStub;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.UUID;
@@ -84,9 +85,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public void connect() throws Exception {
 
     // leader by default is the 1st datanode in the datanode list of pipleline
-    DatanodeDetails leader = this.pipeline.getLeader();
+    DatanodeDetails dn = this.pipeline.getFirstNode();
     // just make a connection to the 1st datanode at the beginning
-    connectToDatanode(leader);
+    connectToDatanode(dn);
   }
 
   private void connectToDatanode(DatanodeDetails dn) {
@@ -148,18 +149,16 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   public ContainerCommandResponseProto sendCommandWithRetry(
       ContainerCommandRequestProto request) throws IOException {
-    int size = pipeline.getMachines().size();
     ContainerCommandResponseProto responseProto = null;
-    DatanodeDetails dn = null;
 
     // In case of an exception or an error, we will try to read from the
     // datanodes in the pipeline in a round robin fashion.
 
     // TODO: cache the correct leader info in here, so that any subsequent calls
     // should first go to leader
-    for (int dnIndex = 0; dnIndex < size; dnIndex++) {
+    List<DatanodeDetails> dns = pipeline.getNodes();
+    for (DatanodeDetails dn : dns) {
       try {
-        dn = pipeline.getMachines().get(dnIndex);
         LOG.debug("Executing command " + request + " on datanode " + dn);
         // In case the command gets retried on a 2nd datanode,
         // sendCommandAsyncCall will create a new channel and async stub
@@ -201,7 +200,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
       ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-    return sendCommandAsync(request, pipeline.getLeader());
+    return sendCommandAsync(request, pipeline.getFirstNode());
   }
 
   private CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(

@@ -20,12 +20,10 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -53,6 +51,7 @@ public class TestNodeFailure {
   private static ContainerWithPipeline ratisContainer1;
   private static ContainerWithPipeline ratisContainer2;
   private static ContainerManager containerManager;
+  private static PipelineManager pipelineManager;
   private static long timeForFailure;
 
   /**
@@ -76,6 +75,7 @@ public class TestNodeFailure {
     cluster.waitForClusterToBeReady();
     StorageContainerManager scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
+    pipelineManager = scm.getPipelineManager();
     ratisContainer1 = containerManager.allocateContainer(
         RATIS, THREE, "testOwner");
     ratisContainer2 = containerManager.allocateContainer(
@@ -102,21 +102,21 @@ public class TestNodeFailure {
   @Test
   public void testPipelineFail() throws InterruptedException, IOException,
       TimeoutException {
-    Assert.assertEquals(ratisContainer1.getPipeline().getLifeCycleState(),
-        HddsProtos.LifeCycleState.OPEN);
+    Assert.assertEquals(ratisContainer1.getPipeline().getPipelineState(),
+        Pipeline.PipelineState.OPEN);
     Pipeline pipelineToFail = ratisContainer1.getPipeline();
-    DatanodeDetails dnToFail = pipelineToFail.getMachines().get(0);
+    DatanodeDetails dnToFail = pipelineToFail.getFirstNode();
     cluster.shutdownHddsDatanode(dnToFail);
 
     // wait for sufficient time for the callback to be triggered
     Thread.sleep(3 * timeForFailure);
 
-    Assert.assertEquals(HddsProtos.LifeCycleState.CLOSED,
-        ratisContainer1.getPipeline().getLifeCycleState());
-    Assert.assertEquals(HddsProtos.LifeCycleState.OPEN,
-        ratisContainer2.getPipeline().getLifeCycleState());
-    Assert.assertNull(containerManager.getPipelineSelector()
-        .getPipeline(pipelineToFail.getId()));
+    Assert.assertEquals(Pipeline.PipelineState.CLOSED,
+        pipelineManager.getPipeline(ratisContainer1.getPipeline().getId())
+            .getPipelineState());
+    Assert.assertEquals(Pipeline.PipelineState.OPEN,
+        pipelineManager.getPipeline(ratisContainer2.getPipeline().getId())
+            .getPipelineState());
     // Now restart the datanode and make sure that a new pipeline is created.
     cluster.restartHddsDatanode(dnToFail);
     ContainerWithPipeline ratisContainer3 =

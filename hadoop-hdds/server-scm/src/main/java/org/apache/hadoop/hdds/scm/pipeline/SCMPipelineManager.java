@@ -78,14 +78,14 @@ public class SCMPipelineManager implements PipelineManager {
     File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
     this.pipelineStore =
         MetadataStoreBuilder.newBuilder()
+            .setCreateIfMissing(true)
             .setConf(conf)
             .setDbFile(pipelineDBPath)
             .setCacheSize(cacheSize * OzoneConsts.MB)
             .build();
-    initializePipelineState();
-
     this.eventPublisher = eventPublisher;
     this.nodeManager = nodeManager;
+    initializePipelineState();
   }
 
   private void initializePipelineState() throws IOException {
@@ -97,12 +97,11 @@ public class SCMPipelineManager implements PipelineManager {
         pipelineStore.getSequentialRangeKVs(null, Integer.MAX_VALUE, null);
 
     for (Map.Entry<byte[], byte[]> entry : pipelines) {
-      Pipeline pipeline = Pipeline
-          .fromProtobuf(HddsProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
+      Pipeline pipeline = Pipeline.getFromProtobuf(
+          HddsProtos.Pipeline.PARSER.parseFrom(entry.getValue()));
       Preconditions.checkNotNull(pipeline);
       stateManager.addPipeline(pipeline);
-      // TODO: add pipeline to node manager
-      // nodeManager.addPipeline(pipeline);
+      nodeManager.addPipeline(pipeline);
     }
   }
 
@@ -112,10 +111,10 @@ public class SCMPipelineManager implements PipelineManager {
     lock.writeLock().lock();
     try {
       Pipeline pipeline =  pipelineFactory.create(type, factor);
-      pipelineStore.put(pipeline.getID().getProtobuf().toByteArray(),
+      pipelineStore.put(pipeline.getId().getProtobuf().toByteArray(),
           pipeline.getProtobufMessage().toByteArray());
       stateManager.addPipeline(pipeline);
-      // TODO: add pipeline to node manager
+      nodeManager.addPipeline(pipeline);
       return pipeline;
     } finally {
       lock.writeLock().unlock();
@@ -123,20 +122,20 @@ public class SCMPipelineManager implements PipelineManager {
   }
 
   @Override
-  public Pipeline createPipeline(ReplicationType type,
-                                 List<DatanodeDetails> nodes)
-      throws IOException {
+  public Pipeline createPipeline(ReplicationType type, ReplicationFactor factor,
+                                 List<DatanodeDetails> nodes) {
     // This will mostly be used to create dummy pipeline for SimplePipelines.
     lock.writeLock().lock();
     try {
-      return pipelineFactory.create(type, nodes);
+      return pipelineFactory.create(type, factor, nodes);
     } finally {
       lock.writeLock().unlock();
     }
   }
 
   @Override
-  public Pipeline getPipeline(PipelineID pipelineID) throws IOException {
+  public Pipeline getPipeline(PipelineID pipelineID)
+      throws PipelineNotFoundException {
     lock.readLock().lock();
     try {
       return stateManager.getPipeline(pipelineID);
@@ -146,21 +145,21 @@ public class SCMPipelineManager implements PipelineManager {
   }
 
   @Override
-  public List<Pipeline> getPipelinesByType(ReplicationType type) {
+  public List<Pipeline> getPipelines(ReplicationType type) {
     lock.readLock().lock();
     try {
-      return stateManager.getPipelinesByType(type);
+      return stateManager.getPipelines(type);
     } finally {
       lock.readLock().unlock();
     }
   }
 
   @Override
-  public List<Pipeline> getPipelinesByTypeAndFactor(ReplicationType type,
+  public List<Pipeline> getPipelines(ReplicationType type,
       ReplicationFactor factor) {
     lock.readLock().lock();
     try {
-      return stateManager.getPipelinesByTypeAndFactor(type, factor);
+      return stateManager.getPipelines(type, factor);
     } finally {
       lock.readLock().unlock();
     }
@@ -232,9 +231,9 @@ public class SCMPipelineManager implements PipelineManager {
   public void removePipeline(PipelineID pipelineID) throws IOException {
     lock.writeLock().lock();
     try {
-      stateManager.removePipeline(pipelineID);
       pipelineStore.delete(pipelineID.getProtobuf().toByteArray());
-      // TODO: remove pipeline from node manager
+      Pipeline pipeline = stateManager.removePipeline(pipelineID);
+      nodeManager.removePipeline(pipeline);
     } finally {
       lock.writeLock().unlock();
     }

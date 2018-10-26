@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
-import org.apache.hadoop.hdds.scm.container.TestSCMContainerManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -54,7 +53,7 @@ public class TestSCMPipelineManager {
   public static void setUp() throws Exception {
     conf = new OzoneConfiguration();
     testDir = GenericTestUtils
-        .getTestDir(TestSCMContainerManager.class.getSimpleName());
+        .getTestDir(TestSCMPipelineManager.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
@@ -83,16 +82,18 @@ public class TestSCMPipelineManager {
 
     // new pipeline manager should be able to load the pipelines from the db
     pipelineManager =
-        new SCMPipelineManager(conf, nodeManager,
-            new EventQueue());
+        new SCMPipelineManager(conf, nodeManager, new EventQueue());
+    for (Pipeline p : pipelines) {
+      pipelineManager.openPipeline(p.getId());
+    }
     List<Pipeline> pipelineList =
-        pipelineManager.getPipelinesByType(HddsProtos.ReplicationType.RATIS);
+        pipelineManager.getPipelines(HddsProtos.ReplicationType.RATIS);
     Assert.assertEquals(pipelines, new HashSet<>(pipelineList));
 
     // clean up
     for (Pipeline pipeline : pipelines) {
-      pipelineManager.finalizePipeline(pipeline.getID());
-      pipelineManager.removePipeline(pipeline.getID());
+      pipelineManager.finalizePipeline(pipeline.getId());
+      pipelineManager.removePipeline(pipeline.getId());
     }
     pipelineManager.close();
   }
@@ -104,13 +105,13 @@ public class TestSCMPipelineManager {
     Pipeline pipeline = pipelineManager
         .createPipeline(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE);
-    pipelineManager.openPipeline(pipeline.getID());
+    pipelineManager.openPipeline(pipeline.getId());
     pipelineManager
-        .addContainerToPipeline(pipeline.getID(), ContainerID.valueof(1));
-    pipelineManager.finalizePipeline(pipeline.getID());
+        .addContainerToPipeline(pipeline.getId(), ContainerID.valueof(1));
+    pipelineManager.finalizePipeline(pipeline.getId());
     pipelineManager
-        .removeContainerFromPipeline(pipeline.getID(), ContainerID.valueof(1));
-    pipelineManager.removePipeline(pipeline.getID());
+        .removeContainerFromPipeline(pipeline.getId(), ContainerID.valueof(1));
+    pipelineManager.removePipeline(pipeline.getId());
     pipelineManager.close();
 
     // new pipeline manager should not be able to load removed pipelines
@@ -118,7 +119,7 @@ public class TestSCMPipelineManager {
         new SCMPipelineManager(conf, nodeManager,
             new EventQueue());
     try {
-      pipelineManager.getPipeline(pipeline.getID());
+      pipelineManager.getPipeline(pipeline.getId());
       Assert.fail("Pipeline should not have been retrieved");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("not found"));
@@ -138,36 +139,36 @@ public class TestSCMPipelineManager {
         .createPipeline(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE);
     Assert
-        .assertFalse(pipelineManager.getPipeline(pipeline.getID()).isHealthy());
+        .assertFalse(pipelineManager.getPipeline(pipeline.getId()).isHealthy());
     Assert
-        .assertFalse(pipelineManager.getPipeline(pipeline.getID()).isOpen());
+        .assertTrue(pipelineManager.getPipeline(pipeline.getId()).isOpen());
 
     // get pipeline report from each dn in the pipeline
     PipelineReportHandler pipelineReportHandler =
         new PipelineReportHandler(pipelineManager, conf);
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
-          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getID());
+          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getId());
       // pipeline is not healthy until all dns report
       Assert.assertFalse(
-          pipelineManager.getPipeline(pipeline.getID()).isHealthy());
+          pipelineManager.getPipeline(pipeline.getId()).isHealthy());
       pipelineReportHandler
           .onMessage(pipelineReportFromDatanode, new EventQueue());
     }
 
     // pipeline is healthy when all dns report
     Assert
-        .assertTrue(pipelineManager.getPipeline(pipeline.getID()).isHealthy());
+        .assertTrue(pipelineManager.getPipeline(pipeline.getId()).isHealthy());
     // pipeline should now move to open state
     Assert
-        .assertTrue(pipelineManager.getPipeline(pipeline.getID()).isOpen());
+        .assertTrue(pipelineManager.getPipeline(pipeline.getId()).isOpen());
 
     // close the pipeline
-    pipelineManager.finalizePipeline(pipeline.getID());
+    pipelineManager.finalizePipeline(pipeline.getId());
 
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
-          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getID());
+          TestUtils.getRandomPipelineReportFromDatanode(dn, pipeline.getId());
       // pipeline report for a closed pipeline should destroy the pipeline
       // and remove it from the pipeline manager
       pipelineReportHandler
@@ -175,7 +176,7 @@ public class TestSCMPipelineManager {
     }
 
     try {
-      pipelineManager.getPipeline(pipeline.getID());
+      pipelineManager.getPipeline(pipeline.getId());
       Assert.fail("Pipeline should not have been retrieved");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("not found"));

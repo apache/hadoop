@@ -30,7 +30,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.*;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.*;
@@ -649,7 +649,7 @@ public class TestOzoneRpcClient {
         cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(new ContainerID(containerID));
     Pipeline pipeline = container.getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
     Assert.assertNotNull(datanodeDetails);
@@ -754,7 +754,7 @@ public class TestOzoneRpcClient {
         .getContainerManager().getContainerWithPipeline(
             ContainerID.valueof(containerID))
         .getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);

@@ -22,11 +22,11 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.container.states.ContainerState;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -232,19 +233,28 @@ public class ContainerStateManager {
   /**
    * Allocates a new container based on the type, replication etc.
    *
-   * @param selector -- Pipeline selector class.
+   * @param pipelineManager -- Pipeline Manager class.
    * @param type -- Replication type.
    * @param replicationFactor - Replication replicationFactor.
    * @return ContainerWithPipeline
    * @throws IOException  on Failure.
    */
-  ContainerInfo allocateContainer(final PipelineSelector selector,
+  ContainerInfo allocateContainer(final PipelineManager pipelineManager,
       final HddsProtos.ReplicationType type,
       final HddsProtos.ReplicationFactor replicationFactor, final String owner)
       throws IOException {
 
-    final Pipeline pipeline = selector.getReplicationPipeline(type,
-        replicationFactor);
+    Pipeline pipeline;
+    try {
+      pipeline = pipelineManager.createPipeline(type, replicationFactor);
+    } catch (IOException e) {
+      final List<Pipeline> pipelines =
+          pipelineManager.getPipelines(type, replicationFactor);
+      if (pipelines.isEmpty()) {
+        throw new IOException("Could not allocate container");
+      }
+      pipeline = pipelines.get((int) containerCount.get() % pipelines.size());
+    }
 
     Preconditions.checkNotNull(pipeline, "Pipeline type=%s/"
         + "replication=%s couldn't be found for the new container. "
@@ -263,7 +273,8 @@ public class ContainerStateManager {
         .setReplicationFactor(replicationFactor)
         .setReplicationType(pipeline.getType())
         .build();
-    selector.addContainerToPipeline(pipeline.getId(), containerID);
+    pipelineManager.addContainerToPipeline(pipeline.getId(),
+        ContainerID.valueof(containerID));
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
     LOG.trace("New container allocated: {}", containerInfo);

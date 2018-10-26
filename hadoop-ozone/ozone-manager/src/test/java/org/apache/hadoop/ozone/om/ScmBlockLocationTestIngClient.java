@@ -27,8 +27,8 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
@@ -127,12 +127,15 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
   }
 
   private Pipeline createPipeline(DatanodeDetails datanode) {
-    final Pipeline pipeline =
-        new Pipeline(datanode.getUuidString(), HddsProtos.LifeCycleState.OPEN,
-            HddsProtos.ReplicationType.STAND_ALONE,
-            HddsProtos.ReplicationFactor.ONE,
-            PipelineID.randomId());
-    pipeline.addMember(datanode);
+    List<DatanodeDetails> dns = new ArrayList<>();
+    dns.add(datanode);
+    Pipeline pipeline = Pipeline.newBuilder()
+        .setState(Pipeline.PipelineState.OPEN)
+        .setId(PipelineID.randomId())
+        .setType(HddsProtos.ReplicationType.STAND_ALONE)
+        .setFactor(HddsProtos.ReplicationFactor.ONE)
+        .setNodes(dns)
+        .build();
     return pipeline;
   }
 

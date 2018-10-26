@@ -305,7 +305,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   private AllocatedBlock newBlock(ContainerWithPipeline containerWithPipeline,
       HddsProtos.LifeCycleState state) throws IOException {
     ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    if (containerWithPipeline.getPipeline().getDatanodes().size() == 0) {
+    if (containerWithPipeline.getPipeline().getNodes().size() == 0) {
       LOG.error("Pipeline Machine count is zero.");
       return null;
     }

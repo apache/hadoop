@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdds.scm.node.states;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -55,7 +55,7 @@ public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
    * @param pipeline Pipeline to be added
    */
   public synchronized void addPipeline(Pipeline pipeline) {
-    for (DatanodeDetails details : pipeline.getDatanodes().values()) {
+    for (DatanodeDetails details : pipeline.getNodes()) {
       UUID dnId = details.getUuid();
       dn2ObjectMap.computeIfAbsent(dnId, k -> new HashSet<>())
           .add(pipeline.getId());
@@ -63,7 +63,7 @@ public class Node2PipelineMap extends Node2ObjectsMap<PipelineID> {
   }
 
   public synchronized void removePipeline(Pipeline pipeline) {
-    for (DatanodeDetails details : pipeline.getDatanodes().values()) {
+    for (DatanodeDetails details : pipeline.getNodes()) {
       UUID dnId = details.getUuid();
       dn2ObjectMap.computeIfPresent(dnId,
           (k, v) -> {

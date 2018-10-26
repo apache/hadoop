@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolPro
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -292,7 +292,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           PipelineResponseProto.Error.success) {
         Preconditions.checkState(response.hasPipeline(), "With success, " +
             "must come a pipeline");
-        return Pipeline.getFromProtoBuf(response.getPipeline());
+        return Pipeline.getFromProtobuf(response.getPipeline());
       } else {
         String errorMessage = String.format("create replication pipeline " +
                 "failed. code : %s Message: %s", response.getErrorCode(),

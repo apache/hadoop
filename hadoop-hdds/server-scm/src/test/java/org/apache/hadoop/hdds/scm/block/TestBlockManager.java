@@ -27,6 +27,8 @@ import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -58,6 +60,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.MB;
 public class TestBlockManager implements EventHandler<Boolean> {
   private static SCMContainerManager mapping;
   private static MockNodeManager nodeManager;
+  private static PipelineManager pipelineManager;
   private static BlockManagerImpl blockManager;
   private static File testDir;
   private final static long DEFAULT_BLOCK_SIZE = 128 * MB;
@@ -83,7 +86,10 @@ public class TestBlockManager implements EventHandler<Boolean> {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
-    mapping = new SCMContainerManager(conf, nodeManager, eventQueue);
+    pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue);
+    mapping = new SCMContainerManager(conf, nodeManager, pipelineManager,
+        eventQueue);
     blockManager = new BlockManagerImpl(conf,
         nodeManager, mapping, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
@@ -101,6 +107,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @After
   public void cleanup() throws IOException {
     blockManager.close();
+    pipelineManager.close();
     mapping.close();
     FileUtil.fullyDelete(testDir);
   }

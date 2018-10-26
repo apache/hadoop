@@ -20,23 +20,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReplicateContainerCommandProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager.ReplicationRequestToRepeat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -227,18 +226,16 @@ public class TestReplicationManager {
   public static Pipeline createPipeline(Iterable<DatanodeDetails> ids)
       throws IOException {
     Objects.requireNonNull(ids, "ids == null");
-    final Iterator<DatanodeDetails> i = ids.iterator();
-    Preconditions.checkArgument(i.hasNext());
-    final DatanodeDetails leader = i.next();
-    final Pipeline pipeline =
-        new Pipeline(leader.getUuidString(), LifeCycleState.OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
-            PipelineID.randomId());
-    pipeline.addMember(leader);
-    while (i.hasNext()) {
-      pipeline.addMember(i.next());
-    }
-    return pipeline;
+    Preconditions.checkArgument(ids.iterator().hasNext());
+    List<DatanodeDetails> dns = new ArrayList<>();
+    ids.forEach(dns::add);
+    return Pipeline.newBuilder()
+        .setState(Pipeline.PipelineState.OPEN)
+        .setId(PipelineID.randomId())
+        .setType(HddsProtos.ReplicationType.STAND_ALONE)
+        .setFactor(ReplicationFactor.ONE)
+        .setNodes(dns)
+        .build();
   }
 
 }

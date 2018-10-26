@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -306,7 +306,7 @@ public class TestCloseContainerHandlingByClient {
               .getContainerWithPipeline(ContainerID.valueof(containerID))
               .getPipeline();
       pipelineList.add(pipeline);
-      List<DatanodeDetails> datanodes = pipeline.getMachines();
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
       for (DatanodeDetails details : datanodes) {
         Assert.assertFalse(ContainerTestHelper
             .isContainerClosed(cluster, containerID, details));
@@ -319,7 +319,7 @@ public class TestCloseContainerHandlingByClient {
     int index = 0;
     for (long containerID : containerIdList) {
       Pipeline pipeline = pipelineList.get(index);
-      List<DatanodeDetails> datanodes = pipeline.getMachines();
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
       for (DatanodeDetails datanodeDetails : datanodes) {
         GenericTestUtils.waitFor(() -> ContainerTestHelper
                 .isContainerClosed(cluster, containerID, datanodeDetails), 500,
@@ -352,7 +352,7 @@ public class TestCloseContainerHandlingByClient {
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getMachines();
+            .getPipeline().getNodes();
     Assert.assertEquals(1, datanodes.size());
     waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
     dataString = fixedLengthString(keyString, (1 * blockSize));
@@ -455,7 +455,7 @@ public class TestCloseContainerHandlingByClient {
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getMachines();
+            .getPipeline().getNodes();
     Assert.assertEquals(1, datanodes.size());
     // move the container on the datanode to Closing state, this will ensure
     // closing the key will hit BLOCK_NOT_COMMITTED_EXCEPTION while trying

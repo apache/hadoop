@@ -32,6 +32,8 @@ import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.Event;
@@ -73,8 +75,11 @@ public class TestContainerReportHandler implements EventPublisher {
     //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir);
+    EventQueue eventQueue = new EventQueue();
+    PipelineManager pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue);
     SCMContainerManager containerManager = new SCMContainerManager(
-        conf, nodeManager, new EventQueue());
+        conf, nodeManager, pipelineManager, eventQueue);
 
     ReplicationActivityStatus replicationActivityStatus =
         new ReplicationActivityStatus();

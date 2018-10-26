@@ -42,6 +42,8 @@ import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -75,7 +77,10 @@ public class TestDeadNodeHandler {
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, storageDir);
     eventQueue = new EventQueue();
     nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);
-    containerManager = new SCMContainerManager(conf, nodeManager, eventQueue);
+    PipelineManager pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue);
+    containerManager = new SCMContainerManager(conf, nodeManager,
+        pipelineManager, eventQueue);
     deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);

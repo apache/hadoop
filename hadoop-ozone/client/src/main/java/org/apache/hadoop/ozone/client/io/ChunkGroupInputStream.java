@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -282,7 +282,10 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
 
       // irrespective of the container state, we will always read via Standalone
       // protocol.
-      pipeline.setType(HddsProtos.ReplicationType.STAND_ALONE);
+      if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
+        pipeline = Pipeline.newBuilder(pipeline)
+            .setType(HddsProtos.ReplicationType.STAND_ALONE).build();
+      }
       XceiverClientSpi xceiverClient = xceiverClientManager
           .acquireClient(pipeline);
       boolean success = false;

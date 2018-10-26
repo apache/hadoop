@@ -50,8 +50,8 @@ public final class PipelineFactory {
     return providers.get(type).create(factor);
   }
 
-  public Pipeline create(ReplicationType type, List<DatanodeDetails> nodes)
-      throws IOException {
-    return providers.get(type).create(nodes);
+  public Pipeline create(ReplicationType type, ReplicationFactor factor,
+      List<DatanodeDetails> nodes) {
+    return providers.get(type).create(factor, nodes);
   }
 }

@@ -31,7 +31,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 /**
  * A wrapper class to hold info about datanode and all deleted block
@@ -74,7 +74,7 @@ public class DatanodeDeletedBlockTransactions {
     }
 
     boolean success = false;
-    for (DatanodeDetails dd : pipeline.getMachines()) {
+    for (DatanodeDetails dd : pipeline.getNodes()) {
       UUID dnID = dd.getUuid();
       if (dnsWithTransactionCommitted == null ||
           !dnsWithTransactionCommitted.contains(dnID)) {

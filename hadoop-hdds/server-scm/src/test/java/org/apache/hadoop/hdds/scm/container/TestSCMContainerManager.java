@@ -24,13 +24,15 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -59,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 public class TestSCMContainerManager {
   private static SCMContainerManager containerManager;
   private static MockNodeManager nodeManager;
+  private static PipelineManager pipelineManager;
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
   private static String containerOwner = "OZONE";
@@ -85,8 +88,10 @@ public class TestSCMContainerManager {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
+    pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, new EventQueue());
     containerManager = new SCMContainerManager(conf, nodeManager,
-        new EventQueue());
+        pipelineManager, new EventQueue());
     xceiverClientManager = new XceiverClientManager(conf);
     random = new Random();
   }
@@ -95,6 +100,9 @@ public class TestSCMContainerManager {
   public static void cleanup() throws IOException {
     if(containerManager != null) {
       containerManager.close();
+    }
+    if (pipelineManager != null) {
+      pipelineManager.close();
     }
     FileUtil.fullyDelete(testDir);
   }
@@ -130,7 +138,7 @@ public class TestSCMContainerManager {
 
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
-      pipelineList.add(containerInfo.getPipeline().getLeader()
+      pipelineList.add(containerInfo.getPipeline().getFirstNode()
           .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
@@ -145,8 +153,8 @@ public class TestSCMContainerManager {
     Pipeline pipeline  = containerInfo.getPipeline();
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = containerInfo.getPipeline();
-    Assert.assertEquals(pipeline.getLeader().getUuid(),
-        newPipeline.getLeader().getUuid());
+    Assert.assertEquals(pipeline.getFirstNode().getUuid(),
+        newPipeline.getFirstNode().getUuid());
   }
 
   @Test
@@ -191,15 +199,15 @@ public class TestSCMContainerManager {
     contInfo = containerManager.getContainer(contInfo.containerID());
     Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
     Pipeline pipeline = containerWithPipeline.getPipeline();
-    containerManager.getPipelineSelector().finalizePipeline(pipeline);
+    pipelineManager.finalizePipeline(pipeline.getId());
 
     ContainerWithPipeline containerWithPipeline2 = containerManager
         .getContainerWithPipeline(contInfo.containerID());
     pipeline = containerWithPipeline2.getPipeline();
     Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
     Assert.assertNotNull("Pipeline should not be null", pipeline);
-    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn1.getHostName()));
-    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn2.getHostName()));
+    Assert.assertTrue(pipeline.getNodes().contains(dn1));
+    Assert.assertTrue(pipeline.getNodes().contains(dn2));
   }
 
   @Test
