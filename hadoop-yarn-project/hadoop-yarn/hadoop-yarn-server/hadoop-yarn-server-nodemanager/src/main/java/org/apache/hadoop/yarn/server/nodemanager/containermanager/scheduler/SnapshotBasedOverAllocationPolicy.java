@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.records.ResourceThresholds;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * An implementation of NMAllocationPolicy based on the
@@ -42,13 +43,21 @@ public class SnapshotBasedOverAllocationPolicy
   public Resource getAvailableResources() {
     ResourceUtilization utilization =
         containersMonitor.getContainersUtilization(true).getUtilization();
-    long memoryAvailable = Math.round(
-        overAllocationThresholds.getMemoryThreshold() *
-            containersMonitor.getPmemAllocatedForContainers()) -
-        (utilization.getPhysicalMemory() << 20);
+
+    long memoryOverAllocationThresholdBytes =
+        Math.round(
+            ((double) overAllocationThresholds.getMemoryThreshold()) *
+            containersMonitor.getPmemAllocatedForContainers());
+    long memoryUtilizationBytes =
+        ((long) utilization.getPhysicalMemory()) << 20;
+    long memoryAvailable =
+        memoryOverAllocationThresholdBytes - memoryUtilizationBytes;
+
     int vcoreAvailable = Math.round(
         (overAllocationThresholds.getCpuThreshold() - utilization.getCPU()) *
             containersMonitor.getVCoresAllocatedForContainers());
-    return Resource.newInstance(memoryAvailable >> 20, vcoreAvailable);
+
+    return (memoryAvailable <= 0 || vcoreAvailable <= 0) ? Resources.none() :
+        Resource.newInstance(memoryAvailable >> 20, vcoreAvailable);
   }
 }
