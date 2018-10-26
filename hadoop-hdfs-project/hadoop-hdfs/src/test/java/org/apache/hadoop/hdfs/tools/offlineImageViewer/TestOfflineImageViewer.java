@@ -669,6 +669,25 @@ public class TestOfflineImageViewer {
     }
   }
 
+  @Test(expected = IOException.class)
+  public void testDelimitedWithExistingFolder() throws IOException,
+      InterruptedException {
+    File tempDelimitedDir = null;
+    try {
+      String tempDelimitedDirName = "tempDirDelimited";
+      String tempDelimitedDirPath = new FileSystemTestHelper().
+          getTestRootDir() + "/" + tempDelimitedDirName;
+      tempDelimitedDir = new File(tempDelimitedDirPath);
+      Assert.assertTrue("Couldn't create temp directory!",
+          tempDelimitedDir.mkdirs());
+      testPBDelimitedWriter(tempDelimitedDirPath);
+    } finally {
+      if (tempDelimitedDir != null) {
+        FileUtils.deleteDirectory(tempDelimitedDir);
+      }
+    }
+  }
+
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";
