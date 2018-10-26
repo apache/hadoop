@@ -16,10 +16,14 @@
  */
 package org.apache.hadoop.hdds.cli;
 
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+
 /**
  * Interface to access the higher level parameters.
  */
 public interface GenericParentCommand {
 
   boolean isVerbose();
+
+  OzoneConfiguration createOzoneConfiguration();
 }
