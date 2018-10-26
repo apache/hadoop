@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
 import picocli.CommandLine.Command;
@@ -46,15 +43,12 @@ public class DeleteBucketHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 2) {
-      throw new OzoneClientException(
-          "volume and bucket name required in delete Bucket");
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureBucketAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    String volumeName = path.getName(0).toString();
-    String bucketName = path.getName(1).toString();
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
 
     if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);

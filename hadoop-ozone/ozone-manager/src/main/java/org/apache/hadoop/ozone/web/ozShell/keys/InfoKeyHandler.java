@@ -18,17 +18,13 @@
 
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
@@ -49,22 +45,14 @@ public class InfoKeyHandler extends Handler {
    */
   @Override
   public Void call() throws Exception {
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    if (path.getNameCount() < 3) {
-      throw new OzoneClientException(
-          "volume/bucket/key name required in infoKey");
-    }
 
-    String volumeName = path.getName(0).toString();
-    String bucketName = path.getName(1).toString();
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureKeyAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    String searchString = volumeName + OzoneConsts.OZONE_URI_DELIMITER +
-        bucketName + OzoneConsts.OZONE_URI_DELIMITER;
-
-    String keyName =
-        uri.substring(uri.indexOf(searchString) +
-                searchString.length());
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
+    String keyName = address.getKeyName();
 
     if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.ozShell;
 
-import com.google.common.base.Strings;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,7 +32,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -63,9 +61,18 @@ import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import com.google.common.base.Strings;
+import org.apache.commons.lang3.RandomStringUtils;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -81,12 +88,6 @@ import picocli.CommandLine.IExceptionHandler2;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.RunLast;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * This test class specified for testing Ozone shell command.
@@ -209,8 +210,7 @@ public class TestOzoneShell {
     testCreateVolume(volumeName, "");
     volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     testCreateVolume("/////" + volumeName, "");
-    testCreateVolume("/////", "Volume name is required " +
-        "to create a volume");
+    testCreateVolume("/////", "Volume name is required");
     testCreateVolume("/////vol/123",
         "Invalid volume name. Delimiters (/) not allowed in volume name");
   }
@@ -1126,36 +1126,49 @@ public class TestOzoneShell {
 
   @Test
   public void testS3BucketMapping() throws  IOException {
+
+    List<ServiceInfo> services =
+        cluster.getOzoneManager().getServiceList();
+
+    String omHostName = services.stream().filter(
+        a -> a.getNodeType().equals(HddsProtos.NodeType.OM))
+        .collect(Collectors.toList()).get(0).getHostname();
+
+    String omPort = cluster.getOzoneManager().getRpcPort();
+    String setOmAddress =
+        "--set=" + OZONE_OM_ADDRESS_KEY + "=" + omHostName + ":" + omPort;
+
     String s3Bucket = "bucket1";
     String commandOutput;
     createS3Bucket("ozone", s3Bucket);
+
+    //WHEN
+    String[] args =
+        new String[] {setOmAddress, "bucket",
+            "path", s3Bucket};
+    execute(shell, args);
+
+    //THEN
+    commandOutput = out.toString();
     String volumeName = client.getOzoneVolumeName(s3Bucket);
-    String[] args = new String[] {"bucket", "path", url + "/" + s3Bucket};
-    if (url.startsWith("o3")) {
-      execute(shell, args);
-      commandOutput = out.toString();
-      assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
-          volumeName));
-      assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME +"://" +
-          s3Bucket + "." + volumeName));
-      out.reset();
-      //Trying to get map for an unknown bucket
-      args = new String[] {"bucket", "path", url + "/" + "unknownbucket"};
-      executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
-    } else {
-      executeWithError(shell, args, "Ozone REST protocol does not support " +
-          "this operation");
-    }
+    assertTrue(commandOutput.contains("Volume name for S3Bucket is : " +
+        volumeName));
+    assertTrue(commandOutput.contains(OzoneConsts.OZONE_URI_SCHEME + "://" +
+        s3Bucket + "." + volumeName));
+    out.reset();
+
+    //Trying to get map for an unknown bucket
+    args = new String[] {setOmAddress, "bucket", "path",
+        "unknownbucket"};
+    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
 
     // No bucket name
-    args = new String[] {"bucket", "path", url};
-    executeWithError(shell, args, "S3Bucket name is required");
+    args = new String[] {setOmAddress, "bucket", "path"};
+    executeWithError(shell, args, "Missing required parameter");
 
     // Invalid bucket name
-    args = new String[] {"bucket", "path", url + "/" + s3Bucket +
-          "/multipleslash"};
-    executeWithError(shell, args, "Invalid S3Bucket name. Delimiters (/) not" +
-        " allowed");
+    args = new String[] {setOmAddress, "bucket", "path", "/asd/multipleslash"};
+    executeWithError(shell, args, "S3_BUCKET_NOT_FOUND");
   }
 
   private void createS3Bucket(String userName, String s3Bucket) {

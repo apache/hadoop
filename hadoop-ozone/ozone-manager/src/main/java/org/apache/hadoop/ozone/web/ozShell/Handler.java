@@ -18,25 +18,12 @@
 
 package org.apache.hadoop.ozone.web.ozShell;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.cli.GenericParentCommand;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.OzoneClient;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_HTTP_SCHEME;
-import static org.apache.hadoop.ozone.OzoneConsts.OZONE_RPC_SCHEME;
-import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -51,8 +38,6 @@ public abstract class Handler implements Callable<Void> {
 
   protected static final Logger LOG = LoggerFactory.getLogger(Handler.class);
 
-  protected OzoneClient client;
-
   @ParentCommand
   private GenericParentCommand parent;
 
@@ -61,128 +46,12 @@ public abstract class Handler implements Callable<Void> {
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * verifies user provided URI.
-   *
-   * @param uri - UriString
-   * @return URI
-   * @throws URISyntaxException
-   * @throws OzoneException
-   */
-  protected URI verifyURI(String uri)
-      throws URISyntaxException, OzoneException, IOException {
-    if ((uri == null) || uri.isEmpty()) {
-      throw new OzoneClientException(
-          "Ozone URI is needed to execute this command.");
-    }
-    URIBuilder ozoneURI = new URIBuilder(stringToUri(uri));
-    if (ozoneURI.getPort() == 0) {
-      ozoneURI.setPort(Shell.DEFAULT_OZONE_PORT);
-    }
-
-    Configuration conf = new OzoneConfiguration();
-    String scheme = ozoneURI.getScheme();
-    if (ozoneURI.getScheme() == null || scheme.isEmpty()) {
-      scheme = OZONE_RPC_SCHEME;
-    }
-    if (scheme.equals(OZONE_HTTP_SCHEME)) {
-      if (ozoneURI.getHost() != null) {
-        if (ozoneURI.getPort() == -1) {
-          client = OzoneClientFactory.getRestClient(ozoneURI.getHost());
-        } else {
-          client = OzoneClientFactory
-              .getRestClient(ozoneURI.getHost(), ozoneURI.getPort(), conf);
-        }
-      } else {
-        client = OzoneClientFactory.getRestClient(conf);
-      }
-    } else if (scheme.equals(OZONE_RPC_SCHEME)) {
-      if (ozoneURI.getHost() != null) {
-        if (ozoneURI.getPort() == -1) {
-          client = OzoneClientFactory.getRpcClient(ozoneURI.getHost());
-        } else {
-          client = OzoneClientFactory
-              .getRpcClient(ozoneURI.getHost(), ozoneURI.getPort(), conf);
-        }
-      } else {
-        client = OzoneClientFactory.getRpcClient(conf);
-      }
-    } else {
-      throw new OzoneClientException("Invalid URI: " + ozoneURI);
-    }
-    return ozoneURI.build();
-  }
-
-  /** Construct a URI from a String with unescaped special characters
-   *  that have non-standard semantics. e.g. /, ?, #. A custom parsing
-   *  is needed to prevent misbehavior.
-   *  @param pathString The input path in string form
-   *  @return URI
-   */
-  private static URI stringToUri(String pathString) throws IOException {
-    // parse uri components
-    String scheme = null;
-    String authority = null;
-    int start = 0;
-
-    // parse uri scheme, if any
-    int colon = pathString.indexOf(':');
-    int slash = pathString.indexOf('/');
-    if (colon > 0 && (slash == colon +1)) {
-      // has a non zero-length scheme
-      scheme = pathString.substring(0, colon);
-      start = colon + 1;
-    }
-
-    // parse uri authority, if any
-    if (pathString.startsWith("//", start) &&
-        (pathString.length()-start > 2)) {
-      start += 2;
-      int nextSlash = pathString.indexOf('/', start);
-      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
-      authority = pathString.substring(start, authEnd);
-      start = authEnd;
-    }
-    // uri path is the rest of the string. ? or # are not interpreted,
-    // but any occurrence of them will be quoted by the URI ctor.
-    String path = pathString.substring(start, pathString.length());
-
-    // Construct the URI
-    try {
-      return new URI(scheme, authority, path, null, null);
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(e);
-    }
-  }
-
-  /**
-   *
-   * @param uri
-   * @return volumeName
-   * @throws Exception
-   * @throws OzoneClientException when uri is null or invalid volume name
-   */
-  protected String parseVolumeName(String uri) throws Exception{
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    int pathNameCount = path.getNameCount();
-    if (pathNameCount != 1) {
-      String errorMessage;
-      if (pathNameCount < 1) {
-        errorMessage = "Volume name is required to perform volume " +
-            "operations like info, update, create and delete. ";
-      } else {
-        errorMessage = "Invalid volume name. Delimiters (/) not allowed in " +
-            "volume name";
-      }
-      throw new OzoneClientException(errorMessage);
-    }
-
-    return ozoneURI.getPath().replaceAll("^/+", "");
-  }
-
   public boolean isVerbose() {
     return parent.isVerbose();
+  }
+
+  public OzoneConfiguration createOzoneConfiguration() {
+    return parent.createOzoneConfiguration();
   }
 
 }
