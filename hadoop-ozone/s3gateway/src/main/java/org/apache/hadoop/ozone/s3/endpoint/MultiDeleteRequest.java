@@ -34,7 +34,7 @@ import java.util.List;
 public class MultiDeleteRequest {
 
   @XmlElement(name = "Quiet")
-  private boolean quiet;
+  private Boolean quiet = Boolean.FALSE;
 
   @XmlElement(name = "Object")
   private List<DeleteObject> objects = new ArrayList<>();
