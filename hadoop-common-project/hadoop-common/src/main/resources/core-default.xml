@@ -657,6 +657,14 @@
 </property>
 
 <property>
+  <name>hadoop.kerberos.keytab.login.autorenewal.enabled</name>
+  <value>false</value>
+  <description>Used to enable automatic renewal of keytab based kerberos login.
+    By default the automatic renewal is disabled for keytab based kerberos login.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.auth_to_local</name>
   <value></value>
   <description>Maps kerberos principals to local user names</description>
