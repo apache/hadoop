@@ -1239,7 +1239,7 @@ public class TestUserGroupInformation {
 
     // run AutoRenewalForUserCredsRunnable with this
     UserGroupInformation.AutoRenewalForUserCredsRunnable userCredsRunnable =
-        ugi.new AutoRenewalForUserCredsRunnable(tgt,
+        ugi.new TicketCacheRenewalRunnable(tgt,
             Boolean.toString(Boolean.TRUE), 100);
 
     // Set the runnable to not to run in a loop
