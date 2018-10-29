@@ -177,7 +177,7 @@ public class TestBlockDeletion {
     // Containers in the DN and SCM should have same delete transactionIds
     // after DN restart. The assertion is just to verify that the state of
     // containerInfos in dn and scm is consistent after dn restart.
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
     matchContainerTransactionIds();
 
     // verify PENDING_DELETE_STATUS event is fired
@@ -210,7 +210,7 @@ public class TestBlockDeletion {
     GenericTestUtils.waitFor(() -> logCapturer.getOutput()
             .contains("RetriableDatanodeCommand type=deleteBlocksCommand"),
         500, 5000);
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
   }
 
   private void verifyTransactionsCommitted() throws IOException {

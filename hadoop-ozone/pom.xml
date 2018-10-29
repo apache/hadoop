@@ -33,7 +33,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
     <hdds.version>0.4.0-SNAPSHOT</hdds.version>
     <ozone.version>0.4.0-SNAPSHOT</ozone.version>
-    <ratis.version>0.3.0-aa38160-SNAPSHOT</ratis.version>
+    <ratis.version>0.3.0-2272086-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Badlands</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>

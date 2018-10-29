@@ -326,7 +326,7 @@ public class TestKeys {
 
   private static void restartDatanode(MiniOzoneCluster cluster, int datanodeIdx)
       throws Exception {
-    cluster.restartHddsDatanode(datanodeIdx);
+    cluster.restartHddsDatanode(datanodeIdx, true);
   }
 
   @Test
