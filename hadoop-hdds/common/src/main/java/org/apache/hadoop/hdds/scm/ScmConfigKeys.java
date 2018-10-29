@@ -172,6 +172,10 @@ public final class ScmConfigKeys {
       "ozone.scm.block.client.port";
   public static final int OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT = 9863;
 
+  public static final String OZONE_SCM_SECURITY_SERVICE_PORT_KEY =
+      "ozone.scm.security.service.port";
+  public static final int OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT = 9961;
+
   // Container service client
   public static final String OZONE_SCM_CLIENT_ADDRESS_KEY =
       "ozone.scm.client.address";
@@ -186,6 +190,14 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_BLOCK_CLIENT_BIND_HOST_KEY =
       "ozone.scm.block.client.bind.host";
   public static final String OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  // SCM Security service address.
+  public static final String OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY =
+      "ozone.scm.security.service.address";
+  public static final String OZONE_SCM_SECURITY_SERVICE_BIND_HOST_KEY =
+      "ozone.scm.security.service.bind.host";
+  public static final String OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT =
       "0.0.0.0";
 
   public static final String OZONE_SCM_DATANODE_ADDRESS_KEY =
@@ -229,6 +241,10 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_HANDLER_COUNT_KEY =
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
+
+  public static final String OZONE_SCM_SECURITY_HANDLER_COUNT_KEY =
+      "ozone.scm.security.handler.count.key";
+  public static final int OZONE_SCM_SECURITY_HANDLER_COUNT_DEFAULT = 2;
 
   public static final String OZONE_SCM_DEADNODE_INTERVAL =
       "ozone.scm.dead.node.interval";

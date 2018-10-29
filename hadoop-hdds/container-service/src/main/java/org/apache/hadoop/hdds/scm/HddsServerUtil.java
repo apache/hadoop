@@ -161,6 +161,28 @@ public final class HddsServerUtil {
   }
 
   /**
+   * Retrieve the socket address that should be used by scm security server to
+   * service clients.
+   *
+   * @param conf
+   * @return Target InetSocketAddress for the SCM security service.
+   */
+  public static InetSocketAddress getScmSecurityInetAddress(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_BIND_HOST_KEY);
+
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.or(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT) +
+            ":" + port
+            .or(conf.getInt(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_KEY,
+                ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT)));
+  }
+
+  /**
    * Retrieve the socket address that should be used by DataNodes to connect
    * to the SCM.
    *
