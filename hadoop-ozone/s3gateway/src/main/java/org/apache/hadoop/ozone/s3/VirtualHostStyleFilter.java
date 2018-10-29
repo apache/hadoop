@@ -74,6 +74,7 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
     }
     //Get the value of the host
     String host = requestContext.getHeaderString(HttpHeaders.HOST);
+    host = checkHostWithoutPort(host);
     String domain = getDomainName(host);
 
     if (domain == null) {
@@ -146,6 +147,14 @@ public class VirtualHostStyleFilter implements ContainerRequestFilter {
       }
     }
     return match;
+  }
+
+  private String checkHostWithoutPort(String host) {
+    if (host.contains(":")){
+      return host.substring(0, host.lastIndexOf(":"));
+    } else {
+      return host;
+    }
   }
 
   @VisibleForTesting
