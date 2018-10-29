@@ -46,16 +46,7 @@ public class TestObjectMultiDelete {
   public void delete() throws IOException, OS3Exception, JAXBException {
     //GIVEN
     OzoneClient client = new OzoneClientStub();
-    client.getObjectStore().createS3Bucket("bilbo", "b1");
-
-    String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
-
-    OzoneBucket bucket =
-        client.getObjectStore().getVolume(volumeName).getBucket("b1");
-
-    bucket.createKey("key1", 0).close();
-    bucket.createKey("key2", 0).close();
-    bucket.createKey("key3", 0).close();
+    OzoneBucket bucket = initTestData(client);
 
     BucketEndpoint rest = new BucketEndpoint();
     rest.setClient(client);
@@ -66,11 +57,9 @@ public class TestObjectMultiDelete {
     mdr.getObjects().add(new DeleteObject("key4"));
 
     //WHEN
-    Response response = rest.multiDelete("b1", "", mdr);
+    MultiDeleteResponse response = rest.multiDelete("b1", "", mdr);
 
     //THEN
-    MultiDeleteResponse mdresponse = (MultiDeleteResponse) response.getEntity();
-
     Set<String> keysAtTheEnd = Sets.newHashSet(bucket.listKeys("")).stream()
         .map(OzoneKey::getName)
         .collect(Collectors.toSet());
@@ -80,7 +69,49 @@ public class TestObjectMultiDelete {
 
     //THEN
     Assert.assertEquals(expectedResult, keysAtTheEnd);
-    Assert.assertEquals(3, mdresponse.getDeletedObjects().size());
-    Assert.assertEquals(0, mdresponse.getErrors().size());
+    Assert.assertEquals(3, response.getDeletedObjects().size());
+    Assert.assertEquals(0, response.getErrors().size());
+  }
+
+  @Test
+  public void deleteQuiet() throws IOException, OS3Exception, JAXBException {
+    //GIVEN
+    OzoneClient client = new OzoneClientStub();
+    OzoneBucket bucket = initTestData(client);
+
+    BucketEndpoint rest = new BucketEndpoint();
+    rest.setClient(client);
+
+    MultiDeleteRequest mdr = new MultiDeleteRequest();
+    mdr.setQuiet(true);
+    mdr.getObjects().add(new DeleteObject("key1"));
+    mdr.getObjects().add(new DeleteObject("key2"));
+    mdr.getObjects().add(new DeleteObject("key4"));
+
+    //WHEN
+    MultiDeleteResponse response = rest.multiDelete("b1", "", mdr);
+
+    //THEN
+    Set<String> keysAtTheEnd = Sets.newHashSet(bucket.listKeys("")).stream()
+        .map(OzoneKey::getName)
+        .collect(Collectors.toSet());
+
+    //THEN
+    Assert.assertEquals(0, response.getDeletedObjects().size());
+    Assert.assertEquals(0, response.getErrors().size());
+  }
+
+  private OzoneBucket initTestData(OzoneClient client) throws IOException {
+    client.getObjectStore().createS3Bucket("bilbo", "b1");
+
+    String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
+
+    OzoneBucket bucket =
+        client.getObjectStore().getVolume(volumeName).getBucket("b1");
+
+    bucket.createKey("key1", 0).close();
+    bucket.createKey("key2", 0).close();
+    bucket.createKey("key3", 0).close();
+    return bucket;
   }
 }
