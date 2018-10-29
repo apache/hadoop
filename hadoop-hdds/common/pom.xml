@@ -239,6 +239,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>StorageContainerLocationProtocol.proto</include>
                   <include>hdds.proto</include>
                   <include>ScmBlockLocationProtocol.proto</include>
+                  <include>SCMSecurityProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

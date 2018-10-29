@@ -74,6 +74,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineReportHandler;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -108,8 +109,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -157,6 +156,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final SCMDatanodeProtocolServer datanodeProtocolServer;
   private final SCMBlockProtocolServer blockProtocolServer;
   private final SCMClientProtocolServer clientProtocolServer;
+  private final SCMSecurityProtocolServer securityProtocolServer;
 
   /*
    * State Managers of SCM.
@@ -210,8 +210,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     StorageContainerManager.initMetrics();
     initContainerReportCache(conf);
     // Authenticate SCM if security is enabled
-    if (conf.getBoolean(OZONE_SECURITY_ENABLED_KEY,
-        OZONE_SECURITY_ENABLED_DEFAULT)) {
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
       loginAsSCMUser(conf);
     }
 
@@ -294,6 +293,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         eventQueue);
     blockProtocolServer = new SCMBlockProtocolServer(conf, this);
     clientProtocolServer = new SCMClientProtocolServer(conf, this);
+    if (OzoneSecurityUtil.isSecurityEnabled(conf)) {
+      securityProtocolServer = new SCMSecurityProtocolServer(conf, this);
+    } else {
+      securityProtocolServer = null;
+    }
     httpServer = new StorageContainerManagerHttpServer(conf);
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
@@ -626,6 +630,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     return clientProtocolServer;
   }
 
+  public SCMSecurityProtocolServer getSecurityProtocolServer() {
+    return securityProtocolServer;
+  }
+
   /**
    * Initialize container reports cache that sent from datanodes.
    *
@@ -728,6 +736,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     LOG.info(buildRpcServerStartMessage("ScmDatanodeProtocl RPC " +
         "server", getDatanodeProtocolServer().getDatanodeRpcAddress()));
     getDatanodeProtocolServer().start();
+    if(getSecurityProtocolServer() != null) {
+      getSecurityProtocolServer().start();
+    }
 
     httpServer.start();
     scmBlockManager.start();
@@ -798,6 +809,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       LOG.error("Storage Container Manager HTTP server stop failed.", ex);
     }
 
+    if (getSecurityProtocolServer() != null) {
+      getSecurityProtocolServer().stop();
+    }
+
     try {
       LOG.info("Stopping Block Manager Service.");
       scmBlockManager.stop();
@@ -838,6 +853,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       getBlockProtocolServer().join();
       getClientProtocolServer().join();
       getDatanodeProtocolServer().join();
+      if(getSecurityProtocolServer() != null) {
+        getSecurityProtocolServer().join();
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.info("Interrupted during StorageContainerManager join.");
