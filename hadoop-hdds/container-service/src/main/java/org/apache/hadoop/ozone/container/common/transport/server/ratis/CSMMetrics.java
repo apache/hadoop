@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.ratis.protocol.RaftGroupId;
 
 /**
  * This class is for maintaining Container State Machine statistics.
@@ -47,9 +48,9 @@ public class CSMMetrics {
   public CSMMetrics() {
   }
 
-  public static CSMMetrics create() {
+  public static CSMMetrics create(RaftGroupId gid) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(SOURCE_NAME,
+    return ms.register(SOURCE_NAME + gid.toString(),
         "Container State Machine",
         new CSMMetrics());
   }

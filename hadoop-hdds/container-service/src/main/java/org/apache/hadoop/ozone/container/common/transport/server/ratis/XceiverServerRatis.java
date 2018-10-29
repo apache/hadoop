@@ -76,6 +76,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -94,11 +96,12 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final int port;
   private final RaftServer server;
   private ThreadPoolExecutor chunkExecutor;
+  private final List<ExecutorService> executors;
+  private final ContainerDispatcher dispatcher;
   private ClientId clientId = ClientId.randomId();
   private final StateContext context;
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
-  private ContainerStateMachine stateMachine;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext context)
@@ -121,18 +124,22 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     this.replicationLevel =
         conf.getEnum(OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT);
-    stateMachine = new ContainerStateMachine(dispatcher, chunkExecutor, this,
-        numContainerOpExecutors);
+    this.executors = new ArrayList<>();
+    this.dispatcher = dispatcher;
+    for (int i = 0; i < numContainerOpExecutors; i++) {
+      executors.add(Executors.newSingleThreadExecutor());
+    }
+
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)
-        .setStateMachine(stateMachine)
+        .setStateMachineRegistry(this::getStateMachine)
         .build();
   }
 
-  @VisibleForTesting
-  public ContainerStateMachine getStateMachine() {
-    return stateMachine;
+  private ContainerStateMachine getStateMachine(RaftGroupId gid) {
+    return new ContainerStateMachine(gid, dispatcher, chunkExecutor,
+            this, Collections.unmodifiableList(executors));
   }
 
   private RaftProperties newRaftProperties(Configuration conf) {
@@ -310,8 +317,11 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   @Override
   public void stop() {
     try {
-      chunkExecutor.shutdown();
+      // shutdown server before the executors as while shutting down,
+      // some of the tasks would be executed using the executors.
       server.close();
+      chunkExecutor.shutdown();
+      executors.forEach(ExecutorService::shutdown);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

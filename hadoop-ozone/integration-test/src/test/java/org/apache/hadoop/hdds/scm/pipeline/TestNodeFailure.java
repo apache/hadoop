@@ -118,7 +118,7 @@ public class TestNodeFailure {
         pipelineManager.getPipeline(ratisContainer2.getPipeline().getId())
             .getPipelineState());
     // Now restart the datanode and make sure that a new pipeline is created.
-    cluster.restartHddsDatanode(dnToFail);
+    cluster.restartHddsDatanode(dnToFail, true);
     ContainerWithPipeline ratisContainer3 =
         containerManager.allocateContainer(RATIS, THREE, "testOwner");
     //Assert that new container is not created from the ratis 2 pipeline

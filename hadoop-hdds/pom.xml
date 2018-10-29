@@ -45,7 +45,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hdds.version>0.4.0-SNAPSHOT</hdds.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.3.0-aa38160-SNAPSHOT</ratis.version>
+    <ratis.version>0.3.0-2272086-SNAPSHOT</ratis.version>
 
     <bouncycastle.version>1.60</bouncycastle.version>
 

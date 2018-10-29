@@ -523,9 +523,13 @@ public class SCMContainerManager implements ContainerManager {
       try {
         containerStateManager.updateContainerReplica(id, replica);
         ContainerInfo currentInfo = containerStateManager.getContainer(id);
-        if (newInfo.getState() == LifeCycleState.CLOSING
-            && currentInfo.getState() == LifeCycleState.CLOSED) {
+        if (newInfo.getState() == LifeCycleState.CLOSED
+            && currentInfo.getState() == LifeCycleState.CLOSING) {
           currentInfo = updateContainerStateInternal(id, LifeCycleEvent.CLOSE);
+          if (!currentInfo.isOpen()) {
+            pipelineManager.removeContainerFromPipeline(
+                currentInfo.getPipelineID(), id);
+          }
         }
 
         HddsProtos.SCMContainerInfo newState =
