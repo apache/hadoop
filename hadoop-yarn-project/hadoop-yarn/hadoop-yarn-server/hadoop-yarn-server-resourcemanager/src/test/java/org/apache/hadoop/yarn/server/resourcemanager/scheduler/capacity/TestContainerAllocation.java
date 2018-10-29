@@ -70,6 +70,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAX_ASSIGN_PER_HEARTBEAT;
 
 public class TestContainerAllocation {
 
@@ -906,6 +907,9 @@ public class TestContainerAllocation {
     CapacitySchedulerConfiguration newConf =
         (CapacitySchedulerConfiguration) TestUtils
             .getConfigurationWithMultipleQueues(conf);
+    // make sure an unlimited number of containers can be assigned,
+    // overriding the default of 100 after YARN-8896
+    newConf.set(MAX_ASSIGN_PER_HEARTBEAT, "-1");
     newConf.setUserLimit("root.c", 50);
     MockRM rm1 = new MockRM(newConf);
 
