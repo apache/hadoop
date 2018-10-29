@@ -66,7 +66,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
@@ -112,6 +111,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       LoggerFactory.getLogger(ContainerStateMachine.class);
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
+  private final RaftGroupId gid;
   private final ContainerDispatcher dispatcher;
   private ThreadPoolExecutor chunkExecutor;
   private final XceiverServerRatis ratisServer;
@@ -127,21 +127,19 @@ public class ContainerStateMachine extends BaseStateMachine {
    */
   private final CSMMetrics metrics;
 
-  public ContainerStateMachine(ContainerDispatcher dispatcher,
+  public ContainerStateMachine(RaftGroupId gid, ContainerDispatcher dispatcher,
       ThreadPoolExecutor chunkExecutor, XceiverServerRatis ratisServer,
-      int  numOfExecutors) {
+      List<ExecutorService> executors) {
+    this.gid = gid;
     this.dispatcher = dispatcher;
     this.chunkExecutor = chunkExecutor;
     this.ratisServer = ratisServer;
+    metrics = CSMMetrics.create(gid);
+    this.numExecutors = executors.size();
+    this.executors = executors.toArray(new ExecutorService[numExecutors]);
     this.writeChunkFutureMap = new ConcurrentHashMap<>();
-    metrics = CSMMetrics.create();
     this.createContainerFutureMap = new ConcurrentHashMap<>();
-    this.numExecutors = numOfExecutors;
-    executors = new ExecutorService[numExecutors];
     containerCommandCompletionMap = new ConcurrentHashMap<>();
-    for (int i = 0; i < numExecutors; i++) {
-      executors[i] = Executors.newSingleThreadExecutor();
-    }
   }
 
   @Override
@@ -207,7 +205,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     final ContainerCommandRequestProto proto =
         getRequestProto(request.getMessage().getContent());
-
+    Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     final StateMachineLogEntryProto log;
     if (proto.getCmdType() == Type.WriteChunk) {
       final WriteChunkRequestProto write = proto.getWriteChunk();
@@ -557,8 +555,5 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   @Override
   public void close() throws IOException {
-    for (int i = 0; i < numExecutors; i++) {
-      executors[i].shutdown();
-    }
   }
 }

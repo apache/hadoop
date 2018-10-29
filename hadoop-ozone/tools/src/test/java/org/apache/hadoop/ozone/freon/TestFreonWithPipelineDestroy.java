@@ -18,27 +18,23 @@
 
 package org.apache.hadoop.ozone.freon;
 
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .OZONE_SCM_STALENODE_INTERVAL;
-
 /**
- * Tests Freon with Datanode restarts.
+ * Tests Freon with Pipeline destroy.
  */
-public class TestFreonWithDatanodeRestart {
+public class TestFreonWithPipelineDestroy {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -52,13 +48,6 @@ public class TestFreonWithDatanodeRestart {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 5, TimeUnit.SECONDS);
-    conf.setTimeDuration(HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL, 1,
-        TimeUnit.SECONDS);
-    conf.setTimeDuration(HddsConfigKeys.HDDS_PIPELINE_REPORT_INTERVAL, 1,
-        TimeUnit.SECONDS);
-    conf.setTimeDuration(OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT, 5,
-        TimeUnit.SECONDS);
     cluster = MiniOzoneCluster.newBuilder(conf)
       .setHbProcessorInterval(1000)
       .setHbInterval(1000)
@@ -80,7 +69,7 @@ public class TestFreonWithDatanodeRestart {
   @Test
   public void testRestart() throws Exception {
     startFreon();
-    cluster.restartHddsDatanode(0, true);
+    destroyPipeline();
     startFreon();
   }
 
@@ -98,6 +87,18 @@ public class TestFreonWithDatanodeRestart {
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
-    Assert.assertEquals(0, randomKeyGenerator.getUnsuccessfulValidationCount());
+    Assert.assertEquals(0,
+        randomKeyGenerator.getUnsuccessfulValidationCount());
+  }
+
+  private void destroyPipeline() throws Exception {
+    XceiverServerSpi server =
+        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine().
+            getContainer().getServer(HddsProtos.ReplicationType.RATIS);
+    StorageContainerDatanodeProtocolProtos.PipelineReport report =
+        server.getPipelineReport().get(0);
+    PipelineID id = PipelineID.getFromProtobuf(report.getPipelineID());
+    cluster.getStorageContainerManager().getContainerManager()
+        .getPipelineSelector().closePipeline(id);
   }
 }
