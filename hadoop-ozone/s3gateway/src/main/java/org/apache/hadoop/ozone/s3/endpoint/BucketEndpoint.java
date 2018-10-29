@@ -223,7 +223,7 @@ public class BucketEndpoint extends EndpointBase {
    */
   @POST
   @Produces(MediaType.APPLICATION_XML)
-  public Response multiDelete(@PathParam("bucket") String bucketName,
+  public MultiDeleteResponse multiDelete(@PathParam("bucket") String bucketName,
       @QueryParam("delete") String delete,
       MultiDeleteRequest request) throws OS3Exception, IOException {
     OzoneBucket bucket = getBucket(bucketName);
@@ -251,11 +251,6 @@ public class BucketEndpoint extends EndpointBase {
         }
       }
     }
-    ResponseBuilder response = Response.ok();
-    if (!request.isQuiet() || result.getErrors().size() > 0) {
-      response = response.entity(result);
-    }
-    return response.build();
-
+    return result;
   }
 }
