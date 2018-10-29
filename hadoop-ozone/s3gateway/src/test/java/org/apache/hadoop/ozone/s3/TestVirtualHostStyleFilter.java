@@ -49,6 +49,7 @@ public class TestVirtualHostStyleFilter {
     conf = new OzoneConfiguration();
     s3HttpAddr = "localhost:9878";
     conf.set(S3GatewayConfigKeys.OZONE_S3G_HTTP_ADDRESS_KEY, s3HttpAddr);
+    s3HttpAddr = s3HttpAddr.substring(0, s3HttpAddr.lastIndexOf(":"));
     conf.set(S3GatewayConfigKeys.OZONE_S3G_DOMAIN_NAME, s3HttpAddr);
     authenticationHeaderParser = new AuthenticationHeaderParser();
     authenticationHeaderParser.setAuthHeader("AWS ozone:scret");
@@ -185,9 +186,10 @@ public class TestVirtualHostStyleFilter {
         authenticationHeaderParser);
 
     ContainerRequest containerRequest = createContainerRequest("mybucket" +
-        ".localhost:9999", null, null, true);
+        ".myhost:9999", null, null, true);
     try {
       virtualHostStyleFilter.filter(containerRequest);
+      fail("testVirtualHostStyleWithNoMatchingDomain");
     } catch (InvalidRequestException ex) {
       GenericTestUtils.assertExceptionContains("No matching domain", ex);
     }
