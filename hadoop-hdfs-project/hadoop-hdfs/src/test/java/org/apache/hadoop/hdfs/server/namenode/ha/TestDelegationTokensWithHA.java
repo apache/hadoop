@@ -332,29 +332,6 @@ public class TestDelegationTokensWithHA {
     }    
   }
 
-  @Test(timeout = 300000)
-  public void testHAUtilClonesDTsDomainNameResolvedFail() throws Exception {
-    final Token<DelegationTokenIdentifier> token =
-        getDelegationToken(fs, "JobTracker");
-
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test");
-
-    URI haUri = new URI("hdfs://my-ha-uri/");
-    token.setService(HAUtilClient.buildTokenServiceForLogicalUri(haUri,
-        HdfsConstants.HDFS_URI_SCHEME));
-    ugi.addToken(token);
-
-    Collection<InetSocketAddress> nnAddrs = new HashSet<InetSocketAddress>();
-    nnAddrs.add(new InetSocketAddress("domainname.doesnot.exist",
-        nn0.getNameNodeAddress().getPort()));
-    nnAddrs.add(new InetSocketAddress("localhost",
-        nn1.getNameNodeAddress().getPort()));
-    HAUtilClient.cloneDelegationTokenForLogicalUri(ugi, haUri, nnAddrs);
-
-    Collection<Token<? extends TokenIdentifier>> tokens = ugi.getTokens();
-    assertEquals(3, tokens.size());
-  }
-
   /**
    * HDFS-3062: DistributedFileSystem.getCanonicalServiceName() throws an
    * exception if the URI is a logical URI. This bug fails the combination of
