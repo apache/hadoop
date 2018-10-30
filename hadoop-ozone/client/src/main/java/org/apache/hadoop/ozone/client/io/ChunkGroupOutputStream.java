@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -191,9 +192,14 @@ public class ChunkGroupOutputStream extends OutputStream {
     ContainerWithPipeline containerWithPipeline = scmClient
         .getContainerWithPipeline(subKeyInfo.getContainerID());
     ContainerInfo container = containerWithPipeline.getContainerInfo();
+    Pipeline pipeline = containerWithPipeline.getPipeline();
+    if (pipeline.getMachines().isEmpty()) {
+      throw new IOException(
+          "No datanodes found in the pipeline " + pipeline.getId());
+    }
 
     XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
+        xceiverClientManager.acquireClient(pipeline);
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
       try {

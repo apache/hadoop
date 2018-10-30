@@ -279,6 +279,10 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       ContainerWithPipeline containerWithPipeline =
           storageContainerLocationClient.getContainerWithPipeline(containerID);
       Pipeline pipeline = containerWithPipeline.getPipeline();
+      if (pipeline.getMachines().isEmpty()) {
+        throw new IOException(
+            "No datanodes found in the pipeline " + pipeline.getId());
+      }
 
       // irrespective of the container state, we will always read via Standalone
       // protocol.

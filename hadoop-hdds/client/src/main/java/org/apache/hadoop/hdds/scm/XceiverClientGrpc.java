@@ -84,7 +84,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public void connect() throws Exception {
 
     // leader by default is the 1st datanode in the datanode list of pipleline
-    DatanodeDetails leader = this.pipeline.getLeader();
+    DatanodeDetails leader = this.pipeline.getMachines().get(0);
     // just make a connection to the 1st datanode at the beginning
     connectToDatanode(leader);
   }
@@ -201,7 +201,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
       ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-    return sendCommandAsync(request, pipeline.getLeader());
+    return sendCommandAsync(request, pipeline.getMachines().get(0));
   }
 
   private CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
