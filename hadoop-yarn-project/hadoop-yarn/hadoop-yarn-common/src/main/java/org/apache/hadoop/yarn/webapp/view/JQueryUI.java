@@ -66,10 +66,12 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css"))
-        .link(root_url("static/dt-1.10.7/css/jui-dt.css"))
+        .link(root_url("static/dt-1.10.18/css/jquery.dataTables.css"))
+        .link(root_url("static/dt-1.10.18/css/jui-dt.css"))
+        .link(root_url("static/dt-1.10.18/css/custom_datatable.css"))
         .script(root_url("static/jquery/jquery-3.3.1.min.js"))
         .script(root_url("static/jquery/jquery-ui-1.12.1.custom.min.js"))
-        .script(root_url("static/dt-1.10.7/js/jquery.dataTables.min.js"))
+        .script(root_url("static/dt-1.10.18/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/dt-sorting/natural.js"))
         .style("#jsnotice { padding: 0.2em; text-align: center; }",
