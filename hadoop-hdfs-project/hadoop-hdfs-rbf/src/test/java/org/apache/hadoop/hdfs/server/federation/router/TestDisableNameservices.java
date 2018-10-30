@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simul
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -43,13 +44,13 @@ import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
-import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -106,12 +107,16 @@ public class TestDisableNameservices {
     // Setup a mount table to map to the two namespaces
     MountTableManager mountTable = routerAdminClient.getMountTableManager();
     Map<String, String> destinations = new TreeMap<>();
-    destinations.put("ns0", "/");
-    destinations.put("ns1", "/");
-    MountTable newEntry = MountTable.newInstance("/", destinations);
-    newEntry.setDestOrder(DestinationOrder.RANDOM);
+    destinations.put("ns0", "/dirns0");
+    MountTable newEntry = MountTable.newInstance("/dirns0", destinations);
     AddMountTableEntryRequest request =
         AddMountTableEntryRequest.newInstance(newEntry);
+    mountTable.addMountTableEntry(request);
+
+    destinations = new TreeMap<>();
+    destinations.put("ns1", "/dirns1");
+    newEntry = MountTable.newInstance("/dirns1", destinations);
+    request = AddMountTableEntryRequest.newInstance(newEntry);
     mountTable.addMountTableEntry(request);
 
     // Refresh the cache in the Router
@@ -122,9 +127,9 @@ public class TestDisableNameservices {
 
     // Add a folder to each namespace
     NamenodeContext nn0 = cluster.getNamenode("ns0", null);
-    nn0.getFileSystem().mkdirs(new Path("/dirns0"));
+    nn0.getFileSystem().mkdirs(new Path("/dirns0/0"));
     NamenodeContext nn1 = cluster.getNamenode("ns1", null);
-    nn1.getFileSystem().mkdirs(new Path("/dirns1"));
+    nn1.getFileSystem().mkdirs(new Path("/dirns1/1"));
   }
 
   @AfterClass
@@ -153,14 +158,12 @@ public class TestDisableNameservices {
 
   @Test
   public void testWithoutDisabling() throws IOException {
-
     // ns0 is slow and renewLease should take a long time
     long t0 = monotonicNow();
     routerProtocol.renewLease("client0");
     long t = monotonicNow() - t0;
     assertTrue("It took too little: " + t + "ms",
         t > TimeUnit.SECONDS.toMillis(1));
-
     // Return the results from all subclusters even if slow
     FileSystem routerFs = routerContext.getFileSystem();
     FileStatus[] filesStatus = routerFs.listStatus(new Path("/"));
@@ -171,7 +174,6 @@ public class TestDisableNameservices {
 
   @Test
   public void testDisabling() throws Exception {
-
     disableNameservice("ns0");
 
     // renewLease should be fast as we are skipping ns0
@@ -180,12 +182,20 @@ public class TestDisableNameservices {
     long t = monotonicNow() - t0;
     assertTrue("It took too long: " + t + "ms",
         t < TimeUnit.SECONDS.toMillis(1));
-
     // We should not report anything from ns0
     FileSystem routerFs = routerContext.getFileSystem();
-    FileStatus[] filesStatus = routerFs.listStatus(new Path("/"));
+    FileStatus[] filesStatus = null;
+    try {
+      routerFs.listStatus(new Path("/"));
+      fail("The listStatus call should fail.");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "No remote locations available", ioe);
+    }
+
+    filesStatus = routerFs.listStatus(new Path("/dirns1"));
     assertEquals(1, filesStatus.length);
-    assertEquals("dirns1", filesStatus[0].getPath().getName());
+    assertEquals("1", filesStatus[0].getPath().getName());
   }
 
   @Test
