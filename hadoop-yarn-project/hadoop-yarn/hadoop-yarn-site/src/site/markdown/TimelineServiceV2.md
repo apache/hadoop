@@ -1570,3 +1570,8 @@ With this API, you can query set of available entity types for a given app id. I
 1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
 1. If flow context information cannot be retrieved or entity for the given entity id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
+
+## <a name="Aggregated Log Serving for Historical Apps"></a>Aggregated Log Serving for Historical Apps
+
+ TimelineService v.2 supports serving aggregated logs of historical apps. To enable this, configure "yarn.log.server.web-service.url" to "${yarn .timeline-service.hostname}:8188/ws/v2/applicationlog"
+ in `yarn-site.xml`
