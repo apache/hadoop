@@ -139,8 +139,6 @@ public final class BlockUtils {
         committedBlockLengthResponseBuilder =
         getCommittedBlockLengthResponseBuilder(blockLength,
             blockData.getBlockID());
-    committedBlockLengthResponseBuilder
-        .setBlockCommitSequenceId(blockData.getBlockCommitSequenceId());
     PutBlockResponseProto.Builder putKeyResponse =
         PutBlockResponseProto.newBuilder();
     putKeyResponse

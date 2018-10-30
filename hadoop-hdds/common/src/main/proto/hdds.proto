@@ -186,7 +186,12 @@ enum ScmOps {
 /**
  * Block ID that uniquely identify a block by SCM.
  */
-message BlockID {
+message ContainerBlockID {
     required int64 containerID = 1;
     required int64 localID = 2;
+}
+
+message BlockID {
+    required ContainerBlockID containerBlockID = 1;
+    optional uint64 blockCommitSequenceId = 2 [default = 0];
 }

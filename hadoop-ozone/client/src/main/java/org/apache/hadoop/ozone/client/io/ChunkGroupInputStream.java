@@ -297,8 +297,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
         ContainerProtos.DatanodeBlockID datanodeBlockID = blockID
             .getDatanodeBlockIDProtobuf();
         ContainerProtos.GetBlockResponseProto response = ContainerProtocolCalls
-            .getBlock(xceiverClient, datanodeBlockID, requestId,
-                omKeyLocationInfo.getBlockCommitSequenceId());
+            .getBlock(xceiverClient, datanodeBlockID, requestId);
         List<ContainerProtos.ChunkInfo> chunks =
             response.getBlockData().getChunksList();
         for (ContainerProtos.ChunkInfo chunk : chunks) {

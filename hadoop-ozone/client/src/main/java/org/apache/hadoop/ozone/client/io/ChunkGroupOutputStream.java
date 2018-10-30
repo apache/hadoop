@@ -128,7 +128,6 @@ public class ChunkGroupOutputStream extends OutputStream {
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
               .setShouldCreateContainer(false)
               .setLength(streamEntry.currentPosition).setOffset(0)
-              .setBlockCommitSequenceId(streamEntry.getBlockCommitSequenceId())
               .build();
       locationInfoList.add(info);
     }
@@ -614,7 +613,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private static class ChunkOutputStreamEntry extends OutputStream {
     private OutputStream outputStream;
-    private final BlockID blockID;
+    private BlockID blockID;
     private final String key;
     private final XceiverClientManager xceiverClientManager;
     private final XceiverClientSpi xceiverClient;
@@ -700,6 +699,11 @@ public class ChunkGroupOutputStream extends OutputStream {
     public void close() throws IOException {
       if (this.outputStream != null) {
         this.outputStream.close();
+        // after closing the chunkOutPutStream, blockId would have been
+        // reconstructed with updated bcsId
+        if (this.outputStream instanceof ChunkOutputStream) {
+          this.blockID = ((ChunkOutputStream) outputStream).getBlockID();
+        }
       }
     }
 
@@ -707,19 +711,6 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
         return out.getBuffer();
-      }
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
-
-    long getBlockCommitSequenceId() throws IOException {
-      if (this.outputStream instanceof ChunkOutputStream) {
-        ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
-        return out.getBlockCommitSequenceId();
-      } else if (outputStream == null) {
-        // For a pre allocated block for which no write has been initiated,
-        // the OutputStream will be null here.
-        // In such cases, the default blockCommitSequenceId will be 0
-        return 0;
       }
       throw new IOException("Invalid Output Stream for Key: " + key);
     }

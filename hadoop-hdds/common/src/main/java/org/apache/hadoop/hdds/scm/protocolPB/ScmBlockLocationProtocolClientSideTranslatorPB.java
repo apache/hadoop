@@ -20,7 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -102,7 +102,8 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
           response.getErrorMessage() : "Allocate block failed.");
     }
     AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
-        .setBlockID(BlockID.getFromProtobuf(response.getBlockID()))
+        .setContainerBlockID(
+            ContainerBlockID.getFromProtobuf(response.getContainerBlockID()))
         .setPipeline(Pipeline.getFromProtobuf(response.getPipeline()))
         .setShouldCreateContainer(response.getCreateContainer());
     return builder.build();

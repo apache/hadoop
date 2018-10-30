@@ -129,13 +129,13 @@ public class BlockManagerImpl implements BlockManager {
    *
    * @param container - Container from which block need to be fetched.
    * @param blockID - BlockID of the block.
-   * @param bcsId latest commit Id of the block
    * @return Key Data.
    * @throws IOException
    */
   @Override
-  public BlockData getBlock(Container container, BlockID blockID, long bcsId)
+  public BlockData getBlock(Container container, BlockID blockID)
       throws IOException {
+    long bcsId = blockID.getBlockCommitSequenceId();
     Preconditions.checkNotNull(blockID,
         "BlockID cannot be null in GetBlock request");
     Preconditions.checkNotNull(blockID.getContainerID(),
@@ -162,7 +162,7 @@ public class BlockManagerImpl implements BlockManager {
     }
     ContainerProtos.BlockData blockData =
         ContainerProtos.BlockData.parseFrom(kData);
-    long id = blockData.getBlockCommitSequenceId();
+    long id = blockData.getBlockID().getBlockCommitSequenceId();
     if (id < bcsId) {
       throw new StorageContainerException(
           "bcsId " + bcsId + " mismatches with existing block Id "

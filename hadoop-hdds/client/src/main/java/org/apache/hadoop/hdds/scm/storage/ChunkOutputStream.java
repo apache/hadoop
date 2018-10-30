@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.storage;
 
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -57,7 +58,7 @@ import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
  */
 public class ChunkOutputStream extends OutputStream {
 
-  private final BlockID blockID;
+  private BlockID blockID;
   private final String key;
   private final String traceID;
   private final BlockData.Builder containerBlockData;
@@ -67,7 +68,6 @@ public class ChunkOutputStream extends OutputStream {
   private final String streamId;
   private int chunkIndex;
   private int chunkSize;
-  private long blockCommitSequenceId;
 
   /**
    * Creates a new ChunkOutputStream.
@@ -96,15 +96,14 @@ public class ChunkOutputStream extends OutputStream {
     this.buffer = ByteBuffer.allocate(chunkSize);
     this.streamId = UUID.randomUUID().toString();
     this.chunkIndex = 0;
-    blockCommitSequenceId = 0;
   }
 
   public ByteBuffer getBuffer() {
     return buffer;
   }
 
-  public long getBlockCommitSequenceId() {
-    return blockCommitSequenceId;
+  public BlockID getBlockID() {
+    return blockID;
   }
 
   @Override
@@ -165,8 +164,12 @@ public class ChunkOutputStream extends OutputStream {
       try {
         ContainerProtos.PutBlockResponseProto responseProto =
             putBlock(xceiverClient, containerBlockData.build(), traceID);
-        blockCommitSequenceId =
-            responseProto.getCommittedBlockLength().getBlockCommitSequenceId();
+        BlockID responseBlockID = BlockID.getFromProtobuf(
+            responseProto.getCommittedBlockLength().getBlockID());
+        Preconditions.checkState(blockID.getContainerBlockID()
+            .equals(responseBlockID.getContainerBlockID()));
+        // updates the bcsId of the block
+        blockID = responseBlockID;
       } catch (IOException e) {
         throw new IOException(
             "Unexpected Storage Container Exception: " + e.toString(), e);
