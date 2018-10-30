@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.block;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
@@ -318,7 +319,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
 
     AllocatedBlock.Builder abb =
         new AllocatedBlock.Builder()
-            .setBlockID(new BlockID(containerID, localID))
+            .setContainerBlockID(new ContainerBlockID(containerID, localID))
             .setPipeline(containerWithPipeline.getPipeline())
             .setShouldCreateContainer(createContainer);
     LOG.trace("New block allocated : {} Container ID: {}", localID,

@@ -150,6 +150,7 @@ enum Result {
 message DatanodeBlockID {
   required int64 containerID = 1;
   required int64 localID = 2;
+  optional uint64 blockCommitSequenceId = 3 [default = 0];
 }
 
 message KeyValue {
@@ -303,7 +304,6 @@ message BlockData {
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
   optional int64 size = 5;
-  optional uint64 blockCommitSequenceId = 6;
 }
 
 // Block Messages.
@@ -317,7 +317,6 @@ message  PutBlockResponseProto {
 
 message  GetBlockRequestProto  {
   required DatanodeBlockID blockID = 1;
-  optional uint64 blockCommitSequenceId = 2 [default = 0];
 }
 
 message  GetBlockResponseProto  {
@@ -336,7 +335,6 @@ message  GetCommittedBlockLengthRequestProto {
 message  GetCommittedBlockLengthResponseProto {
   required DatanodeBlockID blockID = 1;
   required int64 blockLength = 2;
-  optional uint64 blockCommitSequenceId = 3 [default = 0];
 }
 
 message   DeleteBlockResponseProto {

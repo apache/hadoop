@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -120,7 +121,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
     long localID = Time.monotonicNow();
     AllocatedBlock.Builder abb =
         new AllocatedBlock.Builder()
-            .setBlockID(new BlockID(containerID, localID))
+            .setContainerBlockID(new ContainerBlockID(containerID, localID))
             .setPipeline(pipeline)
             .setShouldCreateContainer(false);
     return abb.build();

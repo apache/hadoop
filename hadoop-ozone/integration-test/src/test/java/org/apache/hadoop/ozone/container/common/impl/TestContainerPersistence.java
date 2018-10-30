@@ -558,7 +558,7 @@ public class TestContainerPersistence {
     blockData.setChunks(chunkList);
     blockManager.putBlock(container, blockData);
     BlockData readBlockData = blockManager.
-        getBlock(container, blockData.getBlockID(), 0);
+        getBlock(container, blockData.getBlockID());
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
     Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
@@ -596,25 +596,27 @@ public class TestContainerPersistence {
     blockManager.putBlock(container, blockData);
     BlockData readBlockData;
     try {
+      blockID1.setBlockCommitSequenceId(5);
       // read with bcsId higher than container bcsId
       blockManager.
-          getBlock(container, blockID1, 5);
+          getBlock(container, blockID1);
       Assert.fail("Expected exception not thrown");
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getResult() == UNKNOWN_BCSID);
     }
 
     try {
+      blockID1.setBlockCommitSequenceId(4);
       // read with bcsId lower than container bcsId but greater than committed
       // bcsId.
       blockManager.
-          getBlock(container, blockID1, 4);
+          getBlock(container, blockID1);
       Assert.fail("Expected exception not thrown");
     } catch (StorageContainerException sce) {
       Assert.assertTrue(sce.getResult() == BCSID_MISMATCH);
     }
     readBlockData = blockManager.
-        getBlock(container, blockData.getBlockID(), 4);
+        getBlock(container, blockData.getBlockID());
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(0));
     Assert.assertEquals(info.getChecksum(), readChunk.getChecksum());
@@ -666,7 +668,7 @@ public class TestContainerPersistence {
     blockData.setChunks(chunkProtoList);
     blockManager.putBlock(container, blockData);
     BlockData readBlockData = blockManager.
-        getBlock(container, blockData.getBlockID(), 0);
+        getBlock(container, blockData.getBlockID());
     ChunkInfo lastChunk = chunkList.get(chunkList.size() - 1);
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readBlockData.getChunks().get(readBlockData
@@ -694,7 +696,7 @@ public class TestContainerPersistence {
     blockManager.deleteBlock(container, blockID);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the block.");
-    blockManager.getBlock(container, blockData.getBlockID(), 0);
+    blockManager.getBlock(container, blockData.getBlockID());
   }
 
   /**

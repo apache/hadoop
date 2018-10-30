@@ -239,16 +239,18 @@ public class TestGetCommittedBlockLengthAndPutKey {
         ContainerTestHelper
             .getPutBlockRequest(pipeline, writeChunkRequest.getWriteChunk());
     response = client.sendCommand(putKeyRequest).getPutBlock();
+    Assert.assertEquals(
+        response.getCommittedBlockLength().getBlockLength(), data.length);
+    Assert.assertTrue(response.getCommittedBlockLength().getBlockID()
+        .getBlockCommitSequenceId() > 0);
+    BlockID responseBlockID = BlockID
+        .getFromProtobuf(response.getCommittedBlockLength().getBlockID());
+    blockID
+        .setBlockCommitSequenceId(responseBlockID.getBlockCommitSequenceId());
     // make sure the block ids in the request and response are same.
     // This will also ensure that closing the container committed the block
     // on the Datanodes.
-    Assert.assertEquals(BlockID
-        .getFromProtobuf(response.getCommittedBlockLength().getBlockID()),
-        blockID);
-    Assert.assertEquals(
-        response.getCommittedBlockLength().getBlockLength(), data.length);
-    Assert.assertTrue(
-        response.getCommittedBlockLength().getBlockCommitSequenceId() > 0);
+    Assert.assertEquals(responseBlockID, blockID);
     xceiverClientManager.releaseClient(client);
   }
 }
