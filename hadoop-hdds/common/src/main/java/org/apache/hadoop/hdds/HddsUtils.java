@@ -87,8 +87,20 @@ public final class HddsUtils {
    * @return Target InetSocketAddress for the SCM client endpoint.
    */
   public static InetSocketAddress getScmAddressForClients(Configuration conf) {
-    final Optional<String> host = getHostNameFromConfigKeys(conf,
+    Optional<String> host = getHostNameFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
+        throw new IllegalArgumentException(
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
+      }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
 
     if (!host.isPresent()) {
       throw new IllegalArgumentException(
@@ -109,7 +121,8 @@ public final class HddsUtils {
    * Retrieve the socket address that should be used by clients to connect
    * to the SCM for block service. If
    * {@link ScmConfigKeys#OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY} is not defined
-   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used.
+   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used. If neither
+   * is defined then {@link ScmConfigKeys#OZONE_SCM_NAMES} is used.
    *
    * @param conf
    * @return Target InetSocketAddress for the SCM block client endpoint.
@@ -123,13 +136,26 @@ public final class HddsUtils {
     if (!host.isPresent()) {
       host = getHostNameFromConfigKeys(conf,
           ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
-      if (!host.isPresent()) {
+    }
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
         throw new IllegalArgumentException(
-            ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY
-                + " must be defined. See"
-                + " https://wiki.apache.org/hadoop/Ozone#Configuration"
-                + " for details on configuring Ozone.");
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
       }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
+
+    if (!host.isPresent()) {
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY
+              + " must be defined. See"
+              + " https://wiki.apache.org/hadoop/Ozone#Configuration"
+              + " for details on configuring Ozone.");
     }
 
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,

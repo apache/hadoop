@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -81,10 +82,23 @@ public final class HddsServerUtil {
     // target host.
     // - OZONE_SCM_DATANODE_ADDRESS_KEY
     // - OZONE_SCM_CLIENT_ADDRESS_KEY
+    // - OZONE_SCM_NAMES
     //
-    final Optional<String> host = getHostNameFromConfigKeys(conf,
+    Optional<String> host = getHostNameFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY,
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
+        throw new IllegalArgumentException(
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
+      }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
 
     if (!host.isPresent()) {
       throw new IllegalArgumentException(
