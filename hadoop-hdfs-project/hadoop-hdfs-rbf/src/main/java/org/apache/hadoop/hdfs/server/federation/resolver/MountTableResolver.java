@@ -539,21 +539,28 @@ public class MountTableResolver
    * @param entry Mount table entry.
    * @return PathLocation containing the namespace, local path.
    */
-  private static PathLocation buildLocation(
-      final String path, final MountTable entry) {
-
+  private PathLocation buildLocation(
+      final String path, final MountTable entry) throws IOException {
     String srcPath = entry.getSourcePath();
     if (!path.startsWith(srcPath)) {
       LOG.error("Cannot build location, {} not a child of {}", path, srcPath);
       return null;
     }
+
+    List<RemoteLocation> dests = entry.getDestinations();
+    if (getClass() == MountTableResolver.class && dests.size() > 1) {
+      throw new IOException("Cannnot build location, "
+          + getClass().getSimpleName()
+          + " should not resolve multiple destinations for " + path);
+    }
+
     String remainingPath = path.substring(srcPath.length());
     if (remainingPath.startsWith(Path.SEPARATOR)) {
       remainingPath = remainingPath.substring(1);
     }
 
     List<RemoteLocation> locations = new LinkedList<>();
-    for (RemoteLocation oneDst : entry.getDestinations()) {
+    for (RemoteLocation oneDst : dests) {
       String nsId = oneDst.getNameserviceId();
       String dest = oneDst.getDest();
       String newPath = dest;
