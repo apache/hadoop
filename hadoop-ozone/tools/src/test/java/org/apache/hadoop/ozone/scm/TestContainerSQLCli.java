@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -122,7 +123,7 @@ public class TestContainerSQLCli {
     eventQueue = new EventQueue();
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
     PipelineManager pipelineManager =
-        cluster.getStorageContainerManager().getPipelineManager();
+        new SCMPipelineManager(conf, nodeManager, eventQueue);
     containerManager = new SCMContainerManager(conf, nodeManager,
         pipelineManager, eventQueue);
     blockManager = new BlockManagerImpl(
