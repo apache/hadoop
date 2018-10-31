@@ -99,7 +99,7 @@ public class TestNodeFailure {
     }
   }
 
-  @Test
+  @Test(timeout = 300_000L)
   public void testPipelineFail() throws InterruptedException, IOException,
       TimeoutException {
     Assert.assertEquals(ratisContainer1.getPipeline().getPipelineState(),
@@ -118,6 +118,7 @@ public class TestNodeFailure {
         pipelineManager.getPipeline(ratisContainer2.getPipeline().getId())
             .getPipelineState());
     // Now restart the datanode and make sure that a new pipeline is created.
+    cluster.setWaitForClusterToBeReadyTimeout(300000);
     cluster.restartHddsDatanode(dnToFail, true);
     ContainerWithPipeline ratisContainer3 =
         containerManager.allocateContainer(RATIS, THREE, "testOwner");

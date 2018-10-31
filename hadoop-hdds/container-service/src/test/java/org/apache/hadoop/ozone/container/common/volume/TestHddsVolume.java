@@ -31,6 +31,7 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -134,12 +135,14 @@ public class TestHddsVolume {
         scmUsedFile.exists());
 
     try {
-      // Volume.getAvailable() should fail with NullPointerException as usage
-      // is shutdown.
+      // Volume.getAvailable() should fail with IOException
+      // as usage thread is shutdown.
       volume.getAvailable();
       fail("HddsVolume#shutdown test failed");
     } catch (Exception ex){
-      assertTrue(ex instanceof NullPointerException);
+      assertTrue(ex instanceof IOException);
+      assertTrue(ex.getMessage().contains(
+          "Volume Usage thread is not running."));
     }
   }
 }

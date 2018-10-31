@@ -95,15 +95,30 @@ public class VolumeInfo {
     this.usage = new VolumeUsage(root, b.conf);
   }
 
-  public long getCapacity() {
-    return configuredCapacity < 0 ? usage.getCapacity() : configuredCapacity;
+  public long getCapacity() throws IOException {
+    if (configuredCapacity < 0) {
+      if (usage == null) {
+        throw new IOException("Volume Usage thread is not running. This error" +
+            " is usually seen during DataNode shutdown.");
+      }
+      return usage.getCapacity();
+    }
+    return configuredCapacity;
   }
 
   public long getAvailable() throws IOException {
+    if (usage == null) {
+      throw new IOException("Volume Usage thread is not running. This error " +
+          "is usually seen during DataNode shutdown.");
+    }
     return usage.getAvailable();
   }
 
   public long getScmUsed() throws IOException {
+    if (usage == null) {
+      throw new IOException("Volume Usage thread is not running. This error " +
+          "is usually seen during DataNode shutdown.");
+    }
     return usage.getScmUsed();
   }
 
