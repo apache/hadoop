@@ -186,7 +186,7 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
   }
 
   /**
-   * returns NodeDataDensity Metric.
+   * Returns NodeDataDensity Metric.
    *
    * @return float
    */
@@ -195,8 +195,8 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
   }
 
   /**
-   * computes nodes data density.
-   * <p/>
+   * Computes nodes data density.
+   *
    * This metric allows us to compare different  nodes and how well the data is
    * spread across a set of volumes inside the node.
    */
@@ -231,8 +231,8 @@ public class DiskBalancerDataNode implements Comparable<DiskBalancerDataNode> {
 
   /**
    * Adds a volume to the DataNode.
-   * <p/>
-   * it is assumed that we have one thread per node hence this call is not
+   *
+   * It is assumed that we have one thread per node hence this call is not
    * synchronised neither is the map is protected.
    *
    * @param volume - volume

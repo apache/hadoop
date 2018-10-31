@@ -168,7 +168,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     return VOID_JOURNAL_RESPONSE;
   }
 
-  /** @see JournalProtocol#heartbeat */
+  /** @see QJournalProtocol#heartbeat */
   @Override
   public HeartbeatResponseProto heartbeat(RpcController controller,
       HeartbeatRequestProto req) throws ServiceException {

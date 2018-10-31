@@ -33,7 +33,7 @@ public class XAttrStorage {
 
   /**
    * Reads the extended attribute of an inode by name with prefix.
-   * <p/>
+   * <p>
    *
    * @param inode INode to read
    * @param snapshotId the snapshotId of the requested path
@@ -48,11 +48,11 @@ public class XAttrStorage {
 
   /**
    * Reads the existing extended attributes of an inode.
-   * <p/>
+   * <p>
    * Must be called while holding the FSDirectory read lock.
    *
    * @param inodeAttr INodeAttributes to read.
-   * @return List<XAttr> <code>XAttr</code> list.
+   * @return {@code XAttr} list.
    */
   public static List<XAttr> readINodeXAttrs(INodeAttributes inodeAttr) {
     XAttrFeature f = inodeAttr.getXAttrFeature();
@@ -61,7 +61,7 @@ public class XAttrStorage {
   
   /**
    * Update xattrs of inode.
-   * <p/>
+   * <p>
    * Must be called while holding the FSDirectory write lock.
    * 
    * @param inode INode to update

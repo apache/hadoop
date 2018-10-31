@@ -220,7 +220,7 @@ public class BlockTokenSecretManager extends
   }
 
   /**
-   * Update block keys if update time > update interval.
+   * Update block keys if update time {@literal >} update interval.
    * @return true if the keys are updated.
    */
   public synchronized boolean updateKeys(final long updateTime) throws IOException {

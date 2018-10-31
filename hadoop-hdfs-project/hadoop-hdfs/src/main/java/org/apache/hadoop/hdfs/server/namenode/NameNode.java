@@ -176,8 +176,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  * is a second backup/failover NameNode, or when using federated NameNodes.)
  *
  * The NameNode controls two critical tables:
- *   1)  filename->blocksequence (namespace)
- *   2)  block->machinelist ("inodes")
+ *   1)  filename{@literal ->}blocksequence (namespace)
+ *   2)  block{@literal ->}machinelist ("inodes")
  *
  * The first table is stored on disk and is very precious.
  * The second table is rebuilt every time the NameNode comes up.
@@ -1111,7 +1111,7 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
-   * @return NameNodeHttpServer, used by unit tests to ensure a full shutdown,
+   * NameNodeHttpServer, used by unit tests to ensure a full shutdown,
    * so that no bind exception is thrown during restart.
    */
   @VisibleForTesting

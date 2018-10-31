@@ -208,7 +208,7 @@ public class LeaseManager {
    * read or write lock.
    *
    * @param ancestorDir the ancestor {@link INodeDirectory}
-   * @return Set<INodesInPath>
+   * @return {@code Set<INodesInPath>}
    */
   public Set<INodesInPath> getINodeWithLeases(final INodeDirectory
       ancestorDir) throws IOException {
