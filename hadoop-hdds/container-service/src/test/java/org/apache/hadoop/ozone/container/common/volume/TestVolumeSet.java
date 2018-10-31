@@ -222,8 +222,10 @@ public class TestVolumeSet {
         // getAvailable() should throw null pointer exception as usage is null.
         volume.getAvailable();
         fail("Volume shutdown failed.");
-      } catch (NullPointerException ex) {
+      } catch (IOException ex) {
         // Do Nothing. Exception is expected.
+        assertTrue(ex.getMessage().contains(
+            "Volume Usage thread is not running."));
       }
     }
   }

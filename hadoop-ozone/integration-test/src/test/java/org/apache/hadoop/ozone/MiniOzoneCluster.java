@@ -67,6 +67,14 @@ public interface MiniOzoneCluster {
   void waitForClusterToBeReady() throws TimeoutException, InterruptedException;
 
   /**
+   * Sets the timeout value after which
+   * {@link MiniOzoneCluster#waitForClusterToBeReady} times out.
+   *
+   * @param timeoutInMs timeout value in milliseconds
+   */
+  void setWaitForClusterToBeReadyTimeout(int timeoutInMs);
+
+  /**
    * Waits/blocks till the cluster is out of chill mode.
    *
    * @throws TimeoutException TimeoutException In case of timeout

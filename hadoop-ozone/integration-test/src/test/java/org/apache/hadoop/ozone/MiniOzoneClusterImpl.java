@@ -90,6 +90,9 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   private final OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
 
+  // Timeout for the cluster to be ready
+  private int waitForClusterToBeReadyTimeout = 60000; // 1 min
+
   /**
    * Creates a new MiniOzoneCluster.
    *
@@ -122,7 +125,18 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
           isReady? "Cluster is ready" : "Waiting for cluster to be ready",
           healthy, hddsDatanodes.size());
       return isReady;
-    }, 1000, 60 * 1000); //wait for 1 min.
+    }, 1000, waitForClusterToBeReadyTimeout);
+  }
+
+  /**
+   * Sets the timeout value after which
+   * {@link MiniOzoneClusterImpl#waitForClusterToBeReady} times out.
+   *
+   * @param timeoutInMs timeout value in milliseconds
+   */
+  @Override
+  public void setWaitForClusterToBeReadyTimeout(int timeoutInMs) {
+    waitForClusterToBeReadyTimeout = timeoutInMs;
   }
 
   /**
