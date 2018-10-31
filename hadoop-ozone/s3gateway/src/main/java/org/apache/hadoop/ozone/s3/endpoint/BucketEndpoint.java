@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.Error;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.http.HttpStatus;
@@ -70,6 +71,7 @@ public class BucketEndpoint extends EndpointBase {
    * for more details.
    */
   @GET
+  @SuppressFBWarnings
   public Response list(
       @PathParam("bucket") String bucketName,
       @QueryParam("delimiter") String delimiter,
@@ -83,12 +85,12 @@ public class BucketEndpoint extends EndpointBase {
       @Context HttpHeaders hh) throws OS3Exception, IOException {
 
     if (browser != null) {
-      try (InputStream browserPage = getClass()
-          .getResourceAsStream("/browser.html")) {
-        return Response.ok(browserPage,
+      InputStream browserPage = getClass()
+          .getResourceAsStream("/browser.html");
+      return Response.ok(browserPage,
             MediaType.TEXT_HTML_TYPE)
             .build();
-      }
+
     }
 
     if (prefix == null) {
@@ -295,7 +297,8 @@ public class BucketEndpoint extends EndpointBase {
     keyMetadata.setSize(next.getDataSize());
     keyMetadata.setETag("" + next.getModificationTime());
     keyMetadata.setStorageClass("STANDARD");
-    keyMetadata.setLastModified(Instant.ofEpochMilli(next.getModificationTime()));
+    keyMetadata.setLastModified(Instant.ofEpochMilli(
+        next.getModificationTime()));
     response.addKey(keyMetadata);
   }
 }
