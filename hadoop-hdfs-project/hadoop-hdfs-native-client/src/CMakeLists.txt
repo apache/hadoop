@@ -138,7 +138,27 @@ endif()
 
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
-add_subdirectory(main/native/libhdfspp)
+
+# Temporary fix to disable Libhdfs++ build on older systems that do not support thread_local
+include(CheckCXXSourceCompiles)
+unset (THREAD_LOCAL_SUPPORTED CACHE)
+set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
+set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+check_cxx_source_compiles(
+    "#include <thread>
+    int main(void) {
+      thread_local int s;
+      return 0;
+    }"
+    THREAD_LOCAL_SUPPORTED)
+if (THREAD_LOCAL_SUPPORTED)
+    add_subdirectory(main/native/libhdfspp)
+else()
+    message(WARNING
+    "WARNING: Libhdfs++ library was not built because the required feature thread_local storage \
+    is not supported by your compiler. Known compilers that support this feature: GCC 4.8+, Visual Studio 2015+, \
+    Clang (community version 3.3+), Clang (version for Xcode 8+ and iOS 9+).")
+endif (THREAD_LOCAL_SUPPORTED)
 
 if(REQUIRE_LIBWEBHDFS)
     add_subdirectory(contrib/libwebhdfs)
