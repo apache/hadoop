@@ -23,5 +23,5 @@ You need to
   3. Set bucket/endpointurl during the robot test execution
 
 ```
-robot -v bucket:ozonetest -v OZONE_S3_SET_CREDENTIALS:false -v ENDPOINT_URL:https://s3.us-east-2.amazonaws.com smoketest/s3
+robot -v bucket:ozonetest -v OZONE_TEST:false -v OZONE_S3_SET_CREDENTIALS:false -v ENDPOINT_URL:https://s3.us-east-2.amazonaws.com smoketest/s3
 ```
