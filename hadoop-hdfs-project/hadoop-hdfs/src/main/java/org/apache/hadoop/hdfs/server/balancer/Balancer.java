@@ -78,7 +78,7 @@ import com.google.common.base.Preconditions;
  * <p>SYNOPSIS
  * <pre>
  * To start:
- *      bin/start-balancer.sh [-threshold <threshold>]
+ *      bin/start-balancer.sh [-threshold {@literal <threshold>}]
  *      Example: bin/ start-balancer.sh 
  *                     start the balancer with a default threshold of 10%
  *               bin/ start-balancer.sh -threshold 5
@@ -113,13 +113,14 @@ import com.google.common.base.Preconditions;
  * <p>A system property that limits the balancer's use of bandwidth is 
  * defined in the default configuration file:
  * <pre>
- * <property>
- *   <name>dfs.datanode.balance.bandwidthPerSec</name>
- *   <value>1048576</value>
- * <description>  Specifies the maximum bandwidth that each datanode 
+ * &lt;property&gt;
+ *   &lt;name&gt;dfs.datanode.balance.bandwidthPerSec&lt;/name&gt;
+ *   &lt;value&gt;1048576&lt;/value&gt;
+ * &lt;description&gt;  Specifies the maximum bandwidth that each datanode
  * can utilize for the balancing purpose in term of the number of bytes 
- * per second. </description>
- * </property>
+ * per second.
+ * &lt;/description&gt;
+ * &lt;/property&gt;
  * </pre>
  * 
  * <p>This property determines the maximum speed at which a block will be 

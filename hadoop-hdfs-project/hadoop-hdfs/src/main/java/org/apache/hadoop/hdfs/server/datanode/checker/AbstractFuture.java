@@ -24,7 +24,10 @@ import com.google.common.annotations.Beta;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.base.Preconditions;
 import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.Uninterruptibles;
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
@@ -52,9 +55,7 @@ import java.util.logging.Logger;
  * {@link ListeningExecutorService}, and deriving a {@code Future} from an
  * existing one, typically using methods like {@link Futures#transform
  * (ListenableFuture, com.google.common.base.Function) Futures.transform}
- * and {@link Futures#catching(ListenableFuture, Class,
- * com.google.common.base.Function, java.util.concurrent.Executor)
- * Futures.catching}.
+ * and its overloaded versions.
  * <p>
  * <p>This class implements all methods in {@code ListenableFuture}.
  * Subclasses should provide a way to set the result of the computation
@@ -1265,12 +1266,6 @@ public abstract class AbstractFuture<V> implements ListenableFuture<V> {
    *       r.run();
    *     }
    *   }}</pre>
-   * <p>
-   * <p>This should be preferred to {@link #newDirectExecutorService()}
-   * because implementing the {@link ExecutorService} subinterface
-   * necessitates significant performance overhead.
-   *
-   * @since 18.0
    */
   public static Executor directExecutor() {
     return DirectExecutor.INSTANCE;

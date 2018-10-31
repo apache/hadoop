@@ -45,8 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * VolumeScanner scans a single volume.  Each VolumeScanner has its own thread.<p/>
- * They are all managed by the DataNode's BlockScanner.
+ * VolumeScanner scans a single volume.  Each VolumeScanner has its own thread.
+ * <p>They are all managed by the DataNode's BlockScanner.
  */
 public class VolumeScanner extends Thread {
   public static final Logger LOG =

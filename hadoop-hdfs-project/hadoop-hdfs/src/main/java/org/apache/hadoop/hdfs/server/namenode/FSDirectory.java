@@ -634,12 +634,10 @@ public class FSDirectory implements Closeable {
    *            no permission checks.
    * @param src The path to resolve.
    * @param dirOp The {@link DirOp} that controls additional checks.
-   * @param resolveLink If false, only ancestor symlinks will be checked.  If
-   *         true, the last inode will also be checked.
    * @return if the path indicates an inode, return path after replacing up to
-   *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is. If the path refers to a path in the "raw"
-   *         directory, return the non-raw pathname.
+   *        {@code <inodeid>} with the corresponding path of the inode, else
+   *        the path in {@code src} as is. If the path refers to a path in
+   *        the "raw" directory, return the non-raw pathname.
    * @throws FileNotFoundException
    * @throws AccessControlException
    * @throws ParentNotDirectoryException

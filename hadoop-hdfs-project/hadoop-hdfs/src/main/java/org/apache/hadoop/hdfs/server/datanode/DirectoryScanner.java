@@ -280,7 +280,6 @@ public class DirectoryScanner implements Runnable {
   /**
    * Create a new directory scanner, but don't cycle it running yet.
    *
-   * @param datanode the parent datanode
    * @param dataset the dataset to scan
    * @param conf the Configuration object
    */

@@ -152,7 +152,6 @@ public abstract class BlockPlacementPolicy {
 
   /**
    * Check if the move is allowed. Used by balancer and other tools.
-   * @
    *
    * @param candidates all replicas including source and target
    * @param source source replica of the move

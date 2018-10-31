@@ -669,10 +669,10 @@ public abstract class INodeReference extends INode {
     
     /**
      * {@inheritDoc}
-     * <br/>
+     * <br>
      * To destroy a DstReference node, we first remove its link with the 
-     * referred node. If the reference number of the referred node is <= 0, we 
-     * destroy the subtree of the referred node. Otherwise, we clean the 
+     * referred node. If the reference number of the referred node is &lt;= 0,
+     * we destroy the subtree of the referred node. Otherwise, we clean the
      * referred node's subtree and delete everything created after the last 
      * rename operation, i.e., everything outside of the scope of the prior 
      * WithName nodes.

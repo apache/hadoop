@@ -34,7 +34,7 @@ import java.util.TreeSet;
 /**
  * Greedy Planner is a simple planner that computes the largest possible move at
  * any point of time given a volumeSet.
- * <p/>
+ * <p>
  * This is done by choosing the disks with largest  amount of data above and
  * below the idealStorage and then a move is scheduled between them.
  */

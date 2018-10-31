@@ -523,8 +523,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2. For a {@link WithName} node, since the node must be in a snapshot, we 
    * only count the quota usage for those nodes that still existed at the 
    * creation time of the snapshot associated with the {@link WithName} node.
-   * We do not count in the size of the diff list.  
-   * <pre>
+   * We do not count in the size of the diff list.
+   * </pre>
    *
    * @param bsps Block storage policy suite to calculate intended storage type usage
    * @param blockStoragePolicyId block storage policy id of the current INode

@@ -69,7 +69,7 @@ public class DatanodeCacheManager {
 
   /**
    * Returns the live datanodes and its storage details, which has available
-   * space (> 0) to schedule block moves. This will return array of datanodes
+   * space (&gt; 0) to schedule block moves. This will return array of datanodes
    * from its local cache. It has a configurable refresh interval in millis and
    * periodically refresh the datanode cache by fetching latest
    * {@link Context#getLiveDatanodeStorageReport()} once it elapsed refresh
