@@ -141,6 +141,8 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
         ObserverReadInvocationHandler.class.getClassLoader(),
         new Class<?>[] { xface }, new ObserverReadInvocationHandler());
     combinedProxy = new ProxyInfo<>(wrappedProxy, combinedInfo.toString());
+    // TODO : make this configurable or remove this variable
+    this.observerReadEnabled = true;
   }
 
   public AlignmentContext getAlignmentContext() {
