@@ -24,6 +24,8 @@ import java.util.Collections;
 
 import org.apache.hadoop.conf.StorageSize;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -245,9 +247,8 @@ public class KeyValueContainerData extends ContainerData {
    *
    * @return Protocol Buffer Message
    */
-  public ContainerProtos.ContainerData getProtoBufMessage() {
-    ContainerProtos.ContainerData.Builder builder = ContainerProtos
-        .ContainerData.newBuilder();
+  public ContainerDataProto getProtoBufMessage() {
+    ContainerDataProto.Builder builder = ContainerDataProto.newBuilder();
     builder.setContainerID(this.getContainerID());
     builder.setContainerPath(this.getMetadataPath());
     builder.setState(this.getState());
@@ -282,7 +283,7 @@ public class KeyValueContainerData extends ContainerData {
    */
   @VisibleForTesting
   public static KeyValueContainerData getFromProtoBuf(
-      ContainerProtos.ContainerData protoData) throws IOException {
+      ContainerDataProto protoData) throws IOException {
     // TODO: Add containerMaxSize to ContainerProtos.ContainerData
     StorageSize storageSize = StorageSize.parse(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);

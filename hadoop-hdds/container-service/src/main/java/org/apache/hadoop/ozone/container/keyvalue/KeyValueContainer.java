@@ -30,13 +30,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -284,7 +282,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     } catch (StorageContainerException ex) {
       // Failed to update .container file. Reset the state to CLOSING
-      containerData.setState(ContainerLifeCycleState.CLOSING);
+      containerData.setState(ContainerProtos.ContainerDataProto.State.CLOSING);
       throw ex;
     } finally {
       writeUnlock();
@@ -309,7 +307,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   }
 
   @Override
-  public ContainerLifeCycleState getContainerState() {
+  public ContainerProtos.ContainerDataProto.State getContainerState() {
     return containerData.getState();
   }
 
@@ -427,7 +425,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   @Override
   public void exportContainerData(OutputStream destination,
       ContainerPacker<KeyValueContainerData> packer) throws IOException {
-    if (getContainerData().getState() != ContainerLifeCycleState.CLOSED) {
+    if (getContainerData().getState() !=
+        ContainerProtos.ContainerDataProto.State.CLOSED) {
       throw new IllegalStateException(
           "Only closed containers could be exported: ContainerId="
               + getContainerData().getContainerID());
@@ -518,10 +517,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
    * Returns KeyValueContainerReport for the KeyValueContainer.
    */
   @Override
-  public StorageContainerDatanodeProtocolProtos.ContainerInfo
-      getContainerReport() throws StorageContainerException{
-    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
-        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+  public ContainerReplicaProto getContainerReport()
+      throws StorageContainerException {
+    ContainerReplicaProto.Builder ciBuilder =
+        ContainerReplicaProto.newBuilder();
     ciBuilder.setContainerID(containerData.getContainerID())
         .setReadCount(containerData.getReadCount())
         .setWriteCount(containerData.getWriteCount())
@@ -540,18 +539,18 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
    * @return LifeCycle State of the container in HddsProtos format
    * @throws StorageContainerException
    */
-  private HddsProtos.LifeCycleState getHddsState()
+  private ContainerReplicaProto.State getHddsState()
       throws StorageContainerException {
-    HddsProtos.LifeCycleState state;
+    ContainerReplicaProto.State state;
     switch (containerData.getState()) {
     case OPEN:
-      state = HddsProtos.LifeCycleState.OPEN;
+      state = ContainerReplicaProto.State.OPEN;
       break;
     case CLOSING:
-      state = HddsProtos.LifeCycleState.CLOSING;
+      state = ContainerReplicaProto.State.CLOSING;
       break;
     case CLOSED:
-      state = HddsProtos.LifeCycleState.CLOSED;
+      state = ContainerReplicaProto.State.CLOSED;
       break;
     default:
       throw new StorageContainerException("Invalid Container state found: " +

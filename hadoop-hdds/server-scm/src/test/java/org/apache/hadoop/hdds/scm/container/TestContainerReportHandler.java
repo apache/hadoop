@@ -191,9 +191,11 @@ public class TestContainerReportHandler implements EventPublisher {
 
     for (long containerId : containerIds) {
       org.apache.hadoop.hdds.protocol.proto
-          .StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder
+          .StorageContainerDatanodeProtocolProtos
+          .ContainerReplicaProto.Builder
           ciBuilder = org.apache.hadoop.hdds.protocol.proto
-          .StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+          .StorageContainerDatanodeProtocolProtos
+          .ContainerReplicaProto.newBuilder();
       ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
           .setSize(5368709120L)
           .setUsed(2000000000L)

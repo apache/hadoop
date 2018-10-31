@@ -24,8 +24,6 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
@@ -185,7 +183,8 @@ public class TestKeyValueContainer {
     keyValueContainerData = keyValueContainer
         .getContainerData();
 
-    keyValueContainerData.setState(ContainerLifeCycleState.CLOSED);
+    keyValueContainerData.setState(
+        ContainerProtos.ContainerDataProto.State.CLOSED);
 
     int numberOfKeysToWrite = 12;
     //write one few keys to check the key count after import
@@ -286,7 +285,7 @@ public class TestKeyValueContainer {
 
   @Test
   public void testDeleteContainer() throws Exception {
-    keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
+    keyValueContainerData.setState(ContainerProtos.ContainerDataProto.State
         .CLOSED);
     keyValueContainer = new KeyValueContainer(
         keyValueContainerData, conf);
@@ -315,7 +314,7 @@ public class TestKeyValueContainer {
     keyValueContainerData = keyValueContainer
         .getContainerData();
 
-    assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+    assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
         keyValueContainerData.getState());
 
     //Check state in the .container file
@@ -325,7 +324,7 @@ public class TestKeyValueContainer {
 
     keyValueContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);
-    assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+    assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
         keyValueContainerData.getState());
   }
 
@@ -354,8 +353,8 @@ public class TestKeyValueContainer {
   @Test
   public void testUpdateContainerUnsupportedRequest() throws Exception {
     try {
-      keyValueContainerData.setState(ContainerProtos.ContainerLifeCycleState
-          .CLOSED);
+      keyValueContainerData.setState(
+          ContainerProtos.ContainerDataProto.State.CLOSED);
       keyValueContainer = new KeyValueContainer(keyValueContainerData, conf);
       keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
       Map<String, String> metadata = new HashMap<>();

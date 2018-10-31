@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
@@ -31,8 +33,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatRequestProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -66,8 +66,9 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   }
 
   // Map of datanode to containers
-  private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
-      new HashMap();
+  private Map<DatanodeDetails,
+      Map<String, ContainerReplicaProto>> nodeContainers =
+      new HashMap<>();
   private Map<DatanodeDetails, NodeReportProto> nodeReports = new HashMap<>();
   private AtomicInteger commandStatusReport = new AtomicInteger(0);
   private List<CommandStatus> cmdStatusList = new LinkedList<>();
@@ -274,7 +275,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
         nodeContainers.put(datanode, containers);
       }
 
-      for (StorageContainerDatanodeProtocolProtos.ContainerInfo report : reports
+      for (ContainerReplicaProto report : reports
           .getReportsList()) {
         containers.put(report.getContainerID(), report);
       }
@@ -297,7 +298,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * @return count of storage reports of a datanode
    */
   public int getContainerCountsForDatanode(DatanodeDetails datanodeDetails) {
-    Map<String, ContainerInfo> cr = nodeContainers.get(datanodeDetails);
+    Map<String, ContainerReplicaProto> cr =
+        nodeContainers.get(datanodeDetails);
     if(cr != null) {
       return cr.size();
     }

@@ -131,7 +131,7 @@ enum LifeCycleEvent {
     CLEANUP = 8;
 }
 
-message SCMContainerInfo {
+message ContainerInfoProto {
     required int64 containerID = 1;
     required LifeCycleState state = 2;
     optional PipelineID pipelineID = 3;
@@ -145,7 +145,7 @@ message SCMContainerInfo {
 }
 
 message ContainerWithPipeline {
-  required SCMContainerInfo containerInfo = 1;
+  required ContainerInfoProto containerInfo = 1;
   required Pipeline pipeline = 2;
 }
 

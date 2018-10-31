@@ -18,6 +18,8 @@ package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
@@ -27,8 +29,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.protocol
@@ -293,7 +293,7 @@ public final class TestUtils {
    */
   public static ContainerReportsProto getRandomContainerReports(
       int numberOfContainers) {
-    List<ContainerInfo> containerInfos = new ArrayList<>();
+    List<ContainerReplicaProto> containerInfos = new ArrayList<>();
     for (int i = 0; i < numberOfContainers; i++) {
       containerInfos.add(getRandomContainerInfo(i));
     }
@@ -326,7 +326,7 @@ public final class TestUtils {
    * @return ContainerReportsProto
    */
   public static ContainerReportsProto getContainerReports(
-      ContainerInfo... containerInfos) {
+      ContainerReplicaProto... containerInfos) {
     return getContainerReports(Arrays.asList(containerInfos));
   }
 
@@ -338,10 +338,10 @@ public final class TestUtils {
    * @return ContainerReportsProto
    */
   public static ContainerReportsProto getContainerReports(
-      List<ContainerInfo> containerInfos) {
+      List<ContainerReplicaProto> containerInfos) {
     ContainerReportsProto.Builder
         reportsBuilder = ContainerReportsProto.newBuilder();
-    for (ContainerInfo containerInfo : containerInfos) {
+    for (ContainerReplicaProto containerInfo : containerInfos) {
       reportsBuilder.addReports(containerInfo);
     }
     return reportsBuilder.build();
@@ -354,7 +354,8 @@ public final class TestUtils {
    *
    * @return ContainerInfo
    */
-  public static ContainerInfo getRandomContainerInfo(long containerId) {
+  public static ContainerReplicaProto getRandomContainerInfo(
+      long containerId) {
     return createContainerInfo(containerId,
         OzoneConsts.GB * 5,
         random.nextLong(1000),
@@ -379,11 +380,12 @@ public final class TestUtils {
    *
    * @return ContainerInfo
    */
-  public static ContainerInfo createContainerInfo(
+  public static ContainerReplicaProto createContainerInfo(
       long containerId, long size, long keyCount, long bytesUsed,
       long readCount, long readBytes, long writeCount, long writeBytes) {
-    return ContainerInfo.newBuilder()
+    return ContainerReplicaProto.newBuilder()
         .setContainerID(containerId)
+        .setState(ContainerReplicaProto.State.OPEN)
         .setSize(size)
         .setKeyCount(keyCount)
         .setUsed(bytesUsed)

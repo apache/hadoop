@@ -55,7 +55,7 @@ public final class HddsTestUtils {
    */
   public static NodeRegistrationContainerReport
       createNodeRegistrationContainerReport(List<ContainerInfo> dnContainers) {
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
+    List<StorageContainerDatanodeProtocolProtos.ContainerReplicaProto>
         containers = new ArrayList<>();
     dnContainers.forEach(c -> {
       containers.add(TestUtils.getRandomContainerInfo(c.getContainerID()));

@@ -464,7 +464,7 @@ public class TestCloseContainerHandlingByClient {
       if (datanodes.get(0).equals(datanodeService.getDatanodeDetails())) {
         datanodeService.getDatanodeStateMachine().getContainer()
             .getContainerSet().getContainer(containerID).getContainerData()
-            .setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+            .setState(ContainerProtos.ContainerDataProto.State.CLOSING);
       }
     }
     dataString = fixedLengthString(keyString, (chunkSize * 1 / 2));

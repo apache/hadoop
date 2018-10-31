@@ -161,7 +161,7 @@ public class TestContainerStateMachineFailures {
             .getContainer().getContainerSet()
             .getContainer(omKeyLocationInfo.getContainerID())
             .getContainerState()
-            == ContainerProtos.ContainerLifeCycleState.UNHEALTHY);
+            == ContainerProtos.ContainerDataProto.State.UNHEALTHY);
     try {
       // subsequent requests will fail with unhealthy container exception
       key.close();

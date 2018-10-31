@@ -181,7 +181,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       SCMListContainerResponseProto response =
           rpcProxy.listContainer(NULL_RPC_CONTROLLER, request);
       List<ContainerInfo> containerList = new ArrayList<>();
-      for (HddsProtos.SCMContainerInfo containerInfoProto : response
+      for (HddsProtos.ContainerInfoProto containerInfoProto : response
           .getContainersList()) {
         containerList.add(ContainerInfo.fromProtobuf(containerInfoProto));
       }
