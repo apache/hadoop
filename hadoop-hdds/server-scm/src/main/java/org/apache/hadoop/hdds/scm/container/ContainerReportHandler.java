@@ -78,7 +78,7 @@ public class ContainerReportHandler implements
 
       Set<ContainerID> containerIds = containerReport.getReportsList().stream()
           .map(StorageContainerDatanodeProtocolProtos
-              .ContainerInfo::getContainerID)
+              .ContainerReplicaProto::getContainerID)
           .map(ContainerID::new)
           .collect(Collectors.toSet());
 

@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerData;
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadContainerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -309,7 +309,7 @@ public class ContainerOperationClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public ContainerData readContainer(long containerID,
+  public ContainerDataProto readContainer(long containerID,
       Pipeline pipeline) throws IOException {
     XceiverClientSpi client = null;
     try {
@@ -337,7 +337,7 @@ public class ContainerOperationClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public ContainerData readContainer(long containerID) throws IOException {
+  public ContainerDataProto readContainer(long containerID) throws IOException {
     ContainerWithPipeline info = getContainerWithPipeline(containerID);
     return readContainer(containerID, info.getPipeline());
   }

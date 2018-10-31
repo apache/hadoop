@@ -32,11 +32,11 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerDataProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -385,13 +385,13 @@ public class KeyValueHandler extends Handler {
     }
 
     long containerID = kvContainer.getContainerData().getContainerID();
-    ContainerLifeCycleState containerState = kvContainer.getContainerState();
+    ContainerDataProto.State containerState = kvContainer.getContainerState();
 
     try {
-      if (containerState == ContainerLifeCycleState.CLOSED) {
+      if (containerState == ContainerDataProto.State .CLOSED) {
         LOG.debug("Container {} is already closed.", containerID);
         return ContainerUtils.getSuccessResponse(request);
-      } else if (containerState == ContainerLifeCycleState.INVALID) {
+      } else if (containerState == ContainerDataProto.State .INVALID) {
         LOG.debug("Invalid container data. ContainerID: {}", containerID);
         throw new StorageContainerException("Invalid container data. " +
             "ContainerID: " + containerID, INVALID_CONTAINER_STATE);
@@ -401,7 +401,7 @@ public class KeyValueHandler extends Handler {
 
       // remove the container from open block map once, all the blocks
       // have been committed and the container is closed
-      kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+      kvData.setState(ContainerDataProto.State.CLOSING);
       commitPendingBlocks(kvContainer);
       kvContainer.close();
       // make sure the the container open keys from BlockMap gets removed
@@ -798,9 +798,9 @@ public class KeyValueHandler extends Handler {
   private void checkContainerOpen(KeyValueContainer kvContainer)
       throws StorageContainerException {
 
-    ContainerLifeCycleState containerState = kvContainer.getContainerState();
+    ContainerDataProto.State containerState = kvContainer.getContainerState();
 
-    if (containerState == ContainerLifeCycleState.OPEN) {
+    if (containerState == ContainerDataProto.State.OPEN) {
       return;
     } else {
       String msg = "Requested operation not allowed as ContainerState is " +

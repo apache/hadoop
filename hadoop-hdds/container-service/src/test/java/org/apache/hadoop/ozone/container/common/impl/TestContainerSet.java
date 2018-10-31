@@ -51,8 +51,8 @@ public class TestContainerSet {
   public void testAddGetRemoveContainer() throws StorageContainerException {
     ContainerSet containerSet = new ContainerSet();
     long containerId = 100L;
-    ContainerProtos.ContainerLifeCycleState state = ContainerProtos
-        .ContainerLifeCycleState.CLOSED;
+    ContainerProtos.ContainerDataProto.State state = ContainerProtos
+        .ContainerDataProto.State.CLOSED;
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerId,
         (long) StorageUnit.GB.toBytes(5));
@@ -101,10 +101,10 @@ public class TestContainerSet {
       ContainerData containerData = kv.getContainerData();
       long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+        assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
             containerData.getState());
       } else {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
+        assertEquals(ContainerProtos.ContainerDataProto.State.OPEN,
             containerData.getState());
       }
       count++;
@@ -121,10 +121,10 @@ public class TestContainerSet {
       ContainerData containerData = kv.getContainerData();
       long containerId = containerData.getContainerID();
       if (containerId%2 == 0) {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED,
+        assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED,
             containerData.getState());
       } else {
-        assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN,
+        assertEquals(ContainerProtos.ContainerDataProto.State.OPEN,
             containerData.getState());
       }
       count++;
@@ -168,9 +168,9 @@ public class TestContainerSet {
       KeyValueContainerData kvData = new KeyValueContainerData(i,
           (long) StorageUnit.GB.toBytes(5));
       if (i%2 == 0) {
-        kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
+        kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
       } else {
-        kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
+        kvData.setState(ContainerProtos.ContainerDataProto.State.OPEN);
       }
       KeyValueContainer kv = new KeyValueContainer(kvData, new
           OzoneConfiguration());

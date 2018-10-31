@@ -40,8 +40,8 @@ public class TestKeyValueContainerData {
         .ContainerType.KeyValueContainer;
     String path = "/tmp";
     String containerDBType = "RocksDB";
-    ContainerProtos.ContainerLifeCycleState state = ContainerProtos
-        .ContainerLifeCycleState.CLOSED;
+    ContainerProtos.ContainerDataProto.State state =
+        ContainerProtos.ContainerDataProto.State.CLOSED;
     AtomicLong val = new AtomicLong(0);
 
     KeyValueContainerData kvData = new KeyValueContainerData(containerId,
@@ -49,7 +49,7 @@ public class TestKeyValueContainerData {
 
     assertEquals(containerType, kvData.getContainerType());
     assertEquals(containerId, kvData.getContainerID());
-    assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
+    assertEquals(ContainerProtos.ContainerDataProto.State.OPEN, kvData
         .getState());
     assertEquals(0, kvData.getMetadata().size());
     assertEquals(0, kvData.getNumPendingDeletionBlocks());

@@ -60,7 +60,7 @@ message GetContainerRequestProto {
 }
 
 message GetContainerResponseProto {
-  required SCMContainerInfo containerInfo = 1;
+  required ContainerInfoProto containerInfo = 1;
 }
 
 message GetContainerWithPipelineRequestProto {
@@ -77,7 +77,7 @@ message SCMListContainerRequestProto {
  }
 
 message SCMListContainerResponseProto {
-  repeated SCMContainerInfo containers = 1;
+  repeated ContainerInfoProto containers = 1;
 }
 
 message SCMDeleteContainerRequestProto {

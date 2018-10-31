@@ -253,13 +253,13 @@ public final class ContainerDataYaml {
         String state = (String) nodes.get(OzoneConsts.STATE);
         switch (state) {
         case "OPEN":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.OPEN);
+          kvData.setState(ContainerProtos.ContainerDataProto.State.OPEN);
           break;
         case "CLOSING":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+          kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSING);
           break;
         case "CLOSED":
-          kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
+          kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
           break;
         default:
           throw new IllegalStateException("Unexpected " +

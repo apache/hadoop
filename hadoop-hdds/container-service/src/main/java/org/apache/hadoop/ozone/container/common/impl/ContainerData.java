@@ -25,8 +25,8 @@ import java.util.List;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
     ContainerType;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
-    ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerDataProto;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 
@@ -65,7 +65,7 @@ public abstract class ContainerData {
   private final Map<String, String> metadata;
 
   // State of the Container
-  private ContainerLifeCycleState state;
+  private ContainerDataProto.State state;
 
   private final long maxSize;
 
@@ -121,7 +121,7 @@ public abstract class ContainerData {
     this.containerID = containerId;
     this.layOutVersion = layOutVersion;
     this.metadata = new TreeMap<>();
-    this.state = ContainerLifeCycleState.OPEN;
+    this.state = ContainerDataProto.State.OPEN;
     this.readCount = new AtomicLong(0L);
     this.readBytes =  new AtomicLong(0L);
     this.writeCount =  new AtomicLong(0L);
@@ -158,7 +158,7 @@ public abstract class ContainerData {
    * Returns the state of the container.
    * @return ContainerLifeCycleState
    */
-  public synchronized ContainerLifeCycleState getState() {
+  public synchronized ContainerDataProto.State getState() {
     return state;
   }
 
@@ -166,7 +166,7 @@ public abstract class ContainerData {
    * Set the state of the container.
    * @param state
    */
-  public synchronized void setState(ContainerLifeCycleState state) {
+  public synchronized void setState(ContainerDataProto.State state) {
     this.state = state;
   }
 
@@ -222,7 +222,7 @@ public abstract class ContainerData {
    * @return - boolean
    */
   public synchronized  boolean isOpen() {
-    return ContainerLifeCycleState.OPEN == state;
+    return ContainerDataProto.State.OPEN == state;
   }
 
   /**
@@ -230,7 +230,7 @@ public abstract class ContainerData {
    * @return - boolean
    */
   public synchronized boolean isValid() {
-    return !(ContainerLifeCycleState.INVALID == state);
+    return !(ContainerDataProto.State.INVALID == state);
   }
 
   /**
@@ -238,14 +238,14 @@ public abstract class ContainerData {
    * @return - boolean
    */
   public synchronized  boolean isClosed() {
-    return ContainerLifeCycleState.CLOSED == state;
+    return ContainerDataProto.State.CLOSED == state;
   }
 
   /**
    * Marks this container as closed.
    */
   public synchronized void closeContainer() {
-    setState(ContainerLifeCycleState.CLOSED);
+    setState(ContainerDataProto.State.CLOSED);
   }
 
   /**
@@ -431,5 +431,5 @@ public abstract class ContainerData {
    *
    * @return Protocol Buffer Message
    */
-  public abstract ContainerProtos.ContainerData getProtoBufMessage();
+  public abstract ContainerProtos.ContainerDataProto getProtoBufMessage();
 }

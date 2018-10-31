@@ -268,10 +268,10 @@ public class TestContainerPersistence {
 
     // ContainerSet#getContainerReport currently returns all containers (open
     // and closed) reports.
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
+    List<StorageContainerDatanodeProtocolProtos.ContainerReplicaProto> reports =
         containerSet.getContainerReport().getReportsList();
     Assert.assertEquals(10, reports.size());
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo report :
+    for (StorageContainerDatanodeProtocolProtos.ContainerReplicaProto report :
         reports) {
       long actualContainerID = report.getContainerID();
       Assert.assertTrue(containerIDs.remove(actualContainerID));

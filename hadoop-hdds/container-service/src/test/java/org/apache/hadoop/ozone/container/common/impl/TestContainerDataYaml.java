@@ -91,7 +91,7 @@ public class TestContainerDataYaml {
     assertEquals("RocksDB", kvData.getContainerDBType());
     assertEquals(containerFile.getParent(), kvData.getMetadataPath());
     assertEquals(containerFile.getParent(), kvData.getChunksPath());
-    assertEquals(ContainerProtos.ContainerLifeCycleState.OPEN, kvData
+    assertEquals(ContainerProtos.ContainerDataProto.State.OPEN, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
     assertEquals(0, kvData.getMetadata().size());
@@ -100,7 +100,7 @@ public class TestContainerDataYaml {
     // Update ContainerData.
     kvData.addMetadata("VOLUME", "hdfs");
     kvData.addMetadata("OWNER", "ozone");
-    kvData.setState(ContainerProtos.ContainerLifeCycleState.CLOSED);
+    kvData.setState(ContainerProtos.ContainerDataProto.State.CLOSED);
 
 
     ContainerDataYaml.createContainerFile(ContainerProtos.ContainerType
@@ -117,7 +117,7 @@ public class TestContainerDataYaml {
     assertEquals("RocksDB", kvData.getContainerDBType());
     assertEquals(containerFile.getParent(), kvData.getMetadataPath());
     assertEquals(containerFile.getParent(), kvData.getChunksPath());
-    assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData
+    assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED, kvData
         .getState());
     assertEquals(1, kvData.getLayOutVersion());
     assertEquals(2, kvData.getMetadata().size());
@@ -161,7 +161,7 @@ public class TestContainerDataYaml {
       ContainerUtils.verifyChecksum(kvData);
 
       //Checking the Container file data is consistent or not
-      assertEquals(ContainerProtos.ContainerLifeCycleState.CLOSED, kvData
+      assertEquals(ContainerProtos.ContainerDataProto.State.CLOSED, kvData
           .getState());
       assertEquals("RocksDB", kvData.getContainerDBType());
       assertEquals(ContainerProtos.ContainerType.KeyValueContainer, kvData

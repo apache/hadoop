@@ -25,11 +25,10 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -80,7 +79,7 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * @return ContainerLifeCycleState - Container State.
    * @throws StorageContainerException
    */
-  ContainerLifeCycleState getContainerState();
+  ContainerProtos.ContainerDataProto.State getContainerState();
 
   /**
    * Closes a open container, if it is already closed or does not exist a
@@ -130,7 +129,7 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Returns containerReport for the container.
    */
-  StorageContainerDatanodeProtocolProtos.ContainerInfo getContainerReport()
+  ContainerReplicaProto getContainerReport()
       throws StorageContainerException;
 
   /**
