@@ -60,6 +60,12 @@ public class ListObjectResponse {
   @XmlElement(name = "IsTruncated")
   private boolean isTruncated;
 
+  @XmlElement(name = "NextContinuationToken")
+  private String nextToken;
+
+  @XmlElement(name = "continueToken")
+  private String continueToken;
+
   @XmlElement(name = "Contents")
   private List<KeyMetadata> contents = new ArrayList<>();
 
@@ -146,6 +152,22 @@ public class ListObjectResponse {
 
   public void addPrefix(String relativeKeyName) {
     commonPrefixes.add(new CommonPrefix(relativeKeyName));
+  }
+
+  public String getNextToken() {
+    return nextToken;
+  }
+
+  public void setNextToken(String nextToken) {
+    this.nextToken = nextToken;
+  }
+
+  public String getContinueToken() {
+    return continueToken;
+  }
+
+  public void setContinueToken(String continueToken) {
+    this.continueToken = continueToken;
   }
 
   public int getKeyCount() {
