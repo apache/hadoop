@@ -111,6 +111,7 @@ def load_url_data(url):
  
 """ List all builds of the target project. """
 def list_builds(jenkins_url, job_name):
+  global error_count
   global summary_mode
   url = "%(jenkins)s/job/%(job_name)s/api/json?tree=builds[url,result,timestamp]" % dict(
       jenkins=jenkins_url,
