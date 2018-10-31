@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import re
 import sys
 
@@ -41,19 +42,19 @@ for line in sys.stdin:
   event = words[0]
   attrs = parse(words[1])
   if event == 'MapAttempt':
-    if attrs.has_key("START_TIME"):
+    if "START_TIME" in attrs:
       mapStartTime[attrs["TASKID"]] = int(attrs["START_TIME"])/1000
-    elif attrs.has_key("FINISH_TIME"):
+    elif "FINISH_TIME" in attrs:
       mapEndTime[attrs["TASKID"]] = int(attrs["FINISH_TIME"])/1000
   elif event == 'ReduceAttempt':
-    if attrs.has_key("START_TIME"):
+    if "START_TIME" in attrs:
       reduceStartTime[attrs["TASKID"]] = int(attrs["START_TIME"]) / 1000
-    elif attrs.has_key("FINISH_TIME"):
+    elif "FINISH_TIME" in attrs:
       reduceShuffleTime[attrs["TASKID"]] = int(attrs["SHUFFLE_FINISHED"])/1000
       reduceSortTime[attrs["TASKID"]] = int(attrs["SORT_FINISHED"])/1000
       reduceEndTime[attrs["TASKID"]] = int(attrs["FINISH_TIME"])/1000
   elif event == 'Task':
-    if attrs["TASK_TYPE"] == "REDUCE" and attrs.has_key("COUNTERS"):
+    if attrs["TASK_TYPE"] == "REDUCE" and "COUNTERS" in attrs:
       for n,v in re.findall(counterPat, attrs["COUNTERS"]):
         if n == "File Systems.HDFS bytes written":
           reduceBytes[attrs["TASKID"]] = int(v)
@@ -67,15 +68,14 @@ startTime = min(reduce(min, mapStartTime.values()),
 endTime = max(reduce(max, mapEndTime.values()),
               reduce(max, reduceEndTime.values()))
 
-reduces = reduceBytes.keys()
-reduces.sort()
+reduces = sorted(reduceBytes.keys())
 
-print "Name reduce-output-bytes shuffle-finish reduce-finish"
+print("Name reduce-output-bytes shuffle-finish reduce-finish")
 for r in reduces:
-  print r, reduceBytes[r], reduceShuffleTime[r] - startTime,
-  print reduceEndTime[r] - startTime
+  print(r, reduceBytes[r], reduceShuffleTime[r] - startTime, end=' ')
+  print(reduceEndTime[r] - startTime)
 
-print
+print()
 
 for t in range(startTime, endTime):
   runningMaps[t] = 0
@@ -94,7 +94,7 @@ for reduce in reduceStartTime.keys():
   for t in range(reduceSortTime[reduce], reduceEndTime[reduce]):
     runningReduces[t] += 1
 
-print "time maps shuffle merge reduce"
+print("time maps shuffle merge reduce")
 for t in range(startTime, endTime):
-  print t - startTime, runningMaps[t], shufflingReduces[t], sortingReduces[t], 
-  print runningReduces[t]
+  print(t - startTime, runningMaps[t], shufflingReduces[t], sortingReduces[t], end=' ') 
+  print(runningReduces[t])
