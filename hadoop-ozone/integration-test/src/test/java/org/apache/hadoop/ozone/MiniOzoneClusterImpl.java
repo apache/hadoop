@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -389,7 +390,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, ozoneEnabled);
       Path metaDir = Paths.get(path, "ozone-meta");
       Files.createDirectories(metaDir);
-      conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
       configureTrace();
     }
 
@@ -466,7 +467,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
         Files.createDirectories(metaDir);
         Files.createDirectories(dataDir);
         Files.createDirectories(ratisDir);
-        dnConf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
+        dnConf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDir.toString());
         dnConf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
             ratisDir.toString());

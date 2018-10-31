@@ -305,7 +305,7 @@ public final class HddsUtils {
   public static String getDatanodeIdFilePath(Configuration conf) {
     String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
     if (dataNodeIDPath == null) {
-      String metaPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+      String metaPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
       if (Strings.isNullOrEmpty(metaPath)) {
         // this means meta data is not found, in theory should not happen at
         // this point because should've failed earlier.

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.scm.command
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -69,7 +70,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETED_BLOCK_DB;
 
 /**
@@ -105,10 +105,10 @@ public class DeletedBlockLogImpl
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
 
-    File metaDir = getOzoneMetaDirPath(conf);
-    String scmMetaDataDir = metaDir.getPath();
-    File deletedLogDbPath = new File(scmMetaDataDir, DELETED_BLOCK_DB);
-    int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
+    final File metaDir = ServerUtils.getScmDbDir(conf);
+    final String scmMetaDataDir = metaDir.getPath();
+    final File deletedLogDbPath = new File(scmMetaDataDir, DELETED_BLOCK_DB);
+    final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
     // Load store of all transactions.
     deletedStore = MetadataStoreBuilder.newBuilder()

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -171,7 +172,7 @@ public class TestOmSQLCli {
     String dbOutPath =  GenericTestUtils.getTempPath(
         UUID.randomUUID() + "/out_sql.db");
 
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+    String dbRootPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + OM_DB_NAME;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 

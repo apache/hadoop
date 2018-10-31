@@ -22,11 +22,12 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * OMStorage is responsible for management of the StorageDirectories used by
@@ -42,7 +43,7 @@ public class OMStorage extends Storage {
    * @throws IOException if any directories are inaccessible.
    */
   public OMStorage(OzoneConfiguration conf) throws IOException {
-    super(NodeType.OM, getOzoneMetaDirPath(conf), STORAGE_DIR);
+    super(NodeType.OM, OmUtils.getOmDbDir(conf), STORAGE_DIR);
   }
 
   public void setScmId(String scmId) throws IOException {

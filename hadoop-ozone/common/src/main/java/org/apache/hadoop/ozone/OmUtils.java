@@ -17,12 +17,20 @@
 
 package org.apache.hadoop.ozone;
 
+import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
@@ -36,6 +44,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
  * communication.
  */
 public final class OmUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(OmUtils.class);
 
   private OmUtils() {
   }
@@ -90,5 +99,38 @@ public final class OmUtils {
     final Optional<Integer> port =
         getPortNumberFromConfigKeys(conf, OZONE_OM_HTTP_ADDRESS_KEY);
     return port.or(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
+  }
+
+  /**
+   * Get the location where OM should store its metadata directories.
+   * Fall back to OZONE_METADATA_DIRS if not defined.
+   *
+   * @param conf
+   * @return
+   */
+  public static File getOmDbDir(Configuration conf) {
+    final Collection<String> dbDirs = conf.getTrimmedStringCollection(
+        OMConfigKeys.OZONE_OM_DB_DIRS);
+
+    if (dbDirs.size() > 1) {
+      throw new IllegalArgumentException(
+          "Bad configuration setting " + OMConfigKeys.OZONE_OM_DB_DIRS +
+              ". OM does not support multiple metadata dirs currently.");
+    }
+
+    if (dbDirs.size() == 1) {
+      final File dbDirPath = new File(dbDirs.iterator().next());
+      if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
+        throw new IllegalArgumentException("Unable to create directory " +
+            dbDirPath + " specified in configuration setting " +
+            OMConfigKeys.OZONE_OM_DB_DIRS);
+      }
+      return dbDirPath;
+    }
+
+    LOG.warn("{} is not configured. We recommend adding this setting. " +
+        "Falling back to {} instead.",
+        OMConfigKeys.OZONE_OM_DB_DIRS, HddsConfigKeys.OZONE_METADATA_DIRS);
+    return ServerUtils.getOzoneMetaDirPath(conf);
   }
 }
