@@ -26,19 +26,21 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.apache.hadoop.hdds.client.ReplicationFactor;
-import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.apache.hadoop.ozone.s3.util.S3Consts.COPY_SOURCE_HEADER;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.STORAGE_CLASS_HEADER;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
@@ -80,9 +82,9 @@ public class TestPutObject {
     objectEndpoint.setHeaders(headers);
 
     //WHEN
-    Response response = objectEndpoint.put(bucketName, keyName,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-        body);
+    Response response = objectEndpoint.put(bucketName, keyName, CONTENT
+        .length(), body);
+
 
     //THEN
     String volumeName = clientStub.getObjectStore()
@@ -113,8 +115,6 @@ public class TestPutObject {
 
     //WHEN
     Response response = objectEndpoint.put(bucketName, keyName,
-        ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE,
         chunkedContent.length(),
         new ByteArrayInputStream(chunkedContent.getBytes()));
 
@@ -140,8 +140,7 @@ public class TestPutObject {
     keyName = "sourceKey";
 
     Response response = objectEndpoint.put(bucketName, keyName,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-        body);
+        CONTENT.length(), body);
 
     String volumeName = clientStub.getObjectStore().getOzoneVolumeName(
         bucketName);
@@ -157,12 +156,10 @@ public class TestPutObject {
 
 
     // Add copy header, and then call put
-    when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+    when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
         bucketName  + "/" + keyName);
 
-    response = objectEndpoint.put(destBucket, destkey,
-        ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-        body);
+    response = objectEndpoint.put(destBucket, destkey, CONTENT.length(), body);
 
     // Check destination key and response
     volumeName = clientStub.getObjectStore().getOzoneVolumeName(destBucket);
@@ -176,8 +173,7 @@ public class TestPutObject {
 
     // source and dest same
     try {
-      objectEndpoint.put(bucketName, keyName, ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE, CONTENT.length(), body);
+      objectEndpoint.put(bucketName, keyName, CONTENT.length(), body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getErrorMessage().contains("This copy request is " +
@@ -186,10 +182,9 @@ public class TestPutObject {
 
     // source bucket not found
     try {
-      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           nonexist + "/"  + keyName);
-      response = objectEndpoint.put(destBucket, destkey,
-          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
+      objectEndpoint.put(destBucket, destkey, CONTENT.length(),
           body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
@@ -198,11 +193,9 @@ public class TestPutObject {
 
     // dest bucket not found
     try {
-      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           bucketName + "/" + keyName);
-      response = objectEndpoint.put(nonexist, destkey,
-          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-          body);
+      objectEndpoint.put(nonexist, destkey, CONTENT.length(), body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
@@ -210,11 +203,9 @@ public class TestPutObject {
 
     //Both source and dest bucket not found
     try {
-      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           nonexist + "/" + keyName);
-      response = objectEndpoint.put(nonexist, destkey,
-          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-          body);
+      objectEndpoint.put(nonexist, destkey, CONTENT.length(), body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
@@ -222,14 +213,32 @@ public class TestPutObject {
 
     // source key not found
     try {
-      when(headers.getHeaderString("x-amz-copy-source")).thenReturn(
+      when(headers.getHeaderString(COPY_SOURCE_HEADER)).thenReturn(
           bucketName + "/" + nonexist);
-      response = objectEndpoint.put("nonexistent", keyName,
-          ReplicationType.STAND_ALONE, ReplicationFactor.ONE, CONTENT.length(),
-          body);
+      objectEndpoint.put("nonexistent", keyName, CONTENT.length(), body);
       fail("test copy object failed");
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchBucket"));
+    }
+
+  }
+
+  @Test
+  public void testInvalidStorageType() throws IOException {
+    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
+    ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    objectEndpoint.setHeaders(headers);
+    keyName = "sourceKey";
+    when(headers.getHeaderString(STORAGE_CLASS_HEADER)).thenReturn("random");
+
+    try {
+      Response response = objectEndpoint.put(bucketName, keyName,
+          CONTENT.length(), body);
+      fail("testInvalidStorageType");
+    } catch (OS3Exception ex) {
+      assertEquals(S3ErrorTable.INVALID_ARGUMENT.getErrorMessage(),
+          ex.getErrorMessage());
+      assertEquals("random", ex.getResource());
     }
 
   }

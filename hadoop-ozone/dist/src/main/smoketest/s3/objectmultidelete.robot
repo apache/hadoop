@@ -29,9 +29,9 @@ ${BUCKET}             generated
 
 Delete file with multi delete
                         Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key multidelete/f1 --body /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key multidelete/f2 --body /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key multidelete/f3 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key multidelete/f1 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key multidelete/f2 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key multidelete/f3 --body /tmp/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix multidelete/
                         Should contain             ${result}         multidelete/f1
                         Should contain             ${result}         multidelete/f2

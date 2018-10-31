@@ -30,7 +30,7 @@ ${BUCKET}             generated
 
 Put object to s3
                         Execute                    date > /tmp/testfile
-    ${result} =         Execute AWSS3ApiCli        put-object --bucket ${BUCKET} --key putobject/f1 --body /tmp/testfile
+    ${result} =         Execute AWSS3ApiCli        put-object --storage-class REDUCED_REDUNDANCY --bucket ${BUCKET} --key putobject/f1 --body /tmp/testfile
     ${result} =         Execute AWSS3ApiCli        list-objects --bucket ${BUCKET} --prefix putobject/
                         Should contain             ${result}         f1
 
