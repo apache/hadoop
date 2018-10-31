@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
@@ -116,7 +117,8 @@ public class OzoneBucketStub extends OzoneBucket {
 
   @Override
   public Iterator<? extends OzoneKey> listKeys(String keyPrefix) {
-    return keyDetails.values()
+    Map<String, OzoneKey> sortedKey = new TreeMap<String, OzoneKey>(keyDetails);
+    return sortedKey.values()
         .stream()
         .filter(key -> key.getName().startsWith(keyPrefix))
         .collect(Collectors.toList())
@@ -126,7 +128,8 @@ public class OzoneBucketStub extends OzoneBucket {
   @Override
   public Iterator<? extends OzoneKey> listKeys(String keyPrefix,
       String prevKey) {
-    return keyDetails.values()
+    Map<String, OzoneKey> sortedKey = new TreeMap<String, OzoneKey>(keyDetails);
+    return sortedKey.values()
         .stream()
         .filter(key -> key.getName().compareTo(prevKey) > 0)
         .filter(key -> key.getName().startsWith(keyPrefix))
