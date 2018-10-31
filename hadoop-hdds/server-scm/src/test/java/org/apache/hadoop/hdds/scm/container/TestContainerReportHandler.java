@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,7 +74,7 @@ public class TestContainerReportHandler implements EventPublisher {
         this.getClass().getSimpleName());
     //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir);
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir);
     EventQueue eventQueue = new EventQueue();
     PipelineManager pipelineManager =
         new SCMPipelineManager(conf, nodeManager, eventQueue);

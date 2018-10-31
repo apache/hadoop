@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.block;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
@@ -34,7 +35,6 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -79,7 +79,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     String path = GenericTestUtils
         .getTempPath(TestBlockManager.class.getSimpleName());
     testDir = Paths.get(path).toFile();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, path);
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, path);
     eventQueue = new EventQueue();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {

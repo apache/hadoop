@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.container.common;
 
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto
@@ -117,7 +118,7 @@ public final class SCMTestUtils {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(HDDS_DATANODE_DIR_KEY, GenericTestUtils
         .getRandomizedTempPath());
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, GenericTestUtils
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, GenericTestUtils
         .getRandomizedTempPath());
     return conf;
   }

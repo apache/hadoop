@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.utils.MetadataStore;
@@ -46,7 +47,6 @@ import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_PIPELINE_DB;
 
 /**
@@ -74,8 +74,8 @@ public class SCMPipelineManager implements PipelineManager {
     this.pipelineFactory = new PipelineFactory(nodeManager, stateManager, conf);
     int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    File metaDir = getOzoneMetaDirPath(conf);
-    File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
+    final File metaDir = ServerUtils.getScmDbDir(conf);
+    final File pipelineDBPath = new File(metaDir, SCM_PIPELINE_DB);
     this.pipelineStore =
         MetadataStoreBuilder.newBuilder()
             .setCreateIfMissing(true)

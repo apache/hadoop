@@ -19,13 +19,13 @@ package org.apache.hadoop.hdds.scm.server;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.common.Storage;
 
 import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.STORAGE_DIR;
 
@@ -40,7 +40,7 @@ public class SCMStorage extends Storage {
    * @throws IOException if any directories are inaccessible.
    */
   public SCMStorage(OzoneConfiguration conf) throws IOException {
-    super(NodeType.SCM, getOzoneMetaDirPath(conf), STORAGE_DIR);
+    super(NodeType.SCM, ServerUtils.getScmDbDir(conf), STORAGE_DIR);
   }
 
   public void setScmId(String scmId) throws IOException {

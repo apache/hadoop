@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -192,7 +193,7 @@ public class TestContainerSQLCli {
         UUID.randomUUID() + "/out_sql.db");
     // TODO : the following will fail due to empty Datanode list, need to fix.
     //String dnUUID = cluster.getDataNodes().get(0).getUuid();
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+    String dbRootPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + SCM_CONTAINER_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
     Connection conn;

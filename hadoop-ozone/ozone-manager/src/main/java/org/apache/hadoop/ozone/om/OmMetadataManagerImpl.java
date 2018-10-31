@@ -22,7 +22,9 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -54,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
@@ -114,7 +115,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private final Table s3Table;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
-    File metaDir = getOzoneMetaDirPath(conf);
+    File metaDir = OmUtils.getOmDbDir(conf);
     this.lock = new OzoneManagerLock(conf);
     this.openKeyExpireThresholdMS = 1000 * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,

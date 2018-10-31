@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -34,7 +35,6 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -77,7 +77,7 @@ public class TestSCMContainerManager {
 
     testDir = GenericTestUtils
         .getTestDir(TestSCMContainerManager.class.getSimpleName());
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setTimeDuration(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,

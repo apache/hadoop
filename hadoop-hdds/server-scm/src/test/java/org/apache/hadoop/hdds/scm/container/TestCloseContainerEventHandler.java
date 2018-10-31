@@ -21,6 +21,7 @@ import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
@@ -28,7 +29,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -65,7 +65,7 @@ public class TestCloseContainerEventHandler {
     testDir = GenericTestUtils
         .getTestDir(TestCloseContainerEventHandler.class.getSimpleName());
     configuration
-        .set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
+        .set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     nodeManager = new MockNodeManager(true, 10);
     PipelineManager pipelineManager =
         new SCMPipelineManager(configuration, nodeManager, eventQueue);

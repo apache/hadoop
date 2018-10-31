@@ -491,21 +491,30 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.db.dirs</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the OzoneManager stores its metadata. This should
+      be specified as a single directory. If the directory does not
+      exist then the OM will attempt to create it.
+
+      If undefined, then the OM will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
+  <property>
     <name>ozone.metadata.dirs</name>
     <value/>
-    <tag>OZONE, OM, SCM, CONTAINER, REQUIRED, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, STORAGE</tag>
     <description>
-      Ozone metadata is shared among OM, which acts as the namespace
-      manager for ozone, SCM which acts as the block manager and data nodes
-      which maintain the name of the key(Key Name and BlockIDs). This
-      replicated and distributed metadata store is maintained under the
-      directory pointed by this key. Since metadata can be I/O intensive, at
-      least on OM and SCM we recommend having SSDs. If you have the luxury
-      of mapping this path to SSDs on all machines in the cluster, that will
-      be excellent.
+      This setting is the fallback location for SCM, OM and DataNodes
+      to store their metadata. This setting may be used in test/PoC clusters
+      to simplify configuration.
 
-      If Ratis metadata directories are not specified, Ratis server will emit a
-      warning and use this path for storing its metadata too.
+      For production clusters or any time you care about performance, it is
+      recommended that ozone.om.db.dirs, ozone.scm.db.dirs and
+      dfs.container.ratis.datanode.storage.dir be configured separately.
     </description>
   </property>
   <property>
@@ -533,7 +542,19 @@
       Check the rocksdb documentation for more details.
     </description>
   </property>
+  <property>
+    <name>ozone.scm.db.dirs</name>
+    <value/>
+    <tag>OZONE, SCM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the StorageContainerManager stores its metadata.
+      This should be specified as a single directory. If the directory
+      does not exist then the SCM will attempt to create it.
 
+      If undefined, then the SCM will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
   <property>
     <name>ozone.scm.block.client.address</name>
     <value/>

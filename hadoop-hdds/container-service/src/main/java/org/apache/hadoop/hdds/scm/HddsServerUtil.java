@@ -18,9 +18,10 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.slf4j.Logger;
@@ -331,19 +332,16 @@ public final class HddsServerUtil {
   }
 
   public static String getOzoneDatanodeRatisDirectory(Configuration conf) {
-    final String ratisDir = File.separator + "ratis";
     String storageDir = conf.get(
             OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR);
 
     if (Strings.isNullOrEmpty(storageDir)) {
-      storageDir = conf.get(OzoneConfigKeys
-              .OZONE_METADATA_DIRS);
-      Preconditions.checkNotNull(storageDir, "ozone.metadata.dirs " +
-              "cannot be null, Please check your configs.");
-      storageDir = storageDir.concat(ratisDir);
       LOG.warn("Storage directory for Ratis is not configured." +
-               "Mapping Ratis storage under {}. It is a good idea " +
-               "to map this to an SSD disk.", storageDir);
+          "Mapping Ratis storage under {}. It is a good idea " +
+          "to map this to an SSD disk. Falling back to {}",
+          storageDir, HddsConfigKeys.OZONE_METADATA_DIRS);
+      File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
+      storageDir = (new File (metaDirPath, "ratis")).getPath();
     }
     return storageDir;
   }

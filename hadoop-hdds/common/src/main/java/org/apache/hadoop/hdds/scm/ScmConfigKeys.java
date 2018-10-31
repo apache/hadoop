@@ -31,6 +31,11 @@ import java.util.concurrent.TimeUnit;
 @InterfaceStability.Unstable
 public final class ScmConfigKeys {
 
+  // Location of SCM DB files. For now we just support a single
+  // metadata dir but in future we may support multiple for redundancy or
+  // performance.
+  public static final String OZONE_SCM_DB_DIRS = "ozone.scm.db.dirs";
+
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
       "scm.container.client.idle.threshold";
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
