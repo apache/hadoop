@@ -40,11 +40,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableSet;
 import java.util.Random;
 import org.slf4j.event.Level;
+
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 
 /**
  * Tests for ContainerStateManager.
@@ -120,13 +121,11 @@ public class TestContainerStateManagerIntegration {
   public void testContainerStateManagerRestart() throws IOException {
     // Allocate 5 containers in ALLOCATED state and 5 in CREATING state
 
-    List<ContainerInfo> containers = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       ContainerWithPipeline container = scm.getClientProtocolServer()
           .allocateContainer(
               xceiverClientManager.getType(),
               xceiverClientManager.getFactor(), containerOwner);
-      containers.add(container.getContainerInfo());
       if (i >= 5) {
         scm.getContainerManager().updateContainerState(container
                 .getContainerInfo().getContainerID(),
@@ -134,10 +133,13 @@ public class TestContainerStateManagerIntegration {
       }
     }
 
+    cluster.getStorageContainerManager().stop();
     // New instance of ContainerStateManager should load all the containers in
     // container store.
     ContainerStateManager stateManager =
-        new ContainerStateManager(conf, containerManager, selector);
+        new SCMContainerManager(conf, scm.getScmNodeManager(),
+            OZONE_SCM_DB_CACHE_SIZE_DEFAULT,
+            scm.getEventQueue()).getStateManager();
     int matchCount = stateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
