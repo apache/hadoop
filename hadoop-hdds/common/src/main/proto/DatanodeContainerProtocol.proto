@@ -413,7 +413,7 @@ message PutSmallFileRequestProto {
 
 
 message PutSmallFileResponseProto {
-
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
 message GetSmallFileRequestProto {

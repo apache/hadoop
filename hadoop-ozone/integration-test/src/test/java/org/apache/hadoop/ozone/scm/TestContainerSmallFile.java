@@ -152,7 +152,58 @@ public class TestContainerSmallFile {
     xceiverClientManager.releaseClient(client);
   }
 
+  @Test
+  public void testReadWriteWithBCSId() throws Exception {
+    String traceID = UUID.randomUUID().toString();
+    ContainerWithPipeline container =
+        storageContainerLocationClient.allocateContainer(
+            HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.ONE, containerOwner);
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline());
+    ContainerProtocolCalls.createContainer(client,
+        container.getContainerInfo().getContainerID(), traceID);
 
+    BlockID blockID1 = ContainerTestHelper.getTestBlockID(
+        container.getContainerInfo().getContainerID());
+    ContainerProtos.PutSmallFileResponseProto responseProto =
+        ContainerProtocolCalls
+            .writeSmallFile(client, blockID1, "data123".getBytes(), traceID);
+    long bcsId = responseProto.getCommittedBlockLength().getBlockID()
+        .getBlockCommitSequenceId();
+    try {
+      blockID1.setBlockCommitSequenceId(bcsId + 1);
+      //read a file with higher bcsId than the container bcsId
+      ContainerProtocolCalls
+          .readSmallFile(client, blockID1, traceID);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert
+          .assertTrue(sce.getResult() == ContainerProtos.Result.UNKNOWN_BCSID);
+    }
+
+    // write a new block again to bump up the container bcsId
+    BlockID blockID2 = ContainerTestHelper
+        .getTestBlockID(container.getContainerInfo().getContainerID());
+    ContainerProtocolCalls
+        .writeSmallFile(client, blockID2, "data123".getBytes(), traceID);
+
+    try {
+      blockID1.setBlockCommitSequenceId(bcsId + 1);
+      //read a file with higher bcsId than the committed bcsId for the block
+      ContainerProtocolCalls.readSmallFile(client, blockID1, traceID);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert
+          .assertTrue(sce.getResult() == ContainerProtos.Result.BCSID_MISMATCH);
+    }
+    blockID1.setBlockCommitSequenceId(bcsId);
+    ContainerProtos.GetSmallFileResponseProto response =
+        ContainerProtocolCalls.readSmallFile(client, blockID1, traceID);
+    String readData = response.getData().getData().toStringUtf8();
+    Assert.assertEquals("data123", readData);
+    xceiverClientManager.releaseClient(client);
+  }
 }
 
 

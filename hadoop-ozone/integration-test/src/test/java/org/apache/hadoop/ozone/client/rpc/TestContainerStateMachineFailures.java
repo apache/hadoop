@@ -23,16 +23,9 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.ContainerAction.Action;
-import org.apache.hadoop.hdds.protocol.proto.
-    StorageContainerDatanodeProtocolProtos.ContainerAction.Reason;
 import org.apache.hadoop.hdds.scm.container.
     common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
@@ -88,7 +81,6 @@ public class TestContainerStateMachineFailures {
     File baseDir = new File(path);
     baseDir.mkdirs();
 
-    chunkSize = (int) OzoneConsts.MB;
 
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 200,
         TimeUnit.MILLISECONDS);
@@ -140,7 +132,6 @@ public class TestContainerStateMachineFailures {
     Assert.assertEquals(1, locationInfoList.size());
     OmKeyLocationInfo omKeyLocationInfo = locationInfoList.get(0);
 
-    long containerID = omKeyLocationInfo.getContainerID();
     // delete the container dir
     FileUtil.fullyDelete(new File(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
@@ -171,15 +162,5 @@ public class TestContainerStateMachineFailures {
       Assert.assertTrue(((StorageContainerException) ioe.getCause()).getResult()
           == ContainerProtos.Result.CONTAINER_UNHEALTHY);
     }
-    StorageContainerDatanodeProtocolProtos.ContainerAction action =
-        StorageContainerDatanodeProtocolProtos.ContainerAction.newBuilder()
-            .setContainerID(containerID).setAction(Action.CLOSE)
-            .setReason(Reason.CONTAINER_UNHEALTHY)
-            .build();
-
-    // Make sure the container close action is initiated to SCM.
-    Assert.assertTrue(
-        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine().getContext()
-            .getAllPendingContainerActions().contains(action));
   }
 }

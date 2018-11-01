@@ -756,8 +756,6 @@ public class KeyValueHandler extends Handler {
     try {
       BlockID blockID = BlockID.getFromProtobuf(getSmallFileReq.getBlock()
           .getBlockID());
-      // TODO: add bcsId as a part of getSmallFile transaction
-      // by default its 0
       BlockData responseData = blockManager.getBlock(kvContainer, blockID);
 
       ContainerProtos.ChunkInfo chunkInfo = null;

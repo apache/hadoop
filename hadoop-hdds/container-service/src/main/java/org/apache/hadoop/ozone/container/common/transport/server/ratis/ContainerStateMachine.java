@@ -481,10 +481,11 @@ public class ContainerStateMachine extends BaseStateMachine {
           getRequestProto(trx.getStateMachineLogEntry().getLogData());
       Type cmdType = requestProto.getCmdType();
       CompletableFuture<Message> future;
-      if (cmdType == Type.PutBlock) {
+      if (cmdType == Type.PutBlock || cmdType == Type.PutSmallFile) {
         BlockData blockData;
-        ContainerProtos.BlockData blockDataProto =
-            requestProto.getPutBlock().getBlockData();
+        ContainerProtos.BlockData blockDataProto = cmdType == Type.PutBlock ?
+            requestProto.getPutBlock().getBlockData() :
+            requestProto.getPutSmallFile().getBlock().getBlockData();
 
         // set the blockCommitSequenceId
         try {
@@ -499,9 +500,20 @@ public class ContainerStateMachine extends BaseStateMachine {
             ContainerProtos.PutBlockRequestProto
                 .newBuilder(requestProto.getPutBlock())
                 .setBlockData(blockData.getProtoBufMessage()).build();
-        ContainerCommandRequestProto containerCommandRequestProto =
-            ContainerCommandRequestProto.newBuilder(requestProto)
-                .setPutBlock(putBlockRequestProto).build();
+        ContainerCommandRequestProto containerCommandRequestProto;
+        if (cmdType == Type.PutSmallFile) {
+          ContainerProtos.PutSmallFileRequestProto smallFileRequestProto =
+              ContainerProtos.PutSmallFileRequestProto
+                  .newBuilder(requestProto.getPutSmallFile())
+                  .setBlock(putBlockRequestProto).build();
+          containerCommandRequestProto =
+              ContainerCommandRequestProto.newBuilder(requestProto)
+                  .setPutSmallFile(smallFileRequestProto).build();
+        } else {
+          containerCommandRequestProto =
+              ContainerCommandRequestProto.newBuilder(requestProto)
+                  .setPutBlock(putBlockRequestProto).build();
+        }
         future = CompletableFuture
             .supplyAsync(() -> runCommand(containerCommandRequestProto),
                 getCommandExecutor(requestProto));
