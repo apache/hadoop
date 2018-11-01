@@ -298,7 +298,8 @@ public final class TestSecureOzoneCluster {
     } catch (Exception ex) {
       // Expects timeout failure from scmClient in KSM but KSM user login via
       // kerberos should succeed
-      Assert.assertTrue(logs.getOutput().contains("KSM login successful"));
+      Assert.assertTrue(
+          logs.getOutput().contains("Ozone Manager login successful."));
     }
   }
 
