@@ -526,6 +526,7 @@ public class SCMContainerManager implements ContainerManager {
         containerInfos = reports.getReportsList();
     PendingDeleteStatusList pendingDeleteStatusList =
         new PendingDeleteStatusList(datanodeDetails);
+    BatchOperation batch = new BatchOperation();
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo contInfo :
         containerInfos) {
       // Update replica info during registration process.
@@ -575,7 +576,7 @@ public class SCMContainerManager implements ContainerManager {
           //
           // We need to write this to DB again since the closed only write
           // the updated State.
-          containerStore.put(dbKey, newState.toByteArray());
+          batch.put(dbKey, newState.toByteArray());
 
         } else {
           // Container not found in our container db.
@@ -588,6 +589,7 @@ public class SCMContainerManager implements ContainerManager {
         lock.unlock();
       }
     }
+    containerStore.writeBatch(batch);
     if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
       eventPublisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
           pendingDeleteStatusList);
