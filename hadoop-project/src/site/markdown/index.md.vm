@@ -15,48 +15,56 @@
 Apache Hadoop ${project.version}
 ================================
 
-Apache Hadoop ${project.version} is a minor release in the 2.x.y release
-line, building upon the previous stable release 2.4.1.
+Apache Hadoop ${project.version} is a point release in the 2.x.y release
+line, building upon the previous stable release 2.9.1.
 
 Here is a short overview of the major features and improvements.
 
 *   Common
 
-    *   Authentication improvements when using an HTTP proxy server. This is
-        useful when accessing WebHDFS via a proxy server.
+    *   Aliyun OSS Support. See the
+        [user documentation](./hadoop-aliyun/tools/hadoop-aliyun/index.html)
+        for more details.
 
-    *   A new Hadoop metrics sink that allows writing directly to Graphite.
-
-    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
-        related to the Hadoop Compatible Filesystem (HCFS) effort.
+    *   HADOOP Resource Estimator. See the
+        [user documentation](./hadoop-resourceestimator/ResourceEstimator.html)
+        for more details.
 
 *   HDFS
 
-    *   Support for POSIX-style filesystem extended attributes. See the
-        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
+    *   HDFS Router based federation. See the
+        [user documentation](./hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html)
         for more details.
-
-    *   Using the OfflineImageViewer, clients can now browse an fsimage via
-        the WebHDFS API.
-
-    *   The NFS gateway received a number of supportability improvements and
-        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
-        and the gateway is now able to reject connections from unprivileged ports.
-
-    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
-        modernized with HTML5 and Javascript.
 
 *   YARN
 
-    *   YARN's REST APIs now support write/modify operations. Users can submit and
-        kill applications through REST APIs.
+    *   YARN Timeline Service v.2. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html)
+        for more details.
 
-    *   The timeline store in YARN, used for storing generic and
-        application-specific information for applications, supports authentication
-        through Kerberos.
+    *   YARN Federation. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/Federation.html)
+        for more details.
 
-    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
-        are created dynamically at runtime under any specified parent-queue.
+    *   Opportunistic Containers. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html)
+        for more details.
+
+    *   YARN Web UI v.2. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/YarnUI2.html)
+        for more details.
+
+    *   Capacity Scheduler
+
+        *   Changing queue configuration via API. See the
+            [user documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html#Changing_queue_configuration_via_API)
+            for more details.
+
+        *   Update Resources and Execution Type of an
+            allocated/running container. See the
+            [user documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html#Updating_a_Container_Experimental_-_API_may_change_in_the_future)
+            for more details.
+
 
 Getting Started
 ===============
