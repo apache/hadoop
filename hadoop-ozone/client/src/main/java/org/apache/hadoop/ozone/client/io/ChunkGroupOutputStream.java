@@ -413,6 +413,11 @@ public class ChunkGroupOutputStream extends OutputStream {
       return;
     }
 
+    // update currentStreamIndex in case of closed container exception. The
+    // current stream entry cannot be used for further writes because
+    // container is closed.
+    currentStreamIndex += 1;
+
     // In case where not a single chunk of data has been written to the Datanode
     // yet. This block does not yet exist on the datanode but cached on the
     // outputStream buffer. No need to call GetCommittedBlockLength here
@@ -429,7 +434,6 @@ public class ChunkGroupOutputStream extends OutputStream {
       // allocate new block and write this data in the datanode. The cached
       // data in the buffer does not exceed chunkSize.
       Preconditions.checkState(buffer.position() < chunkSize);
-      currentStreamIndex += 1;
       // readjust the byteOffset value to the length actually been written.
       byteOffset -= buffer.position();
       handleWrite(buffer.array(), 0, buffer.position());
