@@ -189,7 +189,6 @@ public class SCMClientProtocolServer implements
         }
       }
     }
-    String remoteUser = getRpcRemoteUsername();
     getScm().checkAdminAccess(null);
     return scm.getContainerManager()
         .getContainerWithPipeline(ContainerID.valueof(containerID));
