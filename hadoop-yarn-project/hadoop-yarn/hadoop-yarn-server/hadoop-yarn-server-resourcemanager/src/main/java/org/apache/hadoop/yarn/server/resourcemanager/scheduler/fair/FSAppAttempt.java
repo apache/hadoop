@@ -168,7 +168,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       Resource containerResource = rmContainer.getContainer().getResource();
       RMAuditLogger.logSuccess(getUser(), AuditConstants.RELEASE_CONTAINER,
-          "SchedulerApp", getApplicationId(), containerId, containerResource);
+          "SchedulerApp", getApplicationId(), containerId, containerResource,
+          rmContainer.getQueueName(), null);
 
       // Update usage metrics
       queue.getMetrics().releaseResources(
@@ -486,7 +487,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
       RMAuditLogger.logSuccess(getUser(), AuditConstants.ALLOC_CONTAINER,
           "SchedulerApp", getApplicationId(), container.getId(),
-          container.getResource());
+          container.getResource(), getQueueName(), null);
     } finally {
       writeLock.unlock();
     }
