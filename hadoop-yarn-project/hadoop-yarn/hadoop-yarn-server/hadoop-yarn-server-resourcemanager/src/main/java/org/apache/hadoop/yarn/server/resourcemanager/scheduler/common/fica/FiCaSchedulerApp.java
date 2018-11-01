@@ -166,9 +166,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     containersToPreempt.remove(containerId);
 
+    // In order to save space in the audit log, only include the partition
+    // if it is not the default partition.
+    String containerPartition = null;
+    if (partition != null && !partition.isEmpty()) {
+      containerPartition = partition;
+    }
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.RELEASE_CONTAINER, "SchedulerApp",
-        getApplicationId(), containerId);
+        getApplicationId(), containerId, getQueueName(), containerPartition);
     
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
@@ -230,9 +236,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           + " container=" + containerId + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
+    // In order to save space in the audit log, only include the partition
+    // if it is not the default partition.
+    String partition = node.getPartition();
+    if (partition == null || partition.isEmpty()) {
+      partition = null;
+    }
     RMAuditLogger.logSuccess(getUser(),
         AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
-        getApplicationId(), containerId);
+        getApplicationId(), containerId, getQueueName(), partition);
     
     return rmContainer;
   }
