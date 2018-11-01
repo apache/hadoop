@@ -47,6 +47,13 @@ public final class SmallFileUtils {
       ContainerCommandRequestProto msg) {
     ContainerProtos.PutSmallFileResponseProto.Builder getResponse =
         ContainerProtos.PutSmallFileResponseProto.newBuilder();
+    ContainerProtos.BlockData blockData =
+        msg.getPutSmallFile().getBlock().getBlockData();
+    ContainerProtos.GetCommittedBlockLengthResponseProto.Builder
+        committedBlockLengthResponseBuilder = BlockUtils
+        .getCommittedBlockLengthResponseBuilder(blockData.getSize(),
+            blockData.getBlockID());
+    getResponse.setCommittedBlockLength(committedBlockLengthResponseBuilder);
     ContainerCommandResponseProto.Builder builder =
         ContainerUtils.getSuccessResponseBuilder(msg);
     builder.setCmdType(ContainerProtos.Type.PutSmallFile);

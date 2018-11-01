@@ -59,6 +59,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyValue;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    PutSmallFileResponseProto;
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
@@ -231,10 +233,11 @@ public final class ContainerProtocolCalls  {
    * @param blockID - ID of the block
    * @param data - Data to be written into the container.
    * @param traceID - Trace ID for logging purpose.
+   * @return container protocol writeSmallFile response
    * @throws IOException
    */
-  public static void writeSmallFile(XceiverClientSpi client,
-      BlockID blockID, byte[] data, String traceID)
+  public static PutSmallFileResponseProto writeSmallFile(
+      XceiverClientSpi client, BlockID blockID, byte[] data, String traceID)
       throws IOException {
 
     BlockData containerBlockData =
@@ -268,6 +271,7 @@ public final class ContainerProtocolCalls  {
             .build();
     ContainerCommandResponseProto response = client.sendCommand(request);
     validateContainerResponse(response);
+    return response.getPutSmallFile();
   }
 
   /**

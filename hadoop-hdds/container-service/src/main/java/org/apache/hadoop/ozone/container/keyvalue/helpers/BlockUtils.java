@@ -188,7 +188,7 @@ public final class BlockUtils {
     return builder.build();
   }
 
-  private static GetCommittedBlockLengthResponseProto.Builder
+  public static GetCommittedBlockLengthResponseProto.Builder
           getCommittedBlockLengthResponseBuilder(long blockLength,
       ContainerProtos.DatanodeBlockID blockID) {
     ContainerProtos.GetCommittedBlockLengthResponseProto.Builder
