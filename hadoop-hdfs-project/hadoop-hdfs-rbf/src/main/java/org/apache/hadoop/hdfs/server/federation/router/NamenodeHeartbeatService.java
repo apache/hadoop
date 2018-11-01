@@ -351,7 +351,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
                 jsonObject.getLong("PendingReplicationBlocks"),
                 jsonObject.getLong("UnderReplicatedBlocks"),
                 jsonObject.getLong("PendingDeletionBlocks"),
-                jsonObject.getLong("ProvidedCapacityTotal"));
+                jsonObject.optLong("ProvidedCapacityTotal"));
           }
         }
       }
