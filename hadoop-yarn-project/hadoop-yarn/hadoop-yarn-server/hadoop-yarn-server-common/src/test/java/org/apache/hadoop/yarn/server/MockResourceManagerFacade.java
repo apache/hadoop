@@ -120,7 +120,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -338,9 +337,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       applicationContainerIdMap.remove(appId);
     }
 
-    return FinishApplicationMasterResponse.newInstance(
-        request.getFinalApplicationStatus() == FinalApplicationStatus.SUCCEEDED
-            ? true : false);
+    return FinishApplicationMasterResponse.newInstance(true);
   }
 
   protected ApplicationId getApplicationId(int id) {
