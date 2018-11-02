@@ -389,9 +389,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         if (change) {
           diffReport.addDirDiff(dir, relativePath, diff);
         }
+      } else {
+        diffReport.incrementDirsProcessed();
       }
+      long startTime = Time.monotonicNow();
       ReadOnlyList<INode> children = dir.getChildrenList(earlierSnapshot
           .getId());
+      diffReport.addChildrenListingTime(Time.monotonicNow() - startTime);
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
         boolean toProcess = !diff.containsDeleted(name);
@@ -418,6 +422,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       if (change) {
         diffReport.addFileDiff(file, relativePath);
       }
+      diffReport.incrementFilesProcessed();
     }
   }
 
