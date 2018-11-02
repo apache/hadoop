@@ -62,7 +62,9 @@ public class SnapshotBasedOverAllocationPreemptionPolicy
 
     int memoryOverLimit = utilization.getPhysicalMemory() -
         absoluteMemoryPreemptionThresholdMb;
-    float vcoreOverLimit = utilization.getCPU() - cpuPreemptionThreshold;
+    float vcoreOverLimit = utilization.getCPU() -
+        getContainersMonitor().getVCoresAllocatedForContainers() *
+        cpuPreemptionThreshold;
 
     if (vcoreOverLimit > 0) {
       timesCpuOverPreemption++;

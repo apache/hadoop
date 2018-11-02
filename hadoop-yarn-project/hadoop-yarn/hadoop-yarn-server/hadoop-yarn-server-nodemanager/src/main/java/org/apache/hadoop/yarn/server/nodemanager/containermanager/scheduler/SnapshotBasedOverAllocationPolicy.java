@@ -54,8 +54,8 @@ public class SnapshotBasedOverAllocationPolicy
         memoryOverAllocationThresholdBytes - memoryUtilizationBytes;
 
     int vcoreAvailable = Math.round(
-        (overAllocationThresholds.getCpuThreshold() - utilization.getCPU()) *
-            containersMonitor.getVCoresAllocatedForContainers());
+        containersMonitor.getVCoresAllocatedForContainers() *
+            overAllocationThresholds.getCpuThreshold() - utilization.getCPU());
 
     return (memoryAvailable <= 0 || vcoreAvailable <= 0) ? Resources.none() :
         Resource.newInstance(memoryAvailable >> 20, vcoreAvailable);

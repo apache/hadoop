@@ -47,9 +47,11 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
 
   @Before
   public void setUp() {
-    // the node has an allocation of 2048 MB of memory
+    // the node has an allocation of 2048 MB of memory and 4 vcores
     when(containersMonitor.getPmemAllocatedForContainers()).
         thenReturn(2048 * 1024 * 1024L);
+    when(containersMonitor.getVCoresAllocatedForContainers()).
+        thenReturn(4L);
   }
 
   /**
@@ -86,36 +88,36 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         new SnapshotBasedOverAllocationPreemptionPolicy(PREEMPTION_THRESHOLDS,
             MAX_CPU_OVER_PREEMPTION_THRESHOLDS, containersMonitor);
 
-    // the current CPU utilization, 1.0f, is over the preemption threshold,
-    // 0.75f, for the first time. The memory utilization, 1000 MB is below
+    // the current CPU utilization, 4.0f, is over the preemption threshold,
+    // 0.75f * 4, for the first time. The memory utilization, 1000 MB is below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed
     Assert.assertEquals(
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 0.5f, is below the preemption threshold,
-    // 0.75f. In the meantime the memory utilization, 1000 MB is also below
+    // the current CPU utilization, 2.0f, is below the preemption threshold,
+    // 0.75f * 4. In the meantime the memory utilization, 1000 MB is also below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 0.5f),
+            ResourceUtilization.newInstance(1000, 0, 2.0f),
             Time.now()));
     // no resources shall be reclaimed
     Assert.assertEquals(
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is over the preemption threshold,
-    // 0.75f. In the meantime the memory utilization, 1000 MB is below
+    // the current CPU utilization, 4.0f, is over the preemption threshold,
+    // 0.75f * 4. In the meantime the memory utilization, 1000 MB is below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed because the cpu utilization is allowed
     // to go over the preemption threshold at most two times in a row. It is
@@ -124,12 +126,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is again over the preemption
-    // threshold, 0.75f. In the meantime the memory utilization, 1000 MB
+    // the current CPU utilization, 4.0f, is again over the preemption
+    // threshold, 0.75f * 4. In the meantime the memory utilization, 1000 MB
     // is below the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed because the cpu utilization is allowed
     // to go over the preemption threshold at most two times in a row. It is
@@ -138,17 +140,17 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is over the preemption threshold,
+    // the current CPU utilization, 4.0f, is over the preemption threshold,
     // the third time in a row. In the meantime the memory utilization, 1000 MB
     // is below the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // the amount of cpu utilization over the preemption threshold, that is,
-    // 1.0 - 0.75f = 0.25, shall be reclaimed.
+    // (1.0 - 0.75)*4 = 1.0f, shall be reclaimed.
     Assert.assertEquals(
-        ResourceUtilization.newInstance(0, 0, 0.25f),
+        ResourceUtilization.newInstance(0, 0, 1.0f),
         preemptionPolicy.getResourcesToReclaim());
   }
 
@@ -162,12 +164,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         new SnapshotBasedOverAllocationPreemptionPolicy(PREEMPTION_THRESHOLDS,
             MAX_CPU_OVER_PREEMPTION_THRESHOLDS, containersMonitor);
 
-    // the current CPU utilization, 1.0f, is over the preemption threshold,
-    // 0.75f, for the first time. The memory utilization, 1000 MB is below
+    // the current CPU utilization, 4.0f, is over the preemption threshold,
+    // 0.75f * 4, for the first time. The memory utilization, 1000 MB is below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed because the cpu utilization is allowed
     // to go over the preemption threshold at most two times in a row. It is
@@ -176,12 +178,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 0.5f, is below the preemption threshold,
-    // 0.75f. The memory utilization, 2000 MB, however, is above the memory
+    // the current CPU utilization, 2.0f, is below the preemption threshold,
+    // 0.75f * 4. The memory utilization, 2000 MB, however, is above the memory
     // preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(2000, 0, 0.5f),
+            ResourceUtilization.newInstance(2000, 0, 2.0f),
             Time.now()));
     // the amount of memory utilization over the preemption threshold, that is,
     // 2000 - (2048 * 0.75) = 464 MB of memory, shall be reclaimed.
@@ -189,12 +191,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(464, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is over the preemption threshold,
-    // 0.75f, for the first time. The memory utilization, 1000 MB is below
+    // the current CPU utilization, 4.0f, is over the preemption threshold,
+    // 0.75f * 4, for the first time. The memory utilization, 1000 MB is below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed because the cpu utilization is allowed
     // to go over the preemption threshold at most two times in a row. It is
@@ -203,12 +205,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is again over the preemption
-    // threshold, 0.75f. In the meantime the memory utilization, 1000 MB
+    // the current CPU utilization, 4.0f, is again over the preemption
+    // threshold, 0.75f * 4. In the meantime the memory utilization, 1000 MB
     // is still below the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 1.0f),
+            ResourceUtilization.newInstance(1000, 0, 4.0f),
             Time.now()));
     // no resources shall be reclaimed because the cpu utilization is allowed
     // to go over the preemption threshold at most two times in a row. It is
@@ -217,20 +219,20 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         ResourceUtilization.newInstance(0, 0, 0.0f),
         preemptionPolicy.getResourcesToReclaim());
 
-    // the current CPU utilization, 1.0f, is over the CPU preemption threshold,
-    // 0.75f, the third time in a row. In the meantime, the memory utilization,
-    // 2000 MB, is also over the memory preemption threshold,
+    // the current CPU utilization, 4.0f, is over the CPU preemption threshold,
+    // 0.75f * 4, the third time in a row. In the meantime, the memory
+    // utilization, 2000 MB, is also over the memory preemption threshold,
     // 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(2000, 0, 1.0f),
+            ResourceUtilization.newInstance(2000, 0, 4.0f),
             Time.now()));
     // the amount of memory utilization over the preemption threshold, that is,
     // 2000 - (2048 * 0.75) = 464 MB of memory, and the amount of cpu
-    // utilization over the preemption threshold, that is, 1.0f - 0.75f = 0.25f,
+    // utilization over the preemption threshold, that is, 4.0 - 0.75f*4 = 1.0f,
     // shall be reclaimed.
     Assert.assertEquals(
-        ResourceUtilization.newInstance(464, 0, 0.25f),
+        ResourceUtilization.newInstance(464, 0, 1.0f),
         preemptionPolicy.getResourcesToReclaim());
   }
 
@@ -243,12 +245,12 @@ public class TestSnapshotBasedOverAllocationPreemptionPolicy {
         new SnapshotBasedOverAllocationPreemptionPolicy(PREEMPTION_THRESHOLDS,
             MAX_CPU_OVER_PREEMPTION_THRESHOLDS, containersMonitor);
 
-    // the current CPU utilization, 0.5f, is below the preemption threshold,
+    // the current CPU utilization, 2.0f, is below the preemption threshold,
     // 0.75f. In the meantime the memory utilization, 1000 MB is also below
     // the memory preemption threshold, 2048 * 0.75 = 1536 MB.
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(1000, 0, 0.5f),
+            ResourceUtilization.newInstance(1000, 0, 2.0f),
             Time.now()));
     // no resources shall be reclaimed because both CPU and memory utilization
     // are under the preemption threshold

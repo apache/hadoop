@@ -744,8 +744,7 @@ public abstract class SchedulerNode {
     // account for resources allocated in this heartbeat
     projectedNodeUtilization.addTo(
         (int) (resourceAllocatedPendingLaunch.getMemorySize()), 0,
-        (float) resourceAllocatedPendingLaunch.getVirtualCores() /
-            capacity.getVirtualCores());
+        (float) resourceAllocatedPendingLaunch.getVirtualCores());
 
     ResourceThresholds thresholds =
         overAllocationInfo.getOverAllocationThresholds();
@@ -756,7 +755,7 @@ public abstract class SchedulerNode {
         - projectedNodeUtilization.getPhysicalMemory());
     int allowedCpu = Math.max(0, (int)
         (overAllocationThreshold.getVirtualCores() -
-            projectedNodeUtilization.getCPU() * capacity.getVirtualCores()));
+            projectedNodeUtilization.getCPU()));
 
     Resource resourceAllowedForOpportunisticContainers =
         Resources.createResource(allowedMemory, allowedCpu);

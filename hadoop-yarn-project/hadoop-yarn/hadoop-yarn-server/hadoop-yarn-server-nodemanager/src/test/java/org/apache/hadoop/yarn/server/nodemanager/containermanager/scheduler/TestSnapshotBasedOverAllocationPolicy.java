@@ -60,6 +60,14 @@ public class TestSnapshotBasedOverAllocationPolicy {
     return (int) (Math.round(memoryUtilization * MEMORY_CAPACITY_BYTE) >> 20);
   }
 
+  /**
+   * Get the amount of vcores used given a cpu utilization percentage.
+   * @param cpuUtilizationPercentage cpu utilization percentage in [0, 1.0]
+   */
+  private static float getVcores(float cpuUtilizationPercentage) {
+    return VCORE_CAPACITY * cpuUtilizationPercentage;
+  }
+
   @Test
   public void testNoVcoresAvailable() {
     SnapshotBasedOverAllocationPolicy overAllocationPolicy =
@@ -69,7 +77,7 @@ public class TestSnapshotBasedOverAllocationPolicy {
     // the current cpu utilization is over the threshold, 0.8
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(0, 0, 0.9f),
+            ResourceUtilization.newInstance(0, 0, getVcores(0.9f)),
             System.currentTimeMillis()));
     Resource available = overAllocationPolicy.getAvailableResources();
     Assert.assertEquals(
@@ -105,7 +113,7 @@ public class TestSnapshotBasedOverAllocationPolicy {
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
             ResourceUtilization.newInstance(
-                getMemoryMBs(0.9), 0, 0.9f),
+                getMemoryMBs(0.9), 0, getVcores(0.9f)),
             System.currentTimeMillis()));
     Resource available = overAllocationPolicy.getAvailableResources();
     Assert.assertEquals(
@@ -123,8 +131,8 @@ public class TestSnapshotBasedOverAllocationPolicy {
     int memoryUtilizationMBs = getMemoryMBs(0.6);
     when(containersMonitor.getContainersUtilization(anyBoolean())).thenReturn(
         new ContainersMonitor.ContainersResourceUtilization(
-            ResourceUtilization.newInstance(memoryUtilizationMBs, 0, 0.6f),
-            System.currentTimeMillis()));
+            ResourceUtilization.newInstance(memoryUtilizationMBs, 0,
+                getVcores(0.6f)), System.currentTimeMillis()));
     Resource available = overAllocationPolicy.getAvailableResources();
     Assert.assertEquals("Unexpected resources available for overallocation",
         Resource.newInstance(

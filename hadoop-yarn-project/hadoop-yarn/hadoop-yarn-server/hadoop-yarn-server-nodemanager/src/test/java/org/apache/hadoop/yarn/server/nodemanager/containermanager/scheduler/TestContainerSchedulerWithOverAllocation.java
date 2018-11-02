@@ -177,9 +177,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(
         containerManager, createContainerId(1), ContainerSubState.RUNNING);
 
-    // the current containers utilization is low
+    // the current containers utilization is low, only 512MBs out of 2GBs and
+    // 0.5 out 4 vcores are being used.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(512, 0, 1.0f/8));
+        ResourceUtilization.newInstance(512, 0, 0.5f));
 
     // start a container that requests more than what's left unallocated
     // 512 + 1024 + 824 > 2048
@@ -251,9 +252,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(
         containerManager, createContainerId(1), ContainerSubState.RUNNING);
 
-    // the containers utilization is high
+    // the containers memory utilization is high, 1500 MBs out of 2GBs and
+    // but the cpu utilization, 0.5 out of 4 vcores, is low
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1500, 0, 1.0f/8));
+        ResourceUtilization.newInstance(1500, 0, 0.5f));
 
     // start a container that requests more than what's left unallocated
     // 512 + 1024 + 824 > 2048
@@ -313,9 +315,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
 
-    // the current containers utilization is low
+    // the current containers utilization is low, 800 MBs out of 2GBs and
+    // 0.5 out of 4 vcores are being used
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(800, 0, 1.0f/8));
+        ResourceUtilization.newInstance(800, 0, 0.5f));
 
     // start a container when there is no resources left unallocated.
     containerManager.startContainers(StartContainersRequest.newInstance(
@@ -383,9 +386,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
 
-    // the containers are fully utilizing their resources
+    // the containers are fully utilizing their memory, 2048 MBs out of
+    // 2 GBs, but cpu utlization, 0.5 out of 4 vcores, is low
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(2048, 0, 1.0f/8));
+        ResourceUtilization.newInstance(2048, 0, 0.5f));
 
     // start more OPPORTUNISTIC containers than what the OPPORTUNISTIC container
     // queue can hold when there is no unallocated resource left.
@@ -451,9 +455,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
 
-    //  containers utilization is above the over-allocation threshold
+    // containers utilization is above the over-allocation threshold
+    // 1600 MBs out of 2GBs and 2 out of 4 vcores are being used.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1600, 0, 1.0f/2));
+        ResourceUtilization.newInstance(1600, 0, 2.0f));
 
     // start a container that can just fit in the remaining unallocated space
     containerManager.startContainers(StartContainersRequest.newInstance(
@@ -506,9 +511,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
 
-    // containers utilization is low
+    // containers utilization is low, only 512 MBs out of 2GBs and 0.5
+    // out of 4 vcores are being used
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(512, 0, 1.0f/8));
+        ResourceUtilization.newInstance(512, 0, 0.5f));
 
     // start a GUARANTEED container that requests more than what's left
     // unallocated on the node: (512  + 1024 + 824) > 2048
@@ -562,9 +568,11 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.RUNNING);
 
-    // the containers utilization is very high
+    // the containers memory utilization is very high, 1800 MBs out of
+    // 2GBs of memory is being used. But the cpu utilization, 0.5 out of
+    // 4 vcores is very low.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1800, 0, 1.0f/8));
+        ResourceUtilization.newInstance(1800, 0, 0.5f));
 
     // start a GUARANTEED container that requests more than what's left
     // unallocated on the node 512 + 1024 + 824 > 2048
@@ -654,9 +662,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.RUNNING);
 
-    // the containers utilization is low
+    // the containers utilization is low, 1024 MBs out of 2GBs and 0.5
+    // out of 4 vcores are being used.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1024, 0, 1.0f/8));
+        ResourceUtilization.newInstance(1024, 0, 0.5f));
 
     // start a GUARANTEED container that requests more than what's left
     // unallocated on the node: (512  + 1024 + 824) > 2048
@@ -717,9 +726,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.RUNNING);
 
-    // the container utilization is at the overallocation threshold
+    // the container memory utilization is at the overallocation threshold
+    // 2048 * 0.75 = 1536 MB, the cpu utilization is 2 out of 4 vcores.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1536, 0, 1.0f/2));
+        ResourceUtilization.newInstance(1536, 0, 2.0f));
 
     containerManager.startContainers(StartContainersRequest.newInstance(
         new ArrayList<StartContainerRequest>() {
@@ -739,9 +749,11 @@ public class TestContainerSchedulerWithOverAllocation
       }
     });
 
-    // the GUARANTEED container is completed releasing resources
+    // the GUARANTEED container is completed releasing resources, the
+    // utilization goes down to 100 MB out of 2GBs of memory and 0.8
+    // out of 4 vcores
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(100, 0, 1.0f/5));
+        ResourceUtilization.newInstance(100, 0, 0.8f));
     allowContainerToSucceed(2);
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.DONE);
@@ -800,9 +812,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(0), ContainerSubState.RUNNING);
 
-    // the container is fully utilizing its resources
+    // the container is fully utilizing its resources, 2GBs out of its 2GBs of
+    // memory and 4 out of 4 vcores
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(2048, 0, 1.0f));
+        ResourceUtilization.newInstance(2048, 0, 4.0f));
 
     // send two OPPORTUNISTIC container requests that are expected to be queued
     containerManager.startContainers(StartContainersRequest.newInstance(
@@ -820,9 +833,11 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(2), ContainerSubState.SCHEDULED);
 
-    // the containers utilization dropped to the overallocation threshold
+    // the containers memory utilization dropped to the overallocation threshold
+    // 0.75 * 2048 = 1536 MBs. The cpu utilization, 2 out of 4 vcores is also
+    // below the cpu overallocation threshold.
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(1536, 0, 1.0f/2));
+        ResourceUtilization.newInstance(1536, 0, 2.0f));
 
     // try to start opportunistic containers out of band.
     ((ContainerManagerForTest) containerManager)
@@ -838,13 +853,15 @@ public class TestContainerSchedulerWithOverAllocation
       }
     });
 
-    // the GUARANTEED container is completed releasing resources
+    // the GUARANTEED container is completed releasing resources, now the
+    // utilization is 100 MBs out of 2GBs of memory and 0.8 out of 4 vcores
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(100, 0, 1.0f/5));
+        ResourceUtilization.newInstance(100, 0, 0.8f));
 
     // the containers utilization dropped way below the overallocation threshold
+    // 512 MBs < 2048 * 0.75 = 1536 MBs, 0.5 vcores < 4 vcores * 0.75 = 3 vcores
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(512, 0, 1.0f/8));
+        ResourceUtilization.newInstance(512, 0, 0.5f));
 
     ((ContainerManagerForTest) containerManager)
         .checkNodeResourceUtilization();
@@ -923,9 +940,10 @@ public class TestContainerSchedulerWithOverAllocation
         createContainerId(3), ContainerSubState.RUNNING);
 
     // the containers memory utilization is over the preemption threshold
-    // (2048 > 2048 * 0.8 = 1638.4)
+    // (2048 > 2048 * 0.8 = 1638.4). the cpu utilization, 2 out of 4 vcores
+    // is below its preemption threshold
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(2048, 0, 0.5f));
+        ResourceUtilization.newInstance(2048, 0, 2.0f));
     ((ContainerManagerForTest) containerManager)
         .checkNodeResourceUtilization();
 
@@ -988,9 +1006,9 @@ public class TestContainerSchedulerWithOverAllocation
         createContainerId(1), ContainerSubState.RUNNING);
 
     // the node is being fully utilized, which is above the preemption
-    // threshold (2048 * 0.75 = 1536 MB, 1.0f)
+    // threshold (2048 * 0.75 = 1536 MB, 4 * 0.75 = 3 vcores)
     setContainerResourceUtilization(
-        ResourceUtilization.newInstance(2048, 0, 1.0f));
+        ResourceUtilization.newInstance(2048, 0, 4.0f));
     ((ContainerManagerForTest) containerManager)
         .checkNodeResourceUtilization();
 
@@ -1064,10 +1082,10 @@ public class TestContainerSchedulerWithOverAllocation
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(3), ContainerSubState.RUNNING);
 
-    final float fullCpuUtilization = 1.0f;
+    final float fullCpuUtilization = 1.0f * 4;
 
-    // the containers CPU utilization is over its preemption threshold (0.8f)
-    // for the first time
+    // the containers CPU utilization is over its preemption threshold
+    // (0.8f * 4 = 3.2 vcores) for the first time
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(2048, 0, fullCpuUtilization));
     ((ContainerManagerForTest) containerManager)
@@ -1084,8 +1102,8 @@ public class TestContainerSchedulerWithOverAllocation
       }
     });
 
-    // the containers CPU utilization is over its preemption threshold (0.8f)
-    // for the second time
+    // the containers CPU utilization is over its preemption threshold
+    // (0.8f * 4 = 3.2 vcores) for the second time
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(2048, 0, fullCpuUtilization));
     ((ContainerManagerForTest) containerManager)
@@ -1103,8 +1121,8 @@ public class TestContainerSchedulerWithOverAllocation
       }
     });
 
-    // the containers CPU utilization is over the preemption threshold (0.8f)
-    // for the third time
+    // the containers CPU utilization is over the preemption threshold
+    // (0.8f * 4 = 3.2 vcores) for the third time
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(2048, 0, fullCpuUtilization));
     ((ContainerManagerForTest) containerManager)
@@ -1127,8 +1145,8 @@ public class TestContainerSchedulerWithOverAllocation
     });
 
     // again, the containers CPU utilization is over the preemption threshold
-    // (0.8f) for the first time (the cpu over-limit count is reset every time
-    // a preemption is triggered)
+    // (0.8f * 4) for the first time (the cpu over-limit count is reset every
+    // time a preemption is triggered)
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(2048, 0, fullCpuUtilization));
     ((ContainerManagerForTest) containerManager)
@@ -1145,8 +1163,8 @@ public class TestContainerSchedulerWithOverAllocation
       }
     });
 
-    // the containers CPU utilization is over the preemption threshold (0.9f)
-    // for the second time
+    // the containers CPU utilization is over the preemption threshold
+    // (0.8f * 4 = 3.2 vcores) for the second time
     setContainerResourceUtilization(
         ResourceUtilization.newInstance(2048, 0, fullCpuUtilization));
     ((ContainerManagerForTest) containerManager)
@@ -1172,8 +1190,8 @@ public class TestContainerSchedulerWithOverAllocation
 
     // because CPU utilization is over its preemption threshold three times
     // consecutively, the amount of cpu utilization over the preemption
-    // threshold, that is, 1.0 - 0.8 = 0.2f CPU needs to be reclaimed and
-    // as a result, the other OPPORTUNISTIC container should be killed
+    // threshold, that is, (1.0 - 0.8) * 4 = 0.8f CPU needs to be reclaimed
+    // and as a result, the other OPPORTUNISTIC container should be killed
     BaseContainerManagerTest.waitForContainerSubState(containerManager,
         createContainerId(1), ContainerSubState.DONE);
     verifyContainerStatuses(new HashMap<ContainerId, ContainerSubState>() {
