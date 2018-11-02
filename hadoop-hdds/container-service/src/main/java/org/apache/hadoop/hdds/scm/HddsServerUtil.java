@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -32,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys
@@ -114,7 +114,7 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     InetSocketAddress addr = NetUtils.createSocketAddr(host.get() + ":" +
-        port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
+        port.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     return addr;
   }
@@ -135,8 +135,8 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
-            port.or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
+            port.orElse(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -155,8 +155,9 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT) +
-            ":" + port.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT)
+            + ":"
+            + port.orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -176,8 +177,8 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
-            port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
+            port.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
   }
 
 
