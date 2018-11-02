@@ -215,7 +215,7 @@ public class RMAuditLogger {
       String partition) {
     if (LOG.isInfoEnabled()) {
       LOG.info(createSuccessLog(user, operation, target, appId, null,
-          containerId, null, null, queueName, partition));
+          containerId, null, Server.getRemoteIp(), queueName, partition));
     }
   }
 
