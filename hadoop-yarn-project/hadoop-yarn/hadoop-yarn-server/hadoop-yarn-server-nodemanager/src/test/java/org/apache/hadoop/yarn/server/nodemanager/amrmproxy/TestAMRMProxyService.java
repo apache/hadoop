@@ -206,7 +206,6 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
         finishApplicationMaster(testAppId, FinalApplicationStatus.FAILED);
 
     Assert.assertNotNull(finshResponse);
-    Assert.assertEquals(false, finshResponse.getIsUnregistered());
 
     try {
       // Try to finish an application master that is already finished.
