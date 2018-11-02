@@ -20,13 +20,13 @@ package org.apache.hadoop.ozone;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +60,7 @@ public final class OmUtils {
         OZONE_OM_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
+        host.orElse(OZONE_OM_BIND_HOST_DEFAULT) + ":" +
             getOmRpcPort(conf));
   }
 
@@ -90,7 +90,7 @@ public final class OmUtils {
     // If no port number is specified then we'll just try the defaultBindPort.
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         OZONE_OM_ADDRESS_KEY);
-    return port.or(OZONE_OM_PORT_DEFAULT);
+    return port.orElse(OZONE_OM_PORT_DEFAULT);
   }
 
   public static int getOmRestPort(Configuration conf) {
@@ -98,7 +98,7 @@ public final class OmUtils {
     // HTTP BindPort.
     final Optional<Integer> port =
         getPortNumberFromConfigKeys(conf, OZONE_OM_HTTP_ADDRESS_KEY);
-    return port.or(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
+    return port.orElse(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
   }
 
   /**

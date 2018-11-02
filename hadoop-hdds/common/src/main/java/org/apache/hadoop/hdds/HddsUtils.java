@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdds;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -45,6 +44,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys
@@ -114,7 +114,7 @@ public final class HddsUtils {
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(host.get() + ":" + port
-        .or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
+        .orElse(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -162,7 +162,7 @@ public final class HddsUtils {
         ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(host.get() + ":" + port
-        .or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
+        .orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -186,7 +186,7 @@ public final class HddsUtils {
         return hostName;
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -196,7 +196,7 @@ public final class HddsUtils {
    */
   public static Optional<String> getHostName(String value) {
     if ((value == null) || value.isEmpty()) {
-      return Optional.absent();
+      return Optional.empty();
     }
     return Optional.of(HostAndPort.fromString(value).getHostText());
   }
@@ -208,11 +208,11 @@ public final class HddsUtils {
    */
   public static Optional<Integer> getHostPort(String value) {
     if ((value == null) || value.isEmpty()) {
-      return Optional.absent();
+      return Optional.empty();
     }
     int port = HostAndPort.fromString(value).getPortOrDefault(NO_PORT);
     if (port == NO_PORT) {
-      return Optional.absent();
+      return Optional.empty();
     } else {
       return Optional.of(port);
     }
@@ -239,7 +239,7 @@ public final class HddsUtils {
         return hostPort;
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -261,20 +261,17 @@ public final class HddsUtils {
           + " Null or empty address list found.");
     }
 
-    final com.google.common.base.Optional<Integer>
-        defaultPort =  com.google.common.base.Optional.of(ScmConfigKeys
-        .OZONE_SCM_DEFAULT_PORT);
+    final Optional<Integer> defaultPort = Optional
+        .of(ScmConfigKeys.OZONE_SCM_DEFAULT_PORT);
     for (String address : names) {
-      com.google.common.base.Optional<String> hostname =
-          getHostName(address);
+      Optional<String> hostname = getHostName(address);
       if (!hostname.isPresent()) {
         throw new IllegalArgumentException("Invalid hostname for SCM: "
             + hostname);
       }
-      com.google.common.base.Optional<Integer> port =
-          getHostPort(address);
+      Optional<Integer> port = getHostPort(address);
       InetSocketAddress addr = NetUtils.createSocketAddr(hostname.get(),
-          port.or(defaultPort.get()));
+          port.orElse(defaultPort.get()));
       addresses.add(addr);
     }
     return addresses;
