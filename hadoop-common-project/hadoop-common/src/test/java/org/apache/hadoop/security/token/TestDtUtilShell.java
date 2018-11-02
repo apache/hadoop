@@ -57,6 +57,13 @@ public class TestDtUtilShell {
   public static Text KIND_GET = new Text("testTokenKindGet");
   public static Token<?> MOCK_TOKEN =
       new Token(IDENTIFIER, PASSWORD, KIND_GET, SERVICE_GET);
+
+  private static final Text SERVICE_IMPORT =
+      new Text("testTokenServiceImport");
+  private static final Text KIND_IMPORT = new Text("testTokenKindImport");
+  private static final Token<?> IMPORT_TOKEN =
+      new Token(IDENTIFIER, PASSWORD, KIND_IMPORT, SERVICE_IMPORT);
+
   static {
     try {
       defaultConf.set("fs.defaultFS", "file:///");
@@ -73,9 +80,11 @@ public class TestDtUtilShell {
   private final Path tokenFile2 = new Path(workDir, "testPrintTokenFile2");
   private final Path tokenLegacyFile = new Path(workDir, "testPrintTokenFile3");
   private final Path tokenFileGet = new Path(workDir, "testGetTokenFile");
+  private final Path tokenFileImport = new Path(workDir, "testImportTokenFile");
   private final String tokenFilename = tokenFile.toString();
   private final String tokenFilename2 = tokenFile2.toString();
   private final String tokenFilenameGet = tokenFileGet.toString();
+  private final String tokenFilenameImport = tokenFileImport.toString();
   private String[] args = null;
   private DtUtilShell dt = null;
   private int rc = 0;
@@ -282,5 +291,40 @@ public class TestDtUtilShell {
         new FileInputStream(tokenFilenameGet));
     spyCreds.readTokenStorageStream(in);
     Mockito.verify(spyCreds, Mockito.never()).readFields(in);
+  }
+
+  @Test
+  public void testImport() throws Exception {
+    String base64 = IMPORT_TOKEN.encodeToUrlString();
+    args = new String[] {"import", base64, tokenFilenameImport};
+    rc = dt.run(args);
+    assertEquals("test simple import print old exit code", 0, rc);
+
+    args = new String[] {"print", tokenFilenameImport};
+    rc = dt.run(args);
+    assertEquals("test simple import print old exit code", 0, rc);
+    assertTrue("test print after import output:\n" + outContent,
+               outContent.toString().contains(KIND_IMPORT.toString()));
+    assertTrue("test print after import output:\n" + outContent,
+        outContent.toString().contains(SERVICE_IMPORT.toString()));
+    assertTrue("test print after simple import output:\n" + outContent,
+               outContent.toString().contains(base64));
+  }
+
+  @Test
+  public void testImportWithAliasFlag() throws Exception {
+    String base64 = IMPORT_TOKEN.encodeToUrlString();
+    args = new String[] {"import", base64, "-alias", alias,
+        tokenFilenameImport};
+    rc = dt.run(args);
+    assertEquals("test import with alias print old exit code", 0, rc);
+
+    args = new String[] {"print", tokenFilenameImport};
+    rc = dt.run(args);
+    assertEquals("test simple import print old exit code", 0, rc);
+    assertTrue("test print after import output:\n" + outContent,
+               outContent.toString().contains(KIND_IMPORT.toString()));
+    assertTrue("test print after import with alias output:\n" + outContent,
+               outContent.toString().contains(alias));
   }
 }
