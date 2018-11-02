@@ -125,6 +125,21 @@ class SnapshotDiffInfo {
   private final Map<Long, RenameEntry> renameMap =
       new HashMap<Long, RenameEntry>();
 
+  // Total directories compared
+  private long totalDirsCompared;
+
+  // Total directories
+  private long totalDirsProcessed;
+
+  // Total files compared
+  private long totalFilesCompared;
+
+  // Total files
+  private long totalFilesProcessed;
+
+  // Total children listing time
+  private long childrenListingTime;
+
   SnapshotDiffInfo(INodeDirectory snapshotRootDir,
       INodeDirectory snapshotDiffScopeDir, Snapshot start, Snapshot end) {
     Preconditions.checkArgument(snapshotRootDir.isSnapshottable() &&
@@ -133,6 +148,10 @@ class SnapshotDiffInfo {
     this.snapshotDiffScopeDir = snapshotDiffScopeDir;
     this.from = start;
     this.to = end;
+    this.totalDirsCompared = 0;
+    this.totalDirsProcessed = 0;
+    this.totalFilesCompared = 0;
+    this.totalFilesProcessed = 0;
   }
 
   /** Add a dir-diff pair */
@@ -162,6 +181,29 @@ class SnapshotDiffInfo {
 
   Snapshot getTo() {
     return to;
+  }
+
+
+  void incrementDirsCompared() {
+    this.totalDirsCompared++;
+    incrementDirsProcessed();
+  }
+
+  void incrementDirsProcessed() {
+    this.totalDirsProcessed++;
+  }
+
+  void incrementFilesCompared() {
+    this.totalFilesCompared++;
+    incrementFilesProcessed();
+  }
+
+  void incrementFilesProcessed() {
+    this.totalFilesProcessed++;
+  }
+
+  public void addChildrenListingTime(long millis) {
+    this.childrenListingTime += millis;
   }
 
   private RenameEntry getEntry(long inodeId) {
@@ -203,9 +245,15 @@ class SnapshotDiffInfo {
         diffReportList.addAll(subList);
       }
     }
+
+    SnapshotDiffReport.DiffStats dStats = new SnapshotDiffReport.DiffStats(
+        this.totalDirsCompared, this.totalDirsProcessed,
+        this.totalFilesCompared, this.totalFilesProcessed,
+        this.childrenListingTime);
+
     return new SnapshotDiffReport(snapshotRoot.getFullPathName(),
         Snapshot.getSnapshotName(from), Snapshot.getSnapshotName(to),
-        diffReportList);
+        dStats, diffReportList);
   }
 
   /**
