@@ -89,7 +89,7 @@ public final class DtFileOperations {
 
   /** Add the service prefix for a local filesystem. */
   private static Path fileToPath(File f) {
-    return new Path("file:" + f.getAbsolutePath());
+    return new Path(f.toURI().toString());
   }
 
   /** Write out a Credentials object as a local file.
@@ -292,6 +292,32 @@ public final class DtFileOperations {
                  " until " + formatDate(result));
       }
     }
+    doFormattedWrite(tokenFile, fileFormat, creds, conf);
+  }
+
+  /** Import a token from a base64 encoding into the local filesystem.
+   * @param tokenFile A local File object.
+   * @param fileFormat A string equal to FORMAT_PB or FORMAT_JAVA, for output.
+   * @param alias overwrite Service field of fetched token with this text.
+   * @param base64 urlString Encoding of the token to import.
+   * @param conf Configuration object passed along.
+   * @throws IOException Error to import the token into the file.
+   */
+  public static void importTokenFile(File tokenFile, String fileFormat,
+      Text alias, String base64, Configuration conf)
+      throws IOException {
+
+    Credentials creds = tokenFile.exists() ?
+        Credentials.readTokenStorageFile(tokenFile, conf) : new Credentials();
+
+    Token<TokenIdentifier> token = new Token<>();
+    token.decodeFromUrlString(base64);
+    if (alias != null) {
+      token.setService(alias);
+    }
+    creds.addToken(token.getService(), token);
+    LOG.info("Add token with service {}", token.getService());
+
     doFormattedWrite(tokenFile, fileFormat, creds, conf);
   }
 }
