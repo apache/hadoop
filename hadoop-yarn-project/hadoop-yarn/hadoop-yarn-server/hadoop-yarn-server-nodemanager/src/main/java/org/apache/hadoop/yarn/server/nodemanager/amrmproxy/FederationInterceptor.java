@@ -716,12 +716,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   uamPool.finishApplicationMaster(subClusterId, finishRequest);
 
               if (uamResponse.getIsUnregistered()) {
-                AMRMClientRelayer relayer =
-                    secondaryRelayers.remove(subClusterId);
-                if(relayer != null) {
-                  relayer.shutdown();
-                }
-
+                secondaryRelayers.remove(subClusterId);
                 if (getNMStateStore() != null) {
                   getNMStateStore().removeAMRMProxyAppContextEntry(attemptId,
                       NMSS_SECONDARY_SC_PREFIX + subClusterId);
@@ -801,8 +796,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   @Override
   public void shutdown() {
+    LOG.info("Shutting down FederationInterceptor for {}", this.attemptId);
+
     // Do not stop uamPool service and kill UAMs here because of possible second
     // app attempt
+    try {
+      this.uamPool.shutDownConnections();
+    } catch (YarnException e) {
+      LOG.error("Error shutting down all UAM clients without killing them", e);
+    }
+
     if (this.threadpool != null) {
       try {
         this.threadpool.shutdown();
@@ -814,9 +817,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // Stop the home heartbeat thread
     this.homeHeartbeartHandler.shutdown();
     this.homeRMRelayer.shutdown();
-    for (AMRMClientRelayer relayer : this.secondaryRelayers.values()) {
-      relayer.shutdown();
-    }
 
     super.shutdown();
   }

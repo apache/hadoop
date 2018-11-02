@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestExceptio
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.scheduler.ResourceRequestSet;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -155,14 +156,15 @@ public class TestAMRMClientRelayer {
 
     this.mockAMS = new MockApplicationMasterService();
     this.relayer = new AMRMClientRelayer(this.mockAMS, null, "TEST");
-
-    this.relayer.init(conf);
-    this.relayer.start();
-
     this.relayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
 
     clearAllocateRequestLists();
+  }
+
+  @After
+  public void cleanup() {
+    this.relayer.shutdown();
   }
 
   private void assertAsksAndReleases(int expectedAsk, int expectedRelease) {

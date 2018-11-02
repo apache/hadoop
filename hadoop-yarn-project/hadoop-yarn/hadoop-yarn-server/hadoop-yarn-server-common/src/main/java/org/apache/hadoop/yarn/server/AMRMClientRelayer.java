@@ -27,9 +27,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -46,8 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
-import org.apache.hadoop.yarn.client.ClientRMProxy;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -65,8 +62,7 @@ import com.google.common.annotations.VisibleForTesting;
  * pending requests similar to AMRMClient, and handles RM re-sync automatically
  * without propagate the re-sync exception back to AMRMClient.
  */
-public class AMRMClientRelayer extends AbstractService
-    implements ApplicationMasterProtocol {
+public class AMRMClientRelayer implements ApplicationMasterProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(AMRMClientRelayer.class);
 
@@ -131,49 +127,14 @@ public class AMRMClientRelayer extends AbstractService
 
   private AMRMClientRelayerMetrics metrics;
 
-  public AMRMClientRelayer() {
-    super(AMRMClientRelayer.class.getName());
-    this.resetResponseId = -1;
-    this.metrics = AMRMClientRelayerMetrics.getInstance();
-    this.rmClient = null;
-    this.appId = null;
-    this.rmId = "";
-  }
-
   public AMRMClientRelayer(ApplicationMasterProtocol rmClient,
       ApplicationId appId, String rmId) {
-    this();
+    this.resetResponseId = -1;
+    this.metrics = AMRMClientRelayerMetrics.getInstance();
+    this.rmId = "";
     this.rmClient = rmClient;
     this.appId = appId;
     this.rmId = rmId;
-  }
-
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-  }
-
-  @Override
-  protected void serviceStart() throws Exception {
-    final YarnConfiguration conf = new YarnConfiguration(getConfig());
-    try {
-      if (this.rmClient == null) {
-        this.rmClient =
-            ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
-      }
-    } catch (IOException e) {
-      throw new YarnRuntimeException(e);
-    }
-    super.serviceStart();
-  }
-
-  @Override
-  protected void serviceStop() throws Exception {
-    if (this.rmClient != null) {
-      RPC.stopProxy(this.rmClient);
-    }
-    shutdown();
-    super.serviceStop();
   }
 
   public void setAMRegistrationRequest(
@@ -224,6 +185,14 @@ public class AMRMClientRelayer extends AbstractService
       for(UpdateContainerRequest req : remotePendingChange.values()) {
         this.metrics
             .decrClientPending(rmId, req.getContainerUpdateType(), 1);
+      }
+    }
+
+    if (this.rmClient != null) {
+      try {
+        RPC.stopProxy(this.rmClient);
+        this.rmClient = null;
+      } catch (HadoopIllegalArgumentException e) {
       }
     }
   }
