@@ -32,12 +32,15 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Test;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
 public class TestHdfsHelper extends TestDirHelper {
+
+  private HdfsStatement statement;
 
   @Override
   @Test
@@ -54,23 +57,32 @@ public class TestHdfsHelper extends TestDirHelper {
   public Statement apply(Statement statement, FrameworkMethod frameworkMethod, Object o) {
     TestHdfs testHdfsAnnotation = frameworkMethod.getAnnotation(TestHdfs.class);
     if (testHdfsAnnotation != null) {
-      statement = new HdfsStatement(statement, frameworkMethod.getName());
+      this.statement = new HdfsStatement(statement, frameworkMethod.getName());
+      statement = this.statement;
     }
     return super.apply(statement, frameworkMethod, o);
+  }
+
+  public MiniDFSCluster getMiniDFSCluster() {
+    return statement.getMiniDFSCluster();
   }
 
   private static class HdfsStatement extends Statement {
     private Statement statement;
     private String testName;
+    private MiniDFSCluster miniHdfs = null;
 
     public HdfsStatement(Statement statement, String testName) {
       this.statement = statement;
       this.testName = testName;
     }
 
+    public MiniDFSCluster getMiniDFSCluster() {
+      return miniHdfs;
+    }
+
     @Override
     public void evaluate() throws Throwable {
-      MiniDFSCluster miniHdfs = null;
       Configuration conf = HadoopUsersConfTestHelper.getBaseConf();
       if (Boolean.parseBoolean(System.getProperty(HADOOP_MINI_HDFS, "true"))) {
         miniHdfs = startMiniHdfs(conf);
@@ -162,6 +174,14 @@ public class TestHdfsHelper extends TestDirHelper {
       conf.set("hadoop.security.authentication", "simple");
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+      // For BaseTestHttpFSWith#testFileAclsCustomizedUserAndGroupNames
+      conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+          "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");
+      conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
+          "^(default:)?(user|group|mask|other):" +
+              "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?" +
+              "(user|group|mask|other):[[0-9A-Za-z_][@A-Za-z0-9._-]]*:" +
+              "([rwx-]{3})?)*$");
       FileSystemTestHelper helper = new FileSystemTestHelper();
       Path targetFile = new Path(new File(helper.getTestRootDir())
           .getAbsolutePath(), "test.jks");
