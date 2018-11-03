@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,6 +142,13 @@ public class Credentials implements Writable {
   }
 
   /**
+   * Returns an unmodifiable version of the full map of aliases to Tokens.
+   */
+  public Map<Text, Token<? extends TokenIdentifier>> getTokenMap() {
+    return Collections.unmodifiableMap(tokenMap);
+  }
+
+  /**
    * @return number of Tokens in the in-memory map
    */
   public int numberOfTokens() {
@@ -188,6 +196,13 @@ public class Credentials implements Writable {
     list.addAll(secretKeysMap.keySet());
 
     return list;
+  }
+
+  /**
+   * Returns an unmodifiable version of the full map of aliases to secret keys.
+   */
+  public Map<Text, byte[]> getSecretKeyMap() {
+    return Collections.unmodifiableMap(secretKeysMap);
   }
 
   /**
