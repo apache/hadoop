@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -64,6 +66,7 @@ public class Router extends CompositeService {
   private static CompositeServiceShutdownHook routerShutdownHook;
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
+  private JvmPauseMonitor pauseMonitor;
   private RouterClientRMService clientRMProxyService;
   private RouterRMAdminService rmAdminProxyService;
   private WebApp webApp;
@@ -100,6 +103,11 @@ public class Router extends CompositeService {
         WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));
     // Metrics
     DefaultMetricsSystem.initialize(METRICS_NAME);
+    JvmMetrics jm = JvmMetrics.initSingleton("Router", null);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
+    jm.setPauseMonitor(pauseMonitor);
+
     super.serviceInit(conf);
   }
 
