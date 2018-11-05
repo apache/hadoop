@@ -115,13 +115,10 @@ public abstract class BaseHttpServer {
     final Optional<Integer> addressPort =
         getPortNumberFromConfigKeys(conf, addressKey);
 
-    final Optional<String> addresHost =
+    final Optional<String> addressHost =
         getHostNameFromConfigKeys(conf, addressKey);
 
-    String hostName = bindHost.orElse(addresHost.get());
-    if (hostName == null || hostName.isEmpty()) {
-      hostName = bindHostDefault;
-    }
+    String hostName = bindHost.orElse(addressHost.orElse(bindHostDefault));
 
     return NetUtils.createSocketAddr(
         hostName + ":" + addressPort.orElse(bindPortdefault));
