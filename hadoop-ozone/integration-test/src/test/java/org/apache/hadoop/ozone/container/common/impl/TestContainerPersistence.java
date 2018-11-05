@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -330,7 +331,8 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
     return info;
 
   }
@@ -371,7 +373,8 @@ public class TestContainerPersistence {
       ChunkInfo info = getChunk(blockID.getLocalID(), x, 0, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          COMBINED);
       String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
       fileHashMap.put(fileName, info);
     }
@@ -431,7 +434,8 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
 
     byte[] readData = chunkManager.readChunk(container, blockID, info);
     assertTrue(Arrays.equals(data, readData));
@@ -463,11 +467,14 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
     long bytesUsed = container.getContainerData().getBytesUsed();
     Assert.assertEquals(datalen, bytesUsed);
 
@@ -501,7 +508,8 @@ public class TestContainerPersistence {
       byte[] data = getData(datalen);
       oldSha.update(data);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          COMBINED);
     }
 
     // Request to read the whole data in a single go.
@@ -532,7 +540,8 @@ public class TestContainerPersistence {
         blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+    chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+        COMBINED);
     chunkManager.deleteChunk(container, blockID, info);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
@@ -644,7 +653,8 @@ public class TestContainerPersistence {
       info = getChunk(blockID.getLocalID(), x, x * datalen, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(container, blockID, info, data, COMBINED);
+      chunkManager.writeChunk(container, blockID, info, ByteBuffer.wrap(data),
+          COMBINED);
       totalSize += datalen;
       chunkList.add(info);
     }

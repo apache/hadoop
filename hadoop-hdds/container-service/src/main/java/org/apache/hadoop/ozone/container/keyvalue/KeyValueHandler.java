@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.keyvalue;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -76,7 +77,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import static org.apache.hadoop.hdds.HddsConfigKeys
     .HDDS_DATANODE_VOLUME_CHOOSING_POLICY;
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
@@ -668,10 +669,10 @@ public class KeyValueHandler extends Handler {
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(chunkInfoProto);
       Preconditions.checkNotNull(chunkInfo);
 
-      byte[] data = null;
+      ByteBuffer data = null;
       if (request.getWriteChunk().getStage() == Stage.WRITE_DATA ||
           request.getWriteChunk().getStage() == Stage.COMBINED) {
-        data = request.getWriteChunk().getData().toByteArray();
+        data = request.getWriteChunk().getData().asReadOnlyByteBuffer();
       }
 
       chunkManager.writeChunk(kvContainer, blockID, chunkInfo, data,
@@ -729,7 +730,7 @@ public class KeyValueHandler extends Handler {
       ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(
           putSmallFileReq.getChunkInfo());
       Preconditions.checkNotNull(chunkInfo);
-      byte[] data = putSmallFileReq.getData().toByteArray();
+      ByteBuffer data = putSmallFileReq.getData().asReadOnlyByteBuffer();
       // chunks will be committed as a part of handling putSmallFile
       // here. There is no need to maintain this info in openContainerBlockMap.
       chunkManager.writeChunk(
@@ -740,7 +741,7 @@ public class KeyValueHandler extends Handler {
       blockData.setChunks(chunks);
       // TODO: add bcsId as a part of putSmallFile transaction
       blockManager.putBlock(kvContainer, blockData);
-      metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
+      metrics.incContainerBytesStats(Type.PutSmallFile, data.capacity());
 
     } catch (StorageContainerException ex) {
       return ContainerUtils.logAndReturnError(LOG, ex, request);
