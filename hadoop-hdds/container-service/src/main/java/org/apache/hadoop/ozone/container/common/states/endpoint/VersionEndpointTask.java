@@ -64,50 +64,57 @@ public class VersionEndpointTask implements
   public EndpointStateMachine.EndPointStates call() throws Exception {
     rpcEndPoint.lock();
     try{
-      SCMVersionResponseProto versionResponse =
-          rpcEndPoint.getEndPoint().getVersion(null);
-      VersionResponse response = VersionResponse.getFromProtobuf(
-          versionResponse);
-      rpcEndPoint.setVersion(response);
+      if (rpcEndPoint.getState().equals(
+          EndpointStateMachine.EndPointStates.GETVERSION)) {
+        SCMVersionResponseProto versionResponse =
+            rpcEndPoint.getEndPoint().getVersion(null);
+        VersionResponse response = VersionResponse.getFromProtobuf(
+            versionResponse);
+        rpcEndPoint.setVersion(response);
 
-      String scmId = response.getValue(OzoneConsts.SCM_ID);
-      String clusterId = response.getValue(OzoneConsts.CLUSTER_ID);
+        String scmId = response.getValue(OzoneConsts.SCM_ID);
+        String clusterId = response.getValue(OzoneConsts.CLUSTER_ID);
 
-      // Check volumes
-      VolumeSet volumeSet = ozoneContainer.getVolumeSet();
-      volumeSet.writeLock();
-      try {
-        Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
+        // Check volumes
+        VolumeSet volumeSet = ozoneContainer.getVolumeSet();
+        volumeSet.writeLock();
+        try {
+          Map<String, HddsVolume> volumeMap = volumeSet.getVolumeMap();
 
-        Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
-            "null");
-        Preconditions.checkNotNull(clusterId, "Reply from SCM: clusterId " +
-            "cannot be null");
+          Preconditions.checkNotNull(scmId, "Reply from SCM: scmId cannot be " +
+              "null");
+          Preconditions.checkNotNull(clusterId, "Reply from SCM: clusterId " +
+              "cannot be null");
 
-        // If version file does not exist create version file and also set scmId
-        for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
-          HddsVolume hddsVolume = entry.getValue();
-          boolean result = HddsVolumeUtil.checkVolume(hddsVolume, scmId,
-              clusterId, LOG);
-          if (!result) {
-            volumeSet.failVolume(hddsVolume.getHddsRootDir().getPath());
+          // If version file does not exist create version file and also set scmId
+
+          for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
+            HddsVolume hddsVolume = entry.getValue();
+            boolean result = HddsVolumeUtil.checkVolume(hddsVolume, scmId,
+                clusterId, LOG);
+            if (!result) {
+              volumeSet.failVolume(hddsVolume.getHddsRootDir().getPath());
+            }
           }
+          if (volumeSet.getVolumesList().size() == 0) {
+            // All volumes are in inconsistent state
+            throw new DiskOutOfSpaceException("All configured Volumes are in " +
+                "Inconsistent State");
+          }
+        } finally {
+          volumeSet.writeUnlock();
         }
-        if (volumeSet.getVolumesList().size() == 0) {
-          // All volumes are in inconsistent state
-          throw new DiskOutOfSpaceException("All configured Volumes are in " +
-              "Inconsistent State");
-        }
-      } finally {
-        volumeSet.writeUnlock();
+
+        ozoneContainer.getDispatcher().setScmId(scmId);
+
+        EndpointStateMachine.EndPointStates nextState =
+            rpcEndPoint.getState().getNextState();
+        rpcEndPoint.setState(nextState);
+        rpcEndPoint.zeroMissedCount();
+      } else {
+        LOG.debug("Cannot execute GetVersion task as endpoint state machine " +
+            "is in {} state", rpcEndPoint.getState());
       }
-
-      ozoneContainer.getDispatcher().setScmId(scmId);
-
-      EndpointStateMachine.EndPointStates nextState =
-          rpcEndPoint.getState().getNextState();
-      rpcEndPoint.setState(nextState);
-      rpcEndPoint.zeroMissedCount();
     } catch (DiskOutOfSpaceException ex) {
       rpcEndPoint.setState(EndpointStateMachine.EndPointStates.SHUTDOWN);
     } catch(IOException ex) {
