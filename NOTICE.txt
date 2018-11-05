@@ -17,7 +17,7 @@ which has the following notices:
 * This product includes software developed by IBM Corporation and others.
 
 The binary distribution of this product bundles binaries of
-AWS Java SDK 1.10.6,
+AWS Java SDK 1.11.199,
 which has the following notices:
  * This software includes third party software subject to the following
  copyrights: - XML parsing and utility functions from JetS3t - Copyright
