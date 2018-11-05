@@ -36,7 +36,6 @@ RUN \
         java-1.8.0-openjdk \
         curl \
         less  \
-        perl \
         procps \
         net-tools \
         bind-utils \
@@ -54,24 +53,19 @@ ENV HADOOP_CONF_DIR=/etc/hadoop
 ENV HADOOP_HOME=/opt/hadoop-$HADOOP_VERSION
 ENV PATH=$HADOOP_HOME/bin:$PATH
 
-COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION.tar.gz /tmp/hadoop-$HADOOP_VERSION.tar.gz
-RUN tar \
-        -xzf \
-        /tmp/hadoop-$HADOOP_VERSION.tar.gz \
-        -C /opt \
-    # cleanup
-    # - remove unnecessary doc/src files
-    && rm -rf ${HADOOP_HOME}/share/doc \
+COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION /opt/hadoop-$HADOOP_VERSION
+# remove unnecessary doc/src files
+RUN rm -rf ${HADOOP_HOME}/share/doc \
     && for dir in common hdfs mapreduce tools yarn; do \
          rm -rf ${HADOOP_HOME}/share/hadoop/${dir}/sources; \
        done \
     && rm -rf ${HADOOP_HOME}/share/hadoop/common/jdiff \
     && rm -rf ${HADOOP_HOME}/share/hadoop/mapreduce/lib-examples \
     && rm -rf ${HADOOP_HOME}/share/hadoop/yarn/test \
-    && find ${HADOOP_HOME}/share/hadoop -name *test*.jar | xargs rm -rf \
-    && rm /tmp/hadoop-$HADOOP_VERSION.tar.gz
+    && find ${HADOOP_HOME}/share/hadoop -name *test*.jar | xargs rm -rf
 
 RUN ln -s /opt/hadoop-$HADOOP_VERSION/etc/hadoop /etc/hadoop
+RUN ln -s /opt/hadoop-$HADOOP_VERSION /opt/hadoop
 RUN mkdir -p /opt/hadoop-$HADOOP_VERSION/logs
 
 # to allow running as non-root
@@ -89,4 +83,3 @@ LABEL io.k8s.display-name="OpenShift Hadoop" \
       io.openshift.tags="openshift" \
       maintainer="Chance Zibolski <czibolsk@redhat.com>"
 
-ENTRYPOINT ["hdfs"]
