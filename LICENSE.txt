@@ -1835,7 +1835,7 @@ any resulting litigation.
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-JSch 0.1.51
+JSch 0.1.54
 ParaNamer Core 2.3
 JLine 0.9.94
 leveldbjni-all 1.8
