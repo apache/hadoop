@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -196,6 +197,10 @@ public class TestDataNodeLifeline {
           namesystem.getNumDeadDataNodes());
       assertEquals("Expect DataNode not marked stale due to lifeline.", 0,
           namesystem.getNumStaleDataNodes());
+      // add a new volume on the next heartbeat
+      cluster.getDataNodes().get(0).reconfigurePropertyImpl(
+          DFS_DATANODE_DATA_DIR_KEY,
+          cluster.getDataDirectory().concat("/data-new"));
     }
 
     // Verify that we did in fact call the lifeline RPC.

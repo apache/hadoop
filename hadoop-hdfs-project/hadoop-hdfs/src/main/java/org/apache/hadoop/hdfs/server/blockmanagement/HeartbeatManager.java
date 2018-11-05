@@ -251,7 +251,7 @@ class HeartbeatManager implements DatanodeStatistics {
     // updateHeartbeat, because we don't want to modify the
     // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
     // not count as arrival of the first heartbeat.
-    node.updateHeartbeatState(reports, cacheCapacity, cacheUsed,
+    blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
         xceiverCount, failedVolumes, volumeFailureSummary);
     stats.add(node);
   }
