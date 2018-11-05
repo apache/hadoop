@@ -2430,7 +2430,7 @@ public class BlockManager implements BlockStatsMXBean {
     return providedStorageMap.getCapacity();
   }
 
-  public void updateHeartbeat(DatanodeDescriptor node, StorageReport[] reports,
+  void updateHeartbeat(DatanodeDescriptor node, StorageReport[] reports,
       long cacheCapacity, long cacheUsed, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
 
@@ -2438,6 +2438,17 @@ public class BlockManager implements BlockStatsMXBean {
       providedStorageMap.updateStorage(node, report.getStorage());
     }
     node.updateHeartbeat(reports, cacheCapacity, cacheUsed, xceiverCount,
+        failedVolumes, volumeFailureSummary);
+  }
+
+  void updateHeartbeatState(DatanodeDescriptor node,
+      StorageReport[] reports, long cacheCapacity, long cacheUsed,
+      int xceiverCount, int failedVolumes,
+      VolumeFailureSummary volumeFailureSummary) {
+    for (StorageReport report: reports) {
+      providedStorageMap.updateStorage(node, report.getStorage());
+    }
+    node.updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
         failedVolumes, volumeFailureSummary);
   }
 
