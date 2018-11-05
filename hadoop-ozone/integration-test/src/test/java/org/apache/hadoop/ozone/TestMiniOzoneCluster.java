@@ -23,9 +23,13 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .EndpointStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
@@ -213,5 +217,51 @@ public class TestMiniOzoneCluster {
     FileOutputStream out = new FileOutputStream(malformedFile);
     out.write("malformed".getBytes());
     out.close();
+  }
+
+  /**
+   * Test that a DN can register with SCM even if it was started before the SCM.
+   * @throws Exception
+   */
+  @Test (timeout = 300_000)
+  public void testDNstartAfterSCM() throws Exception {
+    // Start a cluster with 1 DN
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(1)
+        .build();
+    cluster.waitForClusterToBeReady();
+
+    // Stop the SCM
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    scm.stop();
+
+    // Restart DN
+    cluster.restartHddsDatanode(0, false);
+
+    // DN should be in GETVERSION state till the SCM is restarted.
+    // Check DN endpoint state for 20 seconds
+    DatanodeStateMachine dnStateMachine = cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine();
+    for (int i = 0; i < 20; i++) {
+      for (EndpointStateMachine endpoint :
+          dnStateMachine.getConnectionManager().getValues()) {
+        Assert.assertEquals(
+            EndpointStateMachine.EndPointStates.GETVERSION,
+            endpoint.getState());
+      }
+      Thread.sleep(1000);
+    }
+
+    // DN should successfully register with the SCM after SCM is restarted.
+    // Restart the SCM
+    cluster.restartStorageContainerManager();
+    // Wait for DN to register
+    cluster.waitForClusterToBeReady();
+    // DN should be in HEARTBEAT state after registering with the SCM
+    for (EndpointStateMachine endpoint :
+        dnStateMachine.getConnectionManager().getValues()) {
+      Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
+          endpoint.getState());
+    }
   }
 }
