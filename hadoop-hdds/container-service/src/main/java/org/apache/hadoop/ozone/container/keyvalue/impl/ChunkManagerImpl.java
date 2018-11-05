@@ -82,7 +82,8 @@ public class ChunkManagerImpl implements ChunkManager {
           chunkFile, info);
       File tmpChunkFile = getTmpChunkFile(chunkFile, info);
 
-      LOG.debug("writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file",
+      LOG.debug(
+          "writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file:{}",
           info.getChunkName(), stage, chunkFile, tmpChunkFile);
 
       switch (stage) {

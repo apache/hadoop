@@ -53,6 +53,13 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.statemachinedata.sync.timeout</name>
+    <value>10s</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Timeout for StateMachine data writes by Ratis.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.datanode.storage.dir</name>
     <value/>
     <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT, RATIS</tag>
