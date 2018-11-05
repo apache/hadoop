@@ -1,5 +1,20 @@
 Hadoop Change Log
 
+Release 2.7.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-15900. Update JSch versions in LICENSE.txt.
+    Contributed by Akira Ajisaka.
+
 Release 2.7.7 - 2018-07-18
 
   INCOMPATIBLE CHANGES
