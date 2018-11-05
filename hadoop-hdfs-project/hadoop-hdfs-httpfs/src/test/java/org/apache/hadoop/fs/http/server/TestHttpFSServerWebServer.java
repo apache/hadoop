@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -55,6 +56,16 @@ public class TestHttpFSServerWebServer {
     confDir.mkdirs();
     logsDir.mkdirs();
     tempDir.mkdirs();
+
+    if (Shell.WINDOWS) {
+      File binDir = new File(homeDir, "bin");
+      binDir.mkdirs();
+      File winutils = Shell.getWinUtilsFile();
+      if (winutils.exists()) {
+        FileUtils.copyFileToDirectory(winutils, binDir);
+      }
+    }
+
     System.setProperty("hadoop.home.dir", homeDir.getAbsolutePath());
     System.setProperty("hadoop.log.dir", logsDir.getAbsolutePath());
     System.setProperty("httpfs.home.dir", homeDir.getAbsolutePath());

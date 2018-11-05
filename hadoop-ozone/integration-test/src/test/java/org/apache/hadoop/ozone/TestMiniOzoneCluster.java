@@ -19,17 +19,22 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine
+    .EndpointStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
 import org.junit.AfterClass;
@@ -40,13 +45,13 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
 import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.junit.Assert.*;
 
 /**
@@ -64,8 +69,7 @@ public class TestMiniOzoneCluster {
   @BeforeClass
   public static void setup() {
     conf = new OzoneConfiguration();
-    conf.set(OZONE_METADATA_DIRS,
-        TEST_ROOT.toString());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, TEST_ROOT.toString());
     conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     WRITE_TMP.mkdirs();
     READ_TMP.mkdirs();
@@ -91,18 +95,20 @@ public class TestMiniOzoneCluster {
     assertEquals(numberOfNodes, datanodes.size());
     for(HddsDatanodeService dn : datanodes) {
       // Create a single member pipe line
-      DatanodeDetails datanodeDetails = dn.getDatanodeDetails();
-      final Pipeline pipeline =
-          new Pipeline(datanodeDetails.getUuidString(),
-              HddsProtos.LifeCycleState.OPEN,
-              HddsProtos.ReplicationType.STAND_ALONE,
-              HddsProtos.ReplicationFactor.ONE, PipelineID.randomId());
-      pipeline.addMember(datanodeDetails);
+      List<DatanodeDetails> dns = new ArrayList<>();
+      dns.add(dn.getDatanodeDetails());
+      Pipeline pipeline = Pipeline.newBuilder()
+          .setState(Pipeline.PipelineState.OPEN)
+          .setId(PipelineID.randomId())
+          .setType(HddsProtos.ReplicationType.STAND_ALONE)
+          .setFactor(HddsProtos.ReplicationFactor.ONE)
+          .setNodes(dns)
+          .build();
 
       // Verify client is able to connect to the container
       try (XceiverClientGrpc client = new XceiverClientGrpc(pipeline, conf)){
         client.connect();
-        assertTrue(client.isConnected());
+        assertTrue(client.isConnected(pipeline.getFirstNode()));
       }
     }
   }
@@ -153,7 +159,7 @@ public class TestMiniOzoneCluster {
     Configuration ozoneConf = SCMTestUtils.getConf();
     File testDir = PathUtils.getTestDir(TestOzoneContainer.class);
     ozoneConf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
-    ozoneConf.set(OZONE_METADATA_DIRS,
+    ozoneConf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         TEST_ROOT.toString());
 
     // Each instance of SM will create an ozone container
@@ -211,5 +217,51 @@ public class TestMiniOzoneCluster {
     FileOutputStream out = new FileOutputStream(malformedFile);
     out.write("malformed".getBytes());
     out.close();
+  }
+
+  /**
+   * Test that a DN can register with SCM even if it was started before the SCM.
+   * @throws Exception
+   */
+  @Test (timeout = 300_000)
+  public void testDNstartAfterSCM() throws Exception {
+    // Start a cluster with 1 DN
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(1)
+        .build();
+    cluster.waitForClusterToBeReady();
+
+    // Stop the SCM
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    scm.stop();
+
+    // Restart DN
+    cluster.restartHddsDatanode(0, false);
+
+    // DN should be in GETVERSION state till the SCM is restarted.
+    // Check DN endpoint state for 20 seconds
+    DatanodeStateMachine dnStateMachine = cluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine();
+    for (int i = 0; i < 20; i++) {
+      for (EndpointStateMachine endpoint :
+          dnStateMachine.getConnectionManager().getValues()) {
+        Assert.assertEquals(
+            EndpointStateMachine.EndPointStates.GETVERSION,
+            endpoint.getState());
+      }
+      Thread.sleep(1000);
+    }
+
+    // DN should successfully register with the SCM after SCM is restarted.
+    // Restart the SCM
+    cluster.restartStorageContainerManager();
+    // Wait for DN to register
+    cluster.waitForClusterToBeReady();
+    // DN should be in HEARTBEAT state after registering with the SCM
+    for (EndpointStateMachine endpoint :
+        dnStateMachine.getConnectionManager().getValues()) {
+      Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
+          endpoint.getState());
+    }
   }
 }

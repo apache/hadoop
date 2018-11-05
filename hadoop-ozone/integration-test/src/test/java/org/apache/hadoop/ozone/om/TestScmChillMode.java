@@ -229,7 +229,7 @@ public class TestScmChillMode {
 
   }
 
-  @Test
+  @Test(timeout=300_000)
   public void testSCMChillMode() throws Exception {
     MiniOzoneCluster.Builder clusterBuilder = MiniOzoneCluster.newBuilder(conf)
         .setHbInterval(1000)
@@ -360,4 +360,24 @@ public class TestScmChillMode {
             .getContainerWithPipeline(containers.get(0).getContainerID()));
   }
 
+  @Test(timeout = 300_000)
+  public void testSCMChillModeDisabled() throws Exception {
+    cluster.stop();
+
+    // If chill mode is disabled, cluster should not be in chill mode even if
+    // min number of datanodes are not started.
+    conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
+    conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, 3);
+    builder = MiniOzoneCluster.newBuilder(conf)
+        .setHbInterval(1000)
+        .setHbProcessorInterval(500)
+        .setNumDatanodes(1);
+    cluster = builder.build();
+    StorageContainerManager scm = cluster.getStorageContainerManager();
+    assertFalse(scm.isInChillMode());
+
+    // Even on SCM restart, cluster should be out of chill mode immediately.
+    cluster.restartStorageContainerManager();
+    assertFalse(scm.isInChillMode());
+  }
 }

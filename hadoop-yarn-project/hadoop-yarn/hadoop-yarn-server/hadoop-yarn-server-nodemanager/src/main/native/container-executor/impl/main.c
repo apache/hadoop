@@ -99,11 +99,21 @@ static void display_usage(FILE *stream) {
     fprintf(stream, "\n");
   }
 
-   fprintf(stream,
+  fprintf(stream,
       "            signal container:      %2d container-pid signal\n"
       "            delete as user:        %2d relative-path\n"
       "            list as user:          %2d relative-path\n",
       SIGNAL_CONTAINER, DELETE_AS_USER, LIST_AS_USER);
+
+  if(is_yarn_sysfs_support_enabled()) {
+    fprintf(stream,
+        "            sync yarn sysfs:       %2d app-id nm-local-dirs\n",
+        SYNC_YARN_SYSFS);
+  } else {
+    fprintf(stream,
+        "[DISABLED]  sync yarn sysfs:       %2d app-id nm-local-dirs\n",
+        SYNC_YARN_SYSFS);
+  }
 }
 
 /* Sets up log files for normal/error logging */
@@ -566,6 +576,11 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.target_dir = argv[optind++];
     *operation = RUN_AS_USER_LIST;
     return 0;
+  case SYNC_YARN_SYSFS:
+    cmd_input.app_id = argv[optind++];
+    cmd_input.local_dirs = argv[optind++];
+    *operation = RUN_AS_USER_SYNC_YARN_SYSFS;
+    return 0;
   default:
     fprintf(ERRORFILE, "Invalid command %d not supported.",command);
     fflush(ERRORFILE);
@@ -722,6 +737,19 @@ int main(int argc, char **argv) {
     }
 
     exit_code = list_as_user(cmd_input.target_dir);
+    break;
+  case RUN_AS_USER_SYNC_YARN_SYSFS:
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+    if (is_yarn_sysfs_support_enabled()) {
+      exit_code = sync_yarn_sysfs(split(cmd_input.local_dirs),
+          cmd_input.run_as_user_name, cmd_input.yarn_user_name,
+          cmd_input.app_id);
+    } else {
+      exit_code = FEATURE_DISABLED;
+    }
     break;
   }
 

@@ -275,7 +275,7 @@ public class TransferFsImage {
       connection.setDoOutput(true);
 
       
-      int chunkSize = conf.getInt(
+      int chunkSize = (int) conf.getLongBytes(
           DFSConfigKeys.DFS_IMAGE_TRANSFER_CHUNKSIZE_KEY,
           DFSConfigKeys.DFS_IMAGE_TRANSFER_CHUNKSIZE_DEFAULT);
       if (imageFile.length() > chunkSize) {

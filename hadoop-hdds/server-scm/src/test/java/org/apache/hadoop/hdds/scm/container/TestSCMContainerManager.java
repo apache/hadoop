@@ -18,21 +18,23 @@ package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -59,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 public class TestSCMContainerManager {
   private static SCMContainerManager containerManager;
   private static MockNodeManager nodeManager;
+  private static PipelineManager pipelineManager;
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
   private static String containerOwner = "OZONE";
@@ -74,7 +77,7 @@ public class TestSCMContainerManager {
 
     testDir = GenericTestUtils
         .getTestDir(TestSCMContainerManager.class.getSimpleName());
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setTimeDuration(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
@@ -85,8 +88,10 @@ public class TestSCMContainerManager {
       throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
+    pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, new EventQueue());
     containerManager = new SCMContainerManager(conf, nodeManager,
-        new EventQueue());
+        pipelineManager, new EventQueue());
     xceiverClientManager = new XceiverClientManager(conf);
     random = new Random();
   }
@@ -95,6 +100,9 @@ public class TestSCMContainerManager {
   public static void cleanup() throws IOException {
     if(containerManager != null) {
       containerManager.close();
+    }
+    if (pipelineManager != null) {
+      pipelineManager.close();
     }
     FileUtil.fullyDelete(testDir);
   }
@@ -130,7 +138,7 @@ public class TestSCMContainerManager {
 
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
-      pipelineList.add(containerInfo.getPipeline().getLeader()
+      pipelineList.add(containerInfo.getPipeline().getFirstNode()
           .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
@@ -145,8 +153,8 @@ public class TestSCMContainerManager {
     Pipeline pipeline  = containerInfo.getPipeline();
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = containerInfo.getPipeline();
-    Assert.assertEquals(pipeline.getLeader().getUuid(),
-        newPipeline.getLeader().getUuid());
+    Assert.assertEquals(pipeline.getFirstNode().getUuid(),
+        newPipeline.getFirstNode().getUuid());
   }
 
   @Test
@@ -191,15 +199,15 @@ public class TestSCMContainerManager {
     contInfo = containerManager.getContainer(contInfo.containerID());
     Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
     Pipeline pipeline = containerWithPipeline.getPipeline();
-    containerManager.getPipelineSelector().finalizePipeline(pipeline);
+    pipelineManager.finalizePipeline(pipeline.getId());
 
     ContainerWithPipeline containerWithPipeline2 = containerManager
         .getContainerWithPipeline(contInfo.containerID());
     pipeline = containerWithPipeline2.getPipeline();
     Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
     Assert.assertNotNull("Pipeline should not be null", pipeline);
-    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn1.getHostName()));
-    Assert.assertTrue(pipeline.getDatanodeHosts().contains(dn2.getHostName()));
+    Assert.assertTrue(pipeline.getNodes().contains(dn1));
+    Assert.assertTrue(pipeline.getNodes().contains(dn2));
   }
 
   @Test
@@ -236,10 +244,10 @@ public class TestSCMContainerManager {
   public void testFullContainerReport() throws Exception {
     ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
+    List<ContainerReplicaProto> reports =
         new ArrayList<>();
-    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
-        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+    ContainerReplicaProto.Builder ciBuilder =
+        ContainerReplicaProto.newBuilder();
     ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
         .setSize(5368709120L)
         .setUsed(2000000000L)
@@ -249,6 +257,7 @@ public class TestSCMContainerManager {
         .setReadBytes(2000000000L)
         .setWriteBytes(2000000000L)
         .setContainerID(info.getContainerID())
+        .setState(ContainerReplicaProto.State.CLOSED)
         .setDeleteTransactionId(0);
 
     reports.add(ciBuilder.build());
@@ -266,14 +275,14 @@ public class TestSCMContainerManager {
         updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
 
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
+    for (ContainerReplicaProto c : reports) {
      Assert.assertEquals(containerManager.getContainerReplicas(
          ContainerID.valueof(c.getContainerID())).size(), 1);
     }
 
     containerManager.processContainerReports(TestUtils.randomDatanodeDetails(),
         crBuilder.build());
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo c : reports) {
+    for (ContainerReplicaProto c : reports) {
       Assert.assertEquals(containerManager.getContainerReplicas(
               ContainerID.valueof(c.getContainerID())).size(), 2);
     }
@@ -284,10 +293,10 @@ public class TestSCMContainerManager {
     ContainerInfo info1 = createContainer();
     ContainerInfo info2 = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
+    List<ContainerReplicaProto> reports =
         new ArrayList<>();
-    StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
-        StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+    ContainerReplicaProto.Builder ciBuilder =
+        ContainerReplicaProto.newBuilder();
     long cID1 = info1.getContainerID();
     long cID2 = info2.getContainerID();
     ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
@@ -296,7 +305,8 @@ public class TestSCMContainerManager {
         .setKeyCount(100000000L)
         .setReadBytes(1000000000L)
         .setWriteBytes(1000000000L)
-        .setContainerID(cID1);
+        .setContainerID(cID1)
+        .setState(ContainerReplicaProto.State.CLOSED);
     reports.add(ciBuilder.build());
 
     ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea54a9")

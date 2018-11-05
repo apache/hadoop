@@ -19,9 +19,11 @@ package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -199,8 +201,24 @@ public class TestHttpFSServer extends HFSTestCase {
     return conf;
   }
 
-  private void createHttpFSServer(boolean addDelegationTokenAuthHandler,
-                                  boolean sslEnabled)
+  /**
+   * Write configuration to a site file under Hadoop configuration dir.
+   */
+  private void writeConf(Configuration conf, String sitename)
+      throws Exception {
+    File homeDir = TestDirHelper.getTestDir();
+    // HDFS configuration
+    File hadoopConfDir = new File(new File(homeDir, "conf"), "hadoop-conf");
+    Assert.assertTrue(hadoopConfDir.exists());
+
+    File siteFile = new File(hadoopConfDir, sitename);
+    OutputStream os = new FileOutputStream(siteFile);
+    conf.writeXml(os);
+    os.close();
+  }
+
+  private Server createHttpFSServer(boolean addDelegationTokenAuthHandler,
+                                    boolean sslEnabled)
       throws Exception {
     Configuration conf = createHttpFSConf(addDelegationTokenAuthHandler,
                                           sslEnabled);
@@ -213,6 +231,7 @@ public class TestHttpFSServer extends HFSTestCase {
     if (addDelegationTokenAuthHandler) {
       HttpFSServerWebApp.get().setAuthority(TestJettyHelper.getAuthority());
     }
+    return server;
   }
 
   private String getSignedTokenString()
@@ -889,6 +908,48 @@ public class TestHttpFSServer extends HFSTestCase {
     statusJson = getStatus(dir, "GETACLSTATUS");
     aclEntries = getAclEntries(statusJson);
     Assert.assertTrue(aclEntries.size() == 0);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCustomizedUserAndGroupNames() throws Exception {
+    // Start server with default configuration
+    Server server = createHttpFSServer(false, false);
+    final Configuration conf = HttpFSServerWebApp.get()
+        .get(FileSystemAccess.class).getFileSystemConfiguration();
+    // Change pattern config
+    conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+        "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");
+    conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?" +
+            "(user|group|mask|other):[[0-9A-Za-z_][@A-Za-z0-9._-]]*:" +
+            "([rwx-]{3})?)*$");
+    // Save configuration to site file
+    writeConf(conf, "hdfs-site.xml");
+    // Restart the HttpFS server to apply new config
+    server.stop();
+    server.start();
+
+    final String aclUser = "user:123:rw-";
+    final String aclGroup = "group:foo@bar:r--";
+    final String aclSpec = "aclspec=user::rwx," + aclUser + ",group::rwx," +
+        aclGroup + ",other::---";
+    final String dir = "/aclFileTestCustom";
+    final String path = dir + "/test";
+    // Create test dir
+    FileSystem fs = FileSystem.get(conf);
+    fs.mkdirs(new Path(dir));
+    createWithHttp(path, null);
+    // Set ACL
+    putCmd(path, "SETACL", aclSpec);
+    // Verify ACL
+    String statusJson = getStatus(path, "GETACLSTATUS");
+    List<String> aclEntries = getAclEntries(statusJson);
+    Assert.assertTrue(aclEntries.contains(aclUser));
+    Assert.assertTrue(aclEntries.contains(aclGroup));
   }
 
   @Test

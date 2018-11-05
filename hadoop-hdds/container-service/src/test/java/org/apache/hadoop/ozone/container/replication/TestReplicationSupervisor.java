@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -41,7 +42,7 @@ public class TestReplicationSupervisor {
   private OzoneConfiguration conf = new OzoneConfiguration();
 
   @Test
-  public void normal() {
+  public void normal() throws Exception {
     //GIVEN
     ContainerSet set = new ContainerSet();
 
@@ -54,7 +55,6 @@ public class TestReplicationSupervisor {
         .collect(Collectors.toList());
 
     try {
-      supervisor.start();
       //WHEN
       supervisor.addTask(new ReplicationTask(1L, datanodes));
       supervisor.addTask(new ReplicationTask(1L, datanodes));
@@ -62,16 +62,11 @@ public class TestReplicationSupervisor {
       supervisor.addTask(new ReplicationTask(2L, datanodes));
       supervisor.addTask(new ReplicationTask(2L, datanodes));
       supervisor.addTask(new ReplicationTask(3L, datanodes));
-      try {
-        Thread.sleep(300);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
       //THEN
-      System.out.println(replicator.replicated.get(0));
+      LambdaTestUtils.await(200_000, 1000,
+          () -> supervisor.getInFlightReplications() == 0);
 
-      Assert
-          .assertEquals(3, replicator.replicated.size());
+      Assert.assertEquals(3, replicator.replicated.size());
 
     } finally {
       supervisor.stop();
@@ -79,7 +74,7 @@ public class TestReplicationSupervisor {
   }
 
   @Test
-  public void duplicateMessageAfterAWhile() throws InterruptedException {
+  public void duplicateMessageAfterAWhile() throws Exception {
     //GIVEN
     ContainerSet set = new ContainerSet();
 
@@ -92,22 +87,18 @@ public class TestReplicationSupervisor {
         .collect(Collectors.toList());
 
     try {
-      supervisor.start();
       //WHEN
       supervisor.addTask(new ReplicationTask(1L, datanodes));
-      Thread.sleep(400);
+      LambdaTestUtils.await(200_000, 1000,
+          () -> supervisor.getInFlightReplications() == 0);
       supervisor.addTask(new ReplicationTask(1L, datanodes));
-      Thread.sleep(300);
+      LambdaTestUtils.await(200_000, 1000,
+          () -> supervisor.getInFlightReplications() == 0);
 
       //THEN
       System.out.println(replicator.replicated.get(0));
 
-      Assert
-          .assertEquals(1, replicator.replicated.size());
-
-      //the last item is still in the queue as we cleanup the queue during the
-      // selection
-      Assert.assertEquals(1, supervisor.getQueueSize());
+      Assert.assertEquals(1, replicator.replicated.size());
 
     } finally {
       supervisor.stop();

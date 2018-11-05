@@ -3787,7 +3787,7 @@
     <description>
       Enable additional discovery/isolation of resources on the NodeManager,
       split by comma. By default, this is empty.
-      Acceptable values: { "yarn-io/gpu", "yarn-io/fpga"}.
+      Acceptable values: { "yarn.io/gpu", "yarn.io/fpga"}.
     </description>
     <name>yarn.nodemanager.resource-plugins</name>
     <value></value>
@@ -3868,9 +3868,10 @@
       At present, since we can only configure one major number in c-e.cfg, FPGA device is
       identified by their minor device number. A common approach to get minor
       device number of FPGA is using "aocl diagnose" and check uevent with device name.
+      A sample manual value for this is like "0,1"
     </description>
     <name>yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices</name>
-    <value>0,1</value>
+    <value>auto</value>
   </property>
 
   <property>

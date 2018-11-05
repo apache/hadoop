@@ -18,25 +18,34 @@
 
 package org.apache.hadoop.hdds;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TimeZone;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys
     .DFS_DATANODE_DNS_INTERFACE_KEY;
@@ -49,6 +58,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
 /**
  * HDDS specific stateless utility functions.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Stable
 public final class HddsUtils {
 
 
@@ -60,6 +71,8 @@ public final class HddsUtils {
   public static final String OZONE_SCM_SERVICE_ID = "OzoneScmService";
   public static final String OZONE_SCM_SERVICE_INSTANCE_ID =
       "OzoneScmServiceInstance";
+  private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
+
 
   private static final int NO_PORT = -1;
 
@@ -74,8 +87,20 @@ public final class HddsUtils {
    * @return Target InetSocketAddress for the SCM client endpoint.
    */
   public static InetSocketAddress getScmAddressForClients(Configuration conf) {
-    final Optional<String> host = getHostNameFromConfigKeys(conf,
+    Optional<String> host = getHostNameFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
+        throw new IllegalArgumentException(
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
+      }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
 
     if (!host.isPresent()) {
       throw new IllegalArgumentException(
@@ -89,14 +114,15 @@ public final class HddsUtils {
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(host.get() + ":" + port
-        .or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
+        .orElse(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
    * Retrieve the socket address that should be used by clients to connect
    * to the SCM for block service. If
    * {@link ScmConfigKeys#OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY} is not defined
-   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used.
+   * then {@link ScmConfigKeys#OZONE_SCM_CLIENT_ADDRESS_KEY} is used. If neither
+   * is defined then {@link ScmConfigKeys#OZONE_SCM_NAMES} is used.
    *
    * @param conf
    * @return Target InetSocketAddress for the SCM block client endpoint.
@@ -110,20 +136,33 @@ public final class HddsUtils {
     if (!host.isPresent()) {
       host = getHostNameFromConfigKeys(conf,
           ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
-      if (!host.isPresent()) {
+    }
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
         throw new IllegalArgumentException(
-            ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY
-                + " must be defined. See"
-                + " https://wiki.apache.org/hadoop/Ozone#Configuration"
-                + " for details on configuring Ozone.");
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
       }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
+
+    if (!host.isPresent()) {
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY
+              + " must be defined. See"
+              + " https://wiki.apache.org/hadoop/Ozone#Configuration"
+              + " for details on configuring Ozone.");
     }
 
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(host.get() + ":" + port
-        .or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
+        .orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -147,7 +186,7 @@ public final class HddsUtils {
         return hostName;
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -157,7 +196,7 @@ public final class HddsUtils {
    */
   public static Optional<String> getHostName(String value) {
     if ((value == null) || value.isEmpty()) {
-      return Optional.absent();
+      return Optional.empty();
     }
     return Optional.of(HostAndPort.fromString(value).getHostText());
   }
@@ -169,11 +208,11 @@ public final class HddsUtils {
    */
   public static Optional<Integer> getHostPort(String value) {
     if ((value == null) || value.isEmpty()) {
-      return Optional.absent();
+      return Optional.empty();
     }
     int port = HostAndPort.fromString(value).getPortOrDefault(NO_PORT);
     if (port == NO_PORT) {
-      return Optional.absent();
+      return Optional.empty();
     } else {
       return Optional.of(port);
     }
@@ -200,7 +239,7 @@ public final class HddsUtils {
         return hostPort;
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -222,20 +261,17 @@ public final class HddsUtils {
           + " Null or empty address list found.");
     }
 
-    final com.google.common.base.Optional<Integer>
-        defaultPort =  com.google.common.base.Optional.of(ScmConfigKeys
-        .OZONE_SCM_DEFAULT_PORT);
+    final Optional<Integer> defaultPort = Optional
+        .of(ScmConfigKeys.OZONE_SCM_DEFAULT_PORT);
     for (String address : names) {
-      com.google.common.base.Optional<String> hostname =
-          getHostName(address);
+      Optional<String> hostname = getHostName(address);
       if (!hostname.isPresent()) {
         throw new IllegalArgumentException("Invalid hostname for SCM: "
             + hostname);
       }
-      com.google.common.base.Optional<Integer> port =
-          getHostPort(address);
+      Optional<Integer> port = getHostPort(address);
       InetSocketAddress addr = NetUtils.createSocketAddr(hostname.get(),
-          port.or(defaultPort.get()));
+          port.orElse(defaultPort.get()));
       addresses.add(addr);
     }
     return addresses;
@@ -266,7 +302,7 @@ public final class HddsUtils {
   public static String getDatanodeIdFilePath(Configuration conf) {
     String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
     if (dataNodeIDPath == null) {
-      String metaPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+      String metaPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
       if (Strings.isNullOrEmpty(metaPath)) {
         // this means meta data is not found, in theory should not happen at
         // this point because should've failed earlier.
@@ -348,4 +384,45 @@ public final class HddsUtils {
     }
   }
 
+  /**
+   * Register the provided MBean with additional JMX ObjectName properties.
+   * If additional properties are not supported then fallback to registering
+   * without properties.
+   *
+   * @param serviceName - see {@link MBeans#register}
+   * @param mBeanName - see {@link MBeans#register}
+   * @param jmxProperties - additional JMX ObjectName properties.
+   * @param mBean - the MBean to register.
+   * @return the named used to register the MBean.
+   */
+  public static ObjectName registerWithJmxProperties(
+      String serviceName, String mBeanName, Map<String, String> jmxProperties,
+      Object mBean) {
+    try {
+
+      // Check support for registering with additional properties.
+      final Method registerMethod = MBeans.class.getMethod(
+          "register", String.class, String.class,
+          Map.class, Object.class);
+
+      return (ObjectName) registerMethod.invoke(
+          null, serviceName, mBeanName, jmxProperties, mBean);
+
+    } catch (NoSuchMethodException | IllegalAccessException |
+        InvocationTargetException e) {
+
+      // Fallback
+      LOG.trace("Registering MBean {} without additional properties {}",
+          mBeanName, jmxProperties);
+      return MBeans.register(serviceName, mBeanName, mBean);
+    }
+  }
+
+  /**
+   * Get the current UTC time in milliseconds.
+   * @return the current UTC time in milliseconds.
+   */
+  public static long getUtcTime() {
+    return Calendar.getInstance(UTC_ZONE).getTimeInMillis();
+  }
 }

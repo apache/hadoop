@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -32,13 +33,14 @@ import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.Event;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -72,9 +74,12 @@ public class TestContainerReportHandler implements EventPublisher {
         this.getClass().getSimpleName());
     //GIVEN
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDir);
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir);
+    EventQueue eventQueue = new EventQueue();
+    PipelineManager pipelineManager =
+        new SCMPipelineManager(conf, nodeManager, eventQueue);
     SCMContainerManager containerManager = new SCMContainerManager(
-        conf, nodeManager, new EventQueue());
+        conf, nodeManager, pipelineManager, eventQueue);
 
     ReplicationActivityStatus replicationActivityStatus =
         new ReplicationActivityStatus();
@@ -186,9 +191,11 @@ public class TestContainerReportHandler implements EventPublisher {
 
     for (long containerId : containerIds) {
       org.apache.hadoop.hdds.protocol.proto
-          .StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder
+          .StorageContainerDatanodeProtocolProtos
+          .ContainerReplicaProto.Builder
           ciBuilder = org.apache.hadoop.hdds.protocol.proto
-          .StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+          .StorageContainerDatanodeProtocolProtos
+          .ContainerReplicaProto.newBuilder();
       ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
           .setSize(5368709120L)
           .setUsed(2000000000L)

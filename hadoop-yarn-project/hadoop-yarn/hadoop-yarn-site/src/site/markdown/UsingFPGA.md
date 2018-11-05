@@ -53,7 +53,7 @@ Use following property to configure `DominantResourceCalculator` (In `capacity-s
 ```
   <property>
     <name>yarn.nodemanager.resource-plugins</name>
-    <value>yarn-io/fpga</value>
+    <value>yarn.io/fpga</value>
   </property>
 
 ```

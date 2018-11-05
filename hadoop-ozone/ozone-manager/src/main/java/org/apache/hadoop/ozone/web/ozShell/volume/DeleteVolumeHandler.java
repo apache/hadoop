@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 
 import picocli.CommandLine.Command;
@@ -40,7 +42,11 @@ public class DeleteVolumeHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    String volumeName = parseVolumeName(uri);
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureVolumeAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
+
+    String volumeName = address.getVolumeName();
 
     if (isVerbose()) {
       System.out.printf("Volume name : %s%n", volumeName);

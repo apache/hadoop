@@ -116,8 +116,8 @@ public class XMLUtils {
    * 
    * There are three kinds of code points in XML:
    * - Those that can be represented normally,
-   * - Those that have to be escaped (for example, & must be represented 
-   *     as &amp;)
+   * - Those that have to be escaped (for example, &amp; must be represented
+   *     as {@literal &amp;})
    * - Those that cannot be represented at all in XML.
    *
    * The built-in SAX functions will handle the first two types for us just

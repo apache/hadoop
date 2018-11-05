@@ -329,8 +329,8 @@ public class INodesInPath {
   }
 
   /**
-   * @return the i-th inode if i >= 0;
-   *         otherwise, i < 0, return the (length + i)-th inode.
+   * @return the i-th inode if i {@literal >=} 0;
+   *         otherwise, i {@literal <} 0, return the (length + i)-th inode.
    */
   public INode getINode(int i) {
     return inodes[(i < 0) ? inodes.length + i : i];

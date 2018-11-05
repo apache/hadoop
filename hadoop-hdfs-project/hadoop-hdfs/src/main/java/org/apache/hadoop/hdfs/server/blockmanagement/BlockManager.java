@@ -143,12 +143,13 @@ import org.slf4j.LoggerFactory;
  * If any of the replica is in maintenance mode, the safety property
  * is extended as follows. These property still apply for the case of zero
  * maintenance replicas, thus we can use these safe property for all scenarios.
- * a. # of live replicas >= # of min replication for maintenance.
- * b. # of live replicas <= # of expected redundancy.
- * c. # of live replicas and maintenance replicas >= # of expected redundancy.
+ * a. # of live replicas &gt;= # of min replication for maintenance.
+ * b. # of live replicas &lt;= # of expected redundancy.
+ * c. # of live replicas and maintenance replicas &gt;= # of expected
+ * redundancy.
  *
  * For regular replication, # of min live replicas for maintenance is determined
- * by DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY. This number has to <=
+ * by DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY. This number has to &lt;=
  * DFS_NAMENODE_REPLICATION_MIN_KEY.
  * For erasure encoding, # of min live replicas for maintenance is
  * BlockInfoStriped#getRealDataBlockNum.
@@ -305,7 +306,7 @@ public class BlockManager implements BlockStatsMXBean {
   private final double storageInfoDefragmentRatio;
 
   /**
-   * Mapping: Block -> { BlockCollection, datanodes, self ref }
+   * Mapping: Block {@literal ->} { BlockCollection, datanodes, self ref }
    * Updated only in response to client-sent information.
    */
   final BlocksMap blocksMap;
@@ -321,7 +322,9 @@ public class BlockManager implements BlockStatsMXBean {
   private final BlockReportProcessingThread blockReportThread =
       new BlockReportProcessingThread();
 
-  /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
+  /**
+   * Store blocks {@literal ->} datanodedescriptor(s) map of corrupt replicas.
+   */
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   /**
@@ -2105,7 +2108,7 @@ public class BlockManager implements BlockStatsMXBean {
    * Choose target datanodes for creating a new block.
    * 
    * @throws IOException
-   *           if the number of targets < minimum replication.
+   *           if the number of targets {@literal <} minimum replication.
    * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
    *      Set, long, List, BlockStoragePolicy, EnumSet)
    */
@@ -2444,7 +2447,7 @@ public class BlockManager implements BlockStatsMXBean {
     return providedStorageMap.getCapacity();
   }
 
-  public void updateHeartbeat(DatanodeDescriptor node, StorageReport[] reports,
+  void updateHeartbeat(DatanodeDescriptor node, StorageReport[] reports,
       long cacheCapacity, long cacheUsed, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
 
@@ -2452,6 +2455,17 @@ public class BlockManager implements BlockStatsMXBean {
       providedStorageMap.updateStorage(node, report.getStorage());
     }
     node.updateHeartbeat(reports, cacheCapacity, cacheUsed, xceiverCount,
+        failedVolumes, volumeFailureSummary);
+  }
+
+  void updateHeartbeatState(DatanodeDescriptor node,
+      StorageReport[] reports, long cacheCapacity, long cacheUsed,
+      int xceiverCount, int failedVolumes,
+      VolumeFailureSummary volumeFailureSummary) {
+    for (StorageReport report: reports) {
+      providedStorageMap.updateStorage(node, report.getStorage());
+    }
+    node.updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
         failedVolumes, volumeFailureSummary);
   }
 
@@ -2487,7 +2501,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   /**
    * The given storage is reporting all its blocks.
-   * Update the (storage-->block list) and (block-->storage list) maps.
+   * Update the (storage{@literal -->}block list) and
+   * (block{@literal -->}storage list) maps.
    *
    * @return true if all known storages of the given DN have finished reporting.
    * @throws IOException
@@ -3777,8 +3792,8 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Modify (block-->datanode) map. Possibly generate replication tasks, if the
-   * removed block is still valid.
+   * Modify (block{@literal -->}datanode) map. Possibly generate replication
+   * tasks, if the removed block is still valid.
    */
   public void removeStoredBlock(BlockInfo storedBlock, DatanodeDescriptor node) {
     blockLog.debug("BLOCK* removeStoredBlock: {} from {}", storedBlock, node);
@@ -4341,7 +4356,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Get blocks to invalidate for <i>nodeId</i>
+   * Get blocks to invalidate for {@code nodeId}
    * in {@link #invalidateBlocks}.
    *
    * @return number of blocks scheduled for removal during this iteration.

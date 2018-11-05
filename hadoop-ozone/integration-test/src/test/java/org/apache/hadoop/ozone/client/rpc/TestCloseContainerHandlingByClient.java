@@ -28,12 +28,14 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.
     StorageContainerException;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
@@ -287,6 +289,64 @@ public class TestCloseContainerHandlingByClient {
     validateData(keyName, dataString.concat(dataString2).getBytes());
   }
 
+  @Test
+  public void testMultiBlockWrites3() throws Exception {
+
+    String keyName = "standalone5";
+    int keyLen = 4 * blockSize;
+    OzoneOutputStream key =
+        createKey(keyName, ReplicationType.RATIS, keyLen);
+    ChunkGroupOutputStream groupOutputStream =
+        (ChunkGroupOutputStream) key.getOutputStream();
+    // With the initial size provided, it should have preallocated 4 blocks
+    Assert.assertEquals(4, groupOutputStream.getStreamEntries().size());
+    // write data 3 blocks and one more chunk
+    byte[] writtenData = fixedLengthString(keyString, keyLen).getBytes();
+    byte[] data = Arrays.copyOfRange(writtenData, 0, 3 * blockSize + chunkSize);
+    Assert.assertEquals(data.length, 3 * blockSize + chunkSize);
+    key.write(data);
+
+    Assert.assertTrue(key.getOutputStream() instanceof ChunkGroupOutputStream);
+    //get the name of a valid container
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setType(HddsProtos.ReplicationType.RATIS)
+        .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName(keyName)
+        .build();
+
+    waitForContainerClose(keyName, key,
+        HddsProtos.ReplicationType.RATIS);
+    // write 3 more chunks worth of data. It will fail and new block will be
+    // allocated. This write completes 4 blocks worth of data written to key
+    data = Arrays
+        .copyOfRange(writtenData, 3 * blockSize + chunkSize, keyLen);
+    key.write(data);
+
+    key.close();
+    // read the key from OM again and match the length and data.
+    OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
+    List<OmKeyLocationInfo> keyLocationInfos =
+        keyInfo.getKeyLocationVersions().get(0).getBlocksLatestVersionOnly();
+    OzoneVolume volume = objectStore.getVolume(volumeName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OzoneInputStream inputStream = bucket.readKey(keyName);
+    byte[] readData = new byte[keyLen];
+    inputStream.read(readData);
+    Assert.assertArrayEquals(writtenData, readData);
+
+    // Though we have written only block initially, the close will hit
+    // closeContainerException and remaining data in the chunkOutputStream
+    // buffer will be copied into a different allocated block and will be
+    // committed.
+    Assert.assertEquals(5, keyLocationInfos.size());
+    Assert.assertEquals(4 * blockSize, keyInfo.getDataSize());
+    long length = 0;
+    for (OmKeyLocationInfo locationInfo : keyLocationInfos) {
+      length += locationInfo.getLength();
+    }
+    Assert.assertEquals(4 * blockSize, length);
+  }
+
   private void waitForContainerClose(String keyName,
       OzoneOutputStream outputStream, HddsProtos.ReplicationType type)
       throws Exception {
@@ -306,7 +366,7 @@ public class TestCloseContainerHandlingByClient {
               .getContainerWithPipeline(ContainerID.valueof(containerID))
               .getPipeline();
       pipelineList.add(pipeline);
-      List<DatanodeDetails> datanodes = pipeline.getMachines();
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
       for (DatanodeDetails details : datanodes) {
         Assert.assertFalse(ContainerTestHelper
             .isContainerClosed(cluster, containerID, details));
@@ -319,7 +379,7 @@ public class TestCloseContainerHandlingByClient {
     int index = 0;
     for (long containerID : containerIdList) {
       Pipeline pipeline = pipelineList.get(index);
-      List<DatanodeDetails> datanodes = pipeline.getMachines();
+      List<DatanodeDetails> datanodes = pipeline.getNodes();
       for (DatanodeDetails datanodeDetails : datanodes) {
         GenericTestUtils.waitFor(() -> ContainerTestHelper
                 .isContainerClosed(cluster, containerID, datanodeDetails), 500,
@@ -352,7 +412,7 @@ public class TestCloseContainerHandlingByClient {
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getMachines();
+            .getPipeline().getNodes();
     Assert.assertEquals(1, datanodes.size());
     waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
     dataString = fixedLengthString(keyString, (1 * blockSize));
@@ -455,7 +515,7 @@ public class TestCloseContainerHandlingByClient {
     List<DatanodeDetails> datanodes =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getMachines();
+            .getPipeline().getNodes();
     Assert.assertEquals(1, datanodes.size());
     // move the container on the datanode to Closing state, this will ensure
     // closing the key will hit BLOCK_NOT_COMMITTED_EXCEPTION while trying
@@ -464,7 +524,7 @@ public class TestCloseContainerHandlingByClient {
       if (datanodes.get(0).equals(datanodeService.getDatanodeDetails())) {
         datanodeService.getDatanodeStateMachine().getContainer()
             .getContainerSet().getContainer(containerID).getContainerData()
-            .setState(ContainerProtos.ContainerLifeCycleState.CLOSING);
+            .setState(ContainerProtos.ContainerDataProto.State.CLOSING);
       }
     }
     dataString = fixedLengthString(keyString, (chunkSize * 1 / 2));

@@ -67,6 +67,14 @@ public interface MiniOzoneCluster {
   void waitForClusterToBeReady() throws TimeoutException, InterruptedException;
 
   /**
+   * Sets the timeout value after which
+   * {@link MiniOzoneCluster#waitForClusterToBeReady} times out.
+   *
+   * @param timeoutInMs timeout value in milliseconds
+   */
+  void setWaitForClusterToBeReadyTimeout(int timeoutInMs);
+
+  /**
    * Waits/blocks till the cluster is out of chill mode.
    *
    * @throws TimeoutException TimeoutException In case of timeout
@@ -156,16 +164,16 @@ public interface MiniOzoneCluster {
    *
    * @param i index of HddsDatanode in the MiniOzoneCluster
    */
-  void restartHddsDatanode(int i) throws InterruptedException,
-      TimeoutException;
+  void restartHddsDatanode(int i, boolean waitForDatanode)
+      throws InterruptedException, TimeoutException;
 
   /**
    * Restart a particular HddsDatanode.
    *
    * @param dn HddsDatanode in the MiniOzoneCluster
    */
-  void restartHddsDatanode(DatanodeDetails dn) throws InterruptedException,
-      TimeoutException, IOException;
+  void restartHddsDatanode(DatanodeDetails dn, boolean waitForDatanode)
+      throws InterruptedException, TimeoutException, IOException;
   /**
    * Shutdown a particular HddsDatanode.
    *

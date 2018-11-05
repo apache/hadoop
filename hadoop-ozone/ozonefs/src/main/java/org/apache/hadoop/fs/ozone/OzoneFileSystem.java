@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +98,11 @@ public class OzoneFileSystem extends FileSystem {
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
-    setConf(conf);
+    if(!(conf instanceof OzoneConfiguration)) {
+      setConf(new OzoneConfiguration(conf));
+    } else {
+      setConf(conf);
+    }
     Objects.requireNonNull(name.getScheme(), "No scheme provided in " + name);
     assert getScheme().equals(name.getScheme());
 
@@ -116,15 +121,15 @@ public class OzoneFileSystem extends FileSystem {
       uri = new URIBuilder().setScheme(OZONE_URI_SCHEME)
           .setHost(authority).build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
-      this.ozoneClient = OzoneClientFactory.getRpcClient(conf);
+      this.ozoneClient = OzoneClientFactory.getRpcClient(getConf());
       objectStore = ozoneClient.getObjectStore();
       this.volume = objectStore.getVolume(volumeStr);
       this.bucket = volume.getBucket(bucketStr);
       this.replicationType = ReplicationType.valueOf(
-          conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+          getConf().get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
               OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
       this.replicationFactor = ReplicationFactor.valueOf(
-          conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
+          getConf().getInt(OzoneConfigKeys.OZONE_REPLICATION,
               OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
       try {
         this.userName =

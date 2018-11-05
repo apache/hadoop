@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -395,6 +396,23 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public void stopWriter(long xceiverStopTimeout) throws IOException {
+    }
+
+    @Override
+    public void waitForMinLength(long minLength, long time, TimeUnit unit)
+        throws IOException {
+      final long deadLine = System.currentTimeMillis() + unit.toMillis(time);
+      do {
+        if (getBytesOnDisk() >= minLength) {
+          return;
+        }
+        try {
+          Thread.sleep(100L);
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+      } while (deadLine > System.currentTimeMillis());
+      throw new IOException("Minimum length was not achieved within timeout");
     }
   }
 

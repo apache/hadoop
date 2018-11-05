@@ -105,6 +105,7 @@ int write_config_file(char *file_name, int banned) {
     fprintf(file, "min.user.id=0\n");
   }
   fprintf(file, "allowed.system.users=allowedUser,daemon\n");
+  fprintf(file, "feature.yarn.sysfs.enabled=1\n");
   fclose(file);
   return 0;
 }
@@ -522,6 +523,63 @@ void test_is_feature_enabled() {
 
 
   free_configuration(&exec_cfg);
+}
+
+void test_yarn_sysfs() {
+  char *app_id = "app-1";
+  char *container_id = "container-1";
+  // Test create sysfs without container.
+  int result = create_yarn_sysfs(username, app_id, container_id, "work", local_dirs);
+  if (result == 0) {
+    printf("Should not be able to create yarn sysfs without container directories.\n");
+    exit(1);
+  }
+
+  result = sync_yarn_sysfs(local_dirs, username, username, app_id);
+  if (result == 0) {
+    printf("sync_yarn_sysfs failed.\n");
+    exit(1);
+  }
+
+  // Create container directories and init app.json
+  char* const* local_dir_ptr;
+  for (local_dir_ptr = local_dirs; *local_dir_ptr != 0; ++local_dir_ptr) {
+    char *user_dir = make_string("%s/usercache/%s", *local_dir_ptr, username);
+    if (mkdirs(user_dir, 0750) != 0) {
+      printf("Can not make user directories: %s\n", user_dir);
+      exit(1);
+    }
+    free(user_dir);
+    char *app_dir = make_string("%s/usercache/%s/appcache/%s/%s", *local_dir_ptr, username, app_id);
+    if (mkdirs(app_dir, 0750) != 0) {
+      printf("Can not make app directories: %s\n", app_dir);
+      exit(1);
+    }
+    free(app_dir);
+    // Simulate distributed cache created directory structures.
+    char *cache_dir = make_string("%s/usercache/%s/appcache/%s/filecache/%s/sysfs.tar/sysfs", *local_dir_ptr, username, app_id, container_id);
+    if (mkdirs(cache_dir, 0750) != 0) {
+      printf("Can not make container directories: %s\n", cache_dir);
+      exit(1);
+    }
+    free(cache_dir);
+    char *nm_dir = make_string("%s/nmPrivate/%s/sysfs", *local_dir_ptr, app_id);
+    if (mkdirs(nm_dir, 0750) != 0) {
+      printf("Can not make nmPrivate directories: %s\n", nm_dir);
+      exit(1);
+    }
+    char *sysfs_path = make_string("%s/%s", nm_dir, "app.json");
+    FILE *file = fopen(sysfs_path, "w");
+    fprintf(file, "{}\n");
+    fclose(file);
+    free(nm_dir);
+  }
+
+  result = sync_yarn_sysfs(local_dirs, username, username, app_id);
+  if (result != 0) {
+    printf("sync_yarn_sysfs failed.\n");
+    exit(1);
+  }
 }
 
 void test_delete_user() {
@@ -1440,32 +1498,26 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (mkdirs(TEST_ROOT, 0777) != 0) {
+  printf("\nMaking test dir\n");
+  if (mkdirs(TEST_ROOT, 0755) != 0) {
     exit(1);
   }
-  if (chmod(TEST_ROOT, 0777) != 0) {    // in case of umask
-    exit(1);
-  }
-
-  if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
+  if (chmod(TEST_ROOT, 0755) != 0) {    // in case of umask
     exit(1);
   }
 
+  // We need a valid config before the test really starts for the check_user
+  // and set_user calls
+  printf("\nCreating test.cfg\n");
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
-
-  printf("\nOur executable is %s\n",get_executable(argv[0]));
-
+  printf("\nLoading test.cfg\n");
   read_executor_config(TEST_ROOT "/test.cfg");
-
-  local_dirs = split(strdup(NM_LOCAL_DIRS));
-  log_dirs = split(strdup(NM_LOG_DIRS));
-
-  create_nm_roots(local_dirs);
 
   // See the description above of various ways this test
   // can be executed in order to understand the following logic
+  printf("\nDetermining user details\n");
   char* current_username = strdup(getpwuid(getuid())->pw_name);
   if (getuid() == 0 && (argc == 2 || argc == 3)) {
     username = argv[1];
@@ -1474,11 +1526,36 @@ int main(int argc, char **argv) {
     username = current_username;
     yarn_username = (argc == 2) ? argv[1] : current_username;
   }
-  set_nm_uid(geteuid(), getegid());
+  struct passwd *username_info = check_user(username);
+  printf("\nSetting NM UID\n");
+  set_nm_uid(username_info->pw_uid, username_info->pw_gid);
 
+  // Make sure that username owns all the files now
+  printf("\nEnsuring ownership of test dir\n");
+  if (chown(TEST_ROOT, username_info->pw_uid, username_info->pw_gid) != 0) {
+    exit(1);
+  }
+  if (chown(TEST_ROOT "/test.cfg",
+       username_info->pw_uid, username_info->pw_gid) != 0) {
+    exit(1);
+  }
+
+  printf("\nSetting effective user\n");
   if (set_user(username)) {
     exit(1);
   }
+
+  printf("\nCreating userlogs dir\n");
+  if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
+    exit(1);
+  }
+
+  printf("\nOur executable is %s\n",get_executable(argv[0]));
+
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
+
+  create_nm_roots(local_dirs);
 
   printf("\nStarting tests\n");
 
@@ -1531,6 +1608,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
+
+  printf("\nTesting yarn sysfs\n");
+  test_yarn_sysfs();
 
   test_check_user(0);
 
@@ -1608,6 +1688,11 @@ int main(int argc, char **argv) {
 
   test_trim_function();
   printf("\nFinished tests\n");
+
+  printf("\nAttempting to clean up from the run\n");
+  if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
+    exit(1);
+  }
 
   free(current_username);
   free_executor_configurations();

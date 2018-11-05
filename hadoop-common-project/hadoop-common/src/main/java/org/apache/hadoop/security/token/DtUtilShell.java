@@ -55,6 +55,7 @@ public class DtUtilShell extends CommandShell {
   private static final String CANCEL = "cancel";
   private static final String REMOVE = "remove";
   private static final String RENEW = "renew";
+  private static final String IMPORT = "import";
   private static final String RENEWER = "-renewer";
   private static final String SERVICE = "-service";
   private static final String ALIAS = "-alias";
@@ -138,6 +139,8 @@ public class DtUtilShell extends CommandShell {
           setSubCommand(new Remove(false));
         } else if (command.equals(RENEW)) {
           setSubCommand(new Renew());
+        } else if (command.equals(IMPORT)) {
+          setSubCommand(new Import(args[++i]));
         }
       } else if (args[i].equals(ALIAS)) {
         alias = new Text(args[++i]);
@@ -176,11 +179,11 @@ public class DtUtilShell extends CommandShell {
   @Override
   public String getCommandUsage() {
     return String.format(
-        "%n%s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n%n",
+        "%n%s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n%n",
         DT_USAGE, (new Print()).getUsage(), (new Get()).getUsage(),
         (new Edit()).getUsage(), (new Append()).getUsage(),
         (new Remove(true)).getUsage(), (new Remove(false)).getUsage(),
-        (new Renew()).getUsage());
+        (new Renew()).getUsage(), (new Import()).getUsage());
   }
 
   private class Print extends SubCommand {
@@ -354,6 +357,36 @@ public class DtUtilShell extends CommandShell {
     @Override
     public String getUsage() {
       return RENEW_USAGE;
+    }
+  }
+
+  private class Import extends SubCommand {
+    public static final String IMPORT_USAGE =
+        "dtutil import <base64> [-alias <alias>] " +
+        FORMAT_SUBSTRING + " filename";
+
+    private String base64 = null;
+
+    Import() { }
+
+    Import(String arg) {
+      base64 = arg;
+    }
+
+    @Override
+    public boolean validate() {
+      return true;
+    }
+
+    @Override
+    public void execute() throws Exception {
+      DtFileOperations.importTokenFile(
+          firstFile, format, alias, base64, getConf());
+    }
+
+    @Override
+    public String getUsage() {
+      return IMPORT_USAGE;
     }
   }
 

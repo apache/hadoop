@@ -116,6 +116,10 @@ public class ChunkGroupOutputStream extends OutputStream {
   public List<ChunkOutputStreamEntry> getStreamEntries() {
     return streamEntries;
   }
+  @VisibleForTesting
+  public XceiverClientManager getXceiverClientManager() {
+    return xceiverClientManager;
+  }
 
   public List<OmKeyLocationInfo> getLocationInfoList() throws IOException {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
@@ -124,7 +128,6 @@ public class ChunkGroupOutputStream extends OutputStream {
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
               .setShouldCreateContainer(false)
               .setLength(streamEntry.currentPosition).setOffset(0)
-              .setBlockCommitSequenceId(streamEntry.getBlockCommitSequenceId())
               .build();
       locationInfoList.add(info);
     }
@@ -410,6 +413,11 @@ public class ChunkGroupOutputStream extends OutputStream {
       return;
     }
 
+    // update currentStreamIndex in case of closed container exception. The
+    // current stream entry cannot be used for further writes because
+    // container is closed.
+    currentStreamIndex += 1;
+
     // In case where not a single chunk of data has been written to the Datanode
     // yet. This block does not yet exist on the datanode but cached on the
     // outputStream buffer. No need to call GetCommittedBlockLength here
@@ -426,7 +434,6 @@ public class ChunkGroupOutputStream extends OutputStream {
       // allocate new block and write this data in the datanode. The cached
       // data in the buffer does not exceed chunkSize.
       Preconditions.checkState(buffer.position() < chunkSize);
-      currentStreamIndex += 1;
       // readjust the byteOffset value to the length actually been written.
       byteOffset -= buffer.position();
       handleWrite(buffer.array(), 0, buffer.position());
@@ -610,7 +617,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private static class ChunkOutputStreamEntry extends OutputStream {
     private OutputStream outputStream;
-    private final BlockID blockID;
+    private BlockID blockID;
     private final String key;
     private final XceiverClientManager xceiverClientManager;
     private final XceiverClientSpi xceiverClient;
@@ -696,6 +703,11 @@ public class ChunkGroupOutputStream extends OutputStream {
     public void close() throws IOException {
       if (this.outputStream != null) {
         this.outputStream.close();
+        // after closing the chunkOutPutStream, blockId would have been
+        // reconstructed with updated bcsId
+        if (this.outputStream instanceof ChunkOutputStream) {
+          this.blockID = ((ChunkOutputStream) outputStream).getBlockID();
+        }
       }
     }
 
@@ -703,19 +715,6 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream instanceof ChunkOutputStream) {
         ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
         return out.getBuffer();
-      }
-      throw new IOException("Invalid Output Stream for Key: " + key);
-    }
-
-    long getBlockCommitSequenceId() throws IOException {
-      if (this.outputStream instanceof ChunkOutputStream) {
-        ChunkOutputStream out = (ChunkOutputStream) this.outputStream;
-        return out.getBlockCommitSequenceId();
-      } else if (outputStream == null) {
-        // For a pre allocated block for which no write has been initiated,
-        // the OutputStream will be null here.
-        // In such cases, the default blockCommitSequenceId will be 0
-        return 0;
       }
       throw new IOException("Invalid Output Stream for Key: " + key);
     }

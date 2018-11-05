@@ -19,8 +19,6 @@ package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.inject.Inject;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -28,9 +26,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-import org.apache.hadoop.ozone.s3.exception.S3ErrorTable.Resource;
-import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV2;
-import org.apache.hadoop.ozone.s3.header.AuthorizationHeaderV4;
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -47,6 +43,9 @@ public class EndpointBase {
   @Inject
   private OzoneClient client;
 
+  @Inject
+  private AuthenticationHeaderParser authenticationHeaderParser;
+
   protected OzoneBucket getBucket(String volumeName, String bucketName)
       throws IOException {
     return getVolume(volumeName).getBucket(bucketName);
@@ -61,7 +60,7 @@ public class EndpointBase {
       LOG.error("Error occurred is {}", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, Resource.BUCKET);
+            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
         throw oex;
       } else {
         throw ex;
@@ -80,7 +79,7 @@ public class EndpointBase {
       LOG.error("Error occurred is {}", ex);
       if (ex.getMessage().contains("NOT_FOUND")) {
         OS3Exception oex =
-            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, Resource.BUCKET);
+            S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
         throw oex;
       } else {
         throw ex;
@@ -173,41 +172,17 @@ public class EndpointBase {
     return client.getObjectStore().getOzoneBucketName(s3BucketName);
   }
 
-  /**
-   * Retrieve the username based on the authorization header.
-   *
-   * @param httpHeaders
-   * @return Identified username
-   * @throws OS3Exception
-   */
-  public String parseUsername(
-      @Context HttpHeaders httpHeaders) throws OS3Exception {
-    String auth = httpHeaders.getHeaderString("Authorization");
-    LOG.info("Auth header string {}", auth);
+  public AuthenticationHeaderParser getAuthenticationHeaderParser() {
+    return authenticationHeaderParser;
+  }
 
-    if (auth == null) {
-      throw S3ErrorTable
-          .newError(S3ErrorTable.MALFORMED_HEADER, Resource.HEADER);
-    }
-
-    String userName;
-    if (auth.startsWith("AWS4")) {
-      LOG.info("V4 Header {}", auth);
-      AuthorizationHeaderV4 authorizationHeader = new AuthorizationHeaderV4(
-          auth);
-      userName = authorizationHeader.getAccessKeyID().toLowerCase();
-    } else {
-      LOG.info("V2 Header {}", auth);
-      AuthorizationHeaderV2 authorizationHeader = new AuthorizationHeaderV2(
-          auth);
-      userName = authorizationHeader.getAccessKeyID().toLowerCase();
-    }
-    return userName;
+  @VisibleForTesting
+  public void setAuthenticationHeaderParser(AuthenticationHeaderParser parser) {
+    this.authenticationHeaderParser = parser;
   }
 
   @VisibleForTesting
   public void setClient(OzoneClient ozoneClient) {
     this.client = ozoneClient;
   }
-
 }

@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.hdds.scm;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.slf4j.Logger;
@@ -28,8 +28,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys
@@ -81,10 +83,23 @@ public final class HddsServerUtil {
     // target host.
     // - OZONE_SCM_DATANODE_ADDRESS_KEY
     // - OZONE_SCM_CLIENT_ADDRESS_KEY
+    // - OZONE_SCM_NAMES
     //
-    final Optional<String> host = getHostNameFromConfigKeys(conf,
+    Optional<String> host = getHostNameFromConfigKeys(conf,
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY,
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      // Fallback to Ozone SCM names.
+      Collection<InetSocketAddress> scmAddresses = getSCMAddresses(conf);
+      if (scmAddresses.size() > 1) {
+        throw new IllegalArgumentException(
+            ScmConfigKeys.OZONE_SCM_NAMES +
+                " must contain a single hostname. Multiple SCM hosts are " +
+                "currently unsupported");
+      }
+      host = Optional.of(scmAddresses.iterator().next().getHostName());
+    }
 
     if (!host.isPresent()) {
       throw new IllegalArgumentException(
@@ -99,7 +114,7 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     InetSocketAddress addr = NetUtils.createSocketAddr(host.get() + ":" +
-        port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
+        port.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
 
     return addr;
   }
@@ -120,8 +135,8 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
-            port.or(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT) + ":" +
+            port.orElse(ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -140,8 +155,9 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT) +
-            ":" + port.or(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_BIND_HOST_DEFAULT)
+            + ":"
+            + port.orElse(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_PORT_DEFAULT));
   }
 
   /**
@@ -161,8 +177,8 @@ public final class HddsServerUtil {
         ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY);
 
     return NetUtils.createSocketAddr(
-        host.or(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
-            port.or(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
+        host.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_BIND_HOST_DEFAULT) + ":" +
+            port.orElse(ScmConfigKeys.OZONE_SCM_DATANODE_PORT_DEFAULT));
   }
 
 
@@ -317,19 +333,16 @@ public final class HddsServerUtil {
   }
 
   public static String getOzoneDatanodeRatisDirectory(Configuration conf) {
-    final String ratisDir = File.separator + "ratis";
     String storageDir = conf.get(
             OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR);
 
     if (Strings.isNullOrEmpty(storageDir)) {
-      storageDir = conf.get(OzoneConfigKeys
-              .OZONE_METADATA_DIRS);
-      Preconditions.checkNotNull(storageDir, "ozone.metadata.dirs " +
-              "cannot be null, Please check your configs.");
-      storageDir = storageDir.concat(ratisDir);
       LOG.warn("Storage directory for Ratis is not configured." +
-               "Mapping Ratis storage under {}. It is a good idea " +
-               "to map this to an SSD disk.", storageDir);
+          "Mapping Ratis storage under {}. It is a good idea " +
+          "to map this to an SSD disk. Falling back to {}",
+          storageDir, HddsConfigKeys.OZONE_METADATA_DIRS);
+      File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
+      storageDir = (new File (metaDirPath, "ratis")).getPath();
     }
     return storageDir;
   }

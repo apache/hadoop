@@ -28,6 +28,9 @@ public final class OMConfigKeys {
   private OMConfigKeys() {
   }
 
+  // Location where the OM stores its DB files. In the future we may support
+  // multiple entries for performance (sharding)..
+  public static final String OZONE_OM_DB_DIRS = "ozone.om.db.dirs";
 
   public static final String OZONE_OM_HANDLER_COUNT_KEY =
       "ozone.om.handler.count.key";

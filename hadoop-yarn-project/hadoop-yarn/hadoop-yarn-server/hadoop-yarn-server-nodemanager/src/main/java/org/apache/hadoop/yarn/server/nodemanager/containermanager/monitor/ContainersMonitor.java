@@ -43,8 +43,7 @@ public interface ContainersMonitor extends Service,
   static void increaseResourceUtilization(
       ContainersMonitor containersMonitor, ResourceUtilization resourceUtil,
       Resource resource) {
-    float vCores = (float) resource.getVirtualCores() /
-        containersMonitor.getVCoresAllocatedForContainers();
+    float vCores = (float) resource.getVirtualCores();
     int vmem = (int) (resource.getMemorySize()
         * containersMonitor.getVmemRatio());
     resourceUtil.addTo((int)resource.getMemorySize(), vmem, vCores);
@@ -60,8 +59,7 @@ public interface ContainersMonitor extends Service,
   static void decreaseResourceUtilization(
       ContainersMonitor containersMonitor, ResourceUtilization resourceUtil,
       Resource resource) {
-    float vCores = (float) resource.getVirtualCores() /
-        containersMonitor.getVCoresAllocatedForContainers();
+    float vCores = (float) resource.getVirtualCores();
     int vmem = (int) (resource.getMemorySize()
         * containersMonitor.getVmemRatio());
     resourceUtil.subtractFrom((int)resource.getMemorySize(), vmem, vCores);

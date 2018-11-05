@@ -20,9 +20,9 @@ package org.apache.hadoop.hdds.scm.client;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerData;
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.Closeable;
@@ -119,7 +119,7 @@ public interface ScmClient extends Closeable {
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerData readContainer(long containerID, Pipeline pipeline)
+  ContainerDataProto readContainer(long containerID, Pipeline pipeline)
       throws IOException;
 
   /**
@@ -128,7 +128,7 @@ public interface ScmClient extends Closeable {
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerData readContainer(long containerID)
+  ContainerDataProto readContainer(long containerID)
       throws IOException;
 
   /**

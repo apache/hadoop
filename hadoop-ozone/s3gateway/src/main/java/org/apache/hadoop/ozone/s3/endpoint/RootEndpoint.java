@@ -20,8 +20,6 @@ package org.apache.hadoop.ozone.s3.endpoint;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Iterator;
@@ -50,12 +48,12 @@ public class RootEndpoint extends EndpointBase {
    * for more details.
    */
   @GET
-  public ListBucketResponse get(@Context HttpHeaders headers)
+  public ListBucketResponse get()
       throws OS3Exception, IOException {
     OzoneVolume volume;
     ListBucketResponse response = new ListBucketResponse();
 
-    String volumeName = "s3" + parseUsername(headers).toLowerCase();
+    String volumeName = "s3" + getAuthenticationHeaderParser().getAccessKeyID();
     try {
       //TODO: we need a specific s3bucketlist endpoint instead
       // of reimplement the naming convention here

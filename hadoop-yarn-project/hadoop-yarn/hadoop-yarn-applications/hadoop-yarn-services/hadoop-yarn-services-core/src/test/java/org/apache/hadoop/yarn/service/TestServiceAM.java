@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
@@ -425,5 +424,36 @@ public class TestServiceAM extends ServiceTestUtils{
     Assert.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());
     am.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testSyncSysFS() {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setVersion("v1");
+    exampleApp.setName("tensorflow");
+
+    Component compA = createComponent("compa", 1, "pwd");
+    compA.getConfiguration().getEnv().put(
+        "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE", "true");
+    Artifact artifact = new Artifact();
+    artifact.setType(Artifact.TypeEnum.TARBALL);
+    compA.artifact(artifact);
+    exampleApp.addComponent(compA);
+    try {
+      MockServiceAM am = new MockServiceAM(exampleApp);
+      am.init(conf);
+      am.start();
+      ServiceScheduler scheduler = am.context.scheduler;
+      scheduler.syncSysFs(exampleApp);
+      scheduler.close();
+      am.stop();
+      am.close();
+    } catch (Exception e) {
+      LOG.error("Fail to sync sysfs: {}", e);
+      Assert.fail("Fail to sync sysfs.");
+    }
   }
 }

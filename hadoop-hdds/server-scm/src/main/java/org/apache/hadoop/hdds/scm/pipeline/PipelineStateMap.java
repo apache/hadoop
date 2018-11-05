@@ -31,8 +31,7 @@ import java.util.stream.Collectors;
 
 /**
  * Holds the data structures which maintain the information about pipeline and
- * its state. All the read write operations in this class are protected by a
- * lock.
+ * its state.
  * Invariant: If a pipeline exists in PipelineStateMap, both pipelineMap and
  * pipeline2container would have a non-null mapping for it.
  */
@@ -65,12 +64,12 @@ class PipelineStateMap {
         String.format("Nodes size=%d, replication factor=%d do not match ",
                 pipeline.getNodes().size(), pipeline.getFactor().getNumber()));
 
-    if (pipelineMap.putIfAbsent(pipeline.getID(), pipeline) != null) {
-      LOG.warn("Duplicate pipeline ID detected. {}", pipeline.getID());
+    if (pipelineMap.putIfAbsent(pipeline.getId(), pipeline) != null) {
+      LOG.warn("Duplicate pipeline ID detected. {}", pipeline.getId());
       throw new IOException(String
-          .format("Duplicate pipeline ID %s detected.", pipeline.getID()));
+          .format("Duplicate pipeline ID %s detected.", pipeline.getId()));
     }
-    pipeline2container.put(pipeline.getID(), new TreeSet<>());
+    pipeline2container.put(pipeline.getId(), new TreeSet<>());
   }
 
   /**
@@ -85,12 +84,13 @@ class PipelineStateMap {
     Preconditions.checkNotNull(pipelineID,
         "Pipeline Id cannot be null");
     Preconditions.checkNotNull(containerID,
-        "container Id cannot be null");
+        "Container Id cannot be null");
 
     Pipeline pipeline = getPipeline(pipelineID);
-    if (!pipeline.isOpen()) {
-      throw new IOException(
-          String.format("%s is not in open state", pipelineID));
+    if (pipeline.isClosed()) {
+      throw new IOException(String
+          .format("Cannot add container to pipeline=%s in closed state",
+              pipelineID));
     }
     pipeline2container.get(pipelineID).add(containerID);
   }
@@ -102,10 +102,14 @@ class PipelineStateMap {
    * @return Pipeline
    * @throws IOException if pipeline is not found
    */
-  Pipeline getPipeline(PipelineID pipelineID) throws IOException {
+  Pipeline getPipeline(PipelineID pipelineID) throws PipelineNotFoundException {
+    Preconditions.checkNotNull(pipelineID,
+        "Pipeline Id cannot be null");
+
     Pipeline pipeline = pipelineMap.get(pipelineID);
     if (pipeline == null) {
-      throw new IOException(String.format("%s not found", pipelineID));
+      throw new PipelineNotFoundException(
+          String.format("%s not found", pipelineID));
     }
     return pipeline;
   }
@@ -116,25 +120,48 @@ class PipelineStateMap {
    * @param type - ReplicationType
    * @return List of pipelines which have the specified replication type
    */
-  List<Pipeline> getPipelinesByType(ReplicationType type) {
+  List<Pipeline> getPipelines(ReplicationType type) {
     Preconditions.checkNotNull(type, "Replication type cannot be null");
 
-    return pipelineMap.values().stream().filter(p -> p.getType().equals(type))
+    return pipelineMap.values().stream()
+        .filter(p -> p.getType().equals(type))
         .collect(Collectors.toList());
   }
 
   /**
-   * Get open pipeline corresponding to specified replication type and factor.
+   * Get pipeline corresponding to specified replication type and factor.
    *
    * @param type - ReplicationType
    * @param factor - ReplicationFactor
-   * @return List of open pipelines with specified replication type and factor
+   * @return List of pipelines with specified replication type and factor
    */
-  List<Pipeline> getPipelinesByTypeAndFactor(ReplicationType type,
-      ReplicationFactor factor) {
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor) {
+    Preconditions.checkNotNull(type, "Replication type cannot be null");
+    Preconditions.checkNotNull(factor, "Replication factor cannot be null");
+
     return pipelineMap.values().stream()
-        .filter(pipeline -> pipeline.isOpen() && pipeline.getType() == type
+        .filter(pipeline -> pipeline.getType() == type
             && pipeline.getFactor() == factor)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Get list of pipeline corresponding to specified replication type and
+   * pipeline states.
+   *
+   * @param type - ReplicationType
+   * @param states - Array of required PipelineState
+   * @return List of pipelines with specified replication type and states
+   */
+  List<Pipeline> getPipelines(ReplicationType type, PipelineState... states) {
+    Preconditions.checkNotNull(type, "Replication type cannot be null");
+    Preconditions.checkNotNull(states, "Pipeline state cannot be null");
+
+    Set<PipelineState> pipelineStates = new HashSet<>();
+    pipelineStates.addAll(Arrays.asList(states));
+    return pipelineMap.values().stream().filter(
+        pipeline -> pipeline.getType() == type && pipelineStates
+            .contains(pipeline.getPipelineState()))
         .collect(Collectors.toList());
   }
 
@@ -146,10 +173,14 @@ class PipelineStateMap {
    * @throws IOException if pipeline is not found
    */
   Set<ContainerID> getContainers(PipelineID pipelineID)
-      throws IOException {
+      throws PipelineNotFoundException {
+    Preconditions.checkNotNull(pipelineID,
+        "Pipeline Id cannot be null");
+
     Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
-      throw new IOException(String.format("%s not found", pipelineID));
+      throw new PipelineNotFoundException(
+          String.format("%s not found", pipelineID));
     }
     return new HashSet<>(containerIDs);
   }
@@ -161,10 +192,15 @@ class PipelineStateMap {
    * @return Number of containers belonging to the pipeline
    * @throws IOException if pipeline is not found
    */
-  int getNumberOfContainers(PipelineID pipelineID) throws IOException {
+  int getNumberOfContainers(PipelineID pipelineID)
+      throws PipelineNotFoundException {
+    Preconditions.checkNotNull(pipelineID,
+        "Pipeline Id cannot be null");
+
     Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
     if (containerIDs == null) {
-      throw new IOException(String.format("%s not found", pipelineID));
+      throw new PipelineNotFoundException(
+          String.format("%s not found", pipelineID));
     }
     return containerIDs.size();
   }
@@ -175,7 +211,7 @@ class PipelineStateMap {
    * @param pipelineID - PipelineID of the pipeline to be removed
    * @throws IOException if the pipeline is not empty or does not exist
    */
-  void removePipeline(PipelineID pipelineID) throws IOException {
+  Pipeline removePipeline(PipelineID pipelineID) throws IOException {
     Preconditions.checkNotNull(pipelineID, "Pipeline Id cannot be null");
 
     Pipeline pipeline = getPipeline(pipelineID);
@@ -192,6 +228,7 @@ class PipelineStateMap {
 
     pipelineMap.remove(pipelineID);
     pipeline2container.remove(pipelineID);
+    return pipeline;
   }
 
   /**
@@ -210,6 +247,10 @@ class PipelineStateMap {
         "container Id cannot be null");
 
     Set<ContainerID> containerIDs = pipeline2container.get(pipelineID);
+    if (containerIDs == null) {
+      throw new PipelineNotFoundException(
+          String.format("%s not found", pipelineID));
+    }
     containerIDs.remove(containerID);
   }
 
@@ -223,7 +264,7 @@ class PipelineStateMap {
    * @throws IOException if pipeline does not exist
    */
   Pipeline updatePipelineState(PipelineID pipelineID, PipelineState state)
-      throws IOException {
+      throws PipelineNotFoundException {
     Preconditions.checkNotNull(pipelineID, "Pipeline Id cannot be null");
     Preconditions.checkNotNull(state, "Pipeline LifeCycleState cannot be null");
 

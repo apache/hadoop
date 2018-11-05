@@ -47,22 +47,22 @@ import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowMan
 
 /**
  * The interface to the top metrics.
- * <p/>
+ * <p>
  * Metrics are collected by a custom audit logger, {@link org.apache.hadoop
  * .hdfs.server.namenode.top.TopAuditLogger}, which calls TopMetrics to
  * increment per-operation, per-user counts on every audit log call. These
  * counts are used to show the top users by NameNode operation as well as
  * across all operations.
- * <p/>
+ * <p>
  * TopMetrics maintains these counts for a configurable number of time
  * intervals, e.g. 1min, 5min, 25min. Each interval is tracked by a
  * RollingWindowManager.
- * <p/>
+ * <p>
  * These metrics are published as a JSON string via {@link org.apache.hadoop
  * .hdfs.server .namenode.metrics.FSNamesystemMBean#getTopWindows}. This is
  * done by calling {@link org.apache.hadoop.hdfs.server.namenode.top.window
  * .RollingWindowManager#snapshot} on each RollingWindowManager.
- * <p/>
+ * <p>
  * Thread-safe: relies on thread-safety of RollingWindowManager
  */
 @InterfaceAudience.Private
@@ -119,6 +119,13 @@ public class TopMetrics implements MetricsSource {
    * log file. This is to be consistent when {@link TopMetrics} is charged with
    * data read back from log files instead of being invoked directly by the
    * FsNamesystem
+   * @param succeeded
+   * @param userName
+   * @param addr
+   * @param cmd
+   * @param src
+   * @param dst
+   * @param status
    */
   public void report(boolean succeeded, String userName, InetAddress addr,
       String cmd, String src, String dst, FileStatus status) {
@@ -147,6 +154,8 @@ public class TopMetrics implements MetricsSource {
    * {@link org.apache.hadoop.metrics2.MetricsRecord}s for consumption by
    * external metrics systems. Each metrics record added corresponds to the
    * reporting period a.k.a window length of the configured rolling windows.
+   * @param collector
+   * @param all
    */
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {

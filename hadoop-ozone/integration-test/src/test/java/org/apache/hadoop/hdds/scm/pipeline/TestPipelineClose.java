@@ -24,8 +24,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.AfterClass;
@@ -50,7 +48,7 @@ public class TestPipelineClose {
   private static ContainerWithPipeline ratisContainer1;
   private static ContainerWithPipeline ratisContainer2;
   private static ContainerManager containerManager;
-  private static PipelineSelector pipelineSelector;
+  private static PipelineManager pipelineManager;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -68,7 +66,7 @@ public class TestPipelineClose {
         .allocateContainer(RATIS, THREE, "testOwner");
     ratisContainer2 = containerManager
         .allocateContainer(RATIS, THREE, "testOwner");
-    pipelineSelector = containerManager.getPipelineSelector();
+    pipelineManager = scm.getPipelineManager();
     // At this stage, there should be 2 pipeline one with 1 open container each.
     // Try closing the both the pipelines, one with a closed container and
     // the other with an open container.
@@ -87,8 +85,8 @@ public class TestPipelineClose {
 
   @Test
   public void testPipelineCloseWithClosedContainer() throws IOException {
-    Set<ContainerID> set = pipelineSelector.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getId());
+    Set<ContainerID> set = pipelineManager
+        .getContainersInPipeline(ratisContainer1.getPipeline().getId());
 
     ContainerID cId = ratisContainer1.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
@@ -105,17 +103,17 @@ public class TestPipelineClose {
     containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
 
-    Set<ContainerID> setClosed = pipelineSelector.getOpenContainerIDsByPipeline(
-        ratisContainer1.getPipeline().getId());
+    Set<ContainerID> setClosed = pipelineManager
+        .getContainersInPipeline(ratisContainer1.getPipeline().getId());
     Assert.assertEquals(0, setClosed.size());
 
-    pipelineSelector.finalizePipeline(ratisContainer1.getPipeline());
-    Pipeline pipeline1 = pipelineSelector
+    pipelineManager.finalizePipeline(ratisContainer1.getPipeline().getId());
+    Pipeline pipeline1 = pipelineManager
         .getPipeline(ratisContainer1.getPipeline().getId());
-    Assert.assertNull(pipeline1);
-    Assert.assertEquals(ratisContainer1.getPipeline().getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSED);
-    for (DatanodeDetails dn : ratisContainer1.getPipeline().getMachines()) {
+    Assert.assertEquals(pipeline1.getPipelineState(),
+        Pipeline.PipelineState.CLOSED);
+    pipelineManager.removePipeline(pipeline1.getId());
+    for (DatanodeDetails dn : ratisContainer1.getPipeline().getNodes()) {
       // Assert that the pipeline has been removed from Node2PipelineMap as well
       Assert.assertEquals(scm.getScmNodeManager().getPipelineByDnID(
           dn.getUuid()).size(), 0);
@@ -125,7 +123,7 @@ public class TestPipelineClose {
   @Test
   public void testPipelineCloseWithOpenContainer() throws IOException,
       TimeoutException, InterruptedException {
-    Set<ContainerID> setOpen = pipelineSelector.getOpenContainerIDsByPipeline(
+    Set<ContainerID> setOpen = pipelineManager.getContainersInPipeline(
         ratisContainer2.getPipeline().getId());
     Assert.assertEquals(1, setOpen.size());
 
@@ -134,12 +132,13 @@ public class TestPipelineClose {
         .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATE);
     containerManager
         .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATED);
-    pipelineSelector.finalizePipeline(ratisContainer2.getPipeline());
-    Assert.assertEquals(ratisContainer2.getPipeline().getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSING);
-    Pipeline pipeline2 = pipelineSelector
+    pipelineManager.finalizePipeline(ratisContainer2.getPipeline().getId());
+    Assert.assertEquals(
+        pipelineManager.getPipeline(ratisContainer2.getPipeline().getId())
+            .getPipelineState(), Pipeline.PipelineState.CLOSED);
+    Pipeline pipeline2 = pipelineManager
         .getPipeline(ratisContainer2.getPipeline().getId());
-    Assert.assertEquals(pipeline2.getLifeCycleState(),
-        HddsProtos.LifeCycleState.CLOSING);
+    Assert.assertEquals(pipeline2.getPipelineState(),
+        Pipeline.PipelineState.CLOSED);
   }
 }

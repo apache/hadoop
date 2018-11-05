@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.hdds.server;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -32,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Optional;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
@@ -115,13 +115,13 @@ public abstract class BaseHttpServer {
     final Optional<Integer> addressPort =
         getPortNumberFromConfigKeys(conf, addressKey);
 
-    final Optional<String> addresHost =
+    final Optional<String> addressHost =
         getHostNameFromConfigKeys(conf, addressKey);
 
-    String hostName = bindHost.or(addresHost).or(bindHostDefault);
+    String hostName = bindHost.orElse(addressHost.orElse(bindHostDefault));
 
     return NetUtils.createSocketAddr(
-        hostName + ":" + addressPort.or(bindPortdefault));
+        hostName + ":" + addressPort.orElse(bindPortdefault));
   }
 
   /**

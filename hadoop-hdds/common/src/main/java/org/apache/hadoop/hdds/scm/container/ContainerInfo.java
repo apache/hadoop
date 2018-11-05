@@ -36,7 +36,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -114,7 +114,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   public ContainerInfo() {
   }
 
-  public static ContainerInfo fromProtobuf(HddsProtos.SCMContainerInfo info) {
+  public static ContainerInfo fromProtobuf(HddsProtos.ContainerInfoProto info) {
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     return builder.setPipelineID(
         PipelineID.getFromProtobuf(info.getPipelineID()))
@@ -191,9 +191,9 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     lastUsed = Time.monotonicNow();
   }
 
-  public HddsProtos.SCMContainerInfo getProtobuf() {
-    HddsProtos.SCMContainerInfo.Builder builder =
-        HddsProtos.SCMContainerInfo.newBuilder();
+  public HddsProtos.ContainerInfoProto getProtobuf() {
+    HddsProtos.ContainerInfoProto.Builder builder =
+        HddsProtos.ContainerInfoProto.newBuilder();
     Preconditions.checkState(containerID > 0);
     return builder.setContainerID(getContainerID())
         .setUsedBytes(getUsedBytes())

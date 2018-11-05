@@ -89,18 +89,18 @@ public abstract class ResourceUtilization implements
   public abstract void setPhysicalMemory(int pmem);
 
   /**
-   * Get <em>CPU</em> utilization.
+   * Get <em>CPU</em> utilization (The amount of vcores used).
    *
-   * @return <em>CPU utilization</em> normalized to 1 CPU
+   * @return <em>CPU utilization</em>
    */
   @Public
   @Unstable
   public abstract float getCPU();
 
   /**
-   * Set <em>CPU</em> utilization.
+   * Set <em>CPU</em> utilization (The amount of vcores used).
    *
-   * @param cpu <em>CPU utilization</em> normalized to 1 CPU
+   * @param cpu <em>CPU utilization</em>
    */
   @Public
   @Unstable

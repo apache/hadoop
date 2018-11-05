@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.om;
 
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -1323,7 +1324,7 @@ public class TestOzoneManager {
     final String path =
         GenericTestUtils.getTempPath(UUID.randomUUID().toString());
     Path metaDirPath = Paths.get(path, "om-meta");
-    config.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
+    config.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
     config.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     config.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
     config.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,

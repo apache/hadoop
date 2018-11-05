@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -144,7 +144,7 @@ public class TestCloseContainerHandler {
       request.setContainerID(blockID.getContainerID());
       request.setWriteChunk(writeRequest);
       request.setTraceID(UUID.randomUUID().toString());
-      request.setDatanodeUuid(pipeline.getLeader().getUuidString());
+      request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
       dispatcher.dispatch(request.build());
       chunkList.add(info);
     }
@@ -179,7 +179,7 @@ public class TestCloseContainerHandler {
     request.setContainerID(blockID.getContainerID());
     request.setPutBlock(putBlockRequestProto);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeUuid(pipeline.getLeader().getUuidString());
+    request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
     dispatcher.dispatch(request.build());
 
     //the open block should be removed from Map
@@ -217,7 +217,7 @@ public class TestCloseContainerHandler {
     request.setDeleteChunk(deleteChunkProto);
     request.setWriteChunk(writeRequest);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeUuid(pipeline.getLeader().getUuidString());
+    request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertTrue(
         openContainerBlockMap.getBlockDataMap(testContainerID)
@@ -250,7 +250,7 @@ public class TestCloseContainerHandler {
     request.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeUuid(pipeline.getLeader().getUuidString());
+    request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
     dispatcher.dispatch(request.build());
     Assert.assertNull(
         openContainerBlockMap.getBlockDataMap(testContainerID));

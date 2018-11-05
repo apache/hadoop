@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -76,6 +76,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -94,11 +96,12 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final int port;
   private final RaftServer server;
   private ThreadPoolExecutor chunkExecutor;
+  private final List<ExecutorService> executors;
+  private final ContainerDispatcher dispatcher;
   private ClientId clientId = ClientId.randomId();
   private final StateContext context;
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
-  private ContainerStateMachine stateMachine;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext context)
@@ -121,15 +124,23 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     this.replicationLevel =
         conf.getEnum(OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT);
-    stateMachine = new ContainerStateMachine(dispatcher, chunkExecutor, this,
-        numContainerOpExecutors);
+    this.executors = new ArrayList<>();
+    this.dispatcher = dispatcher;
+    for (int i = 0; i < numContainerOpExecutors; i++) {
+      executors.add(Executors.newSingleThreadExecutor());
+    }
+
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
         .setProperties(serverProperties)
-        .setStateMachine(stateMachine)
+        .setStateMachineRegistry(this::getStateMachine)
         .build();
   }
 
+  private ContainerStateMachine getStateMachine(RaftGroupId gid) {
+    return new ContainerStateMachine(gid, dispatcher, chunkExecutor,
+            this, Collections.unmodifiableList(executors));
+  }
 
   private RaftProperties newRaftProperties(Configuration conf) {
     final RaftProperties properties = new RaftProperties();
@@ -174,6 +185,20 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         TimeDuration.valueOf(duration, timeUnit);
     RaftClientConfigKeys.Rpc
         .setRequestTimeout(properties, clientRequestTimeout);
+
+    // set the configs enable and set the stateMachineData sync timeout
+    RaftServerConfigKeys.Log.StateMachineData.setSync(properties, true);
+    timeUnit = OzoneConfigKeys.
+        DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT.getUnit();
+    duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT,
+        OzoneConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration dataSyncTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
+    RaftServerConfigKeys.Log.StateMachineData
+        .setSyncTimeout(properties, dataSyncTimeout);
 
     // Set the server Request timeout
     timeUnit = OzoneConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT
@@ -254,6 +279,15 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     } else if (rpc == SupportedRpcType.NETTY) {
       NettyConfigKeys.Server.setPort(properties, port);
     }
+
+    long snapshotThreshold =
+        conf.getLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY,
+            OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT);
+    RaftServerConfigKeys.Snapshot.
+      setAutoTriggerEnabled(properties, true);
+    RaftServerConfigKeys.Snapshot.
+      setAutoTriggerThreshold(properties, snapshotThreshold);
+
     return properties;
   }
 
@@ -297,9 +331,11 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   @Override
   public void stop() {
     try {
-      chunkExecutor.shutdown();
-      stateMachine.close();
+      // shutdown server before the executors as while shutting down,
+      // some of the tasks would be executed using the executors.
       server.close();
+      chunkExecutor.shutdown();
+      executors.forEach(ExecutorService::shutdown);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -360,7 +396,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       ContainerCommandRequestProto request, HddsProtos.PipelineID pipelineID,
       RaftClientRequest.Type type) {
     return new RaftClientRequest(clientId, server.getId(),
-        PipelineID.getFromProtobuf(pipelineID).getRaftGroupID(),
+        RaftGroupId.valueOf(PipelineID.getFromProtobuf(pipelineID).getId()),
         nextCallId(), 0, Message.valueOf(request.toByteString()), type);
   }
 
@@ -393,7 +429,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
           + roleInfoProto.getRole());
     }
 
-    PipelineID pipelineID = PipelineID.valueOf(groupId);
+    PipelineID pipelineID = PipelineID.valueOf(groupId.getUuid());
     ClosePipelineInfo.Builder closePipelineInfo =
         ClosePipelineInfo.newBuilder()
             .setPipelineID(pipelineID.getProtobuf())
@@ -417,8 +453,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       List<PipelineReport> reports = new ArrayList<>();
       for (RaftGroupId groupId : gids) {
         reports.add(PipelineReport.newBuilder()
-                .setPipelineID(PipelineID.valueOf(groupId).getProtobuf())
-                .build());
+            .setPipelineID(PipelineID.valueOf(groupId.getUuid()).getProtobuf())
+            .build());
       }
       return reports;
     } catch (Exception e) {

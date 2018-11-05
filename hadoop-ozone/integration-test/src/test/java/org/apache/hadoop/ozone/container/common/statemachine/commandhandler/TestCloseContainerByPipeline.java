@@ -23,7 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -106,7 +106,7 @@ public class TestCloseContainerByPipeline {
         .getContainerManager().getContainerWithPipeline(
             ContainerID.valueof(containerID))
         .getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -162,7 +162,7 @@ public class TestCloseContainerByPipeline {
         .getContainerManager().getContainerWithPipeline(
             ContainerID.valueof(containerID))
         .getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(datanodes.size(), 1);
 
     DatanodeDetails datanodeDetails = datanodes.get(0);
@@ -220,7 +220,7 @@ public class TestCloseContainerByPipeline {
         .getContainerManager().getContainerWithPipeline(
             ContainerID.valueof(containerID))
         .getPipeline();
-    List<DatanodeDetails> datanodes = pipeline.getMachines();
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(3, datanodes.size());
 
     GenericTestUtils.LogCapturer logCapturer =

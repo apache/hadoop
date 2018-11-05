@@ -24,6 +24,8 @@ import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerAction;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
@@ -40,8 +42,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerType;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,9 +156,9 @@ public class HddsDispatcher implements ContainerDispatcher {
         // which has failed, so the container is marked unhealthy right here.
         // Once container is marked unhealthy, all the subsequent write
         // transactions will fail with UNHEALTHY_CONTAINER exception.
-        if (container.getContainerState() == ContainerLifeCycleState.OPEN) {
+        if (container.getContainerState() == ContainerDataProto.State.OPEN) {
           container.getContainerData()
-              .setState(ContainerLifeCycleState.UNHEALTHY);
+              .setState(ContainerDataProto.State.UNHEALTHY);
           sendCloseContainerActionIfNeeded(container);
         }
       }
@@ -191,7 +191,7 @@ public class HddsDispatcher implements ContainerDispatcher {
 
   private boolean isContainerFull(Container container) {
     boolean isOpen = Optional.ofNullable(container)
-        .map(cont -> cont.getContainerState() == ContainerLifeCycleState.OPEN)
+        .map(cont -> cont.getContainerState() == ContainerDataProto.State.OPEN)
         .orElse(Boolean.FALSE);
     if (isOpen) {
       ContainerData containerData = container.getContainerData();
@@ -205,7 +205,8 @@ public class HddsDispatcher implements ContainerDispatcher {
 
   private boolean isContainerUnhealthy(Container container) {
     return Optional.ofNullable(container).map(
-        cont -> (cont.getContainerState() == ContainerLifeCycleState.UNHEALTHY))
+        cont -> (cont.getContainerState() ==
+            ContainerDataProto.State.UNHEALTHY))
         .orElse(Boolean.FALSE);
   }
 

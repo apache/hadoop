@@ -60,7 +60,6 @@ public class DiskBalancerException extends IOException {
   /**
    * Constructs an {@code IOException} with the specified detail message and
    * cause.
-   * <p/>
    * <p> Note that the detail message associated with {@code cause} is
    * <i>not</i>
    * automatically incorporated into this exception's detail message.

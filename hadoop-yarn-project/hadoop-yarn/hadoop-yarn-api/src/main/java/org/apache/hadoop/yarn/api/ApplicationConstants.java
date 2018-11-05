@@ -273,7 +273,14 @@ public interface ApplicationConstants {
      * Final, Docker run support ENTRY_POINT.
      */
     YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE(
-        "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE");
+        "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE"),
+
+    /**
+     * $YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE
+     * Final, expose cluster information to container.
+     */
+    YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE(
+        "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE");
 
     private final String variable;
     private Environment(String variable) {

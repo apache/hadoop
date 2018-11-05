@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.ozone.s3.endpoint;
 
-import javax.ws.rs.core.HttpHeaders;
 
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
@@ -28,21 +27,21 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
 
 /**
  * This class test HeadBucket functionality.
  */
 public class TestRootList {
 
-  private String volumeName = "vol1";
   private OzoneClientStub clientStub;
   private ObjectStore objectStoreStub;
   private OzoneVolume volumeStub;
   private RootEndpoint rootEndpoint;
+  private String userName = "ozone";
 
   @Before
   public void setup() throws Exception {
@@ -50,21 +49,24 @@ public class TestRootList {
     //Create client stub and object store stub.
     clientStub = new OzoneClientStub();
     objectStoreStub = clientStub.getObjectStore();
-    objectStoreStub.createVolume("s3key");
-    volumeStub = objectStoreStub.getVolume("s3key");
+    String volumeName = "s3" + userName;
+    objectStoreStub.createVolume(volumeName);
+    volumeStub = objectStoreStub.getVolume(volumeName);
 
     // Create HeadBucket and setClient to OzoneClientStub
     rootEndpoint = new RootEndpoint();
     rootEndpoint.setClient(clientStub);
+
+    AuthenticationHeaderParser parser = new AuthenticationHeaderParser();
+    parser.setAuthHeader("AWS " + userName +":secret");
+    rootEndpoint.setAuthenticationHeaderParser(parser);
   }
 
   @Test
   public void testListBucket() throws Exception {
-    HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-    when(headers.getHeaderString("Authorization")).thenReturn("AWS key:secret");
 
     // List operation should success even there is no bucket.
-    ListBucketResponse response = rootEndpoint.get(headers);
+    ListBucketResponse response = rootEndpoint.get();
     assertEquals(0, response.getBucketsNum());
 
     String bucketBaseName = "bucket-";
@@ -72,7 +74,7 @@ public class TestRootList {
       volumeStub.createBucket(
           bucketBaseName + RandomStringUtils.randomNumeric(3));
     }
-    response = rootEndpoint.get(headers);
+    response = rootEndpoint.get();
     assertEquals(10, response.getBucketsNum());
   }
 

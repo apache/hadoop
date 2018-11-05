@@ -18,6 +18,8 @@ package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
@@ -36,7 +38,6 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +124,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
     blockDeletingService =
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
             nodeManager, eventPublisher, svcInterval, serviceTimeout, conf);
-    chillModePrecheck = new ChillModePrecheck();
+    chillModePrecheck = new ChillModePrecheck(conf);
   }
 
   /**
@@ -305,7 +306,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
   private AllocatedBlock newBlock(ContainerWithPipeline containerWithPipeline,
       HddsProtos.LifeCycleState state) throws IOException {
     ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    if (containerWithPipeline.getPipeline().getDatanodes().size() == 0) {
+    if (containerWithPipeline.getPipeline().getNodes().size() == 0) {
       LOG.error("Pipeline Machine count is zero.");
       return null;
     }
@@ -318,7 +319,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
 
     AllocatedBlock.Builder abb =
         new AllocatedBlock.Builder()
-            .setBlockID(new BlockID(containerID, localID))
+            .setContainerBlockID(new ContainerBlockID(containerID, localID))
             .setPipeline(containerWithPipeline.getPipeline())
             .setShouldCreateContainer(createContainer);
     LOG.trace("New block allocated : {} Container ID: {}", localID,
@@ -465,7 +466,7 @@ public class BlockManagerImpl implements EventHandler<Boolean>,
      * @return unique long value
      */
     public static synchronized long next() {
-      long utcTime = Time.getUtcTime();
+      long utcTime = HddsUtils.getUtcTime();
       if ((utcTime & 0xFFFF000000000000L) == 0) {
         return utcTime << Short.SIZE | (offset++ & 0x0000FFFF);
       }

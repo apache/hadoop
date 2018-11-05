@@ -69,7 +69,7 @@ public class TestAllocateContainer {
         xceiverClientManager.getFactor(),
         containerOwner);
     Assert.assertNotNull(container);
-    Assert.assertNotNull(container.getPipeline().getLeader());
+    Assert.assertNotNull(container.getPipeline().getFirstNode());
 
   }
 

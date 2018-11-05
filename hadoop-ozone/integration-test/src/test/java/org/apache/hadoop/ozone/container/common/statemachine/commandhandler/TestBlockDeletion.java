@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLogImpl;
@@ -177,7 +177,7 @@ public class TestBlockDeletion {
     // Containers in the DN and SCM should have same delete transactionIds
     // after DN restart. The assertion is just to verify that the state of
     // containerInfos in dn and scm is consistent after dn restart.
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
     matchContainerTransactionIds();
 
     // verify PENDING_DELETE_STATUS event is fired
@@ -210,7 +210,7 @@ public class TestBlockDeletion {
     GenericTestUtils.waitFor(() -> logCapturer.getOutput()
             .contains("RetriableDatanodeCommand type=deleteBlocksCommand"),
         500, 5000);
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
   }
 
   private void verifyTransactionsCommitted() throws IOException {
@@ -233,9 +233,11 @@ public class TestBlockDeletion {
     ContainerReportsProto containerReport = dnContainerSet.getContainerReport();
     ContainerReportsProto.Builder dummyReportsBuilder =
         ContainerReportsProto.newBuilder();
-    for (ContainerInfo containerInfo : containerReport.getReportsList()) {
+    for (ContainerReplicaProto containerInfo :
+        containerReport.getReportsList()) {
       dummyReportsBuilder.addReports(
-          ContainerInfo.newBuilder(containerInfo).setDeleteTransactionId(0)
+          ContainerReplicaProto.newBuilder(containerInfo)
+              .setDeleteTransactionId(0)
               .build());
     }
     ContainerReportsProto dummyReport = dummyReportsBuilder.build();
@@ -246,7 +248,7 @@ public class TestBlockDeletion {
     // wait for event to be handled by event handler
     Thread.sleep(1000);
     String output = logCapturer.getOutput();
-    for (ContainerInfo containerInfo : dummyReport.getReportsList()) {
+    for (ContainerReplicaProto containerInfo : dummyReport.getReportsList()) {
       long containerId = containerInfo.getContainerID();
       // Event should be triggered only for containers which have deleted blocks
       if (containerIdsWithDeletedBlocks.contains(containerId)) {

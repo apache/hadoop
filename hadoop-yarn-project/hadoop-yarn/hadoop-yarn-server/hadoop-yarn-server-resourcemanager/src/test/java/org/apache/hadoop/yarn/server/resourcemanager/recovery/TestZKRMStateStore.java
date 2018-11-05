@@ -289,6 +289,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testReservationStateStore(zkTester);
     ((TestZKRMStateStoreTester.TestZKRMStateStoreInternal)
         zkTester.getRMStateStore()).testRetryingCreateRootDir();
+    testProxyCA(zkTester);
   }
 
   @Test

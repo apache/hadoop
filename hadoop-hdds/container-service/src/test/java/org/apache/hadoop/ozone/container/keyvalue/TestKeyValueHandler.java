@@ -266,7 +266,7 @@ public class TestKeyValueHandler {
     KeyValueContainerData kvData = new KeyValueContainerData(containerID,
         (long) StorageUnit.GB.toBytes(1));
     KeyValueContainer container = new KeyValueContainer(kvData, conf);
-    kvData.setState(ContainerProtos.ContainerLifeCycleState.INVALID);
+    kvData.setState(ContainerProtos.ContainerDataProto.State.INVALID);
 
     // Create Close container request
     ContainerCommandRequestProto closeContainerRequest =

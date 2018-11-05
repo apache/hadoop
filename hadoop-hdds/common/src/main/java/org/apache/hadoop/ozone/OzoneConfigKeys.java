@@ -74,9 +74,6 @@ public final class OzoneConfigKeys {
       "ozone.trace.enabled";
   public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;
 
-  public static final String OZONE_METADATA_DIRS =
-      "ozone.metadata.dirs";
-
   public static final String OZONE_METADATA_STORE_IMPL =
       "ozone.metastore.impl";
   public static final String OZONE_METADATA_STORE_IMPL_LEVELDB =
@@ -232,6 +229,15 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY;
   public static final int DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT;
+
+  // config settings to enable stateMachineData write timeout
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT;
+  public static final TimeDuration
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT;
+
   public static final int DFS_CONTAINER_CHUNK_MAX_SIZE
       = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
@@ -266,6 +272,10 @@ public final class OzoneConfigKeys {
   public static final TimeDuration
       DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
       ScmConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT;
+  public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
+      ScmConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY;
+  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT;
 
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_KEY;

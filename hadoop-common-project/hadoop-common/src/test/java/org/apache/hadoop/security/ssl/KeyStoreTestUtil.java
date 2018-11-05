@@ -32,15 +32,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigInteger;
+import java.net.Socket;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
@@ -50,8 +55,15 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 
 public class KeyStoreTestUtil {
@@ -537,5 +549,98 @@ public class KeyStoreTestUtil {
     sslConf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile);
     sslConf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile);
     return sslConf;
+  }
+
+  /**
+   * Configures the passed in {@link HttpsURLConnection} to allow all SSL
+   * certificates.
+   *
+   * @param httpsConn The HttpsURLConnection to configure
+   * @throws KeyManagementException
+   * @throws NoSuchAlgorithmException
+   */
+  public static void setAllowAllSSL(HttpsURLConnection httpsConn)
+      throws KeyManagementException, NoSuchAlgorithmException {
+    setAllowAllSSL(httpsConn, null);
+  }
+
+  /**
+   * Configures the passed in {@link HttpsURLConnection} to allow all SSL
+   * certificates.  Also presents a client certificate.
+   *
+   * @param httpsConn The HttpsURLConnection to configure
+   * @param clientCert The client certificate to present
+   * @param clientKeyPair The KeyPair for the client certificate
+   * @throws KeyManagementException
+   * @throws NoSuchAlgorithmException
+   */
+  public static void setAllowAllSSL(HttpsURLConnection httpsConn,
+      X509Certificate clientCert, KeyPair clientKeyPair)
+      throws KeyManagementException, NoSuchAlgorithmException {
+    X509KeyManager km = new X509KeyManager() {
+      @Override
+      public String[] getClientAliases(String s, Principal[] principals) {
+        return new String[]{"client"};
+      }
+
+      @Override
+      public String chooseClientAlias(String[] strings,
+          Principal[] principals, Socket socket) {
+        return "client";
+      }
+
+      @Override
+      public String[] getServerAliases(String s, Principal[] principals) {
+        return null;
+      }
+
+      @Override
+      public String chooseServerAlias(String s, Principal[] principals,
+          Socket socket) {
+        return null;
+      }
+
+      @Override
+      public X509Certificate[] getCertificateChain(String s) {
+        return new X509Certificate[]{clientCert};
+      }
+
+      @Override
+      public PrivateKey getPrivateKey(String s) {
+        return clientKeyPair.getPrivate();
+      }
+    };
+    setAllowAllSSL(httpsConn, km);
+  }
+
+  private static void setAllowAllSSL(HttpsURLConnection httpsConn,
+      KeyManager km) throws KeyManagementException, NoSuchAlgorithmException {
+    // Create a TrustManager that trusts anything
+    TrustManager[] trustAllCerts = new TrustManager[] {
+        new X509TrustManager() {
+          @Override
+          public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[]{};
+          }
+
+          @Override
+          public void checkClientTrusted(
+              java.security.cert.X509Certificate[] certs, String authType)
+              throws CertificateException {
+          }
+
+          @Override
+          public void checkServerTrusted(
+              java.security.cert.X509Certificate[] certs, String authType)
+              throws CertificateException {
+          }
+        }
+    };
+    KeyManager[] kms = (km == null) ? null : new KeyManager[]{km};
+    SSLContext sc = SSLContext.getInstance("SSL");
+    sc.init(kms, trustAllCerts, new SecureRandom());
+    httpsConn.setSSLSocketFactory(sc.getSocketFactory());
+    // Don't check the hostname
+    httpsConn.setHostnameVerifier(new NoopHostnameVerifier());
   }
 }

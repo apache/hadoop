@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.monitor.ServiceMonitor;
@@ -302,6 +303,12 @@ public class ServiceMaster extends CompositeService {
       LOG.info("Service state changed from {} -> {}", curState,
           scheduler.getApp().getState());
     }
+    populateYarnSysFS(scheduler);
+  }
+
+  private static void populateYarnSysFS(ServiceScheduler scheduler) {
+    Service service = scheduler.getApp();
+    scheduler.syncSysFs(service);
   }
 
   private void printSystemEnv() {

@@ -18,23 +18,22 @@
 
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
-import com.google.common.base.Strings;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.web.ozShell.Handler;
-import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.utils.JsonUtils;
-
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
+import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
+import org.apache.hadoop.ozone.web.ozShell.Shell;
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * Executes List Volume call.
@@ -72,13 +71,9 @@ public class ListVolumeHandler extends Handler {
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    if (!Strings.isNullOrEmpty(ozoneURI.getPath()) && !ozoneURI.getPath()
-        .equals("/")) {
-      throw new OzoneClientException(
-          "Invalid URI: " + ozoneURI + " . Specified path not used." + ozoneURI
-              .getPath());
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureRootAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
     if (userName == null) {
       userName = System.getProperty("user.name");

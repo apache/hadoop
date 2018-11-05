@@ -8,10 +8,10 @@ following notices:
 * Copyright 2011 FuseSource Corp. http://fusesource.com
 
 The binary distribution of this product bundles binaries of
-AWS SDK for Java - Bundle 1.11.134,
-AWS Java SDK for AWS KMS 1.11.134,
-AWS Java SDK for Amazon S3 1.11.134,
-AWS Java SDK for AWS STS 1.11.134,
+AWS SDK for Java - Bundle 1.11.375,
+AWS Java SDK for AWS KMS 1.11.375,
+AWS Java SDK for Amazon S3 1.11.375,
+AWS Java SDK for AWS STS 1.11.375,
 JMES Path Query library 1.0,
 which has the following notices:
  * This software includes third party software subject to the following
@@ -613,3 +613,11 @@ which has the following notices:
    Written by Doug Lea with assistance from members of JCP JSR-166
    Expert Group and released to the public domain, as explained at
    http://creativecommons.org/publicdomain/zero/1.0/
+
+
+The source and binary distribution of this product bundles modified version of
+  github.com/awslabs/aws-js-s3-explorer licensed under Apache 2.0 license
+  with the following notice:
+
+AWS JavaScript S3 Explorer
+Copyright 2014-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.

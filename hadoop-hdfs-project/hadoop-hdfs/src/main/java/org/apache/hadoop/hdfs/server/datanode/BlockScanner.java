@@ -189,7 +189,7 @@ public class BlockScanner {
   }
 
   /**
-   * Returns true if the block scanner is enabled.<p/>
+   * Returns true if the block scanner is enabled.
    *
    * If the block scanner is disabled, no volume scanners will be created, and
    * no threads will start.
@@ -234,7 +234,7 @@ public class BlockScanner {
   }
 
   /**
-   * Stops and removes a volume scanner.<p/>
+   * Stops and removes a volume scanner.
    *
    * This function will block until the volume scanner has stopped.
    *
@@ -260,7 +260,7 @@ public class BlockScanner {
   }
 
   /**
-   * Stops and removes all volume scanners.<p/>
+   * Stops and removes all volume scanners.
    *
    * This function will block until all the volume scanners have stopped.
    */

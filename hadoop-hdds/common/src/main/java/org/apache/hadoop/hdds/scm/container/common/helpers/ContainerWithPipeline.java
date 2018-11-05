@@ -23,6 +23,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 /**
  * Class wraps ozone container info.
@@ -50,7 +51,7 @@ public class ContainerWithPipeline implements Comparator<ContainerWithPipeline>,
       HddsProtos.ContainerWithPipeline allocatedContainer) {
     return new ContainerWithPipeline(
         ContainerInfo.fromProtobuf(allocatedContainer.getContainerInfo()),
-        Pipeline.getFromProtoBuf(allocatedContainer.getPipeline()));
+        Pipeline.getFromProtobuf(allocatedContainer.getPipeline()));
   }
 
   public HddsProtos.ContainerWithPipeline getProtobuf() {

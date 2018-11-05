@@ -87,7 +87,7 @@ public class TestUnmanagedApplicationManager {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 10000)
   public void testBasicUsage()
       throws YarnException, IOException, InterruptedException {
 
@@ -104,6 +104,11 @@ public class TestUnmanagedApplicationManager {
     finishApplicationMaster(
         FinishApplicationMasterRequest.newInstance(null, null, null),
         attemptId);
+
+    while (uam.isHeartbeatThreadAlive()) {
+      LOG.info("waiting for heartbeat thread to finish");
+      Thread.sleep(100);
+    }
   }
 
   /*
@@ -261,7 +266,7 @@ public class TestUnmanagedApplicationManager {
         attemptId);
   }
 
-  @Test
+  @Test(timeout = 10000)
   public void testForceKill()
       throws YarnException, IOException, InterruptedException {
     launchUAM(attemptId);
@@ -269,10 +274,28 @@ public class TestUnmanagedApplicationManager {
         RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
     uam.forceKillApplication();
 
+    while (uam.isHeartbeatThreadAlive()) {
+      LOG.info("waiting for heartbeat thread to finish");
+      Thread.sleep(100);
+    }
+
     try {
       uam.forceKillApplication();
       Assert.fail("Should fail because application is already killed");
     } catch (YarnException t) {
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testShutDownConnections()
+      throws YarnException, IOException, InterruptedException {
+    launchUAM(attemptId);
+    registerApplicationMaster(
+        RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
+    uam.shutDownConnections();
+    while (uam.isHeartbeatThreadAlive()) {
+      LOG.info("waiting for heartbeat thread to finish");
+      Thread.sleep(100);
     }
   }
 

@@ -1482,6 +1482,27 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.webapp.https.enabled</name>
+  <value>false</value>
+  <description>True if the MR AM should use HTTPS for its webapp.  If
+    yarn.resourcemanager.application-https.policy is set to LENIENT or STRICT,
+    the MR AM will automatically use the keystore provided by YARN with a
+    certificate for the MR AM webapp, unless provided by the user.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.webapp.https.client.auth</name>
+  <value>false</value>
+  <description>True if the MR AM webapp should require client HTTPS
+    authentication (i.e. the proxy server (RM) should present a certificate to
+    the MR AM webapp). If yarn.resourcemanager.application-https.policy is set
+    to LENIENT or STRICT, the MR AM will automatically use the truststore
+    provided by YARN with the RMs certificate, unless provided by the user.
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.job.committer.cancel-timeout</name>
   <value>60000</value>
   <description>The amount of time in milliseconds to wait for the output

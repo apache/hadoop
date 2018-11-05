@@ -372,18 +372,21 @@ public class VolumeSet {
       for (Map.Entry<String, HddsVolume> entry : volumeMap.entrySet()) {
         hddsVolume = entry.getValue();
         VolumeInfo volumeInfo = hddsVolume.getVolumeInfo();
-        long scmUsed = 0;
-        long remaining = 0;
+        long scmUsed;
+        long remaining;
+        long capacity;
         failed = false;
         try {
           scmUsed = volumeInfo.getScmUsed();
           remaining = volumeInfo.getAvailable();
+          capacity = volumeInfo.getCapacity();
         } catch (IOException ex) {
           LOG.warn("Failed to get scmUsed and remaining for container " +
-              "storage location {}", volumeInfo.getRootDir());
+              "storage location {}", volumeInfo.getRootDir(), ex);
           // reset scmUsed and remaining if df/du failed.
           scmUsed = 0;
           remaining = 0;
+          capacity = 0;
           failed = true;
         }
 
@@ -392,7 +395,7 @@ public class VolumeSet {
         builder.setStorageLocation(volumeInfo.getRootDir())
             .setId(hddsVolume.getStorageID())
             .setFailed(failed)
-            .setCapacity(hddsVolume.getCapacity())
+            .setCapacity(capacity)
             .setRemaining(remaining)
             .setScmUsed(scmUsed)
             .setStorageType(hddsVolume.getStorageType());

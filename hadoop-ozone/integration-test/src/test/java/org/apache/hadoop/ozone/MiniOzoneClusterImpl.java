@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -90,6 +91,9 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   private final OzoneManager ozoneManager;
   private final List<HddsDatanodeService> hddsDatanodes;
 
+  // Timeout for the cluster to be ready
+  private int waitForClusterToBeReadyTimeout = 60000; // 1 min
+
   /**
    * Creates a new MiniOzoneCluster.
    *
@@ -122,7 +126,18 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
           isReady? "Cluster is ready" : "Waiting for cluster to be ready",
           healthy, hddsDatanodes.size());
       return isReady;
-    }, 1000, 60 * 1000); //wait for 1 min.
+    }, 1000, waitForClusterToBeReadyTimeout);
+  }
+
+  /**
+   * Sets the timeout value after which
+   * {@link MiniOzoneClusterImpl#waitForClusterToBeReady} times out.
+   *
+   * @param timeoutInMs timeout value in milliseconds
+   */
+  @Override
+  public void setWaitForClusterToBeReadyTimeout(int timeoutInMs) {
+    waitForClusterToBeReadyTimeout = timeoutInMs;
   }
 
   /**
@@ -232,8 +247,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartHddsDatanode(int i) throws InterruptedException,
-      TimeoutException {
+  public void restartHddsDatanode(int i, boolean waitForDatanode)
+      throws InterruptedException, TimeoutException {
     HddsDatanodeService datanodeService = hddsDatanodes.get(i);
     datanodeService.stop();
     datanodeService.join();
@@ -248,20 +263,24 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
     conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     hddsDatanodes.remove(i);
-    // wait for node to be removed from SCM healthy node list.
-    waitForClusterToBeReady();
+    if (waitForDatanode) {
+      // wait for node to be removed from SCM healthy node list.
+      waitForClusterToBeReady();
+    }
     HddsDatanodeService service =
         HddsDatanodeService.createHddsDatanodeService(conf);
     hddsDatanodes.add(i, service);
     service.start(null);
-    // wait for the node to be identified as a healthy node again.
-    waitForClusterToBeReady();
+    if (waitForDatanode) {
+      // wait for the node to be identified as a healthy node again.
+      waitForClusterToBeReady();
+    }
   }
 
   @Override
-  public void restartHddsDatanode(DatanodeDetails dn)
+  public void restartHddsDatanode(DatanodeDetails dn, boolean waitForDatanode)
       throws InterruptedException, TimeoutException, IOException {
-    restartHddsDatanode(getHddsDatanodeIndex(dn));
+    restartHddsDatanode(getHddsDatanodeIndex(dn), waitForDatanode);
   }
 
   @Override
@@ -371,7 +390,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
       conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, ozoneEnabled);
       Path metaDir = Paths.get(path, "ozone-meta");
       Files.createDirectories(metaDir);
-      conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
+      conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
       configureTrace();
     }
 
@@ -448,7 +467,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
         Files.createDirectories(metaDir);
         Files.createDirectories(dataDir);
         Files.createDirectories(ratisDir);
-        dnConf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
+        dnConf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDir.toString());
         dnConf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
             ratisDir.toString());

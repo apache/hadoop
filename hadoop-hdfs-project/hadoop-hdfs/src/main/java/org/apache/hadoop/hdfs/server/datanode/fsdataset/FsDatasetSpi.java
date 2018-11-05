@@ -192,7 +192,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   FsVolumeReferences getFsVolumeReferences();
 
   /**
-   * Add a new volume to the FsDataset.<p/>
+   * Add a new volume to the FsDataset.
    *
    * If the FSDataset supports block scanning, this function registers
    * the new volume with the block scanner.
@@ -226,7 +226,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /** @return the volume that contains a replica of the block. */
   V getVolume(ExtendedBlock b);
 
-  /** @return a volume information map (name => info). */
+  /** @return a volume information map (name {@literal =>} info). */
   Map<String, Object> getVolumeInfoMap();
 
   /**
@@ -273,7 +273,8 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Get reference to the replica meta info in the replicasMap. 
-   * To be called from methods that are synchronized on {@link FSDataset}
+   * To be called from methods that are synchronized on
+   * implementations of {@link FsDatasetSpi}
    * @return replica from the replicas map
    */
   @Deprecated
@@ -394,7 +395,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Finalizes the block previously opened for writing using writeToBlock.
    * The block size is what is in the parameter b and it must match the amount
    *  of data written
-   * @param block Block to be finalized
+   * @param b Block to be finalized
    * @param fsyncDir whether to sync the directory changes to durable device.
    * @throws IOException
    * @throws ReplicaNotFoundException if the replica can not be found when the
@@ -488,14 +489,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Determine if the specified block is cached.
    * @param bpid Block pool id
-   * @param blockIds - block id
+   * @param blockId - block id
    * @return true if the block is cached
    */
   boolean isCached(String bpid, long blockId);
 
     /**
      * Check if all the data directories are healthy
-     * @return A set of unhealthy data directories.
      * @param failedVolumes
      */
   void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes);

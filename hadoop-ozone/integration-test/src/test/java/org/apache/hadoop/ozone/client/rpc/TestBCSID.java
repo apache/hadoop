@@ -137,7 +137,7 @@ public class TestBCSID {
         omKeyLocationInfo.getBlockCommitSequenceId());
 
     // verify that on restarting the datanode, it reloads the BCSID correctly.
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
     Assert.assertEquals(blockCommitSequenceId,
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet()

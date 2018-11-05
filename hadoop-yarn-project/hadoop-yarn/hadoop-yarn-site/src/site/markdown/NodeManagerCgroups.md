@@ -29,13 +29,13 @@ The following settings are related to setting up CGroups. These need to be set i
 |Configuration Name | Description |
 |:---- |:---- |
 | `yarn.nodemanager.container-executor.class` | This should be set to "org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor". CGroups is a Linux kernel feature and is exposed via the LinuxContainerExecutor. |
-| `yarn.nodemanager.linux-container-executor.resources-handler.class` | This should be set to "org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler". Using the LinuxContainerExecutor doesn't force you to use CGroups. If you wish to use CGroups, the resource-handler-class must be set to CGroupsLCEResourceHandler. |
+| `yarn.nodemanager.linux-container-executor.resources-handler.class` | This should be set to "org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler". Using the LinuxContainerExecutor doesn't force you to use CGroups. If you wish to use CGroups, the resource-handler-class must be set to CGroupsLCEResourceHandler. DefaultLCEResourcesHandler won't work. |
 | `yarn.nodemanager.linux-container-executor.cgroups.hierarchy` | The cgroups hierarchy under which to place YARN proccesses(cannot contain commas). If yarn.nodemanager.linux-container-executor.cgroups.mount is false (that is, if cgroups have been pre-configured) and the YARN user has write access to the parent directory, then the directory will be created. If the directory already exists, the administrator has to give YARN write permissions to it recursively. |
 | `yarn.nodemanager.linux-container-executor.cgroups.mount` | Whether the LCE should attempt to mount cgroups if not found - can be true or false. |
 | `yarn.nodemanager.linux-container-executor.cgroups.mount-path` | Optional. Where CGroups are located. LCE will try to mount them here, if `yarn.nodemanager.linux-container-executor.cgroups.mount` is true. LCE will try to use CGroups from this location, if `yarn.nodemanager.linux-container-executor.cgroups.mount` is false. If specified, this path and its subdirectories (CGroup hierarchies) must exist and they should be readable and writable by YARN before the NodeManager is launched. See CGroups mount options below for details. |
 | `yarn.nodemanager.linux-container-executor.group` | The Unix group of the NodeManager. It should match the setting in "container-executor.cfg". This configuration is required for validating the secure access of the container-executor binary. |
 
-The following settings are related to limiting resource usage of YARN containers:
+Once CGroups enabled, the following settings related to limiting resource usage of YARN containers can works:
 
 |Configuration Name | Description |
 |:---- |:---- |

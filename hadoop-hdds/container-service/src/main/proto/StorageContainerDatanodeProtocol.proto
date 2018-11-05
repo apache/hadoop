@@ -80,10 +80,11 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  repeated CommandStatusReportsProto commandStatusReports = 4;
-  optional ContainerActionsProto containerActions = 5;
-  optional PipelineActionsProto pipelineActions = 6;
-  optional PipelineReportsProto pipelineReports = 7;
+  optional IncrementalContainerReportProto incrementalContainerReport = 4;
+  repeated CommandStatusReportsProto commandStatusReports = 5;
+  optional ContainerActionsProto containerActions = 6;
+  optional PipelineActionsProto pipelineActions = 7;
+  optional PipelineReportsProto pipelineReports = 8;
 }
 
 /*
@@ -128,7 +129,34 @@ enum StorageTypeProto {
 }
 
 message ContainerReportsProto {
-  repeated ContainerInfo reports = 1;
+  repeated ContainerReplicaProto reports = 1;
+}
+
+message IncrementalContainerReportProto {
+  repeated ContainerReplicaProto report = 1;
+}
+
+message ContainerReplicaProto {
+  enum State {
+    OPEN = 1;
+    CLOSING = 2;
+    CLOSED = 3;
+    QUASI_CLOSED = 4;
+    UNHEALTHY = 5;
+    INVALID = 6;
+  }
+  required int64 containerID = 1;
+  required State state = 2;
+  optional int64 size = 3;
+  optional int64 used = 4;
+  optional int64 keyCount = 5;
+  optional int64 readCount = 6;
+  optional int64 writeCount = 7;
+  optional int64 readBytes = 8;
+  optional int64 writeBytes = 9;
+  optional string finalhash = 10;
+  optional int64 deleteTransactionId = 11;
+  optional uint64 blockCommitSequenceId = 12;
 }
 
 message CommandStatusReportsProto {
@@ -198,25 +226,6 @@ message PipelineAction {
    */
   required Action action = 1;
   optional ClosePipelineInfo closePipeline = 2;
-}
-
-/**
-A container report contains the following information.
-*/
-message ContainerInfo {
-  required int64 containerID = 1;
-  optional int64 size = 2;
-  optional int64 used = 3;
-  optional int64 keyCount = 4;
-  // TODO: move the io count to separate message
-  optional int64 readCount = 5;
-  optional int64 writeCount = 6;
-  optional int64 readBytes = 7;
-  optional int64 writeBytes = 8;
-  optional string finalhash = 9;
-  optional hadoop.hdds.LifeCycleState state = 10;
-  optional int64 deleteTransactionId = 11;
-  optional uint64 blockCommitSequenceId = 12;
 }
 
 /*

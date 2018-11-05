@@ -50,14 +50,17 @@ import org.apache.hadoop.util.ToolRunner;
  * <p>The tool scans all files and directories, starting from an indicated
  *  root path. The following abnormal conditions are detected and handled:</p>
  * <ul>
- * <li>files with blocks that are completely missing from all datanodes.<br/>
+ * <li>files with blocks that are completely missing from all datanodes.<br>
  * In this case the tool can perform one of the following actions:
  *  <ul>
- *      <li>none ({@link org.apache.hadoop.hdfs.server.namenode.NamenodeFsck#FIXING_NONE})</li>
  *      <li>move corrupted files to /lost+found directory on DFS
- *      ({@link org.apache.hadoop.hdfs.server.namenode.NamenodeFsck#FIXING_MOVE}). Remaining data blocks are saved as a
- *      block chains, representing longest consecutive series of valid blocks.</li>
- *      <li>delete corrupted files ({@link org.apache.hadoop.hdfs.server.namenode.NamenodeFsck#FIXING_DELETE})</li>
+ *      ({@link org.apache.hadoop.hdfs.server.namenode.NamenodeFsck#doMove}).
+ *      Remaining data blocks are saved as a
+ *      block chains, representing longest consecutive series of valid blocks.
+ *      </li>
+ *      <li>delete corrupted files
+ *      ({@link org.apache.hadoop.hdfs.server.namenode.NamenodeFsck#doDelete})
+ *      </li>
  *  </ul>
  *  </li>
  *  <li>detect files with under-replicated or over-replicated blocks</li>

@@ -372,6 +372,34 @@ public class UnmanagedAMPoolManager extends AbstractService {
   }
 
   /**
+   * Shutdown an UAM client without killing it in YarnRM.
+   *
+   * @param uamId uam Id
+   * @throws YarnException if fails
+   */
+  public void shutDownConnections(String uamId)
+      throws YarnException {
+    if (!this.unmanagedAppMasterMap.containsKey(uamId)) {
+      throw new YarnException("UAM " + uamId + " does not exist");
+    }
+    LOG.info(
+        "Shutting down UAM id {} for application {} without killing the UAM",
+        uamId, this.appIdMap.get(uamId));
+    this.unmanagedAppMasterMap.remove(uamId).shutDownConnections();
+  }
+
+  /**
+   * Shutdown all UAM clients without killing them in YarnRM.
+   *
+   * @throws YarnException if fails
+   */
+  public void shutDownConnections() throws YarnException {
+    for (String uamId : this.unmanagedAppMasterMap.keySet()) {
+      shutDownConnections(uamId);
+    }
+  }
+
+  /**
    * Get the id of all running UAMs.
    *
    * @return uamId set

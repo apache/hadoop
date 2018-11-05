@@ -371,7 +371,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_READS) == null) ?
             null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_READS, false);
     Long readahead = (conf.get(DFS_CLIENT_CACHE_READAHEAD) == null) ?
-        null : conf.getLong(DFS_CLIENT_CACHE_READAHEAD, 0);
+        null : conf.getLongBytes(DFS_CLIENT_CACHE_READAHEAD, 0);
     this.serverDefaultsValidityPeriod =
             conf.getLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
       DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT);

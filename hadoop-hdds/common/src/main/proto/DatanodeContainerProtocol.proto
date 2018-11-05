@@ -140,6 +140,8 @@ enum Result {
   UNKNOWN_CONTAINER_TYPE = 34;
   BLOCK_NOT_COMMITTED = 35;
   CONTAINER_UNHEALTHY = 36;
+  UNKNOWN_BCSID = 37;
+  BCSID_MISMATCH = 38;
 }
 
 /**
@@ -148,22 +150,12 @@ enum Result {
 message DatanodeBlockID {
   required int64 containerID = 1;
   required int64 localID = 2;
+  optional uint64 blockCommitSequenceId = 3 [default = 0];
 }
 
 message KeyValue {
   required string key = 1;
   optional string value = 2;
-}
-
-/**
- * Lifecycle states of a container in Datanode.
- */
-enum ContainerLifeCycleState {
-    OPEN = 1;
-    CLOSING = 2;
-    CLOSED = 3;
-    UNHEALTHY = 4;
-    INVALID = 5;
 }
 
 message ContainerCommandRequestProto {
@@ -232,14 +224,22 @@ message ContainerCommandResponseProto {
   optional GetCommittedBlockLengthResponseProto getCommittedBlockLength = 21;
 }
 
-message ContainerData {
+message ContainerDataProto {
+  enum State {
+    OPEN = 1;
+    CLOSING = 2;
+    CLOSED = 3;
+    QUASI_CLOSED = 4;
+    UNHEALTHY = 5;
+    INVALID = 6;
+  }
   required int64 containerID = 1;
   repeated KeyValue metadata = 2;
   optional string containerPath = 4;
   optional int64 bytesUsed = 6;
   optional int64 size = 7;
   optional int64 blockCount = 8;
-  optional ContainerLifeCycleState state = 9 [default = OPEN];
+  optional State state = 9 [default = OPEN];
   optional ContainerType containerType = 10 [default = KeyValueContainer];
 }
 
@@ -261,7 +261,7 @@ message  ReadContainerRequestProto {
 }
 
 message  ReadContainerResponseProto {
-  optional ContainerData containerData = 1;
+  optional ContainerDataProto containerData = 1;
 }
 
 message  UpdateContainerRequestProto {
@@ -284,7 +284,7 @@ message  ListContainerRequestProto {
 }
 
 message  ListContainerResponseProto {
-  repeated ContainerData containerData = 1;
+  repeated ContainerDataProto containerData = 1;
 }
 
 message CloseContainerRequestProto {
@@ -301,7 +301,6 @@ message BlockData {
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
   optional int64 size = 5;
-  optional uint64 blockCommitSequenceId = 6;
 }
 
 // Block Messages.
@@ -333,7 +332,6 @@ message  GetCommittedBlockLengthRequestProto {
 message  GetCommittedBlockLengthResponseProto {
   required DatanodeBlockID blockID = 1;
   required int64 blockLength = 2;
-  optional uint64 blockCommitSequenceId = 3;
 }
 
 message   DeleteBlockResponseProto {
@@ -415,7 +413,7 @@ message PutSmallFileRequestProto {
 
 
 message PutSmallFileResponseProto {
-
+  required GetCommittedBlockLengthResponseProto committedBlockLength = 1;
 }
 
 message GetSmallFileRequestProto {
