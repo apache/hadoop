@@ -19,3 +19,4 @@ WORKDIR /opt
 RUN sudo rm -rf /opt/hadoop && wget $HADOOP_URL -O hadoop.tar.gz && tar zxf hadoop.tar.gz && rm hadoop.tar.gz && mv hadoop* hadoop && rm -rf /opt/hadoop/share/doc
 WORKDIR /opt/hadoop
 ADD log4j.properties /opt/hadoop/etc/hadoop/log4j.properties
+RUN sudo chown -R hadoop:users /opt/hadoop/etc/hadoop/*
