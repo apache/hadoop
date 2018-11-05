@@ -232,6 +232,15 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY;
   public static final int DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT;
+
+  // config settings to enable stateMachineData write timeout
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT;
+  public static final TimeDuration
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT;
+
   public static final int DFS_CONTAINER_CHUNK_MAX_SIZE
       = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =

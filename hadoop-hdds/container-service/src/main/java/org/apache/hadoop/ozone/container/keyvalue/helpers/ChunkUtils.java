@@ -138,6 +138,8 @@ public final class ChunkUtils {
         }
       }
     }
+    log.debug("Write Chunk completed for chunkFile: {}, size {}", chunkFile,
+        data.length);
   }
 
   /**

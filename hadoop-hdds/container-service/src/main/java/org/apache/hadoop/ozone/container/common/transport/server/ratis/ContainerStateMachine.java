@@ -307,9 +307,18 @@ public class ContainerStateMachine extends BaseStateMachine {
           () -> runCommand(requestProto), chunkExecutor);
     }
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
+    LOG.debug("writeChunk writeStateMachineData : blockId " + write.getBlockID()
+        + " logIndex " + entryIndex + " chunkName " + write.getChunkData()
+        .getChunkName());
     // Remove the future once it finishes execution from the
     // writeChunkFutureMap.
-    writeChunkFuture.thenApply(r -> writeChunkFutureMap.remove(entryIndex));
+    writeChunkFuture.thenApply(r -> {
+      writeChunkFutureMap.remove(entryIndex);
+      LOG.debug("writeChunk writeStateMachineData  completed: blockId " + write
+          .getBlockID() + " logIndex " + entryIndex + " chunkName " + write
+          .getChunkData().getChunkName());
+      return r;
+    });
     return writeChunkFuture;
   }
 
@@ -519,7 +528,12 @@ public class ContainerStateMachine extends BaseStateMachine {
       if (cmdType == Type.CreateContainer) {
         long containerID = requestProto.getContainerID();
         future.thenApply(
-            r -> createContainerFutureMap.remove(containerID).complete(null));
+            r -> {
+              createContainerFutureMap.remove(containerID).complete(null);
+              LOG.info("create Container Transaction completed for container " +
+                  containerID + " log index " + index);
+              return r;
+            });
       }
 
       future.thenAccept(m -> {

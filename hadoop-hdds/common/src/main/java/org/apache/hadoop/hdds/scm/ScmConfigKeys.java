@@ -74,6 +74,12 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.segment.preallocated.size";
   public static final int
       DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT = 128 * 1024 * 1024;
+  public static final String
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT =
+      "dfs.container.ratis.statemachinedata.sync.timeout";
+  public static final TimeDuration
+      DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_TIMEOUT_DEFAULT =
+      TimeDuration.valueOf(10, TimeUnit.SECONDS);
   public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
       "dfs.ratis.client.request.timeout.duration";
   public static final TimeDuration
