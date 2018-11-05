@@ -66,7 +66,7 @@ public class ChunkManagerImpl implements ChunkManager {
    * @throws StorageContainerException
    */
   public void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-      byte[] data, ContainerProtos.Stage stage)
+      ByteBuffer data, ContainerProtos.Stage stage)
       throws StorageContainerException {
 
     try {
