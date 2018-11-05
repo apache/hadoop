@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import java.nio.ByteBuffer;
 
 /**
  * Chunk Manager allows read, write, delete and listing of chunks in
@@ -41,7 +42,7 @@ public interface ChunkManager {
    * @throws StorageContainerException
    */
   void writeChunk(Container container, BlockID blockID, ChunkInfo info,
-                  byte[] data, ContainerProtos.Stage stage)
+                  ByteBuffer data, ContainerProtos.Stage stage)
       throws StorageContainerException;
 
   /**
