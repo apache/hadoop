@@ -8,10 +8,10 @@ following notices:
 * Copyright 2011 FuseSource Corp. http://fusesource.com
 
 The binary distribution of this product bundles binaries of
-AWS SDK for Java - Bundle 1.11.134,
-AWS Java SDK for AWS KMS 1.11.134,
-AWS Java SDK for Amazon S3 1.11.134,
-AWS Java SDK for AWS STS 1.11.134,
+AWS SDK for Java - Bundle 1.11.271,
+AWS Java SDK for AWS KMS 1.11.271,
+AWS Java SDK for Amazon S3 1.11.271,
+AWS Java SDK for AWS STS 1.11.271,
 JMES Path Query library 1.0,
 which has the following notices:
  * This software includes third party software subject to the following
