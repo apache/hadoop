@@ -89,8 +89,8 @@ public class RouterHttpServer extends AbstractService {
 
     this.httpServer = builder.build();
 
-    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), httpServer,
-        RouterWebHdfsMethods.class.getPackage().getName());
+    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), null,
+        httpServer, RouterWebHdfsMethods.class.getPackage().getName());
 
     this.httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, this.router);
     this.httpServer.setAttribute(JspHelper.CURRENT_CONF, this.conf);
