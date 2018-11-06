@@ -747,6 +747,12 @@
         <groupId>com.sun.jersey.contribs</groupId>
         <artifactId>jersey-guice</artifactId>
         <version>${jersey.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
