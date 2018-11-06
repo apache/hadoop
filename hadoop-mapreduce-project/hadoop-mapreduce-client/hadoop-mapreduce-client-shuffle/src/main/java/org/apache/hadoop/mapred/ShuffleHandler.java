@@ -911,6 +911,8 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
         throws Exception {
+      super.channelOpen(ctx, evt);
+
       if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
@@ -926,8 +928,6 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
       accepted.add(evt.getChannel());
-      super.channelOpen(ctx, evt);
-     
     }
 
     @Override
