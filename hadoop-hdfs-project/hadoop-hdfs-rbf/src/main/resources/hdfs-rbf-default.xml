@@ -465,4 +465,51 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by router to login as its
+      service principal. The principal name is configured with
+      dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Router service principal. This is typically set to
+      router/_HOST@REALM.TLD. Each Router will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both Router
+      in an HA setup.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.  The hostname for the Router containing this
+      configuration file.  Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.kerberos.internal.spnego.principal</name>
+    <value>${dfs.web.authentication.kerberos.principal}</value>
+    <description>
+      The server principal used by the Router for web UI SPNEGO
+      authentication when Kerberos security is enabled. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+
+      If the value is '*', the web server will attempt to login with
+      every principal specified in the keytab file
+      dfs.web.authentication.kerberos.keytab.
+    </description>
+  </property>
+
 </configuration>

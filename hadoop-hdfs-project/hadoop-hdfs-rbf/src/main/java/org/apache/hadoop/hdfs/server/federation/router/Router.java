@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
+
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newActiveNamenodeResolver;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newFileSubclusterResolver;
 
@@ -41,6 +45,8 @@ import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
@@ -145,6 +151,11 @@ public class Router extends CompositeService {
     this.conf = configuration;
     updateRouterState(RouterServiceState.INITIALIZING);
 
+    // Enable the security for the Router
+    UserGroupInformation.setConfiguration(conf);
+    SecurityUtil.login(conf, DFS_ROUTER_KEYTAB_FILE_KEY,
+        DFS_ROUTER_KERBEROS_PRINCIPAL_KEY, getHostName(conf));
+
     if (conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_STORE_ENABLE,
         RBFConfigKeys.DFS_ROUTER_STORE_ENABLE_DEFAULT)) {
@@ -244,6 +255,23 @@ public class Router extends CompositeService {
     }
 
     super.serviceInit(conf);
+  }
+
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private static String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
   }
 
   @Override

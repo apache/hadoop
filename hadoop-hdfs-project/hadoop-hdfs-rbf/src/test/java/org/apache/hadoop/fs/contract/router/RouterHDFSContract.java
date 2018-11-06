@@ -43,12 +43,17 @@ public class RouterHDFSContract extends HDFSContract {
   }
 
   public static void createCluster() throws IOException {
+    createCluster(null);
+  }
+
+  public static void createCluster(Configuration conf) throws IOException {
     try {
-      cluster = new MiniRouterDFSCluster(true, 2);
+      cluster = new MiniRouterDFSCluster(true, 2, conf);
 
       // Start NNs and DNs and wait until ready
-      cluster.startCluster();
+      cluster.startCluster(conf);
 
+      cluster.addRouterOverrides(conf);
       // Start routers with only an RPC service
       cluster.startRouters();
 

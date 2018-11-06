@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT;
@@ -60,6 +61,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -174,6 +176,9 @@ public class RouterRpcServer extends AbstractService
   /** Monitor metrics for the RPC calls. */
   private final RouterRpcMonitor rpcMonitor;
 
+  /** If we use authentication for the connections. */
+  private final boolean serviceAuthEnabled;
+
 
   /** Interface to identify the active NN for a nameservice or blockpool ID. */
   private final ActiveNamenodeResolver namenodeResolver;
@@ -264,6 +269,13 @@ public class RouterRpcServer extends AbstractService
     // Add all the RPC protocols that the Router implements
     DFSUtil.addPBProtocol(
         conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
+
+    // Set service-level authorization security policy
+    this.serviceAuthEnabled = conf.getBoolean(
+        HADOOP_SECURITY_AUTHORIZATION, false);
+    if (this.serviceAuthEnabled) {
+      rpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+    }
 
     // We don't want the server to log the full stack trace for some exceptions
     this.rpcServer.addTerseExceptions(
