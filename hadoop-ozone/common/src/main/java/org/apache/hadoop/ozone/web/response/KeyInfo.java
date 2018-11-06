@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -74,6 +75,26 @@ public class KeyInfo implements Comparable<KeyInfo> {
   private String keyName;
 
   private String dataFileName;
+
+  private ReplicationType type;
+
+  /**
+   * Return replication type of the key.
+   *
+   * @return replication type
+   */
+  public ReplicationType getType() {
+    return type;
+  }
+
+  /**
+   * Set replication type of the key.
+   *
+   * @param replicationType
+   */
+  public void setType(ReplicationType replicationType) {
+    this.type = replicationType;
+  }
 
   /**
    * When this key was created.

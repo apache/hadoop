@@ -777,7 +777,8 @@ public class RestClient implements ClientProtocol {
           LOG.warn("Parse exception in getting creation time for volume", e);
         }
         return new OzoneKey(volumeName, bucketName, keyInfo.getKeyName(),
-            keyInfo.getSize(), creationTime, modificationTime);
+            keyInfo.getSize(), creationTime, modificationTime,
+            ReplicationType.valueOf(keyInfo.getType().toString()));
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);
@@ -812,7 +813,8 @@ public class RestClient implements ClientProtocol {
           keyInfo.getSize(),
           HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()),
           HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()),
-          ozoneKeyLocations);
+          ozoneKeyLocations, ReplicationType.valueOf(
+              keyInfo.getType().toString()));
       EntityUtils.consume(response);
       return key;
     } catch (URISyntaxException | ParseException e) {

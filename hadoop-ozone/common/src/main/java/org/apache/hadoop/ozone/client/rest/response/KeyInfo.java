@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.hdds.client.ReplicationType;
 
 /**
  * KeyInfo class is used used for parsing json response
@@ -40,6 +41,25 @@ public class KeyInfo implements Comparable<KeyInfo> {
   private String modifiedOn;
   private long size;
   private String keyName;
+  private ReplicationType type;
+
+  /**
+   * Return replication type of the key.
+   *
+   * @return replication type
+   */
+  public ReplicationType getType() {
+    return type;
+  }
+
+  /**
+   * Set replication type of the key.
+   *
+   * @param replicationType
+   */
+  public void setType(ReplicationType replicationType) {
+    this.type = replicationType;
+  }
 
   /**
    * When this key was created.
