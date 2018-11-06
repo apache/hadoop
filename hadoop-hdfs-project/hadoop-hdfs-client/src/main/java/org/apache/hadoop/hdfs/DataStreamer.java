@@ -290,7 +290,7 @@ class DataStreamer extends Daemon {
     }
     packets.clear();
   }
-  
+
   static class LastExceptionInStreamer {
     private IOException thrown;
 
@@ -1754,6 +1754,7 @@ class DataStreamer extends Daemon {
         blockStream = out;
         result =  true; // success
         errorState.reset();
+        lastException.clear();
         // remove all restarting nodes from failed nodes list
         failed.removeAll(restartingNodes);
         restartingNodes.clear();
@@ -1835,7 +1836,7 @@ class DataStreamer extends Daemon {
 
   protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excluded,
       ExtendedBlock oldBlock) throws IOException {
-    final DfsClientConf conf = dfsClient.getConf(); 
+    final DfsClientConf conf = dfsClient.getConf();
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     while (true) {
