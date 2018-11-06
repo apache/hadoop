@@ -29,7 +29,7 @@
  *
  * while(current.isBalancingNeeded(thresholdValue)) {
  *
- *   // Creates a plan , like move 20 GB data from v1 -> v2
+ *   // Creates a plan , like move 20 GB data from v1 {@literal ->} v2
  *   Step step = planner.plan(current, thresholdValue);
  *
  *   // we add that to our plan
