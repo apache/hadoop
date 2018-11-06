@@ -2002,6 +2002,26 @@
         </dependencies>
       </dependencyManagement>
     </profile>
+    <profile>
+      <!-- TODO: remove this profile to generate html5 docs when we stop supporting JDK8 -->
+      <id>javadoc-html-version</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <additionalOptions>
+                <additionalOption>-html4</additionalOption>
+              </additionalOptions>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <repositories>
