@@ -1539,8 +1539,8 @@ public class CapacityScheduler extends
             .add(node.getUnallocatedResource(), node.getTotalKillableResources()),
         minimumAllocation) <= 0) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("This node or this node partition doesn't have available or"
-            + "killable resource");
+        LOG.debug("This node or node partition doesn't have available or" +
+            " preemptible resource");
       }
       return null;
     }
