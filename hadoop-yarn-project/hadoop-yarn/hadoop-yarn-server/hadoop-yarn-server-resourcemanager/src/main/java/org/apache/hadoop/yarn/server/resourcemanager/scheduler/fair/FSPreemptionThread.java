@@ -229,7 +229,7 @@ class FSPreemptionThread extends Thread {
 
   private void trackPreemptionsAgainstNode(List<RMContainer> containers,
                                            FSAppAttempt app) {
-    FSSchedulerNode node = (FSSchedulerNode) scheduler.getNodeTracker()
+    FSSchedulerNode node = scheduler.getNodeTracker()
         .getNode(containers.get(0).getNodeId());
     node.addContainersForPreemption(containers, app);
   }
