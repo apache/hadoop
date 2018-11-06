@@ -62,7 +62,7 @@ public class TestSignedChunksInputStream {
     InputStream is = fileContent("0A;chunk-signature"
         +
         "=23abb2bd920ddeeaac78a63ed808bc59fa6e7d3ef0e356474b82cdc2f8c93c40\r"
-        + "\n1234567890\r\n");
+        + "\n1234567890");
     String result = IOUtils.toString(is, Charset.forName("UTF-8"));
     Assert.assertEquals("1234567890", result);
   }
