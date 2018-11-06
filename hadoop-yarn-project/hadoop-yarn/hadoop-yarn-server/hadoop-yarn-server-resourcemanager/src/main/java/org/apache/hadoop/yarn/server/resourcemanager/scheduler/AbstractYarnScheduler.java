@@ -230,7 +230,7 @@ public abstract class AbstractYarnScheduler
   }
 
   @VisibleForTesting
-  public ClusterNodeTracker getNodeTracker() {
+  public ClusterNodeTracker<N> getNodeTracker() {
     return nodeTracker;
   }
 
