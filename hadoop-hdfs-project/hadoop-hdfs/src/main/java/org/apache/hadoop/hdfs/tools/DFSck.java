@@ -84,7 +84,7 @@ public class DFSck extends Configured implements Tool {
           "-upgradedomains]]]] "
       + "[-includeSnapshots] [-showprogress] "
       + "[-storagepolicies] [-maintenance] "
-      + "[-blockId <blk_Id>]\n"
+      + "[-blockId <blk_Id>] [-replicate]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
       + "\t-delete\tdelete corrupted files\n"
@@ -107,8 +107,10 @@ public class DFSck extends Configured implements Tool {
       + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
-      + " (under replicated, corrupted or not, etc)\n\n"
-      + "Please Note:\n"
+      + " (under replicated, corrupted or not, etc)\n"
+      + "\t-replicate initiate replication work to make mis-replicated\n"
+      + " blocks satisfy block placement policy\n\n"
+      + "Please Note:\n\n"
       + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
       + " tagged CORRUPT or HEALTHY depending on their block "
@@ -308,6 +310,8 @@ public class DFSck extends Configured implements Tool {
           idx++;
         }
         url.append("&blockId=").append(URLEncoder.encode(sb.toString(), "UTF-8"));
+      } else if (args[idx].equals("-replicate")) {
+        url.append("&replicate=1");
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];

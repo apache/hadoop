@@ -82,6 +82,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.tools.DFSck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -2531,4 +2532,24 @@ public class DFSTestUtil {
     }
   }
 
+  /**
+   * Run the fsck command using the specified params.
+   *
+   * @param conf HDFS configuration to use
+   * @param expectedErrCode The error code expected to be returned by
+   *                         the fsck command
+   * @param checkErrorCode Should the error code be checked
+   * @param path actual arguments to the fsck command
+   **/
+  public static String runFsck(Configuration conf, int expectedErrCode,
+                        boolean checkErrorCode, String... path)
+          throws Exception {
+    ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(bStream, true);
+    int errCode = ToolRunner.run(new DFSck(conf, out), path);
+    if (checkErrorCode) {
+      assertEquals(expectedErrCode, errCode);
+    }
+    return bStream.toString();
+  }
 }
