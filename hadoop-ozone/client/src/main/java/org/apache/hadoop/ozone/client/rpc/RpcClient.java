@@ -537,7 +537,8 @@ public class RpcClient implements ClientProtocol {
         key.getKeyName(),
         key.getDataSize(),
         key.getCreationTime(),
-        key.getModificationTime()))
+        key.getModificationTime(),
+        ReplicationType.valueOf(key.getType().toString())))
         .collect(Collectors.toList());
   }
 
@@ -559,13 +560,10 @@ public class RpcClient implements ClientProtocol {
     keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly().forEach(
         (a) -> ozoneKeyLocations.add(new OzoneKeyLocation(a.getContainerID(),
             a.getLocalID(), a.getLength(), a.getOffset())));
-    return new OzoneKeyDetails(keyInfo.getVolumeName(),
-                        keyInfo.getBucketName(),
-                        keyInfo.getKeyName(),
-                        keyInfo.getDataSize(),
-                        keyInfo.getCreationTime(),
-                        keyInfo.getModificationTime(),
-                        ozoneKeyLocations);
+    return new OzoneKeyDetails(keyInfo.getVolumeName(), keyInfo.getBucketName(),
+        keyInfo.getKeyName(), keyInfo.getDataSize(), keyInfo.getCreationTime(),
+        keyInfo.getModificationTime(), ozoneKeyLocations, ReplicationType
+        .valueOf(keyInfo.getType().toString()));
   }
 
   @Override

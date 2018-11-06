@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.Iterator;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
@@ -48,6 +49,7 @@ import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.ozone.s3.util.S3StorageType;
 import org.apache.hadoop.ozone.s3.util.S3utils;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
@@ -296,7 +298,12 @@ public class BucketEndpoint extends EndpointBase {
     keyMetadata.setKey(next.getName());
     keyMetadata.setSize(next.getDataSize());
     keyMetadata.setETag("" + next.getModificationTime());
-    keyMetadata.setStorageClass("STANDARD");
+    if (next.getReplicationType().toString().equals(ReplicationType
+        .STAND_ALONE.toString())) {
+      keyMetadata.setStorageClass(S3StorageType.REDUCED_REDUNDANCY.toString());
+    } else {
+      keyMetadata.setStorageClass(S3StorageType.STANDARD.toString());
+    }
     keyMetadata.setLastModified(Instant.ofEpochMilli(
         next.getModificationTime()));
     response.addKey(keyMetadata);
