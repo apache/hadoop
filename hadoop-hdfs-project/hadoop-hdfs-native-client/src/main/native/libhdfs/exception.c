@@ -130,7 +130,7 @@ static char* getExceptionUtilString(JNIEnv *env, jthrowable exc, char *methodNam
     jstring jStr = NULL;
     char *excString = NULL;
     jthr = invokeMethod(env, &jVal, STATIC, NULL,
-        "org/apache/commons/lang/exception/ExceptionUtils",
+        "org/apache/commons/lang3/exception/ExceptionUtils",
         methodName, "(Ljava/lang/Throwable;)Ljava/lang/String;", exc);
     if (jthr) {
         destroyLocalReference(env, jthr);
