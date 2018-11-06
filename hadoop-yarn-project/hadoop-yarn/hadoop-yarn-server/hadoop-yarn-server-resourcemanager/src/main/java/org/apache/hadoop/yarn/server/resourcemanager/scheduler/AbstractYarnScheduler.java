@@ -230,6 +230,16 @@ public abstract class AbstractYarnScheduler
     return getMaximumResourceCapability();
   }
 
+  @VisibleForTesting
+  public void setForceConfiguredMaxAllocation(boolean flag) {
+    maxAllocWriteLock.lock();
+    try {
+      useConfiguredMaximumAllocationOnly = flag;
+    } finally {
+      maxAllocWriteLock.unlock();
+    }
+  }
+
   protected void initMaximumResourceCapability(Resource maximumAllocation) {
     maxAllocWriteLock.lock();
     try {
