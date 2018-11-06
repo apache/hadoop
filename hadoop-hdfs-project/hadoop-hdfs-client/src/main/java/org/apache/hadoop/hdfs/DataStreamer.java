@@ -1781,6 +1781,7 @@ class DataStreamer extends Daemon {
         blockStream = out;
         result =  true; // success
         errorState.resetInternalError();
+        lastException.clear();
         // remove all restarting nodes from failed nodes list
         failed.removeAll(restartingNodes);
         restartingNodes.clear();
