@@ -1,0 +1,83 @@
+FROM centos:7 as build
+
+RUN yum -y update && yum clean all
+
+RUN yum -y install curl \
+    && yum clean all \
+    && rm -rf /var/cache/yum
+
+RUN mkdir /build
+COPY . /build
+
+WORKDIR /build
+
+ENV RH_HADOOP_PATCH_VERSION 00002
+ENV HADOOP_VERSION 3.1.1
+
+ENV HADOOP_RELEASE_URL http://download.eng.bos.redhat.com/brewroot/packages/org.apache.hadoop-hadoop-main/${HADOOP_VERSION}.redhat_${RH_HADOOP_PATCH_VERSION}/1/maven/org/apache/hadoop/hadoop-dist/${HADOOP_VERSION}.redhat-${RH_HADOOP_PATCH_VERSION}/hadoop-dist-${HADOOP_VERSION}.redhat-${RH_HADOOP_PATCH_VERSION}-bin.tar.gz
+ENV HADOOP_OUT /build/hadoop-dist/target/hadoop-$HADOOP_VERSION
+
+RUN curl -fSLs \
+    $HADOOP_RELEASE_URL \
+    -o /tmp/hadoop-dist-bin.tar.gz
+
+RUN mkdir -p $(dirname $HADOOP_OUT) && \
+    tar -xvf /tmp/hadoop-dist-bin.tar.gz -C /tmp \
+    && mv /tmp/hadoop-${HADOOP_VERSION}.redhat-${RH_HADOOP_PATCH_VERSION}/ \
+    $HADOOP_OUT
+
+FROM centos:7
+
+RUN \
+    yum install epel-release -y \
+    && yum install -y \
+        java-1.8.0-openjdk \
+        curl \
+        less  \
+        procps \
+        net-tools \
+        bind-utils \
+        which \
+        jq \
+    && yum clean all \
+    && rm -rf /tmp/* /var/tmp/*
+
+ENV JAVA_HOME=/etc/alternatives/jre/
+
+ENV HADOOP_VERSION 3.1.1
+
+ENV HADOOP_CLASSPATH=/opt/hadoop-$HADOOP_VERSION/share/hadoop/tools/lib/*
+ENV HADOOP_CONF_DIR=/etc/hadoop
+ENV HADOOP_HOME=/opt/hadoop-$HADOOP_VERSION
+ENV PATH=$HADOOP_HOME/bin:$PATH
+
+COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION /opt/hadoop-$HADOOP_VERSION
+# remove unnecessary doc/src files
+RUN rm -rf ${HADOOP_HOME}/share/doc \
+    && for dir in common hdfs mapreduce tools yarn; do \
+         rm -rf ${HADOOP_HOME}/share/hadoop/${dir}/sources; \
+       done \
+    && rm -rf ${HADOOP_HOME}/share/hadoop/common/jdiff \
+    && rm -rf ${HADOOP_HOME}/share/hadoop/mapreduce/lib-examples \
+    && rm -rf ${HADOOP_HOME}/share/hadoop/yarn/test \
+    && find ${HADOOP_HOME}/share/hadoop -name *test*.jar | xargs rm -rf
+
+RUN ln -s /opt/hadoop-$HADOOP_VERSION/etc/hadoop /etc/hadoop
+RUN ln -s /opt/hadoop-$HADOOP_VERSION /opt/hadoop
+RUN mkdir -p /opt/hadoop-$HADOOP_VERSION/logs
+
+# to allow running as non-root
+RUN \
+    mkdir -p /hadoop/dfs/data /hadoop/dfs/name && \
+    chown -R 1002:0 /opt /hadoop /hadoop /etc/hadoop && \
+    chmod -R 770 /opt /hadoop /etc/hadoop /etc/passwd
+
+VOLUME /hadoop/dfs/data /hadoop/dfs/name
+
+USER 1002
+
+LABEL io.k8s.display-name="OpenShift Hadoop" \
+      io.k8s.description="This is an image used by operator-metering to to install and run HDFS." \
+      io.openshift.tags="openshift" \
+      maintainer="Chance Zibolski <czibolsk@redhat.com>"
+
