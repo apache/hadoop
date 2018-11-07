@@ -93,25 +93,17 @@ Optional packages:
 ----------------------------------------------------------------------------------
 Maven main modules:
 
-  hadoop                                (Main Hadoop project)
-         - hadoop-project               (Parent POM for all Hadoop Maven modules.             )
-                                        (All plugins & dependencies versions are defined here.)
-         - hadoop-project-dist          (Parent POM for modules that generate distributions.)
-         - hadoop-annotations           (Generates the Hadoop doclet used to generated the Javadocs)
-         - hadoop-assemblies            (Maven assemblies used by the different modules)
-         - hadoop-maven-plugins         (Maven plugins used in project)
-         - hadoop-build-tools           (Build tools like checkstyle, etc.)
-         - hadoop-common-project        (Hadoop Common)
-         - hadoop-hdfs-project          (Hadoop HDFS)
-         - hadoop-yarn-project          (Hadoop YARN)
-         - hadoop-mapreduce-project     (Hadoop MapReduce)
-         - hadoop-ozone                 (Hadoop Ozone)
-         - hadoop-hdds                  (Hadoop Distributed Data Store)
-         - hadoop-tools                 (Hadoop tools like Streaming, Distcp, etc.)
-         - hadoop-dist                  (Hadoop distribution assembler)
-         - hadoop-client-modules        (Hadoop client modules)
-         - hadoop-minicluster           (Hadoop minicluster artifacts)
-         - hadoop-cloud-storage-project (Generates artifacts to access cloud storage like aws, azure, etc.)
+  hadoop                            (Main Hadoop project)
+         - hadoop-project           (Parent POM for all Hadoop Maven modules.             )
+                                    (All plugins & dependencies versions are defined here.)
+         - hadoop-project-dist      (Parent POM for modules that generate distributions.)
+         - hadoop-annotations       (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-assemblies        (Maven assemblies used by the different modules)
+         - hadoop-common-project    (Hadoop Common)
+         - hadoop-hdfs-project      (Hadoop HDFS)
+         - hadoop-mapreduce-project (Hadoop MapReduce)
+         - hadoop-tools             (Hadoop tools like Streaming, Distcp, etc.)
+         - hadoop-dist              (Hadoop distribution assembler)
 
 ----------------------------------------------------------------------------------
 Where to run Maven from?
