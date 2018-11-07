@@ -16,30 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdds.scm;
+package org.apache.hadoop.hdds.scm.chillmode;
 
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.chillmode.Precheck;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 
 /**
- * SCM utility class.
- */
-public final class ScmUtils {
-
-  private ScmUtils() {
-  }
-
-  /**
-   * Perform all prechecks for given scm operation.
-   *
-   * @param operation
-   * @param preChecks prechecks to be performed
-   */
-  public static void preCheck(ScmOps operation, Precheck... preChecks)
-      throws SCMException {
-    for (Precheck preCheck : preChecks) {
-      preCheck.check(operation);
-    }
-  }
+ * Precheck for SCM operations.
+ * */
+public interface Precheck<T> {
+  boolean check(T t) throws SCMException;
+  String type();
 }
