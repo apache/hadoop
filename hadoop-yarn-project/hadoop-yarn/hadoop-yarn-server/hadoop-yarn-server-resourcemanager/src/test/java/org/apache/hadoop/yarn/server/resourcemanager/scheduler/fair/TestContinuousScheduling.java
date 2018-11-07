@@ -376,8 +376,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    FSSchedulerNode node =
-        (FSSchedulerNode) scheduler.getSchedulerNode(node1.getNodeID());
+    FSSchedulerNode node = scheduler.getSchedulerNode(node1.getNodeID());
     // Tick the time and let the fsApp startTime different from initScheduler
     // time
     mockClock.tickSec(delayThresholdTimeMs / 1000);

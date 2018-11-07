@@ -4557,8 +4557,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
 
-    FSSchedulerNode node = (FSSchedulerNode)scheduler.getSchedulerNode(
-      node1.getNodeID());
+    FSSchedulerNode node = scheduler.getSchedulerNode(node1.getNodeID());
 
     NodeRemovedSchedulerEvent removeNode1 =
         new NodeRemovedSchedulerEvent(node1);
