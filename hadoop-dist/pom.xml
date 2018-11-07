@@ -226,7 +226,7 @@
                     <artifact>
                       <file>${project.build.directory}/hadoop-${project.version}.tar.gz</file>
                       <type>tar.gz</type>
-                      <classifier>required</classifier>
+                      <classifier>bin</classifier>
                     </artifact>
                   </artifacts>
                 </configuration>
