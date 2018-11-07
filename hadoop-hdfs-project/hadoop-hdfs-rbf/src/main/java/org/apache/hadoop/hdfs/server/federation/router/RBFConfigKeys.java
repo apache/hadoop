@@ -242,4 +242,15 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "quota-cache.update.interval";
   public static final long DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT =
       60000;
+
+  // HDFS Router security
+  public static final String DFS_ROUTER_KEYTAB_FILE_KEY =
+      FEDERATION_ROUTER_PREFIX + "keytab.file";
+  public static final String DFS_ROUTER_KERBEROS_PRINCIPAL_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.principal";
+  public static final String DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.principal.hostname";
+
+  public static final String DFS_ROUTER_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY =
+      FEDERATION_ROUTER_PREFIX + "kerberos.internal.spnego.principal";
 }
