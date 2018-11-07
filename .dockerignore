@@ -1,2 +1,2 @@
 Dockerfile
-target/*
+**/target/*
