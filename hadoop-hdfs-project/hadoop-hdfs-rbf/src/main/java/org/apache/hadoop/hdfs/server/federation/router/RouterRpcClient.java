@@ -255,7 +255,14 @@ public class RouterRpcClient {
       // for each individual request.
 
       // TODO Add tokens from the federated UGI
-      connection = this.connectionManager.getConnection(ugi, rpcAddress, proto);
+      UserGroupInformation connUGI = ugi;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
+        connUGI = UserGroupInformation.createProxyUser(
+            ugi.getUserName(), routerUser);
+      }
+      connection = this.connectionManager.getConnection(
+          connUGI, rpcAddress, proto);
       LOG.debug("User {} NN {} is using connection {}",
           ugi.getUserName(), rpcAddress, connection);
     } catch (Exception ex) {
