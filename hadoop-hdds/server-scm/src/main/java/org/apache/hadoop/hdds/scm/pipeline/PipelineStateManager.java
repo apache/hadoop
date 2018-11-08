@@ -64,6 +64,11 @@ class PipelineStateManager {
     return pipelineStateMap.getPipelines(type, factor);
   }
 
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor,
+      PipelineState state) {
+    return pipelineStateMap.getPipelines(type, factor, state);
+  }
+
   List<Pipeline> getPipelines(ReplicationType type, PipelineState... states) {
     return pipelineStateMap.getPipelines(type, states);
   }

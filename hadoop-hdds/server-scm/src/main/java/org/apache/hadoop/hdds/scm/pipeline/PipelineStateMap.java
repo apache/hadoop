@@ -166,6 +166,28 @@ class PipelineStateMap {
   }
 
   /**
+   * Get list of pipeline corresponding to specified replication type,
+   * replication factor and pipeline state.
+   *
+   * @param type - ReplicationType
+   * @param state - Required PipelineState
+   * @return List of pipelines with specified replication type,
+   * replication factor and pipeline state
+   */
+  List<Pipeline> getPipelines(ReplicationType type, ReplicationFactor factor,
+      PipelineState state) {
+    Preconditions.checkNotNull(type, "Replication type cannot be null");
+    Preconditions.checkNotNull(factor, "Replication factor cannot be null");
+    Preconditions.checkNotNull(state, "Pipeline state cannot be null");
+
+    return pipelineMap.values().stream().filter(
+        pipeline -> pipeline.getType() == type
+            && pipeline.getPipelineState() == state
+            && pipeline.getFactor() == factor)
+        .collect(Collectors.toList());
+  }
+
+  /**
    * Get set of containerIDs corresponding to a pipeline.
    *
    * @param pipelineID - PipelineID
