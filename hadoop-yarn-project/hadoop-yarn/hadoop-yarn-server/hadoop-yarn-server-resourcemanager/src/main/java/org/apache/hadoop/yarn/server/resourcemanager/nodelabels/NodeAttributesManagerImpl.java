@@ -221,8 +221,10 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
       // Notify RM
       if (rmContext != null && rmContext.getDispatcher() != null) {
-        LOG.info("Updated NodeAttribute event to RM:" + newNodeToAttributesMap
-            .values());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Updated NodeAttribute event to RM:"
+              + newNodeToAttributesMap.values());
+        }
         rmContext.getDispatcher().getEventHandler().handle(
             new NodeAttributesUpdateSchedulerEvent(newNodeToAttributesMap));
       }
