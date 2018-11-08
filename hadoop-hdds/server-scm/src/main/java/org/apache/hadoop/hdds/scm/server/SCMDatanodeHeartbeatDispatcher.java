@@ -20,7 +20,9 @@ package org.apache.hadoop.hdds.scm.server;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
-        .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
+    .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineActionsProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -205,6 +207,19 @@ public final class SCMDatanodeHeartbeatDispatcher {
 
     public ContainerReportFromDatanode(DatanodeDetails datanodeDetails,
         ContainerReportsProto report) {
+      super(datanodeDetails, report);
+    }
+  }
+
+  /**
+   * Incremental Container report event payload with origin.
+   */
+  public static class IncrementalContainerReportFromDatanode
+      extends ReportFromDatanode<IncrementalContainerReportProto> {
+
+    public IncrementalContainerReportFromDatanode(
+        DatanodeDetails datanodeDetails,
+        IncrementalContainerReportProto report) {
       super(datanodeDetails, report);
     }
   }

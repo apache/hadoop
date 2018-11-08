@@ -168,10 +168,14 @@ public class DatanodeStateMachine implements Closeable {
             TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();
         if (now < nextHB.get()) {
-          Thread.sleep(nextHB.get() - now);
+          if(!Thread.interrupted()) {
+            Thread.sleep(nextHB.get() - now);
+          }
         }
       } catch (InterruptedException e) {
-        // Ignore this exception.
+        // Some one has sent interrupt signal, this could be because
+        // 1. Trigger heartbeat immediately
+        // 2. Shutdown has be initiated.
       } catch (Exception e) {
         LOG.error("Unable to finish the execution.", e);
       }
@@ -322,6 +326,15 @@ public class DatanodeStateMachine implements Closeable {
         .setNameFormat("Datanode State Machine Thread - %d")
         .build().newThread(startStateMachineTask);
     stateMachineThread.start();
+  }
+
+  /**
+   * Calling this will immediately trigger a heartbeat to the SCMs.
+   * This heartbeat will also include all the reports which are ready to
+   * be sent by datanode.
+   */
+  public void triggerHeartbeat() {
+    stateMachineThread.interrupt();
   }
 
   /**

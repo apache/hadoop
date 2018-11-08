@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -51,8 +50,6 @@ public class TestCommandStatusReportHandler implements EventPublisher {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCommandStatusReportHandler.class);
   private CommandStatusReportHandler cmdStatusReportHandler;
-  private String storagePath = GenericTestUtils.getRandomizedTempPath()
-      .concat("/" + UUID.randomUUID().toString());
 
   @Before
   public void setup() {
@@ -68,8 +65,6 @@ public class TestCommandStatusReportHandler implements EventPublisher {
         .emptyList());
     cmdStatusReportHandler.onMessage(report, this);
     assertFalse(logCapturer.getOutput().contains("Delete_Block_Status"));
-    assertFalse(logCapturer.getOutput().contains(
-        "Close_Container_Command_Status"));
     assertFalse(logCapturer.getOutput().contains("Replicate_Command_Status"));
 
 
@@ -78,12 +73,8 @@ public class TestCommandStatusReportHandler implements EventPublisher {
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
         "Delete_Block_Status"));
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
-        "Close_Container_Command_Status"));
-    assertTrue(logCapturer.getOutput().contains("firing event of type " +
         "Replicate_Command_Status"));
 
-    assertTrue(logCapturer.getOutput().contains("type: " +
-        "closeContainerCommand"));
     assertTrue(logCapturer.getOutput().contains("type: " +
         "deleteBlocksCommand"));
     assertTrue(logCapturer.getOutput().contains("type: " +
@@ -117,11 +108,6 @@ public class TestCommandStatusReportHandler implements EventPublisher {
     builder.setCmdId(HddsIdFactory.getLongId())
         .setStatus(CommandStatus.Status.EXECUTED)
         .setType(Type.deleteBlocksCommand);
-    reports.add(builder.build());
-
-    builder.setCmdId(HddsIdFactory.getLongId())
-        .setStatus(CommandStatus.Status.EXECUTED)
-        .setType(Type.closeContainerCommand);
     reports.add(builder.build());
 
     builder.setMsg("Not enough space")

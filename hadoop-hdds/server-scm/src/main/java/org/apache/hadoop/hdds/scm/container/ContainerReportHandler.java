@@ -17,19 +17,26 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationActivityStatus;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
+import org.apache.hadoop.hdds.scm.container.replication
+    .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdds.scm.node.states.ReportResult;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.server
+    .SCMDatanodeHeartbeatDispatcher.ContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -47,73 +54,160 @@ public class ContainerReportHandler implements
       LoggerFactory.getLogger(ContainerReportHandler.class);
 
   private final NodeManager nodeManager;
+  private final PipelineManager pipelineManager;
   private final ContainerManager containerManager;
-  private ReplicationActivityStatus replicationStatus;
+  private final ReplicationActivityStatus replicationStatus;
 
-  public ContainerReportHandler(ContainerManager containerManager,
-      NodeManager nodeManager,
-      ReplicationActivityStatus replicationActivityStatus) {
-    Preconditions.checkNotNull(containerManager);
+  public ContainerReportHandler(final NodeManager nodeManager,
+      final PipelineManager pipelineManager,
+      final ContainerManager containerManager,
+      final ReplicationActivityStatus replicationActivityStatus) {
     Preconditions.checkNotNull(nodeManager);
+    Preconditions.checkNotNull(pipelineManager);
+    Preconditions.checkNotNull(containerManager);
     Preconditions.checkNotNull(replicationActivityStatus);
     this.nodeManager = nodeManager;
+    this.pipelineManager = pipelineManager;
     this.containerManager = containerManager;
     this.replicationStatus = replicationActivityStatus;
   }
 
   @Override
-  public void onMessage(ContainerReportFromDatanode containerReportFromDatanode,
-      EventPublisher publisher) {
+  public void onMessage(final ContainerReportFromDatanode reportFromDatanode,
+      final EventPublisher publisher) {
 
-    DatanodeDetails datanodeOrigin =
-        containerReportFromDatanode.getDatanodeDetails();
+    final DatanodeDetails datanodeDetails =
+        reportFromDatanode.getDatanodeDetails();
 
-    ContainerReportsProto containerReport =
-        containerReportFromDatanode.getReport();
+    final ContainerReportsProto containerReport =
+        reportFromDatanode.getReport();
+
     try {
 
-      //update state in container db and trigger close container events
-      containerManager
-          .processContainerReports(datanodeOrigin, containerReport);
+      final List<ContainerReplicaProto> replicas = containerReport
+          .getReportsList();
 
-      Set<ContainerID> containerIds = containerReport.getReportsList().stream()
-          .map(StorageContainerDatanodeProtocolProtos
-              .ContainerReplicaProto::getContainerID)
-          .map(ContainerID::new)
-          .collect(Collectors.toSet());
+      // ContainerIDs which SCM expects this datanode to have.
+      final Set<ContainerID> expectedContainerIDs = nodeManager
+          .getContainers(datanodeDetails);
 
-      ReportResult<ContainerID> reportResult = nodeManager
-          .processContainerReport(datanodeOrigin.getUuid(), containerIds);
+      // ContainerIDs that this datanode actually has.
+      final Set<ContainerID> actualContainerIDs = replicas.parallelStream()
+          .map(ContainerReplicaProto::getContainerID)
+          .map(ContainerID::valueof).collect(Collectors.toSet());
 
-      //we have the report, so we can update the states for the next iteration.
-      nodeManager
-          .setContainersForDatanode(datanodeOrigin.getUuid(), containerIds);
+      // Container replicas which SCM is not aware of.
+      final  Set<ContainerID> newReplicas =
+          new HashSet<>(actualContainerIDs);
+      newReplicas.removeAll(expectedContainerIDs);
 
-      for (ContainerID containerID : reportResult.getMissingEntries()) {
-        final ContainerReplica replica = ContainerReplica.newBuilder()
-            .setContainerID(containerID)
-            .setDatanodeDetails(datanodeOrigin)
-            .build();
-        containerManager
-            .removeContainerReplica(containerID, replica);
-        checkReplicationState(containerID, publisher);
+      // Container replicas which are missing from datanode.
+      final Set<ContainerID> missingReplicas =
+          new HashSet<>(expectedContainerIDs);
+      missingReplicas.removeAll(actualContainerIDs);
+
+      processContainerReplicas(datanodeDetails, replicas, publisher);
+
+      // Remove missing replica from ContainerManager
+      for (ContainerID id : missingReplicas) {
+        try {
+          containerManager.getContainerReplicas(id)
+              .stream()
+              .filter(replica ->
+                  replica.getDatanodeDetails().equals(datanodeDetails))
+              .findFirst()
+              .ifPresent(replica -> {
+                try {
+                  containerManager.removeContainerReplica(id, replica);
+                } catch (ContainerNotFoundException |
+                    ContainerReplicaNotFoundException e) {
+                  // This should not happen, but even if it happens, not an
+                  // issue
+                }
+              });
+        } catch (ContainerNotFoundException e) {
+          LOG.warn("Cannot remove container replica, container {} not found",
+              id);
+        }
       }
 
-      for (ContainerID containerID : reportResult.getNewEntries()) {
-        final ContainerReplica replica = ContainerReplica.newBuilder()
-            .setContainerID(containerID)
-            .setDatanodeDetails(datanodeOrigin)
-            .build();
-        containerManager.updateContainerReplica(containerID, replica);
-        checkReplicationState(containerID, publisher);
-      }
+      // Update the latest set of containers for this datanode in NodeManager.
+      nodeManager.setContainers(datanodeDetails, actualContainerIDs);
 
-    } catch (IOException e) {
-      //TODO: stop all the replication?
-      LOG.error("Error on processing container report from datanode {}",
-          datanodeOrigin, e);
+      // Replicate if needed.
+      newReplicas.forEach(id -> checkReplicationState(id, publisher));
+      missingReplicas.forEach(id -> checkReplicationState(id, publisher));
+
+    } catch (NodeNotFoundException ex) {
+      LOG.error("Received container report from unknown datanode {}",
+          datanodeDetails);
     }
 
+  }
+
+  private void processContainerReplicas(final DatanodeDetails datanodeDetails,
+      final List<ContainerReplicaProto> replicas,
+      final EventPublisher publisher) {
+    final PendingDeleteStatusList pendingDeleteStatusList =
+        new PendingDeleteStatusList(datanodeDetails);
+    for (ContainerReplicaProto replicaProto : replicas) {
+      try {
+        final ContainerID containerID = ContainerID.valueof(
+            replicaProto.getContainerID());
+        final ContainerInfo containerInfo = containerManager
+            .getContainer(containerID);
+        updateContainerState(datanodeDetails, containerInfo,
+            replicaProto, publisher);
+        if (containerInfo.getDeleteTransactionId() >
+            replicaProto.getDeleteTransactionId()) {
+          pendingDeleteStatusList
+              .addPendingDeleteStatus(replicaProto.getDeleteTransactionId(),
+                  containerInfo.getDeleteTransactionId(),
+                  containerInfo.getContainerID());
+        }
+      } catch (ContainerNotFoundException e) {
+        LOG.error("Received container report for an unknown container {}",
+            replicaProto.getContainerID());
+      }
+    }
+    if (pendingDeleteStatusList.getNumPendingDeletes() > 0) {
+      publisher.fireEvent(SCMEvents.PENDING_DELETE_STATUS,
+          pendingDeleteStatusList);
+    }
+  }
+
+  private void updateContainerState(final DatanodeDetails datanodeDetails,
+      final ContainerInfo containerInfo,
+      final ContainerReplicaProto replicaProto,
+      final EventPublisher publisher)
+      throws ContainerNotFoundException {
+
+    final ContainerID id = containerInfo.containerID();
+    final ContainerReplica datanodeContainerReplica = ContainerReplica
+        .newBuilder()
+        .setContainerID(id)
+        .setContainerState(replicaProto.getState())
+        .setDatanodeDetails(datanodeDetails)
+        .build();
+    // TODO: Add bcsid and origin datanode to replica.
+
+    final ContainerReplica scmContainerReplica = containerManager
+        .getContainerReplicas(id)
+        .stream()
+        .filter(replica ->
+            replica.getDatanodeDetails().equals(datanodeDetails))
+        .findFirst().orElse(null);
+
+    // This is an in-memory update.
+    containerManager.updateContainerReplica(id, datanodeContainerReplica);
+    containerInfo.setUsedBytes(replicaProto.getUsed());
+    containerInfo.setNumberOfKeys(replicaProto.getKeyCount());
+
+    // Check if there is state change in container replica.
+    if (scmContainerReplica == null ||
+        scmContainerReplica.getState() != datanodeContainerReplica.getState()) {
+      //TODO: Handler replica state change.
+    }
   }
 
   private void checkReplicationState(ContainerID containerID,

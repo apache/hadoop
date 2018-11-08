@@ -16,14 +16,11 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 
 import java.io.Closeable;
@@ -121,14 +118,6 @@ public interface ContainerManager extends Closeable {
    */
   HddsProtos.LifeCycleState updateContainerState(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException;
-
-  /**
-   * Process container report from Datanode.
-   *
-   * @param reports Container report
-   */
-  void processContainerReports(DatanodeDetails datanodeDetails,
-      ContainerReportsProto reports) throws IOException;
 
   /**
    * Returns the latest list of replicas for given containerId.

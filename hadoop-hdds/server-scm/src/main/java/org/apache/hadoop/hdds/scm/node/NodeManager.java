@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
@@ -63,13 +62,6 @@ import java.util.UUID;
  */
 public interface NodeManager extends StorageContainerNodeProtocol,
     EventHandler<CommandForDatanode>, NodeManagerMXBean, Closeable {
-  /**
-   * Removes a data node from the management of this Node Manager.
-   *
-   * @param node - DataNode.
-   * @throws NodeNotFoundException
-   */
-  void removeNode(DatanodeDetails node) throws NodeNotFoundException;
 
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
@@ -102,6 +94,7 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * Return a map of node stats.
    * @return a map of individual node stats (live/stale but not dead).
    */
+  // TODO: try to change the return type to Map<DatanodeDetails, SCMNodeStat>
   Map<UUID, SCMNodeStat> getNodeStats();
 
   /**
@@ -121,10 +114,10 @@ public interface NodeManager extends StorageContainerNodeProtocol,
 
   /**
    * Get set of pipelines a datanode is part of.
-   * @param dnId - datanodeID
+   * @param datanodeDetails DatanodeDetails
    * @return Set of PipelineID
    */
-  Set<PipelineID> getPipelineByDnID(UUID dnId);
+  Set<PipelineID> getPipelines(DatanodeDetails datanodeDetails);
 
   /**
    * Add pipeline information in the NodeManager.
@@ -139,40 +132,22 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   void removePipeline(Pipeline pipeline);
 
   /**
-   * Update set of containers available on a datanode.
-   * @param uuid - DatanodeID
+   * Remaps datanode to containers mapping to the new set of containers.
+   * @param datanodeDetails - DatanodeDetails
    * @param containerIds - Set of containerIDs
    * @throws SCMException - if datanode is not known. For new datanode use
    *                        addDatanodeInContainerMap call.
    */
-  void setContainersForDatanode(UUID uuid, Set<ContainerID> containerIds)
-      throws SCMException;
-
-  /**
-   * Process containerReport received from datanode.
-   * @param uuid - DataonodeID
-   * @param containerIds - Set of containerIDs
-   * @return The result after processing containerReport
-   */
-  ReportResult<ContainerID> processContainerReport(UUID uuid,
-      Set<ContainerID> containerIds);
+  void setContainers(DatanodeDetails datanodeDetails,
+      Set<ContainerID> containerIds) throws NodeNotFoundException;
 
   /**
    * Return set of containerIDs available on a datanode.
-   * @param uuid - DatanodeID
-   * @return - set of containerIDs
+   * @param datanodeDetails DatanodeDetails
+   * @return set of containerIDs
    */
-  Set<ContainerID> getContainers(UUID uuid);
-
-  /**
-   * Insert a new datanode with set of containerIDs for containers available
-   * on it.
-   * @param uuid - DatanodeID
-   * @param containerIDs - Set of ContainerIDs
-   * @throws SCMException - if datanode already exists
-   */
-  void addDatanodeInContainerMap(UUID uuid, Set<ContainerID> containerIDs)
-      throws SCMException;
+  Set<ContainerID> getContainers(DatanodeDetails datanodeDetails)
+      throws NodeNotFoundException;
 
   /**
    * Add a {@link SCMCommand} to the command queue, which are
@@ -188,7 +163,7 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param dnUuid
    * @param nodeReport
    */
-  void processNodeReport(UUID dnUuid, NodeReportProto nodeReport);
+  void processNodeReport(DatanodeDetails dnUuid, NodeReportProto nodeReport);
 
   /**
    * Process a dead node event in this Node Manager.
@@ -202,5 +177,6 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param dnID - Datanode uuid.
    * @return list of commands
    */
+  // TODO: We can give better name to this method!
   List<SCMCommand> getCommandQueue(UUID dnID);
 }

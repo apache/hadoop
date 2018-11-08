@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
-import org.apache.hadoop.hdds.scm.node.states.ReportResult;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -129,16 +128,6 @@ public class SCMNodeManager
     }
   }
 
-  /**
-   * Removes a data node from the management of this Node Manager.
-   *
-   * @param node - DataNode.
-   * @throws NodeNotFoundException
-   */
-  @Override
-  public void removeNode(DatanodeDetails node) throws NodeNotFoundException {
-    nodeStateManager.removeNode(node);
-  }
 
   /**
    * Gets all datanodes that are in a certain state. This function works by
@@ -270,10 +259,8 @@ public class SCMNodeManager
       datanodeDetails.setHostName(dnAddress.getHostName());
       datanodeDetails.setIpAddress(dnAddress.getHostAddress());
     }
-    UUID dnId = datanodeDetails.getUuid();
     try {
       nodeStateManager.addNode(datanodeDetails);
-      nodeStateManager.setNodeStat(dnId, new SCMNodeStat());
       // Updating Node Report, as registration is successful
       updateNodeStat(datanodeDetails.getUuid(), nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
@@ -326,8 +313,9 @@ public class SCMNodeManager
    * @param nodeReport
    */
   @Override
-  public void processNodeReport(UUID dnUuid, NodeReportProto nodeReport) {
-    this.updateNodeStat(dnUuid, nodeReport);
+  public void processNodeReport(DatanodeDetails dnUuid,
+                                NodeReportProto nodeReport) {
+    this.updateNodeStat(dnUuid.getUuid(), nodeReport);
   }
 
   /**
@@ -377,12 +365,12 @@ public class SCMNodeManager
 
   /**
    * Get set of pipelines a datanode is part of.
-   * @param dnId - datanodeID
+   * @param datanodeDetails - datanodeID
    * @return Set of PipelineID
    */
   @Override
-  public Set<PipelineID> getPipelineByDnID(UUID dnId) {
-    return nodeStateManager.getPipelineByDnID(dnId);
+  public Set<PipelineID> getPipelines(DatanodeDetails datanodeDetails) {
+    return nodeStateManager.getPipelineByDnID(datanodeDetails.getUuid());
   }
 
 
@@ -406,50 +394,27 @@ public class SCMNodeManager
 
   /**
    * Update set of containers available on a datanode.
-   * @param uuid - DatanodeID
+   * @param datanodeDetails - DatanodeID
    * @param containerIds - Set of containerIDs
    * @throws SCMException - if datanode is not known. For new datanode use
    *                        addDatanodeInContainerMap call.
    */
   @Override
-  public void setContainersForDatanode(UUID uuid,
-      Set<ContainerID> containerIds) throws SCMException {
-    nodeStateManager.setContainersForDatanode(uuid, containerIds);
-  }
-
-  /**
-   * Process containerReport received from datanode.
-   * @param uuid - DataonodeID
-   * @param containerIds - Set of containerIDs
-   * @return The result after processing containerReport
-   */
-  @Override
-  public ReportResult<ContainerID> processContainerReport(UUID uuid,
-      Set<ContainerID> containerIds) {
-    return nodeStateManager.processContainerReport(uuid, containerIds);
+  public void setContainers(DatanodeDetails datanodeDetails,
+      Set<ContainerID> containerIds) throws NodeNotFoundException {
+    nodeStateManager.setContainers(datanodeDetails.getUuid(),
+        containerIds);
   }
 
   /**
    * Return set of containerIDs available on a datanode.
-   * @param uuid - DatanodeID
+   * @param datanodeDetails - DatanodeID
    * @return - set of containerIDs
    */
   @Override
-  public Set<ContainerID> getContainers(UUID uuid) {
-    return nodeStateManager.getContainers(uuid);
-  }
-
-  /**
-   * Insert a new datanode with set of containerIDs for containers available
-   * on it.
-   * @param uuid - DatanodeID
-   * @param containerIDs - Set of ContainerIDs
-   * @throws SCMException - if datanode already exists
-   */
-  @Override
-  public void addDatanodeInContainerMap(UUID uuid,
-      Set<ContainerID> containerIDs) throws SCMException {
-    nodeStateManager.addDatanodeInContainerMap(uuid, containerIDs);
+  public Set<ContainerID> getContainers(DatanodeDetails datanodeDetails)
+      throws NodeNotFoundException {
+    return nodeStateManager.getContainers(datanodeDetails.getUuid());
   }
 
   // TODO:
@@ -481,6 +446,7 @@ public class SCMNodeManager
    * @param dnUuid datanode uuid.
    */
   @Override
+  // TODO: This should be removed.
   public void processDeadNode(UUID dnUuid) {
     try {
       SCMNodeStat stat = nodeStateManager.getNodeStat(dnUuid);

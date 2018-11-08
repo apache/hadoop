@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.IncrementalContainerReportProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
@@ -63,62 +65,55 @@ public class CloseContainerCommandHandler implements CommandHandler {
       StateContext context, SCMConnectionManager connectionManager) {
     LOG.debug("Processing Close Container command.");
     invocationCount++;
-    cmdExecuted = false;
     long startTime = Time.monotonicNow();
     // TODO: define this as INVALID_CONTAINER_ID in HddsConsts.java (TBA)
     long containerID = -1;
     try {
-
-      CloseContainerCommandProto
-          closeContainerProto =
-          CloseContainerCommandProto
-              .parseFrom(command.getProtoBufMessage());
+      CloseContainerCommandProto closeContainerProto =
+          CloseContainerCommandProto.parseFrom(command.getProtoBufMessage());
       containerID = closeContainerProto.getContainerID();
-      if (container.getContainerSet().getContainer(containerID)
+      // CloseContainer operation is idempotent, if the container is already
+      // closed, then do nothing.
+      if (!container.getContainerSet().getContainer(containerID)
           .getContainerData().isClosed()) {
-        LOG.debug("Container {} is already closed", containerID);
-        // It might happen that the where the first attempt of closing the
-        // container failed with NOT_LEADER_EXCEPTION. In such cases, SCM will
-        // retry to check the container got really closed via Ratis.
-        // In such cases of the retry attempt, if the container is already
-        // closed via Ratis, we should just return.
-        cmdExecuted = true;
-        return;
-      }
-      HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
-      HddsProtos.ReplicationType replicationType =
-          closeContainerProto.getReplicationType();
+        LOG.debug("Closing container {}.", containerID);
+        HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
+        HddsProtos.ReplicationType replicationType =
+            closeContainerProto.getReplicationType();
 
-      ContainerProtos.ContainerCommandRequestProto.Builder request =
-          ContainerProtos.ContainerCommandRequestProto.newBuilder();
-      request.setCmdType(ContainerProtos.Type.CloseContainer);
-      request.setContainerID(containerID);
-      request.setCloseContainer(
-          ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-      request.setTraceID(UUID.randomUUID().toString());
-      request.setDatanodeUuid(
-          context.getParent().getDatanodeDetails().getUuidString());
-      // submit the close container request for the XceiverServer to handle
-      container.submitContainerRequest(
-          request.build(), replicationType, pipelineID);
+        ContainerProtos.ContainerCommandRequestProto.Builder request =
+            ContainerProtos.ContainerCommandRequestProto.newBuilder();
+        request.setCmdType(ContainerProtos.Type.CloseContainer);
+        request.setContainerID(containerID);
+        request.setCloseContainer(
+            ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
+        request.setTraceID(UUID.randomUUID().toString());
+        request.setDatanodeUuid(
+            context.getParent().getDatanodeDetails().getUuidString());
+        // submit the close container request for the XceiverServer to handle
+        container.submitContainerRequest(
+            request.build(), replicationType, pipelineID);
+        // Since the container is closed, we trigger an ICR
+        IncrementalContainerReportProto icr = IncrementalContainerReportProto
+            .newBuilder()
+            .addReport(container.getContainerSet()
+                .getContainer(containerID).getContainerReport())
+            .build();
+        context.addReport(icr);
+        context.getParent().triggerHeartbeat();
+      }
     } catch (Exception e) {
       if (e instanceof NotLeaderException) {
         // If the particular datanode is not the Ratis leader, the close
         // container command will not be executed by the follower but will be
         // executed by Ratis stateMachine transactions via leader to follower.
         // There can also be case where the datanode is in candidate state.
-        // In these situations, NotLeaderException is thrown. Remove the status
-        // from cmdStatus Map here so that it will be retried only by SCM if the
-        // leader could not not close the container after a certain time.
-        context.removeCommandStatus(containerID);
-        LOG.info(e.getLocalizedMessage());
+        // In these situations, NotLeaderException is thrown.
+        LOG.info("Follower cannot close the container {}.", containerID);
       } else {
         LOG.error("Can't close container " + containerID, e);
-        cmdExecuted = false;
       }
     } finally {
-      updateCommandStatus(context, command,
-          (cmdStatus) -> cmdStatus.setStatus(cmdExecuted), LOG);
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;
     }

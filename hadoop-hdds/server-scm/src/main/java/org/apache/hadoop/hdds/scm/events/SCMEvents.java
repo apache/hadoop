@@ -21,14 +21,12 @@ package org.apache.hadoop.hdds.scm.events;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteStatusList;
-import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
-    .CloseContainerStatus;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler
     .ReplicationStatus;
-import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler
-        .CloseContainerRetryableReq;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .IncrementalContainerReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
         .PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -77,6 +75,16 @@ public final class SCMEvents {
    */
   public static final TypedEvent<ContainerReportFromDatanode> CONTAINER_REPORT =
       new TypedEvent<>(ContainerReportFromDatanode.class, "Container_Report");
+
+  /**
+   * IncrementalContainerReports are send out by Datanodes.
+   * This report is received by SCMDatanodeHeartbeatDispatcher and
+   * Incremental_Container_Report Event is generated.
+   */
+  public static final TypedEvent<IncrementalContainerReportFromDatanode>
+      INCREMENTAL_CONTAINER_REPORT = new TypedEvent<>(
+      IncrementalContainerReportFromDatanode.class,
+      "Incremental_Container_Report");
 
   /**
    * ContainerActions are sent by Datanode. This event is received by
@@ -138,16 +146,6 @@ public final class SCMEvents {
       new TypedEvent<>(ContainerID.class, "Close_Container");
 
   /**
-   * A CLOSE_CONTAINER_RETRYABLE_REQ will be triggered by
-   * CloseContainerEventHandler after sending a SCMCommand to DataNode.
-   * CloseContainerWatcher will track this event. Watcher will be responsible
-   * for retrying it in event of failure or timeout.
-   */
-  public static final TypedEvent<CloseContainerRetryableReq>
-      CLOSE_CONTAINER_RETRYABLE_REQ = new TypedEvent<>(
-      CloseContainerRetryableReq.class, "Close_Container_Retryable");
-
-  /**
    * This event will be triggered whenever a new datanode is registered with
    * SCM.
    */
@@ -174,14 +172,6 @@ public final class SCMEvents {
    */
   public static final Event<ReplicationStatus> REPLICATION_STATUS = new
       TypedEvent<>(ReplicationStatus.class, "Replicate_Command_Status");
-  /**
-   * This event will be triggered by CommandStatusReportHandler whenever a
-   * status for CloseContainer SCMCommand is received.
-   */
-  public static final Event<CloseContainerStatus>
-      CLOSE_CONTAINER_STATUS =
-      new TypedEvent<>(CloseContainerStatus.class,
-          "Close_Container_Command_Status");
   /**
    * This event will be triggered by CommandStatusReportHandler whenever a
    * status for DeleteBlock SCMCommand is received.

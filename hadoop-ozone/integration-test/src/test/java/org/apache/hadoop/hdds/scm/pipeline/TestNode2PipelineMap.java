@@ -93,7 +93,7 @@ public class TestNode2PipelineMap {
 
     // get pipeline details by dnid
     Set<PipelineID> pipelines = scm.getScmNodeManager()
-        .getPipelineByDnID(dns.get(0).getUuid());
+        .getPipelines(dns.get(0));
     Assert.assertEquals(1, pipelines.size());
     pipelines.forEach(p -> Assert.assertEquals(p,
         ratisContainer.getPipeline().getId()));
@@ -116,7 +116,7 @@ public class TestNode2PipelineMap {
     pipelineManager.finalizePipeline(ratisContainer.getPipeline().getId());
     pipelineManager.removePipeline(ratisContainer.getPipeline().getId());
     pipelines = scm.getScmNodeManager()
-        .getPipelineByDnID(dns.get(0).getUuid());
+        .getPipelines(dns.get(0));
     Assert.assertEquals(0, pipelines.size());
   }
 }

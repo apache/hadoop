@@ -49,7 +49,7 @@ public class StaleNodeHandler implements EventHandler<DatanodeDetails> {
   public void onMessage(DatanodeDetails datanodeDetails,
                         EventPublisher publisher) {
     Set<PipelineID> pipelineIds =
-        nodeManager.getPipelineByDnID(datanodeDetails.getUuid());
+        nodeManager.getPipelines(datanodeDetails);
     for (PipelineID pipelineID : pipelineIds) {
       try {
         pipelineManager.finalizePipeline(pipelineID);

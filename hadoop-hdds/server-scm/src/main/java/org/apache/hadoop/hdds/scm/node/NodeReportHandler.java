@@ -50,6 +50,6 @@ public class NodeReportHandler implements EventHandler<NodeReportFromDatanode> {
         + "missing DatanodeDetails.");
     LOGGER.trace("Processing node report for dn: {}", dn);
     nodeManager
-        .processNodeReport(dn.getUuid(), nodeReportFromDatanode.getReport());
+        .processNodeReport(dn, nodeReportFromDatanode.getReport());
   }
 }
