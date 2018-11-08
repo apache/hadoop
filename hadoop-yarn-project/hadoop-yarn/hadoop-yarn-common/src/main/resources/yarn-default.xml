@@ -3772,6 +3772,25 @@
 
   <property>
     <description>
+      This setting controls if pluggable device framework is enabled.
+      Disabled by default
+    </description>
+    <name>yarn.nodemanager.pluggable-device-framework.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Configure vendor device plugin class name here. Comma separated.
+      The class must be found in CLASSPATH. The pluggable device framework will
+      load these classes.
+    </description>
+    <name>yarn.nodemanager.pluggable-device-framework.device-classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
       When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
       YARN NodeManager needs to run GPU discovery binary (now only support
       nvidia-smi) to get GPU-related information.

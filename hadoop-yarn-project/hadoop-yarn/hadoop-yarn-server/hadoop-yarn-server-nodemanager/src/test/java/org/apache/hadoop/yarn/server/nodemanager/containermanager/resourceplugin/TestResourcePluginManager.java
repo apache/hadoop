@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -41,12 +42,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -58,9 +57,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 public class TestResourcePluginManager extends NodeManagerTestBase {
   private NodeManager nm;
+
+  private YarnConfiguration conf;
+
+  @Before
+  public void setup() throws Exception {
+    this.conf = createNMConfig();
+  }
 
   ResourcePluginManager stubResourcePluginmanager() {
     // Stub ResourcePluginManager
@@ -183,7 +190,6 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
     nm = new MyMockNM(rpm);
 
-    YarnConfiguration conf = createNMConfig();
     nm.init(conf);
     verify(rpm, times(1)).initialize(
         any(Context.class));
@@ -198,7 +204,6 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
 
     nm = new MyMockNM(rpm);
 
-    YarnConfiguration conf = createNMConfig();
     nm.init(conf);
     nm.start();
 
@@ -238,14 +243,13 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
       }
 
       @Override
-      protected ContainerExecutor createContainerExecutor(Configuration conf) {
+      protected ContainerExecutor createContainerExecutor(
+          Configuration configuration) {
         ((NMContext)this.getNMContext()).setResourcePluginManager(rpm);
-        lce.setConf(conf);
+        lce.setConf(configuration);
         return lce;
       }
     };
-
-    YarnConfiguration conf = createNMConfig();
 
     nm.init(conf);
     nm.start();
@@ -263,5 +267,90 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
       }
     }
     Assert.assertTrue("New ResourceHandler should be added", newHandlerAdded);
+  }
+
+  // Disabled pluggable framework in configuration.
+  // We use spy object of real rpm to verify "initializePluggableDevicePlugins"
+  // because use mock rpm will not working
+  @Test(timeout = 30000)
+  public void testInitializationWithPluggableDeviceFrameworkDisabled()
+      throws Exception {
+    ResourcePluginManager rpm = new ResourcePluginManager();
+
+    ResourcePluginManager rpmSpy = spy(rpm);
+    nm = new MyMockNM(rpmSpy);
+
+    conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+        false);
+    nm.init(conf);
+    nm.start();
+    verify(rpmSpy, times(1)).initialize(
+        any(Context.class));
+    verify(rpmSpy, times(0)).initializePluggableDevicePlugins(
+        any(Context.class), any(Configuration.class), any(Map.class));
+  }
+
+  // No related configuration set.
+  @Test(timeout = 30000)
+  public void testInitializationWithPluggableDeviceFrameworkDisabled2()
+      throws Exception {
+    ResourcePluginManager rpm = new ResourcePluginManager();
+
+    ResourcePluginManager rpmSpy = spy(rpm);
+    nm = new MyMockNM(rpmSpy);
+
+    nm.init(conf);
+    nm.start();
+    verify(rpmSpy, times(1)).initialize(
+        any(Context.class));
+    verify(rpmSpy, times(0)).initializePluggableDevicePlugins(
+        any(Context.class), any(Configuration.class), any(Map.class));
+  }
+
+  // Enable framework and configure pluggable device classes
+  @Test(timeout = 30000)
+  public void testInitializationWithPluggableDeviceFrameworkEnabled()
+      throws Exception {
+    ResourcePluginManager rpm = new ResourcePluginManager();
+
+    ResourcePluginManager rpmSpy = spy(rpm);
+    nm = new MyMockNM(rpmSpy);
+
+    conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+        true);
+    conf.setStrings(
+        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES,
+        "com.cmp1.hdw1plugin");
+    nm.init(conf);
+    nm.start();
+    verify(rpmSpy, times(1)).initialize(
+        any(Context.class));
+    verify(rpmSpy, times(1)).initializePluggableDevicePlugins(
+        any(Context.class), any(Configuration.class), any(Map.class));
+  }
+
+  // Enable pluggable framework, but leave device classes un-configured
+  // initializePluggableDevicePlugins invoked but it should throw an exception
+  @Test(timeout = 30000)
+  public void testInitializationWithPluggableDeviceFrameworkEnabled2() {
+    ResourcePluginManager rpm = new ResourcePluginManager();
+
+    ResourcePluginManager rpmSpy = spy(rpm);
+    nm = new MyMockNM(rpmSpy);
+    Boolean fail = false;
+    try {
+      conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+          true);
+
+      nm.init(conf);
+      nm.start();
+    } catch (YarnRuntimeException e) {
+      fail = true;
+    } catch (Exception e) {
+
+    }
+    verify(rpmSpy, times(1)).initializePluggableDevicePlugins(
+        any(Context.class), any(Configuration.class), any(Map.class));
+    Assert.assertTrue(fail);
   }
 }
