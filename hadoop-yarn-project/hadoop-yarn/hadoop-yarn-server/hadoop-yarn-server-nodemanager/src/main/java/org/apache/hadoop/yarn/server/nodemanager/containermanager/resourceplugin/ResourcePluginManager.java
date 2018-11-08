@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuResourcePlugin;
@@ -52,11 +53,10 @@ public class ResourcePluginManager {
   public synchronized void initialize(Context context)
       throws YarnException {
     Configuration conf = context.getConf();
+    Map<String, ResourcePlugin> pluginMap = new HashMap<>();
+
     String[] plugins = conf.getStrings(YarnConfiguration.NM_RESOURCE_PLUGINS);
-
     if (plugins != null) {
-      Map<String, ResourcePlugin> pluginMap = new HashMap<>();
-
       // Initialize each plugins
       for (String resourceName : plugins) {
         resourceName = resourceName.trim();
@@ -92,8 +92,34 @@ public class ResourcePluginManager {
         plugin.initialize(context);
         pluginMap.put(resourceName, plugin);
       }
+    }
+    // Try to load pluggable device plugins
+    boolean puggableDeviceFrameworkEnabled = conf.getBoolean(
+        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
 
-      configuredPlugins = Collections.unmodifiableMap(pluginMap);
+    if (puggableDeviceFrameworkEnabled) {
+      initializePluggableDevicePlugins(context, conf, pluginMap);
+    } else {
+      LOG.info("The pluggable device framework is not enabled."
+              + " If you want, please set true to {}",
+          YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
+    }
+    configuredPlugins = Collections.unmodifiableMap(pluginMap);
+  }
+
+  public void initializePluggableDevicePlugins(Context context,
+      Configuration configuration,
+      Map<String, ResourcePlugin> pluginMap)
+      throws YarnRuntimeException {
+    LOG.info("The pluggable device framework enabled," +
+        "trying to load the vendor plugins");
+
+    String[] pluginClassNames = configuration.getStrings(
+        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES);
+    if (null == pluginClassNames) {
+      throw new YarnRuntimeException("Null value found in configuration: "
+          + YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES);
     }
   }
 
