@@ -626,17 +626,7 @@ public class AzureBlobFileSystemStore {
 
     final Map<String, String> aclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
 
-    for (Map.Entry<String, String> modifyAclEntry : modifyAclEntries.entrySet()) {
-      aclEntries.put(modifyAclEntry.getKey(), modifyAclEntry.getValue());
-    }
-
-    if (!modifyAclEntries.containsKey(AbfsHttpConstants.ACCESS_MASK)) {
-      aclEntries.remove(AbfsHttpConstants.ACCESS_MASK);
-    }
-
-    if (!modifyAclEntries.containsKey(AbfsHttpConstants.DEFAULT_MASK)) {
-      aclEntries.remove(AbfsHttpConstants.DEFAULT_MASK);
-    }
+    AbfsAclHelper.modifyAclEntriesInternal(aclEntries, modifyAclEntries);
 
     client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
         AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
@@ -736,12 +726,8 @@ public class AzureBlobFileSystemStore {
     final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
 
     final Map<String, String> getAclEntries = AbfsAclHelper.deserializeAclSpec(op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ACL));
-    for (Map.Entry<String, String> ace : getAclEntries.entrySet()) {
-      if (ace.getKey().startsWith("default:") && (ace.getKey() != AbfsHttpConstants.DEFAULT_MASK)
-              && !aclEntries.containsKey(ace.getKey())) {
-        aclEntries.put(ace.getKey(), ace.getValue());
-      }
-    }
+
+    AbfsAclHelper.setAclEntriesInternal(aclEntries, getAclEntries);
 
     client.setAcl(AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true),
         AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
