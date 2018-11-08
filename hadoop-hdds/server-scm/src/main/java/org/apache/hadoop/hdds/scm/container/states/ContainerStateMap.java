@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdds.scm.container.states;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -261,12 +260,6 @@ public class ContainerStateMap {
     } finally {
       lock.writeLock().unlock();
     }
-  }
-
-  @VisibleForTesting
-  // TODO: fix the test case and remove this method!
-  public static Logger getLOG() {
-    return LOG;
   }
 
   /**

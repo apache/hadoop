@@ -22,7 +22,6 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -30,8 +29,6 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
@@ -47,8 +44,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -187,10 +182,12 @@ public class TestSCMContainerManager {
 
     containerManager.updateContainerReplica(contInfo.containerID(),
         ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
-        .setDatanodeDetails(dn1).build());
+            .setContainerState(ContainerReplicaProto.State.CLOSED)
+            .setDatanodeDetails(dn1).build());
     containerManager.updateContainerReplica(contInfo.containerID(),
         ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
-        .setDatanodeDetails(dn2).build());
+            .setContainerState(ContainerReplicaProto.State.CLOSED)
+            .setDatanodeDetails(dn2).build());
 
     Assert.assertEquals(2,
         containerManager.getContainerReplicas(
@@ -240,102 +237,6 @@ public class TestSCMContainerManager {
             HddsProtos.LifeCycleEvent.CREATED);
   }
 
-  @Test
-  public void testFullContainerReport() throws Exception {
-    ContainerInfo info = createContainer();
-    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    List<ContainerReplicaProto> reports =
-        new ArrayList<>();
-    ContainerReplicaProto.Builder ciBuilder =
-        ContainerReplicaProto.newBuilder();
-    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
-        .setSize(5368709120L)
-        .setUsed(2000000000L)
-        .setKeyCount(100000000L)
-        .setReadCount(100000000L)
-        .setWriteCount(100000000L)
-        .setReadBytes(2000000000L)
-        .setWriteBytes(2000000000L)
-        .setContainerID(info.getContainerID())
-        .setState(ContainerReplicaProto.State.CLOSED)
-        .setDeleteTransactionId(0);
-
-    reports.add(ciBuilder.build());
-
-    ContainerReportsProto.Builder crBuilder = ContainerReportsProto
-        .newBuilder();
-    crBuilder.addAllReports(reports);
-
-    containerManager.processContainerReports(
-        datanodeDetails, crBuilder.build());
-
-    ContainerInfo updatedContainer =
-        containerManager.getContainer(info.containerID());
-    Assert.assertEquals(100000000L,
-        updatedContainer.getNumberOfKeys());
-    Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
-
-    for (ContainerReplicaProto c : reports) {
-     Assert.assertEquals(containerManager.getContainerReplicas(
-         ContainerID.valueof(c.getContainerID())).size(), 1);
-    }
-
-    containerManager.processContainerReports(TestUtils.randomDatanodeDetails(),
-        crBuilder.build());
-    for (ContainerReplicaProto c : reports) {
-      Assert.assertEquals(containerManager.getContainerReplicas(
-              ContainerID.valueof(c.getContainerID())).size(), 2);
-    }
-  }
-
-  @Test
-  public void testListContainerAfterReport() throws Exception {
-    ContainerInfo info1 = createContainer();
-    ContainerInfo info2 = createContainer();
-    DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
-    List<ContainerReplicaProto> reports =
-        new ArrayList<>();
-    ContainerReplicaProto.Builder ciBuilder =
-        ContainerReplicaProto.newBuilder();
-    long cID1 = info1.getContainerID();
-    long cID2 = info2.getContainerID();
-    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
-        .setSize(1000000000L)
-        .setUsed(987654321L)
-        .setKeyCount(100000000L)
-        .setReadBytes(1000000000L)
-        .setWriteBytes(1000000000L)
-        .setContainerID(cID1)
-        .setState(ContainerReplicaProto.State.CLOSED);
-    reports.add(ciBuilder.build());
-
-    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea54a9")
-        .setSize(1000000000L)
-        .setUsed(123456789L)
-        .setKeyCount(200000000L)
-        .setReadBytes(3000000000L)
-        .setWriteBytes(4000000000L)
-        .setContainerID(cID2);
-    reports.add(ciBuilder.build());
-
-    ContainerReportsProto.Builder crBuilder = ContainerReportsProto
-        .newBuilder();
-    crBuilder.addAllReports(reports);
-
-    containerManager.processContainerReports(
-        datanodeDetails, crBuilder.build());
-
-    List<ContainerInfo> list = containerManager.listContainer(
-        ContainerID.valueof(1), 50);
-    Assert.assertEquals(2, list.stream().filter(
-        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2).count());
-    Assert.assertEquals(300000000L, list.stream().filter(
-        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2)
-        .mapToLong(x -> x.getNumberOfKeys()).sum());
-    Assert.assertEquals(1111111110L, list.stream().filter(
-        x -> x.getContainerID() == cID1 || x.getContainerID() == cID2)
-        .mapToLong(x -> x.getUsedBytes()).sum());
-  }
 
   @Test
   public void testCloseContainer() throws IOException {

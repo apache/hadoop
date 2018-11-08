@@ -447,6 +447,11 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
+    if (cmd.getType().equals(Type.closeContainerCommand)) {
+      // We will be removing CommandStatus completely.
+      // As a first step, removed it for CloseContainerCommand.
+      return;
+    }
     CommandStatusBuilder statusBuilder;
     if (cmd.getType() == Type.deleteBlocksCommand) {
       statusBuilder = new DeleteBlockCommandStatusBuilder();
@@ -466,14 +471,6 @@ public class StateContext {
    */
   public Map<Long, CommandStatus> getCommandStatusMap() {
     return cmdStatusMap;
-  }
-
-  /**
-   * Remove object from cache in StateContext#cmdStatusMap.
-   *
-   */
-  public void removeCommandStatus(Long cmdId) {
-    cmdStatusMap.remove(cmdId);
   }
 
   /**

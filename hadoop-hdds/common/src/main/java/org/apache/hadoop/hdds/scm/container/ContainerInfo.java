@@ -158,8 +158,16 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return usedBytes;
   }
 
+  public void setUsedBytes(long value) {
+    usedBytes = value;
+  }
+
   public long getNumberOfKeys() {
     return numberOfKeys;
+  }
+
+  public void setNumberOfKeys(long value) {
+    numberOfKeys = value;
   }
 
   public long getDeleteTransactionId() {

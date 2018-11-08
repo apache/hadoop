@@ -80,7 +80,7 @@ message SCMHeartbeatRequestProto {
   required DatanodeDetailsProto datanodeDetails = 1;
   optional NodeReportProto nodeReport = 2;
   optional ContainerReportsProto containerReport = 3;
-  optional IncrementalContainerReportProto incrementalContainerReport = 4;
+  repeated IncrementalContainerReportProto incrementalContainerReport = 4;
   repeated CommandStatusReportsProto commandStatusReports = 5;
   optional ContainerActionsProto containerActions = 6;
   optional PipelineActionsProto pipelineActions = 7;

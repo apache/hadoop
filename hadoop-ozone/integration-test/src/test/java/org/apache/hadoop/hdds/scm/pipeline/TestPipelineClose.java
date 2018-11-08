@@ -115,8 +115,8 @@ public class TestPipelineClose {
     pipelineManager.removePipeline(pipeline1.getId());
     for (DatanodeDetails dn : ratisContainer1.getPipeline().getNodes()) {
       // Assert that the pipeline has been removed from Node2PipelineMap as well
-      Assert.assertEquals(scm.getScmNodeManager().getPipelineByDnID(
-          dn.getUuid()).size(), 0);
+      Assert.assertEquals(scm.getScmNodeManager().getPipelines(
+          dn).size(), 0);
     }
   }
 

@@ -22,14 +22,12 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.server.events.IdentifiableEventPayload;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.DATANODE_COMMAND;
-import static org.apache.hadoop.hdds.scm.events.SCMEvents.CLOSE_CONTAINER_RETRYABLE_REQ;
 
 /**
  * In case of a node failure, volume failure, volume out of spapce, node
@@ -128,32 +126,7 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
             new CommandForDatanode<>(node.getUuid(), closeContainerCommand))
         .forEach(command -> publisher.fireEvent(DATANODE_COMMAND, command));
 
-    publisher.fireEvent(CLOSE_CONTAINER_RETRYABLE_REQ,
-        new CloseContainerRetryableReq(containerID));
-
     LOG.trace("Issuing {} on Pipeline {} for container", closeContainerCommand,
         pipeline, containerID);
-  }
-
-  /**
-   * Class to create retryable event. Prevents redundant requests for same
-   * container Id.
-   */
-  public static class CloseContainerRetryableReq implements
-      IdentifiableEventPayload {
-
-    private ContainerID containerID;
-    public CloseContainerRetryableReq(ContainerID containerID) {
-      this.containerID = containerID;
-    }
-
-    public ContainerID getContainerID() {
-      return containerID;
-    }
-
-    @Override
-    public long getId() {
-      return containerID.getId();
-    }
   }
 }

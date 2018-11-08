@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.scm.container.replication
     .ReplicationActivityStatus;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
@@ -69,7 +70,7 @@ public class TestContainerReportHandler implements EventPublisher {
   //TODO: Rewrite it
   @Ignore
   @Test
-  public void test() throws IOException {
+  public void test() throws IOException, NodeNotFoundException {
     String testDir = GenericTestUtils.getTempPath(
         this.getClass().getSimpleName());
     //GIVEN
@@ -85,17 +86,17 @@ public class TestContainerReportHandler implements EventPublisher {
         new ReplicationActivityStatus();
 
     ContainerReportHandler reportHandler =
-        new ContainerReportHandler(containerManager, nodeManager,
-            replicationActivityStatus);
+        new ContainerReportHandler(nodeManager, pipelineManager,
+            containerManager, replicationActivityStatus);
 
     DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn2 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn3 = TestUtils.randomDatanodeDetails();
     DatanodeDetails dn4 = TestUtils.randomDatanodeDetails();
-    nodeManager.addDatanodeInContainerMap(dn1.getUuid(), new HashSet<>());
-    nodeManager.addDatanodeInContainerMap(dn2.getUuid(), new HashSet<>());
-    nodeManager.addDatanodeInContainerMap(dn3.getUuid(), new HashSet<>());
-    nodeManager.addDatanodeInContainerMap(dn4.getUuid(), new HashSet<>());
+    nodeManager.setContainers(dn1, new HashSet<>());
+    nodeManager.setContainers(dn2, new HashSet<>());
+    nodeManager.setContainers(dn3, new HashSet<>());
+    nodeManager.setContainers(dn4, new HashSet<>());
 
     ContainerInfo cont1 = containerManager
         .allocateContainer(ReplicationType.STAND_ALONE,
