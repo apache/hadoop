@@ -37,6 +37,7 @@ import java.util.EnumSet;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -883,15 +884,19 @@ public class TestFSImage {
           DFSTestUtil.getECPolicyState(ecPolicy));
 
       // Test enable/disable/remove user customized erasure coding policy
-      testChangeErasureCodingPolicyState(cluster, blockSize, newPolicy);
-      // Test enable/disable built-in erasure coding policy
+      testChangeErasureCodingPolicyState(cluster, blockSize, newPolicy, false);
+      // Test enable/disable default built-in erasure coding policy
       testChangeErasureCodingPolicyState(cluster, blockSize,
-          SystemErasureCodingPolicies.getByID((byte) 1));
+          SystemErasureCodingPolicies.getByID((byte) 1), true);
+      // Test enable/disable non-default built-in erasure coding policy
+      testChangeErasureCodingPolicyState(cluster, blockSize,
+          SystemErasureCodingPolicies.getByID((byte) 2), false);
     }
   }
 
   private void testChangeErasureCodingPolicyState(MiniDFSCluster cluster,
-      int blockSize, ErasureCodingPolicy targetPolicy) throws IOException {
+      int blockSize, ErasureCodingPolicy targetPolicy, boolean isDefault)
+      throws IOException {
     DistributedFileSystem fs = cluster.getFileSystem();
 
     // 1. Enable an erasure coding policy
@@ -920,6 +925,9 @@ public class TestFSImage {
     assertEquals("The erasure coding policy should be of enabled state",
         ErasureCodingPolicyState.ENABLED,
         DFSTestUtil.getECPolicyState(ecPolicy));
+    assertTrue("Policy should be in disabled state in FSImage!",
+        isPolicyEnabledInFsImage(targetPolicy));
+
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
 
@@ -936,9 +944,18 @@ public class TestFSImage {
         ErasureCodingPolicyManager.getInstance().getByID(targetPolicy.getId());
     assertEquals("The erasure coding policy is not found",
         targetPolicy, ecPolicy);
-    assertEquals("The erasure coding policy should be of disabled state",
-        ErasureCodingPolicyState.DISABLED,
-        DFSTestUtil.getECPolicyState(ecPolicy));
+    ErasureCodingPolicyState ecPolicyState =
+        DFSTestUtil.getECPolicyState(ecPolicy);
+    if (isDefault) {
+      assertEquals("The erasure coding policy should be of " +
+              "enabled state", ErasureCodingPolicyState.ENABLED, ecPolicyState);
+    } else {
+      assertEquals("The erasure coding policy should be of " +
+          "disabled state", ErasureCodingPolicyState.DISABLED, ecPolicyState);
+    }
+    assertFalse("Policy should be in disabled state in FSImage!",
+        isPolicyEnabledInFsImage(targetPolicy));
+
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
 
@@ -971,5 +988,16 @@ public class TestFSImage {
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
     fs.delete(dirPath, true);
+  }
+
+  private boolean isPolicyEnabledInFsImage(ErasureCodingPolicy testPolicy) {
+    ErasureCodingPolicyInfo[] persistedPolicies =
+        ErasureCodingPolicyManager.getInstance().getPersistedPolicies();
+    for (ErasureCodingPolicyInfo p : persistedPolicies) {
+      if(p.getPolicy().getName().equals(testPolicy.getName())) {
+        return p.isEnabled();
+      }
+    }
+    throw new AssertionError("Policy is not found!");
   }
 }
