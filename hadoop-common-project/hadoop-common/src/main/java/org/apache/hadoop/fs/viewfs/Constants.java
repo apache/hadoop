@@ -75,7 +75,23 @@ public interface Constants {
    */
   String CONFIG_VIEWFS_LINK_MERGE_SLASH = "linkMergeSlash";
 
+  /**
+   * Config variable for specifying a regex link which uses regular expressions
+   * as source and target could use group captured in src.
+   * E.g. (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
+   *   (/path1/file1 => /prefix-path1/file1)
+   */
+  String CONFIG_VIEWFS_LINK_REGEX = "linkRegex";
+
   FsPermission PERMISSION_555 = new FsPermission((short) 0555);
 
   String CONFIG_VIEWFS_RENAME_STRATEGY = "fs.viewfs.rename.strategy";
+
+  /**
+   * Config capacity of mount point resolution cache.
+   * Value <= 0 means disable cache.
+   */
+  String CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY
+      = "fs.viewfs.path.resolution.cache.capacity";
+  int CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT = 0;
 }
