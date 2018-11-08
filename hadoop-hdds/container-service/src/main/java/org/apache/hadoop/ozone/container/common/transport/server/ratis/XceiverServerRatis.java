@@ -287,6 +287,17 @@ public final class XceiverServerRatis implements XceiverServerSpi {
       setAutoTriggerEnabled(properties, true);
     RaftServerConfigKeys.Snapshot.
       setAutoTriggerThreshold(properties, snapshotThreshold);
+    int logQueueSize =
+        conf.getInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE,
+            OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_SIZE_DEFAULT);
+    RaftServerConfigKeys.Log.setQueueSize(properties, logQueueSize);
+
+    int numSyncRetries = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES,
+        OzoneConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT);
+    RaftServerConfigKeys.Log.StateMachineData.setSyncTimeoutRetry(properties,
+        numSyncRetries);
 
     return properties;
   }
