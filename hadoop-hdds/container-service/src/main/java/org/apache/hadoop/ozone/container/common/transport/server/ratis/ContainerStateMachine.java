@@ -22,7 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
-import org.apache.ratis.proto.RaftProtos.StateMachineEntryProto;
+import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
@@ -55,7 +55,6 @@ import org.apache.ratis.statemachine.StateMachineStorage;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
-import org.apache.ratis.statemachine.impl.TransactionContextImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -206,7 +205,6 @@ public class ContainerStateMachine extends BaseStateMachine {
     final ContainerCommandRequestProto proto =
         getRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
-    final StateMachineLogEntryProto log;
     if (proto.getCmdType() == Type.WriteChunk) {
       final WriteChunkRequestProto write = proto.getWriteChunk();
       // create the state machine data proto
@@ -236,33 +234,29 @@ public class ContainerStateMachine extends BaseStateMachine {
               .setWriteChunk(commitWriteChunkProto)
               .build();
 
-      log = createSMLogEntryProto(request,
-          commitContainerCommandProto.toByteString(),
-          dataContainerCommandProto.toByteString());
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineData(dataContainerCommandProto.toByteString())
+          .setLogData(commitContainerCommandProto.toByteString())
+          .build();
     } else if (proto.getCmdType() == Type.CreateContainer) {
-      log = createSMLogEntryProto(request,
-          request.getMessage().getContent(), request.getMessage().getContent());
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineData(request.getMessage().getContent())
+          .setLogData(request.getMessage().getContent())
+          .build();
     } else {
-      log = createSMLogEntryProto(request, request.getMessage().getContent(),
-          null);
+      return TransactionContext.newBuilder()
+          .setClientRequest(request)
+          .setStateMachine(this)
+          .setServerRole(RaftPeerRole.LEADER)
+          .setLogData(request.getMessage().getContent())
+          .build();
     }
-    return new TransactionContextImpl(this, request, log);
-  }
-
-  private StateMachineLogEntryProto createSMLogEntryProto(RaftClientRequest r,
-      ByteString logData, ByteString smData) {
-    StateMachineLogEntryProto.Builder builder =
-        StateMachineLogEntryProto.newBuilder();
-
-    builder.setCallId(r.getCallId())
-        .setClientId(r.getClientId().toByteString())
-        .setLogData(logData);
-
-    if (smData != null) {
-      builder.setStateMachineEntry(StateMachineEntryProto.newBuilder()
-          .setStateMachineData(smData).build());
-    }
-    return builder.build();
   }
 
   private ByteString getStateMachineData(StateMachineLogEntryProto entryProto) {
