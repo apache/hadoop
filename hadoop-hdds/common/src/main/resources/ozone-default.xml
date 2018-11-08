@@ -60,6 +60,21 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.statemachinedata.sync.retries</name>
+    <value>-1</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Number of times the WriteStateMachineData op will be tried
+      before failing, if this value is -1, then this retries indefinitely.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.queue.size</name>
+    <value>128</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Number of operation pending with Raft's Log Worker.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.datanode.storage.dir</name>
     <value/>
     <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT, RATIS</tag>
