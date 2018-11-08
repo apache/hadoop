@@ -90,7 +90,7 @@ public class TestStripedINodeFile {
   public ExpectedException thrown = ExpectedException.none();
 
   @Before
-  public void init() {
+  public void init() throws IOException {
     Configuration conf = new HdfsConfiguration();
     ErasureCodingPolicyManager.getInstance().init(conf);
   }

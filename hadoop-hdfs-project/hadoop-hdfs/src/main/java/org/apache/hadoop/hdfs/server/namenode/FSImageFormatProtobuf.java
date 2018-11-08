@@ -380,7 +380,7 @@ public final class FSImageFormatProtobuf {
         ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(
             s.getPolicies(i)));
       }
-      fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies);
+      fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies, conf);
     }
   }
 
@@ -601,7 +601,7 @@ public final class FSImageFormatProtobuf {
         FileSummary.Builder summary) throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       ErasureCodingPolicyInfo[] ecPolicies =
-          fsn.getErasureCodingPolicyManager().getPolicies();
+          fsn.getErasureCodingPolicyManager().getPersistedPolicies();
       ArrayList<ErasureCodingPolicyProto> ecPolicyProtoes =
           new ArrayList<ErasureCodingPolicyProto>();
       for (ErasureCodingPolicyInfo p : ecPolicies) {
