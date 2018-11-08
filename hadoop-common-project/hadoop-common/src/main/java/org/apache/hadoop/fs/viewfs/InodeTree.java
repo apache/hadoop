@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +42,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * InodeTree implements a mount-table as a tree of inodes.
@@ -46,19 +51,22 @@ import org.apache.hadoop.util.StringUtils;
  * In order to use it the caller must subclass it and implement
  * the abstract methods {@link #getTargetFileSystem(INodeDir)}, etc.
  *
- * The mountable is initialized from the config variables as 
+ * The mountable is initialized from the config variables as
  * specified in {@link ViewFs}
  *
  * @param <T> is AbstractFileSystem or FileSystem
  *
  * The two main methods are
  * {@link #InodeTree(Configuration, String)} // constructor
- * {@link #resolve(String, boolean)} 
+ * {@link #resolve(String, boolean)}
  */
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 abstract class InodeTree<T> {
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(InodeTree.class.getName());
+
   enum ResultKind {
     INTERNAL_DIR,
     EXTERNAL_DIR
@@ -72,6 +80,11 @@ abstract class InodeTree<T> {
   // the homedir for this mount table
   private final String homedirPrefix;
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
+  private List<RegexMountPoint<T>> regexMountPointList =
+      new ArrayList<RegexMountPoint<T>>();
+  private LRUMap pathResolutionCache;
+  private ReentrantReadWriteLock cacheRWLock;
+  private int pathResolutionCacheCapacity;
 
   static class MountPoint<T> {
     String src;
@@ -122,7 +135,7 @@ abstract class InodeTree<T> {
    */
   static class INodeDir<T> extends INode<T> {
     private final Map<String, INode<T>> children = new HashMap<>();
-    private T internalDirFs =  null; //filesystem of this internal directory
+    private T internalDirFs = null; //filesystem of this internal directory
     private boolean isRoot = false;
     private INodeLink<T> fallbackLink = null;
 
@@ -226,7 +239,14 @@ abstract class InodeTree<T> {
      * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkNfly
      * Refer: {@link Constants#CONFIG_VIEWFS_LINK_NFLY}
      */
-    NFLY;
+    NFLY,
+    /**
+     * Link entry which source are regex exrepssions and target refer matched
+     * group from source
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkMerge
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK_REGEX}
+     */
+    REGEX;
   }
 
   /**
@@ -462,7 +482,7 @@ abstract class InodeTree<T> {
 
   /**
    * Create Inode Tree from the specified mount-table specified in Config
-   * @param config - the mount table keys are prefixed with 
+   * @param config - the mount table keys are prefixed with
    *       FsConstants.CONFIG_VIEWFS_PREFIX
    * @param viewName - the name of the mount table - if null use defaultMT name
    * @throws UnsupportedFileSystemException
@@ -495,84 +515,113 @@ abstract class InodeTree<T> {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     for (Entry<String, String> si : config) {
       final String key = si.getKey();
-      if (key.startsWith(mountTablePrefix)) {
-        gotMountTableEntry = true;
-        LinkType linkType;
-        String src = key.substring(mountTablePrefix.length());
-        String settings = null;
-        if (src.startsWith(linkPrefix)) {
-          src = src.substring(linkPrefix.length());
-          if (src.equals(SlashPath.toString())) {
-            throw new UnsupportedFileSystemException("Unexpected mount table "
-                + "link entry '" + key + "'. Use "
-                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " instead!");
-          }
-          linkType = LinkType.SINGLE;
-        } else if (src.startsWith(linkFallbackPrefix)) {
-          if (src.length() != linkFallbackPrefix.length()) {
-            throw new IOException("ViewFs: Mount points initialization error." +
-                " Invalid " + Constants.CONFIG_VIEWFS_LINK_FALLBACK +
-                " entry in config: " + src);
-          }
-          linkType = LinkType.SINGLE_FALLBACK;
-        } else if (src.startsWith(linkMergePrefix)) { // A merge link
-          src = src.substring(linkMergePrefix.length());
-          linkType = LinkType.MERGE;
-        } else if (src.startsWith(linkMergeSlashPrefix)) {
-          // This is a LinkMergeSlash entry. This entry should
-          // not have any additional source path.
-          if (src.length() != linkMergeSlashPrefix.length()) {
-            throw new IOException("ViewFs: Mount points initialization error." +
-                " Invalid " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
-                " entry in config: " + src);
-          }
-          linkType = LinkType.MERGE_SLASH;
-        } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY)) {
-          // prefix.settings.src
-          src = src.substring(Constants.CONFIG_VIEWFS_LINK_NFLY.length() + 1);
-          // settings.src
-          settings = src.substring(0, src.indexOf('.'));
-          // settings
-
-          // settings.src
-          src = src.substring(settings.length() + 1);
-          // src
-
-          linkType = LinkType.NFLY;
-        } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
-          // ignore - we set home dir from config
-          continue;
-        } else {
-          throw new IOException("ViewFs: Cannot initialize: Invalid entry in " +
-              "Mount table in config: " + src);
-        }
-
-        final String target = si.getValue();
-        if (linkType != LinkType.MERGE_SLASH) {
-          if (isMergeSlashConfigured) {
-            throw new IOException("Mount table " + mountTableName
-                + " has already been configured with a merge slash link. "
-                + "A regular link should not be added.");
-          }
-          linkEntries.add(
-              new LinkEntry(src, target, linkType, settings, ugi, config));
-        } else {
-          if (!linkEntries.isEmpty()) {
-            throw new IOException("Mount table " + mountTableName
-                + " has already been configured with regular links. "
-                + "A merge slash link should not be configured.");
-          }
-          if (isMergeSlashConfigured) {
-            throw new IOException("Mount table " + mountTableName
-                + " has already been configured with a merge slash link. "
-                + "Multiple merge slash links for the same mount table is "
-                + "not allowed.");
-          }
-          isMergeSlashConfigured = true;
-          mergeSlashTarget = target;
-        }
+      if (!key.startsWith(mountTablePrefix)) {
+        continue;
       }
-    }
+
+      gotMountTableEntry = true;
+      LinkType linkType;
+      String src = key.substring(mountTablePrefix.length());
+      String settings = null;
+      if (src.startsWith(linkPrefix)) {
+        src = src.substring(linkPrefix.length());
+        if (src.equals(SlashPath.toString())) {
+          throw new UnsupportedFileSystemException("Unexpected mount table "
+              + "link entry '" + key + "'. Use "
+              + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " instead!");
+        }
+        linkType = LinkType.SINGLE;
+      } else if (src.startsWith(linkFallbackPrefix)) {
+        if (src.length() != linkFallbackPrefix.length()) {
+          throw new IOException("ViewFs: Mount points initialization error." +
+              " Invalid " + Constants.CONFIG_VIEWFS_LINK_FALLBACK +
+              " entry in config: " + src);
+        }
+        linkType = LinkType.SINGLE_FALLBACK;
+      } else if (src.startsWith(linkMergePrefix)) { // A merge link
+        src = src.substring(linkMergePrefix.length());
+        linkType = LinkType.MERGE;
+      } else if (src.startsWith(linkMergeSlashPrefix)) {
+        // This is a LinkMergeSlash entry. This entry should
+        // not have any additional source path.
+        if (src.length() != linkMergeSlashPrefix.length()) {
+          throw new IOException("ViewFs: Mount points initialization error." +
+              " Invalid " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
+              " entry in config: " + src);
+        }
+        linkType = LinkType.MERGE_SLASH;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY)) {
+        // prefix.settings.src
+        src = src.substring(Constants.CONFIG_VIEWFS_LINK_NFLY.length() + 1);
+        // settings.src
+        settings = src.substring(0, src.indexOf('.'));
+        // settings
+
+        // settings.src
+        src = src.substring(settings.length() + 1);
+        // src
+
+        linkType = LinkType.NFLY;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_REGEX)) {
+        final String target = si.getValue();
+        String linkKeyPath = null;
+        final String linkRegexPrefix = Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
+        // settings#.linkKey
+        String settingsAndLinkKeyPath = src.substring(linkRegexPrefix.length());
+        int settingLinkKeySepIndex = settingsAndLinkKeyPath
+            .indexOf(RegexMountPoint.SETTING_SRCREGEX_SEP);
+        if (settingLinkKeySepIndex == -1) {
+          // There's no settings
+          linkKeyPath = settingsAndLinkKeyPath;
+          settings = null;
+        } else {
+          // settings#.linkKey style configuration
+          // settings from settings#.linkKey
+          settings =
+              settingsAndLinkKeyPath.substring(0, settingLinkKeySepIndex);
+          // linkKeyPath
+          linkKeyPath = settingsAndLinkKeyPath.substring(
+              settings.length() + RegexMountPoint.SETTING_SRCREGEX_SEP
+                  .length());
+        }
+        linkType = LinkType.REGEX;
+        linkEntries.add(
+            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
+                config));
+        continue;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
+        // ignore - we set home dir from config
+        continue;
+      } else {
+        throw new IOException("ViewFs: Cannot initialize: Invalid entry in " +
+            "Mount table in config: " + src);
+      }
+
+      final String target = si.getValue();
+      if (linkType != LinkType.MERGE_SLASH) {
+        if (isMergeSlashConfigured) {
+          throw new IOException("Mount table " + mountTableName
+              + " has already been configured with a merge slash link. "
+              + "A regular link should not be added.");
+        }
+        linkEntries.add(
+            new LinkEntry(src, target, linkType, settings, ugi, config));
+      } else {
+        if (!linkEntries.isEmpty()) {
+          throw new IOException("Mount table " + mountTableName
+              + " has already been configured with regular links. "
+              + "A merge slash link should not be configured.");
+        }
+        if (isMergeSlashConfigured) {
+          throw new IOException("Mount table " + mountTableName
+              + " has already been configured with a merge slash link. "
+              + "Multiple merge slash links for the same mount table is "
+              + "not allowed.");
+        }
+        isMergeSlashConfigured = true;
+        mergeSlashTarget = target;
+      }
+    } // End of for loop.
 
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
@@ -587,7 +636,8 @@ abstract class InodeTree<T> {
       getRootDir().setRoot(true);
       INodeLink<T> fallbackLink = null;
       for (LinkEntry le : linkEntries) {
-        if (le.isLinkType(LinkType.SINGLE_FALLBACK)) {
+        switch (le.getLinkType()) {
+        case SINGLE_FALLBACK:
           if (fallbackLink != null) {
             throw new IOException("Mount table " + mountTableName
                 + " has already been configured with a link fallback. "
@@ -597,7 +647,18 @@ abstract class InodeTree<T> {
           fallbackLink = new INodeLink<T>(mountTableName, ugi,
               getTargetFileSystem(new URI(le.getTarget())),
               new URI(le.getTarget()));
-        } else {
+          continue;
+        case REGEX:
+          LOGGER.info("Add regex mount point:" + le.getSrc()
+              + ", target:" + le.getTarget()
+              + ", interceptor settings:" + le.getSettings());
+          RegexMountPoint regexMountPoint =
+              new RegexMountPoint<T>(
+                  this, le.getSrc(), le.getTarget(), le.getSettings());
+          regexMountPoint.initialize();
+          regexMountPointList.add(regexMountPoint);
+          continue;
+        default:
           createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
               le.getSettings(), le.getUgi(), le.getConfig());
         }
@@ -621,6 +682,13 @@ abstract class InodeTree<T> {
           new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
               theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
+    }
+    pathResolutionCacheCapacity = config
+        .getInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY,
+            Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT);
+    if (pathResolutionCacheCapacity > 0) {
+      pathResolutionCache = new LRUMap(pathResolutionCacheCapacity);
+      cacheRWLock = new ReentrantReadWriteLock();
     }
   }
 
@@ -656,7 +724,7 @@ abstract class InodeTree<T> {
   }
 
   /**
-   * Resolve the pathname p relative to root InodeDir
+   * Resolve the pathname p relative to root InodeDir.
    * @param p - input path
    * @param resolveLastComponent
    * @return ResolveResult which allows further resolution of the remaining path
@@ -664,94 +732,214 @@ abstract class InodeTree<T> {
    */
   ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws FileNotFoundException {
-    String[] path = breakIntoPathComponents(p);
-    if (path.length <= 1) { // special case for when path is "/"
-      T targetFs = root.isInternalDir() ?
-          getRootDir().getInternalDirFs() : getRootLink().getTargetFileSystem();
-      ResolveResult<T> res = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-          targetFs, root.fullPath, SlashPath);
-      return res;
+    ResolveResult<T> resolveResult = null;
+    resolveResult = getResolveResultFromCache(p, resolveLastComponent);
+    if (resolveResult != null) {
+      return resolveResult;
     }
 
-    /**
-     * linkMergeSlash has been configured. The root of this mount table has
-     * been linked to the root directory of a file system.
-     * The first non-slash path component should be name of the mount table.
-     */
-    if (root.isLink()) {
-      Path remainingPath;
-      StringBuilder remainingPathStr = new StringBuilder();
+    try {
+      String[] path = breakIntoPathComponents(p);
+      if (path.length <= 1) { // special case for when path is "/"
+        T targetFs = root.isInternalDir() ?
+            getRootDir().getInternalDirFs()
+            : getRootLink().getTargetFileSystem();
+        resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+            targetFs, root.fullPath, SlashPath);
+        return resolveResult;
+      }
+
+      /**
+       * linkMergeSlash has been configured. The root of this mount table has
+       * been linked to the root directory of a file system.
+       * The first non-slash path component should be name of the mount table.
+       */
+      if (root.isLink()) {
+        Path remainingPath;
+        StringBuilder remainingPathStr = new StringBuilder();
+        // ignore first slash
+        for (int i = 1; i < path.length; i++) {
+          remainingPathStr.append("/").append(path[i]);
+        }
+        remainingPath = new Path(remainingPathStr.toString());
+        resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+            getRootLink().getTargetFileSystem(), root.fullPath, remainingPath);
+        return resolveResult;
+      }
+      Preconditions.checkState(root.isInternalDir());
+      INodeDir<T> curInode = getRootDir();
+
+      // Try to resolve path in the regex mount point
+      resolveResult = tryResolveInRegexMountpoint(p, resolveLastComponent);
+      if (resolveResult != null) {
+        return resolveResult;
+      }
+
+      int i;
       // ignore first slash
-      for (int i = 1; i < path.length; i++) {
-        remainingPathStr.append("/").append(path[i]);
-      }
-      remainingPath = new Path(remainingPathStr.toString());
-      ResolveResult<T> res = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-          getRootLink().getTargetFileSystem(), root.fullPath, remainingPath);
-      return res;
-    }
-    Preconditions.checkState(root.isInternalDir());
-    INodeDir<T> curInode = getRootDir();
-
-    int i;
-    // ignore first slash
-    for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
-      INode<T> nextInode = curInode.resolveInternal(path[i]);
-      if (nextInode == null) {
-        if (hasFallbackLink()) {
-          return new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-              getRootFallbackLink().getTargetFileSystem(),
-              root.fullPath, new Path(p));
-        } else {
-          StringBuilder failedAt = new StringBuilder(path[0]);
-          for (int j = 1; j <= i; ++j) {
-            failedAt.append('/').append(path[j]);
+      for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
+        INode<T> nextInode = curInode.resolveInternal(path[i]);
+        if (nextInode == null) {
+          if (hasFallbackLink()) {
+            resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+                getRootFallbackLink().getTargetFileSystem(), root.fullPath,
+                new Path(p));
+            return resolveResult;
+          } else {
+            StringBuilder failedAt = new StringBuilder(path[0]);
+            for (int j = 1; j <= i; ++j) {
+              failedAt.append('/').append(path[j]);
+            }
+            throw (new FileNotFoundException(
+                "File/Directory does not exist: " + failedAt.toString()));
           }
-          throw (new FileNotFoundException(
-              "File/Directory does not exist: " + failedAt.toString()));
+        }
+
+        if (nextInode.isLink()) {
+          final INodeLink<T> link = (INodeLink<T>) nextInode;
+          final Path remainingPath;
+          if (i >= path.length - 1) {
+            remainingPath = SlashPath;
+          } else {
+            StringBuilder remainingPathStr =
+                new StringBuilder("/" + path[i + 1]);
+            for (int j = i + 2; j < path.length; ++j) {
+              remainingPathStr.append('/').append(path[j]);
+            }
+            remainingPath = new Path(remainingPathStr.toString());
+          }
+          resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+              link.getTargetFileSystem(), nextInode.fullPath, remainingPath);
+          return resolveResult;
+        } else if (nextInode.isInternalDir()) {
+          curInode = (INodeDir<T>) nextInode;
         }
       }
 
-      if (nextInode.isLink()) {
-        final INodeLink<T> link = (INodeLink<T>) nextInode;
-        final Path remainingPath;
-        if (i >= path.length - 1) {
-          remainingPath = SlashPath;
-        } else {
-          StringBuilder remainingPathStr = new StringBuilder("/" + path[i + 1]);
-          for (int j = i + 2; j < path.length; ++j) {
-            remainingPathStr.append('/').append(path[j]);
-          }
-          remainingPath = new Path(remainingPathStr.toString());
+      // We have resolved to an internal dir in mount table.
+      Path remainingPath;
+      if (resolveLastComponent) {
+        remainingPath = SlashPath;
+      } else {
+        // note we have taken care of when path is "/" above
+        // for internal dirs rem-path does not start with / since the lookup
+        // that follows will do a children.get(remaningPath) and will have to
+        // strip-out the initial /
+        StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
+        for (int j = i + 1; j < path.length; ++j) {
+          remainingPathStr.append('/').append(path[j]);
         }
-        final ResolveResult<T> res =
-            new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-                link.getTargetFileSystem(), nextInode.fullPath, remainingPath);
-        return res;
-      } else if (nextInode.isInternalDir()) {
-        curInode = (INodeDir<T>) nextInode;
+        remainingPath = new Path(remainingPathStr.toString());
+      }
+      resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+          curInode.getInternalDirFs(), curInode.fullPath, remainingPath);
+      return resolveResult;
+    } finally {
+      if (pathResolutionCacheCapacity > 0 && resolveResult != null) {
+        addResolveResultToCache(p, resolveLastComponent, resolveResult);
       }
     }
+  }
 
-    // We have resolved to an internal dir in mount table.
-    Path remainingPath;
-    if (resolveLastComponent) {
-      remainingPath = SlashPath;
-    } else {
-      // note we have taken care of when path is "/" above
-      // for internal dirs rem-path does not start with / since the lookup
-      // that follows will do a children.get(remaningPath) and will have to
-      // strip-out the initial /
-      StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
-      for (int j = i + 1; j < path.length; ++j) {
-        remainingPathStr.append('/').append(path[j]);
+  /**
+   * Walk through all regex mount points to see
+   * whether the path match any regex expressions.
+   *
+   * @param srcPath
+   * @param resolveLastComponent
+   * @return
+   */
+  protected ResolveResult<T> tryResolveInRegexMountpoint(final String srcPath,
+      final boolean resolveLastComponent) {
+    for (RegexMountPoint regexMountPoint : regexMountPointList) {
+      ResolveResult resolveResult =
+          regexMountPoint.resolve(srcPath, resolveLastComponent);
+      if (resolveResult != null) {
+        return resolveResult;
       }
-      remainingPath = new Path(remainingPathStr.toString());
     }
-    final ResolveResult<T> res =
-        new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-            curInode.getInternalDirFs(), curInode.fullPath, remainingPath);
-    return res;
+    return null;
+  }
+
+  /**
+   * Build resolve result return to caller.
+   *
+   * @param resultKind
+   * @param resolvedPathStr
+   * @param targetOfResolvedPathStr
+   * @param remainingPath
+   * @return
+   */
+  protected ResolveResult<T> buildResolveResultForRegexMountPoint(
+      ResultKind resultKind, String resolvedPathStr,
+      String targetOfResolvedPathStr, Path remainingPath) {
+    try {
+      T targetFs = getTargetFileSystem(new URI(targetOfResolvedPathStr));
+      return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
+          remainingPath);
+    } catch (IOException ex) {
+      LOGGER.error(String.format(
+          "Got Exception while build resolve result."
+              + " ResultKind:%s, resolvedPathStr:%s,"
+              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+              + " will return null.",
+          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
+          ex);
+      return null;
+    } catch (URISyntaxException uex) {
+      LOGGER.error(String.format(
+          "Got Exception while build resolve result."
+              + " ResultKind:%s, resolvedPathStr:%s,"
+              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+              + " will return null.",
+          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
+          uex);
+      return null;
+    }
+  }
+
+  /**
+   * Return resolution cache capacity.
+   *
+   * @return
+   */
+  public int getPathResolutionCacheCapacity() {
+    return pathResolutionCacheCapacity;
+  }
+
+  private void addResolveResultToCache(final String pathStr,
+      final Boolean resolveLastComponent,
+      final ResolveResult<T> resolveResult) {
+    try {
+      cacheRWLock.writeLock().lock();
+      String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+      pathResolutionCache.put(key, resolveResult);
+    } finally {
+      cacheRWLock.writeLock().unlock();
+    }
+  }
+
+  private ResolveResult<T> getResolveResultFromCache(final String pathStr,
+      final Boolean resolveLastComponent) {
+    if (pathResolutionCacheCapacity <= 0) {
+      return null;
+    }
+    try {
+      cacheRWLock.readLock().lock();
+      String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+      return (ResolveResult<T>) pathResolutionCache.get(key);
+    } finally {
+      cacheRWLock.readLock().unlock();
+    }
+  }
+
+  public static String getResolveCacheKeyStr(final String path,
+      Boolean resolveLastComp) {
+    return path + ",resolveLastComp" + resolveLastComp;
+  }
+
+  @VisibleForTesting public LRUMap getPathResolutionCache() {
+    return pathResolutionCache;
   }
 
   List<MountPoint<T>> getMountPoints() {
