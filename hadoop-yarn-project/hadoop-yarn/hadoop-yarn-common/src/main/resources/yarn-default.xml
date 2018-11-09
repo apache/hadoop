@@ -534,8 +534,8 @@
 
       This property allows users to set ACLs of their choice instead of using
       the default mechanism. For fencing to work, the ACLs should be
-      carefully set differently on each ResourceManger such that all the
-      ResourceManagers have shared admin access and the Active ResourceManger
+      carefully set differently on each ResourceManager such that all the
+      ResourceManagers have shared admin access and the Active ResourceManager
       takes over (exclusively) the create-delete access.
     </description>
     <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
