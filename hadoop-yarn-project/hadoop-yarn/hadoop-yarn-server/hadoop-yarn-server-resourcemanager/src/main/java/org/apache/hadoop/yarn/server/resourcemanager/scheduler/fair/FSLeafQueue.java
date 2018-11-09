@@ -651,4 +651,18 @@ public class FSLeafQueue extends FSQueue {
       writeLock.unlock();
     }
   }
+
+  /**
+   * This method is called when an application is removed from this queue
+   * during the submit process.
+   * @param applicationId the application's id
+   */
+  public void removeAssignedApp(ApplicationId applicationId) {
+    writeLock.lock();
+    try {
+      assignedApps.remove(applicationId);
+    } finally {
+      writeLock.unlock();
+    }
+  }
 }
