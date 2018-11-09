@@ -1,4 +1,4 @@
-FROM centos:7 as build
+FROM rhel7:7-released AS build
 
 RUN yum -y update && yum clean all
 
@@ -26,10 +26,9 @@ RUN mkdir -p $(dirname $HADOOP_OUT) && \
     && mv /tmp/hadoop-${HADOOP_VERSION}.redhat-${RH_HADOOP_PATCH_VERSION}/ \
     $HADOOP_OUT
 
-FROM centos:7
+FROM rhel7:7-released
 
 RUN \
-    yum install epel-release -y \
     && yum install -y \
         java-1.8.0-openjdk \
         curl \
