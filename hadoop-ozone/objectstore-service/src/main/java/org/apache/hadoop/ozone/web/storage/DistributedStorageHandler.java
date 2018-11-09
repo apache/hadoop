@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.storage;
 
 import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -486,6 +487,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         HddsClientUtils.formatDateTime(omKeyInfo.getCreationTime()));
     keyInfo.setModifiedOn(
         HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
+    keyInfo.setType(ReplicationType.valueOf(omKeyInfo.getType().toString()));
     return keyInfo;
   }
 
@@ -510,6 +512,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     keyInfoDetails.setModifiedOn(
         HddsClientUtils.formatDateTime(omKeyInfo.getModificationTime()));
     keyInfoDetails.setKeyLocations(keyLocations);
+    keyInfoDetails.setType(ReplicationType.valueOf(omKeyInfo.getType()
+        .toString()));
     return keyInfoDetails;
   }
 
@@ -553,6 +557,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             HddsClientUtils.formatDateTime(info.getCreationTime()));
         tempInfo.setModifiedOn(
             HddsClientUtils.formatDateTime(info.getModificationTime()));
+        tempInfo.setType(ReplicationType.valueOf(info.getType().toString()));
 
         result.addKey(tempInfo);
       }
