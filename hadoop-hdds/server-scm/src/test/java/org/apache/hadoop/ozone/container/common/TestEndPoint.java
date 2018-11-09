@@ -195,6 +195,7 @@ public class TestEndPoint {
       // different from SCM server response scmId
       String newScmId = UUID.randomUUID().toString();
       scmServerImpl.setScmId(newScmId);
+      rpcEndPoint.setState(EndpointStateMachine.EndPointStates.GETVERSION);
       newState = versionTask.call();
       Assert.assertEquals(EndpointStateMachine.EndPointStates.SHUTDOWN,
             newState);
