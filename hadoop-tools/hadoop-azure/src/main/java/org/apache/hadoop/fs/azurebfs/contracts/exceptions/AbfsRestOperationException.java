@@ -81,13 +81,23 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
   }
 
   private static String formatMessage(final AbfsHttpOperation abfsHttpOperation) {
+    // HEAD request response doesn't have StorageErrorCode, StorageErrorMessage.
+    if (abfsHttpOperation.getMethod().equals("HEAD")) {
+      return String.format(
+              "Operation failed: \"%1$s\", %2$s, HEAD, %3$s",
+              abfsHttpOperation.getStatusDescription(),
+              abfsHttpOperation.getStatusCode(),
+              abfsHttpOperation.getUrl().toString());
+    }
+
     return String.format(
-        "%1$s %2$s%nStatusCode=%3$s%nStatusDescription=%4$s%nErrorCode=%5$s%nErrorMessage=%6$s",
-        abfsHttpOperation.getMethod(),
-        abfsHttpOperation.getUrl().toString(),
-        abfsHttpOperation.getStatusCode(),
-        abfsHttpOperation.getStatusDescription(),
-        abfsHttpOperation.getStorageErrorCode(),
-        abfsHttpOperation.getStorageErrorMessage());
+            "Operation failed: \"%1$s\", %2$s, %3$s, %4$s, %5$s, \"%6$s\"",
+            abfsHttpOperation.getStatusDescription(),
+            abfsHttpOperation.getStatusCode(),
+            abfsHttpOperation.getMethod(),
+            abfsHttpOperation.getUrl().toString(),
+            abfsHttpOperation.getStorageErrorCode(),
+            // Remove break line to ensure the request id and timestamp can be shown in console.
+            abfsHttpOperation.getStorageErrorMessage().replaceAll("\\n", " "));
   }
 }
