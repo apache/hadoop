@@ -167,10 +167,6 @@ public class TestSCMContainerManager {
         .setHostName("host2")
         .setIpAddress("2.2.2.2")
         .setUuid(UUID.randomUUID().toString()).build();
-    containerManager
-        .updateContainerState(contInfo.containerID(), LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(contInfo.containerID(),
-        LifeCycleEvent.CREATED);
     containerManager.updateContainerState(contInfo.containerID(),
         LifeCycleEvent.FINALIZE);
     containerManager
@@ -219,26 +215,6 @@ public class TestSCMContainerManager {
   }
 
   @Test
-  public void testContainerCreationLeaseTimeout() throws IOException,
-      InterruptedException {
-    nodeManager.setChillmode(false);
-    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(),
-        containerOwner);
-    containerManager.updateContainerState(containerInfo.getContainerInfo()
-        .containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    Thread.sleep(TIMEOUT + 1000);
-
-    thrown.expect(IOException.class);
-    thrown.expectMessage("Lease Exception");
-    containerManager
-        .updateContainerState(containerInfo.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATED);
-  }
-
-
-  @Test
   public void testCloseContainer() throws IOException {
     ContainerID id = createContainer().containerID();
     containerManager.updateContainerState(id,
@@ -260,10 +236,6 @@ public class TestSCMContainerManager {
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
     ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    containerManager.updateContainerState(containerInfo.containerID(),
-        HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(containerInfo.containerID(),
-        HddsProtos.LifeCycleEvent.CREATED);
     return containerInfo;
   }
 

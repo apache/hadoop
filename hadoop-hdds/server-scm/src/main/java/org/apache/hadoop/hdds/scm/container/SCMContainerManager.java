@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ContainerInfoProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
@@ -37,9 +36,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.lease.Lease;
-import org.apache.hadoop.ozone.lease.LeaseException;
-import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
@@ -54,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -82,7 +77,6 @@ public class SCMContainerManager implements ContainerManager {
   private final MetadataStore containerStore;
   private final PipelineManager pipelineManager;
   private final ContainerStateManager containerStateManager;
-  private final LeaseManager<ContainerInfo> containerLeaseManager;
   private final EventPublisher eventPublisher;
   private final long size;
 
@@ -121,14 +115,6 @@ public class SCMContainerManager implements ContainerManager {
     this.pipelineManager = pipelineManager;
     this.containerStateManager = new ContainerStateManager(conf);
     this.eventPublisher = eventPublisher;
-
-    final long containerCreationLeaseTimeout = conf.getTimeDuration(
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT,
-        TimeUnit.MILLISECONDS);
-    this.containerLeaseManager = new LeaseManager<>("ContainerCreation",
-        containerCreationLeaseTimeout);
-    this.containerLeaseManager.start();
 
     loadExistingContainers();
   }
@@ -371,51 +357,31 @@ public class SCMContainerManager implements ContainerManager {
   private ContainerInfo updateContainerStateInternal(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException {
     // Refactor the below code for better clarity.
-    try {
-      final ContainerInfo info =
-          containerStateManager.getContainer(containerID);
-      switch (event) {
-      case CREATE:
-        // Acquire lease on container
-        Lease<ContainerInfo> containerLease =
-            containerLeaseManager.acquire(info);
-        // Register callback to be executed in case of timeout
-        containerLease.registerCallBack(() -> {
-          updateContainerState(containerID,
-              HddsProtos.LifeCycleEvent.TIMEOUT);
-          return null; });
-        break;
-      case CREATED:
-        // Release the lease on container
-        containerLeaseManager.release(info);
-        break;
-      case FINALIZE:
-        // TODO: we don't need a lease manager here for closing as the
-        // container report will include the container state after HDFS-13008
-        // If a client failed to update the container close state, DN container
-        // report from 3 DNs will be used to close the container eventually.
-        break;
-      case CLOSE:
-        break;
-      case UPDATE:
-        break;
-      case DELETE:
-        break;
-      case TIMEOUT:
-        break;
-      case CLEANUP:
-        break;
-      default:
-        throw new SCMException("Unsupported container LifeCycleEvent.",
-            FAILED_TO_CHANGE_CONTAINER_STATE);
-      }
-      // If the below updateContainerState call fails, we should revert the
-      // changes made in switch case.
-      // Like releasing the lease in case of BEGIN_CREATE.
-      return containerStateManager.updateContainerState(containerID, event);
-    } catch (LeaseException e) {
-      throw new IOException("Lease Exception.", e);
+    switch (event) {
+    case FINALIZE:
+      // TODO: we don't need a lease manager here for closing as the
+      // container report will include the container state after HDFS-13008
+      // If a client failed to update the container close state, DN container
+      // report from 3 DNs will be used to close the container eventually.
+      break;
+    case CLOSE:
+      break;
+    case UPDATE:
+      break;
+    case DELETE:
+      break;
+    case TIMEOUT:
+      break;
+    case CLEANUP:
+      break;
+    default:
+      throw new SCMException("Unsupported container LifeCycleEvent.",
+          FAILED_TO_CHANGE_CONTAINER_STATE);
     }
+    // If the below updateContainerState call fails, we should revert the
+    // changes made in switch case.
+    // Like releasing the lease in case of BEGIN_CREATE.
+    return containerStateManager.updateContainerState(containerID, event);
   }
 
 
@@ -533,9 +499,6 @@ public class SCMContainerManager implements ContainerManager {
    */
   @Override
   public void close() throws IOException {
-    if (containerLeaseManager != null) {
-      containerLeaseManager.shutdown();
-    }
     if (containerStateManager != null) {
       containerStateManager.close();
     }

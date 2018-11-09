@@ -39,7 +39,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent.CREATED;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CLOSE_CONTAINER;
@@ -112,8 +111,6 @@ public class TestCloseContainerEventHandler {
   @Test
   public void testCloseContainerEventWithValidContainers() throws IOException {
 
-    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
-        .captureLogs(CloseContainerEventHandler.LOG);
     ContainerWithPipeline containerWithPipeline = containerManager
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.ONE, "ozone");
@@ -123,16 +120,6 @@ public class TestCloseContainerEventHandler {
         containerWithPipeline.getPipeline().getFirstNode();
     int closeCount = nodeManager.getCommandCount(datanode);
     eventQueue.fireEvent(CLOSE_CONTAINER, id);
-    eventQueue.processAll(1000);
-    // At this point of time, the allocated container is not in open
-    // state, so firing close container event should not queue CLOSE
-    // command in the Datanode
-    Assert.assertEquals(0, nodeManager.getCommandCount(datanode));
-    //Execute these state transitions so that we can close the container.
-    containerManager.updateContainerState(id, CREATED);
-    eventQueue.fireEvent(CLOSE_CONTAINER,
-        new ContainerID(
-            containerWithPipeline.getContainerInfo().getContainerID()));
     eventQueue.processAll(1000);
     Assert.assertEquals(closeCount + 1,
         nodeManager.getCommandCount(datanode));
@@ -165,8 +152,6 @@ public class TestCloseContainerEventHandler {
       Assert.assertEquals(closeCount[i], nodeManager.getCommandCount(details));
       i++;
     }
-    //Execute these state transitions so that we can close the container.
-    containerManager.updateContainerState(id, CREATED);
     eventQueue.fireEvent(CLOSE_CONTAINER, id);
     eventQueue.processAll(1000);
     i = 0;

@@ -247,7 +247,6 @@ message KeyArgs {
 
 message KeyLocation {
     required hadoop.hdds.BlockID blockID = 1;
-    required bool shouldCreateContainer = 2;
     required uint64 offset = 3;
     required uint64 length = 4;
     // indicated at which version this block gets created.

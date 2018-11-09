@@ -257,30 +257,16 @@ public class SCMClientProtocolServer implements
     if (type == StorageContainerLocationProtocolProtos
         .ObjectStageChangeRequestProto.Type.container) {
       if (op == StorageContainerLocationProtocolProtos
-          .ObjectStageChangeRequestProto.Op.create) {
+          .ObjectStageChangeRequestProto.Op.close) {
         if (stage == StorageContainerLocationProtocolProtos
             .ObjectStageChangeRequestProto.Stage.begin) {
-          scm.getContainerManager().updateContainerState(
-              ContainerID.valueof(id), HddsProtos
-              .LifeCycleEvent.CREATE);
+          scm.getContainerManager()
+              .updateContainerState(ContainerID.valueof(id),
+                  HddsProtos.LifeCycleEvent.FINALIZE);
         } else {
-          scm.getContainerManager().updateContainerState(
-              ContainerID.valueof(id), HddsProtos
-              .LifeCycleEvent.CREATED);
-        }
-      } else {
-        if (op == StorageContainerLocationProtocolProtos
-            .ObjectStageChangeRequestProto.Op.close) {
-          if (stage == StorageContainerLocationProtocolProtos
-              .ObjectStageChangeRequestProto.Stage.begin) {
-            scm.getContainerManager().updateContainerState(
-                ContainerID.valueof(id), HddsProtos
-                .LifeCycleEvent.FINALIZE);
-          } else {
-            scm.getContainerManager().updateContainerState(
-                ContainerID.valueof(id), HddsProtos
-                .LifeCycleEvent.CLOSE);
-          }
+          scm.getContainerManager()
+              .updateContainerState(ContainerID.valueof(id),
+                  HddsProtos.LifeCycleEvent.CLOSE);
         }
       }
     } // else if (type == ObjectStageChangeRequestProto.Type.pipeline) {

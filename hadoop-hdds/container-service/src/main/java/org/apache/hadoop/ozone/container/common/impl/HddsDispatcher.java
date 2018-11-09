@@ -111,21 +111,33 @@ public class HddsDispatcher implements ContainerDispatcher {
     ContainerCommandResponseProto responseProto = null;
     long startTime = System.nanoTime();
     ContainerProtos.Type cmdType = msg.getCmdType();
-    try {
-      long containerID = msg.getContainerID();
+    long containerID = msg.getContainerID();
+    metrics.incContainerOpsMetrics(cmdType);
 
-      metrics.incContainerOpsMetrics(cmdType);
-      if (cmdType != ContainerProtos.Type.CreateContainer) {
+    if (cmdType != ContainerProtos.Type.CreateContainer) {
+      container = getContainer(containerID);
+
+      if (container == null && (cmdType == ContainerProtos.Type.WriteChunk
+          || cmdType == ContainerProtos.Type.PutSmallFile)) {
+        // If container does not exist, create one for WriteChunk and
+        // PutSmallFile request
+        createContainer(msg);
         container = getContainer(containerID);
-        containerType = getContainerType(container);
-      } else {
-        if (!msg.hasCreateContainer()) {
-          return ContainerUtils.malformedRequest(msg);
-        }
-        containerType = msg.getCreateContainer().getContainerType();
       }
-    } catch (StorageContainerException ex) {
-      return ContainerUtils.logAndReturnError(LOG, ex, msg);
+
+      // if container not found return error
+      if (container == null) {
+        StorageContainerException sce = new StorageContainerException(
+            "ContainerID " + containerID + " does not exist",
+            ContainerProtos.Result.CONTAINER_NOT_FOUND);
+        return ContainerUtils.logAndReturnError(LOG, sce, msg);
+      }
+      containerType = getContainerType(container);
+    } else {
+      if (!msg.hasCreateContainer()) {
+        return ContainerUtils.malformedRequest(msg);
+      }
+      containerType = msg.getCreateContainer().getContainerType();
     }
     // Small performance optimization. We check if the operation is of type
     // write before trying to send CloseContainerAction.
@@ -166,6 +178,32 @@ public class HddsDispatcher implements ContainerDispatcher {
     } else {
       return ContainerUtils.unsupportedRequest(msg);
     }
+  }
+
+  /**
+   * Create a container using the input container request.
+   * @param containerRequest - the container request which requires container
+   *                         to be created.
+   */
+  private void createContainer(ContainerCommandRequestProto containerRequest) {
+    ContainerProtos.CreateContainerRequestProto.Builder createRequest =
+        ContainerProtos.CreateContainerRequestProto.newBuilder();
+    ContainerType containerType =
+        ContainerProtos.ContainerType.KeyValueContainer;
+    createRequest.setContainerType(containerType);
+
+    ContainerCommandRequestProto.Builder requestBuilder =
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(ContainerProtos.Type.CreateContainer)
+            .setContainerID(containerRequest.getContainerID())
+            .setCreateContainer(createRequest.build())
+            .setDatanodeUuid(containerRequest.getDatanodeUuid())
+            .setTraceID(containerRequest.getTraceID());
+
+    // TODO: Assuming the container type to be KeyValueContainer for now.
+    // We need to get container type from the containerRequest.
+    Handler handler = getHandler(containerType);
+    handler.handle(requestBuilder.build(), null);
   }
 
   /**
@@ -227,15 +265,8 @@ public class HddsDispatcher implements ContainerDispatcher {
   }
 
   @VisibleForTesting
-  public Container getContainer(long containerID)
-      throws StorageContainerException {
-    Container container = containerSet.getContainer(containerID);
-    if (container == null) {
-      throw new StorageContainerException(
-          "ContainerID " + containerID + " does not exist",
-          ContainerProtos.Result.CONTAINER_NOT_FOUND);
-    }
-    return container;
+  public Container getContainer(long containerID) {
+    return containerSet.getContainer(containerID);
   }
 
   private ContainerType getContainerType(Container container) {

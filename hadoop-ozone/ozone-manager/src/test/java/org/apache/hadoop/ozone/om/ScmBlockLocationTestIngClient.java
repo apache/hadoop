@@ -122,8 +122,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
     AllocatedBlock.Builder abb =
         new AllocatedBlock.Builder()
             .setContainerBlockID(new ContainerBlockID(containerID, localID))
-            .setPipeline(pipeline)
-            .setShouldCreateContainer(false);
+            .setPipeline(pipeline);
     return abb.build();
   }
 

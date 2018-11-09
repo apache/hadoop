@@ -118,6 +118,9 @@ public class TestContainerStateMachineFailures {
         objectStore.getVolume(volumeName).getBucket(bucketName)
             .createKey("ratis", 1024, ReplicationType.RATIS,
                 ReplicationFactor.ONE);
+    // First write and flush creates a container in the datanode
+    key.write("ratis".getBytes());
+    key.flush();
     key.write("ratis".getBytes());
 
     //get the name of a valid container
@@ -139,7 +142,8 @@ public class TestContainerStateMachineFailures {
             .getContainer(omKeyLocationInfo.getContainerID()).getContainerData()
             .getContainerPath()));
     try {
-      // flush will throw an exception
+      // flush will throw an exception for the second write as the container
+      // dir has been deleted.
       key.flush();
       Assert.fail("Expected exception not thrown");
     } catch (IOException ioe) {

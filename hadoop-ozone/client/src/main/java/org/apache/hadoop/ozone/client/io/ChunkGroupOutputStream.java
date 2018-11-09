@@ -21,7 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -29,7 +28,6 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -126,7 +124,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     for (ChunkOutputStreamEntry streamEntry : streamEntries) {
       OmKeyLocationInfo info =
           new OmKeyLocationInfo.Builder().setBlockID(streamEntry.blockID)
-              .setShouldCreateContainer(false)
               .setLength(streamEntry.currentPosition).setOffset(0)
               .build();
       locationInfoList.add(info);
@@ -180,41 +177,17 @@ public class ChunkGroupOutputStream extends OutputStream {
     // equals to open session version)
     for (OmKeyLocationInfo subKeyInfo : version.getLocationList()) {
       if (subKeyInfo.getCreateVersion() == openVersion) {
-        checkKeyLocationInfo(subKeyInfo);
+        addKeyLocationInfo(subKeyInfo);
       }
     }
   }
 
-  private void checkKeyLocationInfo(OmKeyLocationInfo subKeyInfo)
+  private void addKeyLocationInfo(OmKeyLocationInfo subKeyInfo)
       throws IOException {
     ContainerWithPipeline containerWithPipeline = scmClient
         .getContainerWithPipeline(subKeyInfo.getContainerID());
-    ContainerInfo container = containerWithPipeline.getContainerInfo();
-
     XceiverClientSpi xceiverClient =
         xceiverClientManager.acquireClient(containerWithPipeline.getPipeline());
-    // create container if needed
-    if (subKeyInfo.getShouldCreateContainer()) {
-      try {
-        ContainerProtocolCalls.createContainer(xceiverClient,
-            container.getContainerID(), requestID);
-        scmClient.notifyObjectStageChange(
-            ObjectStageChangeRequestProto.Type.container,
-            subKeyInfo.getContainerID(),
-            ObjectStageChangeRequestProto.Op.create,
-            ObjectStageChangeRequestProto.Stage.complete);
-      } catch (StorageContainerException ex) {
-        if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
-          //container already exist, this should never happen
-          LOG.debug("Container {} already exists.",
-              container.getContainerID());
-        } else {
-          LOG.error("Container creation failed for {}.",
-              container.getContainerID(), ex);
-          throw ex;
-        }
-      }
-    }
     streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
         chunkSize, subKeyInfo.getLength()));
@@ -479,7 +452,7 @@ public class ChunkGroupOutputStream extends OutputStream {
    */
   private void allocateNewBlock(int index) throws IOException {
     OmKeyLocationInfo subKeyInfo = omClient.allocateBlock(keyArgs, openID);
-    checkKeyLocationInfo(subKeyInfo);
+    addKeyLocationInfo(subKeyInfo);
   }
 
   @Override

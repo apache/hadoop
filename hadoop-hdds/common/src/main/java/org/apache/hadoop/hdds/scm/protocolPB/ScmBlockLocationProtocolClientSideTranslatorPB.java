@@ -104,8 +104,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
         .setContainerBlockID(
             ContainerBlockID.getFromProtobuf(response.getContainerBlockID()))
-        .setPipeline(Pipeline.getFromProtobuf(response.getPipeline()))
-        .setShouldCreateContainer(response.getCreateContainer());
+        .setPipeline(Pipeline.getFromProtobuf(response.getPipeline()));
     return builder.build();
   }
 

@@ -105,8 +105,7 @@ message AllocateScmBlockResponseProto {
   required Error errorCode = 1;
   optional ContainerBlockID containerBlockID = 2;
   optional hadoop.hdds.Pipeline pipeline = 3;
-  optional bool createContainer = 4;
-  optional string errorMessage = 5;
+  optional string errorMessage = 4;
 }
 
 /**

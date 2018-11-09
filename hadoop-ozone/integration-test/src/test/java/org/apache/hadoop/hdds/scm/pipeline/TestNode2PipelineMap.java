@@ -102,10 +102,6 @@ public class TestNode2PipelineMap {
     // Now close the container and it should not show up while fetching
     // containers by pipeline
     containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
     containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);

@@ -54,12 +54,11 @@ public class ContainerChillModeRule implements
     containerMap = new ConcurrentHashMap<>();
     if(containers != null) {
       containers.forEach(c -> {
-        // Containers in ALLOCATED state should not be included while
-        // calculating the total number of containers here. They are not
-        // reported by DNs and hence should not affect the chill mode exit
-        // rule.
+        // TODO: There can be containers in OPEN state which were never
+        // created by the client. We are not considering these containers for
+        // now. These containers can be handled by tracking pipelines.
         if (c != null && c.getState() != null &&
-            !c.getState().equals(HddsProtos.LifeCycleState.ALLOCATED)) {
+            !c.getState().equals(HddsProtos.LifeCycleState.OPEN)) {
           containerMap.put(c.getContainerID(), c);
         }
       });
