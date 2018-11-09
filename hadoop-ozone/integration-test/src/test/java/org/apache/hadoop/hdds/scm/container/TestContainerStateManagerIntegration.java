@@ -77,14 +77,12 @@ public class TestContainerStateManagerIntegration {
   public void testAllocateContainer() throws IOException {
     // Allocate a container and verify the container info
     ContainerWithPipeline container1 = scm.getClientProtocolServer()
-        .allocateContainer(
-            xceiverClientManager.getType(),
+        .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    ContainerStateManager stateManager = new ContainerStateManager(conf);
     ContainerInfo info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.ALLOCATED);
+            HddsProtos.LifeCycleState.OPEN);
     Assert.assertEquals(container1.getContainerInfo().getContainerID(),
         info.getContainerID());
     Assert.assertEquals(containerOwner, info.getOwner());
@@ -92,7 +90,7 @@ public class TestContainerStateManagerIntegration {
         info.getReplicationType());
     Assert.assertEquals(xceiverClientManager.getFactor(),
         info.getReplicationFactor());
-    Assert.assertEquals(HddsProtos.LifeCycleState.ALLOCATED, info.getState());
+    Assert.assertEquals(HddsProtos.LifeCycleState.OPEN, info.getState());
 
     // Check there are two containers in ALLOCATED state after allocation
     ContainerWithPipeline container2 = scm.getClientProtocolServer()
@@ -102,7 +100,7 @@ public class TestContainerStateManagerIntegration {
     int numContainers = containerStateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.ALLOCATED).size();
+            HddsProtos.LifeCycleState.OPEN).size();
     Assert.assertNotEquals(container1.getContainerInfo().getContainerID(),
         container2.getContainerInfo().getContainerID());
     Assert.assertEquals(2, numContainers);
@@ -122,7 +120,7 @@ public class TestContainerStateManagerIntegration {
       if (i >= 5) {
         scm.getContainerManager().updateContainerState(container
                 .getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
+            HddsProtos.LifeCycleEvent.FINALIZE);
       }
     }
 
@@ -139,7 +137,7 @@ public class TestContainerStateManagerIntegration {
         .filter(info ->
             info.getReplicationFactor() == xceiverClientManager.getFactor())
         .filter(info ->
-            info.getState() == HddsProtos.LifeCycleState.ALLOCATED)
+            info.getState() == HddsProtos.LifeCycleState.OPEN)
         .count();
     Assert.assertEquals(5, matchCount);
     matchCount = result.stream()
@@ -150,7 +148,7 @@ public class TestContainerStateManagerIntegration {
         .filter(info ->
             info.getReplicationFactor() == xceiverClientManager.getFactor())
         .filter(info ->
-            info.getState() == HddsProtos.LifeCycleState.CREATING)
+            info.getState() == HddsProtos.LifeCycleState.CLOSING)
         .count();
     Assert.assertEquals(5, matchCount);
   }
@@ -158,16 +156,6 @@ public class TestContainerStateManagerIntegration {
   @Test
   public void testGetMatchingContainer() throws IOException {
     ContainerWithPipeline container1 = scm.getClientProtocolServer().
-        allocateContainer(xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(), containerOwner);
-    containerManager
-        .updateContainerState(container1.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(container1.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATED);
-
-    ContainerWithPipeline container2 = scm.getClientProtocolServer().
         allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
 
@@ -178,21 +166,17 @@ public class TestContainerStateManagerIntegration {
     Assert.assertEquals(container1.getContainerInfo().getContainerID(),
         info.getContainerID());
 
+    ContainerWithPipeline container2 = scm.getClientProtocolServer().
+        allocateContainer(xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(), containerOwner);
     info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.ALLOCATED);
+            HddsProtos.LifeCycleState.OPEN);
     // space has already been allocated in container1, now container 2 should
     // be chosen.
     Assert.assertEquals(container2.getContainerInfo().getContainerID(),
         info.getContainerID());
-
-    containerManager
-        .updateContainerState(container2.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(container2.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATED);
 
     // now we have to get container1
     info = containerStateManager
@@ -208,32 +192,16 @@ public class TestContainerStateManagerIntegration {
     NavigableSet<ContainerID> containerList = containerStateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-            HddsProtos.LifeCycleState.ALLOCATED);
+            HddsProtos.LifeCycleState.OPEN);
     int containers = containerList == null ? 0 : containerList.size();
     Assert.assertEquals(0, containers);
 
-    // Allocate container1 and update its state from ALLOCATED -> CREATING ->
+    // Allocate container1 and update its state from
     // OPEN -> CLOSING -> CLOSED -> DELETING -> DELETED
     ContainerWithPipeline container1 = scm.getClientProtocolServer()
         .allocateContainer(
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
-        xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-        HddsProtos.LifeCycleState.ALLOCATED).size();
-    Assert.assertEquals(1, containers);
-
-    containerManager
-        .updateContainerState(container1.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
-        xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-        HddsProtos.LifeCycleState.CREATING).size();
-    Assert.assertEquals(1, containers);
-
-    containerManager
-        .updateContainerState(container1.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATED);
     containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.OPEN).size();
@@ -271,35 +239,12 @@ public class TestContainerStateManagerIntegration {
         HddsProtos.LifeCycleState.DELETED).size();
     Assert.assertEquals(1, containers);
 
-    // Allocate container1 and update its state from ALLOCATED -> CREATING ->
-    // DELETING
-    ContainerWithPipeline container2 = scm.getClientProtocolServer()
-        .allocateContainer(
-            xceiverClientManager.getType(),
-            xceiverClientManager.getFactor(), containerOwner);
-    containerManager
-        .updateContainerState(container2.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(container2.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.TIMEOUT);
-    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
-        xceiverClientManager.getType(), xceiverClientManager.getFactor(),
-        HddsProtos.LifeCycleState.DELETING).size();
-    Assert.assertEquals(1, containers);
-
-    // Allocate container1 and update its state from ALLOCATED -> CREATING ->
+    // Allocate container1 and update its state from
     // OPEN -> CLOSING -> CLOSED
     ContainerWithPipeline container3 = scm.getClientProtocolServer()
         .allocateContainer(
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    containerManager
-        .updateContainerState(container3.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(container3.getContainerInfo().containerID(),
-            HddsProtos.LifeCycleEvent.CREATED);
     containerManager
         .updateContainerState(container3.getContainerInfo().containerID(),
             HddsProtos.LifeCycleEvent.FINALIZE);

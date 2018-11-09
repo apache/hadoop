@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
+import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -56,12 +57,12 @@ public class CloseContainerCommandHandler implements CommandHandler {
    * Handles a given SCM command.
    *
    * @param command           - SCM Command
-   * @param container         - Ozone Container.
+   * @param ozoneContainer         - Ozone Container.
    * @param context           - Current Context.
    * @param connectionManager - The SCMs that we are talking to.
    */
   @Override
-  public void handle(SCMCommand command, OzoneContainer container,
+  public void handle(SCMCommand command, OzoneContainer ozoneContainer,
       StateContext context, SCMConnectionManager connectionManager) {
     LOG.debug("Processing Close Container command.");
     invocationCount++;
@@ -74,8 +75,16 @@ public class CloseContainerCommandHandler implements CommandHandler {
       containerID = closeContainerProto.getContainerID();
       // CloseContainer operation is idempotent, if the container is already
       // closed, then do nothing.
-      if (!container.getContainerSet().getContainer(containerID)
-          .getContainerData().isClosed()) {
+      // TODO: Non-existent container should be handled properly
+      Container container =
+          ozoneContainer.getContainerSet().getContainer(containerID);
+      if (container == null) {
+        LOG.error("Container {} does not exist in datanode. "
+            + "Container close failed.", containerID);
+        cmdExecuted = false;
+        return;
+      }
+      if (container.getContainerData().isClosed()) {
         LOG.debug("Closing container {}.", containerID);
         HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
         HddsProtos.ReplicationType replicationType =
@@ -91,12 +100,12 @@ public class CloseContainerCommandHandler implements CommandHandler {
         request.setDatanodeUuid(
             context.getParent().getDatanodeDetails().getUuidString());
         // submit the close container request for the XceiverServer to handle
-        container.submitContainerRequest(
+        ozoneContainer.submitContainerRequest(
             request.build(), replicationType, pipelineID);
         // Since the container is closed, we trigger an ICR
         IncrementalContainerReportProto icr = IncrementalContainerReportProto
             .newBuilder()
-            .addReport(container.getContainerSet()
+            .addReport(ozoneContainer.getContainerSet()
                 .getContainer(containerID).getContainerReport())
             .build();
         context.addReport(icr);

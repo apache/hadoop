@@ -117,17 +117,7 @@ public class ContainerOperationClient implements ScmClient {
   public void createContainer(XceiverClientSpi client,
       long containerId) throws IOException {
     String traceID = UUID.randomUUID().toString();
-    storageContainerLocationClient.notifyObjectStageChange(
-        ObjectStageChangeRequestProto.Type.container,
-        containerId,
-        ObjectStageChangeRequestProto.Op.create,
-        ObjectStageChangeRequestProto.Stage.begin);
     ContainerProtocolCalls.createContainer(client, containerId, traceID);
-    storageContainerLocationClient.notifyObjectStageChange(
-        ObjectStageChangeRequestProto.Type.container,
-        containerId,
-        ObjectStageChangeRequestProto.Op.create,
-        ObjectStageChangeRequestProto.Stage.complete);
 
     // Let us log this info after we let SCM know that we have completed the
     // creation state.

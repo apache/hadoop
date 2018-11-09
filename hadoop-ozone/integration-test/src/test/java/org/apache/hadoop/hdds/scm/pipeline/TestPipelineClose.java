@@ -95,10 +95,6 @@ public class TestPipelineClose {
     // Now close the container and it should not show up while fetching
     // containers by pipeline
     containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
     containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
@@ -128,10 +124,6 @@ public class TestPipelineClose {
     Assert.assertEquals(1, setOpen.size());
 
     ContainerID cId2 = ratisContainer2.getContainerInfo().containerID();
-    containerManager
-        .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(cId2, HddsProtos.LifeCycleEvent.CREATED);
     pipelineManager.finalizePipeline(ratisContainer2.getPipeline().getId());
     Assert.assertEquals(
         pipelineManager.getPipeline(ratisContainer2.getPipeline().getId())

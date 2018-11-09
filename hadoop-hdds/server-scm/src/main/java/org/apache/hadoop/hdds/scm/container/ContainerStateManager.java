@@ -138,7 +138,7 @@ public class ContainerStateManager {
     finalStates.add(LifeCycleState.CLOSED);
     finalStates.add(LifeCycleState.DELETED);
 
-    this.stateMachine = new StateMachine<>(LifeCycleState.ALLOCATED,
+    this.stateMachine = new StateMachine<>(LifeCycleState.OPEN,
         finalStates);
     initializeStateMachine();
 
@@ -156,12 +156,6 @@ public class ContainerStateManager {
    *
    * Event and State Transition Mapping:
    *
-   * State: ALLOCATED ---------------> CREATING
-   * Event:                CREATE
-   *
-   * State: CREATING  ---------------> OPEN
-   * Event:               CREATED
-   *
    * State: OPEN      ---------------> CLOSING
    * Event:               FINALIZE
    *
@@ -174,34 +168,20 @@ public class ContainerStateManager {
    * State: DELETING ----------------> DELETED
    * Event:               CLEANUP
    *
-   * State: CREATING  ---------------> DELETING
-   * Event:               TIMEOUT
-   *
    *
    * Container State Flow:
    *
-   * [ALLOCATED]---->[CREATING]------>[OPEN]-------->[CLOSING]------->[CLOSED]
-   *            (CREATE)     |    (CREATED)       (FINALIZE)     (CLOSE)    |
-   *                         |                                              |
-   *                         |                                              |
-   *                         |(TIMEOUT)                             (DELETE)|
-   *                         |                                              |
-   *                         +-------------> [DELETING] <-------------------+
-   *                                            |
-   *                                            |
-   *                                   (CLEANUP)|
-   *                                            |
-   *                                        [DELETED]
+   * [OPEN]-------->[CLOSING]------->[CLOSED]
+   *       (FINALIZE)         (CLOSE)   |
+   *                                    |
+   *                                    |
+   *                            (DELETE)|
+   *                                    |
+   *                                    |
+   *                                [DELETING] ----------> [DELETED]
+   *                                            (CLEANUP)
    */
   private void initializeStateMachine() {
-    stateMachine.addTransition(LifeCycleState.ALLOCATED,
-        LifeCycleState.CREATING,
-        LifeCycleEvent.CREATE);
-
-    stateMachine.addTransition(LifeCycleState.CREATING,
-        LifeCycleState.OPEN,
-        LifeCycleEvent.CREATED);
-
     stateMachine.addTransition(LifeCycleState.OPEN,
         LifeCycleState.CLOSING,
         LifeCycleEvent.FINALIZE);
@@ -213,10 +193,6 @@ public class ContainerStateManager {
     stateMachine.addTransition(LifeCycleState.CLOSED,
         LifeCycleState.DELETING,
         LifeCycleEvent.DELETE);
-
-    stateMachine.addTransition(LifeCycleState.CREATING,
-        LifeCycleState.DELETING,
-        LifeCycleEvent.TIMEOUT);
 
     stateMachine.addTransition(LifeCycleState.DELETING,
         LifeCycleState.DELETED,
@@ -262,7 +238,7 @@ public class ContainerStateManager {
 
     final long containerID = containerCount.incrementAndGet();
     final ContainerInfo containerInfo = new ContainerInfo.Builder()
-        .setState(HddsProtos.LifeCycleState.ALLOCATED)
+        .setState(LifeCycleState.OPEN)
         .setPipelineID(pipeline.getId())
         .setUsedBytes(0)
         .setNumberOfKeys(0)

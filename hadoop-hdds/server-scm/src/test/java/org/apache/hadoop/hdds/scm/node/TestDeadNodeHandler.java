@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -142,21 +141,6 @@ public class TestDeadNodeHandler {
     ContainerInfo container3 =
         TestUtils.allocateContainer(containerManager);
 
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
     registerReplicas(datanode1, container1, container2);
     registerReplicas(datanode2, container1, container3);
 
@@ -268,10 +252,6 @@ public class TestDeadNodeHandler {
 
     ContainerInfo container1 =
         TestUtils.allocateContainer(containerManager);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
     TestUtils.closeContainer(containerManager, container1.containerID());
 
     deadNodeHandler.onMessage(dn1, eventQueue);

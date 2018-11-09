@@ -94,7 +94,7 @@ public class TestSCMChillModeManager {
     // Assign open state to containers to be included in the chill mode
     // container list
     for (ContainerInfo container : containers) {
-      container.setState(HddsProtos.LifeCycleState.OPEN);
+      container.setState(HddsProtos.LifeCycleState.CLOSED);
     }
     scmChillModeManager = new SCMChillModeManager(config, containers, queue);
     queue.addHandler(SCMEvents.NODE_REGISTRATION_CONT_REPORT,
@@ -140,13 +140,13 @@ public class TestSCMChillModeManager {
     containers = new ArrayList<>();
     // Add 100 containers to the list of containers in SCM
     containers.addAll(HddsTestUtils.getContainerInfo(25 * 4));
-    // Assign OPEN state to first 25 containers and ALLLOCATED state to rest
+    // Assign CLOSED state to first 25 containers and OPEM state to rest
     // of the containers
     for (ContainerInfo container : containers.subList(0, 25)) {
-      container.setState(HddsProtos.LifeCycleState.OPEN);
+      container.setState(HddsProtos.LifeCycleState.CLOSED);
     }
     for (ContainerInfo container : containers.subList(25, 100)) {
-      container.setState(HddsProtos.LifeCycleState.ALLOCATED);
+      container.setState(HddsProtos.LifeCycleState.OPEN);
     }
 
     scmChillModeManager = new SCMChillModeManager(config, containers, queue);
@@ -154,9 +154,9 @@ public class TestSCMChillModeManager {
         scmChillModeManager);
     assertTrue(scmChillModeManager.getInChillMode());
 
-    // When 10 OPEN containers are reported by DNs, the computed container
-    // threshold should be 10/25 as there are only 25 open containers.
-    // Containers in ALLOCATED state should not contribute towards list of
+    // When 10 CLOSED containers are reported by DNs, the computed container
+    // threshold should be 10/25 as there are only 25 CLOSED containers.
+    // Containers in OPEN state should not contribute towards list of
     // containers while calculating container threshold in SCMChillNodeManager
     testContainerThreshold(containers.subList(0, 10), 0.4);
     assertTrue(scmChillModeManager.getInChillMode());

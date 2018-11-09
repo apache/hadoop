@@ -616,4 +616,20 @@ public final class ContainerTestHelper {
     }
     return false;
   }
+
+  public static boolean isContainerPresent(MiniOzoneCluster cluster,
+      long containerID, DatanodeDetails datanode) {
+    for (HddsDatanodeService datanodeService : cluster.getHddsDatanodes()) {
+      if (datanode.equals(datanodeService.getDatanodeDetails())) {
+        Container container =
+            datanodeService.getDatanodeStateMachine().getContainer()
+                .getContainerSet().getContainer(containerID);
+        if (container != null) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
 }

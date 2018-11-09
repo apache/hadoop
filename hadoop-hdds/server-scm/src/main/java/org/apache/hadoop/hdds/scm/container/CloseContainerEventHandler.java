@@ -74,19 +74,6 @@ public class CloseContainerEventHandler implements EventHandler<ContainerID> {
     HddsProtos.LifeCycleState state = info.getState();
     try {
       switch (state) {
-      case ALLOCATED:
-        // We cannot close a container in ALLOCATED state, moving the
-        // container to CREATING state, this should eventually
-        // timeout and the container will be moved to DELETING state.
-        LOG.debug("Closing container #{} in {} state", containerID, state);
-        containerManager.updateContainerState(containerID,
-            HddsProtos.LifeCycleEvent.CREATE);
-        break;
-      case CREATING:
-        // We cannot close a container in CREATING state, it will eventually
-        // timeout and moved to DELETING state.
-        LOG.debug("Closing container {} in {} state", containerID, state);
-        break;
       case OPEN:
         containerManager.updateContainerState(containerID,
             HddsProtos.LifeCycleEvent.FINALIZE);
