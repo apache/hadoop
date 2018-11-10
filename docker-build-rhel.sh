@@ -14,3 +14,7 @@ imagebuilder \
     -t "registry.access.redhat.com/openshift/ose-hadoop:$IMAGE_TAG" \
     -f "$DIR/Dockerfile.rhel" \
     "$DIR"
+
+docker tag \
+    "registry.access.redhat.com/openshift/ose-hadoop:$IMAGE_TAG" \
+    "openshift/ose-hadoop:$IMAGE_TAG"
