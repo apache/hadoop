@@ -55,8 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -250,21 +248,6 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException(String.format(
             RestApiErrorMessages.ERROR_KERBEROS_PRINCIPAL_NAME_FORMAT,
             kerberosPrincipal.getPrincipalName()));
-      }
-    }
-    if (!StringUtils.isEmpty(kerberosPrincipal.getKeytab())) {
-      try {
-        // validate URI format
-        URI keytabURI = new URI(kerberosPrincipal.getKeytab());
-        if (keytabURI.getScheme() == null) {
-          throw new IllegalArgumentException(String.format(
-              RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
-              kerberosPrincipal.getKeytab()));
-        }
-      } catch (URISyntaxException e) {
-        throw new IllegalArgumentException(
-            String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID,
-                e.getLocalizedMessage()));
       }
     }
   }

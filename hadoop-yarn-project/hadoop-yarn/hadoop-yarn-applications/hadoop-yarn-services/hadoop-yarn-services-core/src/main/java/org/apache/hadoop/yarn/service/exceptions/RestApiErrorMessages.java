@@ -117,8 +117,6 @@ public interface RestApiErrorMessages {
       + "expression element name %s specified in placement policy of component "
       + "%s. Expression element names should be a valid constraint name or an "
       + "expression name defined for this component only.";
-  String ERROR_KEYTAB_URI_SCHEME_INVALID = "Unsupported keytab URI scheme: %s";
-  String ERROR_KEYTAB_URI_INVALID = "Invalid keytab URI: %s";
 
   String ERROR_COMP_INSTANCE_DOES_NOT_NEED_UPGRADE = "The component instance " +
       "(%s) does not need an upgrade.";
