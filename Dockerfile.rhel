@@ -64,11 +64,13 @@ RUN ln -s /opt/hadoop-$HADOOP_VERSION/etc/hadoop /etc/hadoop
 RUN ln -s /opt/hadoop-$HADOOP_VERSION /opt/hadoop
 RUN mkdir -p /opt/hadoop-$HADOOP_VERSION/logs
 
+RUN useradd hadoop -m -u 1002 -d $HADOOP_HOME
+
 # to allow running as non-root
 RUN \
     mkdir -p /hadoop/dfs/data /hadoop/dfs/name && \
     chown -R 1002:0 /opt /hadoop /hadoop /etc/hadoop && \
-    chmod -R 770 /opt /hadoop /etc/hadoop /etc/passwd
+    chmod -R 774 /opt /hadoop /etc/hadoop /etc/passwd
 
 VOLUME /hadoop/dfs/data /hadoop/dfs/name
 
