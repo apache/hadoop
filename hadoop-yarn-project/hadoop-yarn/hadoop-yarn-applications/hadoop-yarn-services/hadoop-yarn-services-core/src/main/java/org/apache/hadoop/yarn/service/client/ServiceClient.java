@@ -1131,31 +1131,21 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       throw new YarnException(e);
     }
 
-    if (keytabURI.getScheme() != null) {
-      switch (keytabURI.getScheme()) {
-      case "hdfs":
-        Path keytabOnhdfs = new Path(keytabURI);
-        if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
-          LOG.warn(service.getName() + "'s keytab (principalName = "
-              + principalName + ") doesn't exist at: " + keytabOnhdfs);
-          return;
-        }
-        LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
-            LocalResourceType.FILE);
-        localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
-            service.getName()), keytabRes);
-        LOG.info("Adding " + service.getName() + "'s keytab for "
-            + "localization, uri = " + keytabOnhdfs);
-        break;
-      case "file":
-        LOG.info("Using a keytab from localhost: " + keytabURI);
-        break;
-      default:
-        LOG.warn("Unsupported keytab URI scheme " + keytabURI);
-        break;
-      }
+    if ("file".equals(keytabURI.getScheme())) {
+      LOG.info("Using a keytab from localhost: " + keytabURI);
     } else {
-      LOG.warn("Unsupported keytab URI scheme " + keytabURI);
+      Path keytabOnhdfs = new Path(keytabURI);
+      if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
+        LOG.warn(service.getName() + "'s keytab (principalName = "
+            + principalName + ") doesn't exist at: " + keytabOnhdfs);
+        return;
+      }
+      LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
+          LocalResourceType.FILE);
+      localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
+          service.getName()), keytabRes);
+      LOG.info("Adding " + service.getName() + "'s keytab for "
+          + "localization, uri = " + keytabOnhdfs);
     }
   }
 
