@@ -160,6 +160,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
 
+    // Set sub-cluster timeout to 500ms
+    conf.setLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+        500);
+
     return conf;
   }
 
@@ -568,6 +572,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         interceptor.recover(recoveredDataMap);
 
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        // SC1 should be initialized to be timed out
+        Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
 
         // The first allocate call expects a fail-over exception and re-register
         try {
@@ -741,6 +747,60 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   }
 
   @Test
+  public void testSubClusterTimeOut() throws Exception {
+    UserGroupInformation ugi =
+        interceptor.getUGIWithToken(interceptor.getAttemptId());
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        // Register the application first time
+        RegisterApplicationMasterRequest registerReq =
+            Records.newRecord(RegisterApplicationMasterRequest.class);
+        registerReq.setHost(Integer.toString(testAppId));
+        registerReq.setRpcPort(0);
+        registerReq.setTrackingUrl("");
+        RegisterApplicationMasterResponse registerResponse =
+            interceptor.registerApplicationMaster(registerReq);
+        Assert.assertNotNull(registerResponse);
+        lastResponseId = 0;
+
+        registerSubCluster(SubClusterId.newInstance("SC-1"));
+
+        getContainersAndAssert(1, 1);
+
+        AllocateResponse allocateResponse =
+            interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(2, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(0, interceptor.getTimedOutSCs(true).size());
+
+        // Let all SC timeout (home and SC-1), without an allocate from AM
+        Thread.sleep(800);
+
+        // Should not be considered timeout, because there's no recent AM
+        // heartbeat
+        allocateResponse = interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(2, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(0, interceptor.getTimedOutSCs(true).size());
+
+        // Generate a duplicate heartbeat from AM, so that it won't really
+        // trigger an heartbeat to all SC
+        AllocateRequest allocateRequest =
+            Records.newRecord(AllocateRequest.class);
+        // Set to lastResponseId - 1 so that it will be considered a duplicate
+        // heartbeat and thus not forwarded to all SCs
+        allocateRequest.setResponseId(lastResponseId - 1);
+        interceptor.allocate(allocateRequest);
+
+        // Should be considered timeout
+        allocateResponse = interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(0, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(2, interceptor.getTimedOutSCs(true).size());
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testSecondAttempt() throws Exception {
     final RegisterApplicationMasterRequest registerReq =
         Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -803,6 +863,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         int numberOfContainers = 3;
         // Should re-attach secondaries and get the three running containers
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        // SC1 should be initialized to be timed out
+        Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
         Assert.assertEquals(numberOfContainers,
             registerResponse.getContainersFromPreviousAttempts().size());
 
@@ -831,5 +893,4 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       }
     });
   }
-
 }
