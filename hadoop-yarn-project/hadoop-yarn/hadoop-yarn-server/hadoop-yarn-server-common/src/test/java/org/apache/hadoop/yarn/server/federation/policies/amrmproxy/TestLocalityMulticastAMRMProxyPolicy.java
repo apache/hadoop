@@ -154,8 +154,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // pretty print requests
     LOG.info("Initial headroom");
@@ -180,7 +180,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster2"), ar);
     response = ((FederationAMRMProxyPolicy) getPolicy())
-        .splitResourceRequests(resourceRequests);
+        .splitResourceRequests(resourceRequests, new HashSet<SubClusterId>());
 
     LOG.info("After headroom update");
     prettyPrintRequests(response);
@@ -218,8 +218,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     long tstart = System.currentTimeMillis();
     for (int i = 0; i < numIterations; i++) {
       Map<SubClusterId, List<ResourceRequest>> response =
-          ((FederationAMRMProxyPolicy) getPolicy())
-              .splitResourceRequests(resourceRequests);
+          ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+              resourceRequests, new HashSet<SubClusterId>());
       validateSplit(response, resourceRequests);
     }
     long tend = System.currentTimeMillis();
@@ -243,8 +243,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // we expect all three to appear for a zero-sized ANY
 
@@ -279,8 +279,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     prepPolicyWithHeadroom(true);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     // pretty print requests
     prettyPrintRequests(response);
@@ -354,8 +354,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
     List<ResourceRequest> resourceRequests = createComplexRequest();
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     validateSplit(response, resourceRequests);
     prettyPrintRequests(response);
@@ -697,8 +697,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
         ResourceRequest.ANY, 1024, 1, 1, 0, null, false));
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
 
     checkExpectedAllocation(response, "subcluster0", 3, 1);
     checkExpectedAllocation(response, "subcluster1", 1, 0);
@@ -717,7 +717,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
         ResourceRequest.ANY, 1024, 1, 1, 100, null, false));
 
     response = ((FederationAMRMProxyPolicy) getPolicy())
-        .splitResourceRequests(resourceRequests);
+        .splitResourceRequests(resourceRequests, new HashSet<SubClusterId>());
 
     /*
      * Since node request is a cancel, it should not be considered associated
@@ -750,12 +750,13 @@ public class TestLocalityMulticastAMRMProxyPolicy
     initializePolicy(conf);
     List<ResourceRequest> resourceRequests = createSimpleRequest();
 
-    // Update the response timestamp for the first time
     prepPolicyWithHeadroom(true);
 
+    // For first time, no sub-cluster expired
+    Set<SubClusterId> expiredSCList = new HashSet<>();
     Map<SubClusterId, List<ResourceRequest>> response =
         ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+            .splitResourceRequests(resourceRequests, expiredSCList);
 
     // pretty print requests
     prettyPrintRequests(response);
@@ -776,11 +777,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     Thread.sleep(800);
 
-    // Update the response timestamp for the second time, skipping sc0 and sc5
-    prepPolicyWithHeadroom(false);
-
+    // For the second time, sc0 and sc5 expired
+    expiredSCList.add(SubClusterId.newInstance("subcluster0"));
+    expiredSCList.add(SubClusterId.newInstance("subcluster5"));
     response = ((FederationAMRMProxyPolicy) getPolicy())
-        .splitResourceRequests(resourceRequests);
+        .splitResourceRequests(resourceRequests, expiredSCList);
 
     // pretty print requests
     prettyPrintRequests(response);
