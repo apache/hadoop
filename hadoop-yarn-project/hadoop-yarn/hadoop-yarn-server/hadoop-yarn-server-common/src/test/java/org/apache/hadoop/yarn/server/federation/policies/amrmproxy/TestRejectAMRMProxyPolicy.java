@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -69,8 +70,8 @@ public class TestRejectAMRMProxyPolicy
         .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
 
     Map<SubClusterId, List<ResourceRequest>> response =
-        ((FederationAMRMProxyPolicy) getPolicy())
-            .splitResourceRequests(resourceRequests);
+        ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
+            resourceRequests, new HashSet<SubClusterId>());
   }
 
 
