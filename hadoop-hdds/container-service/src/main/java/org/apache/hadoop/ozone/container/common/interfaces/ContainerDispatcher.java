@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 
 /**
  * Dispatcher acts as the bridge between the transport layer and
@@ -39,6 +40,15 @@ public interface ContainerDispatcher {
    * @return Command Response
    */
   ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg);
+
+  /**
+   * Validates whether the container command should be executed on the pipeline
+   * or not. Will be invoked by the leader node in the Ratis pipeline
+   * @param msg containerCommand
+   * @throws StorageContainerException
+   */
+  void validateContainerCommand(
+      ContainerCommandRequestProto msg) throws StorageContainerException;
 
   /**
    * Initialize the Dispatcher.

@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.scm.*;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -170,6 +171,11 @@ public class TestCSMMetrics {
     public ContainerCommandResponseProto dispatch(
         ContainerCommandRequestProto msg) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override

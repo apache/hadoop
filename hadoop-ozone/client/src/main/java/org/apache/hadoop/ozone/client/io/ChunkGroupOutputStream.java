@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -429,11 +430,22 @@ public class ChunkGroupOutputStream extends OutputStream {
   }
 
   private boolean checkIfContainerIsClosed(IOException ioe) {
-    return Optional.of(ioe.getCause())
+    return checkIfContainerNotOpenException(ioe) || Optional.of(ioe.getCause())
         .filter(e -> e instanceof StorageContainerException)
         .map(e -> (StorageContainerException) e)
         .filter(sce -> sce.getResult() == Result.CLOSED_CONTAINER_IO)
         .isPresent();
+  }
+
+  private boolean checkIfContainerNotOpenException(IOException ioe) {
+    Throwable t = ioe.getCause();
+    while (t != null) {
+      if (t instanceof ContainerNotOpenException) {
+        return true;
+      }
+      t = t.getCause();
+    }
+    return false;
   }
 
   private long getKeyLength() {

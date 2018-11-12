@@ -24,6 +24,9 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CloseContainerCommandProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerDataProto.State;
+import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .SCMConnectionManager;
@@ -84,8 +87,18 @@ public class CloseContainerCommandHandler implements CommandHandler {
         cmdExecuted = false;
         return;
       }
-      if (!container.getContainerData().isClosed()) {
+      ContainerData containerData = container.getContainerData();
+      State containerState = container.getContainerData().getState();
+      if (containerState != State.CLOSED) {
         LOG.debug("Closing container {}.", containerID);
+        // when a closeContainerCommand arrives at a Datanode and if the
+        // container is open, each replica will be moved to closing state first.
+        if (containerState == State.OPEN) {
+          containerData.setState(State.CLOSING);
+        }
+
+        // if the container is already closed, it will be just ignored.
+        // ICR will get triggered to change the replica state in SCM.
         HddsProtos.PipelineID pipelineID = closeContainerProto.getPipelineID();
         HddsProtos.ReplicationType replicationType =
             closeContainerProto.getReplicationType();
@@ -100,14 +113,13 @@ public class CloseContainerCommandHandler implements CommandHandler {
         request.setDatanodeUuid(
             context.getParent().getDatanodeDetails().getUuidString());
         // submit the close container request for the XceiverServer to handle
-        ozoneContainer.submitContainerRequest(
-            request.build(), replicationType, pipelineID);
+        ozoneContainer.submitContainerRequest(request.build(), replicationType,
+            pipelineID);
         // Since the container is closed, we trigger an ICR
-        IncrementalContainerReportProto icr = IncrementalContainerReportProto
-            .newBuilder()
-            .addReport(ozoneContainer.getContainerSet()
-                .getContainer(containerID).getContainerReport())
-            .build();
+        IncrementalContainerReportProto icr =
+            IncrementalContainerReportProto.newBuilder().addReport(
+                ozoneContainer.getContainerSet().getContainer(containerID)
+                    .getContainerReport()).build();
         context.addReport(icr);
         context.getParent().triggerHeartbeat();
       }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.server;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
@@ -226,6 +227,11 @@ public class TestContainerServer {
 
     @Override
     public void init() {
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override
