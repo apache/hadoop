@@ -51,7 +51,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>datanode</module>
     <module>s3gateway</module>
     <module>dist</module>
-    <module>docs</module>
   </modules>
 
   <repositories>
@@ -130,6 +129,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-server-scm</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-docs</artifactId>
         <version>${hdds.version}</version>
       </dependency>
       <dependency>
