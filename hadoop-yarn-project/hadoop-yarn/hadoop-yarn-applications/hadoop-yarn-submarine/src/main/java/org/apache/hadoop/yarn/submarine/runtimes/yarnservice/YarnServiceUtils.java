@@ -58,9 +58,7 @@ public class YarnServiceUtils {
 
   private static String getDNSNameCommonSuffix(String serviceName,
       String userName, String domain, int port) {
-    String commonEndpointSuffix =
-        "." + serviceName + "." + userName + "." + domain + ":" + port;
-    return commonEndpointSuffix;
+    return "." + serviceName + "." + userName + "." + domain + ":" + port;
   }
 
   public static String getTFConfigEnv(String curCommponentName, int nWorkers,
