@@ -156,9 +156,7 @@ public class CliUtils {
       return true;
 
     if (args.length == 1) {
-      if (args[0].equals("-h") || args[0].equals("--help")) {
-        return true;
-      }
+      return args[0].equals("-h") || args[0].equals("--help");
     }
 
     return false;

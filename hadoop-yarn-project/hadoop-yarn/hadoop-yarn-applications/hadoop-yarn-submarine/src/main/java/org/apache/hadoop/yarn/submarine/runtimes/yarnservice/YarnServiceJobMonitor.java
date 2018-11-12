@@ -40,7 +40,6 @@ public class YarnServiceJobMonitor extends JobMonitor {
     }
 
     Service serviceSpec = this.serviceClient.getStatus(jobName);
-    JobStatus jobStatus = JobStatusBuilder.fromServiceSpec(serviceSpec);
-    return jobStatus;
+    return JobStatusBuilder.fromServiceSpec(serviceSpec);
   }
 }

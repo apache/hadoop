@@ -103,10 +103,7 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
   }
 
   private boolean needHdfs(String content) {
-    if (content != null && content.contains("hdfs://")) {
-      return true;
-    }
-    return false;
+    return content != null && content.contains("hdfs://");
   }
 
   private void addHdfsClassPathIfNeeded(RunJobParameters parameters,
