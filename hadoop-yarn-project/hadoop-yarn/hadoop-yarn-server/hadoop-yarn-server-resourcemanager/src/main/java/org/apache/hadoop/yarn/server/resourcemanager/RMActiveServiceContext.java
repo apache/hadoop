@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
@@ -121,6 +122,7 @@ public class RMActiveServiceContext {
   private MultiNodeSortingManager<SchedulerNode> multiNodeSortingManager;
 
   private ProxyCAManager proxyCAManager;
+  private VolumeManager volumeManager;
 
   public RMActiveServiceContext() {
     queuePlacementManager = new PlacementManager();
@@ -568,5 +570,17 @@ public class RMActiveServiceContext {
   @Unstable
   public void setProxyCAManager(ProxyCAManager proxyCAManager) {
     this.proxyCAManager = proxyCAManager;
+  }
+
+  @Private
+  @Unstable
+  public VolumeManager getVolumeManager() {
+    return this.volumeManager;
+  }
+
+  @Private
+  @Unstable
+  public void setVolumeManager(VolumeManager volumeManager) {
+    this.volumeManager = volumeManager;
   }
 }
