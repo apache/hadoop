@@ -456,4 +456,51 @@ public class TestServiceAM extends ServiceTestUtils{
       Assert.fail("Fail to sync sysfs.");
     }
   }
+
+  @Test
+  public void testScheduleWithResourceAttributes() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testScheduleWithResourceAttributes");
+    exampleApp.setVersion("v1");
+
+    List<ResourceTypeInfo> resourceTypeInfos = new ArrayList<>(
+        ResourceUtils.getResourcesTypeInfo());
+    // Add 3rd resource type.
+    resourceTypeInfos.add(ResourceTypeInfo
+        .newInstance("test-resource", "", ResourceTypes.COUNTABLE));
+    // Reinitialize resource types
+    ResourceUtils.reinitializeResources(resourceTypeInfos);
+
+    Component serviceCompoent = createComponent("compa", 1, "pwd");
+    serviceCompoent.getResource().setResourceInformations(
+        ImmutableMap.of("test-resource",
+            new ResourceInformation()
+                .value(1234L)
+                .unit("Gi")
+                .attributes(ImmutableMap.of("k1", "v1", "k2", "v2"))));
+    exampleApp.addComponent(serviceCompoent);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    am.init(conf);
+    am.start();
+
+    ServiceScheduler serviceScheduler = am.context.scheduler;
+    AMRMClientAsync<AMRMClient.ContainerRequest> amrmClientAsync =
+        serviceScheduler.getAmRMClient();
+
+    Collection<AMRMClient.ContainerRequest> rr =
+        amrmClientAsync.getMatchingRequests(0);
+    Assert.assertEquals(1, rr.size());
+
+    org.apache.hadoop.yarn.api.records.Resource capability =
+        rr.iterator().next().getCapability();
+    Assert.assertEquals(1234L, capability.getResourceValue("test-resource"));
+    Assert.assertEquals("Gi",
+        capability.getResourceInformation("test-resource").getUnits());
+    Assert.assertEquals(2, capability.getResourceInformation("test-resource")
+        .getAttributes().size());
+    am.stop();
+  }
 }
