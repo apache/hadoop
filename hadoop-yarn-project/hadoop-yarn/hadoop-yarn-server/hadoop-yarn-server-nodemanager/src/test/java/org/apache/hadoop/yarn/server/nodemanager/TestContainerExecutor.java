@@ -181,9 +181,10 @@ public class TestContainerExecutor {
 
   @Test
   public void testExecContainer() throws Exception {
+    Container container = mock(Container.class);
     try {
       ContainerExecContext.Builder builder = new ContainerExecContext.Builder();
-      builder.setUser("foo").setAppId("app1").setContainer("container1");
+      builder.setUser("foo").setAppId("app1").setContainer(container);
       ContainerExecContext ctx = builder.build();
       containerExecutor.execContainer(ctx);
     } catch (Exception e) {
