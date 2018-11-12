@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.executor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
 /**
  * Encapsulates information required for starting/launching containers.
@@ -32,7 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ContainerExecContext {
   private final String user;
   private final String appId;
-  private final String container;
+  private final Container container;
 
   /**
    *  Builder for ContainerExecContext.
@@ -40,13 +41,13 @@ public final class ContainerExecContext {
   public static final class Builder {
     private String user;
     private String appId;
-    private String container;
+    private Container container;
 
     public Builder() {
     }
 
-    public Builder setContainer(String container) {
-      this.container = container;
+    public Builder setContainer(Container c) {
+      this.container = c;
       return this;
     }
 
@@ -79,7 +80,7 @@ public final class ContainerExecContext {
     return this.appId;
   }
 
-  public String getContainerId() {
+  public Container getContainer() {
     return this.container;
   }
 }

@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -697,10 +696,11 @@ public class TestLinuxContainerExecutor {
 
   @Test
   public void testExecContainer() throws Exception {
+    Container container = mock(Container.class);
     LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
     ContainerExecContext.Builder builder =
         new ContainerExecContext.Builder();
-    builder.setUser("foo").setAppId("app1").setContainer("container1");
+    builder.setUser("foo").setAppId("app1").setContainer(container);
     ContainerExecContext ctx = builder.build();
     lce.execContainer(ctx);
     verify(lce, times(1)).execContainer(ctx);

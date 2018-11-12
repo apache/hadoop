@@ -99,6 +99,7 @@ public class WebServer extends AbstractService {
       targets.add(AuthenticationFilterInitializer.class.getName());
       conf.set(filterInitializerConfKey, StringUtils.join(",", targets));
     }
+    ContainerShellWebSocket.init(nmContext);
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
       this.webApp =

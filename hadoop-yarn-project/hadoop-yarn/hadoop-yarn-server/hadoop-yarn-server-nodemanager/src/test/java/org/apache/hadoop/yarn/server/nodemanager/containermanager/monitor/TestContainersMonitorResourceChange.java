@@ -103,11 +103,13 @@ public class TestContainersMonitorResourceChange {
         throws IOException {
       return true;
     }
+
     @Override
     public IOStreamPair execContainer(ContainerExecContext ctx)
         throws ContainerExecutionException {
       return new IOStreamPair(null, null);
     }
+
     @Override
     public void deleteAsUser(DeletionAsUserContext ctx)
         throws IOException, InterruptedException {
