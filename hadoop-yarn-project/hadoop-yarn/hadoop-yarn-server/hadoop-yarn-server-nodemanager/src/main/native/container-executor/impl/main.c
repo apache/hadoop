@@ -76,6 +76,10 @@ static void flush_and_close_log_files() {
   }
 }
 
+static void display_feature_disabled_message(const char* name) {
+  fprintf(ERRORFILE, "Feature disabled: %s\n", name);
+}
+
 int main(int argc, char **argv) {
   int invalid_args = 0; 
   int do_check_setup = 0;
@@ -195,15 +199,18 @@ int main(int argc, char **argv) {
   }
 
   if (do_mount_cgroups) {
-    optind++;
-    char *hierarchy = argv[optind++];
-    int result = 0;
-
-    while (optind < argc && result == 0) {
-      result = mount_cgroup(argv[optind++], hierarchy);
+    if (is_mount_cgroups_support_enabled()) {
+      optind++;
+      char *hierarchy = argv[optind++];
+      int result = 0;
+      while (optind < argc && result == 0) {
+        result = mount_cgroup(argv[optind++], hierarchy);
+      }
+      return result;
+    } else {
+      display_feature_disabled_message("mount cgroup");
+      return FEATURE_DISABLED;
     }
-
-    return result;
   }
 
   //checks done for user name
