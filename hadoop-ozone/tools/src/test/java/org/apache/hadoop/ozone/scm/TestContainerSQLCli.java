@@ -128,7 +128,7 @@ public class TestContainerSQLCli {
     containerManager = new SCMContainerManager(conf, nodeManager,
         pipelineManager, eventQueue);
     blockManager = new BlockManagerImpl(
-        conf, nodeManager, containerManager, eventQueue);
+        conf, nodeManager, pipelineManager, containerManager, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
     eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, false);
     GenericTestUtils.waitFor(() -> {

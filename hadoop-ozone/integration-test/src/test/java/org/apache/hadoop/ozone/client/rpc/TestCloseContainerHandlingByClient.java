@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
@@ -377,10 +378,12 @@ public class TestCloseContainerHandlingByClient {
       cluster.getStorageContainerManager().getEventQueue()
           .fireEvent(SCMEvents.CLOSE_CONTAINER,
               ContainerID.valueof(containerID));
+      ContainerInfo container = cluster.getStorageContainerManager()
+          .getContainerManager()
+          .getContainer(ContainerID.valueof(containerID));
       Pipeline pipeline =
-          cluster.getStorageContainerManager().getContainerManager()
-              .getContainerWithPipeline(ContainerID.valueof(containerID))
-              .getPipeline();
+          cluster.getStorageContainerManager().getPipelineManager()
+              .getPipeline(container.getPipelineID());
       pipelineList.add(pipeline);
       List<DatanodeDetails> datanodes = pipeline.getNodes();
       for (DatanodeDetails details : datanodes) {
@@ -435,10 +438,13 @@ public class TestCloseContainerHandlingByClient {
     List<OmKeyLocationInfo> locationInfos =
         new ArrayList<>(groupOutputStream.getLocationInfoList());
     long containerID = locationInfos.get(0).getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getNodes();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager()
+        .getContainer(ContainerID.valueof(containerID));
+    Pipeline pipeline =
+        cluster.getStorageContainerManager().getPipelineManager()
+            .getPipeline(container.getPipelineID());
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(1, datanodes.size());
     waitForContainerClose(keyName, key, HddsProtos.ReplicationType.STAND_ALONE);
     dataString = fixedLengthString(keyString, (1 * blockSize));
@@ -538,10 +544,13 @@ public class TestCloseContainerHandlingByClient {
     List<OmKeyLocationInfo> locationInfos =
         groupOutputStream.getLocationInfoList();
     long containerID = locationInfos.get(0).getContainerID();
-    List<DatanodeDetails> datanodes =
-        cluster.getStorageContainerManager().getContainerManager()
-            .getContainerWithPipeline(ContainerID.valueof(containerID))
-            .getPipeline().getNodes();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager()
+        .getContainer(ContainerID.valueof(containerID));
+    Pipeline pipeline =
+        cluster.getStorageContainerManager().getPipelineManager()
+            .getPipeline(container.getPipelineID());
+    List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(1, datanodes.size());
     // move the container on the datanode to Closing state, this will ensure
     // closing the key will hit BLOCK_NOT_COMMITTED_EXCEPTION while trying

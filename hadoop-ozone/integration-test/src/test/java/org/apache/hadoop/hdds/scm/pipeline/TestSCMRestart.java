@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -65,10 +66,12 @@ public class TestSCMRestart {
     StorageContainerManager scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
     pipelineManager = scm.getPipelineManager();
-    ratisPipeline1 = containerManager.allocateContainer(
-        RATIS, THREE, "Owner1").getPipeline();
-    ratisPipeline2 = containerManager.allocateContainer(
-        RATIS, ONE, "Owner2").getPipeline();
+    ratisPipeline1 = pipelineManager.getPipeline(
+        containerManager.allocateContainer(
+        RATIS, THREE, "Owner1").getPipelineID());
+    ratisPipeline2 = pipelineManager.getPipeline(
+        containerManager.allocateContainer(
+        RATIS, ONE, "Owner2").getPipelineID());
     // At this stage, there should be 2 pipeline one with 1 open container
     // each. Try restarting the SCM and then discover that pipeline are in
     // correct state.
@@ -100,10 +103,10 @@ public class TestSCMRestart {
     Assert.assertEquals(ratisPipeline1AfterRestart, ratisPipeline1);
     Assert.assertEquals(ratisPipeline2AfterRestart, ratisPipeline2);
 
-    // Try creating a new ratis pipeline, it should be from the same pipeline
+    // Try creating a new container, it should be from the same pipeline
     // as was before restart
-    Pipeline newRatisPipeline = newContainerManager
-        .allocateContainer(RATIS, THREE, "Owner1").getPipeline();
-    Assert.assertEquals(newRatisPipeline.getId(), ratisPipeline1.getId());
+    ContainerInfo containerInfo = newContainerManager
+        .allocateContainer(RATIS, THREE, "Owner1");
+    Assert.assertEquals(containerInfo.getPipelineID(), ratisPipeline1.getId());
   }
 }

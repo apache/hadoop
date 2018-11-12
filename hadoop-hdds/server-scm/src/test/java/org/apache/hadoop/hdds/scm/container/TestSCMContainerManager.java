@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -44,11 +43,13 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Tests for Container ContainerManager.
@@ -109,7 +110,7 @@ public class TestSCMContainerManager {
 
   @Test
   public void testallocateContainer() throws Exception {
-    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
+    ContainerInfo containerInfo = containerManager.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
@@ -126,14 +127,15 @@ public class TestSCMContainerManager {
      */
     Set<UUID> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
-      ContainerWithPipeline containerInfo = containerManager.allocateContainer(
+      ContainerInfo containerInfo = containerManager.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
           containerOwner);
 
       Assert.assertNotNull(containerInfo);
-      Assert.assertNotNull(containerInfo.getPipeline());
-      pipelineList.add(containerInfo.getPipeline().getFirstNode()
+      Assert.assertNotNull(containerInfo.getPipelineID());
+      pipelineList.add(pipelineManager.getPipeline(
+          containerInfo.getPipelineID()).getFirstNode()
           .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
@@ -141,32 +143,27 @@ public class TestSCMContainerManager {
 
   @Test
   public void testGetContainer() throws IOException {
-    ContainerWithPipeline containerInfo = containerManager.allocateContainer(
+    ContainerInfo containerInfo = containerManager.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerOwner);
-    Pipeline pipeline  = containerInfo.getPipeline();
+    Assert.assertNotNull(containerInfo);
+    Pipeline pipeline  = pipelineManager
+        .getPipeline(containerInfo.getPipelineID());
     Assert.assertNotNull(pipeline);
-    Pipeline newPipeline = containerInfo.getPipeline();
-    Assert.assertEquals(pipeline.getFirstNode().getUuid(),
-        newPipeline.getFirstNode().getUuid());
+    Assert.assertEquals(containerInfo,
+        containerManager.getContainer(containerInfo.containerID()));
   }
 
   @Test
   public void testGetContainerWithPipeline() throws Exception {
-    ContainerWithPipeline containerWithPipeline = containerManager
+    ContainerInfo contInfo = containerManager
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    ContainerInfo contInfo = containerWithPipeline.getContainerInfo();
     // Add dummy replicas for container.
-    DatanodeDetails dn1 = DatanodeDetails.newBuilder()
-        .setHostName("host1")
-        .setIpAddress("1.1.1.1")
-        .setUuid(UUID.randomUUID().toString()).build();
-    DatanodeDetails dn2 = DatanodeDetails.newBuilder()
-        .setHostName("host2")
-        .setIpAddress("2.2.2.2")
-        .setUuid(UUID.randomUUID().toString()).build();
+    Iterator<DatanodeDetails> nodes = pipelineManager
+        .getPipeline(contInfo.getPipelineID()).getNodes().iterator();
+    DatanodeDetails dn1 = nodes.next();
     containerManager.updateContainerState(contInfo.containerID(),
         LifeCycleEvent.FINALIZE);
     containerManager
@@ -180,27 +177,21 @@ public class TestSCMContainerManager {
         ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
             .setContainerState(ContainerReplicaProto.State.CLOSED)
             .setDatanodeDetails(dn1).build());
-    containerManager.updateContainerReplica(contInfo.containerID(),
-        ContainerReplica.newBuilder().setContainerID(contInfo.containerID())
-            .setContainerState(ContainerReplicaProto.State.CLOSED)
-            .setDatanodeDetails(dn2).build());
 
-    Assert.assertEquals(2,
+    Assert.assertEquals(1,
         containerManager.getContainerReplicas(
             finalContInfo.containerID()).size());
 
     contInfo = containerManager.getContainer(contInfo.containerID());
     Assert.assertEquals(contInfo.getState(), LifeCycleState.CLOSED);
-    Pipeline pipeline = containerWithPipeline.getPipeline();
-    pipelineManager.finalizePipeline(pipeline.getId());
+    // After closing the container, we should get the replica and construct
+    // standalone pipeline. No more ratis pipeline.
 
-    ContainerWithPipeline containerWithPipeline2 = containerManager
-        .getContainerWithPipeline(contInfo.containerID());
-    pipeline = containerWithPipeline2.getPipeline();
-    Assert.assertNotEquals(containerWithPipeline, containerWithPipeline2);
-    Assert.assertNotNull("Pipeline should not be null", pipeline);
-    Assert.assertTrue(pipeline.getNodes().contains(dn1));
-    Assert.assertTrue(pipeline.getNodes().contains(dn2));
+    Set<DatanodeDetails> replicaNodes = containerManager
+        .getContainerReplicas(contInfo.containerID())
+        .stream().map(ContainerReplica::getDatanodeDetails)
+        .collect(Collectors.toSet());
+    Assert.assertTrue(replicaNodes.contains(dn1));
   }
 
   @Test
@@ -232,11 +223,9 @@ public class TestSCMContainerManager {
   private ContainerInfo createContainer()
       throws IOException {
     nodeManager.setChillmode(false);
-    ContainerWithPipeline containerWithPipeline = containerManager
+    return containerManager
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);
-    ContainerInfo containerInfo = containerWithPipeline.getContainerInfo();
-    return containerInfo;
   }
 
 }

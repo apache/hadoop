@@ -20,11 +20,14 @@ package org.apache.hadoop.hdds.scm.block;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -51,11 +54,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -99,21 +104,23 @@ public class TestDeletedBlockLog {
         DatanodeDetails.newBuilder().setUuid(UUID.randomUUID().toString())
             .build());
 
-    ContainerInfo containerInfo =
-        new ContainerInfo.Builder().setContainerID(1).build();
-    Pipeline pipeline = Pipeline.newBuilder()
-        .setType(ReplicationType.RATIS)
-        .setFactor(ReplicationFactor.THREE)
-        .setState(Pipeline.PipelineState.CLOSED)
-        .setId(PipelineID.randomId())
-        .setNodes(dnList)
-        .build();
-    ContainerWithPipeline containerWithPipeline =
-        new ContainerWithPipeline(containerInfo, pipeline);
-    when(containerManager.getContainerWithPipeline(anyObject()))
-        .thenReturn(containerWithPipeline);
+    final ContainerInfo container =
+        new ContainerInfo.Builder().setContainerID(1)
+            .setReplicationFactor(ReplicationFactor.THREE)
+            .setState(HddsProtos.LifeCycleState.CLOSED)
+            .build();
+    final Set<ContainerReplica> replicaSet = dnList.stream()
+        .map(datanodeDetails -> ContainerReplica.newBuilder()
+            .setContainerID(container.containerID())
+            .setContainerState(ContainerReplicaProto.State.OPEN)
+            .setDatanodeDetails(datanodeDetails)
+            .build())
+        .collect(Collectors.toSet());
+
+    when(containerManager.getContainerReplicas(anyObject()))
+        .thenReturn(replicaSet);
     when(containerManager.getContainer(anyObject()))
-        .thenReturn(containerInfo);
+        .thenReturn(container);
   }
 
   @After
@@ -383,8 +390,7 @@ public class TestDeletedBlockLog {
 
   private void mockContainerInfo(long containerID, DatanodeDetails dd)
       throws IOException {
-    List<DatanodeDetails> dns = new ArrayList<>();
-    dns.add(dd);
+    List<DatanodeDetails> dns = Collections.singletonList(dd);
     Pipeline pipeline = Pipeline.newBuilder()
             .setType(ReplicationType.STAND_ALONE)
             .setFactor(ReplicationFactor.ONE)
@@ -399,11 +405,18 @@ public class TestDeletedBlockLog {
         .setReplicationFactor(pipeline.getFactor());
 
     ContainerInfo containerInfo = builder.build();
-    ContainerWithPipeline containerWithPipeline = new ContainerWithPipeline(
-        containerInfo, pipeline);
     Mockito.doReturn(containerInfo).when(containerManager)
         .getContainer(ContainerID.valueof(containerID));
-    Mockito.doReturn(containerWithPipeline).when(containerManager)
-        .getContainerWithPipeline(ContainerID.valueof(containerID));
+
+    final Set<ContainerReplica> replicaSet = dns.stream()
+        .map(datanodeDetails -> ContainerReplica.newBuilder()
+            .setContainerID(containerInfo.containerID())
+            .setContainerState(ContainerReplicaProto.State.OPEN)
+            .setDatanodeDetails(datanodeDetails)
+            .build())
+        .collect(Collectors.toSet());
+    when(containerManager.getContainerReplicas(
+        ContainerID.valueof(containerID)))
+        .thenReturn(replicaSet);
   }
 }

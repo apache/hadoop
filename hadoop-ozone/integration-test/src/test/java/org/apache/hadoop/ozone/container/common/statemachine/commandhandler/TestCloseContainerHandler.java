@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -80,28 +81,30 @@ public class TestCloseContainerHandler {
         cluster.getOzoneManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    long containerID = omKeyLocationInfo.getContainerID();
+    ContainerID containerId = ContainerID.valueof(
+        omKeyLocationInfo.getContainerID());
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getContainerManager().getContainer(containerId);
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainerManager().getContainerWithPipeline(
-            ContainerID.valueof(containerID))
-        .getPipeline();
+        .getPipelineManager().getPipeline(container.getPipelineID());
 
-    Assert.assertFalse(isContainerClosed(cluster, containerID));
+    Assert.assertFalse(isContainerClosed(cluster, containerId.getId()));
 
     DatanodeDetails datanodeDetails =
         cluster.getHddsDatanodes().get(0).getDatanodeDetails();
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
-            new CloseContainerCommand(containerID,
+            new CloseContainerCommand(containerId.getId(),
                 HddsProtos.ReplicationType.STAND_ALONE, pipeline.getId()));
 
-    GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerID),
+    GenericTestUtils.waitFor(() ->
+            isContainerClosed(cluster, containerId.getId()),
             500,
             5 * 1000);
 
     //double check if it's really closed (waitFor also throws an exception)
-    Assert.assertTrue(isContainerClosed(cluster, containerID));
+    Assert.assertTrue(isContainerClosed(cluster, containerId.getId()));
   }
 
   private Boolean isContainerClosed(MiniOzoneCluster cluster,

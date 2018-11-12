@@ -227,7 +227,9 @@ public class ContainerStateManager {
       final List<Pipeline> pipelines = pipelineManager
           .getPipelines(type, replicationFactor, Pipeline.PipelineState.OPEN);
       if (pipelines.isEmpty()) {
-        throw new IOException("Could not allocate container");
+        throw new IOException("Could not allocate container. Cannot get any" +
+            " matching pipeline for Type:" + type +
+            ", Factor:" + replicationFactor + ", State:PipelineState.OPEN");
       }
       pipeline = pipelines.get((int) containerCount.get() % pipelines.size());
     }

@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
@@ -61,8 +62,11 @@ public class TestNode2PipelineMap {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    ratisContainer = containerManager.allocateContainer(
+    pipelineManager = scm.getPipelineManager();
+    ContainerInfo containerInfo = containerManager.allocateContainer(
         RATIS, THREE, "testOwner");
+    ratisContainer = new ContainerWithPipeline(containerInfo,
+        pipelineManager.getPipeline(containerInfo.getPipelineID()));
     pipelineManager = scm.getPipelineManager();
   }
 

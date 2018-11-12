@@ -18,8 +18,8 @@ package org.apache.hadoop.hdds.scm.block;
 
 import com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 
@@ -30,8 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 
 /**
  * A wrapper class to hold info about datanode and all deleted block
@@ -58,31 +57,28 @@ public class DatanodeDeletedBlockTransactions {
 
   public boolean addTransaction(DeletedBlocksTransaction tx,
       Set<UUID> dnsWithTransactionCommitted) {
-    Pipeline pipeline = null;
     try {
-      ContainerWithPipeline containerWithPipeline =
-          containerManager.getContainerWithPipeline(
-              ContainerID.valueof(tx.getContainerID()));
-      if (containerWithPipeline.getContainerInfo().isOpen()
-          || containerWithPipeline.getPipeline().isEmpty()) {
-        return false;
+      boolean success = false;
+      final ContainerID id = ContainerID.valueof(tx.getContainerID());
+      final ContainerInfo container = containerManager.getContainer(id);
+      final Set<ContainerReplica> replicas = containerManager
+          .getContainerReplicas(id);
+      if (!container.isOpen()) {
+        for (ContainerReplica replica : replicas) {
+          UUID dnID = replica.getDatanodeDetails().getUuid();
+          if (dnsWithTransactionCommitted == null ||
+              !dnsWithTransactionCommitted.contains(dnID)) {
+            // Transaction need not be sent to dns which have
+            // already committed it
+            success = addTransactionToDN(dnID, tx);
+          }
+        }
       }
-      pipeline = containerWithPipeline.getPipeline();
+      return success;
     } catch (IOException e) {
       SCMBlockDeletingService.LOG.warn("Got container info error.", e);
       return false;
     }
-
-    boolean success = false;
-    for (DatanodeDetails dd : pipeline.getNodes()) {
-      UUID dnID = dd.getUuid();
-      if (dnsWithTransactionCommitted == null ||
-          !dnsWithTransactionCommitted.contains(dnID)) {
-        // Transaction need not be sent to dns which have already committed it
-        success = addTransactionToDN(dnID, tx);
-      }
-    }
-    return success;
   }
 
   private boolean addTransactionToDN(UUID dnID, DeletedBlocksTransaction tx) {

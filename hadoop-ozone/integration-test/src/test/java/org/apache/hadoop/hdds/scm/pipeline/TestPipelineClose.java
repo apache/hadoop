@@ -21,6 +21,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
@@ -62,10 +63,15 @@ public class TestPipelineClose {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    ratisContainer1 = containerManager
+    pipelineManager = scm.getPipelineManager();
+    ContainerInfo containerInfo1 = containerManager
         .allocateContainer(RATIS, THREE, "testOwner");
-    ratisContainer2 = containerManager
+    ratisContainer1 = new ContainerWithPipeline(containerInfo1,
+        pipelineManager.getPipeline(containerInfo1.getPipelineID()));
+    ContainerInfo containerInfo2 = containerManager
         .allocateContainer(RATIS, THREE, "testOwner");
+    ratisContainer2 = new ContainerWithPipeline(containerInfo2,
+        pipelineManager.getPipeline(containerInfo2.getPipelineID()));
     pipelineManager = scm.getPipelineManager();
     // At this stage, there should be 2 pipeline one with 1 open container each.
     // Try closing the both the pipelines, one with a closed container and

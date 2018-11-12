@@ -52,9 +52,8 @@ public class OzoneTestUtils {
             .updateContainerState(ContainerID.valueof(blockID.getContainerID()),
                 HddsProtos.LifeCycleEvent.CLOSE);
         Assert.assertFalse(scm.getContainerManager()
-            .getContainerWithPipeline(ContainerID.valueof(
-                blockID.getContainerID()))
-            .getContainerInfo().isOpen());
+            .getContainer(ContainerID.valueof(
+                blockID.getContainerID())).isOpen());
       } catch (IOException e) {
         e.printStackTrace();
       }

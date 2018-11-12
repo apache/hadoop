@@ -97,6 +97,14 @@ public class TestFreonWithDatanodeFastRestart {
     TermIndex termIndexAfterRestart = sm.getLastAppliedTermIndex();
     Assert.assertTrue(termIndexAfterRestart.getIndex() >=
         termIndexBeforeRestart.getIndex());
+    // TODO: fix me
+    // Give some time for the datanode to register again with SCM.
+    // If we try to use the pipeline before the datanode registers with SCM
+    // we end up in "NullPointerException: scmId cannot be null" in
+    // datanode statemachine and datanode crashes.
+    // This has to be fixed. Check HDDS-830.
+    // Until then this sleep should help us!
+    Thread.sleep(5000);
     startFreon();
   }
 

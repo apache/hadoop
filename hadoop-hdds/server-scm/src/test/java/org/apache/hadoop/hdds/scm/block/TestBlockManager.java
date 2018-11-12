@@ -91,7 +91,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
     mapping = new SCMContainerManager(conf, nodeManager, pipelineManager,
         eventQueue);
     blockManager = new BlockManagerImpl(conf,
-        nodeManager, mapping, eventQueue);
+        nodeManager, pipelineManager, mapping, eventQueue);
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, blockManager);
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
