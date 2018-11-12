@@ -109,6 +109,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManager;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.VolumeManagerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.volume.csi.processor.VolumeAMSProcessor;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -136,6 +139,7 @@ import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -843,6 +847,16 @@ public class ResourceManager extends CompositeService
           false)) {
         SystemServiceManager systemServiceManager = createServiceManager();
         addIfService(systemServiceManager);
+      }
+
+      // Add volume manager to RM context when it is necessary
+      String[] amsProcessorList = conf.getStrings(
+          YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS);
+      if (amsProcessorList != null&& Arrays.stream(amsProcessorList)
+          .anyMatch(s -> VolumeAMSProcessor.class.getName().equals(s))) {
+        VolumeManager volumeManager = new VolumeManagerImpl();
+        rmContext.setVolumeManager(volumeManager);
+        addIfService(volumeManager);
       }
 
       super.serviceInit(conf);
